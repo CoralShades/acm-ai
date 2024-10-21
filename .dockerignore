@@ -1,0 +1,8 @@
+notebooks/
+data/
+.uploads/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.env
+sqlite-db/

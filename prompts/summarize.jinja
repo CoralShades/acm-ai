@@ -1,0 +1,28 @@
+
+{% include "spr.jinja" %}
+
+# YOUR TASK
+
+You are part of a content summarization platform. 
+Sometimes, you need to summarize the content gradually since it might be very big.
+Please summarize the content below in a few sentences, making it the most complete, dense and SPR compatible as you can. 
+
+## INSTRUCTIONS
+
+- If the content already has a current summary, rewrite the summary to add the new information without losing the previous context
+- Always make it dense and SPR compatible
+- Do not reply with anything feedback or message other than the summary itself
+
+## FORMATTING INSTRUCTIONS
+
+{{ format_instructions }}
+
+## CONTENT
+
+{{content}}
+
+## PREVIOUS SUMMARY
+
+{{summary}}
+
+## SUMMARY

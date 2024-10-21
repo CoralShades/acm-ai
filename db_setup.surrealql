@@ -1,0 +1,196 @@
+REMOVE table IF EXISTS source;
+REMOVE table IF EXISTS reference;
+REMOVE table IF EXISTS notebook;
+REMOVE table IF EXISTS note;
+REMOVE table IF EXISTS artifact;
+REMOVE table IF EXISTS source_chunk;
+REMOVE table IF EXISTS source_insight;
+REMOVE ANALYZER IF EXISTS my_analyzer;
+REMOVE FUNCTION IF EXISTS fn::text_search;
+
+REMOVE INDEX IF EXISTS idx_source_full  ON TABLE source_chunk;
+REMOVE INDEX IF EXISTS idx_source_embed_chunk ON TABLE source_embedding;
+REMOVE INDEX IF EXISTS idx_source_insight ON TABLE source_insight;
+REMOVE INDEX IF EXISTS idx_note ON TABLE note;
+REMOVE INDEX IF EXISTS idx_source_title ON TABLE source;
+REMOVE INDEX IF EXISTS idx_note_title ON TABLE note;
+
+DEFINE TABLE IF NOT EXISTS source SCHEMAFULL;
+
+DEFINE FIELD asset
+    ON TABLE source
+    FLEXIBLE TYPE option<object>;
+
+DEFINE FIELD title ON TABLE source TYPE option<string>;
+-- DEFINE FIELD summary ON TABLE source TYPE option<string>;
+DEFINE FIELD topics ON TABLE source TYPE option<array<string>>;
+
+DEFINE FIELD created ON source DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD updated ON source DEFAULT time::now() VALUE time::now();
+
+-- temporary while surreal doesn't fix the sdk 
+DEFINE TABLE IF NOT EXISTS source_chunk SCHEMAFULL;
+DEFINE FIELD source ON TABLE source_chunk TYPE record<source>;
+DEFINE FIELD order ON TABLE source_chunk TYPE int;
+DEFINE FIELD content ON TABLE source_chunk TYPE string;
+
+DEFINE TABLE IF NOT EXISTS source_embedding SCHEMAFULL;
+DEFINE FIELD source ON TABLE source_embedding TYPE record<source>;
+DEFINE FIELD order ON TABLE source_embedding TYPE int;
+DEFINE FIELD content ON TABLE source_embedding TYPE string;
+DEFINE FIELD embedding ON TABLE source_embedding TYPE array<float>;
+
+DEFINE TABLE IF NOT EXISTS source_insight SCHEMAFULL;
+DEFINE FIELD source ON TABLE source_insight TYPE record<source>;
+DEFINE FIELD insight_type ON TABLE source_insight TYPE string;
+DEFINE FIELD content ON TABLE source_insight TYPE string;
+DEFINE FIELD embedding ON TABLE source_insight TYPE array<float>;
+
+
+DEFINE TABLE IF NOT EXISTS note SCHEMAFULL;
+
+DEFINE FIELD title ON TABLE note TYPE option<string>;
+DEFINE FIELD summary ON TABLE note TYPE option<string>;
+DEFINE FIELD content ON TABLE note TYPE option<string>;
+DEFINE FIELD embedding ON TABLE note TYPE array<float>;
+
+DEFINE FIELD created ON note DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD updated ON note DEFAULT time::now() VALUE time::now();
+
+DEFINE TABLE IF NOT EXISTS notebook SCHEMAFULL;
+
+DEFINE FIELD name ON TABLE notebook TYPE option<string>;
+DEFINE FIELD description ON TABLE notebook TYPE option<string>;
+
+DEFINE FIELD created ON notebook DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD updated ON notebook DEFAULT time::now() VALUE time::now();
+
+DEFINE TABLE reference
+TYPE RELATION 
+FROM source TO notebook;
+
+DEFINE TABLE artifact
+TYPE RELATION 
+FROM note TO notebook;
+
+-- entender o analyzer
+DEFINE ANALYZER my_analyzer TOKENIZERS blank,class,camel,punct FILTERS snowball(english), lowercase;
+
+DEFINE INDEX idx_source_title ON TABLE source COLUMNS title SEARCH ANALYZER my_analyzer BM25 HIGHLIGHTS;
+DEFINE INDEX idx_source_full ON TABLE source_chunk COLUMNS content SEARCH ANALYZER my_analyzer BM25 HIGHLIGHTS;
+DEFINE INDEX idx_source_embed_chunk ON TABLE source_embedding COLUMNS content SEARCH ANALYZER my_analyzer BM25 HIGHLIGHTS;
+DEFINE INDEX idx_source_insight ON TABLE source_insight COLUMNS content SEARCH ANALYZER my_analyzer BM25 HIGHLIGHTS;
+DEFINE INDEX idx_note ON TABLE note COLUMNS content SEARCH ANALYZER my_analyzer BM25 HIGHLIGHTS;
+DEFINE INDEX idx_note_title ON TABLE note COLUMNS title SEARCH ANALYZER my_analyzer BM25 HIGHLIGHTS;
+
+DEFINE FUNCTION IF NOT EXISTS fn::text_search($query_text: string, $match_count: int, $sources:bool, $show_notes:bool) {
+
+   
+    let $source_title_search = 
+        IF $sources {(
+            SELECT id as item_id, math::max(search::score(1)) AS relevance
+            FROM source
+            WHERE title @1@ $query_text
+            GROUP BY item_id)}
+        ELSE { [] };
+    
+    let $source_embedding_search = 
+         IF $sources {(
+             SELECT source as item_id, math::max(search::score(1)) AS relevance
+            FROM source_embedding
+            WHERE content @1@ $query_text
+            GROUP BY item_id)}
+        ELSE { [] };
+
+    let $source_chunk_search = 
+         IF $sources {(
+            SELECT source as item_id, math::max(search::score(1)) AS relevance
+            FROM source_chunk
+            WHERE content @1@ $query_text
+            GROUP BY item_id)}
+        ELSE { [] };
+    
+    let $source_insight_search = 
+         IF $sources {(
+             SELECT source as item_id, math::max(search::score(1)) AS relevance
+            FROM source_insight
+            WHERE content @1@ $query_text
+            GROUP BY item_id)}
+        ELSE { [] };
+
+    let $note_title_search = 
+         IF $show_notes {(
+             SELECT id as item_id, math::max(search::score(1)) AS relevance
+            FROM note
+            WHERE title @1@ $query_text
+            GROUP BY item_id)}
+        ELSE { [] };
+
+     let $note_content_search = 
+         IF $show_notes {(
+             SELECT id as item_id, math::max(search::score(1)) AS relevance
+            FROM note
+            WHERE content @1@ $query_text
+            GROUP BY item_id)}
+        ELSE { [] };
+
+    let $source_chunk_results = array::union($source_embedding_search, $source_chunk_search);
+    
+    let $source_asset_results = array::union($source_title_search, $source_insight_search);
+
+    let $source_results = array::union($source_chunk_results, $source_asset_results );
+    let $note_results = array::union($note_title_search, $note_content_search );
+    let $final_results = array::union($source_results, $note_results );
+
+    RETURN (SELECT item_id, math::max(relevance) as relevance from $final_results
+        group by item_id ORDER BY relevance DESC LIMIT $match_count);
+    
+    
+};
+
+
+REMOVE FUNCTION fn::vector_search;
+
+DEFINE FUNCTION IF NOT EXISTS fn::vector_search($query: array<float>, $match_count: int, $sources:bool, $show_notes:bool) {
+   
+    let $source_embedding_search = 
+         IF $sources {(
+            SELECT source as item_id, content, vector::similarity::cosine(embedding, $query) as similarity
+            FROM source_embedding LIMIT $match_count)}
+        ELSE { [] };
+
+    
+    let $source_insight_search = 
+         IF $sources {(
+             SELECT source as item_id, content, vector::similarity::cosine(embedding, $query) as similarity
+                FROM source_insight LIMIT $match_count)}
+        ELSE { [] };
+
+    
+     let $note_content_search = 
+         IF $show_notes {(
+                SELECT id as item_id, content, vector::similarity::cosine(embedding, $query) as similarity
+                FROM note LIMIT $match_count)}
+
+        ELSE { [] };
+
+    let $source_chunk_results = array::union($source_embedding_search, $source_insight_search);
+    
+    let $source_results = array::union($source_chunk_results, $source_insight_search);
+
+    let $note_results = $note_content_search;
+    let $final_results = array::union($source_results, $note_results );
+
+    RETURN (SELECT item_id, math::max(similarity) as similarity from $final_results
+        group by item_id ORDER BY similarity DESC LIMIT $match_count);
+    
+    
+};
+
+CREATE open_notebook:database_info SET
+    version= "0.0.1";
+
+UPDATE open_notebook:database_info SET
+    version= "0.0.1";
+
+

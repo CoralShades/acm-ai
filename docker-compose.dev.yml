@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v2
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./surreal-data:/mydata
+    user: "${UID}:${GID}"
+    command: start --log trace --user root --pass root rocksdb:mydatabase.db
+    pull_policy: always
+  open_notebook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8502"
+    volumes:
+      - ./docker.env:/app/.env
+    depends_on:
+      - surrealdb
