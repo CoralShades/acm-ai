@@ -8,13 +8,52 @@ Open Notebook empowers you to manage your research, generate AI-assisted notes, 
 
 ## ⚙️ Setting Up
 
-Go to the [Setup Guide](docs/SETUP.md) to learn how to set up the tool.
+Go to the [Setup Guide](docs/SETUP.md) to learn how to set up the tool in details.
+
+But, the gist of it is: 
+
+```sh
+git clone https://github.com/lfnovo/open_notebook.git
+cd open_notebook
+cp .env.sample .env
+poetry install
+poetry run streamlit run app_home.py
+```
+
+or with docker:
+
+```yaml
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v2
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./surreal-data:/mydata
+    user: "${UID}:${GID}"
+    command: start --log trace --user root --pass root rocksdb:mydatabase.db
+    pull_policy: always
+  open_notebook:
+    image: lfnovo/open_notebook:latest
+    ports:
+      - "8080:8502"
+    volumes:
+      - ./docker.env:/app/.env
+    depends_on:
+      - surrealdb
+    pull_policy: always
+```
+
+
 
 ## Usage Instructions
 
 Go to the [Usage](docs/USAGE.md) page to learn how to use all features.
 
 ## 🚀 Features
+
+![New Notebook](docs/assets/asset_list.png)
+
 
 - **Multi-Notebook Support**: Organize your research across multiple notebooks effortlessly.
 - **Broad Content Integration**: Works with links, PDFs, TXT files, PowerPoint presentations, YouTube videos, and pasted text (audio/video support coming soon).
