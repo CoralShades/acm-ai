@@ -134,3 +134,7 @@ specs/
 .claude
 
 .playwright-mcp/
+
+#AI Stuff
+.bmad/
+.github/agents
