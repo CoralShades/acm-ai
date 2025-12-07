@@ -1,0 +1,53 @@
+-- ACM Record Table
+-- Stores structured Asbestos Containing Material (ACM) Register data extracted from PDF documents
+-- Links to source documents for traceability and supports hierarchical structure (school → building → room → item)
+
+DEFINE TABLE IF NOT EXISTS acm_record SCHEMAFULL;
+
+-- Foreign key to source document
+DEFINE FIELD IF NOT EXISTS source_id ON TABLE acm_record TYPE record<source>;
+
+-- School identification
+DEFINE FIELD IF NOT EXISTS school_name ON TABLE acm_record TYPE string;
+DEFINE FIELD IF NOT EXISTS school_code ON TABLE acm_record TYPE option<string>;
+
+-- Building hierarchy
+DEFINE FIELD IF NOT EXISTS building_id ON TABLE acm_record TYPE string;
+DEFINE FIELD IF NOT EXISTS building_name ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_year ON TABLE acm_record TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS building_construction ON TABLE acm_record TYPE option<string>;
+
+-- Room hierarchy
+DEFINE FIELD IF NOT EXISTS room_id ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS room_name ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS room_area ON TABLE acm_record TYPE option<float>;
+DEFINE FIELD IF NOT EXISTS area_type ON TABLE acm_record TYPE option<string>;
+
+-- ACM item data
+DEFINE FIELD IF NOT EXISTS product ON TABLE acm_record TYPE string;
+DEFINE FIELD IF NOT EXISTS material_description ON TABLE acm_record TYPE string;
+DEFINE FIELD IF NOT EXISTS extent ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS location ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS friable ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS material_condition ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS risk_status ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS result ON TABLE acm_record TYPE string;
+
+-- Citation support
+DEFINE FIELD IF NOT EXISTS page_number ON TABLE acm_record TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS extraction_confidence ON TABLE acm_record TYPE option<float>;
+
+-- Timestamps (following existing pattern)
+DEFINE FIELD IF NOT EXISTS created ON acm_record DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD IF NOT EXISTS updated ON acm_record DEFAULT time::now() VALUE time::now();
+
+-- Indexes for query performance
+DEFINE INDEX IF NOT EXISTS idx_acm_source ON TABLE acm_record COLUMNS source_id;
+DEFINE INDEX IF NOT EXISTS idx_acm_building ON TABLE acm_record COLUMNS building_id;
+DEFINE INDEX IF NOT EXISTS idx_acm_room ON TABLE acm_record COLUMNS room_id;
+DEFINE INDEX IF NOT EXISTS idx_acm_risk ON TABLE acm_record COLUMNS risk_status;
+
+-- Cascade delete when source is deleted
+DEFINE EVENT IF NOT EXISTS acm_record_source_delete ON TABLE source WHEN ($after == NONE) THEN {
+    DELETE acm_record WHERE source_id == $before.id;
+};
