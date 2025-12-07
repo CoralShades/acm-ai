@@ -744,10 +744,11 @@ No new environment variables required - leverages existing configuration.
 
 ### 12.3 Database Migration
 
-Run migration script to create `acm_record` table:
+The `acm_record` table is created by migration #10 (`migrations/10.surrealql`).
+Migrations run automatically on API startup, or manually via:
 
 ```bash
-uv run python -m open_notebook.migrations.acm_tables
+uv run python -c "from dotenv import load_dotenv; load_dotenv(); import asyncio; from open_notebook.database.async_migrate import AsyncMigrationManager; asyncio.run(AsyncMigrationManager().run_migration_up())"
 ```
 
 ---
@@ -758,7 +759,9 @@ uv run python -m open_notebook.migrations.acm_tables
 |------|---------|
 | `open_notebook/domain/acm.py` | ACMRecord model |
 | `open_notebook/transformations/acm_extraction.py` | Extraction pipeline |
-| `open_notebook/migrations/acm_tables.surql` | DB schema |
+| `migrations/10.surrealql` | DB schema (up migration) |
+| `migrations/10_down.surrealql` | DB schema (down migration) |
+| `open_notebook/database/async_migrate.py` | Migration runner |
 | `api/routers/acm.py` | REST endpoints |
 | `commands/acm_commands.py` | Background jobs |
 | `frontend/src/components/acm/` | React components |

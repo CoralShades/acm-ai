@@ -1,0 +1,8 @@
+-- Rollback for migration 10: ACM Record Table
+
+REMOVE EVENT IF EXISTS acm_record_source_delete ON TABLE source;
+REMOVE INDEX IF EXISTS idx_acm_source ON TABLE acm_record;
+REMOVE INDEX IF EXISTS idx_acm_building ON TABLE acm_record;
+REMOVE INDEX IF EXISTS idx_acm_room ON TABLE acm_record;
+REMOVE INDEX IF EXISTS idx_acm_risk ON TABLE acm_record;
+REMOVE TABLE IF EXISTS acm_record;
