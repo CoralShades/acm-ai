@@ -1,0 +1,115 @@
+version: "3.8"
+
+# Development Docker Compose with hot-reloading
+# Usage: docker compose -f docker-compose.dev-local.yml up
+#
+# This setup mounts your source code so changes reflect immediately.
+# Best for development when you want everything in Docker.
+
+services:
+  # Database - SurrealDB
+  surrealdb:
+    image: surrealdb/surrealdb:v2
+    container_name: open-notebook-db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./surreal_data:/mydata
+    environment:
+      - SURREAL_EXPERIMENTAL_GRAPHQL=true
+    command: start --log info --user root --pass root surrealkv://mydata/open_notebook.db
+    pull_policy: always
+    user: root
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend with hot-reload
+  api:
+    image: python:3.12-slim-bookworm
+    container_name: open-notebook-api
+    working_dir: /app
+    ports:
+      - "5055:5055"
+    volumes:
+      - .:/app
+      - api_venv:/app/.venv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD=root
+      - SURREAL_NAMESPACE=open_notebook
+      - SURREAL_DATABASE=staging
+    env_file:
+      - .env
+    depends_on:
+      surrealdb:
+        condition: service_healthy
+    command: >
+      bash -c "
+        pip install uv &&
+        uv sync &&
+        uv run uvicorn api.main:app --host 0.0.0.0 --port 5055 --reload
+      "
+    restart: unless-stopped
+
+  # Background Worker
+  worker:
+    image: python:3.12-slim-bookworm
+    container_name: open-notebook-worker
+    working_dir: /app
+    volumes:
+      - .:/app
+      - worker_venv:/app/.venv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=utf-8
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD=root
+      - SURREAL_NAMESPACE=open_notebook
+      - SURREAL_DATABASE=staging
+    env_file:
+      - .env
+    depends_on:
+      surrealdb:
+        condition: service_healthy
+    command: >
+      bash -c "
+        pip install uv &&
+        uv sync &&
+        uv run surreal-commands-worker --import-modules commands
+      "
+    restart: unless-stopped
+
+  # Next.js Frontend with hot-reload
+  frontend:
+    image: node:20-slim
+    container_name: open-notebook-frontend
+    working_dir: /app/frontend
+    ports:
+      - "8502:8502"
+    volumes:
+      - ./frontend:/app/frontend
+      - frontend_node_modules:/app/frontend/node_modules
+    environment:
+      - PORT=8502
+      - NEXT_TELEMETRY_DISABLED=1
+      - INTERNAL_API_URL=http://api:5055
+    depends_on:
+      - api
+    command: >
+      bash -c "
+        npm install &&
+        npm run dev -- -p 8502
+      "
+    restart: unless-stopped
+
+volumes:
+  api_venv:
+  worker_venv:
+  frontend_node_modules:
