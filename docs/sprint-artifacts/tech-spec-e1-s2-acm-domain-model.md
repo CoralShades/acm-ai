@@ -1,7 +1,7 @@
 # Tech-Spec: E1-S2 ACM Record Domain Model
 
 **Created:** 2025-12-07
-**Status:** Ready for Development
+**Status:** Done
 **Epic:** E1 - ACM Data Extraction Pipeline
 **Story:** S2 - Create ACM Record Domain Model
 
