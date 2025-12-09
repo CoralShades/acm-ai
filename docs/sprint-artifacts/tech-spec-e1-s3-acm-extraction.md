@@ -1,7 +1,7 @@
 # Tech-Spec: E1-S3 ACM Extraction Transformation
 
 **Created:** 2025-12-07
-**Status:** Ready for Development
+**Status:** Ready for Review
 **Epic:** E1 - ACM Data Extraction Pipeline
 **Story:** S3 - Implement ACM Extraction Transformation
 
@@ -109,76 +109,76 @@ Based on sample PDFs in `docs/samplePDF/`:
 
 ### Tasks
 
-- [ ] **Task 1: Create `open_notebook/extractors/acm_extractor.py`**
+- [x] **Task 1: Create `open_notebook/extractors/acm_extractor.py`**
   - Define regex patterns for building/room headers
   - Implement table detection by column headers
   - Implement markdown table parsing
   - Track current building/room context
 
-- [ ] **Task 2: Create `commands/acm_commands.py`**
+- [x] **Task 2: Create `commands/acm_commands.py`**
   - Define `ACMExtractionInput` and `ACMExtractionOutput`
   - Implement `acm_extract` command
   - Delete existing records for idempotency
   - Call extractor and save records
 
-- [ ] **Task 3: Implement building header parsing**
+- [x] **Task 3: Implement building header parsing**
   - Pattern: `B00A - Admin Block - 1924`
   - Extract: building_id, building_name, building_year
   - Handle variations (with/without year)
 
-- [ ] **Task 4: Implement room header parsing**
+- [x] **Task 4: Implement room header parsing**
   - Pattern: `B00A-R0001 - Main Office - 45.5m²`
   - Extract: room_id, room_name, room_area
   - Handle area_type from section headers
 
-- [ ] **Task 5: Implement table row extraction**
+- [x] **Task 5: Implement table row extraction**
   - Parse markdown tables with pipe delimiters
   - Map columns to ACMRecord fields
   - Handle missing/empty cells
 
-- [ ] **Task 6: Implement page number tracking**
+- [x] **Task 6: Implement page number tracking**
   - Look for page markers in markdown
   - Associate page with each record
   - Fallback if page info unavailable
 
-- [ ] **Task 7: Test with sample PDFs**
+- [x] **Task 7: Test with sample PDFs**
   - Process 3 sample PDFs
   - Verify >90% field accuracy
   - Document any edge cases
 
 ### Acceptance Criteria
 
-- [ ] **AC1**: New transformation `acm_extraction` is registered
+- [x] **AC1**: New transformation `acm_extraction` is registered
   - Given: The command module exists
   - When: `acm_extract` is called with a source_id
   - Then: ACM records are created in database
 
-- [ ] **AC2**: Parses Docling markdown for tables
+- [x] **AC2**: Parses Docling markdown for tables
   - Given: Source with markdown containing tables
   - When: Extraction runs
   - Then: Table rows become ACM records
 
-- [ ] **AC3**: Identifies ACM Register tables by headers
+- [x] **AC3**: Identifies ACM Register tables by headers
   - Given: Markdown with multiple tables
   - When: Extraction runs
   - Then: Only ACM Register tables are parsed (headers match)
 
-- [ ] **AC4**: Extracts hierarchical structure
+- [x] **AC4**: Extracts hierarchical structure
   - Given: Markdown with Building/Room headers
   - When: Extraction runs
   - Then: Records have correct building_id, room_id associations
 
-- [ ] **AC5**: Associates page numbers with records
+- [x] **AC5**: Associates page numbers with records
   - Given: Markdown with page markers
   - When: Extraction runs
   - Then: Records have page_number field populated
 
-- [ ] **AC6**: Handles "No Asbestos" entries
+- [x] **AC6**: Handles "No Asbestos" entries
   - Given: Room with "No Asbestos Detected" result
   - When: Extraction runs
   - Then: Record created with result="Not Detected"
 
-- [ ] **AC7**: Works on all 3 sample PDFs with >90% accuracy
+- [x] **AC7**: Works on all 3 sample PDFs with >90% accuracy
   - Given: Sample PDFs from docs/samplePDF/
   - When: Extraction runs on each
   - Then: Extracted data matches PDF content >90%

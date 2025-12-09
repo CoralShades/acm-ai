@@ -41,7 +41,7 @@ development_status:
   epic-1: in-progress
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
-  e1-s3-implement-acm-extraction-transformation: ready-for-dev
+  e1-s3-implement-acm-extraction-transformation: review
   e1-s4-create-acm-api-endpoints: ready-for-dev
   e1-s5-integrate-acm-extraction-into-source-processing: drafted
   epic-1-retrospective: optional
