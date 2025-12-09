@@ -1,0 +1,120 @@
+# Sprint Status - ACM-AI
+# generated: 2025-12-08
+# project: acm-ai
+# project_key: acm-ai
+# tracking_system: file-system
+# story_location: docs/sprint-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic exists in epic file but not contexted
+#   - in-progress: Epic being actively worked on
+#   - done: Epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story tech-spec created in sprint-artifacts folder
+#   - ready-for-dev: Draft approved and ready for implementation
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Stories with tech-specs are marked 'drafted' or 'ready-for-dev'
+# - Dev moves story to 'in-progress', then 'review', then 'done'
+# - SM typically drafts next story ONLY after previous one is 'done'
+
+generated: 2025-12-08
+project: acm-ai
+project_key: acm-ai
+tracking_system: file-system
+story_location: docs/sprint-artifacts
+
+development_status:
+  # Epic 1: ACM Data Extraction Pipeline (P0)
+  epic-1: in-progress
+  e1-s1-create-acm-data-model: done
+  e1-s2-create-acm-record-domain-model: done
+  e1-s3-implement-acm-extraction-transformation: ready-for-dev
+  e1-s4-create-acm-api-endpoints: ready-for-dev
+  e1-s5-integrate-acm-extraction-into-source-processing: drafted
+  epic-1-retrospective: optional
+
+  # Epic 2: AG Grid Spreadsheet Integration (P0)
+  epic-2: backlog
+  e2-s1-install-and-configure-ag-grid: drafted
+  e2-s2-create-acmspreadsheet-component: drafted
+  e2-s3-implement-column-sorting-and-filtering: drafted
+  e2-s4-implement-row-grouping: drafted
+  e2-s5-implement-risk-status-color-coding: drafted
+  e2-s6-add-search-bar-to-spreadsheet: drafted
+  epic-2-retrospective: optional
+
+  # Epic 3: Cell Citations & PDF Viewer (P0)
+  epic-3: backlog
+  e3-s1-make-cells-clickable: drafted
+  e3-s2-create-pdf-viewer-modal: drafted
+  e3-s3-implement-acm-citation-reference-type: drafted
+  e3-s4-store-page-numbers-during-extraction: drafted
+  epic-3-retrospective: optional
+
+  # Epic 4: Chat with ACM Context (P0)
+  epic-4: backlog
+  e4-s1-add-acm-records-to-chat-context: drafted
+  e4-s2-create-acm-context-toggle: drafted
+  e4-s3-generate-acm-aware-chat-responses: drafted
+  e4-s4-support-acm-specific-questions: drafted
+  epic-4-retrospective: optional
+
+  # Epic 5: Export Functionality (P1)
+  epic-5: backlog
+  e5-s1-implement-csv-export: drafted
+  e5-s2-implement-excel-export: drafted
+  epic-5-retrospective: optional
+
+  # Epic 6: Rebranding to ACM-AI (P1)
+  epic-6: backlog
+  e6-s1-update-application-name-and-title: drafted
+  e6-s2-create-new-logo-and-favicon: drafted
+  e6-s3-update-color-theme: drafted
+  e6-s4-update-landing-home-page: drafted
+  epic-6-retrospective: optional
+
+  # Epic 7: Upload Wizard (P0)
+  epic-7: backlog
+  e7-s1-create-wizard-framework-component: drafted
+  e7-s2-file-upload-step-with-drag-drop: drafted
+  e7-s3-document-type-detection-step: drafted
+  e7-s4-processing-options-step: drafted
+  e7-s5-review-confirm-step: drafted
+  e7-s6-upload-progress-results-step: drafted
+  epic-7-retrospective: optional
+
+  # Epic 8: UI Refresh - Bento Grid Design (P1)
+  epic-8: backlog
+  e8-s1-install-ui-ux-pro-max-skill: drafted
+  e8-s2-define-acm-ai-design-tokens: drafted
+  e8-s3-create-bento-card-component: drafted
+  e8-s4-create-bento-grid-layout-component: drafted
+  e8-s5-redesign-dashboard-home-page: drafted
+  e8-s6-redesign-sources-list-page: drafted
+  e8-s7-redesign-source-detail-page: drafted
+  e8-s8-update-navigation-sidebar: drafted
+  e8-s9-typography-font-updates: drafted
+  e8-s10-dark-mode-refinement: drafted
+  epic-8-retrospective: optional
+
+# SUMMARY:
+# ========
+# Total Epics: 8
+# Total Stories: 41
+# Stories Done: 2
+# Stories Ready for Dev: 2
+# Stories Drafted: 37
+# Stories Backlog: 0
