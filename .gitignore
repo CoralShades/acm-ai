@@ -139,3 +139,7 @@ specs/
 .bmad/
 .github/agents
 nul
+
+
+#node modules
+node_modules/

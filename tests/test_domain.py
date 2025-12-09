@@ -8,6 +8,7 @@ that can be tested without database mocking.
 import pytest
 from pydantic import ValidationError
 
+from open_notebook.domain.acm import ACMRecord
 from open_notebook.domain.base import RecordModel
 from open_notebook.domain.content_settings import ContentSettings
 from open_notebook.domain.models import ModelManager
@@ -302,6 +303,181 @@ class TestEpisodeProfile:
             num_segments=5,
         )
         assert profile.num_segments == 5
+
+
+# ============================================================================
+# TEST SUITE 10: ACMRecord Domain Validation
+# ============================================================================
+
+
+class TestACMRecordDomain:
+    """Test suite for ACMRecord domain validation."""
+
+    def test_valid_acm_record(self):
+        """Test creating a valid ACM record."""
+        record = ACMRecord(
+            source_id="source:123",
+            school_name="Test School",
+            building_id="B1",
+            product="Floor Tiles",
+            material_description="Vinyl asbestos tiles",
+            result="Detected",
+        )
+        assert record.school_name == "Test School"
+        assert record.source_id == "source:123"
+        assert record.product == "Floor Tiles"
+
+    def test_source_id_normalization(self):
+        """Test that source_id without prefix gets normalized."""
+        record = ACMRecord(
+            source_id="123",  # Without prefix
+            school_name="Test School",
+            building_id="B1",
+            product="Tiles",
+            material_description="Vinyl tiles",
+            result="Detected",
+        )
+        assert record.source_id == "source:123"
+
+    def test_missing_required_field_school_name(self):
+        """Test that missing school_name raises error."""
+        with pytest.raises((ValidationError, InvalidInputError)):
+            ACMRecord(
+                source_id="source:123",
+                school_name="",  # Empty
+                building_id="B1",
+                product="Tiles",
+                material_description="Vinyl tiles",
+                result="Detected",
+            )
+
+    def test_missing_required_field_building_id(self):
+        """Test that missing building_id raises error."""
+        with pytest.raises((ValidationError, InvalidInputError)):
+            ACMRecord(
+                source_id="source:123",
+                school_name="Test School",
+                building_id="",  # Empty
+                product="Tiles",
+                material_description="Vinyl tiles",
+                result="Detected",
+            )
+
+    def test_missing_required_field_product(self):
+        """Test that missing product raises error."""
+        with pytest.raises((ValidationError, InvalidInputError)):
+            ACMRecord(
+                source_id="source:123",
+                school_name="Test School",
+                building_id="B1",
+                product="",  # Empty
+                material_description="Vinyl tiles",
+                result="Detected",
+            )
+
+    def test_missing_required_field_result(self):
+        """Test that missing result raises error."""
+        with pytest.raises((ValidationError, InvalidInputError)):
+            ACMRecord(
+                source_id="source:123",
+                school_name="Test School",
+                building_id="B1",
+                product="Tiles",
+                material_description="Vinyl tiles",
+                result="",  # Empty
+            )
+
+    def test_optional_fields_default_to_none(self):
+        """Test that optional fields default to None."""
+        record = ACMRecord(
+            source_id="source:123",
+            school_name="Test School",
+            building_id="B1",
+            product="Tiles",
+            material_description="Vinyl tiles",
+            result="Detected",
+        )
+        assert record.room_id is None
+        assert record.risk_status is None
+        assert record.page_number is None
+        assert record.building_name is None
+        assert record.friable is None
+
+    def test_confidence_range_valid(self):
+        """Test extraction_confidence accepts valid range 0-1."""
+        record = ACMRecord(
+            source_id="source:123",
+            school_name="Test School",
+            building_id="B1",
+            product="Tiles",
+            material_description="Vinyl tiles",
+            result="Detected",
+            extraction_confidence=0.95,
+        )
+        assert record.extraction_confidence == 0.95
+
+    def test_confidence_range_invalid(self):
+        """Test extraction_confidence rejects values outside 0-1."""
+        with pytest.raises(ValidationError):
+            ACMRecord(
+                source_id="source:123",
+                school_name="Test School",
+                building_id="B1",
+                product="Tiles",
+                material_description="Vinyl tiles",
+                result="Detected",
+                extraction_confidence=1.5,  # Out of range
+            )
+
+    def test_table_name(self):
+        """Test that table_name is set correctly."""
+        assert ACMRecord.table_name == "acm_record"
+
+    def test_all_optional_fields(self):
+        """Test record with all optional fields populated."""
+        record = ACMRecord(
+            source_id="source:123",
+            school_name="Test School",
+            school_code="TS001",
+            building_id="B1A",
+            building_name="Administration Building",
+            building_year=1985,
+            building_construction="Brick",
+            room_id="B1A-R101",
+            room_name="Principal Office",
+            room_area=45.5,
+            area_type="Interior",
+            product="Ceiling Tiles",
+            material_description="Acoustic ceiling tiles with chrysotile",
+            extent="50 sqm",
+            location="Above suspended ceiling",
+            friable="Friable",
+            material_condition="Good",
+            risk_status="Medium",
+            result="Detected",
+            page_number=15,
+            extraction_confidence=0.92,
+        )
+        assert record.school_code == "TS001"
+        assert record.building_year == 1985
+        assert record.room_area == 45.5
+        assert record.friable == "Friable"
+        assert record.page_number == 15
+
+    def test_whitespace_trimming(self):
+        """Test that required string fields trim whitespace."""
+        record = ACMRecord(
+            source_id="source:123",
+            school_name="  Test School  ",
+            building_id="  B1  ",
+            product="  Floor Tiles  ",
+            material_description="Vinyl tiles",
+            result="  Detected  ",
+        )
+        assert record.school_name == "Test School"
+        assert record.building_id == "B1"
+        assert record.product == "Floor Tiles"
+        assert record.result == "Detected"
 
 
 if __name__ == "__main__":
