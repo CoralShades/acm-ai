@@ -1,0 +1,48 @@
+<testsuites id="" name="" tests="10" failures="0" skipped="10" errors="0" time="0.158966">
+<testsuite name="notebooks.spec.ts" timestamp="2025-12-07T11:35:40.129Z" hostname="chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="Notebook Management › can create a new notebook" classname="notebooks.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Notebook Management › can view notebook details" classname="notebooks.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Notebook Management › can see notebooks list" classname="notebooks.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2025-12-07T11:35:40.129Z" hostname="chromium" tests="4" failures="0" skipped="4" time="0" errors="0">
+<testcase name="Smoke Tests @smoke › homepage loads successfully" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests @smoke › can navigate to notebooks page" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests @smoke › API health check passes" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Smoke Tests @smoke › can list notebooks via API" classname="smoke.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="sources.spec.ts" timestamp="2025-12-07T11:35:40.129Z" hostname="chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
+<testcase name="Source Management › sources page loads" classname="sources.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Source Management › can navigate to source detail" classname="sources.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Source Management › upload button is accessible" classname="sources.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+</testsuites>
