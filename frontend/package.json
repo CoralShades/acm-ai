@@ -1,6 +1,7 @@
 {
-  "name": "frontend",
-  "version": "0.1.0",
+  "name": "acm-ai-frontend",
+  "version": "1.0.0",
+  "description": "ACM-AI Frontend - Asbestos Containing Material Register Management",
   "private": true,
   "scripts": {
     "dev": "next dev",
