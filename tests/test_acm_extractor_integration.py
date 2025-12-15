@@ -258,29 +258,61 @@ class TestAccuracyMetrics:
     """Test accuracy requirements from AC7."""
 
     def test_field_accuracy_sample1(self):
-        """Test >90% field accuracy on sample 1."""
+        """Test >90% field accuracy on sample 1 - validates actual field values."""
         markdown = TestSamplePDF1124.SAMPLE_MARKDOWN
         result = extract_acm_records(markdown, "source:1124")
 
-        # Count correctly extracted fields
-        expected_fields = [
-            ("school_name", "Westview Primary School"),
-            ("building_id", "B01A"),
-            ("building_name", "Administration Block"),
-            ("room_id", "B01A-R001"),
-            ("product", "Floor Tiles"),
+        # Validate specific records with expected values
+        expected_records = [
+            {
+                "school_name": "Westview Primary School",
+                "building_id": "B01A",
+                "building_name": "Administration Block",
+                "building_year": 1965,
+                "room_id": "B01A-R001",
+                "room_name": "Principal Office",
+                "room_area": 42.5,
+                "product": "Floor Tiles",
+                "material_description": "Vinyl asbestos floor tiles, 9x9 inch",
+                "result": "Detected",
+            },
+            {
+                "school_name": "Westview Primary School",
+                "building_id": "B01A",
+                "room_id": "B01A-R001",
+                "product": "Pipe Lagging",
+                "material_description": "Chrysotile asbestos pipe insulation",
+                "friable": "Friable",
+                "material_condition": "Fair",
+                "risk_status": "Medium",
+                "result": "Detected",
+            },
+            {
+                "building_id": "B02A",
+                "building_name": "Science Block",
+                "building_year": 1972,
+                "room_id": "B02A-R001",
+                "room_name": "Lab 1",
+                "product": "Bench Tops",
+            },
         ]
 
         correct = 0
         total = 0
-        for record in result:
-            for field, _ in expected_fields:
-                if record.get(field):
-                    correct += 1
-                total += 1
+
+        for expected in expected_records:
+            # Find matching record
+            for record in result:
+                match = all(
+                    record.get(k) == v for k, v in expected.items()
+                )
+                if match:
+                    correct += len(expected)
+                    break
+            total += len(expected)
 
         accuracy = correct / total if total > 0 else 0
-        assert accuracy > 0.9, f"Accuracy {accuracy:.2%} is below 90%"
+        assert accuracy > 0.9, f"Accuracy {accuracy:.2%} is below 90% threshold"
 
     def test_all_required_fields_present(self):
         """Test all required fields are present in extracted records."""

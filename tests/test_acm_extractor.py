@@ -348,7 +348,7 @@ class TestEdgeCases:
     """Test suite for edge cases and error handling."""
 
     def test_handles_missing_cells(self):
-        """Test handling of missing/empty cells."""
+        """Test handling of missing/empty cells - should skip rows with missing required fields."""
         from open_notebook.extractors.acm_extractor import extract_acm_records
 
         markdown = """# School
@@ -361,9 +361,8 @@ class TestEdgeCases:
 """
         result = extract_acm_records(markdown, "source:123")
 
-        assert len(result) == 1
-        assert result[0]["product"] == "Tiles"
-        assert result[0]["material_description"] == ""
+        # Should be skipped because material_description is empty (required field)
+        assert len(result) == 0
 
     def test_handles_no_building_context(self):
         """Test handling when no building header is found."""
