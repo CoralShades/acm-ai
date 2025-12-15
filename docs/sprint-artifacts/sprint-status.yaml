@@ -41,18 +41,18 @@ development_status:
   epic-1: in-progress
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
-  e1-s3-implement-acm-extraction-transformation: review
-  e1-s4-create-acm-api-endpoints: ready-for-dev
+  e1-s3-implement-acm-extraction-transformation: done
+  e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
   e1-s5-integrate-acm-extraction-into-source-processing: drafted
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
-  epic-2: backlog
-  e2-s1-install-and-configure-ag-grid: drafted
-  e2-s2-create-acmspreadsheet-component: drafted
-  e2-s3-implement-column-sorting-and-filtering: drafted
+  epic-2: in-progress
+  e2-s1-install-and-configure-ag-grid: done  # ag-grid-community + ag-grid-react installed
+  e2-s2-create-acmspreadsheet-component: done  # ACMGrid component with full CRUD
+  e2-s3-implement-column-sorting-and-filtering: done  # Built into AG Grid config
   e2-s4-implement-row-grouping: drafted
-  e2-s5-implement-risk-status-color-coding: drafted
+  e2-s5-implement-risk-status-color-coding: done  # RiskStatusRenderer with badges
   e2-s6-add-search-bar-to-spreadsheet: drafted
   epic-2-retrospective: optional
 
@@ -73,8 +73,8 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: Export Functionality (P1)
-  epic-5: backlog
-  e5-s1-implement-csv-export: drafted
+  epic-5: in-progress
+  e5-s1-implement-csv-export: done  # Export CSV button in ACMToolbar
   e5-s2-implement-excel-export: drafted
   epic-5-retrospective: optional
 
@@ -114,7 +114,10 @@ development_status:
 # ========
 # Total Epics: 8
 # Total Stories: 41
-# Stories Done: 2
-# Stories Ready for Dev: 2
-# Stories Drafted: 37
+# Stories Done: 9  # E1-S1,S2,S3,S4 + E2-S1,S2,S3,S5 + E5-S1
+# Stories Ready for Dev: 0
+# Stories Drafted: 32
 # Stories Backlog: 0
+#
+# Last Updated: 2025-12-15
+# Notes: ACM Frontend implementation completed with AG Grid, full CRUD, and navigation

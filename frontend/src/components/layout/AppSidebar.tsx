@@ -38,6 +38,7 @@ import {
   Plus,
   Wrench,
   Command,
+  FileWarning,
 } from 'lucide-react'
 
 const navigation = [
@@ -45,6 +46,7 @@ const navigation = [
     title: 'Collect',
     items: [
       { name: 'Sources', href: '/sources', icon: FileText },
+      { name: 'ACM Register', href: '/acm', icon: FileWarning },
     ],
   },
   {
