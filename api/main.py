@@ -78,9 +78,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Open Notebook API",
-    description="API for Open Notebook - Research Assistant",
-    version="0.2.2",
+    title="ACM-AI API",
+    description="API for ACM-AI - Asbestos Containing Material Register Analysis",
+    version="1.0.0",
     lifespan=lifespan,
 )
 
@@ -122,7 +122,7 @@ app.include_router(acm.router, prefix="/api/acm", tags=["acm"])
 
 @app.get("/")
 async def root():
-    return {"message": "Open Notebook API is running"}
+    return {"message": "ACM-AI API is running"}
 
 
 @app.get("/health")

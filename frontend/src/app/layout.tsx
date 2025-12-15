@@ -7,12 +7,17 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ConnectionGuard } from "@/components/common/ConnectionGuard";
 import { themeScript } from "@/lib/theme-script";
+import { BRANDING } from "@/config/branding";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Open Notebook",
-  description: "Privacy-focused research and knowledge management",
+  title: {
+    default: BRANDING.name,
+    template: `%s | ${BRANDING.name}`,
+  },
+  description: BRANDING.description,
+  keywords: BRANDING.keywords,
 };
 
 export default function RootLayout({
