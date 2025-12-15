@@ -57,7 +57,6 @@ class ACMRecord(ObjectModel):
 
     # Citation support
     page_number: Optional[int] = None
-    extraction_confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
     # Validators for required fields
     @field_validator("source_id", mode="before")
@@ -89,6 +88,13 @@ class ACMRecord(ObjectModel):
     def validate_product(cls, v):
         if not v or not v.strip():
             raise InvalidInputError("product cannot be empty")
+        return v.strip()
+
+    @field_validator("material_description")
+    @classmethod
+    def validate_material_description(cls, v):
+        if not v or not v.strip():
+            raise InvalidInputError("material_description cannot be empty")
         return v.strip()
 
     @field_validator("result")
