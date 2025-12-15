@@ -79,8 +79,8 @@ development_status:
   epic-5-retrospective: optional
 
   # Epic 6: Rebranding to ACM-AI (P1)
-  epic-6: backlog
-  e6-s1-update-application-name-and-title: drafted
+  epic-6: in-progress
+  e6-s1-update-application-name-and-title: done  # Implemented 2025-12-15
   e6-s2-create-new-logo-and-favicon: drafted
   e6-s3-update-color-theme: drafted
   e6-s4-update-landing-home-page: drafted
@@ -114,10 +114,10 @@ development_status:
 # ========
 # Total Epics: 8
 # Total Stories: 41
-# Stories Done: 9  # E1-S1,S2,S3,S4 + E2-S1,S2,S3,S5 + E5-S1
+# Stories Done: 10  # E1-S1,S2,S3,S4 + E2-S1,S2,S3,S5 + E5-S1 + E6-S1
 # Stories Ready for Dev: 0
-# Stories Drafted: 32
+# Stories Drafted: 31
 # Stories Backlog: 0
 #
 # Last Updated: 2025-12-15
-# Notes: ACM Frontend implementation completed with AG Grid, full CRUD, and navigation
+# Notes: E6-S1 (App Rebranding) completed - "Open Notebook" → "ACM-AI"
