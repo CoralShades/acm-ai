@@ -52,6 +52,8 @@ import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import { SourceInsightDialog } from '@/components/source/SourceInsightDialog'
 import { NotebookAssociations } from '@/components/source/NotebookAssociations'
+import { ACMTab } from '@/components/acm/ACMTab'
+import { useACMStats } from '@/lib/hooks/use-acm'
 
 interface SourceDetailContentProps {
   sourceId: string
@@ -79,6 +81,9 @@ export function SourceDetailContent({
   const [isDownloadingFile, setIsDownloadingFile] = useState(false)
   const [fileAvailable, setFileAvailable] = useState<boolean | null>(null)
   const [selectedInsight, setSelectedInsight] = useState<SourceInsightResponse | null>(null)
+
+  // ACM Stats for tab badge
+  const { data: acmStats } = useACMStats(sourceId)
 
   const fetchSource = useCallback(async () => {
     try {
@@ -403,10 +408,13 @@ export function SourceDetailContent({
       {/* Tabs Content */}
       <div className="flex-1 overflow-y-auto px-2">
         <Tabs defaultValue="content" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sticky top-0 z-10">
+          <TabsList className="grid w-full grid-cols-4 sticky top-0 z-10">
             <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="insights">
               Insights {insights.length > 0 && `(${insights.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="acm">
+              ACM {acmStats?.total_records ? `(${acmStats.total_records})` : ''}
             </TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
           </TabsList>
@@ -572,6 +580,10 @@ export function SourceDetailContent({
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="acm" className="mt-6">
+            <ACMTab sourceId={sourceId} />
           </TabsContent>
 
           <TabsContent value="details" className="mt-6">

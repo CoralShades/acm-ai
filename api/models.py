@@ -422,3 +422,118 @@ class SourceStatusResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     message: str
+
+
+# ACM API Models
+class ACMRecordResponse(BaseModel):
+    """Single ACM record response."""
+
+    id: str
+    source_id: str
+    school_name: str
+    school_code: Optional[str] = None
+    building_id: str
+    building_name: Optional[str] = None
+    building_year: Optional[int] = None
+    building_construction: Optional[str] = None
+    room_id: Optional[str] = None
+    room_name: Optional[str] = None
+    room_area: Optional[float] = None
+    area_type: Optional[str] = None
+    product: str
+    material_description: str
+    extent: Optional[str] = None
+    location: Optional[str] = None
+    friable: Optional[str] = None
+    material_condition: Optional[str] = None
+    risk_status: Optional[str] = None
+    result: str
+    page_number: Optional[int] = None
+    extraction_confidence: Optional[float] = None
+    created: Optional[str] = None
+    updated: Optional[str] = None
+
+
+class ACMRecordListResponse(BaseModel):
+    """Paginated list of ACM records."""
+
+    records: List[ACMRecordResponse]
+    total: int
+    page: int
+    pages: int
+    limit: int
+
+
+class ACMExtractRequest(BaseModel):
+    """Request to trigger ACM extraction."""
+
+    source_id: str = Field(..., description="Source ID to extract ACM data from")
+
+
+class ACMExtractResponse(BaseModel):
+    """Response from extraction trigger."""
+
+    command_id: str = Field(..., description="Command ID to track progress")
+    status: str = Field(default="submitted", description="Initial status")
+    message: str = Field(default="ACM extraction started")
+
+
+class ACMStatsResponse(BaseModel):
+    """ACM statistics summary."""
+
+    total_records: int
+    high_risk_count: int
+    medium_risk_count: int
+    low_risk_count: int
+    building_count: int
+    room_count: int
+    source_id: Optional[str] = None
+
+
+class ACMRecordCreateRequest(BaseModel):
+    """Request to create a new ACM record."""
+
+    source_id: str = Field(..., description="Source document ID")
+    school_name: str = Field(..., min_length=1, description="School name")
+    school_code: Optional[str] = Field(None, description="School code")
+    building_id: str = Field(..., min_length=1, description="Building ID")
+    building_name: Optional[str] = Field(None, description="Building name")
+    building_year: Optional[int] = Field(None, description="Building year")
+    building_construction: Optional[str] = Field(None, description="Construction type")
+    room_id: Optional[str] = Field(None, description="Room ID")
+    room_name: Optional[str] = Field(None, description="Room name")
+    room_area: Optional[float] = Field(None, description="Room area in m²")
+    area_type: Optional[str] = Field(None, description="Area type: Interior/Exterior/Grounds")
+    product: str = Field(..., min_length=1, description="ACM product name")
+    material_description: str = Field(..., min_length=1, description="Material description")
+    extent: Optional[str] = Field(None, description="Extent of ACM")
+    location: Optional[str] = Field(None, description="Location within room")
+    friable: Optional[str] = Field(None, description="Friable/Non Friable")
+    material_condition: Optional[str] = Field(None, description="Material condition")
+    risk_status: Optional[str] = Field(None, description="Risk status: Low/Medium/High")
+    result: str = Field(..., min_length=1, description="Test result")
+    page_number: Optional[int] = Field(None, description="Source page number")
+
+
+class ACMRecordUpdateRequest(BaseModel):
+    """Request to update an ACM record. All fields optional for partial updates."""
+
+    school_name: Optional[str] = Field(None, min_length=1, description="School name")
+    school_code: Optional[str] = Field(None, description="School code")
+    building_id: Optional[str] = Field(None, min_length=1, description="Building ID")
+    building_name: Optional[str] = Field(None, description="Building name")
+    building_year: Optional[int] = Field(None, description="Building year")
+    building_construction: Optional[str] = Field(None, description="Construction type")
+    room_id: Optional[str] = Field(None, description="Room ID")
+    room_name: Optional[str] = Field(None, description="Room name")
+    room_area: Optional[float] = Field(None, description="Room area in m²")
+    area_type: Optional[str] = Field(None, description="Area type: Interior/Exterior/Grounds")
+    product: Optional[str] = Field(None, min_length=1, description="ACM product name")
+    material_description: Optional[str] = Field(None, min_length=1, description="Material description")
+    extent: Optional[str] = Field(None, description="Extent of ACM")
+    location: Optional[str] = Field(None, description="Location within room")
+    friable: Optional[str] = Field(None, description="Friable/Non Friable")
+    material_condition: Optional[str] = Field(None, description="Material condition")
+    risk_status: Optional[str] = Field(None, description="Risk status: Low/Medium/High")
+    result: Optional[str] = Field(None, min_length=1, description="Test result")
+    page_number: Optional[int] = Field(None, description="Source page number")
