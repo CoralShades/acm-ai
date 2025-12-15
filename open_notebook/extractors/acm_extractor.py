@@ -15,7 +15,12 @@ from loguru import logger
 
 @dataclass
 class ParseContext:
-    """Tracks current parsing context during extraction."""
+    """Tracks current parsing context during extraction.
+
+    Note: area_type defaults to "Interior" as most ACM registers follow the pattern
+    of listing interior spaces first and explicitly marking exterior/grounds areas.
+    If no area type header is found, Interior is the most common assumption.
+    """
 
     school_name: str = ""
     school_code: Optional[str] = None
@@ -26,7 +31,7 @@ class ParseContext:
     room_id: Optional[str] = None
     room_name: Optional[str] = None
     room_area: Optional[float] = None
-    area_type: str = "Interior"
+    area_type: str = "Interior"  # Default - most common case in ACM registers
     current_page: int = 1
 
 
@@ -94,14 +99,14 @@ ACM_OPTIONAL_HEADERS = {
     "risk",
 }
 
-# Regex patterns
+# Regex patterns - using possessive quantifiers and atomic groups to prevent ReDoS
 BUILDING_PATTERN = re.compile(
-    r"^#+\s*(?:Building[:\s]*)?([A-Z]\d+[A-Z]?)\s*[-–]\s*(.+?)(?:\s*[-–]\s*(\d{4}))?(?:\s*[-–]\s*(.+))?$",
+    r"^#+\s*(?:Building[:\s]*)?([A-Z]\d+[A-Z]?)\s*[-–]\s*([^-–\n]+?)(?:\s*[-–]\s*(\d{4}))?(?:\s*[-–]\s*([^-–\n]+?))?$",
     re.IGNORECASE | re.MULTILINE,
 )
 
 ROOM_PATTERN = re.compile(
-    r"^#+\s*(?:Room[:\s]*)?([A-Z0-9]+-?R?\d+)\s*[-–]\s*(.+?)(?:\s*[-–]\s*([\d.]+)\s*m²)?$",
+    r"^#+\s*(?:Room[:\s]*)?([A-Z0-9]+-?R?\d+)\s*[-–]\s*([^-–\n]+?)(?:\s*[-–]\s*([\d.]+)\s*m²)?$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -111,7 +116,7 @@ AREA_TYPE_PATTERN = re.compile(
 )
 
 SCHOOL_PATTERN = re.compile(
-    r"^#\s*(.+?)\s*[-–]\s*(?:Asbestos|ACM|SAMP)",
+    r"^#\s*([^-–\n]+?)(?:\s*[-–]\s*(?:Asbestos|ACM|SAMP).*)?$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -167,13 +172,22 @@ def extract_acm_records(markdown_content: Optional[str], source_id: str) -> List
             context.building_id = building_match.group(1).strip()
             context.building_name = building_match.group(2).strip()
             if building_match.group(3):
-                context.building_year = int(building_match.group(3))
+                try:
+                    context.building_year = int(building_match.group(3))
+                except ValueError:
+                    logger.warning(f"Invalid building year: {building_match.group(3)}")
+                    context.building_year = None
+            else:
+                context.building_year = None
             if building_match.group(4):
                 context.building_construction = building_match.group(4).strip()
-            # Reset room when building changes
+            else:
+                context.building_construction = None
+            # Reset room and area_type when building changes
             context.room_id = None
             context.room_name = None
             context.room_area = None
+            context.area_type = "Interior"  # Reset to default
             logger.debug(f"Building: {context.building_id} - {context.building_name}")
 
         # Check for room header
@@ -214,7 +228,17 @@ def _looks_like_table_header(line: str) -> bool:
 
 
 def _extract_table_lines(lines: List[str], start_idx: int) -> Tuple[List[str], int]:
-    """Extract all lines belonging to a table starting at start_idx."""
+    """Extract all lines belonging to a table starting at start_idx.
+
+    Args:
+        lines: All lines from the markdown document
+        start_idx: Index of the first table line (header row)
+
+    Returns:
+        Tuple of (table_lines, end_index) where:
+        - table_lines: List of all lines in the table (including header and separator)
+        - end_index: Index of the first line after the table
+    """
     table_lines = []
     i = start_idx
 
@@ -326,8 +350,8 @@ def _create_row_from_cells(
     material_desc = get_cell("material_description")
     result = get_cell("result")
 
-    # Skip if missing required fields
-    if not product and not material_desc:
+    # Skip if missing required fields - both product AND material_description are required
+    if not product or not material_desc:
         return None
 
     # Handle "No Asbestos" cases

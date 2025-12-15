@@ -28,6 +28,7 @@ class ACMExtractionOutput(CommandOutput):
     source_id: str
     records_created: int = 0
     records_deleted: int = 0
+    records_failed: int = 0
     processing_time: float = 0.0
     error_message: Optional[str] = None
 
@@ -59,6 +60,10 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
     try:
         logger.info(f"Starting ACM extraction for source: {source_id}")
 
+        # Validate source_id format
+        if not source_id or not isinstance(source_id, str):
+            raise ValueError("source_id must be a non-empty string")
+
         # 1. Load source
         source = await Source.get(source_id)
         if not source:
@@ -89,6 +94,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
 
         # 4. Create and save ACM records
         created_count = 0
+        failed_count = 0
         for record_dict in extracted_dicts:
             try:
                 record = ACMRecord(**record_dict)
@@ -96,19 +102,28 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 created_count += 1
             except Exception as e:
                 logger.warning(f"Failed to create ACM record: {e}")
+                failed_count += 1
                 continue
 
         processing_time = time.time() - start_time
-        logger.info(
-            f"ACM extraction complete for {source_id}: "
-            f"{created_count} records created in {processing_time:.2f}s"
-        )
+
+        if failed_count > 0:
+            logger.warning(
+                f"ACM extraction completed with errors for {source_id}: "
+                f"{created_count} records created, {failed_count} failed in {processing_time:.2f}s"
+            )
+        else:
+            logger.info(
+                f"ACM extraction complete for {source_id}: "
+                f"{created_count} records created in {processing_time:.2f}s"
+            )
 
         return ACMExtractionOutput(
             success=True,
             source_id=source_id,
             records_created=created_count,
             records_deleted=deleted_count,
+            records_failed=failed_count,
             processing_time=processing_time,
         )
 
