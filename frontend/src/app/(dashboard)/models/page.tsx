@@ -8,6 +8,7 @@ import { useModels, useModelDefaults, useProviders } from '@/lib/hooks/use-model
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { BRANDING } from '@/config/branding'
 
 export default function ModelsPage() {
   const { data: models, isLoading: modelsLoading, refetch: refetchModels } = useModels()
@@ -50,7 +51,7 @@ export default function ModelsPage() {
             <div>
               <h1 className="text-2xl font-bold">Model Management</h1>
               <p className="text-muted-foreground mt-1">
-                Configure AI models for different purposes across Open Notebook
+                Configure AI models for different purposes across {BRANDING.name}
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={handleRefresh}>
