@@ -43,7 +43,7 @@ development_status:
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
-  e1-s5-integrate-acm-extraction-into-source-processing: drafted
+  e1-s5-integrate-acm-extraction-into-source-processing: ready-for-dev
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -81,8 +81,8 @@ development_status:
   # Epic 6: Rebranding to ACM-AI (P1)
   epic-6: in-progress
   e6-s1-update-application-name-and-title: done  # Implemented 2025-12-15
-  e6-s2-create-new-logo-and-favicon: drafted
-  e6-s3-update-color-theme: drafted
+  e6-s2-create-new-logo-and-favicon: done  # Implemented 2025-12-18
+  e6-s3-update-color-theme: in-progress
   e6-s4-update-landing-home-page: drafted
   epic-6-retrospective: optional
 
@@ -114,10 +114,10 @@ development_status:
 # ========
 # Total Epics: 8
 # Total Stories: 41
-# Stories Done: 10  # E1-S1,S2,S3,S4 + E2-S1,S2,S3,S5 + E5-S1 + E6-S1
-# Stories Ready for Dev: 0
-# Stories Drafted: 31
+# Stories Done: 11  # E1-S1,S2,S3,S4 + E2-S1,S2,S3,S5 + E5-S1 + E6-S1,S2
+# Stories Ready for Dev: 1  # E1-S5
+# Stories Drafted: 29
 # Stories Backlog: 0
 #
-# Last Updated: 2025-12-15
-# Notes: E6-S1 (App Rebranding) completed - "Open Notebook" → "ACM-AI"
+# Last Updated: 2025-12-18
+# Notes: E6-S2 (Logo and Favicon) completed

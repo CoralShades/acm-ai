@@ -2,7 +2,7 @@
 
 > **Story:** E6-S3
 > **Epic:** Rebranding to ACM-AI
-> **Status:** Draft
+> **Status:** Ready for Dev
 > **Created:** 2025-12-08
 
 ---
