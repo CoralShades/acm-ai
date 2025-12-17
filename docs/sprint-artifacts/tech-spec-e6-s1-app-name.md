@@ -2,8 +2,9 @@
 
 > **Story:** E6-S1
 > **Epic:** Rebranding to ACM-AI
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2025-12-17
 
 ---
 
@@ -23,10 +24,10 @@ Update all application branding from "Open Notebook" to "ACM-AI" across frontend
 
 ## Acceptance Criteria
 
-- [ ] Browser tab title: "ACM-AI"
-- [ ] Header shows "ACM-AI" logo/text
-- [ ] package.json name updated
-- [ ] API docs title updated
+- [x] Browser tab title: "ACM-AI"
+- [x] Header shows "ACM-AI" logo/text
+- [x] package.json name updated
+- [x] API docs title updated
 
 ---
 
@@ -188,5 +189,29 @@ None - can be done independently
 ## Estimated Complexity
 
 **Low** - Simple text and metadata changes
+
+---
+
+## Implementation Notes
+
+### Initial Implementation (2025-12-15)
+Core branding files updated:
+- `frontend/src/app/layout.tsx` - Uses BRANDING.name for metadata
+- `frontend/src/components/layout/AppSidebar.tsx` - Uses BRANDING.name
+- `frontend/package.json` - Updated to "acm-ai-frontend"
+- `api/main.py` - Updated FastAPI title to "ACM-AI API"
+- `frontend/src/config/branding.ts` - Created centralized branding config
+
+### Code Review Fix (2025-12-17)
+Additional files updated to use BRANDING config (previously had hardcoded "Open Notebook"):
+- `frontend/src/components/auth/LoginForm.tsx` - Login page title
+- `frontend/src/components/common/ConnectionGuard.tsx` - Error messages
+- `frontend/src/components/errors/ConnectionErrorOverlay.tsx` - Error messages
+- `frontend/src/app/(dashboard)/models/page.tsx` - Page description
+- `frontend/src/app/(dashboard)/settings/components/SettingsForm.tsx` - Help text
+- `frontend/src/app/(dashboard)/models/components/DefaultModelsSection.tsx` - Descriptions
+- `frontend/src/lib/hooks/use-version-check.ts` - Version update toast
+
+**Verification:** `grep "Open Notebook" frontend/src/` returns no matches.
 
 ---
