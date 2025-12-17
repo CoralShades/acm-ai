@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
 import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
-import { BRANDING } from '@/config/branding'
+import { Logo } from '@/components/brand/Logo'
 import {
   Tooltip,
   TooltipContent,
@@ -118,12 +117,9 @@ export function AppSidebar() {
         >
           {isCollapsed ? (
             <div className="relative flex items-center justify-center w-full">
-              <Image
-                src="/logo.svg"
-                alt={BRANDING.name}
-                width={32}
-                height={32}
-                className="transition-opacity group-hover:opacity-0"
+              <Logo
+                variant="icon"
+                iconClassName="w-8 h-8 transition-opacity group-hover:opacity-0"
               />
               <Button
                 variant="ghost"
@@ -136,12 +132,7 @@ export function AppSidebar() {
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2">
-                <Image src="/logo.svg" alt={BRANDING.name} width={32} height={32} />
-                <span className="text-base font-medium text-sidebar-foreground">
-                  {BRANDING.name}
-                </span>
-              </div>
+              <Logo variant="full" className="text-sidebar-foreground" />
               <Button
                 variant="ghost"
                 size="sm"
