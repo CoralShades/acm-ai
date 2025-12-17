@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle } from 'lucide-react'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { BRANDING } from '@/config/branding'
 
 export function LoginForm() {
   const [password, setPassword] = useState('')
@@ -139,7 +140,7 @@ export function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle>Open Notebook</CardTitle>
+          <CardTitle>{BRANDING.name}</CardTitle>
           <CardDescription>
             Enter your password to access the application
           </CardDescription>

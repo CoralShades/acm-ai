@@ -13,6 +13,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { useSettings, useUpdateSettings } from '@/lib/hooks/use-settings'
 import { useEffect, useState } from 'react'
 import { ChevronDownIcon } from 'lucide-react'
+import { BRANDING } from '@/config/branding'
 
 const settingsSchema = z.object({
   default_content_processing_engine_doc: z.enum(['auto', 'docling', 'simple']).optional(),
@@ -256,7 +257,7 @@ export function SettingsForm() {
                 Help me choose
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 text-sm text-muted-foreground space-y-2">
-                <p>Once your files are uploaded and processed, they are not required anymore. Most users should allow Open Notebook to delete uploaded files from the upload folder automatically. Choose <strong>no</strong>, ONLY if you are using Notebook as the primary storage location for those files (which you shouldn&apos;t be at all). This option will soon be deprecated in favor of always downloading the files.</p>
+                <p>Once your files are uploaded and processed, they are not required anymore. Most users should allow {BRANDING.name} to delete uploaded files from the upload folder automatically. Choose <strong>no</strong>, ONLY if you are using {BRANDING.name} as the primary storage location for those files (which you shouldn&apos;t be at all). This option will soon be deprecated in favor of always downloading the files.</p>
                 <p>• Choose <strong>yes</strong> (recommended) to automatically delete uploaded files after processing</p>
                 <p>• Choose <strong>no</strong> only if you need to keep the original files in the upload folder</p>
               </CollapsibleContent>
