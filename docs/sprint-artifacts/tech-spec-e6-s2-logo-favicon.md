@@ -2,7 +2,7 @@
 
 > **Story:** E6-S2
 > **Epic:** Rebranding to ACM-AI
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,10 +23,10 @@ Design and implement a professional logo and favicon for ACM-AI that conveys com
 
 ## Acceptance Criteria
 
-- [ ] Logo designed (SVG format)
-- [ ] Favicon created (multiple sizes)
-- [ ] Logo used in header
-- [ ] Favicon appears in browser tab
+- [x] Logo designed (SVG format)
+- [x] Favicon created (multiple sizes)
+- [x] Logo used in header
+- [x] Favicon appears in browser tab
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Story:** E1-S5
 > **Epic:** ACM Data Extraction Pipeline
-> **Status:** Draft
+> **Status:** Ready for Dev
 > **Created:** 2025-12-08
 
 ---

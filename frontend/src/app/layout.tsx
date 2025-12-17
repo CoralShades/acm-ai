@@ -18,6 +18,13 @@ export const metadata: Metadata = {
   },
   description: BRANDING.description,
   keywords: BRANDING.keywords,
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/icon.svg',
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
