@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { getConfig } from '@/lib/config'
+import { BRANDING } from '@/config/branding'
 
 /**
  * Hook to check for version updates and display notification.
@@ -23,7 +24,7 @@ export function useVersionCheck() {
           if (!isDismissed) {
             // Show persistent toast notification
             toast.info(`Version ${config.latestVersion} available`, {
-              description: 'A new version of Open Notebook is available.',
+              description: `A new version of ${BRANDING.name} is available.`,
               duration: Infinity, // No auto-dismiss - user must manually dismiss
               closeButton: true, // Show close button for dismissing
               action: {

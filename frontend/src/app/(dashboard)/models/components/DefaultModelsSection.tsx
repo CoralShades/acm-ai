@@ -11,6 +11,7 @@ import { ModelDefaults, Model } from '@/lib/types/models'
 import { useUpdateModelDefaults } from '@/lib/hooks/use-models'
 import { AlertCircle, X } from 'lucide-react'
 import { EmbeddingModelChangeDialog } from './EmbeddingModelChangeDialog'
+import { BRANDING } from '@/config/branding'
 
 interface DefaultModelsSectionProps {
   models: Model[]
@@ -155,7 +156,7 @@ export function DefaultModelsSection({ models, defaults }: DefaultModelsSectionP
       <CardHeader>
         <CardTitle>Default Model Assignments</CardTitle>
         <CardDescription>
-          Configure which models to use for different purposes across Open Notebook
+          Configure which models to use for different purposes across {BRANDING.name}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -163,8 +164,8 @@ export function DefaultModelsSection({ models, defaults }: DefaultModelsSectionP
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Missing required models: {missingRequired.join(', ')}. 
-              Open Notebook may not function properly without these.
+              Missing required models: {missingRequired.join(', ')}.
+              {BRANDING.name} may not function properly without these.
             </AlertDescription>
           </Alert>
         )}
