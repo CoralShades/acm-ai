@@ -2,7 +2,7 @@
 
 > **Story:** E6-S3
 > **Epic:** Rebranding to ACM-AI
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,10 +23,10 @@ Update the application color scheme to a professional palette appropriate for co
 
 ## Acceptance Criteria
 
-- [ ] Primary color updated (suggested: blue/teal)
-- [ ] Accent color for risk indicators
-- [ ] Dark mode colors adjusted
-- [ ] Consistent across all components
+- [x] Primary color updated (suggested: blue/teal)
+- [x] Accent color for risk indicators
+- [x] Dark mode colors adjusted
+- [x] Consistent across all components
 
 ---
 

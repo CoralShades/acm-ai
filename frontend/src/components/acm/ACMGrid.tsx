@@ -19,14 +19,15 @@ interface ACMGridProps {
   onDelete: (record: ACMRecord) => void
 }
 
-// Custom cell renderer for risk status
+// Custom cell renderer for risk status with theme-aware colors
 function RiskStatusRenderer({ value }: { value: string | null | undefined }) {
   if (!value) return null
 
   const variants: Record<string, string> = {
-    High: 'bg-red-100 text-red-800 hover:bg-red-200',
-    Medium: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
-    Low: 'bg-green-100 text-green-800 hover:bg-green-200',
+    High: 'bg-risk-high-bg text-risk-high-foreground',
+    Medium: 'bg-risk-medium-bg text-risk-medium-foreground',
+    Low: 'bg-risk-low-bg text-risk-low-foreground',
+    Presumed: 'bg-risk-presumed-bg text-risk-presumed-foreground',
   }
 
   return (
