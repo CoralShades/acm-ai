@@ -2,7 +2,7 @@
 
 > **Story:** E6-S4
 > **Epic:** Rebranding to ACM-AI
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,10 +23,10 @@ Redesign the landing/home page to explain ACM-AI's purpose and guide new users t
 
 ## Acceptance Criteria
 
-- [ ] Hero section explains ACM-AI purpose
-- [ ] Key features listed
-- [ ] Quick start instructions visible
-- [ ] Call-to-action to upload first document
+- [x] Hero section explains ACM-AI purpose
+- [x] Key features listed
+- [x] Quick start instructions visible
+- [x] Call-to-action to upload first document
 
 ---
 

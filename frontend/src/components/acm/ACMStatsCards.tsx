@@ -54,13 +54,13 @@ export function ACMStatsCards({ stats, isLoading }: ACMStatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 flex-wrap">
-            <Badge variant="destructive" className="text-xs">
+            <Badge variant="secondary" className="text-xs bg-risk-high-bg text-risk-high-foreground">
               High: {stats.high_risk_count}
             </Badge>
-            <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
+            <Badge variant="secondary" className="text-xs bg-risk-medium-bg text-risk-medium-foreground">
               Medium: {stats.medium_risk_count}
             </Badge>
-            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 hover:bg-green-200">
+            <Badge variant="secondary" className="text-xs bg-risk-low-bg text-risk-low-foreground">
               Low: {stats.low_risk_count}
             </Badge>
           </div>
