@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { AppShell } from '@/components/layout/AppShell'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { FileText, Link as LinkIcon, Upload, AlignLeft, Trash2, ArrowUpDown } from 'lucide-react'
+import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -271,8 +272,16 @@ export default function SourcesPage() {
       <AppShell>
         <EmptyState
           icon={FileText}
-          title="No sources yet"
-          description="Sources from all notebooks will appear here"
+          title="No Documents Yet"
+          description="Upload your first SAMP document to start extracting ACM register data with AI-powered analysis."
+          action={
+            <Button asChild>
+              <Link href="/sources">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Document
+              </Link>
+            </Button>
+          }
         />
       </AppShell>
     )
