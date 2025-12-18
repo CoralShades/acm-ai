@@ -144,3 +144,4 @@ nul
 #node modules
 node_modules/
 .vercel
+frontend/.next-dev/cache/*
