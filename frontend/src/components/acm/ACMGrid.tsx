@@ -1,22 +1,29 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import { AgGridReact } from 'ag-grid-react'
 import type { ColDef, GridReadyEvent, CellClickedEvent, GridApi } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
+
+// Expose grid control methods via ref
+export interface ACMGridRef {
+  expandAll: () => void
+  collapseAll: () => void
+}
 
 interface ACMGridProps {
   records: ACMRecord[]
   isLoading?: boolean
   onEdit: (record: ACMRecord) => void
   onDelete: (record: ACMRecord) => void
+  enableGrouping?: boolean
 }
 
 // Custom cell renderer for risk status with theme-aware colors
@@ -75,9 +82,22 @@ function ActionsRenderer({
   )
 }
 
-export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) {
+export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
+  { records, isLoading, onEdit, onDelete, enableGrouping = true },
+  ref
+) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
   const [gridApi, setGridApi] = useState<GridApi<ACMRecord> | null>(null)
+
+  // Expose expand/collapse methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    expandAll: () => {
+      gridApi?.expandAll()
+    },
+    collapseAll: () => {
+      gridApi?.collapseAll()
+    },
+  }), [gridApi])
 
   const onGridReady = useCallback((params: GridReadyEvent<ACMRecord>) => {
     setGridApi(params.api)
@@ -92,6 +112,14 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 110,
         sortable: true,
         filter: true,
+        rowGroup: enableGrouping,
+        hide: enableGrouping,
+        valueFormatter: (params) => {
+          if (params.data?.building_name) {
+            return `${params.value} - ${params.data.building_name}`
+          }
+          return params.value || 'Unknown Building'
+        },
       },
       {
         field: 'building_name',
@@ -99,6 +127,7 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 150,
         sortable: true,
         filter: true,
+        hide: enableGrouping,
       },
       {
         field: 'room_id',
@@ -106,6 +135,14 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 100,
         sortable: true,
         filter: true,
+        rowGroup: enableGrouping,
+        hide: enableGrouping,
+        valueFormatter: (params) => {
+          if (params.data?.room_name) {
+            return `${params.value} - ${params.data.room_name}`
+          }
+          return params.value || 'No Room'
+        },
       },
       {
         field: 'room_name',
@@ -113,6 +150,7 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 130,
         sortable: true,
         filter: true,
+        hide: enableGrouping,
       },
       {
         field: 'product',
@@ -176,7 +214,7 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         filter: false,
       },
     ],
-    [onEdit, onDelete]
+    [onEdit, onDelete, enableGrouping]
   )
 
   const defaultColDef = useMemo<ColDef>(
@@ -186,6 +224,15 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
     }),
     []
   )
+
+  // Auto group column definition for the grouped hierarchy
+  const autoGroupColumnDef = useMemo(() => ({
+    headerName: 'Location',
+    minWidth: 280,
+    cellRendererParams: {
+      suppressCount: false,
+    },
+  }), [])
 
   const onCellClicked = useCallback(
     (event: CellClickedEvent<ACMRecord>) => {
@@ -213,6 +260,21 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
           --ag-odd-row-background-color: hsl(var(--muted) / 0.3);
           --ag-row-hover-color: hsl(var(--muted));
         }
+        /* Group row styling */
+        .ag-theme-alpine .ag-row-group {
+          background-color: hsl(var(--muted) / 0.7);
+          font-weight: 600;
+        }
+        .ag-theme-alpine .ag-row-group-expanded {
+          border-bottom: 2px solid hsl(var(--border));
+        }
+        /* Group row level indentation */
+        .ag-theme-alpine .ag-row-level-1 .ag-group-value {
+          padding-left: 8px;
+        }
+        .ag-theme-alpine .ag-row-level-2 .ag-group-value {
+          padding-left: 16px;
+        }
       `}</style>
       <AgGridReact<ACMRecord>
         ref={gridRef}
@@ -229,7 +291,12 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         paginationPageSize={50}
         paginationPageSizeSelector={[20, 50, 100]}
         domLayout="normal"
+        // Row grouping configuration
+        groupDisplayType={enableGrouping ? 'groupRows' : undefined}
+        groupDefaultExpanded={1}
+        autoGroupColumnDef={enableGrouping ? autoGroupColumnDef : undefined}
+        suppressAggFuncInHeader={true}
       />
     </div>
   )
-}
+})

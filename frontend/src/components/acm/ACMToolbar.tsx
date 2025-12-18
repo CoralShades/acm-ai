@@ -8,18 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Download, Plus, RefreshCw, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronRight, Download, Plus, RefreshCw, Sparkles } from 'lucide-react'
 
 interface ACMToolbarProps {
   onAddNew: () => void
   onExtract: () => void
   onExport: () => void
   onRefresh: () => void
+  onExpandAll?: () => void
+  onCollapseAll?: () => void
   riskFilter?: string
   onRiskFilterChange: (value: string | undefined) => void
   isExtracting?: boolean
   isExporting?: boolean
   disabled?: boolean
+  showGroupingControls?: boolean
 }
 
 export function ACMToolbar({
@@ -27,11 +30,14 @@ export function ACMToolbar({
   onExtract,
   onExport,
   onRefresh,
+  onExpandAll,
+  onCollapseAll,
   riskFilter,
   onRiskFilterChange,
   isExtracting = false,
   isExporting = false,
   disabled = false,
+  showGroupingControls = true,
 }: ACMToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 justify-between">
@@ -51,6 +57,32 @@ export function ACMToolbar({
             <SelectItem value="Low">Low Risk</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Expand/Collapse All Buttons */}
+        {showGroupingControls && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExpandAll}
+              disabled={disabled}
+              title="Expand all groups"
+            >
+              <ChevronDown className="mr-1 h-4 w-4" />
+              Expand All
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCollapseAll}
+              disabled={disabled}
+              title="Collapse all groups"
+            >
+              <ChevronRight className="mr-1 h-4 w-4" />
+              Collapse All
+            </Button>
+          </>
+        )}
 
         {/* Refresh Button */}
         <Button variant="outline" size="icon" onClick={onRefresh} disabled={disabled}>
