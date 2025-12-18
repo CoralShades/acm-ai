@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FileWarning, AlertCircle } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { ACMGrid } from './ACMGrid'
+import { ACMGrid, type ACMGridRef } from './ACMGrid'
 import { ACMRecordDialog } from './ACMRecordDialog'
 import { ACMStatsCards } from './ACMStatsCards'
 import { ACMToolbar } from './ACMToolbar'
@@ -23,6 +23,9 @@ interface ACMTabProps {
 }
 
 export function ACMTab({ sourceId }: ACMTabProps) {
+  // Refs
+  const gridRef = useRef<ACMGridRef>(null)
+
   // State
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -90,6 +93,14 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     refetchRecords()
   }, [refetchRecords])
 
+  const handleExpandAll = useCallback(() => {
+    gridRef.current?.expandAll()
+  }, [])
+
+  const handleCollapseAll = useCallback(() => {
+    gridRef.current?.collapseAll()
+  }, [])
+
   const records = recordsData?.records || []
   const hasRecords = records.length > 0
 
@@ -116,11 +127,14 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             onExtract={handleExtract}
             onExport={handleExport}
             onRefresh={handleRefresh}
+            onExpandAll={handleExpandAll}
+            onCollapseAll={handleCollapseAll}
             riskFilter={riskFilter}
             onRiskFilterChange={setRiskFilter}
             isExtracting={extractACM.isPending}
             isExporting={exportCsv.isPending}
             disabled={isLoadingRecords}
+            showGroupingControls={hasRecords}
           />
 
           {/* No Records Alert */}
@@ -139,6 +153,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
           {/* AG Grid */}
           {(hasRecords || isLoadingRecords) && (
             <ACMGrid
+              ref={gridRef}
               records={records}
               isLoading={isLoadingRecords}
               onEdit={handleEdit}

@@ -2,8 +2,9 @@
 
 > **Story:** E2-S4
 > **Epic:** AG Grid Spreadsheet Integration
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2025-12-18
 
 ---
 
@@ -23,11 +24,25 @@ Implement hierarchical row grouping in the ACM spreadsheet to organize data by B
 
 ## Acceptance Criteria
 
-- [ ] Building rows are collapsible groups
-- [ ] Room rows are nested within Building groups
-- [ ] ACM items shown as leaf rows
-- [ ] Group expand/collapse icons work
-- [ ] "Expand All" / "Collapse All" buttons available
+- [x] Building rows are collapsible groups
+- [x] Room rows are nested within Building groups
+- [x] ACM items shown as leaf rows
+- [x] Group expand/collapse icons work
+- [x] "Expand All" / "Collapse All" buttons available
+
+## Implementation Notes (2025-12-18)
+
+Row grouping was already implemented in ACMGrid.tsx with:
+- `rowGroup: true` on building_id and room_id columns
+- `groupDisplayType="groupRows"` for row-based grouping
+- `groupDefaultExpanded={1}` to expand first level by default
+- `autoGroupColumnDef` with Location header
+
+Added Expand/Collapse All buttons:
+- Added `onExpandAll` and `onCollapseAll` props to ACMToolbar
+- Added ChevronDown/ChevronRight icon buttons
+- Wired up via `useRef<ACMGridRef>` in ACMTab
+- Buttons only shown when `showGroupingControls={hasRecords}`
 
 ---
 

@@ -51,9 +51,9 @@ development_status:
   e2-s1-install-and-configure-ag-grid: done  # ag-grid-community + ag-grid-react installed
   e2-s2-create-acmspreadsheet-component: done  # ACMGrid component with full CRUD
   e2-s3-implement-column-sorting-and-filtering: done  # Built into AG Grid config
-  e2-s4-implement-row-grouping: drafted
+  e2-s4-implement-row-grouping: done  # Building/Room grouping with Expand/Collapse All buttons
   e2-s5-implement-risk-status-color-coding: done  # RiskStatusRenderer with badges
-  e2-s6-add-search-bar-to-spreadsheet: drafted
+  e2-s6-add-search-bar-to-spreadsheet: ready-for-dev
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
@@ -114,10 +114,11 @@ development_status:
 # ========
 # Total Epics: 8 (2 done, 3 in-progress, 3 backlog)
 # Total Stories: 41
-# Stories Done: 14  # E1-S1,S2,S3,S4,S5 + E2-S1,S2,S3,S5 + E5-S1 + E6-S1,S2,S3,S4
+# Stories Done: 15  # E1-S1,S2,S3,S4,S5 + E2-S1,S2,S3,S4,S5 + E5-S1 + E6-S1,S2,S3,S4
 # Stories Ready for Dev: 0
-# Stories Drafted: 27
+# Stories Drafted: 26
 # Stories Backlog: 0
 #
 # Last Updated: 2025-12-18
 # Notes: Epic 1 (ACM Data Extraction) and Epic 6 (Rebranding) COMPLETE!
+# E2-S4 Row Grouping completed with Expand/Collapse All buttons
