@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Enable standalone output for Docker deployment (skip for Vercel)
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
 
+  // Use alternative build directory if .next is locked
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+
   // API Rewrites: Proxy /api/* requests to FastAPI backend
   // This simplifies reverse proxy configuration - users only need to proxy to port 8502
   // Next.js handles internal routing to the API backend on port 5055
