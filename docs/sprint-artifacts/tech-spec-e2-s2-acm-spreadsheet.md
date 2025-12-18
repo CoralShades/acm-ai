@@ -1,7 +1,8 @@
 # Tech-Spec: E2-S2 ACMSpreadsheet Component
 
 **Created:** 2025-12-07
-**Status:** Ready for Development
+**Status:** Done
+**Completed:** 2025-12-08
 **Epic:** E2 - AG Grid Spreadsheet Integration
 **Story:** S2 - Create ACMSpreadsheet Component
 
@@ -140,27 +141,27 @@ After completing E2-S1 (Install AG Grid), these should exist:
 
 ### Acceptance Criteria
 
-- [ ] **AC1**: Component renders AG Grid with ACM columns
+- [x] **AC1**: Component renders AG Grid with ACM columns
   - Given: ACMSpreadsheet with sourceId prop
   - When: Component mounts
   - Then: AG Grid renders with defined columns
 
-- [ ] **AC2**: Fetches data from API on source selection
+- [x] **AC2**: Fetches data from API on source selection
   - Given: sourceId is provided
   - When: Component mounts
   - Then: Calls `/api/acm/records?source_id=xxx`
 
-- [ ] **AC3**: Shows loading state during fetch
+- [x] **AC3**: Shows loading state during fetch
   - Given: Data is being fetched
   - When: isLoading is true
   - Then: Loading spinner displayed
 
-- [ ] **AC4**: Shows empty state when no ACM data
+- [x] **AC4**: Shows empty state when no ACM data
   - Given: API returns empty records
   - When: Data loads
   - Then: Empty state message shown
 
-- [ ] **AC5**: Shows error state on API failure
+- [x] **AC5**: Shows error state on API failure
   - Given: API call fails
   - When: Error occurs
   - Then: Error message displayed

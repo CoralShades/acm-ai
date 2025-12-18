@@ -2,8 +2,9 @@
 
 > **Story:** E2-S1
 > **Epic:** AG Grid Spreadsheet Integration
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2025-12-08
 
 ---
 
@@ -23,10 +24,10 @@ Install AG Grid React library and configure it for use in the ACM-AI frontend, i
 
 ## Acceptance Criteria
 
-- [ ] `ag-grid-react` and `ag-grid-community` installed
-- [ ] AG Grid CSS imported and themed to match app
-- [ ] License configured (Community edition)
-- [ ] Basic grid renders in test page
+- [x] `ag-grid-react` and `ag-grid-community` installed
+- [x] AG Grid CSS imported and themed to match app
+- [x] License configured (Community edition)
+- [x] Basic grid renders in test page
 
 ---
 
