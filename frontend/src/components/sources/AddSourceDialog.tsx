@@ -23,6 +23,7 @@ import { useTransformations } from '@/lib/hooks/use-transformations'
 import { useCreateSource } from '@/lib/hooks/use-sources'
 import { useSettings } from '@/lib/hooks/use-settings'
 import { CreateSourceRequest } from '@/lib/types/api'
+import { acmApi } from '@/lib/api/acm'
 
 const MAX_BATCH_SIZE = 50
 
@@ -36,6 +37,7 @@ const createSourceSchema = z.object({
   transformations: z.array(z.string()).optional(),
   embed: z.boolean(),
   async_processing: z.boolean(),
+  enable_acm_extraction: z.boolean().optional(),
 }).refine((data) => {
   if (data.type === 'link') {
     return !!data.url && data.url.trim() !== ''
@@ -132,6 +134,7 @@ export function AddSourceDialog({
       embed: settings?.default_embedding_option === 'always' || settings?.default_embedding_option === 'ask',
       async_processing: true,
       transformations: [],
+      enable_acm_extraction: true,
     },
   })
 
@@ -153,6 +156,7 @@ export function AddSourceDialog({
         embed: embedValue,
         async_processing: true,
         transformations: [],
+        enable_acm_extraction: true,
       })
     }
   }, [settings, transformations, defaultNotebookId, reset])
@@ -312,7 +316,18 @@ export function AddSourceDialog({
       requestWithFile.file = file
     }
 
-    await createSource.mutateAsync(createRequest)
+    const createdSource = await createSource.mutateAsync(createRequest)
+
+    // Trigger ACM extraction if enabled
+    if (data.enable_acm_extraction && createdSource?.id) {
+      try {
+        await acmApi.extract(createdSource.id)
+        toast.success('ACM extraction started')
+      } catch (error) {
+        console.error('Failed to trigger ACM extraction:', error)
+        toast.error('Source created but ACM extraction failed to start')
+      }
+    }
   }
 
   // Batch submission
@@ -361,8 +376,17 @@ export function AddSourceDialog({
           requestWithFile.file = item.value as File
         }
 
-        await createSource.mutateAsync(createRequest)
+        const createdSource = await createSource.mutateAsync(createRequest)
         results.success++
+
+        // Trigger ACM extraction if enabled
+        if (data.enable_acm_extraction && createdSource?.id) {
+          try {
+            await acmApi.extract(createdSource.id)
+          } catch (acmError) {
+            console.error(`ACM extraction failed for ${itemLabel}:`, acmError)
+          }
+        }
       } catch (error) {
         console.error(`Error creating source for ${itemLabel}:`, error)
         results.failed++

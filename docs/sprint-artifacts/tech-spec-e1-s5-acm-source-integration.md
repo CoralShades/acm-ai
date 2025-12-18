@@ -2,7 +2,7 @@
 
 > **Story:** E1-S5
 > **Epic:** ACM Data Extraction Pipeline
-> **Status:** Ready for Dev
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,10 +23,10 @@ Integrate ACM extraction transformation into the existing source processing pipe
 
 ## Acceptance Criteria
 
-- [ ] Option to enable ACM extraction on source upload
-- [ ] Processing status shown during extraction
-- [ ] Errors handled gracefully with user feedback
-- [ ] Can re-run extraction if needed
+- [x] Option to enable ACM extraction on source upload
+- [x] Processing status shown during extraction
+- [x] Errors handled gracefully with user feedback
+- [x] Can re-run extraction if needed
 
 ---
 

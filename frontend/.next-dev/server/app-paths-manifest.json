@@ -1,0 +1,6 @@
+{
+  "/config/route": "app/config/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/(dashboard)/notebooks/page": "app/(dashboard)/notebooks/page.js",
+  "/(dashboard)/acm/page": "app/(dashboard)/acm/page.js"
+}

@@ -1,0 +1,19 @@
+{
+  "..\\node_modules\\next\\dist\\client\\dev\\hot-reloader\\app\\use-websocket.js -> @vercel/turbopack-ecmascript-runtime/browser/dev/hmr-client/hmr-client.ts": {
+    "id": "..\\node_modules\\next\\dist\\client\\dev\\hot-reloader\\app\\use-websocket.js -> @vercel/turbopack-ecmascript-runtime/browser/dev/hmr-client/hmr-client.ts",
+    "files": [
+      "static/chunks/_app-pages-browser_node_modules_next_dist_client_dev_noop-turbopack-hmr_js.js"
+    ]
+  },
+  "components\\ui\\markdown-editor.tsx -> @uiw/react-md-editor": {
+    "id": "components\\ui\\markdown-editor.tsx -> @uiw/react-md-editor",
+    "files": [
+      "static/css/_app-pages-browser_node_modules_uiw_react-md-editor_esm_index_js.css",
+      "static/chunks/_app-pages-browser_node_modules_uiw_react-md-editor_esm_index_js.js"
+    ]
+  },
+  "lib\\hooks\\use-sources.ts -> @/lib/api/notebooks": {
+    "id": "lib\\hooks\\use-sources.ts -> @/lib/api/notebooks",
+    "files": []
+  }
+}

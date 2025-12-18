@@ -38,12 +38,12 @@ story_location: docs/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  epic-1: in-progress
+  epic-1: done  # All stories completed 2025-12-18
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
-  e1-s5-integrate-acm-extraction-into-source-processing: ready-for-dev
+  e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -112,12 +112,12 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 8 (1 done, 4 in-progress, 3 backlog)
+# Total Epics: 8 (2 done, 3 in-progress, 3 backlog)
 # Total Stories: 41
-# Stories Done: 13  # E1-S1,S2,S3,S4 + E2-S1,S2,S3,S5 + E5-S1 + E6-S1,S2,S3,S4
-# Stories Ready for Dev: 1  # E1-S5
+# Stories Done: 14  # E1-S1,S2,S3,S4,S5 + E2-S1,S2,S3,S5 + E5-S1 + E6-S1,S2,S3,S4
+# Stories Ready for Dev: 0
 # Stories Drafted: 27
 # Stories Backlog: 0
 #
 # Last Updated: 2025-12-18
-# Notes: Epic 6 (Rebranding) COMPLETE! All 4 stories done.
+# Notes: Epic 1 (ACM Data Extraction) and Epic 6 (Rebranding) COMPLETE!

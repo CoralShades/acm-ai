@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: `%s | ${BRANDING.name}`,
   },
   description: BRANDING.description,
-  keywords: BRANDING.keywords,
+  keywords: [...BRANDING.keywords],
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },
