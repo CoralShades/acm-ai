@@ -139,6 +139,11 @@ specs/
 .bmad/
 .github/agents
 nul
+.agent/
+.codex/
+.opencode/
+_bmad/
+.gemini/
 
 
 #node modules

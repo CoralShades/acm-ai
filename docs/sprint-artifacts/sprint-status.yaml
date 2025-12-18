@@ -38,12 +38,13 @@ story_location: docs/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  epic-1: done  # All stories completed 2025-12-18
+  epic-1: in-progress  # E1-S6 (local embeddings) added - reopened
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
   e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
+  e1-s6-configure-local-embedding-pipeline: drafted  # Tech-spec created with Esperanto/Ollama integration
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -54,6 +55,7 @@ development_status:
   e2-s4-implement-row-grouping: done  # Building/Room grouping with Expand/Collapse All buttons
   e2-s5-implement-risk-status-color-coding: done  # RiskStatusRenderer with badges
   e2-s6-add-search-bar-to-spreadsheet: ready-for-dev
+  e2-s7-implement-building-tab-navigation: drafted  # Tech-spec created
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
@@ -110,15 +112,36 @@ development_status:
   e8-s10-dark-mode-refinement: drafted
   epic-8-retrospective: optional
 
+  # Epic 9: Document Library Management (P0) - NEW
+  epic-9: backlog
+  e9-s1-create-document-library-view: drafted  # Tech-spec created
+  e9-s2-document-processing-status-dashboard: drafted  # Tech-spec created
+  e9-s3-document-actions-and-bulk-operations: drafted  # Tech-spec created
+  epic-9-retrospective: optional
+
+  # Epic 10: ACM-AI UI Simplification (P0) - NEW
+  epic-10: backlog
+  e10-s1-simplify-navigation: drafted  # Tech-spec created
+  epic-10-retrospective: optional
+
 # SUMMARY:
 # ========
-# Total Epics: 8 (2 done, 3 in-progress, 3 backlog)
-# Total Stories: 41
+# Total Epics: 10 (1 done, 2 in-progress, 7 backlog)
+# Total Stories: 47
 # Stories Done: 15  # E1-S1,S2,S3,S4,S5 + E2-S1,S2,S3,S4,S5 + E5-S1 + E6-S1,S2,S3,S4
-# Stories Ready for Dev: 0
-# Stories Drafted: 26
-# Stories Backlog: 0
+# Stories Ready for Dev: 1  # E2-S6
+# Stories Drafted: 32  # All new stories now have tech-specs
+# Stories Backlog: 0  # All stories now have at least draft status
 #
-# Last Updated: 2025-12-18
-# Notes: Epic 1 (ACM Data Extraction) and Epic 6 (Rebranding) COMPLETE!
-# E2-S4 Row Grouping completed with Expand/Collapse All buttons
+# Last Updated: 2025-12-19
+# Notes:
+# - Epic 6 (Rebranding) COMPLETE!
+# - NEW: Added E1-S6 (Local Embeddings), E2-S7 (Building Tabs), Epic 9 (Document Library)
+# - NEW: Added Epic 10 (UI Simplification) - E10-S1 to focus on ACM workflow
+# - ALL NEW STORIES NOW HAVE TECH-SPECS:
+#   - E1-S6: Local embedding pipeline using Esperanto/Ollama
+#   - E2-S7: Building tab navigation
+#   - E9-S1: Document library view
+#   - E9-S2: Processing status dashboard
+#   - E9-S3: Document actions and bulk operations
+#   - E10-S1: UI simplification for ACM focus
