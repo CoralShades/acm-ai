@@ -10,14 +10,16 @@
 
 | Epic | Title | Priority | Stories |
 |------|-------|----------|---------|
-| E1 | ACM Data Extraction Pipeline | P0 | 5 |
-| E2 | AG Grid Spreadsheet Integration | P0 | 6 |
+| E1 | ACM Data Extraction Pipeline | P0 | 6 |
+| E2 | AG Grid Spreadsheet Integration | P0 | 7 |
 | E3 | Cell Citations & PDF Viewer | P0 | 4 |
 | E4 | Chat with ACM Context | P0 | 4 |
 | E5 | Export Functionality | P1 | 2 |
 | E6 | Rebranding to ACM-AI | P1 | 4 |
 | **E7** | **Upload Wizard** | **P0** | **6** |
 | **E8** | **UI Refresh (Bento Grid)** | **P1** | **10** |
+| **E9** | **Document Library Management** | **P0** | **3** |
+| **E10** | **ACM-AI UI Simplification** | **P0** | **1** |
 
 ---
 
@@ -111,6 +113,28 @@
 **Technical Notes:**
 - Modify `commands/source_commands.py`
 - Add ACM extraction as optional transformation
+
+---
+
+### E1-S6: Configure Local Embedding Pipeline
+**As a** developer
+**I want** to configure local embedding models for ACM data vectorization
+**So that** semantic search works without external API calls (privacy requirement)
+
+**Acceptance Criteria:**
+- [ ] Local embedding model selected and configured (e.g., sentence-transformers, nomic-embed)
+- [ ] Embedding pipeline integrated with ACM record creation
+- [ ] Page content vectorized and stored in SurrealDB vector fields
+- [ ] Semantic search API endpoint for ACM records
+- [ ] Configuration option to choose between local and cloud embeddings
+- [ ] Performance benchmarks documented (embedding speed, search latency)
+
+**Technical Notes:**
+- Location: `open_notebook/graphs/embeddings/` or new module
+- Use Esperanto abstraction for model provider flexibility
+- SurrealDB supports vector fields natively
+- Consider batch embedding for large documents
+- Reference: NFR-201 (local processing requirement)
 
 ---
 
@@ -220,6 +244,30 @@
 **Technical Notes:**
 - Use AG Grid Quick Filter API
 - `api.setQuickFilter(searchText)`
+
+---
+
+### E2-S7: Implement Building Tab Navigation
+**As a** user
+**I want** ACM data organized by building tabs
+**So that** I can quickly navigate between buildings in a school
+
+**Acceptance Criteria:**
+- [ ] Tab bar above spreadsheet showing all buildings (e.g., B00A, B00B, B00C)
+- [ ] Tab shows building code and record count (e.g., "B00A (4)")
+- [ ] Clicking tab filters grid to show only that building's records
+- [ ] "All Buildings" tab option to show combined view
+- [ ] Active tab visually highlighted
+- [ ] Tabs auto-generated from ACM data (no hardcoding)
+- [ ] Smooth transition when switching tabs
+- [ ] Remember last selected tab per source (session persistence)
+
+**Technical Notes:**
+- Location: `frontend/src/components/acm/BuildingTabs.tsx`
+- Use Radix UI Tabs or similar accessible component
+- Filter grid data client-side for performance
+- Consider: group by building_id field from ACM records
+- Reference: Existing MVP at acm.coralshades.ai uses this pattern
 
 ---
 
@@ -476,19 +524,29 @@
 ## Story Dependencies
 
 ```
-E1-S1 → E1-S2 → E1-S3 → E1-S4 → E1-S5
+E1-S1 → E1-S2 → E1-S3 → E1-S4 → E1-S5 → E1-S6 (embeddings)
                   ↓
-E2-S1 → E2-S2 → E2-S3/S4/S5/S6
+E2-S1 → E2-S2 → E2-S3/S4/S5/S6 → E2-S7 (building tabs)
                   ↓
 E3-S1 → E3-S2 → E3-S3
    ↑
 E1-S3 (page numbers) → E3-S4
 
 E4-S1 → E4-S2 → E4-S3 → E4-S4
+   ↑
+E1-S6 (semantic search requires embeddings)
 
 E2-S2 → E5-S1 → E5-S2
 
 E6-S1/S2/S3/S4 (independent, can be done anytime)
+
+E7-S1 → E7-S2 → E7-S3 → E7-S4 → E7-S5 → E7-S6
+
+E8-S1/S2 → E8-S3/S4 → E8-S5/S6/S7/S8/S9/S10
+
+E1-S4 → E9-S1 → E9-S2 → E9-S3 (document management depends on ACM API)
+
+E10-S1 (independent, can be done anytime - early recommended for UI focus)
 ```
 
 ---
@@ -496,21 +554,27 @@ E6-S1/S2/S3/S4 (independent, can be done anytime)
 ## MVP Scope Summary
 
 **Must Have (MVP):**
-- E1: All stories (extraction pipeline)
-- E2: S1-S4 (core spreadsheet)
+- E1: S1-S5 (extraction pipeline core)
+- E2: S1-S4, S7 (core spreadsheet + building tabs)
 - E3: S1-S3 (citations)
 - E4: S1, S3 (basic chat integration)
 - E6: S1 (basic rebrand)
+- E7: S1-S6 (upload wizard - complete)
+- E9: S1 (document library view)
+- E10: S1 (UI simplification - focus on ACM workflow)
 
 **Should Have:**
+- E1: S6 (local embeddings for privacy)
 - E2: S5, S6 (polish)
 - E3: S4 (page numbers)
 - E4: S2, S4 (chat polish)
 - E5: S1 (CSV export)
 - E6: S2-S4 (full rebrand)
+- E9: S2, S3 (processing status, bulk actions)
 
 **Could Have:**
 - E5: S2 (Excel export)
+- E8: All stories (UI refresh - nice to have)
 
 ---
 
@@ -799,3 +863,110 @@ E6-S1/S2/S3/S4 (independent, can be done anytime)
 
 **Technical Notes:**
 - Update CSS variables in `globals.css`
+
+---
+
+## Epic 9: Document Library Management
+
+### E9-S1: Create Document Library View
+**As a** user
+**I want** a dedicated view to manage all my uploaded documents
+**So that** I can organize, monitor, and maintain my ACM document collection
+
+**Acceptance Criteria:**
+- [ ] Document Library page accessible from main navigation
+- [ ] Grid/List view toggle for document display
+- [ ] Show for each document: name, type, upload date, processing status, ACM record count
+- [ ] Filter by: document type (SAMP, ACM Register, Other), processing status, date range
+- [ ] Sort by: name, date, type, record count
+- [ ] Search documents by name or content keywords
+- [ ] Bulk selection with multi-select checkboxes
+- [ ] Quick actions: View, Re-process, Delete, Download original
+
+**Technical Notes:**
+- Location: `frontend/src/app/(dashboard)/documents/page.tsx`
+- Reuse existing Source model, extend with ACM-specific metadata
+- Consider: separate route vs enhanced Sources page
+- Reference: PRD Section 4.1 mentions Sources panel but lacks dedicated management
+
+---
+
+### E9-S2: Document Processing Status Dashboard
+**As a** user
+**I want** to see real-time processing status for all documents
+**So that** I know what's being processed and can identify failures
+
+**Acceptance Criteria:**
+- [ ] Processing queue visualization (pending, in-progress, completed, failed)
+- [ ] Real-time status updates via polling or WebSocket
+- [ ] Progress percentage for documents being processed
+- [ ] Estimated time remaining for large documents
+- [ ] Error details with actionable messages for failures
+- [ ] Retry button for failed documents
+- [ ] Cancel button for in-progress documents
+- [ ] Processing history log
+
+**Technical Notes:**
+- Location: `frontend/src/components/documents/ProcessingStatus.tsx`
+- Backend: extend existing source processing to emit status events
+- Consider: use React Query for polling or integrate WebSocket for real-time
+- Reference: E7-S6 covers upload progress, this extends to full lifecycle
+
+---
+
+### E9-S3: Document Actions and Bulk Operations
+**As a** user
+**I want** to perform actions on documents individually and in bulk
+**So that** I can efficiently manage my document collection
+
+**Acceptance Criteria:**
+- [ ] Individual document actions: View details, Open spreadsheet, Re-extract ACM, Delete
+- [ ] Bulk actions: Delete selected, Re-process selected, Export selected
+- [ ] Confirmation dialogs for destructive actions
+- [ ] Progress feedback for bulk operations
+- [ ] Undo capability for recent deletions (soft delete with grace period)
+- [ ] Archive functionality (hide without delete)
+- [ ] Document metadata editing (rename, add tags/notes)
+
+**Technical Notes:**
+- Location: `frontend/src/components/documents/DocumentActions.tsx`
+- Backend: Add bulk operation endpoints to ACM API
+- Consider: optimistic updates for better UX
+- Reference: Existing MVP has basic actions, this adds comprehensive management
+
+---
+
+## Epic 10: ACM-AI UI Simplification
+
+### E10-S1: Simplify Navigation for ACM-AI Focus
+**As a** user
+**I want** a simplified UI focused on ACM document management
+**So that** I'm not distracted by features irrelevant to my ACM compliance workflow
+
+**Acceptance Criteria:**
+- [ ] Hide "Notebooks" navigation item (not needed for ACM workflow)
+- [ ] Hide "Podcasts" navigation item (not relevant to compliance)
+- [ ] Hide "Transformations" navigation item (advanced feature, not POC scope)
+- [ ] Hide "Advanced" navigation item (developer features)
+- [ ] Keep "Sources" navigation (document management)
+- [ ] Keep "ACM Register" navigation (core functionality)
+- [ ] Keep "Ask and Search" navigation (semantic search for compliance questions)
+- [ ] Keep "Models" navigation (AI model configuration for local inference)
+- [ ] Keep "Settings" navigation (user preferences)
+- [ ] Navigation items hidden via feature flag or environment config
+- [ ] Hidden items easily re-enabled via configuration (no hard delete)
+- [ ] UI feels cohesive with reduced navigation (no empty groups)
+
+**Technical Notes:**
+- Location: `frontend/src/components/layout/AppSidebar.tsx`
+- Implementation options:
+  - Environment variable: `NEXT_PUBLIC_ACM_MODE=true`
+  - Feature flag in settings
+  - Conditional rendering in navigation config
+- Keep hidden component code intact for future re-enablement
+- Group navigation items logically after reduction:
+  - "Documents": Sources
+  - "ACM": ACM Register
+  - "Search": Ask and Search
+  - "Settings": Models, Settings
+- Reference: Analysis of `AppSidebar.tsx` navigation structure
