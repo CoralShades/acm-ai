@@ -15,6 +15,19 @@
         "npx",
         "chrome-devtools-mcp@latest"
       ]
+    },
+    "n8n-mcp": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "supergateway",
+        "--streamableHttp",
+        "https://n8n-prod.coralshades.ai/mcp-server/http",
+        "--header",
+        "authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDBiYzkyMS0zMTJiLTQxZmEtYTQ1NC0zNDY2MjlmOWYxMzkiLCJpc3MiOiJuOG4iLCJhdWQiOiJtY3Atc2VydmVyLWFwaSIsImp0aSI6IjU3M2Q2OTkwLWM3YmUtNDQ5Yi1iZDQ1LTQ2NWI2YTFlYWJmOCIsImlhdCI6MTc2NjIwODkyNX0.8ihBiccXLHt1g4p15PRyHnDqssKZdfJitngd2S5s4yA"
+      ]
     }
   }
 }
