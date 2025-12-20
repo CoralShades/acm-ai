@@ -45,7 +45,7 @@ development_status:
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
   e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
   e1-s6-configure-local-embedding-pipeline: drafted  # Tech-spec created with Esperanto/Ollama integration
-  e1-s7-ai-powered-acm-extraction: drafted  # Tech-spec created 2025-12-20 - replaces regex with LLM extraction
+  e1-s7-ai-powered-acm-extraction: review  # Code review fixes complete 2025-12-20 - all 10 review items addressed
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -128,10 +128,11 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 10 (1 done, 3 in-progress, 6 backlog)
-# Total Stories: 48  # Added E1-S7 (AI-Powered ACM Extraction)
+# Total Stories: 48
 # Stories Done: 16  # E1-S1,S2,S3,S4,S5 + E2-S1,S2,S3,S4,S5,S6 + E5-S1 + E6-S1,S2,S3,S4
+# Stories In Review: 1  # E1-S7 (code review fixes complete)
 # Stories Ready for Dev: 0
-# Stories Drafted: 32  # All remaining stories have tech-specs
+# Stories Drafted: 31  # All remaining stories have tech-specs
 # Stories Backlog: 0  # All stories now have at least draft status
 #
 # Last Updated: 2025-12-20
@@ -139,11 +140,10 @@ development_status:
 # Progress: 33% complete (16/48 stories done)
 #
 # NEXT RECOMMENDED ACTION:
-# Run `/bmad:bmm:workflows:dev-story` for e1-s7-ai-powered-acm-extraction (drafted)
-# or e2-s7-building-tab-navigation (drafted)
+# Run second code review on e1-s7-ai-powered-acm-extraction or mark as done
+# or promote e2-s7-building-tab-navigation to ready-for-dev
 #
 # Notes:
 # - Epic 6 (Rebranding) COMPLETE!
 # - Epic 1, 2, 5 in-progress
-# - All stories have tech-specs drafted
-# - NEW: E1-S7 AI-Powered ACM Extraction tech-spec added (Party Mode reviewed)
+# - E1-S7: All 10 code review items addressed, ready for final approval

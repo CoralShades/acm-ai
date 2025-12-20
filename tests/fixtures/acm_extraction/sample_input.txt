@@ -1,0 +1,41 @@
+# Test School - Asbestos Register
+
+--- Page 1 ---
+
+## Building: A1 - Administration Block - 1965 - Brick
+
+### Interior
+
+#### Room: A1-R001 - Main Office - 45.5m²
+
+| Product | Material Description | Extent | Location | Friable | Material Condition | Risk Status | Result |
+|---------|---------------------|--------|----------|---------|-------------------|-------------|--------|
+| Floor Tiles | Vinyl asbestos tiles, 9x9 inch, grey/white mottled | 45m² | Floor | Non Friable | Good | Low | Detected |
+| Pipe Lagging | Cement-bound pipe insulation on heating pipes | Sections | Under floor | Non Friable | Fair | Medium | Detected |
+
+#### Room: A1-R002 - Reception - 30.0m²
+
+| Product | Material Description | Extent | Location | Friable | Material Condition | Risk Status | Result |
+|---------|---------------------|--------|----------|---------|-------------------|-------------|--------|
+| Ceiling Tiles | Acoustic ceiling tiles, 2x4 ft | 30m² | Ceiling | Non Friable | Good | Low | Not Detected |
+
+--- Page 2 ---
+
+## Building: B1 - Science Wing - 1972 - Concrete
+
+### Interior
+
+#### Room: B1-R001 - Chemistry Lab - 80.0m²
+
+| Product | Material Description | Extent | Location | Friable | Material Condition | Risk Status | Result |
+|---------|---------------------|--------|----------|---------|-------------------|-------------|--------|
+| Fume Hood Lining | Cement sheet fume hood panels | 3 units | Bench tops | Non Friable | Fair | Medium | Detected |
+| Bench Tops | Cement sheet laboratory bench surfaces | 12m² | Benches | Non Friable | Good | Low | Presumed |
+
+### Exterior
+
+#### Room: B1-EXT - External Walls
+
+| Product | Material Description | Extent | Location | Friable | Material Condition | Risk Status | Result |
+|---------|---------------------|--------|----------|---------|-------------------|-------------|--------|
+| Eaves Lining | Fibro cement eaves soffit lining | 50m linear | Eaves | Non Friable | Poor | High | Detected |
