@@ -404,7 +404,7 @@ class TestACMRecordDomain:
         assert record.friable is None
 
     def test_confidence_range_valid(self):
-        """Test extraction_confidence accepts valid range 0-1."""
+        """Test extraction_confidence accepts valid string values: high, medium, low."""
         record = ACMRecord(
             source_id="source:123",
             school_name="Test School",
@@ -412,13 +412,14 @@ class TestACMRecordDomain:
             product="Tiles",
             material_description="Vinyl tiles",
             result="Detected",
-            extraction_confidence=0.95,
+            extraction_confidence="high",
         )
-        assert record.extraction_confidence == 0.95
+        assert record.extraction_confidence == "high"
 
     def test_confidence_range_invalid(self):
-        """Test extraction_confidence rejects values outside 0-1."""
-        with pytest.raises(ValidationError):
+        """Test extraction_confidence rejects invalid string values."""
+        from open_notebook.exceptions import InvalidInputError
+        with pytest.raises(InvalidInputError):
             ACMRecord(
                 source_id="source:123",
                 school_name="Test School",
@@ -426,7 +427,7 @@ class TestACMRecordDomain:
                 product="Tiles",
                 material_description="Vinyl tiles",
                 result="Detected",
-                extraction_confidence=1.5,  # Out of range
+                extraction_confidence="invalid",  # Not valid - must be high/medium/low
             )
 
     def test_table_name(self):
@@ -456,7 +457,7 @@ class TestACMRecordDomain:
             risk_status="Medium",
             result="Detected",
             page_number=15,
-            extraction_confidence=0.92,
+            extraction_confidence="high",
         )
         assert record.school_code == "TS001"
         assert record.building_year == 1985

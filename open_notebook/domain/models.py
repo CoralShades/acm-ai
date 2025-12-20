@@ -39,6 +39,7 @@ class DefaultModels(RecordModel):
     # default_vision_model: Optional[str]
     default_embedding_model: Optional[str] = None
     default_tools_model: Optional[str] = None
+    default_extraction_model: Optional[str] = None  # E1-S7: AI-powered ACM extraction
 
     @classmethod
     async def get_instance(cls) -> "DefaultModels":
@@ -179,6 +180,12 @@ class ModelManager:
         elif model_type == "tools":
             model_id = (
                 defaults.default_tools_model or defaults.default_chat_model
+            )
+        elif model_type == "extraction":
+            # E1-S7: AI-powered ACM extraction
+            model_id = (
+                defaults.default_extraction_model
+                or defaults.default_chat_model
             )
         elif model_type == "embedding":
             model_id = defaults.default_embedding_model

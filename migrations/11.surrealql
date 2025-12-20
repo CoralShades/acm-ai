@@ -1,0 +1,26 @@
+-- Migration 11: Add AI-Powered ACM Extraction Fields
+-- Story: E1-S7 AI-Powered ACM Extraction
+-- Adds new fields for enhanced extraction with confidence scoring and data quality tracking
+
+-- Remove old extraction_confidence field (was float, now string enum)
+REMOVE FIELD IF EXISTS extraction_confidence ON TABLE acm_record;
+
+-- AI Extraction: New data fields
+DEFINE FIELD IF NOT EXISTS disturbance_potential ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS sample_no ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS sample_result ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS identifying_company ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS quantity ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS acm_labelled ON TABLE acm_record TYPE option<bool>;
+DEFINE FIELD IF NOT EXISTS acm_label_details ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS hygienist_recommendations ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS psb_supplied_acm_id ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS removal_status ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS date_of_removal ON TABLE acm_record TYPE option<string>;
+
+-- AI Extraction: Metadata fields
+DEFINE FIELD IF NOT EXISTS extraction_confidence ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS data_issues ON TABLE acm_record TYPE option<array<string>>;
+
+-- Index for filtering by extraction confidence
+DEFINE INDEX IF NOT EXISTS idx_acm_extraction_confidence ON TABLE acm_record COLUMNS extraction_confidence;

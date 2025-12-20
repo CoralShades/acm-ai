@@ -19,3 +19,68 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # =============================================================================
+  # OLLAMA - Local AI Models (OPTIONAL)
+  # =============================================================================
+  # Use profiles to enable Ollama based on your hardware:
+  #
+  #   Office laptop (no GPU):     docker compose --profile ollama-cpu up -d
+  #   Developer machine (GPU):    docker compose --profile ollama-gpu up -d
+  #   No local AI needed:         docker compose up -d  (skips Ollama entirely)
+  #
+  # After starting, pull models:
+  #   docker exec acm-ai-ollama ollama pull qwen3
+  #   docker exec acm-ai-ollama ollama pull mxbai-embed-large
+  #
+  # Then set in .env: OLLAMA_API_BASE=http://ollama:11434
+  # =============================================================================
+
+  # Ollama CPU-only (for office laptops, VMs, or machines without NVIDIA GPU)
+  ollama-cpu:
+    image: ollama/ollama:latest
+    container_name: acm-ai-ollama
+    profiles:
+      - ollama-cpu
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Ollama with NVIDIA GPU acceleration (for developer machines with GPU)
+  ollama-gpu:
+    image: ollama/ollama:latest
+    container_name: acm-ai-ollama
+    profiles:
+      - ollama-gpu
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  ollama_data:
+    name: acm-ai-ollama-data

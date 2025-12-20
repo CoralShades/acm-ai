@@ -6,10 +6,18 @@ Each record links to a source document and captures the hierarchical
 structure: School > Building > Room > ACM Item.
 """
 
-from typing import ClassVar, List, Optional
+from enum import Enum
+from typing import ClassVar, List, Literal, Optional
 
 from loguru import logger
 from pydantic import Field, field_validator
+
+
+class ExtractionConfidence(str, Enum):
+    """Confidence level for extracted ACM records."""
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
 
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.base import ObjectModel
@@ -58,6 +66,63 @@ class ACMRecord(ObjectModel):
     # Citation support
     page_number: Optional[int] = None
 
+    # New fields for AI-powered extraction (Task 1: E1-S7)
+    # All optional for backwards compatibility with existing records
+    disturbance_potential: Optional[str] = Field(
+        default=None,
+        description="Likelihood of material disturbance (e.g., 'Low', 'Medium', 'High')"
+    )
+    sample_no: Optional[str] = Field(
+        default=None,
+        description="Sample identification number from lab testing"
+    )
+    sample_result: Optional[str] = Field(
+        default=None,
+        description="Laboratory analysis result for the sample"
+    )
+    identifying_company: Optional[str] = Field(
+        default=None,
+        description="Hygiene consulting company that performed the inspection"
+    )
+    quantity: Optional[str] = Field(
+        default=None,
+        description="Amount or extent of the material (e.g., '10 m²', '5 linear meters')"
+    )
+    acm_labelled: Optional[bool] = Field(
+        default=None,
+        description="Whether the ACM has been labeled on-site"
+    )
+    acm_label_details: Optional[str] = Field(
+        default=None,
+        description="Details about the ACM labeling (e.g., label type, date)"
+    )
+    hygienist_recommendations: Optional[str] = Field(
+        default=None,
+        description="Recommendations from the hygienist for this material"
+    )
+    psb_supplied_acm_id: Optional[str] = Field(
+        default=None,
+        description="Unique identifier supplied by PSB (if applicable)"
+    )
+    removal_status: Optional[str] = Field(
+        default=None,
+        description="Removal status (e.g., 'N/A', 'Pending', 'Complete', 'Encapsulated')"
+    )
+    date_of_removal: Optional[str] = Field(
+        default=None,
+        description="Date when the material was removed (if applicable)"
+    )
+
+    # Extraction metadata
+    extraction_confidence: Optional[str] = Field(
+        default=None,
+        description="Confidence level of the extraction: 'high', 'medium', or 'low'"
+    )
+    data_issues: Optional[List[str]] = Field(
+        default=None,
+        description="List of data quality issues identified during extraction"
+    )
+
     # Validators for required fields
     @field_validator("source_id", mode="before")
     @classmethod
@@ -103,6 +168,20 @@ class ACMRecord(ObjectModel):
         if not v or not v.strip():
             raise InvalidInputError("result cannot be empty")
         return v.strip()
+
+    @field_validator("extraction_confidence")
+    @classmethod
+    def validate_extraction_confidence(cls, v):
+        """Validate extraction_confidence is one of: high, medium, low."""
+        if v is None:
+            return v
+        valid_values = {"high", "medium", "low"}
+        v_lower = v.lower().strip() if isinstance(v, str) else v
+        if v_lower not in valid_values:
+            raise InvalidInputError(
+                f"extraction_confidence must be one of {valid_values}, got '{v}'"
+            )
+        return v_lower
 
     # Class methods for filtered queries
     @classmethod
