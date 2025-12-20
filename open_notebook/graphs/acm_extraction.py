@@ -2,7 +2,7 @@
 ACM Extraction LangGraph Workflow
 
 AI-powered extraction of Asbestos Containing Material (ACM) records from
-PDF documents processed by Docling.
+PDF documents processed by content-core (PyMuPDF).
 
 Story: E1-S7 AI-Powered ACM Extraction
 """
@@ -11,7 +11,7 @@ import asyncio
 import hashlib
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ai_prompter import Prompter
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -23,6 +23,14 @@ from typing_extensions import TypedDict
 
 from open_notebook.domain.acm import ACMRecord
 from open_notebook.domain.notebook import Source
+from open_notebook.extractors.acm_debug import (
+    acm_debug,
+    debug_config,
+    dump_content_to_file,
+    dump_prompt_to_file,
+    log_extraction_preview,
+    log_prompt_preview,
+)
 from open_notebook.extractors.acm_schemas import (
     ACMExtractionOutput,
     ACMExtractionRecord,
@@ -42,6 +50,71 @@ RETRY_DELAYS = [1, 2, 4]  # Exponential backoff in seconds
 # Chunking constants (for when no page markers exist)
 CHARS_PER_TOKEN_ESTIMATE = 4  # Approximate characters per token for chunking
 CHUNK_OVERLAP_CHARS = 500  # Overlap between chunks to preserve context
+
+
+def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
+    """
+    Pre-process ACM document content to help LLM understand the structure.
+
+    The content from PyMuPDF/content-core often comes in vertical format where
+    table columns are stacked vertically. This function:
+    1. Identifies room/building headers
+    2. Groups related content together
+    3. Adds structural markers to help LLM parsing
+
+    Returns:
+        Tuple of (processed_content, metadata_dict)
+    """
+    metadata = {
+        "original_length": len(content),
+        "rooms_found": 0,
+        "acm_indicators_found": 0,
+        "no_asbestos_found": 0,
+    }
+
+    # Count key patterns for metadata
+    metadata["acm_indicators_found"] = content.count("Asbestos-containing")
+    metadata["no_asbestos_found"] = content.count("No Asbestos")
+
+    # Room header pattern: B009 - R0005 - General Storeroom - 6.61 m2
+    room_pattern = r"(B\d{3}\s*-\s*R\d{4,5}\s*-\s*[^-\n]+\s*-\s*[\d.]+\s*m2)"
+    rooms = re.findall(room_pattern, content)
+    metadata["rooms_found"] = len(rooms)
+
+    # Building header pattern: B009 - Special Purpose - 1950 - Steel
+    building_pattern = r"(B\d{3}\s*-\s*[A-Za-z][^-\n]+\s*-\s*\d{4}\s*-\s*[A-Za-z]+)"
+    buildings = re.findall(building_pattern, content)
+
+    if debug_config.DEBUG_ENABLED:
+        acm_debug(f"Pre-process found: {len(rooms)} rooms, {len(buildings)} buildings")
+        acm_debug(f"ACM indicators: {metadata['acm_indicators_found']}, No Asbestos: {metadata['no_asbestos_found']}")
+
+    # Add section markers to help LLM understand structure
+    processed = content
+
+    # Mark building headers clearly
+    for building in buildings:
+        marker = f"\n\n=== BUILDING: {building} ===\n"
+        processed = processed.replace(building, marker + building)
+
+    # Mark room headers clearly
+    for room in rooms:
+        marker = f"\n--- ROOM: {room} ---\n"
+        processed = processed.replace(room, marker + room)
+
+    # Mark ACM result patterns
+    processed = processed.replace(
+        "Asbestos-containing\nmaterial",
+        ">>> ACM DETECTED: Asbestos-containing material <<<"
+    )
+    processed = processed.replace(
+        "Asbestos-containing material",
+        ">>> ACM DETECTED: Asbestos-containing material <<<"
+    )
+
+    metadata["processed_length"] = len(processed)
+
+    return processed, metadata
 
 
 class ExtractionState(TypedDict):
@@ -208,18 +281,32 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
             "context": BuildingRoomContext(),
         }
 
+    # Debug: Log content preview and dump to file
+    source_id = str(source.id) if source.id else "unknown"
+    log_extraction_preview(content, source_id)
+    dump_content_to_file(content, source_id, "raw_content")
+
+    # Pre-process content to add structural markers
+    processed_content, preprocess_meta = _preprocess_acm_content(content)
+
+    if debug_config.DEBUG_ENABLED:
+        acm_debug(f"Pre-processing complete: {preprocess_meta}")
+        dump_content_to_file(processed_content, source_id, "processed_content")
+
     # Initialize context from source metadata
     context = BuildingRoomContext()
     if source.title:
         context.school_name = source.title
 
-    # Chunk content if needed
-    chunks = _chunk_content(content)
+    # Chunk processed content if needed
+    chunks = _chunk_content(processed_content)
 
     logger.info(f"Prepared {len(chunks)} chunks for extraction from source {source.id}")
+    acm_debug(f"Content stats: {preprocess_meta['acm_indicators_found']} ACM indicators, "
+              f"{preprocess_meta['no_asbestos_found']} No Asbestos entries")
 
     return {
-        "content": content,
+        "content": processed_content,
         "chunks": chunks,
         "context": context,
         "current_chunk_index": 0,
@@ -248,7 +335,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     context.current_page = page_number
 
     # Render the extraction prompt
-    prompter = Prompter(template="prompts/acm/extraction.jinja")
+    prompter = Prompter(prompt_template="acm/extraction")
     system_prompt = prompter.render(
         data={
             "school_name": context.school_name,
@@ -261,6 +348,14 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             "content": chunk_content,
         }
     )
+
+    # Debug: Log and dump the prompt
+    source: Source = state["source"]
+    source_id = str(source.id) if source.id else "unknown"
+    log_prompt_preview(system_prompt, source_id)
+    dump_prompt_to_file(system_prompt, source_id, current_index)
+
+    acm_debug(f"Chunk {current_index + 1}/{len(chunks)}: {len(chunk_content)} chars")
 
     # Get the model
     try:
@@ -284,6 +379,13 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     try:
         chain = model.with_structured_output(ACMExtractionResult)
         result: ACMExtractionResult = await chain.ainvoke(messages)
+
+        # Debug: Log raw result before processing
+        logger.debug(f"Raw extraction result: status={result.status}, records_count={len(result.records)}")
+        if result.records:
+            logger.debug(f"First record: {result.records[0].model_dump_json()[:500]}")
+        else:
+            logger.warning(f"No records extracted. Extraction notes: {result.extraction_notes}")
 
         # Update stats
         result.update_stats()
