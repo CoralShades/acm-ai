@@ -88,22 +88,47 @@ For development or testing ACM-AI:
 # Clone the repository
 git clone https://github.com/CoralShades/acm-ai
 cd acm-ai
+```
 
+#### Windows (Recommended)
+```batch
+# Ensure Docker Desktop is running first!
+
+# Start all services with one command:
+start-all.bat
+
+# Stop all services:
+stop-all.bat
+```
+
+#### macOS / Linux
+```bash
 # Start all services (requires make, Docker, and uv)
 make start-all
 
-# Or start services individually:
+# Stop all services
+make stop-all
+```
+
+#### Manual Setup (All Platforms)
+```bash
 docker compose up -d surrealdb        # Database on port 8000
 uv run run_api.py                     # API on port 5055
 uv run surreal-commands-worker --import-modules commands  # Background worker
 cd frontend && npm run dev            # Frontend on port 8502
 ```
 
+#### Docker-Only Development
+```bash
+# Full containerized development with hot-reload:
+docker compose -f docker-compose.dev-local.yml up
+```
+
 **Access at:** http://localhost:8502
 
 **Requirements:**
-- Docker and Docker Compose
-- Python 3.11+ (via uv)
+- Docker Desktop (must be running)
+- Python 3.11+ (via [uv](https://docs.astral.sh/uv/))
 - Node.js 18+ (for frontend)
 - API key for at least one AI provider (OpenAI, Anthropic, Ollama, etc.)
 

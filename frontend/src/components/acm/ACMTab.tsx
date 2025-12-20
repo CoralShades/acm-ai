@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FileWarning, AlertCircle } from 'lucide-react'
@@ -16,6 +16,7 @@ import {
   useExtractACM,
   useExportACMCsv,
 } from '@/lib/hooks/use-acm'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import type { ACMRecord } from '@/lib/types/acm'
 
 interface ACMTabProps {
@@ -28,11 +29,25 @@ export function ACMTab({ sourceId }: ACMTabProps) {
 
   // State
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
+  const [searchText, setSearchText] = useState('')
+  const [visibleCount, setVisibleCount] = useState<number | undefined>(undefined)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
   const [selectedRecord, setSelectedRecord] = useState<ACMRecord | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [recordToDelete, setRecordToDelete] = useState<ACMRecord | null>(null)
+
+  // Debounce search text for better performance
+  const debouncedSearchText = useDebouncedValue(searchText, 300)
+
+  // Reset search when risk filter changes to avoid confusion
+  // Skip initial mount by checking if searchText has content
+  useEffect(() => {
+    if (searchText) {
+      setSearchText('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riskFilter])
 
   // Queries
   const {
@@ -101,8 +116,13 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     gridRef.current?.collapseAll()
   }, [])
 
+  const handleVisibleCountChange = useCallback((count: number) => {
+    setVisibleCount(count)
+  }, [])
+
   const records = recordsData?.records || []
-  const hasRecords = records.length > 0
+  const totalCount = records.length
+  const hasRecords = totalCount > 0
 
   return (
     <div className="space-y-6">
@@ -135,6 +155,10 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             isExporting={exportCsv.isPending}
             disabled={isLoadingRecords}
             showGroupingControls={hasRecords}
+            searchText={searchText}
+            onSearchChange={setSearchText}
+            visibleCount={visibleCount}
+            totalCount={totalCount}
           />
 
           {/* No Records Alert */}
@@ -158,6 +182,8 @@ export function ACMTab({ sourceId }: ACMTabProps) {
               isLoading={isLoadingRecords}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              quickFilterText={debouncedSearchText}
+              onVisibleCountChange={handleVisibleCountChange}
             />
           )}
         </CardContent>
