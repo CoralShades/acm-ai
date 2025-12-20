@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Enable standalone output for Docker deployment (skip for Vercel)
   ...(process.env.VERCEL ? {} : { output: "standalone" }),
+
+  // Set workspace root to parent directory to resolve multiple lockfile warning
+  // This tells Next.js that the monorepo root is one level up
+  outputFileTracingRoot: path.join(__dirname, '../'),
 
   // Use alternative build directory if .next is locked
   distDir: process.env.NEXT_DIST_DIR || '.next',

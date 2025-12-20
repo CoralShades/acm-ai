@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef } from 'react'
+import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, CellClickedEvent, GridApi } from 'ag-grid-community'
+import type { ColDef, GridReadyEvent, CellClickedEvent, GridApi, ModelUpdatedEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Edit2, Trash2 } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
 
 // Register AG Grid modules
@@ -24,6 +24,10 @@ interface ACMGridProps {
   onEdit: (record: ACMRecord) => void
   onDelete: (record: ACMRecord) => void
   enableGrouping?: boolean
+  // Quick filter search functionality
+  quickFilterText?: string
+  // Callback to report visible row count changes
+  onVisibleCountChange?: (count: number) => void
 }
 
 // Custom cell renderer for risk status with theme-aware colors
@@ -83,7 +87,7 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, isLoading, onEdit, onDelete, enableGrouping = true },
+  { records, isLoading, onEdit, onDelete, enableGrouping = true, quickFilterText, onVisibleCountChange },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
@@ -99,10 +103,32 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     },
   }), [gridApi])
 
+  // Apply quick filter when search text changes
+  useEffect(() => {
+    if (gridApi) {
+      gridApi.setGridOption('quickFilterText', quickFilterText || '')
+    }
+  }, [gridApi, quickFilterText])
+
   const onGridReady = useCallback((params: GridReadyEvent<ACMRecord>) => {
     setGridApi(params.api)
     params.api.sizeColumnsToFit()
   }, [])
+
+  // Track visible row count changes for result count display
+  // Count only data rows, not group header rows
+  const onModelUpdated = useCallback((event: ModelUpdatedEvent<ACMRecord>) => {
+    if (onVisibleCountChange && event.api) {
+      let dataRowCount = 0
+      event.api.forEachNodeAfterFilterAndSort((node) => {
+        // Only count leaf nodes (actual data rows), not group rows
+        if (!node.group) {
+          dataRowCount++
+        }
+      })
+      onVisibleCountChange(dataRowCount)
+    }
+  }, [onVisibleCountChange])
 
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(
     () => [
@@ -283,6 +309,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         defaultColDef={defaultColDef}
         onGridReady={onGridReady}
         onCellClicked={onCellClicked}
+        onModelUpdated={onModelUpdated}
         loading={isLoading}
         animateRows={true}
         rowSelection="single"

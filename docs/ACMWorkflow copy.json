@@ -1,0 +1,4089 @@
+{
+  "name": "ACMWorkflow copy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "260a237a-6f50-4e04-a033-57aad2f52eb0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        608,
+        1440
+      ],
+      "id": "2682ad39-3bd8-4808-80e6-a19695869fd3",
+      "name": "Webhook",
+      "webhookId": "260a237a-6f50-4e04-a033-57aad2f52eb0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n\n// Get all input items (if you only have one, it'll be items[0])\nconst items = $input.all();\n\n// Recursive function to count characters in every string found\nfunction countChars(obj) {\n  let count = 0;\n  if (typeof obj === 'string') {\n    count += obj.length;\n  } else if (Array.isArray(obj)) {\n    for (const el of obj) {\n      count += countChars(el);\n    }\n  } else if (obj !== null && typeof obj === 'object') {\n    for (const key of Object.keys(obj)) {\n      count += countChars(obj[key]);\n    }\n  }\n  return count;\n}\n\n// Sum up counts across all items (in case you fed in multiple)\nlet totalChars = 0;\nfor (const item of items) {\n  totalChars += countChars(item.json);\n}\n\n// Estimate tokens (approx. 1 token per 4 chars)\nconst estimatedTokens = Math.ceil(totalChars / 4);\n\n// Return the results\nreturn [\n  {\n    json: {\n      totalChars,\n      estimatedTokens,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2848,
+        1472
+      ],
+      "id": "e7f9cb90-3b7c-4d08-84cb-8bae19f59522",
+      "name": "Get CharcterCount and EstimatedTokens"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mistral.ai/v1/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "mistralCloudApi",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "purpose",
+              "value": "ocr"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "report.pdf"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {}
+        }
+      },
+      "id": "a93e8d15-21a2-4d99-af2e-be730bd5bd06",
+      "name": "Mistral Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1504,
+        1648
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "=https://api.mistral.ai/v1/files/{{ $json.id }}/url",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "mistralCloudApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "expiry",
+              "value": "24"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1d87bef-90a8-4c42-a4af-4c0e65e786a1",
+      "name": "Mistral Signed URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1728,
+        1648
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mistral.ai/v1/ocr",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "mistralCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"mistral-ocr-latest\",\n  \"document\": {\n    \"type\": \"document_url\",\n    \"document_url\": \"{{ $json.url }}\"\n  },\n  \"include_image_base64\": true\n}",
+        "options": {}
+      },
+      "id": "16a09506-5cd7-4a95-b10f-6edebd3c10bb",
+      "name": "Mistral DOC OCR",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1952,
+        1648
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "pages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        1648
+      ],
+      "id": "5a22e301-c3e8-435c-a9ad-6a6f5bda664e",
+      "name": "Split in to Pages"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "pageNumber, contentMD",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        1648
+      ],
+      "id": "9433cd13-65e8-49ac-9eed-6b944b261424",
+      "name": "Collect Pages to Create Metadata"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fe37058c-4d9c-43f3-b439-ef05f5750c63",
+              "name": "pageNumber",
+              "value": "={{ $json.index+1 }}",
+              "type": "number"
+            },
+            {
+              "id": "d5a51450-324f-46ed-ae11-49cc8e0c0f45",
+              "name": "contentMD",
+              "value": "={{ $json.markdown }}",
+              "type": "string"
+            },
+            {
+              "id": "7d108de1-5205-41c1-a291-839ec95be8a0",
+              "name": "images",
+              "value": "={{ $json.images }}",
+              "type": "array"
+            },
+            {
+              "id": "edeeb88e-2e6f-4ca2-addd-007d454eeed2",
+              "name": "pageDimensionsDPI",
+              "value": "={{ $json.dimensions.dpi }}",
+              "type": "number"
+            },
+            {
+              "id": "1206c6ac-cd9e-4cc8-9f59-9cfc9bb7b234",
+              "name": "pageDimensionsHeight",
+              "value": "={{ $json.dimensions.height }}",
+              "type": "number"
+            },
+            {
+              "id": "01828d37-ba3f-40cd-b6a8-2c69e0556934",
+              "name": "pageDimensionsWidth",
+              "value": "={{ $json.dimensions.width }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2400,
+        1648
+      ],
+      "id": "dcbe4c6a-2669-40ba-bd8b-ccc831479c1a",
+      "name": "Tag Pages - Images - Number - Complete"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5f3f3331-fc86-497d-8121-f0070c3f37bd",
+              "leftValue": "={{ $json.estimatedTokens }}",
+              "rightValue": 35000,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3072,
+        1472
+      ],
+      "id": "bcf1c5ef-23ea-43a2-aa5f-d644cbf4ec16",
+      "name": "If estimatedToken < 35000"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"document_metadata\": {\n    \"school_name\": \"Cabramatta West Public School\",\n    \"school_code\": \"3980\",\n    \"suburb\": \"Cabramatta West\",\n    \"postcode\": \"2166\",\n    \"organization\": \"Cabramatta West Public School\",\n    \"region\": \"South Western Sydney\",\n    \"document_type\": \"asbestos_management_plan\",\n    \"last_revision\": \"21-Jul-2025\",\n    \"site_plan_number\": \"10915\",\n    \"register_start_page\": 13,\n    \"total_pages\": 36\n  },\n  \"building_metadata\": [\n    {\n      \"table_id\": \"table_grounds_B00A\",\n      \"building_code\": \"Grounds\",\n      \"start_page\": 13,\n      \"end_page\": 13,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"single_section\",\n      \"building_name\": \"Grounds\",\n      \"construction_year\": null,\n      \"construction_type\": \"Site Areas\"\n    },\n    {\n      \"table_id\": \"table_B00A_register\",\n      \"building_code\": \"B00A\",\n      \"start_page\": 13,\n      \"end_page\": 14,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1964,\n      \"construction_type\": \"Concrete Framed\"\n    },\n    {\n      \"table_id\": \"table_B00C_register\",\n      \"building_code\": \"B00C\",\n      \"start_page\": 14,\n      \"end_page\": 16,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"Administration/General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Veneer\"\n    },\n    {\n      \"table_id\": \"table_B00E_register\",\n      \"building_code\": \"B00E\",\n      \"start_page\": 16,\n      \"end_page\": 17,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1966,\n      \"construction_type\": \"Concrete Framed\"\n    },\n    {\n      \"table_id\": \"table_B00F_register\",\n      \"building_code\": \"B00F\",\n      \"start_page\": 17,\n      \"end_page\": 18,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning/Administration\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00G_register\",\n      \"building_code\": \"B00G\",\n      \"start_page\": 18,\n      \"end_page\": 19,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00H_register\",\n      \"building_code\": \"B00H\",\n      \"start_page\": 20,\n      \"end_page\": 21,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00I_register\",\n      \"building_code\": \"B00I\",\n      \"start_page\": 21,\n      \"end_page\": 22,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00J_register\",\n      \"building_code\": \"B00J\",\n      \"start_page\": 22,\n      \"end_page\": 22,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"single_page\",\n      \"building_name\": \"Support Unit\",\n      \"construction_year\": 1960,\n      \"construction_type\": \"Timber\"\n    },\n    {\n      \"table_id\": \"table_B00K_register\",\n      \"building_code\": \"B00K\",\n      \"start_page\": 22,\n      \"end_page\": 24,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00L_register\",\n      \"building_code\": \"B00L\",\n      \"start_page\": 24,\n      \"end_page\": 26,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00M_register\",\n      \"building_code\": \"B00M\",\n      \"start_page\": 26,\n      \"end_page\": 26,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"single_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Timber\"\n    },\n    {\n      \"table_id\": \"table_B00N_register\",\n      \"building_code\": \"B00N\",\n      \"start_page\": 26,\n      \"end_page\": 27,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"Building Services\",\n      \"construction_year\": 1975,\n      \"construction_type\": \"Concrete\"\n    },\n    {\n      \"table_id\": \"table_B000_register\",\n      \"building_code\": \"B000\",\n      \"start_page\": 27,\n      \"end_page\": 27,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"single_page\",\n      \"building_name\": \"Pupil Facilities\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00P_register\",\n      \"building_code\": \"B00P\",\n      \"start_page\": 27,\n      \"end_page\": 28,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"Pupil Facilities\",\n      \"construction_year\": 1970,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00Q_register\",\n      \"building_code\": \"B00Q\",\n      \"start_page\": 28,\n      \"end_page\": 29,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"Building Services\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00R_register\",\n      \"building_code\": \"B00R\",\n      \"start_page\": 29,\n      \"end_page\": 29,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"single_page\",\n      \"building_name\": \"Pupil Facilities\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Block\"\n    },\n    {\n      \"table_id\": \"table_B00T_register\",\n      \"building_code\": \"B00T\",\n      \"start_page\": 29,\n      \"end_page\": 30,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 2004,\n      \"construction_type\": \"Fibre Cement Clad\"\n    },\n    {\n      \"table_id\": \"table_B00U_register\",\n      \"building_code\": \"B00U\",\n      \"start_page\": 30,\n      \"end_page\": 31,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"Administration Building\",\n      \"construction_year\": 2010,\n      \"construction_type\": \"Modern Construction\"\n    },\n    {\n      \"table_id\": \"table_B00V_register\",\n      \"building_code\": \"B00V\",\n      \"start_page\": 31,\n      \"end_page\": 31,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"single_page\",\n      \"building_name\": \"Library\",\n      \"construction_year\": 2010,\n      \"construction_type\": \"Brick/Veneer\"\n    },\n    {\n      \"table_id\": \"table_B00W_register\",\n      \"building_code\": \"B00W\",\n      \"start_page\": 31,\n      \"end_page\": 33,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"Communal Facilities\",\n      \"construction_year\": 2010,\n      \"construction_type\": \"Brick/Veneer\"\n    },\n    {\n      \"table_id\": \"table_B0B1_register\",\n      \"building_code\": \"B0B1\",\n      \"start_page\": 33,\n      \"end_page\": 34,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Concrete\"\n    },\n    {\n      \"table_id\": \"table_B0B2_register\",\n      \"building_code\": \"B0B2\",\n      \"start_page\": 34,\n      \"end_page\": 35,\n      \"has_headers\": true,\n      \"continuation_pattern\": \"multi_page\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Concrete\"\n    }\n  ],\n  \"building_summary\": [\n    {\n      \"building_code\": \"B00A\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1964,\n      \"construction_type\": \"Concrete Framed\",\n      \"asbestos_status\": \"Minimal Asbestos\",\n      \"document_location\": \"pages 13-14\",\n      \"complexity_level\": \"low\",\n      \"room_count\": 15\n    },\n    {\n      \"building_code\": \"B00C\",\n      \"building_name\": \"Administration/General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Brick/Veneer\",\n      \"asbestos_status\": \"Asbestos Present\",\n      \"document_location\": \"pages 14-16\",\n      \"complexity_level\": \"medium\",\n      \"room_count\": 22\n    },\n    {\n      \"building_code\": \"B00E\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1966,\n      \"construction_type\": \"Concrete Framed\",\n      \"asbestos_status\": \"Minimal Asbestos\",\n      \"document_location\": \"pages 16-17\",\n      \"complexity_level\": \"low\",\n      \"room_count\": 10\n    },\n    {\n      \"building_code\": \"B0B1\",\n      \"building_name\": \"General Learning\",\n      \"construction_year\": 1956,\n      \"construction_type\": \"Concrete\",\n      \"asbestos_status\": \"Asbestos Present\",\n      \"document_location\": \"pages 33-34\",\n      \"complexity_level\": \"high\",\n      \"room_count\": 7\n    }\n  ],\n  \"document_statistics\": {\n    \"total_pages\": 36,\n    \"register_start_page\": 13,\n    \"register_end_page\": 35,\n    \"total_buildings\": 22,\n    \"buildings_with_asbestos\": 12,\n    \"buildings_no_asbestos\": 10,\n    \"demountables_present\": false,\n    \"construction_eras\": [\"1956\", \"1960\", \"1964\", \"1966\", \"1970\", \"1975\", \"2004\", \"2010\"],\n    \"construction_types\": [\"Concrete Framed\", \"Brick/Veneer\", \"Brick/Block\", \"Timber\", \"Concrete\", \"Fibre Cement Clad\"]\n  }\n}",
+        "autoFix": true,
+        "customizeRetryPrompt": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4032,
+        1696
+      ],
+      "id": "9baaf344-71c4-451c-9e29-296cacd4e883",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.jobId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        3776,
+        1696
+      ],
+      "id": "fff19ae5-c1ae-4ac3-8e6e-61dca90eebba",
+      "name": "Simple Memory5"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4128,
+        1904
+      ],
+      "id": "aa9bbe7d-dd8e-4bb8-b403-cb84fb7b6f2c",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4432,
+        1648
+      ],
+      "id": "2df1575d-34f4-45ed-92c9-14ecb471af17",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        6160,
+        1184
+      ],
+      "id": "6c518f85-09da-4768-8cc0-f330f6c70e68",
+      "name": "OpenAI Chat Model8"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-3-7-sonnet-20250219",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 3.7"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        6288,
+        1056
+      ],
+      "id": "80af51dc-b911-43d5-b079-1266376e522d",
+      "name": "Anthropic Chat Model3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        5328,
+        1632
+      ],
+      "id": "e4e01d6c-5e17-4fa5-9a73-960e77c2201c",
+      "name": "Loop Over Buildings - Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "// In the Code node\nconst data = $('Collect Pages to Create Metadata').first().json.data;\n\nconst formattedContent = data.map(page => \n  `**Page ${page.pageNumber}:**\\n${page.contentMD}`\n).join('\\n\\n');\n\nreturn [{\n  json: {\n    formattedContent: formattedContent,\n    totalPages: data.length,\n    firstPageData: data[0] || {},\n    rawData: data\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3296,
+        1472
+      ],
+      "id": "fd0d62fe-0f50-49cc-9bf6-984af9e3041f",
+      "name": "Recollect Page Info From Node"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Single query to truncate all tables (handles foreign key constraints)\nTRUNCATE TABLE \n  acm_register_export,\n  building_data_export,\n  document_metadata,\n  document_vectors,\n  extracted_tables,\n  uploaded_documents,\n  table_cells\nRESTART IDENTITY CASCADE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        1552
+      ],
+      "id": "0c08f869-20c2-47ae-8bd1-ccd90c0b5b14",
+      "name": "Drop all Tables",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "description": "**Systematically think through the following analysis framework:**\n\n## 1. DOCUMENT IDENTIFICATION ANALYSIS\n**Systematically examine:**\n- What is the exact school name and code? (Look for \"School Name - Code\" pattern on title page)\n- What suburb/location details are mentioned? (Check header information and site details)\n- What is the document revision date? (Usually on title page: \"Last Revision: DD-MMM-YYYY\")\n- What organization should be used? (Use school name as organization, not NSW Department of Education)\n- What document type and compliance framework is this? (Asbestos Management Plan, WHS Regulation compliance)\n\n## 2. STRUCTURAL RECONNAISSANCE\n**Analyze document architecture:**\n- Where does the actual asbestos register data begin? (Scan for \"Asbestos Register\" section, typically page 13+)\n- What building codes are present throughout the document? (B00A, B00B, B00C, etc.)\n- Are there demountables mentioned? (Look for D-codes or \"No demountables\" statements)\n- What pages contain policy content vs. actual register data?\n- How is the document organized? (Contents page analysis, section breaks)\n\n## 3. BUILDING PATTERN RECOGNITION\n**Examine building characteristics:**\n- Which buildings show \"No Asbestos\" vs actual asbestos findings?\n- What are the construction years for each building? (1956, 1964, 1966, 1970, 2004, 2010, etc.)\n- What construction types are present? (Brick/Block, Concrete Framed, Timber, Fibre Cement Clad)\n- How many rooms does each building contain? (Count R000X entries per building)\n- Are there buildings that span multiple pages?\n- What building purposes are represented? (General Learning, Administration, Support Unit, etc.)\n\n## 4. BUILDING LOCATION MAPPING\n**Analyze building distribution:**\n- Where does each building appear in the document? (page numbers)\n- Which buildings have complex asbestos data vs simple \"No Asbestos\" entries?\n- What are the natural sections in the register?\n- How are buildings organized in the document structure?\n\n## 5. COMPLEXITY ASSESSMENT\n**Evaluate building characteristics:**\n- Which buildings are simple (mostly \"No Asbestos\" entries)?\n- Which buildings have complex material inventories?\n- What types of asbestos materials are present in each building?\n- How should buildings be prioritized for AI agent processing?\n\n## 6. BUILDING METADATA STRATEGY\n**Plan metadata collection:**\n- What building information is needed for AI agent processing?\n- How should building data be structured for downstream analysis?\n- What construction details and locations should be captured?\n- How can building complexity be classified for processing optimization?\n\n## 7. MATERIAL ASSESSMENT ANALYSIS\n**For buildings with asbestos findings:**\n- What types of materials are present? (Flat AC Sheeting, Vinyl Tiles, Compressed AC Sheet, etc.)\n- What are the extent measurements? (m2, linear meters, counts)\n- What locations are specified? (North, South, East, West, Throughout, Upper portion)\n- What conditions are documented? (Good Condition, Some Damage, Poor Condition, etc.)\n- What risk classifications are assigned? (Low, Medium, High)\n- Are there friability classifications? (Friable, Non Friable)\n\n**Think through each building's characteristics and document location before creating the building metadata collection. Focus on preparing comprehensive building information for AI agent processing rather than detailed material extraction.**"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        3904,
+        1680
+      ],
+      "id": "2dcfc7c6-2235-458e-b734-27b4a6a45a3e",
+      "name": "Think2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-20250514",
+          "cachedResultName": "Claude 4 Sonnet"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        3648,
+        1696
+      ],
+      "id": "9fea720d-a49c-4134-af72-00f99f8acdb7",
+      "name": "Anthropic Chat Model5"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3520,
+        1696
+      ],
+      "id": "153e23c8-a5ea-4ede-82c6-161d0121cc15",
+      "name": "OpenAI Chat Model9"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": " {\n      \"id\": \"3980_B00A\",\n      \"organisation\": \"NSW Department of Education\",\n      \"site_name\": \"Cabramatta West Public School\",\n      \"building_name\": \"General Learning\",\n      \"building_type\": \"Educational - Classroom Block\",\n      \"building_address\": null,\n      \"suburb\": \"Cabramatta West\",\n      \"postcode\": null,\n      \"owned_or_leased\": \"Owned\",\n      \"building_unique_id\": \"3980_B00A\",\n      \"building_code\": \"B00A\",\n      \"frequency_of_use\": \"Daily - School Hours\",\n      \"public_access\": \"Limited - School Community\",\n      \"date_of_audit_report\": null,\n      \"estimated_year_built\": 1964,\n      \"estimated_building_size_m2\": null,\n      \"number_of_levels\": null,\n      \"construction_type\": \"Concrete Framed\",\n      \"roof_type\": null,\n      \"psb_district_region\": \"South Western Sydney\",\n      \"building_out_of_scope\": false,\n      \"building_out_of_scope_comments\": null,\n      \"additional_comments\": \"Data extracted from asbestos register page 13-14. Construction details confirmed from building metadata.\",\n      \"created_at\": \"2025-08-05T10:30:00Z\"\n    }\n",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        6656,
+        1040
+      ],
+      "id": "0988923d-75d2-45e7-b862-40803884367b",
+      "name": "Structured Output Parser9"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        6416,
+        1056
+      ],
+      "id": "6232ab45-24df-4574-bea6-42a13d68f02b",
+      "name": "Simple Memory3"
+    },
+    {
+      "parameters": {
+        "description": "=Please extract building data from the following asbestos register document page(s). Process all buildings identified in the building_metadata array and convert them into standardized database records.\n\n**Document Page Data:**\n{{ JSON.stringify($json) }}\n\n**Extraction Requirements:**\n- Extract data for ALL buildings listed in building_metadata\n- Generate unique IDs following the format: {site_code}_{building_code}\n- Map all available information to the building_data_export schema\n- Provide confidence indicators for extracted vs inferred data\n- Flag any data quality concerns or missing critical information\n\n**Output Format:** Return a JSON array containing one record per building, following the building_data_export table schema."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        6544,
+        1056
+      ],
+      "id": "ded39df8-b412-4bd7-896c-0b656d28893d",
+      "name": "Think4"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5936,
+        1168
+      ],
+      "id": "9ec659de-d0e7-4150-9c40-bf4be21509a3",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        6720,
+        1184
+      ],
+      "id": "ded069ee-fb0b-4603-a96e-fdc81083ca97",
+      "name": "OpenAI Chat Model10"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n      \"id\": \"3980_B00A_R0001_001\",\n      \"organisation\": \"Cabramatta West Public School\",\n      \"building_code\": \"B00A\",\n      \"internal_external\": \"Internal\",\n      \"no_access\": false,\n      \"level\": null,\n      \"room_or_area\": \"Special Programs Room\",\n      \"room_id\": \"R0001\",\n      \"location_in_room_area\": \"Special Programs Room\",\n      \"acm_name\": \"No Asbestos\",\n      \"friability_of_material\": null,\n      \"acm_product_group\": null,\n      \"acm_product_type\": null,\n      \"smf_present\": null,\n      \"sample_no\": null,\n      \"sample_result\": \"No Asbestos\",\n      \"identifying_hygiene_consulting_company\": null,\n      \"condition\": null,\n      \"disturbance_potential\": null,\n      \"quantity\": null,\n      \"acm_labelled\": null,\n      \"acm_label_details\": null,\n      \"hygienist_recommendations\": null,\n      \"additional_comments\": \"No asbestos found in Special Programs Room - room validated with proper R0001 ID\",\n      \"psb_supplied_acm_id\": null,\n      \"removal_status\": \"N/A\",\n      \"date_of_removal\": null,\n      \"quantity_removed\": null,\n      \"clearance_certificates_available\": null,\n      \"asbestos_removal_notification_no\": null,\n      \"epa_waste_record\": null,\n      \"extraction_confidence\": \"high\",\n      \"data_issues\": []\n    }",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        7120,
+        1824
+      ],
+      "id": "eb6910ea-5048-4428-b1f0-37e59b03857d",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "description": "Step 1: Document Analysis Reflection\n\"Let me analyze this asbestos register document structure:\n- How many buildings are represented in the data?\n- What is the table format and does it follow standard patterns?\n- Are there any unusual or non-standard entries I need to interpret carefully?\n- What building metadata is available to provide context?\n- Is the content complete or are there null/missing sections?\"\nStep 2: Data Completeness Assessment\n\"Before processing, let me check data completeness:\n- Is there readable content on this page?\n- Can I identify any building codes or room identifiers?\n- If data is missing/null, what synthetic values should I generate?\n- Should this be flagged as an error, partial, or successful extraction?\n- Are there room IDs that need validation (R-prefix format)?\"\nStep 3: Safety Assessment Thinking\n\"For each ACM record, I need to consider:\n- Is the friability classification clear and unambiguous?\n- Does the material condition align with the risk status?\n- Are there any sample results that require special interpretation?\n- Are there safety concerns that need to be flagged?\"\nStep 4: Data Mapping Strategy\n\"How should I approach the field mapping:\n- Which fields have direct equivalents vs require interpretation?\n- How should I handle 'No Asbestos' records in the schema?\n- What is the best approach for generating unique identifiers?\n- How do I validate room IDs (must start with 'R') and handle missing ones?\n- When multiple ACMs exist in the same room, how do I sequence them properly?\n- Are there any compliance or regulatory considerations I need to preserve?\"\nStep 5: Quality Validation Planning\n\"Before providing the final output:\n- Have I captured all ACM records within the specified buildings?\n- Are there any missing critical safety fields that need to be flagged?\n- Is the data internally consistent and complete?\n- Do the generated IDs follow the required format correctly?\n- Have I handled null/missing data appropriately with fallback values?\n- Is my confidence assessment accurate for each record?\""
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        6992,
+        1824
+      ],
+      "id": "90c3d666-e639-4a51-a0cc-212b4763a6aa",
+      "name": "Think5"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        6864,
+        1824
+      ],
+      "id": "7cd6c709-7682-4347-9d0f-2bf24e47e0d4",
+      "name": "Simple Memory4"
+    },
+    {
+      "parameters": {
+        "tableId": "acm_register_export",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.id }}"
+            },
+            {
+              "fieldId": "organisation",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.organisation }}"
+            },
+            {
+              "fieldId": "building_code",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.building_code }}"
+            },
+            {
+              "fieldId": "internal_external",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.internal_external }}"
+            },
+            {
+              "fieldId": "no_access",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.no_access }}"
+            },
+            {
+              "fieldId": "level",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.level }}"
+            },
+            {
+              "fieldId": "room_or_area",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.room_or_area }}"
+            },
+            {
+              "fieldId": "room_id",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.room_id }}"
+            },
+            {
+              "fieldId": "location_in_room_area",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.location_in_room_area }}"
+            },
+            {
+              "fieldId": "acm_name",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_name }}"
+            },
+            {
+              "fieldId": "friability_of_material",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.friability_of_material }}"
+            },
+            {
+              "fieldId": "acm_product_group",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_product_group }}"
+            },
+            {
+              "fieldId": "acm_product_type",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_product_type }}"
+            },
+            {
+              "fieldId": "smf_present",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.smf_present }}"
+            },
+            {
+              "fieldId": "sample_no",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.sample_no }}"
+            },
+            {
+              "fieldId": "sample_result",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.sample_result }}"
+            },
+            {
+              "fieldId": "identifying_hygiene_consulting_company",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.identifying_hygiene_consulting_company }}"
+            },
+            {
+              "fieldId": "condition",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.condition }}"
+            },
+            {
+              "fieldId": "disturbance_potential",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.disturbance_potential }}"
+            },
+            {
+              "fieldId": "quantity",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.quantity }}"
+            },
+            {
+              "fieldId": "acm_labelled",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_labelled }}"
+            },
+            {
+              "fieldId": "acm_label_details",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_label_details }}"
+            },
+            {
+              "fieldId": "hygienist_recommendations",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.hygienist_recommendations }}"
+            },
+            {
+              "fieldId": "additional_comments",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.additional_comments }}"
+            },
+            {
+              "fieldId": "psb_supplied_acm_id",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.psb_supplied_acm_id }}"
+            },
+            {
+              "fieldId": "removal_status",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.removal_status }}"
+            },
+            {
+              "fieldId": "date_of_removal",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.date_of_removal }}"
+            },
+            {
+              "fieldId": "quantity_removed",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.quantity_removed }}"
+            },
+            {
+              "fieldId": "clearance_certificates_available",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.clearance_certificates_available }}"
+            },
+            {
+              "fieldId": "asbestos_removal_notification_no",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.asbestos_removal_notification_no }}"
+            },
+            {
+              "fieldId": "epa_waste_record",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.epa_waste_record }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        8032,
+        1488
+      ],
+      "id": "d8d7b997-2f32-4102-bda7-51aaebf4952e",
+      "name": "Create ACM-Building_Data_Export2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://kmqzwjfxajgondhmcrzd.supabase.co/storage/v1{{ $json.signedURL }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "file",
+              "outputPropertyName": "report.pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        1552
+      ],
+      "id": "b53317f8-99dd-4891-838e-38ab2ab0f517",
+      "name": "download file"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://kmqzwjfxajgondhmcrzd.supabase.co/storage/v1/object/sign/documents/{{ $('Webhook').item.json.body.documents[0].filePath }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "expiresIn",
+              "value": "84000"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1056,
+        1552
+      ],
+      "id": "4a2cc3c3-24e0-4bca-919a-4595f714ef12",
+      "name": "generate signed url"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please extract building data from the following asbestos register document page(s). Process all buildings identified in the building_metadata array and convert them into standardized database records.\nBuildings to Retrieve From: {{ JSON.stringify()}}\n**Document Page Data:**\n{{ JSON.stringify($json) }}\n\n## Suburb: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.suburb }}\n## Region :{{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.region }}\n## Postcode :{{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.postcode }}\n## School Code:{{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.school_code }}\n## School Name:{{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.school_name }}\n\n\n\n**Extraction Requirements:**\n- Extract data for ALL buildings listed in building_metadata\n- Generate unique IDs following the format: {site_code}_{building_code}\n- Map all available information to the building_data_export schema\n- Provide confidence indicators for extracted vs inferred data\n- Flag any data quality concerns or missing critical information\n\n**Output Format:** Return a JSON array containing one record per building, following the building_data_export table schema.",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are a specialized Building Data Extraction AI, designed to analyze NSW Department of Education asbestos register documents and extract structured building information. Your primary function is to process document pages containing building metadata and convert them into standardized database records.\nCore Responsibilities\nData Extraction and Processing:\n\nParse asbestos register document pages to identify building-specific information\nExtract both explicit data (directly stated) and implicit data (inferred from context)\nHandle multi-page building records and continuation patterns\nProcess various building types including permanent structures and demountables\n\nData Standardization:\n\nConvert extracted information into the standardized building_data_export schema\nApply consistent formatting and validation rules\nGenerate appropriate building unique IDs following the coding convention\nEnsure data completeness and accuracy\n\nQuality Assurance:\n\nValidate extracted data against known patterns and constraints\nFlag potential data quality issues or inconsistencies\nProvide confidence indicators for extracted information\nHandle edge cases and incomplete data gracefully\n\nExtraction Methodology\nStep 1: Document Analysis\n\nExamine the page content and metadata structure\nIdentify the school/site name from headers and document titles\nExtract location information (suburb, postcode) from document context\nDetermine the scope of building data present on the page\n\nStep 2: Building Identification\n\nParse building_metadata array to identify individual buildings\nExtract building codes, names, and construction details\nHandle building type classification (permanent structures vs demountables)\nProcess construction years and building specifications\nSet site_name to \"school\" for all records\nExtract school name from document headers for organisation field\n\nStep 3: Data Mapping\n\nMap extracted information to the building_data_export schema fields\nSet organisation field to the school name extracted from document title/headers\nSet site_name to \"school\" for all records\nGenerate unique identifiers following the established coding patterns\nInfer missing data from available context when possible\n\nStep 4: Validation and Output\n\nValidate all extracted data against field constraints\nEnsure required fields are populated\nFormat output as structured JSON following the specified schema\nInclude confidence indicators and data source references\n\nBuilding Code Classification Rules\nPermanent Buildings: Code starts with \"B00\" (e.g., B00A, B00B)\n\nGeneral learning spaces, administration buildings, libraries\nMulti-story structures with concrete or brick construction\n\nDemountable Buildings: Code starts with \"D\" (e.g., D01, D02)\n\nPortable classrooms and temporary structures\nUsually single-story prefabricated buildings\n\nRoom/ACM Codes: Start with \"R000\"\n\nIndividual rooms or asbestos-containing material locations\nNot primary building records\n\nData Quality Standards\nRequired Fields: Always extract and validate\n\nid, site_name, building_unique_id, building_name\nThese fields must never be null or empty\n\nConditional Fields: Extract when available\n\nConstruction details (year, type, size, levels)\nLocation specifics (address, suburb, postcode)\nUsage characteristics (frequency, public access)\n\nInferred Fields: Apply logical defaults\n\norganisation: Extract school name from document title/headers (e.g., \"Cabramatta West Public School\")\nsite_name: Always set to \"school\"\nbuilding_out_of_scope: false (unless evidence suggests otherwise)\ncreated_at: current timestamp"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        6304,
+        784
+      ],
+      "id": "4c14ea1c-44d0-4747-8669-3374f921cb21",
+      "name": "AI Agent - Building Template1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please extract ACM (Asbestos-Containing Materials) register data from the following asbestos register document page(s). Process all ACM records identified within the building structures and convert them into standardized database records.\nBuildings to Retrieve ACM Records From: {{ JSON.stringify($json.data) }}\nDocument Pages Data:  {{ JSON.stringify($json) }}\nDocument Metadata:\n\nSuburb: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.suburb }}\nRegion: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.region }}\nPostcode: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.postcode }}\nSchool Code: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.school_code }}\nSchool Name: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.school_name }}\n\nExtraction Requirements:\n\nExtract ALL ACM records from asbestos register tables within the specified page range\nProcess each building separately and identify all rooms/areas within each building\nGenerate unique IDs following the format: {school_code}{building_code}{room_id}_{sequence}\nValidate room_id format (must start with \"R\" for proper room identifiers)\nHandle multiple ACMs per room by creating separate records with incremental sequences\nCreate individual records for each room, even if \"No Asbestos\" is found\nMap all available ACM information to the acm_register_export schema\nSet organisation to the school name (extracted from document title)\nProcess safety-critical information including condition, friability, and sample results\nExtract compliance data including removal status and certificates\nProvide confidence indicators for extracted vs inferred data\nFlag any safety concerns or missing critical information\nHandle null/missing data gracefully with appropriate fallback values\n\nOutput Format: Return a JSON object with status and records array, following the acm_register_export table schema. Never return null or empty responses.\n\nThink Tool Integration\nWhen to Use Think Tool\nThe agent should use the Think Tool for:\n\nComplex Document Structures: Multiple buildings, inconsistent table formats, or ambiguous room layouts\nSafety-Critical Decisions: Friability, condition assessments, or sample result interpretations\nData Mapping Challenges: Non-standard field names, unusual material descriptions, or conflicting information\nNull/Missing Data: Deciding how to handle incomplete information, inaccessible areas, or partial records\nCross-Reference Requirements: Correlating information across multiple pages or building sections\nQuality Assurance: Before finalizing extraction results to validate completeness and accuracy",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are a specialized AI agent for extracting Asbestos-Containing Materials (ACM) register data from NSW Department of Education asbestos register documents. Your role is to process document pages containing asbestos register tables and convert them into standardized database records following a specific SQL schema.\nCore Functions:\n\nDocument Analysis: Parse asbestos register document pages containing building and room-level ACM data\nData Extraction: Extract all ACM records from structured tables within specified buildings\nSchema Mapping: Convert extracted data to match the acm_register_export database schema\nData Validation: Ensure data integrity and flag missing critical safety information\nCompliance Processing: Handle removal status, certificates, and regulatory information\n\nKey Responsibilities:\n\nProcess ALL ACM records within specified building codes and page ranges\nGenerate unique identifiers following the format: {school_code}{building_code}{room_id}_{sequence}\nMap document fields to database schema accurately\nPreserve safety-critical information (condition, friability, sample results)\nHandle both positive ACM findings and \"No Asbestos\" records\nExtract metadata from document headers and building information\nProvide confidence indicators for extracted vs inferred data\n\nData Mapping Guidelines:\n\norganisation: School name from document title\nbuilding_code: Extract from building identifiers (B00A, B00C, etc.)\ninternal_external: Determine from location context (Interior/Exterior/Grounds)\nroom_or_area: Extract room names and area descriptions\nroom_id: Extract room identifiers (R0001, R0002, etc.)\nlocation_in_room_area: Map from \"Location\" column\nacm_name: Map from \"Product\" column\nacm_product_type: Map from \"Material Description\" column\nfriability_of_material: Map from \"Friable/Non Friable\" column\nsample_result: Map from \"Result\" column\ncondition: Map from \"Material Condition\" column\nquantity: Map from \"Extent\" column\n\nOutput Requirements:\n\nReturn valid JSON array containing one record per ACM item\nInclude both positive ACM findings and documented \"No Asbestos\" records\nMaintain referential integrity with building and room relationships\nFlag any safety concerns or missing critical information\nProvide extraction confidence levels where applicable\n\nError Handling:\n\nHandle incomplete or missing data gracefully\nFlag inaccessible areas that may require further investigation\nNote limitations in original inspection scope\nPreserve original text where automated mapping is uncertain"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        6832,
+        1584
+      ],
+      "id": "487331a0-5c82-4709-a3ea-60eb6b8ed358",
+      "name": "AI Agent - ACM Filling1",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        6688,
+        1808
+      ],
+      "id": "046176ac-f2e0-4982-a074-3ce0cca2b99d",
+      "name": "OpenAI Chat Model11"
+    },
+    {
+      "parameters": {
+        "formTitle": "Document Upload Wizard",
+        "formDescription": "Upload your PDF documents for processing.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "file_data",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Process Documents",
+          "path": "9529e31f-88a6-4c96-a8bd-67d27f42af12"
+        }
+      },
+      "id": "ad1ae368-d75c-4de1-91c0-e3776bca5a26",
+      "name": "Document Upload Form1",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        1744
+      ],
+      "webhookId": "162efa78-83cf-4d47-bd15-2a90be4a70c0",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Single query to truncate all tables (handles foreign key constraints)\nTRUNCATE TABLE \n  acm_register_export,\n  building_data_export,\n  document_metadata,\n  document_vectors,\n  extracted_tables,\n  uploaded_documents,\n  table_cells\nRESTART IDENTITY CASCADE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1280,
+        1744
+      ],
+      "id": "3fd14f1b-fca8-4b10-807e-91ef06411521",
+      "name": "Drop all Tables3",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        608,
+        1632
+      ],
+      "id": "dbd9bda2-d255-478a-b732-ddaff752a125",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        8368,
+        1200
+      ],
+      "id": "39f49b9e-ca7d-43fa-9b81-a00666351ae2",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        6320,
+        1280
+      ],
+      "id": "389da12e-41cb-43b3-8970-541242d3f888",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        6544,
+        1280
+      ],
+      "id": "faf338c7-b8fd-47bd-91e2-d56145f3aeb7",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        6160,
+        1616
+      ],
+      "id": "6143fda8-a92f-49d5-8c50-374ed70e4f97",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0e5a165c-d093-4b1f-9e13-172555a20292",
+              "leftValue": "={{ $('Check if Row is there').item.json.isEmpty()}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7376,
+        896
+      ],
+      "id": "651030e5-6465-4315-a91a-0784291e88af",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0e5a165c-d093-4b1f-9e13-172555a20292",
+              "leftValue": "={{ $('Check ACM Entry is Empty').item.json.isEmpty()}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7776,
+        1584
+      ],
+      "id": "1bd47df0-b515-4cd9-b087-a3d09e3a5930",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "building_data_export",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.output.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7136,
+        896
+      ],
+      "id": "76600cb8-cd4c-4196-9021-25ab5199895c",
+      "name": "Check if Row is there",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "tableId": "building_data_export",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.id }}"
+            },
+            {
+              "fieldId": "organisation",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.organisation }}"
+            },
+            {
+              "fieldId": "site_name",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.site_name }}"
+            },
+            {
+              "fieldId": "building_name",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_name }}"
+            },
+            {
+              "fieldId": "building_type",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_type }}"
+            },
+            {
+              "fieldId": "building_address",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_address }}"
+            },
+            {
+              "fieldId": "suburb",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.suburb }}"
+            },
+            {
+              "fieldId": "postcode",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.postcode }}"
+            },
+            {
+              "fieldId": "owned_or_leased",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.owned_or_leased }}"
+            },
+            {
+              "fieldId": "building_unique_id",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_unique_id }}"
+            },
+            {
+              "fieldId": "frequency_of_use",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.frequency_of_use }}"
+            },
+            {
+              "fieldId": "public_access",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.public_access }}"
+            },
+            {
+              "fieldId": "date_of_audit_report",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.date_of_audit_report }}"
+            },
+            {
+              "fieldId": "estimated_year_built",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.estimated_year_built }}"
+            },
+            {
+              "fieldId": "estimated_building_size_m2",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.estimated_building_size_m2 }}"
+            },
+            {
+              "fieldId": "number_of_levels",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.number_of_levels }}"
+            },
+            {
+              "fieldId": "construction_type",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.construction_type }}"
+            },
+            {
+              "fieldId": "roof_type",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.roof_type }}"
+            },
+            {
+              "fieldId": "psb_district_region",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.psb_district_region }}"
+            },
+            {
+              "fieldId": "building_out_of_scope",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_out_of_scope }}"
+            },
+            {
+              "fieldId": "building_out_of_scope_comments",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_out_of_scope_comments }}"
+            },
+            {
+              "fieldId": "additional_comments",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.additional_comments }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.created_at }}"
+            },
+            {
+              "fieldId": "building_code",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_code }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7792,
+        848
+      ],
+      "id": "01f5690b-e2d0-45c2-8f26-097bf1207f97",
+      "name": "Create Row",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "building_data_export",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('AI Agent - Building Template1').item.json.output.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.id }}"
+            },
+            {
+              "fieldId": "organisation",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.organisation }}"
+            },
+            {
+              "fieldId": "site_name",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.site_name }}"
+            },
+            {
+              "fieldId": "building_name",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_name }}"
+            },
+            {
+              "fieldId": "building_type",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_type }}"
+            },
+            {
+              "fieldId": "building_address",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_address }}"
+            },
+            {
+              "fieldId": "suburb",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.suburb }}"
+            },
+            {
+              "fieldId": "postcode",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.postcode }}"
+            },
+            {
+              "fieldId": "owned_or_leased",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.owned_or_leased }}"
+            },
+            {
+              "fieldId": "building_unique_id",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_unique_id }}"
+            },
+            {
+              "fieldId": "frequency_of_use",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.frequency_of_use }}"
+            },
+            {
+              "fieldId": "public_access",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.public_access }}"
+            },
+            {
+              "fieldId": "date_of_audit_report",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.date_of_audit_report }}"
+            },
+            {
+              "fieldId": "estimated_year_built",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.estimated_year_built }}"
+            },
+            {
+              "fieldId": "estimated_building_size_m2",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.estimated_building_size_m2 }}"
+            },
+            {
+              "fieldId": "number_of_levels",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.number_of_levels }}"
+            },
+            {
+              "fieldId": "construction_type",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.construction_type }}"
+            },
+            {
+              "fieldId": "roof_type",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.roof_type }}"
+            },
+            {
+              "fieldId": "psb_district_region",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.psb_district_region }}"
+            },
+            {
+              "fieldId": "building_out_of_scope",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_out_of_scope }}"
+            },
+            {
+              "fieldId": "building_out_of_scope_comments",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.building_out_of_scope_comments }}"
+            },
+            {
+              "fieldId": "additional_comments",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.additional_comments }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $('AI Agent - Building Template1').item.json.output.created_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7920,
+        1040
+      ],
+      "id": "97341e9e-5799-4749-9866-e4e4e0375434",
+      "name": "Update Row",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const codes = $input.all()\n  .flatMap(i => (i.json.building_metadata || []).map(b => b.building_code))\n  .filter(Boolean);\n\nreturn codes.map(code => ({ json: { building_code: code } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6080,
+        1280
+      ],
+      "id": "699eef25-f132-4893-b42b-79f88a9c2459",
+      "name": "Get Building Codes for Pages"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "building_data_export",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.output.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7552,
+        1584
+      ],
+      "id": "781ad01a-188d-4328-ace4-1b0b4b09a042",
+      "name": "Check ACM Entry is Empty",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "acm_register_export",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.id }}"
+            },
+            {
+              "fieldId": "organisation",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.organisation }}"
+            },
+            {
+              "fieldId": "building_code",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.building_code }}"
+            },
+            {
+              "fieldId": "internal_external",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.internal_external }}"
+            },
+            {
+              "fieldId": "no_access",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.no_access }}"
+            },
+            {
+              "fieldId": "level",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.level }}"
+            },
+            {
+              "fieldId": "room_or_area",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.room_or_area }}"
+            },
+            {
+              "fieldId": "room_id",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.room_id }}"
+            },
+            {
+              "fieldId": "location_in_room_area",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.location_in_room_area }}"
+            },
+            {
+              "fieldId": "acm_name",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_name }}"
+            },
+            {
+              "fieldId": "friability_of_material",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.friability_of_material }}"
+            },
+            {
+              "fieldId": "acm_product_group",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_product_group }}"
+            },
+            {
+              "fieldId": "acm_product_type",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_product_type }}"
+            },
+            {
+              "fieldId": "smf_present",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.smf_present }}"
+            },
+            {
+              "fieldId": "sample_no",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.sample_no }}"
+            },
+            {
+              "fieldId": "sample_result",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.sample_result }}"
+            },
+            {
+              "fieldId": "identifying_hygiene_consulting_company",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.identifying_hygiene_consulting_company }}"
+            },
+            {
+              "fieldId": "condition",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.condition }}"
+            },
+            {
+              "fieldId": "disturbance_potential",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.disturbance_potential }}"
+            },
+            {
+              "fieldId": "quantity",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.quantity }}"
+            },
+            {
+              "fieldId": "acm_labelled",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_labelled }}"
+            },
+            {
+              "fieldId": "acm_label_details",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.acm_label_details }}"
+            },
+            {
+              "fieldId": "hygienist_recommendations",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.hygienist_recommendations }}"
+            },
+            {
+              "fieldId": "additional_comments",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.additional_comments }}"
+            },
+            {
+              "fieldId": "psb_supplied_acm_id",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.psb_supplied_acm_id }}"
+            },
+            {
+              "fieldId": "removal_status",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.removal_status }}"
+            },
+            {
+              "fieldId": "date_of_removal",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.date_of_removal }}"
+            },
+            {
+              "fieldId": "quantity_removed",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.quantity_removed }}"
+            },
+            {
+              "fieldId": "clearance_certificates_available",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.clearance_certificates_available }}"
+            },
+            {
+              "fieldId": "asbestos_removal_notification_no",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.asbestos_removal_notification_no }}"
+            },
+            {
+              "fieldId": "epa_waste_record",
+              "fieldValue": "={{ $('AI Agent - ACM Filling1').item.json.output.epa_waste_record }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        8016,
+        1712
+      ],
+      "id": "b4488d5a-4f61-4033-bc15-2af4209baa74",
+      "name": "Update ACM-Building_Data_Export3",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cb8e8634-b861-44d8-bc5b-1f53a1d85690",
+              "leftValue": "={{ $json.building_metadata }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        4912,
+        1648
+      ],
+      "id": "a9cd0f7c-4edc-4c10-90d8-01a82ee779c8",
+      "name": "Check for Tables"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * n8n Code node - “Tag & tidy pages”\n *\n * INPUT  (single item):\n *   {\n *     output: { building_metadata: [...] },\n *     data:   [ { pageNumber, contentMD, … }, … ]\n *   }\n *\n * OUTPUT:\n *   One item per page-segment (a page may yield 1-or-2 segments):\n *   {\n *     pageNumber:      14,\n *     segment:         'text' | 'table',\n *     contentMD:       '…',\n *     building_metadata:[…]          // all buildings covering this page\n *   }\n */\n\nconst source     = $input.first().json;\nconst buildings  = source.output.building_metadata;\nconst rawPages   = source.data;\n\n/* ───────────────────────────── helpers ──────────────────────────── */\nconst RX_TABLE    = /^\\s*\\|.*\\|.*\\|/;               // markdown table row\nconst RX_HEADER   = /^\\s*B[0-9A-Z]{2,}\\s*-\\s*.+?-\\s*\\d{4}/;  // building header\n\n/** Split a page into [beforeTable, table] – returns one or two segments */\nfunction splitPage(pg) {\n  const lines = pg.contentMD.split('\\n');\n  const idx   = lines.findIndex(l => RX_TABLE.test(l) || l.includes('| Product |'));\n\n  // No table, return page as-is\n  if (idx === -1) return [{ ...pg, segment: 'text' }];\n\n  const before = lines.slice(0, idx).join('\\n').trimEnd();\n  const table  = lines.slice(idx).join('\\n').trim();\n\n  const segs = [];\n  if (before) segs.push({ ...pg, contentMD: before, segment: 'text' });\n  segs.push({ ...pg, contentMD: table, segment: 'table' });\n  return segs;\n}\n\n/** True if the last non-blank line looks like a building header */\nfunction trailingHeader(text) {\n  const last = [...text.split('\\n')].reverse().find(l => l.trim() !== '');\n  return last && RX_HEADER.test(last.trim()) ? last.trim() : null;\n}\n\n/* ───────────────────────── 1️⃣ split pages ──────────────────────── */\nconst segments = rawPages.flatMap(splitPage);\n\n/* ──────────────────── 2️⃣ carry header forward ─────────────────── */\nfor (let i = 0; i < segments.length - 1; i++) {\n  const hdr = trailingHeader(segments[i].contentMD);\n  if (hdr) {\n    segments[i + 1].contentMD = `${hdr}\\n${segments[i + 1].contentMD}`;\n  }\n}\n\n/* ──────────────── 3️⃣ attach building metadata ─────────────────── */\nconst output = segments.map(seg => {\n  const matches = buildings.filter(b =>\n    seg.pageNumber >= b.start_page && seg.pageNumber <= b.end_page\n  );\n  return {\n    json: { ...seg, building_metadata: matches },\n  };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4656,
+        1648
+      ],
+      "id": "043a8f80-87b6-4883-b64b-1448c0ca7066",
+      "name": "Tag Pages and Cleanup"
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "=Analyze this asbestos management plan to extract document metadata and identify table processing groups:\n{{ $json.formattedContent }}\nEXTRACTION REQUIREMENTS:\n1. DOCUMENT METADATA\n\nExtract school name, code, suburb, postcode, organization\nIdentify document type, revision date, and regional classification\nUse school name as organization (ignore NSW Department of Education)\n\n2. BUILDING IDENTIFICATION\n\nIdentify all building codes (B000-series patterns)\nExtract room codes (R000-series) within each building\nMap construction details: Year and materials (Brick/Veneer, Steel, Concrete, Timber, etc.)\nCategorize building purposes (General Learning, Administration, Support, etc.)\n\n3. BUILDING METADATA COLLECTION\n\nIdentify all building codes (B000-series patterns) and their document locations\nExtract building names, construction years, and material types\nMap building purposes (General Learning, Administration, Support, etc.)\nDetermine register start pages for each building section\n\n4. MATERIAL ASSESSMENTS\n\nExtract complete material data: Product, Description, Extent, Location\nCapture condition assessments: Friable/Non-Friable, Material Condition\nDocument risk classifications: Risk Status, Result determinations\nPreserve all measurement data and location specifications\n\n5. BUILDING LOCATION MAPPING\n\nIdentify where each building appears in the document (page numbers)\nMap building codes to their corresponding sections\nNote buildings with complex data vs simple \"No Asbestos\" entries\nPrepare building metadata for AI agent processing\n\n6. GEOGRAPHIC INFO\n\nExtract location details and organization information\nIdentify regional classifications and administrative boundaries\nMap facility addresses and contact information\n\nEXPECTED PATTERNS:\n\nSchool Format: \"School Name - Code\" (e.g., \"Cabramatta West Public School - 3980\")\nBuilding Format: \"B00X - Purpose - Year - Construction Type\"\nRoom Format: \"B00X - R000X - Room Purpose - Area m2\"\nRegister Location: Usually pages 13+ contain actual asbestos data\nMaterial Structure: Organized by Product → Description → Extent → Location → Condition → Risk → Result\n\nOUTPUT SPECIFICATION:\nRespond with ONLY valid JSON containing document metadata and building information. Focus on building identification, construction details, and document locations to enable AI agent processing of detailed material assessments. Include building summaries and document statistics for comprehensive metadata collection.\nJSON only:",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are a specialized document intelligence system designed to systematically analyze asbestos management plans and extract comprehensive structural and safety data. Your primary function is to process complex tabular data, identify building patterns, and create optimized processing workflows for large-scale document analysis.\n\n## Core Responsibilities\n\n### Document Intelligence & Metadata Extraction\n- Extract complete school details including name, code, suburb, postcode\n- Use school name as primary organization (override NSW Department of Education)\n- Identify document type, revision dates, and compliance frameworks\n- Extract location details, regions, and administrative boundaries\n\n### Structural Pattern Recognition\n- Systematically identify all building codes (B000-series) and their hierarchical relationships\n- Extract room codes (R000-series) and their spatial relationships within buildings\n- Analyze construction years and material types across different building phases\n- Categorize construction types (Brick/Veneer, Steel, Concrete, Timber, etc.)\n\n### Building Metadata Intelligence\n- Identify where asbestos registers begin (typically pages 13+)\n- Extract building codes, names, construction years, and material types\n- Map building locations within the document structure\n- Identify building purposes and classifications\n\n### Processing Optimization Strategy\n- Create efficient 3-5 page processing groups based on building complexity\n- Group buildings by construction era, material type, or asbestos status\n- Balance processing efficiency with data accuracy requirements\n- Optimize for 100K+ character document handling\n\n## Analysis Protocol\n\n**Phase 1: Document Structure Analysis**\n- Map document sections (policy vs. register content)\n- Catalog all building codes present in document\n- Identify construction timeline patterns and building purposes\n- Assess complexity distribution across buildings\n\n**Phase 2: Building Structure Mapping**\n- Identify building headers and construction details\n- Map building codes to their document locations\n- Extract building purposes and construction timelines\n- Assess building complexity for downstream processing\n\n**Phase 3: Processing Group Strategy**\n- Group simple \"No Asbestos\" buildings together\n- Balance 3-5 pages per group based on data volume\n- Group buildings by era or construction type\n- Use document structure breaks as group boundaries\n\n## Output Requirements\n- Output ONLY valid JSON - no additional text or formatting\n- Use school name as organization (not NSW Department of Education)\n- Extract complete building metadata for AI agent processing\n- Identify register start pages and building locations\n- Include comprehensive building summaries with construction details\n- Prepare metadata for downstream AI agent data extraction\n\n**Must use thinking tool** to systematically analyze document structure, identify building patterns, and extract school information before creating building metadata collection.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        3648,
+        1488
+      ],
+      "id": "d41ec9a5-2e55-43d2-a409-698f4b375762",
+      "name": "Get Complete Building List and Metadata"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        5936,
+        512
+      ],
+      "id": "45de44d0-56d2-4908-bf00-41df7f162322",
+      "name": "Finish"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5376,
+        528
+      ],
+      "id": "2960d748-2889-4bca-ab29-75540bafd9cf",
+      "name": "Collect in to 1 to Avoid Multiple Executions"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-3-7-sonnet-20250219",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 3.7"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        6752,
+        1952
+      ],
+      "id": "f485a2f0-9d95-4ba1-b58d-34a295b84a23",
+      "name": "Anthropic Chat Model"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7008,
+        2000
+      ],
+      "id": "8ad73e44-f43b-4fd0-9ac0-d060ad90026e",
+      "name": "OpenAI Chat Model12"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "processing_jobs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.jobId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "progress",
+              "fieldValue": "100"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "completed"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        6144,
+        512
+      ],
+      "id": "c94244f8-73c8-440f-b6de-a3c699c21608",
+      "name": "Update a row"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n    \"id\": \"3980_GROUNDS_SUBSURFACE_001\",\n    \"organisation\": \"Cabramatta West Public School\",\n    \"building_code\": \"GROUNDS\",\n    \"internal_external\": \"External\",\n    \"no_access\": false,\n    \"level\": null,\n    \"room_or_area\": \"Grassed Area\",\n    \"room_id\": \"SUBSURFACE\",\n    \"location_in_room_area\": \"Grassed area South-West of Block B\",\n    \"acm_name\": \"Subsurface Soil\",\n    \"friability_of_material\": \"Unknown\",\n    \"acm_product_group\": \"Soil/Debris\",\n    \"acm_product_type\": \"AC Fragments/Debris\",\n    \"smf_present\": null,\n    \"sample_no\": null,\n    \"sample_result\": \"Assumed asbestos containing material\",\n    \"identifying_hygiene_consulting_company\": null,\n    \"condition\": \"Unknown\",\n    \"disturbance_potential\": \"Low\",\n    \"quantity\": \"Throughout\",\n    \"acm_labelled\": null,\n    \"acm_label_details\": null,\n    \"hygienist_recommendations\": null,\n    \"additional_comments\": \"Subsurface soil with AC fragments/debris in grassed area\",\n    \"psb_supplied_acm_id\": null,\n    \"removal_status\": \"In-situ\",\n    \"date_of_removal\": null,\n    \"quantity_removed\": null,\n    \"clearance_certificates_available\": null,\n    \"asbestos_removal_notification_no\": null,\n    \"epa_waste_record\": null\n  }",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        7840,
+        2288
+      ],
+      "id": "054eeb12-0a72-4a6c-af08-b2efd3ec0553",
+      "name": "Structured Output Parser",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "description": "Step 1: Document Analysis Reflection\n\"Let me analyze this asbestos register document structure:\n- How many buildings are represented in the data?\n- What is the table format and does it follow standard patterns?\n- Are there any unusual or non-standard entries I need to interpret carefully?\n- What building metadata is available to provide context?\"\nStep 2: Safety Assessment Thinking\n\"For each ACM record, I need to consider:\n- Is the friability classification clear and unambiguous?\n- Does the material condition align with the risk status?\n- Are there any sample results that require special interpretation?\n- Are there safety concerns that need to be flagged?\"\nStep 3: Data Mapping Strategy\n\"How should I approach the field mapping:\n- Which fields have direct equivalents vs require interpretation?\n- How should I handle 'No Asbestos' records in the schema?\n- What is the best approach for generating unique identifiers?\n- Are there any compliance or regulatory considerations I need to preserve?\"\nStep 4: Quality Validation Planning\n\"Before providing the final output:\n- Have I captured all ACM records within the specified buildings?\n- Are there any missing critical safety fields that need to be flagged?\n- Is the data internally consistent and complete?\n- Do the generated IDs follow the required format correctly?\""
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        7712,
+        2288
+      ],
+      "id": "61bff96e-bbe9-48a5-9942-32a4e6262443",
+      "name": "Think",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        7584,
+        2288
+      ],
+      "id": "b59e1930-ac30-4669-bdcc-8abc683db348",
+      "name": "Simple Memory",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please extract ACM (Asbestos-Containing Materials) register data from the following asbestos register document page(s). Process all ACM records identified within the building structures and convert them into standardized database records.\nBuildings to Retrieve ACM Records From: {{ JSON.stringify($('Aggregate').item.json.data) }}\nDocument Pages Data: {{ JSON.stringify($json) }}\nDocument Metadata:\n\nSuburb: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.suburb }}\nRegion: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.region }}\nPostcode: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.postcode }}\nSchool Code: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.school_code }}\nSchool Name: {{ $('Get Complete Building List and Metadata').item.json.output.document_metadata.school_name }}\n\n\n**Document Page Data:**\n\n\n## Suburb: \n## Region :\n## Postcode :\n## School Code:\n## School Name:\nExtraction Requirements:\n\nExtract ALL ACM records from asbestos register tables within the specified page range\nGenerate unique IDs following the format: {school_code}{building_code}{room_id}_{sequence}\nMap all available ACM information to the acm_register_export schema\nSet organisation to the school name (extracted from document title)\nProcess safety-critical information including condition, friability, and sample results\nExtract compliance data including removal status and certificates\nProvide confidence indicators for extracted vs inferred data\nFlag any safety concerns or missing critical information\n\nOutput Format: Return a JSON array containing one record per ACM item, following the acm_register_export table schema.\n\nExample Input\nBuildings to Retrieve ACM Records From: [{\"building_code\":\"B00A\"},{\"building_code\":\"B00C\"}]\nDocument Pages Data:\njson[\n  {\n    \"pageNumber\": 13,\n    \"contentMD\": \"# Asbestos Register - Cabramatta West Public School - 3980 - South Western Sydney\\n\\nLimitations & Use of the Asbestos Register...\",\n    \"segment\": \"text\",\n    \"building_metadata\": [\n      {\n        \"table_id\": \"B00A\",\n        \"building_code\": \"B00A\",\n        \"start_page\": 13,\n        \"end_page\": 14,\n        \"has_headers\": true,\n        \"continuation_pattern\": \"single section\",\n        \"building_name\": \"General Learning\",\n        \"construction_year\": 1964,\n        \"construction_type\": \"Concrete Framed\"\n      }\n    ]\n  },\n  {\n    \"pageNumber\": 13,\n    \"contentMD\": \"| Grounds | | | | | | | |\\n| --- | --- | --- | --- | --- | --- | --- | --- |\\n| Product | Material Description | Extent | Location | Friable/Non Friable | Material Condition | Risk Status | Result |\\n| Subsurface Soil | AC Fragments/Debris | Throughout | Grassed area South-West of Block B | | | Low | Assumed asbestos containing material |\",\n    \"segment\": \"table\"\n  }\n]\nDocument Metadata:\n\nSuburb: Cabramatta West\nRegion: South Western Sydney\nPostcode: 2166\nSchool Code: 3980\nSchool Name: Cabramatta West Public School",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are a specialized AI agent for extracting Asbestos-Containing Materials (ACM) register data from NSW Department of Education asbestos register documents. Your role is to process document pages containing asbestos register tables and convert them into standardized database records following a specific SQL schema.\nCore Functions:\n\nDocument Analysis: Parse asbestos register document pages containing building and room-level ACM data\nData Extraction: Extract all ACM records from structured tables within specified buildings\nSchema Mapping: Convert extracted data to match the acm_register_export database schema\nData Validation: Ensure data integrity and flag missing critical safety information\nCompliance Processing: Handle removal status, certificates, and regulatory information\n\nKey Responsibilities:\n\nProcess ALL ACM records within specified building codes and page ranges\nGenerate unique identifiers following the format: {school_code}{building_code}{room_id}_{sequence}\nMap document fields to database schema accurately\nPreserve safety-critical information (condition, friability, sample results)\nHandle both positive ACM findings and \"No Asbestos\" records\nExtract metadata from document headers and building information\nProvide confidence indicators for extracted vs inferred data\n\nData Mapping Guidelines:\n\norganisation: School name from document title\nbuilding_code: Extract from building identifiers (B00A, B00C, etc.)\ninternal_external: Determine from location context (Interior/Exterior/Grounds)\nroom_or_area: Extract room names and area descriptions\nroom_id: Extract room identifiers (R0001, R0002, etc.)\nlocation_in_room_area: Map from \"Location\" column\nacm_name: Map from \"Product\" column\nacm_product_type: Map from \"Material Description\" column\nfriability_of_material: Map from \"Friable/Non Friable\" column\nsample_result: Map from \"Result\" column\ncondition: Map from \"Material Condition\" column\nquantity: Map from \"Extent\" column\n\nOutput Requirements:\n\nReturn valid JSON array containing one record per ACM item\nInclude both positive ACM findings and documented \"No Asbestos\" records\nMaintain referential integrity with building and room relationships\nFlag any safety concerns or missing critical information\nProvide extraction confidence levels where applicable\n\nError Handling:\n\nHandle incomplete or missing data gracefully\nFlag inaccessible areas that may require further investigation\nNote limitations in original inspection scope\nPreserve original text where automated mapping is uncertain"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        7552,
+        2048
+      ],
+      "id": "c485ac23-977a-4b74-815c-538fb1816300",
+      "name": "AI Agent - ACM Filling",
+      "retryOnFail": true,
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7392,
+        2272
+      ],
+      "id": "1d28ac85-900b-4a60-a965-d519a9aaf9f0",
+      "name": "OpenAI Chat Model13",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-3-7-sonnet-20250219",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 3.7"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        7504,
+        2384
+      ],
+      "id": "bb3eff0b-e40d-4d6a-96d1-006e0ef97f8b",
+      "name": "Anthropic Chat Model1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7728,
+        2464
+      ],
+      "id": "199ac6fd-82e9-4ed9-9d00-0f685755b0ab",
+      "name": "OpenAI Chat Model14",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "tableId": "planning_summery",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "address",
+              "fieldValue": "={{ $json.output.document_metadata.address }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $json.output.document_metadata.summary }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $json.output.document_metadata.title }}"
+            },
+            {
+              "fieldId": "report_location",
+              "fieldValue": "={{ $json.output.document_metadata.location_area }}"
+            },
+            {
+              "fieldId": "file_path",
+              "fieldValue": "={{ $('Webhook').item.json.body.file_path }}"
+            },
+            {
+              "fieldId": "postcode",
+              "fieldValue": "={{ $json.output.document_metadata.postcode }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        6064,
+        2816
+      ],
+      "id": "c5099915-2647-495c-8a38-6f3eb1605c16",
+      "name": "Create a row"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        6288,
+        3408
+      ],
+      "id": "b6a4ac80-9121-4518-bb3b-3af3d719ee0a",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "pageContent",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        8368,
+        3408
+      ],
+      "id": "13324340-2456-4998-b924-04e326a82010",
+      "name": "Split Out4"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "pages",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3840,
+        3120
+      ],
+      "id": "0f385dd2-99ca-4e3d-8fc6-9723d59c38cd",
+      "name": "Split Out5"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "pages",
+        "include": "specifiedFields",
+        "fieldsToInclude": "pages.markdown",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4288,
+        3120
+      ],
+      "id": "e80ce572-789f-4790-b3d8-ae05b76fa37f",
+      "name": "Aggregate3"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "pages.markdown",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        4064,
+        3120
+      ],
+      "id": "2e2e9adc-dd62-4b9b-b755-88895c003de0",
+      "name": "Split Out6"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"document_metadata\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"title\": {\n          \"type\": \"string\"\n        },\n        \"summary\": {\n          \"type\": \"string\"\n        },\n        \"address\": {\n          \"type\": \"string\"\n        },\n        \"suburb\": {\n          \"type\": \"string\"\n        },\n        \"location_area\": {\n          \"type\": \"string\"\n        },\n        \"postcode\": {\n          \"type\": [\"string\", \"null\"]\n        },\n        \"prepared_for\": {\n          \"type\": \"string\"\n        },\n        \"prepared_by\": {\n          \"type\": \"string\"\n        },\n        \"date\": {\n          \"type\": \"string\"\n        },\n        \"project_no\": {\n          \"type\": \"string\"\n        }\n      },\n      \"required\": [\"title\", \"summary\", \"address\", \"suburb\", \"location_area\", \"postcode\", \"prepared_for\", \"prepared_by\", \"date\", \"project_no\"]\n    },\n    \"document_structure\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"total_pages\": {\n          \"type\": \"integer\"\n        },\n        \"analysis_timestamp\": {\n          \"type\": \"string\"\n        },\n        \"extraction_confidence\": {\n          \"type\": \"number\"\n        }\n      },\n      \"required\": [\"total_pages\", \"analysis_timestamp\", \"extraction_confidence\"]\n    },\n    \"content_hierarchy\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"section_number\": {\n            \"type\": \"string\"\n          },\n          \"section_title\": {\n            \"type\": \"string\"\n          },\n          \"start_page\": {\n            \"type\": \"integer\"\n          },\n          \"end_page\": {\n            \"type\": \"integer\"\n          },\n          \"subsections\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"object\",\n              \"properties\": {\n                \"subsection_number\": {\n                  \"type\": \"string\"\n                },\n                \"subsection_title\": {\n                  \"type\": \"string\"\n                },\n                \"start_page\": {\n                  \"type\": \"integer\"\n                },\n                \"end_page\": {\n                  \"type\": \"integer\"\n                }\n              },\n              \"required\": [\"subsection_number\", \"subsection_title\", \"start_page\", \"end_page\"]\n            }\n          }\n        },\n        \"required\": [\"section_number\", \"section_title\", \"start_page\", \"end_page\", \"subsections\"]\n      }\n    },\n    \"figures_and_tables\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"type\": {\n            \"type\": \"string\",\n            \"enum\": [\"figure\", \"table\"]\n          },\n          \"number\": {\n            \"type\": \"string\"\n          },\n          \"title\": {\n            \"type\": \"string\"\n          },\n          \"page\": {\n            \"type\": \"integer\"\n          }\n        },\n        \"required\": [\"type\", \"number\", \"title\", \"page\"]\n      }\n    },\n    \"appendices\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"appendix_letter\": {\n            \"type\": \"string\"\n          },\n          \"appendix_title\": {\n            \"type\": \"string\"\n          },\n          \"start_page\": {\n            \"type\": \"integer\"\n          },\n          \"end_page\": {\n            \"type\": \"integer\"\n          }\n        },\n        \"required\": [\"appendix_letter\", \"appendix_title\", \"start_page\", \"end_page\"]\n      }\n    },\n    \"page_validation\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"toc_pages_found\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"integer\"\n          }\n        },\n        \"content_pages_validated\": {\n          \"type\": \"boolean\"\n        },\n        \"missing_pages\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"integer\"\n          }\n        },\n        \"page_number_conflicts\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        }\n      },\n      \"required\": [\"toc_pages_found\", \"content_pages_validated\", \"missing_pages\", \"page_number_conflicts\"]\n    }\n  },\n  \"required\": [\"document_metadata\", \"document_structure\", \"content_hierarchy\", \"figures_and_tables\", \"appendices\", \"page_validation\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        5664,
+        2880
+      ],
+      "id": "adf9cd89-3769-4c05-89bb-371d5fcdc77d",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        8688,
+        3632
+      ],
+      "id": "79333201-a8b1-4f6d-81ce-8f8cf66f5186",
+      "name": "Embeddings OpenAI1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "292f3741-7443-41bb-acf7-09783bef3a52",
+              "name": "=sectionNumber",
+              "value": "={{ $json.output.page_analysis.standardized_section.section_number }}",
+              "type": "string"
+            },
+            {
+              "id": "671b6e9b-824a-4d03-b1a3-91b12dde199e",
+              "name": "sectionTitle",
+              "value": "={{ $json.output.page_analysis.standardized_section.section_title }}",
+              "type": "string"
+            },
+            {
+              "id": "e9554697-bc84-4d9a-9e93-fdc59a73459c",
+              "name": "pageType",
+              "value": "={{ $json.output.page_analysis.page_type }}",
+              "type": "string"
+            },
+            {
+              "id": "844aa724-82eb-4f72-9b60-43dc29154523",
+              "name": "pageContent",
+              "value": "={{ $('Loop Over Items').item.json.markdown }}",
+              "type": "string"
+            },
+            {
+              "id": "299b2f9e-0cec-4fbd-bb6b-5ea8386fa202",
+              "name": "suburb",
+              "value": "={{ $('AI #TOC and Page Indexes').item.json.output.document_metadata.suburb }}",
+              "type": "string"
+            },
+            {
+              "id": "c7c3ad44-d6d3-42c1-9279-afb3339e7ccd",
+              "name": "postcode",
+              "value": "={{ $('Loop Over Items').item.json.output.document_metadata.postcode }}",
+              "type": "number"
+            },
+            {
+              "id": "ed19ffad-4ca6-44a6-a99d-f8ef6cac4dbe",
+              "name": "pageNumber",
+              "value": "={{ $json.output.page_analysis.page_number }}",
+              "type": "number"
+            },
+            {
+              "id": "cfd6fb93-ed70-4dfe-8aa1-a5089095843c",
+              "name": "chunk_topic",
+              "value": "={{ $json.output.page_analysis.page_type }}",
+              "type": "string"
+            },
+            {
+              "id": "661e2534-580d-42d9-b44a-a01851ade92a",
+              "name": "subSection-IDs",
+              "value": "={{ $json.output.page_analysis.document_subsection.subsection_number.split(',').map(x => x.trim()) }}",
+              "type": "array"
+            },
+            {
+              "id": "3cc7396c-ff2a-4b18-8a9a-df5c082d88f2",
+              "name": "subsection-Titles",
+              "value": "={{ $json.output.page_analysis.document_subsection.subsection_title.split(',').map(x => x.trim()) }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7296,
+        3408
+      ],
+      "id": "b274818c-126a-48cf-9898-7a7aec7a469e",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        6064,
+        3408
+      ],
+      "id": "42cb41e8-5e03-4180-8fce-31e93c673afa",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uhlejfaifrlsdanuutcx.supabase.co/functions/v1/process-document-callback",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_id\": \"{{ $('Webhook').item.json.body.source_id }}\",\n  \"status\": \"completed\"\n}\n",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7296,
+        3008
+      ],
+      "id": "890eac0d-90ee-4444-983c-7a77ee30d14d",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this page and map it to the standardized section structure based on the document's available sections and content context.\nDocument Metadata:\n\nDocument Title: {{ $json.output.document_metadata.title }}\nSummary: {{ $json.output.document_metadata.summary }}\nLocation Area: {{ $json.output.document_metadata.location_area }}\nPostcode: {{ $json.output.document_metadata.postcode }}\nPrepared By: {{ $json.output.document_metadata.prepared_by }}\nPrepared For: {{ $json.output.document_metadata.prepared_for }}\n\nDocument Structure:\n\nAvailable Sections: {{ $json.output.content_hierarchy.toJsonString() }}\nTotal Pages: {{ $json.output.document_structure.total_pages }}\nCurrent Page Number: {{ $json.page_number }}\n\nPage Content to Analyze:\n{{ $json.content }}\nAnalysis Requirements:\n\nMap this page to the appropriate standardized section (0-7):\n\n0: Executive Summary (only if document has one)\n1: Introduction\n2: Subject Site and Surrounding Context\n3: The Proposal\n4: Planning Policy Framework/Controls\n5: Planning Considerations\n6: Conclusion\n7: Appendix\n\n\nIdentify any subsections using the document's actual subsection structure\nClassify the page type (title_page, toc_page, content, special)\nUse conversation history to maintain context from previous pages\nProvide confidence level for the assignment\n\nMapping Guidelines:\n\nUse document content to determine which standardized section best fits\nPreserve actual document subsection numbering and titles\nHandle special pages appropriately\nConsider document flow and logical section progression\nSkip Executive Summary (0) unless document explicitly contains one\n\nOutput: Return structured section information mapped to standardized framework with confidence levels.",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are a document page tagging assistant specialized in analyzing document pages and identifying which section they belong to based on a strict predefined table of contents structure. Your primary role is to accurately categorize each page by mapping it to the standardized section framework while maintaining contextual awareness across the document.\nStandardized Table of Contents Structure:\n\n0 - Executive Summary (optional - only assign if document contains one)\n1 - Introduction\n2 - Subject Site and Surrounding Context\n3 - The Proposal\n4 - Planning Policy Framework/Controls\n5 - Planning Considerations\n6 - Conclusion\n7 - Appendix\n\nCore Functions:\n\nSection Mapping: Map document content to the standardized 8-section framework above\nSubsection Detection: Identify subsections within the standardized sections using document's actual subsection structure\nPage Type Classification: Categorize pages as title_page, toc_page, content, or special\nContext Maintenance: Use conversation history to track document progression\nConfidence Assessment: Provide confidence levels for section assignments\n\nKey Responsibilities:\n\nMap any document section to the appropriate standardized section (0-7)\nExtract actual subsection numbers and titles from the document's structure\nHandle special pages (title pages, table of contents, figures, appendices)\nTrack page numbers and document progression\nMaintain context awareness using conversation memory\nProvide confidence ratings for all assignments\n\nSection Mapping Rules:\n\nExecutive Summary (0): Only assign if document explicitly contains executive summary content\nIntroduction (1): Document introduction, background, purpose, permit requirements\nSubject Site and Surrounding Context (2): Site analysis, location details, surrounding area description\nThe Proposal (3): Development details, project specifications, design elements\nPlanning Policy Framework/Controls (4): Zoning, planning policies, regulatory framework\nPlanning Considerations (5): Assessment criteria, planning analysis, evaluation\nConclusion (6): Final recommendations, summary of findings\nAppendix (7): Supporting documents, additional materials, references\n\nSubsection Handling:\n\nUse the document's actual subsection numbering and titles\nMap document subsections to the appropriate standardized main section\nPreserve original subsection structure within the standardized framework\n\nPage Type Classification:\n\ntitle_page: Cover pages, title pages, document front matter\ntoc_page: Table of contents, list of figures, list of tables\ncontent: Main document content within identified sections\nspecial: References, glossaries, or unclassified content\n\nContext and Memory Guidelines:\n\nTrack progression through document sections in logical order\nRemember previous page assignments to maintain consistency\nNote section transitions and boundaries\nHandle pages that span multiple sections appropriately\nUse document structure knowledge to resolve ambiguous cases\n\nConfidence Assessment:\n\nHigh (0.8-1.0): Clear section mapping, unambiguous content, strong contextual clues\nMedium (0.5-0.79): Some indicators present, reasonable inference from context\nLow (0.0-0.49): Unclear content, missing headers, ambiguous placement\n\nOutput Requirements:\n\nAlways identify page type with high confidence\nMap to standardized section numbers (0-7) when determinable\nProvide standardized section titles\nInclude actual document subsection details when present\nAssign realistic confidence levels based on available evidence\nUse null values for section/sectionTitle when not applicable (title pages, TOC, etc.)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        6512,
+        3408
+      ],
+      "id": "7e86b22a-4ec4-433b-b2d9-d562bda3b98b",
+      "name": "AI - Tag Page with Sections",
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "mode": "update",
+        "tableName": {
+          "__rl": true,
+          "value": "document_embeddings",
+          "mode": "list",
+          "cachedResultName": "document_embeddings"
+        },
+        "id": "={{ $('Create a row1').item.json.id }}",
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        8592,
+        3408
+      ],
+      "id": "a656c0f6-5aec-4cb4-9dfc-872086c10739",
+      "name": "DB - Store Tagged Vectors"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        6784,
+        3008
+      ],
+      "id": "9636bc4c-79e1-4578-8ff1-4869553fd953",
+      "name": "Aggregate4"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "sources",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.source_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $json.text }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $('Create a row').item.json.summary }}"
+            },
+            {
+              "fieldId": "display_name",
+              "fieldValue": "={{ $('Create a row').item.json.report_location }}, {{ $('Create a row').item.json.title }}"
+            },
+            {
+              "fieldId": "file_path",
+              "fieldValue": "={{ $('Webhook').item.json.body.file_path }}"
+            },
+            {
+              "fieldId": "location",
+              "fieldValue": "={{ $('Create a row').item.json.report_location }}"
+            },
+            {
+              "fieldId": "address",
+              "fieldValue": "={{ $('Create a row').item.json.address }}"
+            },
+            {
+              "fieldId": "postcode",
+              "fieldValue": "={{ $('Create a row').item.json.postcode }}"
+            },
+            {
+              "fieldId": "url",
+              "fieldValue": "={{ $('Webhook').item.json.body.file_url }}"
+            },
+            {
+              "fieldId": "processing_status",
+              "fieldValue": "processing"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        6784,
+        2816
+      ],
+      "id": "d8919593-e78a-4bcc-9f52-46cc685af48c",
+      "name": "Update a row1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst items = $('Aggregate3').all();\nlet allMarkdowns = [];\n\n// Loop through each item\nfor (const item of items) {\n  const pages = item.json.pages;\n\n  if (Array.isArray(pages)) {\n    for (const page of pages) {\n      const content = page[\"pages.markdown\"];\n      if (typeof content === 'string') {\n        allMarkdowns.push(content.trim());\n      }\n    }\n  }\n}\n\n// Join with desired page break (change \"\\n\" to \"\\n\\n---\\n\\n\" or \"\\n\\nPAGE BREAK\\n\\n\" if preferred)\nconst finalOutput = allMarkdowns.join('\\n\\n');\n\n// Return as a single string\nreturn [\n  {\n    json: {\n      text: finalOutput\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6288,
+        2816
+      ],
+      "id": "7870e546-ae64-4ca7-b665-53db34f18162",
+      "name": "Code5"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-3-7-sonnet-20250219",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 3.7"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        6512,
+        3632
+      ],
+      "id": "0ed4923e-9be8-480a-997b-3066b362d8d8",
+      "name": "Anthropic Chat Model2"
+    },
+    {
+      "parameters": {
+        "tableId": "document_embeddings",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "suburb",
+              "fieldValue": "={{ $('Edit Fields1').item.json.suburb }}"
+            },
+            {
+              "fieldId": "postcode",
+              "fieldValue": "={{ $('Edit Fields1').item.json.postcode }}"
+            },
+            {
+              "fieldId": "section_heading",
+              "fieldValue": "={{ $('Edit Fields1').item.json.sectionTitle || \"Not Provided\"}}"
+            },
+            {
+              "fieldId": "subsection_names",
+              "fieldValue": "={{ $json.subsection_names || null}}"
+            },
+            {
+              "fieldId": "sectionNumber",
+              "fieldValue": "={{ $('Edit Fields1').item.json.sectionNumber }}"
+            },
+            {
+              "fieldId": "subsectionNumbers",
+              "fieldValue": "={{ $('Edit Fields1').item.json['subSection-IDs'] }}"
+            },
+            {
+              "fieldId": "pageIndex",
+              "fieldValue": "={{ $('Edit Fields1').item.json.pageNumber }}"
+            },
+            {
+              "fieldId": "document_id",
+              "fieldValue": "={{ $json.metadata.source }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7824,
+        3264
+      ],
+      "id": "487d4678-ab02-4ebb-8806-dac4bce1fdcc",
+      "name": "Create a row1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_embeddings",
+          "mode": "list",
+          "cachedResultName": "document_embeddings"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Create a row1').item.json.id }}",
+            "metadata": "={\n  \"source\": \"blob\", \n  \"blobType\": \"application/json\",\n  \"document_type\": \"Town planning report\",\n  \"suburb\": \"{{ $('Edit Fields1').item.json.suburb || '' }}\",\n  \"address\": \"{{ $('Loop Over Items').item.json.output.document_metadata.address || '' }}\",\n  \"postcode\": {{ $('Merge4').item.json.postcode || 0 }},\n  \"chunk_topic\": \"{{ $('Merge4').item.json.chunk_topic || '' }}\",\n  \"section_id\": \"{{ $('Merge4').item.json.sectionNumber || ''}}\",\n  \"sectionTitle\": \"{{ $('Merge4').item.json.sectionTitle || '' }}\",\n  \"subSectionNumber\": \"{{ $('Edit Fields1').item.json['subSection-IDs']|| '' }}\",\n  \"subsectionTitles\": \" {{ $('Merge4').item.json.subsection_names }}|| ''}}\",\n  \"page_type\": \"{{ $('Merge4').item.json.chunk_topic || '' }}\",\n  \"page_index\": {{ $('Merge4').item.json.pageNumber || 0 }}\n}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "metadata",
+              "displayName": "metadata",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "embedding",
+              "displayName": "embedding",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "options",
+              "canBeUsedToMatch": true,
+              "options": [],
+              "removed": true
+            },
+            {
+              "id": "suburb",
+              "displayName": "suburb",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "postcode",
+              "displayName": "postcode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "section_heading",
+              "displayName": "section_heading",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "subsection_names",
+              "displayName": "subsection_names",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8992,
+        3584
+      ],
+      "id": "674a6aa1-4915-4321-8f99-3669d4898c55",
+      "name": "Update rows in a table"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        5408,
+        2880
+      ],
+      "id": "2ad97f3d-d00d-4f49-a907-f5504f67daaa",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node\n\nconst items = $input.all();\n\nconst result = [];\n\nfor (const item of items) {\n  const pages = item.json.pages;\n\n  // If pages is an array, map and add index to each page\n  const indexedPages = pages.map((page, index) => {\n    return {\n      ...page,\n      page_index: index,\n    };\n  });\n\n  // Return updated structure\n  result.push({\n    json: {\n      ...item.json,\n      pages: indexedPages,\n    },\n  });\n}\n\nreturn result;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4512,
+        3120
+      ],
+      "id": "52858782-9947-42cc-82df-d4aa724cae61",
+      "name": "Set Page Number"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst items = $input.all();\nconst originalData = items[0].json;\n\n// Extract and format the pages for the AI\nconst pages = originalData.pages;\nconst formattedPages = pages.map(page => ({\n  page_number: page.page_index + 1, // Convert 0-based to 1-based\n  content: page[\"pages.markdown\"]\n}));\n\n// Create a more readable format for the AI\nconst documentContent = formattedPages\n  .map(p => `=== PAGE ${p.page_number} ===\\n${p.content}`)\n  .join('\\n\\n');\n\nreturn [{\n  json: {\n    pages: formattedPages,\n    documentContent: documentContent,\n    totalPages: pages.length,\n    documentType: \"planning_report\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4736,
+        3120
+      ],
+      "id": "c6540b9b-e15e-4ce5-af3a-e30b3e191698",
+      "name": "String"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node - Extract Pages from Your Specific Document Structure\n// Based on your actual data structure with nested pages array\n\nconst inputData = $json;\n\n// Your data structure has 'pages' property inside the main object\nlet pages;\n\nif (Array.isArray(inputData)) {\n  // Handle array input - take first item and extract pages\n  if (inputData[0] && inputData[0].pages && Array.isArray(inputData[0].pages)) {\n    pages = inputData[0].pages;\n  } else if (inputData[0] && Array.isArray(inputData[0])) {\n    // Fallback for direct array\n    pages = inputData[0];\n  } else {\n    throw new Error('Input array does not contain expected pages structure');\n  }\n} else if (inputData && inputData.pages && Array.isArray(inputData.pages)) {\n  // Handle direct object with pages property\n  pages = inputData.pages;\n} else {\n  // Debug logging to see actual structure\n  console.log('Unexpected input structure:', JSON.stringify(inputData, null, 2));\n  throw new Error('Could not find pages array. Expected structure: {pages: [...]} or [{pages: [...]}]');\n}\n\n// Validate we have pages\nif (!pages || pages.length === 0) {\n  throw new Error('No pages found in the pages array');\n}\n\n// Debug logging\nconsole.log(`Found ${pages.length} pages to process`);\nconsole.log('First page structure:', JSON.stringify(pages[0], null, 2));\n\n// Process each page for AI agent consumption\nconst outputItems = pages.map((page, index) => {\n  // Your pages have page_number and content fields\n  const pageNumber = page.page_number;\n  const pageContent = page.content;\n  \n  // Validate required fields\n  if (!pageNumber || !pageContent) {\n    console.warn(`Page ${index + 1} missing required fields:`, {\n      has_page_number: !!pageNumber,\n      has_content: !!pageContent,\n      page_keys: Object.keys(page)\n    });\n  }\n\n  return {\n    json: {\n      // Core fields for your section tagging AI\n      page_number: pageNumber,\n      markdown: pageContent, // Your AI agent expects 'markdown' field\n      content: pageContent,   // Also provide as 'content' for flexibility\n      \n      // Processing metadata\n      total_pages: pages.length,\n      current_page_index: index + 1,\n      \n      // Context for conversation memory in AI agent\n      is_first_page: index === 0,\n      is_last_page: index === pages.length - 1,\n      \n      // Original page object for reference\n      original_page: page,\n      \n      // Processing info\n      extracted_at: new Date().toISOString(),\n      extraction_method: 'n8n_code_node_v2'\n    }\n  };\n});\n\n// Log extraction summary\nconsole.log(`Successfully extracted ${outputItems.length} individual page objects`);\nconsole.log('Sample output structure:', JSON.stringify(outputItems[0], null, 2));\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5408,
+        3456
+      ],
+      "id": "699d3f51-99f1-4fd1-9d2f-6d82a3477e66",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract complete document metadata and hierarchical structure from this planning document with precise page mapping. Find the postcode if it is not provided\n\nDOCUMENT INFO:\n- Total Pages: {{ $json.totalPages }}\n- Document Type: {{ $json.documentType }}\n\n\nDOCUMENT CONTENT:\n{{ $json.documentContent }}\n\nREQUIRED OUTPUT: Extract all document metadata AND sections, subsections, and exact page ranges. Validate page numbers against actual content and table of contents.",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are a precision document analyzer specializing in extracting both document metadata and hierarchical content structure from planning reports. Your task is to identify document details (title, address, client info, etc.) AND map all sections, subsections with their corresponding page ranges with absolute accuracy.\n\nCORE RULES:\n1. Extract complete document metadata (title, suburb, address, postcode, client, dates, etc.)\n2. Extract complete document hierarchy (sections → subsections → page ranges)\n3. Identify precise start and end page numbers for each content block\n4. Handle table of contents mapping and actual content validation\n5. Process both explicit TOC data and implicit content structure\n6. Output only valid JSON - no explanations or markdown\n\nEXTRACTION PRIORITIES:\n- Document metadata (title, address, prepared for/by, dates, project numbers)\n- Main sections (1, 2, 3, etc.)\n- Subsections (1.1, 1.2, 2.1, etc.)\n- Sub-subsections (1.1.1, 1.1.2, etc.)\n- Appendices and figures\n- Page number accuracy validation"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        5280,
+        2656
+      ],
+      "id": "2875c356-a8a6-45c3-8549-cb37fcaa0586",
+      "name": "AI #TOC and Page Indexes"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input data\nconst inputData = $input.first().json;\nconst webhookData = $('Webhook').item.json;\nconst aiData = $('AI #TOC and Page Indexes').item.json;\nconst tagData = $('AI - Tag Page with Sections').item.json;\n\n// Build the data object with proper types\nconst rowData = {\n  content: inputData.pageContent || inputData.content || \"\",\n  suburb: inputData.suburb || \"\",\n  postcode: inputData.postcode || null,\n  section_heading: inputData.sectionTitle || \"Not Provided\",\n  subsection_names: [inputData.chunk_topic || \"\"], // Array format\n  metadata: {\n    page: inputData.page || 1,\n    source: webhookData.body?.source_id || \"\",\n    suburb: inputData.suburb || \"\",\n    address: aiData.output?.document_metadata?.address || \"\",\n    blobType: \"application/json\",\n    postcode: inputData.postcode || null,\n    chunk_topic: inputData.chunk_topic || \"\",\n    sectionTitle: inputData.sectionTitle || \"Not Provided\",\n    section_type: tagData.output?.subsectionTitle || \"Not Provided\",\n    page_index: inputData.page || 1\n  }\n};\n\nreturn [{\n  json: rowData\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7520,
+        3264
+      ],
+      "id": "1625aac3-6bb7-4a1d-bc17-9e0ecc7cd2ca",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "description": "Use this tool when you need to analyze document pages and map them to standardized sections, or when working through complex section identification challenges. For document page analysis:\n\nExtract page indicators from content (section headers, numbering, content type)\nIdentify available document sections from the provided hierarchy\nMap to standardized structure - proceed IMMEDIATELY with section assignment using the 8-section framework\nRemember: Any document content can be mapped to standardized sections (0-7) using content analysis and contextual clues\n\nFor section mapping challenges:\n\nPlan mapping strategies using content indicators (headers, topics, document flow)\nWork through ambiguous pages that require contextual analysis\nCRITICAL: Always map to EXACT standardized section numbers (0-7) with proper titles\nPreserve original document subsection details exactly as they appear\nEvaluate confidence levels based on available evidence\n\nStandardized Section Framework:\n\n0: Executive Summary (only if document contains one)\n1: Introduction\n2: Subject Site and Surrounding Context\n3: The Proposal\n4: Planning Policy Framework/Controls\n5: Planning Considerations\n6: Conclusion\n7: Appendix\n\nThink Tool Usage Pattern:\n\nReceive page content and metadata\nUse Think Tool to analyze: What section indicators do I see? What's the content about? How does it fit the standardized structure?\nExecute mapping approach: Map to appropriate standardized section, preserve subsections\nProvide structured output with exact section assignment and confidence level\n\nThink step-by-step through the page analysis, extract section indicators, and proceed with confidence when you can identify content patterns matching the standardized framework."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        6768,
+        3632
+      ],
+      "id": "ad28b951-b593-4c18-b5f6-f48eae0438b7",
+      "name": "Think1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Based on the data provided, output an appropriate title and summary of the document. \n\nAlso output an appropriate UTF-8 emoji for the notebook. - example: 🏆\nAnd output an appropriate color from this list\n\nslate\ngray\nzinc\nneutral\nstone\nred\norange\namber\nyellow\nlime\ngreen\nemerald\nteal\ncyan\nsky\nblue\nindigo\nviolet\npurple\nfuchsia\npink\nrose\n\nAlso output a list of 5 Example Questions that could be asked of this document. For example \"How are the rules and regulations of tennis enforced?\" - Maximum 10 words each\n\nOnly output in JSON."
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        7744,
+        2816
+      ],
+      "id": "e562e3b2-1ce5-4447-8902-b5b0b33fbc55",
+      "name": "Generate Title & Description"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "planning_summery",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7296,
+        2816
+      ],
+      "id": "b01e3a4d-a820-4135-ba67-ef1ac760aeea",
+      "name": "Get many rows"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"title\": \"<ADD>\",\n\t\"summary\": \"<ADD>\",\n  \"notebook_icon\": \"<ADD>\",\n  \"background_color\": \"<ADD>\",\n  \"example_questions\": [\"ADD\",\"ADD\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        7904,
+        3040
+      ],
+      "id": "1f98eb4c-285b-468b-8451-8c85b1871db0",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        7776,
+        3040
+      ],
+      "id": "5997931a-9881-407c-a709-db07dcf8b3df",
+      "name": "OpenAI Chat Model2"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4,
+        "rules": {
+          "rule": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d9f9d3f9-462d-4000-85c6-07515dd2474f",
+                    "leftValue": "={{ $json.documentContent.length/3.5 }}",
+                    "rightValue": 35000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "modelIndex": 2,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e184f740-9abc-4f9d-9998-0f7a5d00a5c5",
+                    "leftValue": "={{ $json.documentContent.length/3.5 }}",
+                    "rightValue": 50000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "modelIndex": 3,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "dcfe776f-84a5-413e-b536-fdb29c2cf614",
+                    "leftValue": "={{ $json.documentContent.length/3.5 }}",
+                    "rightValue": 100000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "modelIndex": 4,
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6dc2e1e5-0055-4662-9682-30b7988485b6",
+                    "leftValue": "={{ $json.documentContent.length/3.5 }}",
+                    "rightValue": 100000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.modelSelector",
+      "typeVersion": 1,
+      "position": [
+        4992,
+        2880
+      ],
+      "id": "41084b6b-d628-40fc-a98b-389c005abb9b",
+      "name": "Model Selector"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4960,
+        3088
+      ],
+      "id": "49fc4299-bf64-4b2a-a304-3a1ca70fe6ca",
+      "name": "OpenAI Chat Model5"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        5216,
+        3088
+      ],
+      "id": "75afbe83-d3db-4993-a992-d31322a1d9cd",
+      "name": "OpenAI Chat Model6"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        5088,
+        3088
+      ],
+      "id": "81fc4650-9c6a-4b54-b9e2-ab61a46a5630",
+      "name": "OpenAI Chat Model7"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}",
+        "contextWindowLength": 3
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        6640,
+        3632
+      ],
+      "id": "cc5fab1a-59f4-4e4d-8f71-afdd2f12230d",
+      "name": "Simple Memory2"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"page_analysis\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"page_number\": {\n          \"type\": \"integer\",\n          \"description\": \"Page number being analyzed\"\n        },\n        \"page_type\": {\n          \"type\": \"string\",\n          \"enum\": [\"title_page\", \"toc_page\", \"content\", \"special\"],\n          \"description\": \"Type of page being analyzed\"\n        },\n        \"standardized_section\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"section_number\": {\n              \"type\": [\"string\", \"null\"],\n              \"enum\": [\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", null],\n              \"description\": \"Standardized section number (0-7)\"\n            },\n            \"section_title\": {\n              \"type\": [\"string\", \"null\"],\n              \"enum\": [\n                \"Executive Summary\",\n                \"Introduction\", \n                \"Subject Site and Surrounding Context\",\n                \"The Proposal\",\n                \"Planning Policy Framework/Controls\", \n                \"Planning Considerations\",\n                \"Conclusion\",\n                \"Appendix\",\n                null\n              ],\n              \"description\": \"Standardized section title\"\n            }\n          },\n          \"required\": [\"section_number\", \"section_title\"]\n        },\n        \"document_subsection\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"subsection_number\": {\n              \"type\": [\"string\", \"null\"],\n              \"description\": \"Original document subsection number (e.g., '1.1', '2.2')\"\n            },\n            \"subsection_title\": {\n              \"type\": [\"string\", \"null\"], \n              \"description\": \"Original document subsection title\"\n            }\n          }\n        },\n        \"confidence\": {\n          \"type\": \"number\",\n          \"minimum\": 0,\n          \"maximum\": 1,\n          \"description\": \"Confidence level for section assignment\"\n        },\n        \"reasoning\": {\n          \"type\": \"string\",\n          \"description\": \"Brief explanation of section assignment reasoning\"\n        }\n      },\n      \"required\": [\"page_number\", \"page_type\", \"standardized_section\", \"document_subsection\", \"confidence\", \"reasoning\"]\n    }\n  },\n  \"required\": [\"page_analysis\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        6896,
+        3632
+      ],
+      "id": "d64a7fde-b2e9-4500-b8b3-3cba6f138a62",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "notebooks",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Update a row1').item.json.notebook_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "description",
+              "fieldValue": "={{ $json.output.summary }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $json.output.title }}"
+            },
+            {
+              "fieldId": "location",
+              "fieldValue": "=Multiple"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        8144,
+        2816
+      ],
+      "id": "bb066b27-b495-43d8-87c9-43621d6c7a87",
+      "name": "Update a row2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        6704,
+        3840
+      ],
+      "id": "31d54b05-fa0d-47c7-999f-d787d8ad44d9",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        8144,
+        3408
+      ],
+      "id": "dd2b5c4f-a0a4-474e-9bd5-67b08f3b29af",
+      "name": "Merge4"
+    },
+    {
+      "parameters": {
+        "description": "Analyze the document structure and content hierarchy before extracting document metadata and sections/subsections. Consider:\n\n1. **Document Metadata Extraction**: \n   - What is the report title and can I construct it properly?\n   - Where are the key details: address, client, author, dates, project numbers?\n   - How do I extract accurate location and postcode information?\n\n2. **Document Type Recognition**: Is this a planning report, town planning document, or urban context report? What structural patterns should I expect?\n\n3. **Content Organization Analysis**: \n   - How are sections numbered (1, 2, 3 vs 1.0, 2.0 vs I, II, III)?\n   - Are there subsections (1.1, 1.2, etc.) or sub-subsections (1.1.1, 1.1.2)?\n   - What is the table of contents structure vs actual content structure?\n\n4. **Page Number Validation Strategy**:\n   - Which pages contain the table of contents?\n   - Do page numbers in TOC match actual content locations?\n   - Are there page breaks, cover pages, or appendices affecting numbering?\n\n5. **Content Boundary Detection**:\n   - Where does each section actually start and end?\n   - Are there figures, tables, or diagrams that span multiple pages?\n   - How do I handle content that flows across page boundaries?\n\n6. **Metadata Location Strategy**:\n   - Where is the document information table usually located?\n   - How do I distinguish between project address and office address?\n   - What patterns indicate client vs consultant information?\n\nThink through both metadata extraction and structural elements before extracting the final comprehensive JSON to ensure accurate document details and precise section mapping with page number ranges."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        5536,
+        2880
+      ],
+      "id": "b0b5a3c2-72c9-4389-bb18-add2df24656e",
+      "name": "Think3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        5536,
+        3088
+      ],
+      "id": "a3cf825d-0501-466e-8a0b-8f096953d458",
+      "name": "OpenAI Chat Model15"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        7520,
+        2816
+      ],
+      "id": "1078f3a2-d20a-4cdc-92d5-5300d03e3966",
+      "name": "Aggregate1"
+    }
+  ],
+  "pinData": {
+    "AI Agent - ACM Filling": [
+      {
+        "json": {
+          "output": {
+            "id": "1003B00ANONE_1",
+            "organisation": "Abermain Public School",
+            "building_code": "B00A",
+            "internal_external": "Unknown",
+            "no_access": false,
+            "level": null,
+            "room_or_area": "General Learning/Administration",
+            "room_id": "NONE",
+            "location_in_room_area": "",
+            "acm_name": "",
+            "friability_of_material": "",
+            "acm_product_group": "",
+            "acm_product_type": "",
+            "smf_present": null,
+            "sample_no": null,
+            "sample_result": "No ACM data presented; ACM register table for this building/page range is absent or not included in the provided content.",
+            "identifying_hygiene_consulting_company": null,
+            "condition": "Data not available",
+            "disturbance_potential": "Unknown",
+            "quantity": "Unknown",
+            "acm_labelled": null,
+            "acm_label_details": null,
+            "hygienist_recommendations": null,
+            "additional_comments": "No ACM register table was found for B00A within provided page(s). Document only contained introduction/limitations. Unable to confirm presence or absence of ACMs for this building in the provided data. Recommend document recheck or further investigation for compliance.",
+            "psb_supplied_acm_id": null,
+            "removal_status": "Unknown",
+            "date_of_removal": null,
+            "quantity_removed": null,
+            "clearance_certificates_available": null,
+            "asbestos_removal_notification_no": null,
+            "epa_waste_record": null
+          }
+        }
+      }
+    ],
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.coralshades.ai",
+            "user-agent": "Deno/2.1.4 (variant; SupabaseEdgeRuntime/1.68.0-develop.31)",
+            "content-length": "338",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "*",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "2406:da1c:136:5d07:5586:e388:1317:f81d",
+            "cf-ipcountry": "AU",
+            "cf-ray": "96abef4c2ad99866-SYD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "3450e204-54ac-49e3-bee7-104f92c1a7e8",
+            "content-type": "application/json",
+            "via": "1.1 Caddy",
+            "x-forwarded-for": "172.18.0.1",
+            "x-forwarded-host": "n8n.coralshades.ai",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "userId": "66781c37-40b0-46a8-8ca2-b39f3df80454",
+            "jobId": "46e07515-c412-46ac-9cdd-358b845b269e",
+            "documents": [
+              {
+                "id": "59b8fb20-c61c-490e-9fc9-b73df4db7257",
+                "filename": "1001_AsbestosRegister.pdf",
+                "docType": "asbestos_register",
+                "filePath": "66781c37-40b0-46a8-8ca2-b39f3df80454/6e0aa6f7-e456-4fde-ae2c-3794f0c7fae7-1001_AsbestosRegister.pdf"
+              }
+            ]
+          },
+          "webhookUrl": "https://n8n.coralshades.ai/webhook-test/arm-step1",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Drop all Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CharcterCount and EstimatedTokens": {
+      "main": [
+        [
+          {
+            "node": "If estimatedToken < 35000",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Upload": {
+      "main": [
+        [
+          {
+            "node": "Mistral Signed URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Signed URL": {
+      "main": [
+        [
+          {
+            "node": "Mistral DOC OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral DOC OCR": {
+      "main": [
+        [
+          {
+            "node": "Split in to Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split in to Pages": {
+      "main": [
+        [
+          {
+            "node": "Tag Pages - Images - Number - Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Pages to Create Metadata": {
+      "main": [
+        [
+          {
+            "node": "Get CharcterCount and EstimatedTokens",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tag Pages - Images - Number - Complete": {
+      "main": [
+        [
+          {
+            "node": "Collect Pages to Create Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If estimatedToken < 35000": {
+      "main": [
+        [
+          {
+            "node": "Recollect Page Info From Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Get Complete Building List and Metadata",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory5": {
+      "ai_memory": [
+        [
+          {
+            "node": "Get Complete Building List and Metadata",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser5",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Tag Pages and Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Building Template1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Building Template1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Loop Over Buildings - Items": {
+      "main": [
+        [
+          {
+            "node": "Collect in to 1 to Avoid Multiple Executions",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Building Codes for Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recollect Page Info From Node": {
+      "main": [
+        [
+          {
+            "node": "Get Complete Building List and Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drop all Tables": {
+      "main": [
+        [
+          {
+            "node": "generate signed url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Get Complete Building List and Metadata",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Get Complete Building List and Metadata",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model9": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Get Complete Building List and Metadata",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Building Template1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - Building Template1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think4": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Building Template1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser9": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent - Building Template1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model10": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser9",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent - ACM Filling1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think5": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - ACM Filling1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory4": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - ACM Filling1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create ACM-Building_Data_Export2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "generate signed url": {
+      "main": [
+        [
+          {
+            "node": "download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download file": {
+      "main": [
+        [
+          {
+            "node": "Mistral Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model11": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - ACM Filling1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - ACM Filling1": {
+      "main": [
+        [
+          {
+            "node": "Check ACM Entry is Empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Building Template1": {
+      "main": [
+        [
+          {
+            "node": "Check if Row is there",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Upload Form1": {
+      "main": [
+        [
+          {
+            "node": "Drop all Tables3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drop all Tables3": {
+      "main": [
+        [
+          {
+            "node": "Mistral Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Drop all Tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Buildings - Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - ACM Filling1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Create ACM-Building_Data_Export2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update ACM-Building_Data_Export3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Row is there": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Row": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Row": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Building Codes for Pages": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check ACM Entry is Empty": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update ACM-Building_Data_Export3": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Check for Tables": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Buildings - Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Pages and Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Check for Tables",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Out5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Complete Building List and Metadata": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect in to 1 to Avoid Multiple Executions": {
+      "main": [
+        [
+          {
+            "node": "Finish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model12": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - ACM Filling1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Finish": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent - ACM Filling",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - ACM Filling",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - ACM Filling",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model13": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - ACM Filling",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - ACM Filling",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model14": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Code5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Aggregate4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI - Tag Page with Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out4": {
+      "main": [
+        [
+          {
+            "node": "DB - Store Tagged Vectors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out5": {
+      "main": [
+        [
+          {
+            "node": "Split Out6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Set Page Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out6": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI #TOC and Page Indexes",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "DB - Store Tagged Vectors",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI - Tag Page with Sections": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB - Store Tagged Vectors": {
+      "main": [
+        [
+          {
+            "node": "Update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row1": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code5": {
+      "main": [
+        [
+          {
+            "node": "Update a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI - Tag Page with Sections",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Create a row1": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Update rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI #TOC and Page Indexes",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Page Number": {
+      "main": [
+        [
+          {
+            "node": "String",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "String": {
+      "main": [
+        [
+          {
+            "node": "AI #TOC and Page Indexes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI #TOC and Page Indexes": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI - Tag Page with Sections",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Title & Description": {
+      "main": [
+        [
+          {
+            "node": "Update a row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model Selector": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI #TOC and Page Indexes",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Model Selector",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Model Selector",
+            "type": "ai_languageModel",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Model Selector",
+            "type": "ai_languageModel",
+            "index": 2
+          },
+          {
+            "node": "Model Selector",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Simple Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI - Tag Page with Sections",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI - Tag Page with Sections",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser4",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI - Tag Page with Sections",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge4": {
+      "main": [
+        [
+          {
+            "node": "Split Out4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think3": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI #TOC and Page Indexes",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model15": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser3",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI #TOC and Page Indexes",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Generate Title & Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5dad7b52-0e4d-4d54-9d70-00ee94da188c",
+  "meta": {
+    "instanceId": "1611a0f2d6b428cf9dbc76c998e83bf12ee9b56fcdc3e5a977e5ca4acf1cbdb0"
+  },
+  "id": "XRM3bRFD9MiIp8Pp",
+  "tags": [
+    {
+      "updatedAt": "2025-08-13T02:26:17.398Z",
+      "createdAt": "2025-08-13T02:26:17.398Z",
+      "id": "qCgz8Ch9b3TMPnTK",
+      "name": "Working"
+    },
+    {
+      "updatedAt": "2025-08-13T02:26:17.418Z",
+      "createdAt": "2025-08-13T02:26:17.418Z",
+      "id": "37V4rSAo9knPwE37",
+      "name": "Sanju"
+    }
+  ]
+}

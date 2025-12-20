@@ -1,0 +1,21 @@
+services:
+  # SurrealDB Database
+  # Used for hybrid development: DB in Docker, code runs locally
+  surrealdb:
+    image: surrealdb/surrealdb:v2
+    container_name: acm-ai-db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./surreal_data:/mydata
+    environment:
+      - SURREAL_EXPERIMENTAL_GRAPHQL=true
+    command: start --log info --user root --pass root surrealkv://mydata/open_notebook.db
+    pull_policy: always
+    user: root
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
