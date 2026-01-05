@@ -52,15 +52,61 @@ CHARS_PER_TOKEN_ESTIMATE = 4  # Approximate characters per token for chunking
 CHUNK_OVERLAP_CHARS = 500  # Overlap between chunks to preserve context
 
 
+def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
+    """
+    Extract just the ACM Register section from a SAMP document.
+
+    SAMP documents have lots of boilerplate text before the actual ACM Register.
+    This function finds and extracts just the relevant section.
+
+    Returns:
+        Tuple of (extracted_content, was_extracted)
+    """
+    # Look for common markers that indicate start of ACM Register section
+    start_markers = [
+        "Appendix B: Asbestos Register",
+        "Appendix B - Asbestos Register",
+        "Asbestos Register",
+        "Interior",  # Often the first area type in the register
+    ]
+
+    # Look for building pattern which indicates start of actual data
+    building_pattern = r"(B\d{3}\s*-\s*[A-Za-z])"
+
+    start_idx = -1
+
+    # Try to find a good starting point
+    for marker in start_markers:
+        idx = content.find(marker)
+        if idx != -1:
+            start_idx = idx
+            break
+
+    # If no marker found, try to find the first building ID pattern
+    if start_idx == -1:
+        match = re.search(building_pattern, content)
+        if match:
+            # Go back a bit to include potential headers
+            start_idx = max(0, match.start() - 200)
+
+    if start_idx != -1 and start_idx > 500:  # Only extract if there's significant boilerplate
+        extracted = content[start_idx:]
+        acm_debug(f"Extracted ACM Register section: {len(content)} -> {len(extracted)} chars (saved {len(content) - len(extracted)} chars)")
+        return extracted, True
+
+    return content, False
+
+
 def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     """
     Pre-process ACM document content to help LLM understand the structure.
 
     The content from PyMuPDF/content-core often comes in vertical format where
     table columns are stacked vertically. This function:
-    1. Identifies room/building headers
-    2. Groups related content together
-    3. Adds structural markers to help LLM parsing
+    1. Extracts the ACM Register section (removes boilerplate)
+    2. Identifies room/building headers
+    3. Groups related content together
+    4. Adds structural markers to help LLM parsing
 
     Returns:
         Tuple of (processed_content, metadata_dict)
@@ -70,7 +116,13 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
         "rooms_found": 0,
         "acm_indicators_found": 0,
         "no_asbestos_found": 0,
+        "section_extracted": False,
     }
+
+    # First, try to extract just the ACM Register section
+    content, was_extracted = _extract_acm_register_section(content)
+    metadata["section_extracted"] = was_extracted
+    metadata["extracted_length"] = len(content)
 
     # Count key patterns for metadata
     metadata["acm_indicators_found"] = content.count("Asbestos-containing")
@@ -102,15 +154,22 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
         marker = f"\n--- ROOM: {room} ---\n"
         processed = processed.replace(room, marker + room)
 
-    # Mark ACM result patterns
-    processed = processed.replace(
-        "Asbestos-containing\nmaterial",
-        ">>> ACM DETECTED: Asbestos-containing material <<<"
-    )
-    processed = processed.replace(
-        "Asbestos-containing material",
-        ">>> ACM DETECTED: Asbestos-containing material <<<"
-    )
+    # Mark ACM result patterns (replace newline-split version first, then check for already-marked)
+    acm_marker = ">>> ACM DETECTED: Asbestos-containing material <<<"
+
+    # Replace newline-split version (most common in PDF extraction)
+    processed = processed.replace("Asbestos-containing\nmaterial", acm_marker)
+
+    # Replace single-line version only if not already marked
+    # This prevents double-marking
+    processed = processed.replace("Asbestos-containing material", acm_marker)
+
+    # Clean up any accidental double markers
+    while ">>> ACM DETECTED: >>> ACM DETECTED:" in processed:
+        processed = processed.replace(
+            ">>> ACM DETECTED: >>> ACM DETECTED: Asbestos-containing material <<< <<<",
+            acm_marker
+        )
 
     metadata["processed_length"] = len(processed)
 

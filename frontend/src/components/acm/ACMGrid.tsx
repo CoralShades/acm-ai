@@ -323,6 +323,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         groupDefaultExpanded={1}
         autoGroupColumnDef={enableGrouping ? autoGroupColumnDef : undefined}
         suppressAggFuncInHeader={true}
+        // Use legacy theming for v32 CSS compatibility (ag-theme-alpine)
+        theme="legacy"
       />
     </div>
   )
