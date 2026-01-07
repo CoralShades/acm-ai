@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FileWarning, AlertCircle } from 'lucide-react'
@@ -9,6 +9,7 @@ import { ACMGrid, type ACMGridRef } from './ACMGrid'
 import { ACMRecordDialog } from './ACMRecordDialog'
 import { ACMStatsCards } from './ACMStatsCards'
 import { ACMToolbar } from './ACMToolbar'
+import { BuildingTabs } from './BuildingTabs'
 import {
   useACMRecords,
   useACMStats,
@@ -17,6 +18,7 @@ import {
   useExportACMCsv,
 } from '@/lib/hooks/use-acm'
 import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
+import { useSessionStorage } from '@/lib/hooks/use-session-storage'
 import type { ACMRecord } from '@/lib/types/acm'
 
 interface ACMTabProps {
@@ -37,14 +39,24 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [recordToDelete, setRecordToDelete] = useState<ACMRecord | null>(null)
 
+  // Building tab state - persisted per source in session storage
+  const [selectedBuilding, setSelectedBuilding] = useSessionStorage<string | null>(
+    `acm-building-${sourceId}`,
+    null
+  )
+
   // Debounce search text for better performance
   const debouncedSearchText = useDebouncedValue(searchText, 300)
 
-  // Reset search when risk filter changes to avoid confusion
+  // Reset search and building selection when risk filter changes to avoid confusion
   // Skip initial mount by checking if searchText has content
   useEffect(() => {
     if (searchText) {
       setSearchText('')
+    }
+    // Reset building selection when risk filter changes
+    if (selectedBuilding !== null) {
+      setSelectedBuilding(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riskFilter])
@@ -120,8 +132,32 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     setVisibleCount(count)
   }, [])
 
-  const records = recordsData?.records || []
-  const totalCount = records.length
+  // Building change handler
+  const handleBuildingChange = useCallback((buildingId: string | null) => {
+    setSelectedBuilding(buildingId)
+  }, [setSelectedBuilding])
+
+  // All records from API (full dataset for building tabs)
+  const allRecords = recordsData?.records || []
+
+  // Reset building selection if selected building no longer exists in data
+  useEffect(() => {
+    if (selectedBuilding && allRecords.length > 0) {
+      const buildingExists = allRecords.some((r) => r.building_id === selectedBuilding)
+      if (!buildingExists) {
+        setSelectedBuilding(null)
+      }
+    }
+  }, [allRecords, selectedBuilding, setSelectedBuilding])
+
+  // Filter records by selected building
+  const records = useMemo(() => {
+    if (!selectedBuilding) return allRecords
+    return allRecords.filter((r) => r.building_id === selectedBuilding)
+  }, [allRecords, selectedBuilding])
+
+  const totalCount = allRecords.length
+  const filteredCount = records.length
   const hasRecords = totalCount > 0
 
   return (
@@ -141,6 +177,15 @@ export function ACMTab({ sourceId }: ACMTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Building Tabs */}
+          {hasRecords && (
+            <BuildingTabs
+              records={allRecords}
+              selectedBuilding={selectedBuilding}
+              onBuildingChange={handleBuildingChange}
+            />
+          )}
+
           {/* Toolbar */}
           <ACMToolbar
             onAddNew={handleAddNew}
@@ -158,7 +203,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             searchText={searchText}
             onSearchChange={setSearchText}
             visibleCount={visibleCount}
-            totalCount={totalCount}
+            totalCount={filteredCount}
           />
 
           {/* No Records Alert */}
