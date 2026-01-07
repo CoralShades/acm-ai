@@ -44,7 +44,7 @@ development_status:
   e1-s3-implement-acm-extraction-transformation: done
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
   e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
-  e1-s6-configure-local-embedding-pipeline: drafted  # Tech-spec created with Esperanto/Ollama integration
+  e1-s6-configure-local-embedding-pipeline: ready-for-dev  # Promoted 2026-01-07
   e1-s7-ai-powered-acm-extraction: done  # Completed 2026-01-07 - all 10 review items addressed
   epic-1-retrospective: optional
 
@@ -131,8 +131,8 @@ development_status:
 # Total Stories: 48
 # Stories Done: 18  # E1-S1,S2,S3,S4,S5,S7 + E2-S1,S2,S3,S4,S5,S6,S7 + E5-S1 + E6-S1,S2,S3,S4
 # Stories In Review: 0
-# Stories Ready for Dev: 0
-# Stories Drafted: 30  # All remaining stories have tech-specs
+# Stories Ready for Dev: 1  # e1-s6
+# Stories Drafted: 29  # All remaining stories have tech-specs
 # Stories Backlog: 0  # All stories now have at least draft status
 #
 # Last Updated: 2026-01-07
@@ -140,8 +140,8 @@ development_status:
 # Progress: 38% complete (18/48 stories done)
 #
 # NEXT RECOMMENDED ACTION:
-# Promote e1-s6-configure-local-embedding-pipeline to ready-for-dev (completes Epic 1)
-# or start Epic 3 (Cell Citations & PDF Viewer)
+# Implement e1-s6-configure-local-embedding-pipeline (completes Epic 1!)
+# Run: /bmad:bmm:workflows:dev-story
 #
 # Notes:
 # - Epic 2 (AG Grid Spreadsheet) COMPLETE!
