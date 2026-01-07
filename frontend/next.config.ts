@@ -1,26 +1,19 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker deployment (skip for Vercel)
-  ...(process.env.VERCEL ? {} : { output: "standalone" }),
+  // Enable standalone output for Docker deployment (skip for Vercel and dev)
+  ...(!isDev && !process.env.VERCEL ? { output: "standalone" } : {}),
 
   // Set workspace root to parent directory to resolve multiple lockfile warning
-  // This tells Next.js that the monorepo root is one level up
-  outputFileTracingRoot: path.join(__dirname, '../'),
-
-  // Use alternative build directory if .next is locked
-  distDir: process.env.NEXT_DIST_DIR || '.next',
+  // Only apply for production builds, not development
+  ...(!isDev ? { outputFileTracingRoot: path.join(__dirname, '../') } : {}),
 
   // API Rewrites: Proxy /api/* requests to FastAPI backend
-  // This simplifies reverse proxy configuration - users only need to proxy to port 8502
-  // Next.js handles internal routing to the API backend on port 5055
   async rewrites() {
-    // INTERNAL_API_URL: Where Next.js server-side should proxy API requests
-    // Default: http://localhost:5055 (single-container deployment)
-    // Override for multi-container: INTERNAL_API_URL=http://api-service:5055
     const internalApiUrl = process.env.INTERNAL_API_URL || 'http://localhost:5055'
-
     console.log(`[Next.js Rewrites] Proxying /api/* to ${internalApiUrl}/api/*`)
 
     return [
