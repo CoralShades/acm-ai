@@ -24,6 +24,7 @@ class ACMExtractionInput(CommandInput):
     source_id: str
     model_id: Optional[str] = None  # Optional model override
     force: bool = False  # Delete existing records before extraction (default: False)
+    embed_records: bool = True  # Embed records for semantic search (E1-S6)
 
 
 class ACMExtractionOutput(CommandOutput):
@@ -34,6 +35,7 @@ class ACMExtractionOutput(CommandOutput):
     records_created: int = 0
     records_deleted: int = 0
     records_failed: int = 0
+    records_embedded: int = 0  # E1-S6: Count of records with embeddings
     processing_time: float = 0.0
     error_message: Optional[str] = None
     # New AI extraction fields
@@ -138,12 +140,46 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
             f"(confidence: {result.confidence_distribution})"
         )
 
+        # 5. Embed records for semantic search (E1-S6)
+        embedded_count = 0
+        if input_data.embed_records and result.total_records > 0:
+            try:
+                from api.services.acm_embedding_service import ACMEmbeddingService
+                from open_notebook.domain.acm import ACMEmbeddingConfig
+
+                logger.info(f"Starting embedding for {result.total_records} ACM records")
+
+                # Load the freshly created records
+                records = await ACMRecord.get_by_source(source_id)
+
+                if records:
+                    # Embed records
+                    embedding_service = ACMEmbeddingService(ACMEmbeddingConfig())
+                    embedded_records = await embedding_service.embed_records(records)
+
+                    # Save embedded records back to database
+                    for record in embedded_records:
+                        if record.embedding:
+                            await record.save()
+                            embedded_count += 1
+
+                    logger.info(f"Embedded {embedded_count}/{len(records)} ACM records")
+
+            except Exception as e:
+                # Embedding failure should not fail the entire extraction
+                logger.warning(
+                    f"Embedding failed for source {source_id}, records saved without embeddings: {e}"
+                )
+
+        processing_time = time.time() - start_time
+
         return ACMExtractionOutput(
             success=True,
             source_id=source_id,
             records_created=result.total_records,
             records_deleted=deleted_count,
             records_failed=result.records_failed,
+            records_embedded=embedded_count,
             processing_time=processing_time,
             confidence_distribution=result.confidence_distribution,
             extraction_method="ai",
