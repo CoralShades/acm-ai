@@ -45,18 +45,18 @@ development_status:
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
   e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
   e1-s6-configure-local-embedding-pipeline: drafted  # Tech-spec created with Esperanto/Ollama integration
-  e1-s7-ai-powered-acm-extraction: review  # Code review fixes complete 2025-12-20 - all 10 review items addressed
+  e1-s7-ai-powered-acm-extraction: done  # Completed 2026-01-07 - all 10 review items addressed
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
-  epic-2: in-progress
+  epic-2: done  # All 7 stories complete 2026-01-07
   e2-s1-install-and-configure-ag-grid: done  # ag-grid-community + ag-grid-react installed
   e2-s2-create-acmspreadsheet-component: done  # ACMGrid component with full CRUD
   e2-s3-implement-column-sorting-and-filtering: done  # Built into AG Grid config
   e2-s4-implement-row-grouping: done  # Building/Room grouping with Expand/Collapse All buttons
   e2-s5-implement-risk-status-color-coding: done  # RiskStatusRenderer with badges
   e2-s6-add-search-bar-to-spreadsheet: done  # Code review passed 2025-12-20
-  e2-s7-implement-building-tab-navigation: drafted  # Tech-spec created
+  e2-s7-implement-building-tab-navigation: done  # Code review passed 2026-01-07
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
@@ -127,23 +127,24 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 10 (1 done, 3 in-progress, 6 backlog)
+# Total Epics: 10 (2 done, 2 in-progress, 6 backlog)
 # Total Stories: 48
-# Stories Done: 16  # E1-S1,S2,S3,S4,S5 + E2-S1,S2,S3,S4,S5,S6 + E5-S1 + E6-S1,S2,S3,S4
-# Stories In Review: 1  # E1-S7 (code review fixes complete)
+# Stories Done: 18  # E1-S1,S2,S3,S4,S5,S7 + E2-S1,S2,S3,S4,S5,S6,S7 + E5-S1 + E6-S1,S2,S3,S4
+# Stories In Review: 0
 # Stories Ready for Dev: 0
-# Stories Drafted: 31  # All remaining stories have tech-specs
+# Stories Drafted: 30  # All remaining stories have tech-specs
 # Stories Backlog: 0  # All stories now have at least draft status
 #
-# Last Updated: 2025-12-20
+# Last Updated: 2026-01-07
 #
-# Progress: 33% complete (16/48 stories done)
+# Progress: 38% complete (18/48 stories done)
 #
 # NEXT RECOMMENDED ACTION:
-# Run second code review on e1-s7-ai-powered-acm-extraction or mark as done
-# or promote e2-s7-building-tab-navigation to ready-for-dev
+# Promote e1-s6-configure-local-embedding-pipeline to ready-for-dev (completes Epic 1)
+# or start Epic 3 (Cell Citations & PDF Viewer)
 #
 # Notes:
+# - Epic 2 (AG Grid Spreadsheet) COMPLETE!
 # - Epic 6 (Rebranding) COMPLETE!
-# - Epic 1, 2, 5 in-progress
-# - E1-S7: All 10 code review items addressed, ready for final approval
+# - Epic 1: 6/7 stories done (only e1-s6 remaining)
+# - Epic 5: 1/2 stories done

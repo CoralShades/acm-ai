@@ -1,6 +1,6 @@
 # Story 1.7: AI-Powered ACM Extraction
 
-Status: review
+Status: done
 
 ## Story
 
@@ -416,3 +416,4 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 | 2025-12-20 | Implementation complete - all tasks done, 17 unit tests pass | dev-story workflow (Claude Opus 4.5) |
 | 2025-12-20 | Code review completed - 10 action items identified | code-review workflow |
 | 2025-12-20 | Addressed all 10 code review findings (3 HIGH, 5 MEDIUM, 2 LOW) | dev-story workflow (Claude Opus 4.5) |
+| 2026-01-07 | Story marked as done - all implementation and review complete | workflow-status |
