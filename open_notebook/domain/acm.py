@@ -6,6 +6,8 @@ Each record links to a source document and captures the hierarchical
 structure: School > Building > Room > ACM Item.
 """
 
+from dataclasses import dataclass, field as dataclass_field
+from datetime import datetime
 from enum import Enum
 from typing import ClassVar, List, Literal, Optional
 
@@ -18,6 +20,32 @@ class ExtractionConfidence(str, Enum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+@dataclass
+class ACMEmbeddingConfig:
+    """Configuration for ACM embedding pipeline.
+
+    Controls how ACM records are embedded for semantic search.
+    Uses dataclass for lightweight configuration without Pydantic overhead.
+    """
+    enabled: bool = True
+    model_id: Optional[str] = None  # Falls back to default embedding model if None
+    batch_size: int = 50
+    include_fields: List[str] = dataclass_field(default_factory=lambda: [
+        "building_name",
+        "room_name",
+        "product",
+        "material_description",
+        "location",
+        "extent",
+        "material_condition",
+        "risk_status",
+        "friable",
+        "result",
+        "hygienist_recommendations",
+    ])
+
 
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.base import ObjectModel
@@ -121,6 +149,24 @@ class ACMRecord(ObjectModel):
     data_issues: Optional[List[str]] = Field(
         default=None,
         description="List of data quality issues identified during extraction"
+    )
+
+    # Embedding fields for semantic search (E1-S6)
+    embedding: Optional[List[float]] = Field(
+        default=None,
+        description="Vector embedding for semantic search"
+    )
+    embedding_text: Optional[str] = Field(
+        default=None,
+        description="Combined text used to generate the embedding"
+    )
+    embedding_model: Optional[str] = Field(
+        default=None,
+        description="Model ID used to generate the embedding"
+    )
+    embedded_at: Optional[datetime] = Field(
+        default=None,
+        description="Timestamp when embedding was generated"
     )
 
     # Validators for required fields
@@ -317,6 +363,35 @@ class ACMRecord(ObjectModel):
         from open_notebook.domain.notebook import Source
 
         return await Source.get(self.source_id)
+
+    def get_embedding_text(self) -> str:
+        """
+        Generate text for embedding from key ACM record fields.
+
+        Combines relevant fields to create searchable text for semantic search.
+        Fields are selected based on their relevance for compliance queries.
+        """
+        # Fields to include in embedding (ordered by importance)
+        field_mappings = [
+            ("Building", self.building_name),
+            ("Room", self.room_name),
+            ("Product", self.product),
+            ("Material", self.material_description),
+            ("Location", self.location),
+            ("Extent", self.extent),
+            ("Condition", self.material_condition),
+            ("Risk", self.risk_status),
+            ("Friable", self.friable),
+            ("Result", self.result),
+            ("Recommendations", self.hygienist_recommendations),
+        ]
+
+        parts = []
+        for label, value in field_mappings:
+            if value:
+                parts.append(f"{label}: {value}")
+
+        return " | ".join(parts) if parts else ""
 
     def _prepare_save_data(self) -> dict:
         """Override to ensure source_id is proper record format."""
