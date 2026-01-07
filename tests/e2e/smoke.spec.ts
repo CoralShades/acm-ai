@@ -18,14 +18,16 @@ test.describe('Smoke Tests @smoke', () => {
   });
 
   test('can navigate to notebooks page', async ({ page }) => {
+    // Given: User is on the homepage
     await page.goto('/');
 
-    // Look for notebooks link/button (adjust selector)
+    // When: User clicks the notebooks link
     const notebooksLink = page.getByRole('link', { name: /notebook/i });
-    if (await notebooksLink.isVisible()) {
-      await notebooksLink.click();
-      await expect(page).toHaveURL(/notebooks/);
-    }
+    await expect(notebooksLink).toBeVisible();
+    await notebooksLink.click();
+
+    // Then: User should be on the notebooks page
+    await expect(page).toHaveURL(/notebooks/);
   });
 
   test('API health check passes', async ({ apiClient }) => {

@@ -515,6 +515,34 @@ class ACMRecordCreateRequest(BaseModel):
     page_number: Optional[int] = Field(None, description="Source page number")
 
 
+class ACMSearchResultResponse(BaseModel):
+    """Single ACM search result with similarity score."""
+
+    id: str
+    source_id: str
+    school_name: str
+    building_id: str
+    building_name: Optional[str] = None
+    room_id: Optional[str] = None
+    room_name: Optional[str] = None
+    product: str
+    material_description: str
+    extent: Optional[str] = None
+    location: Optional[str] = None
+    material_condition: Optional[str] = None
+    risk_status: Optional[str] = None
+    result: str
+    score: float = Field(..., description="Semantic similarity score (0-1)")
+
+
+class ACMSearchResponse(BaseModel):
+    """Semantic search results response."""
+
+    query: str
+    results: List[ACMSearchResultResponse]
+    total: int
+
+
 class ACMRecordUpdateRequest(BaseModel):
     """Request to update an ACM record. All fields optional for partial updates."""
 

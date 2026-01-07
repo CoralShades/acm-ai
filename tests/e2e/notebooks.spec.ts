@@ -20,28 +20,24 @@ test.describe('Notebook Management', () => {
   });
 
   test('can create a new notebook', async ({ page }) => {
+    // Given: User is on the homepage
     await page.goto('/');
 
-    // Look for create notebook button (adjust selector based on actual UI)
+    // When: User clicks create button and fills form
     const createButton = page.getByRole('button', { name: /create|new|add/i });
+    await expect(createButton).toBeVisible();
+    await createButton.click();
 
-    if (await createButton.isVisible()) {
-      await createButton.click();
+    const nameInput = page.getByLabel(/name/i);
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('E2E Test Notebook');
 
-      // Fill notebook form (adjust selectors)
-      const nameInput = page.getByLabel(/name/i);
-      if (await nameInput.isVisible()) {
-        await nameInput.fill('E2E Test Notebook');
-      }
+    const submitButton = page.getByRole('button', { name: /save|create|submit/i });
+    await expect(submitButton).toBeVisible();
+    await submitButton.click();
 
-      const submitButton = page.getByRole('button', { name: /save|create|submit/i });
-      if (await submitButton.isVisible()) {
-        await submitButton.click();
-      }
-
-      // Verify notebook was created
-      await expect(page.getByText('E2E Test Notebook')).toBeVisible();
-    }
+    // Then: Notebook should be created and visible
+    await expect(page.getByText('E2E Test Notebook')).toBeVisible();
   });
 
   test('can view notebook details', async ({ page }) => {

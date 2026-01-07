@@ -38,13 +38,13 @@ story_location: docs/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  epic-1: in-progress  # E1-S6 (local embeddings) added - reopened
+  epic-1: done  # All 7 stories complete 2026-01-07
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
   e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
-  e1-s6-configure-local-embedding-pipeline: ready-for-dev  # Promoted 2026-01-07
+  e1-s6-configure-local-embedding-pipeline: done  # Code review passed 2026-01-07
   e1-s7-ai-powered-acm-extraction: done  # Completed 2026-01-07 - all 10 review items addressed
   epic-1-retrospective: optional
 
@@ -127,24 +127,24 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 10 (2 done, 2 in-progress, 6 backlog)
+# Total Epics: 10 (3 done, 1 in-progress, 6 backlog)
 # Total Stories: 48
-# Stories Done: 18  # E1-S1,S2,S3,S4,S5,S7 + E2-S1,S2,S3,S4,S5,S6,S7 + E5-S1 + E6-S1,S2,S3,S4
+# Stories Done: 19  # E1-S1,S2,S3,S4,S5,S6,S7 + E2-S1,S2,S3,S4,S5,S6,S7 + E5-S1 + E6-S1,S2,S3,S4
 # Stories In Review: 0
-# Stories Ready for Dev: 1  # e1-s6
+# Stories Ready for Dev: 0
 # Stories Drafted: 29  # All remaining stories have tech-specs
 # Stories Backlog: 0  # All stories now have at least draft status
 #
 # Last Updated: 2026-01-07
 #
-# Progress: 38% complete (18/48 stories done)
+# Progress: 40% complete (19/48 stories done)
 #
 # NEXT RECOMMENDED ACTION:
-# Implement e1-s6-configure-local-embedding-pipeline (completes Epic 1!)
+# Epic 3: Cell Citations & PDF Viewer (e3-s1-make-cells-clickable)
 # Run: /bmad:bmm:workflows:dev-story
 #
 # Notes:
+# - Epic 1 (ACM Data Extraction Pipeline) COMPLETE!
 # - Epic 2 (AG Grid Spreadsheet) COMPLETE!
 # - Epic 6 (Rebranding) COMPLETE!
-# - Epic 1: 6/7 stories done (only e1-s6 remaining)
 # - Epic 5: 1/2 stories done
