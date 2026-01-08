@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -31,8 +30,6 @@ import { useSources } from '@/lib/hooks/use-sources'
 import type { ACMRecord } from '@/lib/types/acm'
 
 export default function ACMPage() {
-  const router = useRouter()
-
   // State
   const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(undefined)
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
@@ -115,13 +112,6 @@ export default function ACMPage() {
 
   const handleRefresh = () => {
     refetchRecords()
-  }
-
-  // Navigate to source detail page
-  const handleViewSource = () => {
-    if (selectedSourceId) {
-      router.push(`/sources/${selectedSourceId}`)
-    }
   }
 
   return (

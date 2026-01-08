@@ -238,14 +238,23 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
     tokens = token_count(content)
     threshold = int(context_window * CHUNK_THRESHOLD_RATIO)
 
+    # Page marker pattern - supports multiple formats:
+    # 1. Dashes format: "--- Page 5 ---" or "——— Page 5 ———"
+    # 2. HTML comment format: "<!-- Page 5 -->"
+    # 3. Simple format: "Page 5" at line start
+    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$))"
+
     if tokens <= threshold:
-        # No chunking needed
-        return [{"content": content, "page_number": 1, "chunk_index": 0}]
+        # No chunking needed, but still extract first page number if available
+        page_num = 1
+        first_match = re.search(page_pattern, content, re.IGNORECASE)
+        if first_match:
+            page_num = int(next(g for g in first_match.groups() if g is not None))
+        return [{"content": content, "page_number": page_num, "chunk_index": 0}]
 
     chunks = []
 
     # Try to split by page markers first
-    page_pattern = r"(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+"
     page_matches = list(re.finditer(page_pattern, content, re.IGNORECASE))
 
     if page_matches:
@@ -255,7 +264,8 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
             end = page_matches[i + 1].start() if i + 1 < len(page_matches) else len(content)
 
             page_content = content[start:end]
-            page_num = int(match.group(1))
+            # Extract page number from whichever capture group matched
+            page_num = int(next(g for g in match.groups() if g is not None))
 
             # Check if this chunk is still too large
             if token_count(page_content) > threshold:
@@ -451,6 +461,12 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
 
         # Extract new records and update context
         new_records = result.records
+
+        # Ensure page_number is set on all records from this chunk
+        # This provides fallback when LLM doesn't extract page numbers
+        for record in new_records:
+            if record.page_number is None:
+                record.page_number = page_number
 
         if new_records:
             # Update context from the last record for continuity
