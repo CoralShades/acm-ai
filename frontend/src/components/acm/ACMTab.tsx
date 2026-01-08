@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FileWarning, AlertCircle } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { ACMGrid, type ACMGridRef } from './ACMGrid'
+import { ACMGrid, type ACMGridRef, type CellSelectionDetails } from './ACMGrid'
+import { ACMCellViewer } from './ACMCellViewer'
 import { ACMRecordDialog } from './ACMRecordDialog'
 import { ACMStatsCards } from './ACMStatsCards'
 import { ACMToolbar } from './ACMToolbar'
@@ -17,6 +18,7 @@ import {
   useExtractACM,
   useExportACMCsv,
 } from '@/lib/hooks/use-acm'
+import { useSource } from '@/lib/hooks/use-sources'
 import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { useSessionStorage } from '@/lib/hooks/use-session-storage'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -38,6 +40,8 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const [selectedRecord, setSelectedRecord] = useState<ACMRecord | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [recordToDelete, setRecordToDelete] = useState<ACMRecord | null>(null)
+  // Cell citation viewer state
+  const [selectedCell, setSelectedCell] = useState<CellSelectionDetails | null>(null)
 
   // Building tab state - persisted per source in session storage
   const [selectedBuilding, setSelectedBuilding] = useSessionStorage<string | null>(
@@ -73,6 +77,19 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   })
 
   const { data: stats, isLoading: isLoadingStats } = useACMStats(sourceId)
+
+  // Fetch source data to get PDF URL for citation viewer
+  const { data: sourceData } = useSource(sourceId)
+
+  // Create PDF download URL if source has an asset
+  const pdfUrl = useMemo(() => {
+    // Check if source has a file asset (PDF)
+    if (sourceData?.asset?.file_path) {
+      // Use the download endpoint to get the PDF
+      return `/api/sources/${sourceId}/download`
+    }
+    return null
+  }, [sourceData?.asset?.file_path, sourceId])
 
   // Mutations
   const deleteRecord = useDeleteACMRecord()
@@ -132,13 +149,22 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     setVisibleCount(count)
   }, [])
 
+  // Cell citation viewer handler
+  const handleCellSelect = useCallback((details: CellSelectionDetails) => {
+    setSelectedCell(details)
+  }, [])
+
+  const handleCellViewerClose = useCallback(() => {
+    setSelectedCell(null)
+  }, [])
+
   // Building change handler
   const handleBuildingChange = useCallback((buildingId: string | null) => {
     setSelectedBuilding(buildingId)
   }, [setSelectedBuilding])
 
   // All records from API (full dataset for building tabs)
-  const allRecords = recordsData?.records || []
+  const allRecords = useMemo(() => recordsData?.records || [], [recordsData?.records])
 
   // Reset building selection if selected building no longer exists in data
   useEffect(() => {
@@ -229,6 +255,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
               onDelete={handleDelete}
               quickFilterText={debouncedSearchText}
               onVisibleCountChange={handleVisibleCountChange}
+              onCellSelect={handleCellSelect}
             />
           )}
         </CardContent>
@@ -253,6 +280,14 @@ export function ACMTab({ sourceId }: ACMTabProps) {
         confirmVariant="destructive"
         onConfirm={confirmDelete}
         isLoading={deleteRecord.isPending}
+      />
+
+      {/* Cell Citation Viewer */}
+      <ACMCellViewer
+        sourceId={sourceId}
+        selection={selectedCell}
+        pdfUrl={pdfUrl}
+        onClose={handleCellViewerClose}
       />
     </div>
   )

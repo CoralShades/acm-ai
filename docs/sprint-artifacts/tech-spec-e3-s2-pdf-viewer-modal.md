@@ -1,7 +1,7 @@
 # Tech-Spec: E3-S2 PDF Viewer Modal
 
 **Created:** 2025-12-07
-**Status:** Ready for Development
+**Status:** Done
 **Epic:** E3 - Cell Citations & PDF Viewer
 **Story:** S2 - Create PDF Viewer Modal
 
@@ -42,32 +42,32 @@ Create an `ACMCellViewer` modal component that:
 
 ### Tasks
 
-- [ ] **Task 1: Install react-pdf**
+- [x] **Task 1: Install react-pdf**
   - `npm install react-pdf`
   - Configure PDF.js worker
 
-- [ ] **Task 2: Create ACMCellViewer component**
+- [x] **Task 2: Create ACMCellViewer component**
   - Location: `frontend/src/components/acm/ACMCellViewer.tsx`
   - Modal wrapper with PDF viewer
   - Page/zoom controls
 
-- [ ] **Task 3: Integrate with ACMSpreadsheet**
+- [x] **Task 3: Integrate with ACMSpreadsheet**
   - Pass onCellClick handler
   - Open modal with record data
 
-- [ ] **Task 4: Handle PDF loading**
+- [x] **Task 4: Handle PDF loading**
   - Get PDF URL from source asset
   - Navigate to page_number
   - Handle missing page info
 
 ### Acceptance Criteria
 
-- [ ] **AC1**: Modal opens with PDF viewer on cell click
-- [ ] **AC2**: PDF loads to correct page number
-- [ ] **AC3**: Page navigation controls work
-- [ ] **AC4**: Zoom controls available
-- [ ] **AC5**: Close button works
-- [ ] **AC6**: Responsive sizing
+- [x] **AC1**: Modal opens with PDF viewer on cell click
+- [x] **AC2**: PDF loads to correct page number
+- [x] **AC3**: Page navigation controls work
+- [x] **AC4**: Zoom controls available
+- [x] **AC5**: Close button works
+- [x] **AC6**: Responsive sizing
 
 ---
 
@@ -215,6 +215,57 @@ export default ACMCellViewer
 | E3-S1 (Clickable Cells) | Story | Provides click handler |
 | react-pdf | npm | `npm install react-pdf` |
 | Source asset URL | API | PDF file path from source |
+
+---
+
+## Dev Agent Record
+
+### Implementation Date
+2026-01-08
+
+### Agent Model Used
+Claude Opus 4.5
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `frontend/src/components/acm/ACMCellViewer.tsx` | Complete rewrite with react-pdf PDF viewer, page navigation, zoom controls |
+| `frontend/src/components/acm/ACMTab.tsx` | Added useSource hook, pdfUrl prop to ACMCellViewer |
+| `frontend/package.json` | Added react-pdf dependency |
+
+### Implementation Notes
+- Used react-pdf with bundled PDF.js worker (no external CDN dependency)
+- PDF URL derived from `/api/sources/{id}/download` endpoint
+- Modal auto-navigates to page_number from ACM record
+- Graceful fallback when no PDF available (shows cell info only)
+- Added "Go to Source Page" button when user navigates away
+- All controls have aria-labels for accessibility
+- Text and annotation layers enabled for better PDF rendering
+- Zoom constraints defined as constants (MIN_SCALE, MAX_SCALE, SCALE_STEP)
+
+### Build Verification
+- TypeScript: Pass
+- ESLint: Pass (no new warnings)
+
+### Code Review (2026-01-08)
+**Reviewer:** Claude Opus 4.5 (Adversarial Review)
+**Outcome:** PASS (after fixes)
+
+**Issues Found:** 1 HIGH, 4 MEDIUM, 5 LOW (10 total)
+
+**Fixes Applied:**
+1. [HIGH] External CDN dependency → Changed to bundled worker using `new URL()` import
+2. [MEDIUM] Documented `sourceId` prop usage with JSDoc comment
+3. [MEDIUM] Improved cleanup on selection change with proper state reset
+4. [MEDIUM] Removed duplicate zoom reset button (RotateCcw icon)
+5. [MEDIUM] Added loading guard to "Go to source page" button
+6. [LOW] Replaced magic numbers with constants (MIN_SCALE, MAX_SCALE, SCALE_STEP)
+7. [LOW] Removed console.error from production code
+
+**Issues Accepted (no fix needed):**
+- Keyboard zoom shortcuts (enhancement, not bug)
+- PDF memory management (handled by react-pdf internally)
+- File documentation mismatch (corrected in notes)
 
 ---
 

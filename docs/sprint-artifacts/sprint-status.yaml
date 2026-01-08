@@ -60,11 +60,11 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
-  epic-3: backlog
-  e3-s1-make-cells-clickable: drafted
-  e3-s2-create-pdf-viewer-modal: drafted
-  e3-s3-implement-acm-citation-reference-type: drafted
-  e3-s4-store-page-numbers-during-extraction: drafted
+  epic-3: done  # All 4 stories complete 2026-01-08
+  e3-s1-make-cells-clickable: done  # Code review passed 2026-01-08
+  e3-s2-create-pdf-viewer-modal: done  # Code review passed 2026-01-08
+  e3-s3-implement-acm-citation-reference-type: done  # Code review passed 2026-01-08
+  e3-s4-store-page-numbers-during-extraction: done  # Code review passed 2026-01-08
   epic-3-retrospective: optional
 
   # Epic 4: Chat with ACM Context (P0)
@@ -127,24 +127,26 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 10 (3 done, 1 in-progress, 6 backlog)
+# Total Epics: 10 (4 done, 1 in-progress, 5 backlog)
 # Total Stories: 48
-# Stories Done: 19  # E1-S1,S2,S3,S4,S5,S6,S7 + E2-S1,S2,S3,S4,S5,S6,S7 + E5-S1 + E6-S1,S2,S3,S4
+# Stories Done: 23  # E1-S1,S2,S3,S4,S5,S6,S7 + E2-S1,S2,S3,S4,S5,S6,S7 + E3-S1,S2,S3,S4 + E5-S1 + E6-S1,S2,S3,S4
 # Stories In Review: 0
 # Stories Ready for Dev: 0
-# Stories Drafted: 29  # All remaining stories have tech-specs
+# Stories Drafted: 25  # All remaining stories have tech-specs
 # Stories Backlog: 0  # All stories now have at least draft status
 #
-# Last Updated: 2026-01-07
+# Last Updated: 2026-01-08
 #
-# Progress: 40% complete (19/48 stories done)
+# Progress: 48% complete (23/48 stories done)
 #
 # NEXT RECOMMENDED ACTION:
-# Epic 3: Cell Citations & PDF Viewer (e3-s1-make-cells-clickable)
+# Epic 5: Export Functionality (e5-s2-implement-excel-export) OR
+# Epic 4: Chat with ACM Context (e4-s1-add-acm-records-to-chat-context)
 # Run: /bmad:bmm:workflows:dev-story
 #
 # Notes:
 # - Epic 1 (ACM Data Extraction Pipeline) COMPLETE!
 # - Epic 2 (AG Grid Spreadsheet) COMPLETE!
+# - Epic 3 (Cell Citations & PDF Viewer) COMPLETE!
 # - Epic 6 (Rebranding) COMPLETE!
 # - Epic 5: 1/2 stories done

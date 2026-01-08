@@ -181,6 +181,38 @@
   --ag-odd-row-background-color: var(--card);
 }
 
+/* Clickable cell styles for ACM Grid */
+.ag-theme-alpine .ag-cell {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ag-theme-alpine .ag-cell:hover {
+  /* Fallback for browsers without color-mix() support */
+  background-color: rgba(99, 102, 241, 0.08);
+  /* Modern browsers with color-mix() support */
+  background-color: color-mix(in oklch, var(--primary) 8%, transparent);
+}
+
+.ag-theme-alpine .ag-row-group .ag-cell {
+  cursor: default;
+}
+
+.ag-theme-alpine .ag-row-group .ag-cell:hover {
+  background-color: transparent;
+}
+
+/* Actions column should not show clickable cursor */
+.ag-theme-alpine .ag-cell[col-id="actions"],
+.ag-theme-alpine .ag-pinned-right-cols-container .ag-cell {
+  cursor: default;
+}
+
+.ag-theme-alpine .ag-cell[col-id="actions"]:hover,
+.ag-theme-alpine .ag-pinned-right-cols-container .ag-cell:hover {
+  background-color: transparent;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
