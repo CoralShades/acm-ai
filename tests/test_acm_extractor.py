@@ -255,6 +255,41 @@ class TestPageNumberTracking:
         assert result[0]["page_number"] == 3
         assert result[1]["page_number"] == 4
 
+    def test_small_content_with_page_markers(self):
+        """Test that small content (below chunking threshold) still extracts page numbers.
+
+        Regression test for bug where _chunk_content would return page_number=1
+        for small content even when page markers indicated a different page.
+        """
+        from open_notebook.graphs.acm_extraction import _chunk_content
+
+        # Small content that won't trigger chunking, but starts at page 5
+        content = "--- Page 5 ---\nSmall ACM content here"
+        chunks = _chunk_content(content)
+
+        assert len(chunks) == 1
+        assert chunks[0]["page_number"] == 5, "Should extract page 5 from marker, not default to 1"
+
+    def test_small_content_without_page_markers(self):
+        """Test that small content without page markers defaults to page 1."""
+        from open_notebook.graphs.acm_extraction import _chunk_content
+
+        content = "Small ACM content with no page markers"
+        chunks = _chunk_content(content)
+
+        assert len(chunks) == 1
+        assert chunks[0]["page_number"] == 1, "Should default to page 1 when no markers"
+
+    def test_small_content_html_comment_page_marker(self):
+        """Test HTML comment style page markers in small content."""
+        from open_notebook.graphs.acm_extraction import _chunk_content
+
+        content = "<!-- Page 12 -->\nContent from page 12"
+        chunks = _chunk_content(content)
+
+        assert len(chunks) == 1
+        assert chunks[0]["page_number"] == 12
+
 
 class TestParseContext:
     """Test suite for ParseContext dataclass."""

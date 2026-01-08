@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, CellClickedEvent, GridApi, ModelUpdatedEvent } from 'ag-grid-community'
+import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,15 @@ export interface ACMGridRef {
   collapseAll: () => void
 }
 
+// Cell selection details for citation viewer
+export interface CellSelectionDetails {
+  recordId: string
+  field: string
+  value: unknown
+  pageNumber?: number | null
+  record: ACMRecord
+}
+
 interface ACMGridProps {
   records: ACMRecord[]
   isLoading?: boolean
@@ -28,6 +37,8 @@ interface ACMGridProps {
   quickFilterText?: string
   // Callback to report visible row count changes
   onVisibleCountChange?: (count: number) => void
+  // Callback when a cell is selected for citation viewing
+  onCellSelect?: (details: CellSelectionDetails) => void
 }
 
 // Custom cell renderer for risk status with theme-aware colors
@@ -87,7 +98,7 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, isLoading, onEdit, onDelete, enableGrouping = true, quickFilterText, onVisibleCountChange },
+  { records, isLoading, onEdit, onDelete, enableGrouping = true, quickFilterText, onVisibleCountChange, onCellSelect },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
@@ -262,11 +273,59 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
 
   const onCellClicked = useCallback(
     (event: CellClickedEvent<ACMRecord>) => {
-      if (event.colDef.headerName !== 'Actions' && event.data) {
+      // Skip if clicking on Actions column or group row
+      if (event.colDef.headerName === 'Actions' || event.node.group || !event.data) {
+        return
+      }
+
+      const field = event.colDef?.field
+      if (!field) return
+
+      // Guard: Skip if record has no ID (unsaved records)
+      const recordId = event.data.id
+      if (!recordId) return
+
+      // If onCellSelect is provided, use it for citation viewing
+      if (onCellSelect) {
+        onCellSelect({
+          recordId,
+          field: field,
+          value: event.value,
+          pageNumber: event.data.page_number,
+          record: event.data,
+        })
+      } else {
+        // Fallback to edit behavior if no cell select handler
         onEdit(event.data)
       }
     },
-    [onEdit]
+    [onEdit, onCellSelect]
+  )
+
+  // Keyboard navigation: Enter key opens cell citation viewer
+  const onCellKeyDown = useCallback(
+    (event: CellKeyDownEvent<ACMRecord>) => {
+      const keyboardEvent = event.event as KeyboardEvent
+      if (keyboardEvent?.key === 'Enter' && event.data && !event.node.group) {
+        const field = event.colDef?.field
+        const recordId = event.data.id
+        // Guard: Skip if no field, Actions column, or no record ID
+        if (field && event.colDef?.headerName !== 'Actions' && recordId) {
+          if (onCellSelect) {
+            onCellSelect({
+              recordId,
+              field: field,
+              value: event.value,
+              pageNumber: event.data.page_number,
+              record: event.data,
+            })
+          } else {
+            onEdit(event.data)
+          }
+        }
+      }
+    },
+    [onEdit, onCellSelect]
   )
 
   return (
@@ -309,6 +368,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         defaultColDef={defaultColDef}
         onGridReady={onGridReady}
         onCellClicked={onCellClicked}
+        onCellKeyDown={onCellKeyDown}
         onModelUpdated={onModelUpdated}
         loading={isLoading}
         animateRows={true}

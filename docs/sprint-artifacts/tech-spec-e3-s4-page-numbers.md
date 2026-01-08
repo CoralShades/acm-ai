@@ -2,8 +2,10 @@
 
 > **Story:** E3-S4
 > **Epic:** Cell Citations & PDF Viewer
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Implemented:** 2026-01-08
+> **Reviewed:** 2026-01-08
 
 ---
 
@@ -23,10 +25,10 @@ Enhance the ACM extraction transformation to capture and store the PDF page numb
 
 ## Acceptance Criteria
 
-- [ ] Extraction pipeline captures page numbers
-- [ ] Page number stored in `acm_record.page_number`
-- [ ] Works correctly for multi-page registers
-- [ ] Falls back gracefully if page number unavailable
+- [x] Extraction pipeline captures page numbers
+- [x] Page number stored in `acm_record.page_number`
+- [x] Works correctly for multi-page registers
+- [x] Falls back gracefully if page number unavailable
 
 ---
 
@@ -190,8 +192,9 @@ def extract_acm_records(content: str, source_id: str) -> List[ACMRecord]:
 
 | File | Change |
 |------|--------|
-| `open_notebook/transformations/acm_extraction.py` | Add page number tracking |
-| `open_notebook/domain/acm.py` | Already has `page_number` field |
+| `open_notebook/graphs/acm_extraction.py` | Add page number tracking and fallback logic |
+| `prompts/acm/extraction.jinja` | Add page_number to LLM prompt optional fields |
+| `open_notebook/domain/acm.py` | Already has `page_number` field (no changes needed) |
 
 ---
 
@@ -236,5 +239,69 @@ def test_page_number_extraction():
 ## Estimated Complexity
 
 **Medium** - Requires understanding Docling output format and multi-page handling
+
+---
+
+## Dev Agent Record
+
+### Implementation Notes (2026-01-08)
+
+**Analysis Findings:**
+Most infrastructure already existed prior to this story:
+- `ACMRecord.page_number` field already defined in `open_notebook/domain/acm.py:95`
+- `ACMExtractionRecord.page_number` already in schema `open_notebook/extractors/acm_schemas.py:203-206`
+- Chunking by page markers already implemented in `_chunk_content()`
+- Save records already maps `page_number` from extraction schema to domain model
+
+**Changes Made:**
+
+1. **`prompts/acm/extraction.jinja`** (lines 149):
+   - Added `page_number` to optional fields section with instruction to use `{{ page_number }}` placeholder
+
+2. **`open_notebook/graphs/acm_extraction.py`** (lines 460-464):
+   - Added fallback logic to set `page_number` from chunk context when LLM doesn't extract it:
+   ```python
+   # Ensure page_number is set on all records from this chunk
+   # This provides fallback when LLM doesn't extract page numbers
+   for record in new_records:
+       if record.page_number is None:
+           record.page_number = page_number
+   ```
+
+3. **`open_notebook/graphs/acm_extraction.py`** (lines 248-263):
+   - Enhanced page marker regex to support multiple formats:
+   ```python
+   # Support multiple formats:
+   # 1. Dashes format: "--- Page 5 ---" or "——— Page 5 ———"
+   # 2. HTML comment format: "<!-- Page 5 -->"
+   # 3. Simple format: "Page 5" at line start
+   page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$))"
+   ```
+   - Fixed page number extraction for multiple capture groups:
+   ```python
+   # Extract page number from whichever capture group matched
+   page_num = int(next(g for g in match.groups() if g is not None))
+   ```
+
+**Verification:**
+- Python import: Pass
+- Implementation satisfies all 4 acceptance criteria
+
+### Code Review Fixes (2026-01-08)
+
+**Issues Fixed:**
+
+1. **[H1] Small content defaulted to page_number=1** - Fixed `_chunk_content()` to extract first page number from markers even when content is below chunking threshold. Previously small PDFs would incorrectly have all records with `page_number=1`.
+
+2. **[M1] File Changes table referenced wrong path** - Updated tech spec to reference actual implementation path `open_notebook/graphs/acm_extraction.py` instead of non-existent `transformations/acm_extraction.py`.
+
+3. **[M2] Missing unit tests for small content edge case** - Added 3 new tests to `tests/test_acm_extractor.py`:
+   - `test_small_content_with_page_markers` - verifies page 5 extracted from small content
+   - `test_small_content_without_page_markers` - verifies default to page 1
+   - `test_small_content_html_comment_page_marker` - verifies HTML comment format
+
+**Final Verification:**
+- All 5 page number tests: Pass
+- Python syntax check: Pass
 
 ---

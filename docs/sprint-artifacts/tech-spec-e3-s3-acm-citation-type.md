@@ -1,9 +1,11 @@
 # Tech-Spec: E3-S3 ACM Citation Reference Type
 
 **Created:** 2025-12-07
-**Status:** Ready for Development
+**Status:** Done
 **Epic:** E3 - Cell Citations & PDF Viewer
 **Story:** S3 - Implement ACM Citation Reference Type
+**Implemented:** 2026-01-08
+**Reviewed:** 2026-01-08
 
 ---
 
@@ -38,29 +40,31 @@ Extend the citation parser in `source-references.tsx` to:
 
 ### Tasks
 
-- [ ] **Task 1: Analyze existing citation patterns**
+- [x] **Task 1: Analyze existing citation patterns**
   - Read `frontend/src/lib/utils/source-references.tsx`
   - Understand parseSourceReferences function
 
-- [ ] **Task 2: Add ACM citation pattern**
-  - Pattern: `\[acm:([^:\]]+):?([^\]]*)\]`
-  - Match: `[acm:acm_record:abc123:product]`
+- [x] **Task 2: Add ACM citation pattern**
+  - Pattern: `/acm:([^:\]\s]+):?([^:\]\s]*)/g`
+  - Match: `[acm:record_id:field]` or `[acm:record_id]`
 
-- [ ] **Task 3: Create ACMCitationLink component**
+- [x] **Task 3: Create ACMCitationLink component**
   - Render as clickable badge/link
-  - Fetch record on click
-  - Open ACMCellViewer modal
+  - Styled with amber color scheme
+  - Open ACMCellViewer modal via onACMClick handler
 
-- [ ] **Task 4: Integrate into parseSourceReferences**
-  - Add ACM case to parser
-  - Return appropriate component
+- [x] **Task 4: Integrate into parseSourceReferences**
+  - Added ACM pattern to parseSourceReferences()
+  - Created convertSourceReferencesExtended() with ReferenceClickHandlers
+  - Created createReferenceLinkComponentExtended() for ReactMarkdown
+  - Updated convertReferencesToMarkdownLinks() for ACM support
 
 ### Acceptance Criteria
 
-- [ ] **AC1**: Parser recognizes `[acm:record_id:field]` pattern
-- [ ] **AC2**: Converts to clickable link in chat
-- [ ] **AC3**: Click opens ACMCellViewer modal
-- [ ] **AC4**: Gracefully handles invalid references
+- [x] **AC1**: Parser recognizes `[acm:record_id:field]` pattern
+- [x] **AC2**: Converts to clickable link in chat
+- [x] **AC3**: Click opens ACMCellViewer modal (via onACMClick handler)
+- [x] **AC4**: Gracefully handles invalid references
 
 ---
 
@@ -128,6 +132,42 @@ export function parseSourceReferences(
 |------------|------|-------|
 | E3-S2 (PDF Viewer) | Story | Modal to open |
 | Existing citation system | Code | source-references.tsx |
+
+---
+
+## Dev Agent Record
+
+### Implementation Notes (2026-01-08)
+
+**File Modified:** `frontend/src/lib/utils/source-references.tsx`
+
+**Changes Made:**
+1. Extended `ReferenceType` to include `'acm'`
+2. Added optional `field?: string` to `ParsedReference` interface
+3. Enhanced `parseSourceReferences()` with ACM pattern matching
+4. Created `ReferenceClickHandlers` interface with `onACMClick` handler
+5. Created `ACMCitationLink` component with amber badge styling
+6. Created `convertSourceReferencesExtended()` for ACM-aware rendering
+7. Updated `convertReferencesToMarkdownLinks()` with ACM support
+8. Created `createReferenceLinkComponentExtended()` for ReactMarkdown integration
+
+**Verification:**
+- TypeScript compilation: ✅ Pass
+- ESLint: ✅ Pass (no new warnings)
+
+### Code Review Fixes (2026-01-08)
+
+**Issues Fixed:**
+1. **[H2] Fixed ACM pattern for SurrealDB record IDs** - Updated regex to properly capture `table_name:record_id:optional_field` format. Pattern now correctly handles `[acm:acm_record:abc123:product]`.
+2. **[M2] Added JSDoc to ACMCitationLink** - Added proper documentation with @param and @example.
+3. **[M3] Fixed convertReferencesToCompactMarkdown for ACM** - Updated to include field in deduplication key and hrefs for ACM references.
+
+**Deferred Issues (no test framework in project):**
+- **[H1] Unit tests** - Frontend has no Jest/Vitest setup. Tests should be added when test framework is configured.
+
+**Final Verification:**
+- TypeScript compilation: ✅ Pass
+- Code review: ✅ All fixable issues addressed
 
 ---
 
