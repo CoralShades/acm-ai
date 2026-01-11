@@ -100,12 +100,12 @@ development_status:
   epic-7-retrospective: optional
 
   # Epic 8: UI Refresh - Bento Grid Design (P1)
-  epic-8: backlog
-  e8-s1-install-ui-ux-pro-max-skill: drafted
-  e8-s2-define-acm-ai-design-tokens: drafted
-  e8-s3-create-bento-card-component: drafted
-  e8-s4-create-bento-grid-layout-component: drafted
-  e8-s5-redesign-dashboard-home-page: drafted
+  epic-8: in-progress
+  e8-s1-install-ui-ux-pro-max-skill: done  # Code review passed 2026-01-11
+  e8-s2-define-acm-ai-design-tokens: done  # Code review passed 2026-01-11
+  e8-s3-create-bento-card-component: done  # Code review passed 2026-01-11
+  e8-s4-create-bento-grid-layout-component: done  # Code review passed 2026-01-11
+  e8-s5-redesign-dashboard-home-page: in-progress
   e8-s6-redesign-sources-list-page: drafted
   e8-s7-redesign-source-detail-page: drafted
   e8-s8-update-navigation-sidebar: drafted
@@ -127,21 +127,21 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 10 (7 done, 0 in-progress, 3 backlog)
+# Total Epics: 10 (7 done, 1 in-progress, 2 backlog)
 # Total Stories: 48
-# Stories Done: 34  # E1(7) + E2(7) + E3(4) + E4(4) + E5(2) + E6(4) + E7(6)
+# Stories Done: 38  # E1(7) + E2(7) + E3(4) + E4(4) + E5(2) + E6(4) + E7(6) + E8(4)
 # Stories In Review: 0
 # Stories Ready for Dev: 0
-# Stories Drafted: 14  # Remaining stories have tech-specs
+# Stories Drafted: 10  # Remaining E8 stories have tech-specs
 # Stories Backlog: 0  # All stories now have at least draft status
 #
 # Last Updated: 2026-01-11
 #
-# Progress: 71% complete (34/48 stories done)
+# Progress: 79% complete (38/48 stories done)
 #
 # NEXT RECOMMENDED ACTION:
-# Epic 8: UI Refresh - Bento Grid Design (e8-s1-install-ui-ux-pro-max-skill)
-# Run: /bmad:bmm:workflows:dev-story
+# Epic 8: UI Refresh - Bento Grid Design (e8-s5-redesign-dashboard-home-page)
+# Run: /bmad:bmm:workflows:create-story to prepare next story
 #
 # Notes:
 # - Epic 1 (ACM Data Extraction Pipeline) COMPLETE!
