@@ -84,6 +84,17 @@ export const acmApi = {
   },
 
   /**
+   * Export ACM records as Excel
+   */
+  exportExcel: async (sourceId: string): Promise<Blob> => {
+    const response = await apiClient.get('/acm/export/excel', {
+      params: { source_id: sourceId },
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  /**
    * Check if a source has ACM records
    */
   hasRecords: async (sourceId: string): Promise<boolean> => {

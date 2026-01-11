@@ -10,19 +10,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ChevronDown, ChevronRight, Download, Plus, RefreshCw, Search, Sparkles, X } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ChevronDown, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Search, Sparkles, X } from 'lucide-react'
 
 interface ACMToolbarProps {
   onAddNew: () => void
   onExtract: () => void
-  onExport: () => void
+  onExportCsv: () => void
+  onExportExcel: () => void
   onRefresh: () => void
   onExpandAll?: () => void
   onCollapseAll?: () => void
   riskFilter?: string
   onRiskFilterChange: (value: string | undefined) => void
   isExtracting?: boolean
-  isExporting?: boolean
+  isExportingCsv?: boolean
+  isExportingExcel?: boolean
   disabled?: boolean
   showGroupingControls?: boolean
   // Search functionality
@@ -36,14 +44,16 @@ interface ACMToolbarProps {
 export function ACMToolbar({
   onAddNew,
   onExtract,
-  onExport,
+  onExportCsv,
+  onExportExcel,
   onRefresh,
   onExpandAll,
   onCollapseAll,
   riskFilter,
   onRiskFilterChange,
   isExtracting = false,
-  isExporting = false,
+  isExportingCsv = false,
+  isExportingExcel = false,
   disabled = false,
   showGroupingControls = true,
   searchText = '',
@@ -182,15 +192,29 @@ export function ACMToolbar({
             {isExtracting ? 'Extracting...' : 'Extract ACM'}
           </Button>
 
-          {/* Export CSV Button */}
-          <Button
-            variant="outline"
-            onClick={onExport}
-            disabled={disabled || isExporting}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {isExporting ? 'Exporting...' : 'Export CSV'}
-          </Button>
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={disabled || isExportingCsv || isExportingExcel}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {isExportingCsv || isExportingExcel ? 'Exporting...' : 'Export'}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onExportCsv} disabled={isExportingCsv}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExportExcel} disabled={isExportingExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Add New Button */}
           <Button onClick={onAddNew} disabled={disabled}>
