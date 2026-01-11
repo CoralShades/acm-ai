@@ -2,7 +2,7 @@
 
 > **Story:** E4-S2
 > **Epic:** Chat with ACM Context
-> **Status:** Draft
+> **Status:** Done (Code Review Passed 2026-01-09)
 > **Created:** 2025-12-08
 
 ---
@@ -23,10 +23,10 @@ Add a toggle switch to the chat panel that allows users to control whether ACM d
 
 ## Acceptance Criteria
 
-- [ ] Toggle switch in chat panel header
-- [ ] Default: ON when ACM data exists for selected source
-- [ ] Visual indicator shows when ACM context is active
-- [ ] Toggle state persists during session
+- [x] Toggle switch in chat panel header
+- [x] Default: ON when ACM data exists for selected source
+- [x] Visual indicator shows when ACM context is active
+- [x] Toggle state persists during session
 
 ---
 

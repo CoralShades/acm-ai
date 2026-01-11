@@ -7,7 +7,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock } from 'lucide-react'
+import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock, TableProperties } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import ReactMarkdown from 'react-markdown'
 import {
   SourceChatMessage,
@@ -34,7 +36,7 @@ interface ChatPanelProps {
   messages: SourceChatMessage[]
   isStreaming: boolean
   contextIndicators: SourceChatContextIndicator | null
-  onSendMessage: (message: string, modelOverride?: string) => void
+  onSendMessage: (message: string, modelOverride?: string, includeAcmContext?: boolean) => void
   modelOverride?: string
   onModelChange?: (model?: string) => void
   // Session management props
@@ -52,6 +54,9 @@ interface ChatPanelProps {
   notebookContextStats?: NotebookContextStats
   // Notebook ID for saving notes
   notebookId?: string
+  // ACM context props
+  sourceId?: string
+  hasAcmData?: boolean
 }
 
 export function ChatPanel({
@@ -71,13 +76,57 @@ export function ChatPanel({
   title = 'Chat with Source',
   contextType = 'source',
   notebookContextStats,
-  notebookId
+  notebookId,
+  sourceId,
+  hasAcmData = false
 }: ChatPanelProps) {
   const [input, setInput] = useState('')
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false)
+  // Initialize toggle state synchronously from sessionStorage to avoid flash
+  const [includeAcmContext, setIncludeAcmContext] = useState(() => {
+    if (typeof window !== 'undefined' && sourceId) {
+      try {
+        const saved = sessionStorage.getItem(`acm-context-${sourceId}`)
+        if (saved !== null) {
+          return saved === 'true'
+        }
+      } catch {
+        // sessionStorage may be unavailable in private browsing mode
+      }
+    }
+    return hasAcmData
+  })
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { openModal } = useModalManager()
+
+  // Update toggle state when sourceId changes (e.g., navigating between sources)
+  useEffect(() => {
+    if (sourceId) {
+      try {
+        const saved = sessionStorage.getItem(`acm-context-${sourceId}`)
+        if (saved !== null) {
+          setIncludeAcmContext(saved === 'true')
+        } else {
+          setIncludeAcmContext(hasAcmData)
+        }
+      } catch {
+        // sessionStorage may be unavailable in private browsing mode
+        setIncludeAcmContext(hasAcmData)
+      }
+    }
+  }, [sourceId, hasAcmData])
+
+  const handleAcmToggle = (checked: boolean) => {
+    setIncludeAcmContext(checked)
+    if (sourceId) {
+      try {
+        sessionStorage.setItem(`acm-context-${sourceId}`, String(checked))
+      } catch {
+        // sessionStorage may be unavailable in private browsing mode
+      }
+    }
+  }
 
   const handleReferenceClick = (type: string, id: string) => {
     const modalType = type === 'source_insight' ? 'insight' : type as 'source' | 'note' | 'insight'
@@ -100,7 +149,7 @@ export function ChatPanel({
 
   const handleSend = () => {
     if (input.trim() && !isStreaming) {
-      onSendMessage(input.trim(), modelOverride)
+      onSendMessage(input.trim(), modelOverride, includeAcmContext)
       setInput('')
     }
   }
@@ -129,38 +178,68 @@ export function ChatPanel({
             <Bot className="h-5 w-5" />
             {title}
           </CardTitle>
-          {onSelectSession && onCreateSession && onDeleteSession && (
-            <Dialog open={sessionManagerOpen} onOpenChange={setSessionManagerOpen}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                onClick={() => setSessionManagerOpen(true)}
-                disabled={loadingSessions}
-              >
-                <Clock className="h-4 w-4" />
-                <span className="text-xs">Sessions</span>
-              </Button>
-              <DialogContent className="sm:max-w-[420px] p-0 overflow-hidden">
-                <DialogTitle className="sr-only">Chat Sessions</DialogTitle>
-                <SessionManager
-                  sessions={sessions}
-                  currentSessionId={currentSessionId ?? null}
-                  onCreateSession={(title) => onCreateSession?.(title)}
-                  onSelectSession={(sessionId) => {
-                    onSelectSession(sessionId)
-                    setSessionManagerOpen(false)
-                  }}
-                  onUpdateSession={(sessionId, title) => onUpdateSession?.(sessionId, title)}
-                  onDeleteSession={(sessionId) => onDeleteSession?.(sessionId)}
-                  loadingSessions={loadingSessions}
+          <div className="flex items-center gap-2">
+            {/* ACM Context Toggle */}
+            {hasAcmData && (
+              <div className="flex items-center gap-2">
+                <TableProperties className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="acm-context" className="text-xs cursor-pointer">
+                  ACM Data
+                </Label>
+                <Switch
+                  id="acm-context"
+                  checked={includeAcmContext}
+                  onCheckedChange={handleAcmToggle}
+                  disabled={isStreaming}
                 />
-              </DialogContent>
-            </Dialog>
-          )}
+              </div>
+            )}
+            {onSelectSession && onCreateSession && onDeleteSession && (
+              <Dialog open={sessionManagerOpen} onOpenChange={setSessionManagerOpen}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setSessionManagerOpen(true)}
+                  disabled={loadingSessions}
+                >
+                  <Clock className="h-4 w-4" />
+                  <span className="text-xs">Sessions</span>
+                </Button>
+                <DialogContent className="sm:max-w-[420px] p-0 overflow-hidden">
+                  <DialogTitle className="sr-only">Chat Sessions</DialogTitle>
+                  <SessionManager
+                    sessions={sessions}
+                    currentSessionId={currentSessionId ?? null}
+                    onCreateSession={(title) => onCreateSession?.(title)}
+                    onSelectSession={(sessionId) => {
+                      onSelectSession(sessionId)
+                      setSessionManagerOpen(false)
+                    }}
+                    onUpdateSession={(sessionId, title) => onUpdateSession?.(sessionId, title)}
+                    onDeleteSession={(sessionId) => onDeleteSession?.(sessionId)}
+                    loadingSessions={loadingSessions}
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0 p-0">
+        {/* ACM Context Indicator */}
+        {hasAcmData && includeAcmContext && (
+          <div className="px-4 py-2 bg-primary/10 text-primary text-xs flex items-center gap-2 border-b">
+            <TableProperties className="h-3 w-3" />
+            ACM Register data included in context
+          </div>
+        )}
+        {hasAcmData && !includeAcmContext && (
+          <div className="px-4 py-2 text-muted-foreground text-xs flex items-center gap-2 border-b">
+            <TableProperties className="h-3 w-3" />
+            ACM data not included (toggle to enable)
+          </div>
+        )}
         <ScrollArea className="flex-1 min-h-0 px-4" ref={scrollAreaRef}>
           <div className="space-y-4 py-4">
             {messages.length === 0 ? (
