@@ -217,13 +217,35 @@
   * {
     @apply border-border outline-ring/50;
   }
-  
+
   html {
     @apply antialiased;
   }
-  
+
   body {
     @apply bg-background text-foreground transition-colors;
+  }
+
+  /* Ensure pointer cursor for interactive elements */
+  button,
+  [role="button"],
+  a,
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  select,
+  summary,
+  [tabindex]:not([tabindex="-1"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  [type="button"]:disabled,
+  [type="submit"]:disabled,
+  [type="reset"]:disabled,
+  select:disabled {
+    cursor: not-allowed;
   }
   
   /* Ensure proper theme inheritance for popovers and dropdowns */

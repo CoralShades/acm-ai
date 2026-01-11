@@ -2,8 +2,9 @@
 
 > **Story:** E7-S2
 > **Epic:** Upload Wizard
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2026-01-11
 
 ---
 
@@ -23,13 +24,13 @@ Create the first step of the upload wizard with a drag-and-drop file upload zone
 
 ## Acceptance Criteria
 
-- [ ] Large drop zone with visual feedback
-- [ ] Click to browse fallback
-- [ ] File type validation with clear error messages
-- [ ] File size validation
-- [ ] Preview of selected files with remove option
-- [ ] Batch support: up to 50 files
-- [ ] Progress indicator per file
+- [x] Large drop zone with visual feedback
+- [x] Click to browse fallback
+- [x] File type validation with clear error messages
+- [x] File size validation
+- [x] Preview of selected files with remove option
+- [x] Batch support: up to 50 files
+- [x] Progress indicator per file
 
 ---
 
@@ -341,5 +342,90 @@ export function formatFileSize(bytes: number): string {
 ## Estimated Complexity
 
 **Medium** - Third-party integration with state management
+
+---
+
+## Dev Agent Record
+
+### Implementation Notes (2026-01-11)
+
+Implemented file upload step with drag & drop functionality:
+
+1. **types.ts** - Upload file interface, accepted file types, size/count limits
+2. **upload-store.ts** - Zustand store for managing upload file state
+3. **FileDropzone.tsx** - Main dropzone component with react-dropzone
+4. **index.ts** - Barrel exports for clean imports
+5. **utils.ts** - Added formatFileSize utility function
+
+**Dependencies installed:**
+- `react-dropzone` - Drag & drop file handling
+- `nanoid` - Unique ID generation for files
+
+**Features implemented:**
+- Large dropzone with drag visual feedback (border color, background)
+- Click to browse fallback via input element
+- File type validation (PDF, Word, images, audio, video)
+- File size validation (100MB limit)
+- File preview list with file type icons
+- Remove individual files or clear all
+- Batch support up to 50 files with counter
+- Progress bar UI for uploading files
+- Toast notifications for rejected files with clear error messages
+- Duplicate file detection
+- Full accessibility support (aria-labels, roles)
+
+**Build verification:**
+- TypeScript compilation: PASS
+- ESLint check: PASS (no warnings or errors)
+
+### File List
+
+| File | Change |
+|------|--------|
+| `frontend/package.json` | Modified - added react-dropzone, nanoid |
+| `frontend/src/components/upload/types.ts` | New |
+| `frontend/src/components/upload/FileDropzone.tsx` | New |
+| `frontend/src/components/upload/index.ts` | New |
+| `frontend/src/lib/stores/upload-store.ts` | New |
+| `frontend/src/lib/utils.ts` | Modified - added formatFileSize |
+
+### Change Log
+
+- 2026-01-11: Created file upload dropzone with drag & drop support
+- 2026-01-11: Code review fixes - added toast notifications, progress bar, duplicate detection, accessibility
+
+---
+
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-01-11
+**Reviewer:** Claude (Adversarial Code Review)
+**Outcome:** Changes Requested → Fixed
+
+### Issues Found: 2 High, 3 Medium, 2 Low
+
+### Action Items
+
+- [x] [HIGH] Add toast notifications for rejected files - Integrated useToast hook with clear error messages
+- [x] [HIGH] Add progress bar UI to FilePreviewItem - Added Progress component with status indicators
+- [x] [MED] Tech spec path mismatch (upload store) - Note: Actual path is correct in File List
+- [x] [MED] Tech spec path mismatch (format utility) - Note: Added to existing utils.ts
+- [x] [MED] Add duplicate file detection - Added filename-based deduplication with toast warning
+- [x] [LOW] Add accessibility on dropzone - Added role, aria-label, tabIndex
+- [x] [LOW] Add aria-label on remove buttons - Added descriptive labels
+
+### Resolution Summary
+
+All HIGH and MEDIUM issues addressed:
+1. **Toast notifications**: Integrated `useToast` hook to show clear error messages for rejected files (type, size, count)
+2. **Progress bar**: Added `Progress` component with uploading/success/error states
+3. **Duplicate detection**: Files with same name are rejected with toast warning
+4. **Accessibility**: Full ARIA support on dropzone and file items
+
+### Post-Fix Verification
+
+- TypeScript: PASS
+- ESLint: PASS
+- All fixes integrated into implementation
 
 ---
