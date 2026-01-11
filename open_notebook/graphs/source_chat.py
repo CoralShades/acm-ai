@@ -11,6 +11,7 @@ from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
 from open_notebook.config import LANGGRAPH_CHECKPOINT_FILE
+from open_notebook.domain.acm import ACMRecord
 from open_notebook.domain.notebook import Source, SourceInsight
 from open_notebook.graphs.utils import provision_langchain_model
 from open_notebook.utils.context_builder import ContextBuilder
@@ -24,6 +25,7 @@ class SourceChatState(TypedDict):
     context: Optional[str]
     model_override: Optional[str]
     context_indicators: Optional[Dict[str, List[str]]]
+    include_acm_context: Optional[bool]
 
 
 def call_model_with_source_context(
@@ -34,13 +36,17 @@ def call_model_with_source_context(
 
     This function:
     1. Uses ContextBuilder to build source-specific context
-    2. Applies the source_chat Jinja2 prompt template
-    3. Handles model provisioning with override support
-    4. Tracks context indicators for referenced insights/content
+    2. Optionally includes ACM records when include_acm_context is True
+    3. Applies the source_chat Jinja2 prompt template
+    4. Handles model provisioning with override support
+    5. Tracks context indicators for referenced insights/content/ACM records
     """
     source_id = state.get("source_id")
     if not source_id:
         raise ValueError("source_id is required in state")
+
+    # Check if ACM context should be included
+    include_acm = state.get("include_acm_context", False)
 
     # Build source context using ContextBuilder (run async code in new loop)
     def build_context():
@@ -54,7 +60,17 @@ def call_model_with_source_context(
                 include_notes=False,  # Focus on source-specific content
                 max_tokens=50000,  # Reasonable limit for source context
             )
-            return new_loop.run_until_complete(context_builder.build())
+            context_result = new_loop.run_until_complete(context_builder.build())
+
+            # Add ACM context if enabled
+            if include_acm:
+                acm_context = new_loop.run_until_complete(
+                    format_acm_context(source_id, max_records=50)
+                )
+                if acm_context:
+                    context_result["acm_context"] = acm_context
+
+            return context_result
         finally:
             new_loop.close()
             asyncio.set_event_loop(None)
@@ -80,7 +96,12 @@ def call_model_with_source_context(
         "sources": [],
         "insights": [],
         "notes": [],
+        "acm_records_included": [],
     }
+
+    # Track if ACM context was included
+    if context_data.get("acm_context"):
+        context_indicators["acm_records_included"].append(source_id)
 
     if context_data.get("sources"):
         source_info = context_data["sources"][0]  # First source
@@ -164,6 +185,57 @@ def call_model_with_source_context(
     }
 
 
+async def format_acm_context(source_id: str, max_records: int = 50) -> str:
+    """
+    Format ACM records as markdown table for chat context.
+
+    Args:
+        source_id: The source ID to fetch ACM records for
+        max_records: Maximum number of records to include (default 50)
+
+    Returns:
+        Formatted markdown table string, or empty string if no records
+    """
+    records = await ACMRecord.get_by_source(source_id)
+
+    if not records:
+        return ""
+
+    total_records = len(records)
+    truncated = total_records > max_records
+    records = records[:max_records]
+
+    # Build markdown table
+    lines = [
+        "## ACM Register Data",
+        "",
+        "| Building | Room | Product | Material | Risk | Result |",
+        "|----------|------|---------|----------|------|--------|",
+    ]
+
+    for r in records:
+        # Use building_name if available, fallback to building_id
+        building = r.building_name or r.building_id
+        room = r.room_name or "-"
+        product = r.product or "-"
+        # Truncate material description to 30 characters
+        material = r.material_description or "-"
+        if len(material) > 30:
+            material = material[:30] + "..."
+        risk = r.risk_status or "-"
+        result = r.result or "-"
+
+        lines.append(
+            f"| {building} | {room} | {product} | {material} | {risk} | {result} |"
+        )
+
+    if truncated:
+        lines.append("")
+        lines.append(f"*({max_records} of {total_records} records shown)*")
+
+    return "\n".join(lines)
+
+
 def _format_source_context(context_data: Dict) -> str:
     """
     Format the context data into a readable string for the prompt.
@@ -204,6 +276,11 @@ def _format_source_context(context_data: Dict) -> str:
                     f"**Content:** {insight.get('content', 'No content')}"
                 )
                 context_parts.append("")  # Empty line for separation
+
+    # Add ACM Register Data if present
+    if context_data.get("acm_context"):
+        context_parts.append(context_data["acm_context"])
+        context_parts.append("")
 
     # Add metadata
     if context_data.get("metadata"):

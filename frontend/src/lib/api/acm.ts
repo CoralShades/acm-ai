@@ -82,4 +82,14 @@ export const acmApi = {
     })
     return response.data
   },
+
+  /**
+   * Check if a source has ACM records
+   */
+  hasRecords: async (sourceId: string): Promise<boolean> => {
+    const response = await apiClient.get<ACMRecordListResponse>('/acm/records', {
+      params: { source_id: sourceId, limit: 1 }
+    })
+    return response.data.total > 0
+  },
 }
