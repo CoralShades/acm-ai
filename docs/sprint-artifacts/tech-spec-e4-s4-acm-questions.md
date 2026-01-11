@@ -2,7 +2,7 @@
 
 > **Story:** E4-S4
 > **Epic:** Chat with ACM Context
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,10 +23,10 @@ Enhance the chat system prompt to help the AI correctly interpret and answer ACM
 
 ## Acceptance Criteria
 
-- [ ] AI correctly interprets building/room references
-- [ ] AI summarizes risk status when asked
-- [ ] AI explains ACM terminology when asked
-- [ ] AI references policy sections when relevant
+- [x] AI correctly interprets building/room references
+- [x] AI summarizes risk status when asked
+- [x] AI explains ACM terminology when asked
+- [x] AI references policy sections when relevant
 
 ---
 
@@ -227,5 +227,60 @@ def format_acm_context_for_question(
 ## Estimated Complexity
 
 **Medium** - Primarily prompt engineering with optional pattern detection
+
+---
+
+## Dev Agent Record
+
+### Implementation Date: 2026-01-11
+
+### Implementation Notes
+
+1. **Enhanced System Prompt** (`prompts/source_chat.jinja`):
+   - Added comprehensive "Common ACM Question Types and How to Answer" section
+   - Included 5 question type patterns: Location, Risk, Terminology, Action/Compliance, Summary
+   - Added 4 detailed example responses showing proper formatting for different query types
+   - Enhanced Response Guidelines with tables and professional assessment recommendations
+
+2. **New Utility Module** (`api/utils/acm_context.py`):
+   - Created `detect_question_type()` function to classify ACM questions
+   - Created `format_acm_context_for_question()` to format context based on question type
+   - Implemented formatting functions: `_format_risk_summary()`, `_format_by_location()`, `_format_summary()`, `_format_as_table()`
+
+3. **Test Coverage** (`tests/test_acm_chat_context.py`):
+   - Added `TestQuestionPatternDetection` class with 6 test methods
+   - Added `TestACMContextFormatting` class with 5 test methods
+   - Added `TestACMQuestionExamples` class with 6 test methods
+   - All 36 tests pass (17 new + 19 existing)
+
+### File List
+
+| File | Status |
+|------|--------|
+| `prompts/source_chat.jinja` | Modified |
+| `api/utils/__init__.py` | New |
+| `api/utils/acm_context.py` | New |
+| `tests/test_acm_chat_context.py` | Modified |
+
+### Change Log
+
+- 2026-01-11: Implemented E4-S4 - Enhanced system prompt with ACM question handling patterns and examples. Created utility module with question detection and context formatting. Added comprehensive test coverage.
+- 2026-01-11: Code Review Fixes Applied:
+  - **HIGH**: Integrated utility module (`detect_question_type`, `format_acm_context_for_question`) into actual chat flow in `source_chat.py`
+  - **MEDIUM**: Added policy reference guidance section to prompt template
+  - **MEDIUM**: Replaced duplicate ACMRecord class with Protocol for flexibility with domain model
+  - **MEDIUM**: Added proper exports to `api/utils/__init__.py`
+  - **LOW**: Fixed grammar "1 items" → "1 item" with proper pluralization
+  - **LOW**: Updated test file docstring to reference all related stories
+
+### Updated File List
+
+| File | Status |
+|------|--------|
+| `prompts/source_chat.jinja` | Modified (prompt + policy guidance) |
+| `open_notebook/graphs/source_chat.py` | Modified (integration) |
+| `api/utils/__init__.py` | Modified (exports) |
+| `api/utils/acm_context.py` | Modified (Protocol type) |
+| `tests/test_acm_chat_context.py` | Modified (docstring + tests) |
 
 ---
