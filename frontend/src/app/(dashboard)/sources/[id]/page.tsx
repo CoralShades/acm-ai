@@ -2,12 +2,14 @@
 
 import { useRouter, useParams } from 'next/navigation'
 import { useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { useSourceChat } from '@/lib/hooks/useSourceChat'
 import { ChatPanel } from '@/components/source/ChatPanel'
 import { useNavigation } from '@/lib/hooks/use-navigation'
 import { SourceDetailContent } from '@/components/source/SourceDetailContent'
+import { acmApi } from '@/lib/api/acm'
 
 export default function SourceDetailPage() {
   const router = useRouter()
@@ -17,6 +19,19 @@ export default function SourceDetailPage() {
 
   // Initialize source chat
   const chat = useSourceChat(sourceId)
+
+  // Check if source has ACM data
+  // On error, default to true so toggle is shown (user can toggle off if needed)
+  const { data: hasAcmData = false, isError: acmCheckError } = useQuery({
+    queryKey: ['acm-has-records', sourceId],
+    queryFn: () => acmApi.hasRecords(sourceId),
+    enabled: !!sourceId,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1, // Only retry once to avoid delays
+  })
+
+  // If ACM check failed, show toggle anyway (fail-open for better UX)
+  const showAcmToggle = acmCheckError ? true : hasAcmData
 
   const handleBack = useCallback(() => {
     const returnPath = navigation.getReturnPath()
@@ -56,7 +71,7 @@ export default function SourceDetailPage() {
             messages={chat.messages}
             isStreaming={chat.isStreaming}
             contextIndicators={chat.contextIndicators}
-            onSendMessage={(message, model) => chat.sendMessage(message, model)}
+            onSendMessage={(message, model, includeAcm) => chat.sendMessage(message, model, includeAcm)}
             modelOverride={chat.currentSession?.model_override}
             onModelChange={(model) => {
               if (chat.currentSessionId) {
@@ -70,6 +85,8 @@ export default function SourceDetailPage() {
             onUpdateSession={(sessionId, title) => chat.updateSession(sessionId, { title })}
             onDeleteSession={chat.deleteSession}
             loadingSessions={chat.loadingSessions}
+            sourceId={sourceId}
+            hasAcmData={showAcmToggle}
           />
         </div>
       </div>
