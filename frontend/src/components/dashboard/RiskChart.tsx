@@ -31,29 +31,42 @@ export function RiskChart({ data }: RiskChartProps) {
     );
   }
 
+  const total = chartData.reduce((sum, item) => sum + item.value, 0);
+
   return (
     <div className="space-y-4">
-      {/* Bar chart */}
-      <div className="flex h-8 rounded-lg overflow-hidden">
+      {/* Bar chart with accessibility */}
+      <div
+        className="flex h-8 rounded-lg overflow-hidden"
+        role="img"
+        aria-label={`Risk distribution chart: ${chartData.map((item) => `${item.label} risk ${item.value} items (${Math.round(item.percent)}%)`).join(', ')}`}
+      >
         {chartData.map((item) => (
           <div
             key={item.label}
             className={`${item.color} transition-all`}
             style={{ width: `${item.percent}%` }}
+            role="presentation"
+            aria-hidden="true"
           />
         ))}
       </div>
 
       {/* Legend */}
-      <div className="flex justify-between">
+      <div className="flex justify-between" role="list" aria-label="Risk distribution legend">
         {chartData.map((item) => (
-          <div key={item.label} className="text-center">
-            <div className={`w-3 h-3 rounded-full ${item.color} mx-auto mb-1`} />
+          <div key={item.label} className="text-center" role="listitem">
+            <div className={`w-3 h-3 rounded-full ${item.color} mx-auto mb-1`} aria-hidden="true" />
             <p className="text-sm font-medium">{item.value}</p>
             <p className="text-xs text-muted-foreground">{item.label}</p>
           </div>
         ))}
       </div>
+
+      {/* Screen reader summary */}
+      <p className="sr-only">
+        Total of {total} ACM items: {chartData.map((item) => `${item.value} ${item.label.toLowerCase()} risk`).join(', ')}
+      </p>
     </div>
   );
 }
