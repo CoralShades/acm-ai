@@ -1,0 +1,16 @@
+# PROCESSED_CONTENT Debug Dump
+# Source: source:z0s53pvbp480qyac18n4
+# Length: 418 chars
+#============================================================
+
+
+        School Asbestos Management Plan (SAMP)
+        Survey Date: 2024-01-15
+
+        This document contains the asbestos register for Administration Block
+        and Science Wing buildings. Multiple ACM materials have been identified
+        including floor tiles, pipe lagging, ceiling tiles, and eaves lining.
+
+        Building A1 - Administration Block (1965)
+        Building B1 - Science Wing (1972)
+        
