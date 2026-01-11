@@ -3,13 +3,14 @@ import sqlite3
 from typing import Annotated, Dict, List, Optional
 
 from ai_prompter import Prompter
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
+from api.utils.acm_context import detect_question_type, format_acm_context_for_question
 from open_notebook.config import LANGGRAPH_CHECKPOINT_FILE
 from open_notebook.domain.acm import ACMRecord
 from open_notebook.domain.notebook import Source, SourceInsight
@@ -48,6 +49,14 @@ def call_model_with_source_context(
     # Check if ACM context should be included
     include_acm = state.get("include_acm_context", False)
 
+    # Extract last user message for question-type detection
+    last_user_message = None
+    messages = state.get("messages", [])
+    for msg in reversed(messages):
+        if isinstance(msg, HumanMessage) or (hasattr(msg, "type") and msg.type == "human"):
+            last_user_message = msg.content if hasattr(msg, "content") else str(msg)
+            break
+
     # Build source context using ContextBuilder (run async code in new loop)
     def build_context():
         """Build context in a new event loop"""
@@ -62,10 +71,14 @@ def call_model_with_source_context(
             )
             context_result = new_loop.run_until_complete(context_builder.build())
 
-            # Add ACM context if enabled
+            # Add ACM context if enabled, with question-type optimized formatting
             if include_acm:
                 acm_context = new_loop.run_until_complete(
-                    format_acm_context(source_id, max_records=50)
+                    format_acm_context(
+                        source_id,
+                        max_records=50,
+                        user_message=last_user_message,
+                    )
                 )
                 if acm_context:
                     context_result["acm_context"] = acm_context
@@ -185,16 +198,22 @@ def call_model_with_source_context(
     }
 
 
-async def format_acm_context(source_id: str, max_records: int = 50) -> str:
+async def format_acm_context(
+    source_id: str,
+    max_records: int = 50,
+    user_message: Optional[str] = None,
+) -> str:
     """
-    Format ACM records as markdown table for chat context.
+    Format ACM records for chat context, optimized for the question type.
 
     Args:
         source_id: The source ID to fetch ACM records for
         max_records: Maximum number of records to include (default 50)
+        user_message: Optional user message to detect question type for
+                     optimized formatting
 
     Returns:
-        Formatted markdown table string, or empty string if no records
+        Formatted markdown string, or empty string if no records
     """
     records = await ACMRecord.get_by_source(source_id)
 
@@ -203,37 +222,21 @@ async def format_acm_context(source_id: str, max_records: int = 50) -> str:
 
     total_records = len(records)
     truncated = total_records > max_records
-    records = records[:max_records]
+    records_to_format = records[:max_records]
 
-    # Build markdown table
-    lines = [
-        "## ACM Register Data",
-        "",
-        "| Building | Room | Product | Material | Risk | Result |",
-        "|----------|------|---------|----------|------|--------|",
-    ]
+    # Detect question type and use optimized formatting
+    if user_message:
+        question_type = detect_question_type(user_message)
+        formatted = format_acm_context_for_question(records_to_format, question_type)
+    else:
+        # Default: use table format
+        formatted = format_acm_context_for_question(records_to_format, "general")
 
-    for r in records:
-        # Use building_name if available, fallback to building_id
-        building = r.building_name or r.building_id
-        room = r.room_name or "-"
-        product = r.product or "-"
-        # Truncate material description to 30 characters
-        material = r.material_description or "-"
-        if len(material) > 30:
-            material = material[:30] + "..."
-        risk = r.risk_status or "-"
-        result = r.result or "-"
-
-        lines.append(
-            f"| {building} | {room} | {product} | {material} | {risk} | {result} |"
-        )
-
+    # Add truncation notice if needed
     if truncated:
-        lines.append("")
-        lines.append(f"*({max_records} of {total_records} records shown)*")
+        formatted += f"\n\n*({max_records} of {total_records} records shown)*"
 
-    return "\n".join(lines)
+    return formatted
 
 
 def _format_source_context(context_data: Dict) -> str:
