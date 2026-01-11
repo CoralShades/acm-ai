@@ -2,7 +2,7 @@
 
 > **Story:** E8-S5
 > **Epic:** UI Refresh (Bento Grid Design)
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,12 +23,12 @@ Redesign the dashboard home page using bento grid layout to provide a clear over
 
 ## Acceptance Criteria
 
-- [ ] Bento grid layout with key metrics
-- [ ] Card 1: Total sources with recent activity
-- [ ] Card 2: ACM summary (risk distribution chart)
-- [ ] Card 3: Recent uploads list
-- [ ] Card 4: Quick actions
-- [ ] Responsive collapse on mobile
+- [x] Bento grid layout with key metrics
+- [x] Card 1: Total sources with recent activity
+- [x] Card 2: ACM summary (risk distribution chart)
+- [x] Card 3: Recent uploads list
+- [x] Card 4: Quick actions
+- [x] Responsive collapse on mobile
 
 ---
 
@@ -341,7 +341,51 @@ export function RecentSourcesList({ sources }: { sources: Source[] }) {
 | `frontend/src/app/(dashboard)/page.tsx` | Redesign with bento grid |
 | `frontend/src/components/dashboard/RiskChart.tsx` | New component |
 | `frontend/src/components/dashboard/RecentSourcesList.tsx` | New component |
-| `frontend/src/hooks/use-acm-summary.ts` | New hook for ACM stats |
+| `frontend/src/lib/hooks/use-acm-summary.ts` | New hook for ACM stats |
+
+---
+
+## Implementation Notes (2026-01-11)
+
+### Files Created/Modified
+- **`frontend/src/app/(dashboard)/page.tsx`** - New dashboard page with bento grid layout showing:
+  - 4 metric cards (Total Sources, High Risk, Medium Risk, Low Risk)
+  - Risk Distribution chart (large card)
+  - Recent Uploads list (medium card)
+  - Quick Actions (medium card)
+- **`frontend/src/components/dashboard/RiskChart.tsx`** - Horizontal stacked bar chart for risk distribution with legend
+- **`frontend/src/components/dashboard/RecentSourcesList.tsx`** - List of recent sources with time formatting using date-fns
+- **`frontend/src/lib/hooks/use-acm-summary.ts`** - Wrapper hook around useACMStats with normalized field names
+
+### Implementation Details
+- Uses existing `useSources()` and `useACMStats()` hooks via new `useACMSummary()` wrapper
+- RiskChart uses the existing ACM stats API fields (high_risk_count, medium_risk_count, low_risk_count)
+- RecentSourcesList handles nullable titles with fallback to "Untitled"
+- All cards support loading states via BentoCard's `isLoading` prop
+- Responsive layout via BentoGrid's column variants (1-4 columns based on screen size)
+
+---
+
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-01-12
+**Outcome:** Approved with fixes applied
+
+### Issues Found & Fixed (6 total)
+
+| Severity | Issue | Fix Applied |
+|----------|-------|-------------|
+| HIGH | No error state handling for API failures | Added error state UI for sources and ACM cards |
+| HIGH | Upload link goes to /sources instead of upload action | Changed to `/sources?action=upload` |
+| MEDIUM | Sources not sorted by date (newest first) | Added date sorting before slicing |
+| MEDIUM | Date parsing could throw on invalid dates | Added try-catch wrapper in `formatCreatedDate()` |
+| MEDIUM | RiskChart bar segments have no accessibility labels | Added `role`, `aria-label`, and screen reader summary |
+| MEDIUM | No "recent activity" indicator per AC | Added weekly activity count display |
+
+### Low Issues (Not Fixed - Accepted)
+- Hardcoded English strings (i18n out of scope)
+- "No ACM data" shown during loading (minor UX)
+- Large card has sparse content (acceptable design choice)
 
 ---
 
