@@ -25,6 +25,7 @@ import {
   useDeleteACMRecord,
   useExtractACM,
   useExportACMCsv,
+  useExportACMExcel,
 } from '@/lib/hooks/use-acm'
 import { useSources } from '@/lib/hooks/use-sources'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -59,6 +60,7 @@ export default function ACMPage() {
   const deleteRecord = useDeleteACMRecord()
   const extractACM = useExtractACM()
   const exportCsv = useExportACMCsv()
+  const exportExcel = useExportACMExcel()
 
   // Compute records
   const records = useMemo(() => recordsData?.records || [], [recordsData])
@@ -104,9 +106,15 @@ export default function ACMPage() {
     }
   }
 
-  const handleExport = () => {
+  const handleExportCsv = () => {
     if (selectedSourceId) {
       exportCsv.mutate(selectedSourceId)
+    }
+  }
+
+  const handleExportExcel = () => {
+    if (selectedSourceId) {
+      exportExcel.mutate(selectedSourceId)
     }
   }
 
@@ -188,12 +196,14 @@ export default function ACMPage() {
                 <ACMToolbar
                   onAddNew={handleAddNew}
                   onExtract={handleExtract}
-                  onExport={handleExport}
+                  onExportCsv={handleExportCsv}
+                  onExportExcel={handleExportExcel}
                   onRefresh={handleRefresh}
                   riskFilter={riskFilter}
                   onRiskFilterChange={setRiskFilter}
                   isExtracting={extractACM.isPending}
-                  isExporting={exportCsv.isPending}
+                  isExportingCsv={exportCsv.isPending}
+                  isExportingExcel={exportExcel.isPending}
                   disabled={isLoadingRecords}
                 />
 

@@ -8,11 +8,15 @@ listing, filtering, extraction, and export.
 import csv
 import io
 import math
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from loguru import logger
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 from api.command_service import CommandService
 from api.models import (
@@ -286,6 +290,128 @@ async def export_acm_records(
         raise
     except Exception as e:
         logger.error(f"Error exporting ACM records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Risk status colors for Excel
+RISK_COLORS = {
+    "Low": "C6EFCE",  # Green
+    "Medium": "FFEB9C",  # Yellow/Orange
+    "High": "FFC7CE",  # Red
+}
+
+
+@router.get("/export/excel")
+async def export_acm_excel(
+    source_id: str = Query(..., description="Source ID to export"),
+):
+    """
+    Export ACM records as formatted Excel file.
+
+    Downloads all records for the specified source as an Excel file
+    with formatted headers, auto-sized columns, and risk status color coding.
+    """
+    try:
+        # Get all records for source
+        records = await ACMRecord.get_by_source(source_id)
+
+        if not records:
+            raise HTTPException(
+                status_code=404, detail="No ACM records found for source"
+            )
+
+        # Get source title for filename
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        source_title = source.title if source else source_id
+
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "ACM Register"
+
+        # Define columns: (header, field, width)
+        columns = [
+            ("Building ID", "building_id", 12),
+            ("Building Name", "building_name", 20),
+            ("Room ID", "room_id", 10),
+            ("Room Name", "room_name", 15),
+            ("Product", "product", 20),
+            ("Material Description", "material_description", 35),
+            ("Extent", "extent", 15),
+            ("Location", "location", 20),
+            ("Friable", "friable", 10),
+            ("Condition", "material_condition", 12),
+            ("Risk Status", "risk_status", 12),
+            ("Result", "result", 15),
+            ("Page", "page_number", 8),
+        ]
+
+        # Header styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(
+            start_color="4472C4", end_color="4472C4", fill_type="solid"
+        )
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        # Write headers
+        for col_idx, (header, _, width) in enumerate(columns, 1):
+            cell = ws.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+            cell.border = thin_border
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        # Write data rows
+        for row_idx, record in enumerate(records, 2):
+            for col_idx, (_, field, _) in enumerate(columns, 1):
+                value = getattr(record, field, None)
+                # Convert value to string if not None
+                if value is not None:
+                    value = str(value) if not isinstance(value, str) else value
+                cell = ws.cell(row=row_idx, column=col_idx, value=value or "")
+                cell.border = thin_border
+
+                # Color code risk status
+                if field == "risk_status" and value in RISK_COLORS:
+                    cell.fill = PatternFill(
+                        start_color=RISK_COLORS[value],
+                        end_color=RISK_COLORS[value],
+                        fill_type="solid",
+                    )
+
+        # Freeze header row
+        ws.freeze_panes = "A2"
+
+        # Auto-filter
+        if records:
+            ws.auto_filter.ref = ws.dimensions
+
+        # Save to bytes
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        filename = f"acm_export_{source_title}_{date.today()}.xlsx".replace(" ", "_")
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting ACM records to Excel: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

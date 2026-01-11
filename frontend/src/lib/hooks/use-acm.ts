@@ -238,3 +238,38 @@ export function useExportACMCsv() {
     },
   })
 }
+
+/**
+ * Hook to export ACM records as Excel
+ */
+export function useExportACMExcel() {
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: async (sourceId: string) => {
+      const blob = await acmApi.exportExcel(sourceId)
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `acm_export_${sourceId}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Excel file exported successfully',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to export Excel file',
+        variant: 'destructive',
+      })
+    },
+  })
+}

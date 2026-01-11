@@ -17,6 +17,7 @@ import {
   useDeleteACMRecord,
   useExtractACM,
   useExportACMCsv,
+  useExportACMExcel,
 } from '@/lib/hooks/use-acm'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
@@ -95,6 +96,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const deleteRecord = useDeleteACMRecord()
   const extractACM = useExtractACM()
   const exportCsv = useExportACMCsv()
+  const exportExcel = useExportACMExcel()
 
   // Handlers
   const handleAddNew = useCallback(() => {
@@ -129,9 +131,13 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     extractACM.mutate(sourceId)
   }, [extractACM, sourceId])
 
-  const handleExport = useCallback(() => {
+  const handleExportCsv = useCallback(() => {
     exportCsv.mutate(sourceId)
   }, [exportCsv, sourceId])
+
+  const handleExportExcel = useCallback(() => {
+    exportExcel.mutate(sourceId)
+  }, [exportExcel, sourceId])
 
   const handleRefresh = useCallback(() => {
     refetchRecords()
@@ -216,14 +222,16 @@ export function ACMTab({ sourceId }: ACMTabProps) {
           <ACMToolbar
             onAddNew={handleAddNew}
             onExtract={handleExtract}
-            onExport={handleExport}
+            onExportCsv={handleExportCsv}
+            onExportExcel={handleExportExcel}
             onRefresh={handleRefresh}
             onExpandAll={handleExpandAll}
             onCollapseAll={handleCollapseAll}
             riskFilter={riskFilter}
             onRiskFilterChange={setRiskFilter}
             isExtracting={extractACM.isPending}
-            isExporting={exportCsv.isPending}
+            isExportingCsv={exportCsv.isPending}
+            isExportingExcel={exportExcel.isPending}
             disabled={isLoadingRecords}
             showGroupingControls={hasRecords}
             searchText={searchText}
