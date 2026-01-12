@@ -2,7 +2,7 @@
 
 > **Story:** E8-S6
 > **Epic:** UI Refresh (Bento Grid Design)
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,12 +23,12 @@ Redesign the sources list page with a bento card grid view option alongside the 
 
 ## Acceptance Criteria
 
-- [ ] Grid view option (bento cards)
-- [ ] List view option (current table)
-- [ ] View toggle persisted
-- [ ] Source cards show: title, type, date, ACM status
-- [ ] Quick actions on hover
-- [ ] Batch selection mode
+- [x] Grid view option (bento cards)
+- [x] List view option (current table)
+- [x] View toggle persisted
+- [x] Source cards show: title, type, date, ACM status
+- [x] Quick actions on hover
+- [x] Batch selection mode
 
 ---
 
@@ -395,5 +395,67 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
 ## Estimated Complexity
 
 **Medium** - View toggle with state persistence
+
+---
+
+## Implementation Notes (2026-01-12)
+
+### Files Created/Modified
+- **`frontend/src/app/(dashboard)/sources/page.tsx`** - Complete redesign with:
+  - Grid/list view toggle using useLocalStorage hook
+  - Search filtering with clear button (filters by title and URL)
+  - Batch selection mode with bulk delete capability
+  - Preserved existing functionality: infinite scroll, keyboard navigation (list view), sorting
+  - Loading skeletons for both view modes
+  - Empty states for no sources and no search results
+- **`frontend/src/components/sources/SourcesGridView.tsx`** - New BentoGrid-based grid view with:
+  - Source type icons (Link, Upload, Text)
+  - Type badges
+  - Checkbox selection with ring highlight
+  - Dropdown menu with View/Delete actions
+  - Date formatting with date-fns
+  - Embedded and insights count badges
+- **`frontend/src/components/sources/SourcesTableView.tsx`** - Refactored table view component with:
+  - Checkbox column for batch selection
+  - Sortable Created column
+  - All original table features preserved
+  - Loading more indicator row
+- **`frontend/src/lib/hooks/use-local-storage.ts`** - SSR-safe localStorage hook with hydration handling
+- **`frontend/src/components/ui/skeleton.tsx`** - New Skeleton component for loading states
+
+### Implementation Details
+- View preference persisted to localStorage with key `sources-view`
+- Default view is `list` to match original behavior
+- Search filters by both title and URL
+- Bulk delete uses Promise.all for parallel deletion
+- ConfirmDialog updated to handle both single and bulk deletion
+- filteredSources memoized with useMemo to prevent unnecessary re-renders
+- Keyboard navigation only active in list view
+
+---
+
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-01-12
+**Outcome:** Approved with fixes applied
+
+### Issues Found & Fixed (7 total)
+
+| Severity | Issue | Fix Applied |
+|----------|-------|-------------|
+| HIGH | "Select All" checkbox toggled instead of set | Fixed logic to only add unselected/remove selected |
+| HIGH | Bulk delete fails fast with Promise.all | Changed to Promise.allSettled with partial failure handling |
+| MEDIUM | Grid view lacks infinite scroll loading indicator | Added loadingMore prop and spinner to SourcesGridView |
+| MEDIUM | Grid cards not fully clickable | Wrapped entire card in Link with preventDefault on interactive elements |
+| MEDIUM | Search lacks debouncing | Added useDeferredValue for performance |
+| MEDIUM | Duplicate formatCreatedDate function | Extracted to shared utility `@/lib/utils/format-date.ts` |
+| LOW | Missing aria-label on search clear button | Added aria-label="Clear search" |
+
+### Low Issues (Not Fixed - Accepted)
+- Table checkbox column inconsistent padding (minor visual)
+- Skeleton loading uses inline spinner (acceptable)
+
+### Additional Files Created
+- `frontend/src/lib/utils/format-date.ts` - Shared date formatting utility
 
 ---
