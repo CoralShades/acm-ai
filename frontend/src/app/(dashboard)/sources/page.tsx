@@ -1,273 +1,341 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { sourcesApi } from '@/lib/api/sources'
-import { SourceListResponse } from '@/lib/types/api'
-import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import { EmptyState } from '@/components/common/EmptyState'
-import { AppShell } from '@/components/layout/AppShell'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { FileText, Link as LinkIcon, Upload, AlignLeft, Trash2, ArrowUpDown } from 'lucide-react'
-import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue } from 'react';
+import { useRouter } from 'next/navigation';
+import { sourcesApi } from '@/lib/api/sources';
+import { SourceListResponse } from '@/lib/types/api';
+import { EmptyState } from '@/components/common/EmptyState';
+import { AppShell } from '@/components/layout/AppShell';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import {
+  FileText,
+  Upload,
+  LayoutGrid,
+  List,
+  Search,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { useLocalStorage } from '@/lib/hooks/use-local-storage';
+import { SourcesGridView } from '@/components/sources/SourcesGridView';
+import { SourcesTableView } from '@/components/sources/SourcesTableView';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SourcesPage() {
-  const [sources, setSources] = useState<SourceListResponse[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const [sortBy, setSortBy] = useState<'created' | 'updated'>('updated')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; source: SourceListResponse | null }>({
+  const [sources, setSources] = useState<SourceListResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [sortBy, setSortBy] = useState<'created' | 'updated'>('updated');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [view, setView] = useLocalStorage<'grid' | 'list'>(
+    'sources-view',
+    'list'
+  );
+  const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    source: SourceListResponse | null;
+    isBulk?: boolean;
+  }>({
     open: false,
-    source: null
-  })
-  const router = useRouter()
-  const tableRef = useRef<HTMLTableElement>(null)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const offsetRef = useRef(0)
-  const loadingMoreRef = useRef(false)
-  const hasMoreRef = useRef(true)
-  const PAGE_SIZE = 30
+    source: null,
+    isBulk: false,
+  });
+  const router = useRouter();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const loadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(true);
+  const PAGE_SIZE = 30;
 
-  const fetchSources = useCallback(async (reset = false) => {
-    try {
-      // Check flags before proceeding
-      if (!reset && (loadingMoreRef.current || !hasMoreRef.current)) {
-        return
+  const fetchSources = useCallback(
+    async (reset = false) => {
+      try {
+        // Check flags before proceeding
+        if (!reset && (loadingMoreRef.current || !hasMoreRef.current)) {
+          return;
+        }
+
+        if (reset) {
+          setLoading(true);
+          offsetRef.current = 0;
+          setSources([]);
+          hasMoreRef.current = true;
+        } else {
+          loadingMoreRef.current = true;
+          setLoadingMore(true);
+        }
+
+        const data = await sourcesApi.list({
+          limit: PAGE_SIZE,
+          offset: offsetRef.current,
+          sort_by: sortBy,
+          sort_order: sortOrder,
+        });
+
+        if (reset) {
+          setSources(data);
+        } else {
+          setSources((prev) => [...prev, ...data]);
+        }
+
+        // Check if we have more data
+        const hasMoreData = data.length === PAGE_SIZE;
+        hasMoreRef.current = hasMoreData;
+        offsetRef.current += data.length;
+      } catch (err) {
+        console.error('Failed to fetch sources:', err);
+        setError('Failed to load sources');
+        toast.error('Failed to load sources');
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+        loadingMoreRef.current = false;
       }
-
-      if (reset) {
-        setLoading(true)
-        offsetRef.current = 0
-        setSources([])
-        hasMoreRef.current = true
-      } else {
-        loadingMoreRef.current = true
-        setLoadingMore(true)
-      }
-
-      const data = await sourcesApi.list({
-        limit: PAGE_SIZE,
-        offset: offsetRef.current,
-        sort_by: sortBy,
-        sort_order: sortOrder,
-      })
-
-      if (reset) {
-        setSources(data)
-      } else {
-        setSources(prev => [...prev, ...data])
-      }
-
-      // Check if we have more data
-      const hasMoreData = data.length === PAGE_SIZE
-      hasMoreRef.current = hasMoreData
-      offsetRef.current += data.length
-    } catch (err) {
-      console.error('Failed to fetch sources:', err)
-      setError('Failed to load sources')
-      toast.error('Failed to load sources')
-    } finally {
-      setLoading(false)
-      setLoadingMore(false)
-      loadingMoreRef.current = false
-    }
-  }, [sortBy, sortOrder])
+    },
+    [sortBy, sortOrder]
+  );
 
   // Initial load and when sort changes
   useEffect(() => {
-    fetchSources(true)
+    fetchSources(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortBy, sortOrder])
+  }, [sortBy, sortOrder]);
 
-  useEffect(() => {
-    // Focus the table when component mounts or sources change
-    if (sources.length > 0 && tableRef.current) {
-      tableRef.current.focus()
-    }
-  }, [sources])
+  // Filter sources by search (memoized with deferred value for performance)
+  const filteredSources = useMemo(
+    () =>
+      sources?.filter(
+        (source) =>
+          source.title?.toLowerCase().includes(deferredSearch.toLowerCase()) ||
+          source.asset?.url?.toLowerCase().includes(deferredSearch.toLowerCase())
+      ) || [],
+    [sources, deferredSearch]
+  );
 
+  // Keyboard navigation for list view
   useEffect(() => {
+    if (view !== 'list' || filteredSources.length === 0) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (sources.length === 0) return
-
       switch (e.key) {
         case 'ArrowDown':
-          e.preventDefault()
+          e.preventDefault();
           setSelectedIndex((prev) => {
-            const newIndex = Math.min(prev + 1, sources.length - 1)
-            // Scroll to keep selected row visible
-            setTimeout(() => scrollToSelectedRow(newIndex), 0)
-            return newIndex
-          })
-          break
+            const newIndex = Math.min(prev + 1, filteredSources.length - 1);
+            setTimeout(() => scrollToSelectedRow(newIndex), 0);
+            return newIndex;
+          });
+          break;
         case 'ArrowUp':
-          e.preventDefault()
+          e.preventDefault();
           setSelectedIndex((prev) => {
-            const newIndex = Math.max(prev - 1, 0)
-            // Scroll to keep selected row visible
-            setTimeout(() => scrollToSelectedRow(newIndex), 0)
-            return newIndex
-          })
-          break
+            const newIndex = Math.max(prev - 1, 0);
+            setTimeout(() => scrollToSelectedRow(newIndex), 0);
+            return newIndex;
+          });
+          break;
         case 'Enter':
-          e.preventDefault()
-          if (sources[selectedIndex]) {
-            router.push(`/sources/${sources[selectedIndex].id}`)
+          e.preventDefault();
+          if (filteredSources[selectedIndex]) {
+            router.push(`/sources/${filteredSources[selectedIndex].id}`);
           }
-          break
+          break;
         case 'Home':
-          e.preventDefault()
-          setSelectedIndex(0)
-          setTimeout(() => scrollToSelectedRow(0), 0)
-          break
+          e.preventDefault();
+          setSelectedIndex(0);
+          setTimeout(() => scrollToSelectedRow(0), 0);
+          break;
         case 'End':
-          e.preventDefault()
-          const lastIndex = sources.length - 1
-          setSelectedIndex(lastIndex)
-          setTimeout(() => scrollToSelectedRow(lastIndex), 0)
-          break
+          e.preventDefault();
+          const lastIndex = filteredSources.length - 1;
+          setSelectedIndex(lastIndex);
+          setTimeout(() => scrollToSelectedRow(lastIndex), 0);
+          break;
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [sources, selectedIndex, router])
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredSources, selectedIndex, router, view]);
 
   const scrollToSelectedRow = (index: number) => {
-    const scrollContainer = scrollContainerRef.current
-    if (!scrollContainer) return
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
 
-    // Find the selected row element
-    const rows = scrollContainer.querySelectorAll('tbody tr')
-    const selectedRow = rows[index] as HTMLElement
-    if (!selectedRow) return
+    const rows = scrollContainer.querySelectorAll('tbody tr');
+    const selectedRow = rows[index] as HTMLElement;
+    if (!selectedRow) return;
 
-    const containerRect = scrollContainer.getBoundingClientRect()
-    const rowRect = selectedRow.getBoundingClientRect()
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const rowRect = selectedRow.getBoundingClientRect();
 
-    // Check if row is above visible area
     if (rowRect.top < containerRect.top) {
-      selectedRow.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      selectedRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (rowRect.bottom > containerRect.bottom) {
+      selectedRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-    // Check if row is below visible area
-    else if (rowRect.bottom > containerRect.bottom) {
-      selectedRow.scrollIntoView({ behavior: 'smooth', block: 'end' })
-    }
-  }
+  };
 
-  // Set up scroll listener after sources are loaded
+  // Infinite scroll
   useEffect(() => {
-    const scrollContainer = scrollContainerRef.current
-    if (!scrollContainer) return
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
 
-    let scrollTimeout: NodeJS.Timeout | null = null
+    let scrollTimeout: NodeJS.Timeout | null = null;
 
     const handleScroll = () => {
       if (scrollTimeout) {
-        clearTimeout(scrollTimeout)
+        clearTimeout(scrollTimeout);
       }
 
       scrollTimeout = setTimeout(() => {
-        if (!scrollContainerRef.current) return
+        if (!scrollContainerRef.current) return;
 
-        const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
-        const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+        const { scrollTop, scrollHeight, clientHeight } =
+          scrollContainerRef.current;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-        // Load more when within 200px of the bottom
-        if (distanceFromBottom < 200 && !loadingMoreRef.current && hasMoreRef.current) {
-          fetchSources(false)
+        if (
+          distanceFromBottom < 200 &&
+          !loadingMoreRef.current &&
+          hasMoreRef.current
+        ) {
+          fetchSources(false);
         }
-      }, 100)
-    }
+      }, 100);
+    };
 
-    scrollContainer.addEventListener('scroll', handleScroll)
-    handleScroll() // Check on mount
+    scrollContainer.addEventListener('scroll', handleScroll);
+    handleScroll();
 
     return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll)
+      scrollContainer.removeEventListener('scroll', handleScroll);
       if (scrollTimeout) {
-        clearTimeout(scrollTimeout)
+        clearTimeout(scrollTimeout);
       }
-    }
-  }, [fetchSources, sources.length])
+    };
+  }, [fetchSources, sources.length]);
 
   const toggleSort = (field: 'created' | 'updated') => {
     if (sortBy === field) {
-      // Toggle order if clicking the same field
-      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
-      // Switch to new field with default desc order
-      setSortBy(field)
-      setSortOrder('desc')
+      setSortBy(field);
+      setSortOrder('desc');
     }
-  }
+  };
 
-  const getSourceIcon = (source: SourceListResponse) => {
-    if (source.asset?.url) return <LinkIcon className="h-4 w-4" />
-    if (source.asset?.file_path) return <Upload className="h-4 w-4" />
-    return <AlignLeft className="h-4 w-4" />
-  }
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
-  const getSourceType = (source: SourceListResponse) => {
-    if (source.asset?.url) return 'Link'
-    if (source.asset?.file_path) return 'File'
-    return 'Text'
-  }
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
 
-  const handleRowClick = useCallback((index: number, sourceId: string) => {
-    setSelectedIndex(index)
-    router.push(`/sources/${sourceId}`)
-  }, [router])
+  const handleDeleteSource = (source: SourceListResponse) => {
+    setDeleteDialog({ open: true, source, isBulk: false });
+  };
 
-  const handleDeleteClick = useCallback((e: React.MouseEvent, source: SourceListResponse) => {
-    e.stopPropagation() // Prevent row click
-    setDeleteDialog({ open: true, source })
-  }, [])
+  const handleBulkDelete = () => {
+    setDeleteDialog({ open: true, source: null, isBulk: true });
+  };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteDialog.source) return
-
     try {
-      await sourcesApi.delete(deleteDialog.source.id)
-      toast.success('Source deleted successfully')
-      // Remove the deleted source from the list
-      setSources(prev => prev.filter(s => s.id !== deleteDialog.source?.id))
-      setDeleteDialog({ open: false, source: null })
+      if (deleteDialog.isBulk) {
+        // Delete all selected sources with partial failure handling
+        const deletePromises = Array.from(selectedIds).map((id) =>
+          sourcesApi.delete(id).then(() => ({ id, success: true })).catch(() => ({ id, success: false }))
+        );
+        const results = await Promise.allSettled(deletePromises);
+        const successful = results
+          .filter((r): r is PromiseFulfilledResult<{ id: string; success: boolean }> =>
+            r.status === 'fulfilled' && r.value.success
+          )
+          .map((r) => r.value.id);
+        const failedCount = selectedIds.size - successful.length;
+
+        if (failedCount === 0) {
+          toast.success(`${selectedIds.size} sources deleted successfully`);
+        } else if (successful.length > 0) {
+          toast.warning(`${successful.length} sources deleted, ${failedCount} failed`);
+        } else {
+          toast.error('Failed to delete sources');
+        }
+
+        // Remove only successfully deleted sources
+        setSources((prev) => prev.filter((s) => !successful.includes(s.id)));
+        clearSelection();
+      } else if (deleteDialog.source) {
+        await sourcesApi.delete(deleteDialog.source.id);
+        toast.success('Source deleted successfully');
+        setSources((prev) =>
+          prev.filter((s) => s.id !== deleteDialog.source?.id)
+        );
+        // Also remove from selection if selected
+        if (selectedIds.has(deleteDialog.source.id)) {
+          toggleSelection(deleteDialog.source.id);
+        }
+      }
+      setDeleteDialog({ open: false, source: null, isBulk: false });
     } catch (err) {
-      console.error('Failed to delete source:', err)
-      toast.error('Failed to delete source')
+      console.error('Failed to delete source:', err);
+      toast.error('Failed to delete source');
     }
-  }
+  };
 
   if (loading) {
     return (
       <AppShell>
-        <div className="flex h-full items-center justify-center">
-          <LoadingSpinner />
+        <div className="flex flex-col h-full w-full max-w-none px-6 py-6">
+          <div className="mb-6 flex-shrink-0">
+            <Skeleton className="h-9 w-48 mb-2" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+          <div className="flex items-center gap-4 mb-6">
+            <Skeleton className="h-10 w-64" />
+            <div className="flex-1" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+          <SourcesLoadingSkeleton view={view} />
         </div>
       </AppShell>
-    )
+    );
   }
 
   if (error) {
     return (
       <AppShell>
         <div className="flex h-full items-center justify-center">
-          <p className="text-red-500">{error}</p>
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={() => fetchSources(true)}>Retry</Button>
+          </div>
         </div>
       </AppShell>
-    )
+    );
   }
 
-  if (sources.length === 0) {
+  if (sources.length === 0 && !search) {
     return (
       <AppShell>
         <EmptyState
@@ -276,7 +344,7 @@ export default function SourcesPage() {
           description="Upload your first SAMP document to start extracting ACM register data with AI-powered analysis."
           action={
             <Button asChild>
-              <Link href="/sources">
+              <Link href="/sources?action=upload">
                 <Upload className="w-4 h-4 mr-2" />
                 Upload Document
               </Link>
@@ -284,151 +352,205 @@ export default function SourcesPage() {
           }
         />
       </AppShell>
-    )
+    );
   }
 
   return (
     <AppShell>
       <div className="flex flex-col h-full w-full max-w-none px-6 py-6">
-        <div className="mb-6 flex-shrink-0">
-          <h1 className="text-3xl font-bold">All Sources</h1>
-          <p className="mt-2 text-muted-foreground">
-            Browse all sources across your notebooks. Use arrow keys to navigate and Enter to open.
-          </p>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 flex-shrink-0">
+          <div>
+            <h1 className="text-3xl font-bold">Sources</h1>
+            <p className="text-muted-foreground">
+              {view === 'list'
+                ? 'Use arrow keys to navigate and Enter to open'
+                : 'Click on a card to view details'}
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/sources?action=upload">
+              <Plus className="w-4 h-4 mr-2" />
+              Upload
+            </Link>
+          </Button>
         </div>
 
-        <div ref={scrollContainerRef} className="flex-1 rounded-md border overflow-auto">
-          <table
-            ref={tableRef}
-            tabIndex={0}
-            className="w-full min-w-[800px] outline-none table-fixed"
-          >
-            <colgroup>
-              <col className="w-[120px]" />
-              <col className="w-auto" />
-              <col className="w-[140px]" />
-              <col className="w-[100px]" />
-              <col className="w-[100px]" />
-              <col className="w-[100px]" />
-            </colgroup>
-            <thead className="sticky top-0 bg-background z-10">
-              <tr className="border-b bg-muted/50">
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Type
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Title
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground hidden sm:table-cell">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleSort('created')}
-                    className="h-8 px-2 hover:bg-muted"
-                  >
-                    Created
-                    <ArrowUpDown className={cn(
-                      "ml-2 h-3 w-3",
-                      sortBy === 'created' ? 'opacity-100' : 'opacity-30'
-                    )} />
-                    {sortBy === 'created' && (
-                      <span className="ml-1 text-xs">
-                        {sortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </Button>
-                </th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground hidden md:table-cell">
-                  Insights
-                </th>
-                <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground hidden lg:table-cell">
-                  Embedded
-                </th>
-                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sources.map((source, index) => (
-                <tr
-                  key={source.id}
-                  onClick={() => handleRowClick(index, source.id)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  className={cn(
-                    "border-b transition-colors cursor-pointer",
-                    selectedIndex === index
-                      ? "bg-accent"
-                      : "hover:bg-muted/50"
-                  )}
-                >
-                  <td className="h-12 px-4">
-                    <div className="flex items-center gap-2">
-                      {getSourceIcon(source)}
-                      <Badge variant="secondary" className="text-xs">
-                        {getSourceType(source)}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="h-12 px-4">
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="font-medium truncate">
-                        {source.title || 'Untitled Source'}
-                      </span>
-                      {source.asset?.url && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {source.asset.url}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="h-12 px-4 text-muted-foreground text-sm hidden sm:table-cell">
-                    {formatDistanceToNow(new Date(source.created), { addSuffix: true })}
-                  </td>
-                  <td className="h-12 px-4 text-center hidden md:table-cell">
-                    <span className="text-sm font-medium">{source.insights_count || 0}</span>
-                  </td>
-                  <td className="h-12 px-4 text-center hidden lg:table-cell">
-                    <Badge variant={source.embedded ? "default" : "secondary"} className="text-xs">
-                      {source.embedded ? "Yes" : "No"}
-                    </Badge>
-                  </td>
-                  <td className="h-12 px-4 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => handleDeleteClick(e, source)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {loadingMore && (
-                <tr>
-                  <td colSpan={6} className="h-16 text-center">
-                    <div className="flex items-center justify-center">
-                      <LoadingSpinner />
-                      <span className="ml-2 text-muted-foreground">Loading more sources...</span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        {/* Toolbar */}
+        <div className="flex items-center gap-4 mb-6 flex-shrink-0">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search sources..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+            {search && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Selection actions */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedIds.size} selected
+              </span>
+              <Button variant="outline" size="sm" onClick={clearSelection}>
+                Clear
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete
+              </Button>
+            </div>
+          )}
+
+          {/* View toggle */}
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={view === 'grid' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setView('grid')}
+              className="px-2"
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={view === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setView('list')}
+              className="px-2"
+              aria-label="List view"
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto">
+          {filteredSources.length === 0 ? (
+            <SourcesEmptyState hasSearch={!!search} />
+          ) : view === 'grid' ? (
+            <SourcesGridView
+              sources={filteredSources}
+              selectedIds={selectedIds}
+              onToggleSelection={toggleSelection}
+              onDeleteSource={handleDeleteSource}
+              loadingMore={loadingMore}
+            />
+          ) : (
+            <div className="rounded-md border">
+              <SourcesTableView
+                sources={filteredSources}
+                selectedIds={selectedIds}
+                onToggleSelection={toggleSelection}
+                onDeleteSource={handleDeleteSource}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onToggleSort={toggleSort}
+                selectedIndex={selectedIndex}
+                onSelectIndex={setSelectedIndex}
+                loadingMore={loadingMore}
+              />
+            </div>
+          )}
         </div>
       </div>
 
       <ConfirmDialog
         open={deleteDialog.open}
-        onOpenChange={(open) => setDeleteDialog({ open, source: deleteDialog.source })}
-        title="Delete Source"
-        description={`Are you sure you want to delete "${deleteDialog.source?.title || 'this source'}"? This action cannot be undone.`}
+        onOpenChange={(open) =>
+          setDeleteDialog({ open, source: deleteDialog.source })
+        }
+        title={deleteDialog.isBulk ? 'Delete Sources' : 'Delete Source'}
+        description={
+          deleteDialog.isBulk
+            ? `Are you sure you want to delete ${selectedIds.size} selected sources? This action cannot be undone.`
+            : `Are you sure you want to delete "${deleteDialog.source?.title || 'this source'}"? This action cannot be undone.`
+        }
         confirmText="Delete"
         confirmVariant="destructive"
         onConfirm={handleDeleteConfirm}
       />
     </AppShell>
-  )
+  );
+}
+
+function SourcesLoadingSkeleton({ view }: { view: 'grid' | 'list' }) {
+  if (view === 'grid') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-8 w-8 rounded" />
+            </div>
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border">
+      <div className="p-4 space-y-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-5 flex-1" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-6 w-12" />
+            <Skeleton className="h-8 w-8" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SourcesEmptyState({ hasSearch }: { hasSearch: boolean }) {
+  return (
+    <div className="text-center py-12">
+      <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+      <h2 className="text-xl font-semibold mb-2">
+        {hasSearch ? 'No sources found' : 'No sources yet'}
+      </h2>
+      <p className="text-muted-foreground mb-4">
+        {hasSearch
+          ? 'Try adjusting your search'
+          : 'Upload your first document to get started'}
+      </p>
+      {!hasSearch && (
+        <Button asChild>
+          <Link href="/sources?action=upload">
+            <Upload className="w-4 h-4 mr-2" />
+            Upload Document
+          </Link>
+        </Button>
+      )}
+    </div>
+  );
 }
