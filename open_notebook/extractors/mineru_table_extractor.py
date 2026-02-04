@@ -26,12 +26,15 @@ try:
         try:
             from magic_pdf.operators.pipes import PipeResult
             UNIPipe = None  # Will be handled in the extractor
+            DiskReaderWriter = None
         except ImportError:
             UNIPipe = None
+            DiskReaderWriter = None
     MINERU_AVAILABLE = magic_pdf is not None
 except ImportError:
     MINERU_AVAILABLE = False
     UNIPipe = None
+    DiskReaderWriter = None
     logger.warning("MinerU (magic-pdf) not available. Table extraction will fail.")
 
 
