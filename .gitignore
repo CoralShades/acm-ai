@@ -168,3 +168,4 @@ logs/security/
 
 # Temporary Claude working directories
 tmpclaude-*-cwd/
+tmpclaude-*
