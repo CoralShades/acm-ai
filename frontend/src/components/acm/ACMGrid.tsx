@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, CellClickedEvent, GridApi } from 'ag-grid-community'
+import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,11 +12,33 @@ import type { ACMRecord } from '@/lib/types/acm'
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
 
+// Expose grid control methods via ref
+export interface ACMGridRef {
+  expandAll: () => void
+  collapseAll: () => void
+}
+
+// Cell selection details for citation viewer
+export interface CellSelectionDetails {
+  recordId: string
+  field: string
+  value: unknown
+  pageNumber?: number | null
+  record: ACMRecord
+}
+
 interface ACMGridProps {
   records: ACMRecord[]
   isLoading?: boolean
   onEdit: (record: ACMRecord) => void
   onDelete: (record: ACMRecord) => void
+  enableGrouping?: boolean
+  // Quick filter search functionality
+  quickFilterText?: string
+  // Callback to report visible row count changes
+  onVisibleCountChange?: (count: number) => void
+  // Callback when a cell is selected for citation viewing
+  onCellSelect?: (details: CellSelectionDetails) => void
 }
 
 // Custom cell renderer for risk status with theme-aware colors
@@ -75,14 +97,49 @@ function ActionsRenderer({
   )
 }
 
-export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) {
+export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
+  { records, isLoading, onEdit, onDelete, enableGrouping = true, quickFilterText, onVisibleCountChange, onCellSelect },
+  ref
+) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
   const [gridApi, setGridApi] = useState<GridApi<ACMRecord> | null>(null)
+
+  // Expose expand/collapse methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    expandAll: () => {
+      gridApi?.expandAll()
+    },
+    collapseAll: () => {
+      gridApi?.collapseAll()
+    },
+  }), [gridApi])
+
+  // Apply quick filter when search text changes
+  useEffect(() => {
+    if (gridApi) {
+      gridApi.setGridOption('quickFilterText', quickFilterText || '')
+    }
+  }, [gridApi, quickFilterText])
 
   const onGridReady = useCallback((params: GridReadyEvent<ACMRecord>) => {
     setGridApi(params.api)
     params.api.sizeColumnsToFit()
   }, [])
+
+  // Track visible row count changes for result count display
+  // Count only data rows, not group header rows
+  const onModelUpdated = useCallback((event: ModelUpdatedEvent<ACMRecord>) => {
+    if (onVisibleCountChange && event.api) {
+      let dataRowCount = 0
+      event.api.forEachNodeAfterFilterAndSort((node) => {
+        // Only count leaf nodes (actual data rows), not group rows
+        if (!node.group) {
+          dataRowCount++
+        }
+      })
+      onVisibleCountChange(dataRowCount)
+    }
+  }, [onVisibleCountChange])
 
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(
     () => [
@@ -92,6 +149,14 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 110,
         sortable: true,
         filter: true,
+        rowGroup: enableGrouping,
+        hide: enableGrouping,
+        valueFormatter: (params) => {
+          if (params.data?.building_name) {
+            return `${params.value} - ${params.data.building_name}`
+          }
+          return params.value || 'Unknown Building'
+        },
       },
       {
         field: 'building_name',
@@ -99,6 +164,7 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 150,
         sortable: true,
         filter: true,
+        hide: enableGrouping,
       },
       {
         field: 'room_id',
@@ -106,6 +172,14 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 100,
         sortable: true,
         filter: true,
+        rowGroup: enableGrouping,
+        hide: enableGrouping,
+        valueFormatter: (params) => {
+          if (params.data?.room_name) {
+            return `${params.value} - ${params.data.room_name}`
+          }
+          return params.value || 'No Room'
+        },
       },
       {
         field: 'room_name',
@@ -113,6 +187,7 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         width: 130,
         sortable: true,
         filter: true,
+        hide: enableGrouping,
       },
       {
         field: 'product',
@@ -176,7 +251,7 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         filter: false,
       },
     ],
-    [onEdit, onDelete]
+    [onEdit, onDelete, enableGrouping]
   )
 
   const defaultColDef = useMemo<ColDef>(
@@ -187,13 +262,70 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
     []
   )
 
+  // Auto group column definition for the grouped hierarchy
+  const autoGroupColumnDef = useMemo(() => ({
+    headerName: 'Location',
+    minWidth: 280,
+    cellRendererParams: {
+      suppressCount: false,
+    },
+  }), [])
+
   const onCellClicked = useCallback(
     (event: CellClickedEvent<ACMRecord>) => {
-      if (event.colDef.headerName !== 'Actions' && event.data) {
+      // Skip if clicking on Actions column or group row
+      if (event.colDef.headerName === 'Actions' || event.node.group || !event.data) {
+        return
+      }
+
+      const field = event.colDef?.field
+      if (!field) return
+
+      // Guard: Skip if record has no ID (unsaved records)
+      const recordId = event.data.id
+      if (!recordId) return
+
+      // If onCellSelect is provided, use it for citation viewing
+      if (onCellSelect) {
+        onCellSelect({
+          recordId,
+          field: field,
+          value: event.value,
+          pageNumber: event.data.page_number,
+          record: event.data,
+        })
+      } else {
+        // Fallback to edit behavior if no cell select handler
         onEdit(event.data)
       }
     },
-    [onEdit]
+    [onEdit, onCellSelect]
+  )
+
+  // Keyboard navigation: Enter key opens cell citation viewer
+  const onCellKeyDown = useCallback(
+    (event: CellKeyDownEvent<ACMRecord>) => {
+      const keyboardEvent = event.event as KeyboardEvent
+      if (keyboardEvent?.key === 'Enter' && event.data && !event.node.group) {
+        const field = event.colDef?.field
+        const recordId = event.data.id
+        // Guard: Skip if no field, Actions column, or no record ID
+        if (field && event.colDef?.headerName !== 'Actions' && recordId) {
+          if (onCellSelect) {
+            onCellSelect({
+              recordId,
+              field: field,
+              value: event.value,
+              pageNumber: event.data.page_number,
+              record: event.data,
+            })
+          } else {
+            onEdit(event.data)
+          }
+        }
+      }
+    },
+    [onEdit, onCellSelect]
   )
 
   return (
@@ -213,6 +345,21 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
           --ag-odd-row-background-color: hsl(var(--muted) / 0.3);
           --ag-row-hover-color: hsl(var(--muted));
         }
+        /* Group row styling */
+        .ag-theme-alpine .ag-row-group {
+          background-color: hsl(var(--muted) / 0.7);
+          font-weight: 600;
+        }
+        .ag-theme-alpine .ag-row-group-expanded {
+          border-bottom: 2px solid hsl(var(--border));
+        }
+        /* Group row level indentation */
+        .ag-theme-alpine .ag-row-level-1 .ag-group-value {
+          padding-left: 8px;
+        }
+        .ag-theme-alpine .ag-row-level-2 .ag-group-value {
+          padding-left: 16px;
+        }
       `}</style>
       <AgGridReact<ACMRecord>
         ref={gridRef}
@@ -221,6 +368,8 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         defaultColDef={defaultColDef}
         onGridReady={onGridReady}
         onCellClicked={onCellClicked}
+        onCellKeyDown={onCellKeyDown}
+        onModelUpdated={onModelUpdated}
         loading={isLoading}
         animateRows={true}
         rowSelection="single"
@@ -229,7 +378,14 @@ export function ACMGrid({ records, isLoading, onEdit, onDelete }: ACMGridProps) 
         paginationPageSize={50}
         paginationPageSizeSelector={[20, 50, 100]}
         domLayout="normal"
+        // Row grouping configuration
+        groupDisplayType={enableGrouping ? 'groupRows' : undefined}
+        groupDefaultExpanded={1}
+        autoGroupColumnDef={enableGrouping ? autoGroupColumnDef : undefined}
+        suppressAggFuncInHeader={true}
+        // Use legacy theming for v32 CSS compatibility (ag-theme-alpine)
+        theme="legacy"
       />
     </div>
   )
-}
+})

@@ -1,20 +1,23 @@
 @echo off
+chcp 65001 >nul
 echo ========================================
-echo   Open Notebook - Stopping All Services
+echo   ACM-AI - Stopping All Services
 echo ========================================
 echo.
 
-echo Stopping API Server...
-taskkill /FI "WINDOWTITLE eq Open Notebook - API*" /F >nul 2>&1
-
-echo Stopping Background Worker...
-taskkill /FI "WINDOWTITLE eq Open Notebook - Worker*" /F >nul 2>&1
+cd /d "D:\ailocal\acm-ai"
 
 echo Stopping Frontend...
-taskkill /FI "WINDOWTITLE eq Open Notebook - Frontend*" /F >nul 2>&1
+taskkill /FI "WINDOWTITLE eq ACM-AI - Frontend*" /F >nul 2>&1
 
-echo Stopping SurrealDB container...
-docker stop surrealdb >nul 2>&1
+echo Stopping Background Worker...
+taskkill /FI "WINDOWTITLE eq ACM-AI - Worker*" /F >nul 2>&1
+
+echo Stopping API Server...
+taskkill /FI "WINDOWTITLE eq ACM-AI - API*" /F >nul 2>&1
+
+echo Stopping SurrealDB...
+docker compose down >nul 2>&1
 
 echo.
 echo ========================================

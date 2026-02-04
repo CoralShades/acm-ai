@@ -1,0 +1,23 @@
+-- Migration 11 Rollback: Remove AI-Powered ACM Extraction Fields
+-- Story: E1-S7 AI-Powered ACM Extraction
+
+-- Remove new fields
+REMOVE FIELD IF EXISTS disturbance_potential ON TABLE acm_record;
+REMOVE FIELD IF EXISTS sample_no ON TABLE acm_record;
+REMOVE FIELD IF EXISTS sample_result ON TABLE acm_record;
+REMOVE FIELD IF EXISTS identifying_company ON TABLE acm_record;
+REMOVE FIELD IF EXISTS quantity ON TABLE acm_record;
+REMOVE FIELD IF EXISTS acm_labelled ON TABLE acm_record;
+REMOVE FIELD IF EXISTS acm_label_details ON TABLE acm_record;
+REMOVE FIELD IF EXISTS hygienist_recommendations ON TABLE acm_record;
+REMOVE FIELD IF EXISTS psb_supplied_acm_id ON TABLE acm_record;
+REMOVE FIELD IF EXISTS removal_status ON TABLE acm_record;
+REMOVE FIELD IF EXISTS date_of_removal ON TABLE acm_record;
+REMOVE FIELD IF EXISTS data_issues ON TABLE acm_record;
+
+-- Remove index
+REMOVE INDEX IF EXISTS idx_acm_extraction_confidence ON TABLE acm_record;
+
+-- Restore old extraction_confidence field type (float)
+REMOVE FIELD IF EXISTS extraction_confidence ON TABLE acm_record;
+DEFINE FIELD IF NOT EXISTS extraction_confidence ON TABLE acm_record TYPE option<float>;

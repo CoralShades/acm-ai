@@ -12,8 +12,10 @@ import {
 export function useSources(notebookId?: string) {
   return useQuery({
     queryKey: QUERY_KEYS.sources(notebookId),
-    queryFn: () => sourcesApi.list({ notebook_id: notebookId }),
-    enabled: !!notebookId,
+    queryFn: () => sourcesApi.list({ notebook_id: notebookId || undefined }),
+    // Enable query: fetch all sources when notebookId is empty string or undefined
+    // Only disable when notebookId is explicitly set but invalid (which shouldn't happen)
+    enabled: true,
     staleTime: 5 * 1000, // 5 seconds - more responsive for real-time source updates
     refetchOnWindowFocus: true, // Refetch when user comes back to the tab
   })

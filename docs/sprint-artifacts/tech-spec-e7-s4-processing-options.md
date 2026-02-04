@@ -2,8 +2,9 @@
 
 > **Story:** E7-S4
 > **Epic:** Upload Wizard
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2026-01-11
 
 ---
 
@@ -23,11 +24,11 @@ Create the processing options step where users configure how their documents sho
 
 ## Acceptance Criteria
 
-- [ ] ACM Documents: Enable ACM extraction toggle (default ON)
-- [ ] All Documents: Embedding option
-- [ ] Transformation selection (multi-select)
-- [ ] Notebook assignment (multi-select)
-- [ ] Processing mode: Sync vs Async
+- [x] ACM Documents: Enable ACM extraction toggle (default ON)
+- [x] All Documents: Embedding option
+- [x] Transformation selection (multi-select)
+- [x] Notebook assignment (multi-select)
+- [x] Processing mode: Sync vs Async
 
 ---
 
@@ -331,5 +332,74 @@ export function ProcessingOptionsStep() {
 ## Estimated Complexity
 
 **Medium** - Multiple options with conditional display
+
+---
+
+## Dev Agent Record
+
+### Implementation Notes (2026-01-11)
+
+Implemented processing options step with the following components:
+
+1. **ProcessingOptions interface** in `upload-store.ts`:
+   - `enableAcmExtraction: boolean` - ACM data extraction toggle (default: true)
+   - `enableEmbeddings: boolean` - Semantic search embeddings (default: true)
+   - `transformations: string[]` - Selected AI transformations
+   - `notebookIds: string[]` - Selected notebook assignments
+   - `processingMode: 'sync' | 'async'` - Processing mode (default: async)
+
+2. **ProcessingOptionsStep.tsx** component featuring:
+   - ACM extraction card (conditional - only shown if ACM files present)
+   - Embeddings toggle with Switch component
+   - Transformations multi-select with Checkboxes (summary, outline, takeaways)
+   - Notebook assignment multi-select using useNotebooks hook
+   - Processing mode RadioGroup (Background/Immediate)
+   - Visual icons for each section (Shield, Database, Wand2, FolderOpen, Clock, Zap)
+   - Loading state for notebooks
+   - Empty state handling
+
+3. **Store methods added**:
+   - `setOptions(updates)` - Partial update of processing options
+   - `resetOptions()` - Reset to default options
+
+**Features implemented:**
+- ACM extraction toggle (only visible when ACM files detected)
+- Embeddings toggle for semantic search
+- Multi-select transformations (summary, outline, takeaways)
+- Notebook assignment with data from useNotebooks hook
+- Sync/Async processing mode selection
+- Responsive grid layout for processing mode
+- Hover states and proper cursor styling
+
+**Build verification:**
+- TypeScript compilation: PASS
+- ESLint check: PASS (no warnings or errors)
+
+### File List
+
+| File | Change |
+|------|--------|
+| `frontend/src/lib/stores/upload-store.ts` | Modified - Added ProcessingOptions interface and methods |
+| `frontend/src/components/upload/ProcessingOptionsStep.tsx` | New - Options step component |
+| `frontend/src/components/upload/index.ts` | Modified - Added export |
+
+### Change Log
+
+- 2026-01-11: Created processing options store extension and ProcessingOptionsStep component
+- 2026-01-11: Code review - 5 issues found (2 MEDIUM, 3 LOW), 2 MEDIUM issues fixed
+
+### Code Review (2026-01-11)
+
+**Issues Found:** 5 (2 MEDIUM, 3 LOW)
+
+| # | Severity | Issue | Resolution |
+|---|----------|-------|------------|
+| 1 | MEDIUM | No error handling for notebooks API | FIXED - Added `isError` state handling |
+| 2 | MEDIUM | Radio button parent click didn't work | FIXED - Changed div to label element |
+| 3 | LOW | ACM files computed twice | Deferred - Minor optimization |
+| 4 | LOW | No accessible name for notebooks section | Deferred - Enhancement |
+| 5 | LOW | TRANSFORMATIONS defined inline | Deferred - Could move to constants |
+
+**Build Verification:** PASS (TypeScript + ESLint)
 
 ---

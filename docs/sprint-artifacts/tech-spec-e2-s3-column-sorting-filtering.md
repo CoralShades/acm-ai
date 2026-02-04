@@ -2,8 +2,9 @@
 
 > **Story:** E2-S3
 > **Epic:** AG Grid Spreadsheet Integration
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2025-12-08
 
 ---
 
@@ -23,11 +24,11 @@ Enable AG Grid's built-in sorting and filtering capabilities for the ACM spreads
 
 ## Acceptance Criteria
 
-- [ ] Click column header to sort ascending/descending
-- [ ] Filter icon in header opens filter menu
-- [ ] Text filter for string columns
-- [ ] Dropdown filter for enum columns (Risk Status, Friable, Result)
-- [ ] Filter state persists during session
+- [x] Click column header to sort ascending/descending
+- [x] Filter icon in header opens filter menu
+- [x] Text filter for string columns
+- [x] Dropdown filter for enum columns (Risk Status, Friable, Result)
+- [x] Filter state persists during session
 
 ---
 

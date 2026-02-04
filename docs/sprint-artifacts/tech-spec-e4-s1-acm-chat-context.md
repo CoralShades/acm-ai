@@ -1,7 +1,7 @@
 # Tech-Spec: E4-S1 ACM Records in Chat Context
 
 **Created:** 2025-12-07
-**Status:** Ready for Development
+**Status:** Done
 **Epic:** E4 - Chat with ACM Context
 **Story:** S1 - Add ACM Records to Chat Context
 
@@ -39,30 +39,30 @@ Modify the chat context builder in `api/routers/source_chat.py` to:
 
 ### Tasks
 
-- [ ] **Task 1: Analyze existing context builder**
+- [x] **Task 1: Analyze existing context builder**
   - Read `api/routers/source_chat.py`
   - Understand context format
 
-- [ ] **Task 2: Create ACM context formatter**
+- [x] **Task 2: Create ACM context formatter**
   - Function to format records as markdown table
   - Include key fields only
   - Add risk status highlighting
 
-- [ ] **Task 3: Integrate into context builder**
+- [x] **Task 3: Integrate into context builder**
   - Check for ACM toggle flag
   - Fetch records for source
   - Append to context
 
-- [ ] **Task 4: Handle token limits**
+- [x] **Task 4: Handle token limits**
   - Truncate if too many records
   - Show summary if truncated
 
 ### Acceptance Criteria
 
-- [ ] **AC1**: ACM records included when toggled on
-- [ ] **AC2**: Formatted as readable table
-- [ ] **AC3**: Token limit respected
-- [ ] **AC4**: Labeled as "ACM Register Data"
+- [x] **AC1**: ACM records included when toggled on
+- [x] **AC2**: Formatted as readable table
+- [x] **AC3**: Token limit respected
+- [x] **AC4**: Labeled as "ACM Register Data"
 
 ---
 

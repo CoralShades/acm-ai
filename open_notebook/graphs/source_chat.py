@@ -3,14 +3,16 @@ import sqlite3
 from typing import Annotated, Dict, List, Optional
 
 from ai_prompter import Prompter
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
+from api.utils.acm_context import detect_question_type, format_acm_context_for_question
 from open_notebook.config import LANGGRAPH_CHECKPOINT_FILE
+from open_notebook.domain.acm import ACMRecord
 from open_notebook.domain.notebook import Source, SourceInsight
 from open_notebook.graphs.utils import provision_langchain_model
 from open_notebook.utils.context_builder import ContextBuilder
@@ -24,6 +26,7 @@ class SourceChatState(TypedDict):
     context: Optional[str]
     model_override: Optional[str]
     context_indicators: Optional[Dict[str, List[str]]]
+    include_acm_context: Optional[bool]
 
 
 def call_model_with_source_context(
@@ -34,13 +37,25 @@ def call_model_with_source_context(
 
     This function:
     1. Uses ContextBuilder to build source-specific context
-    2. Applies the source_chat Jinja2 prompt template
-    3. Handles model provisioning with override support
-    4. Tracks context indicators for referenced insights/content
+    2. Optionally includes ACM records when include_acm_context is True
+    3. Applies the source_chat Jinja2 prompt template
+    4. Handles model provisioning with override support
+    5. Tracks context indicators for referenced insights/content/ACM records
     """
     source_id = state.get("source_id")
     if not source_id:
         raise ValueError("source_id is required in state")
+
+    # Check if ACM context should be included
+    include_acm = state.get("include_acm_context", False)
+
+    # Extract last user message for question-type detection
+    last_user_message = None
+    messages = state.get("messages", [])
+    for msg in reversed(messages):
+        if isinstance(msg, HumanMessage) or (hasattr(msg, "type") and msg.type == "human"):
+            last_user_message = msg.content if hasattr(msg, "content") else str(msg)
+            break
 
     # Build source context using ContextBuilder (run async code in new loop)
     def build_context():
@@ -54,7 +69,21 @@ def call_model_with_source_context(
                 include_notes=False,  # Focus on source-specific content
                 max_tokens=50000,  # Reasonable limit for source context
             )
-            return new_loop.run_until_complete(context_builder.build())
+            context_result = new_loop.run_until_complete(context_builder.build())
+
+            # Add ACM context if enabled, with question-type optimized formatting
+            if include_acm:
+                acm_context = new_loop.run_until_complete(
+                    format_acm_context(
+                        source_id,
+                        max_records=50,
+                        user_message=last_user_message,
+                    )
+                )
+                if acm_context:
+                    context_result["acm_context"] = acm_context
+
+            return context_result
         finally:
             new_loop.close()
             asyncio.set_event_loop(None)
@@ -80,7 +109,12 @@ def call_model_with_source_context(
         "sources": [],
         "insights": [],
         "notes": [],
+        "acm_records_included": [],
     }
+
+    # Track if ACM context was included
+    if context_data.get("acm_context"):
+        context_indicators["acm_records_included"].append(source_id)
 
     if context_data.get("sources"):
         source_info = context_data["sources"][0]  # First source
@@ -164,6 +198,47 @@ def call_model_with_source_context(
     }
 
 
+async def format_acm_context(
+    source_id: str,
+    max_records: int = 50,
+    user_message: Optional[str] = None,
+) -> str:
+    """
+    Format ACM records for chat context, optimized for the question type.
+
+    Args:
+        source_id: The source ID to fetch ACM records for
+        max_records: Maximum number of records to include (default 50)
+        user_message: Optional user message to detect question type for
+                     optimized formatting
+
+    Returns:
+        Formatted markdown string, or empty string if no records
+    """
+    records = await ACMRecord.get_by_source(source_id)
+
+    if not records:
+        return ""
+
+    total_records = len(records)
+    truncated = total_records > max_records
+    records_to_format = records[:max_records]
+
+    # Detect question type and use optimized formatting
+    if user_message:
+        question_type = detect_question_type(user_message)
+        formatted = format_acm_context_for_question(records_to_format, question_type)
+    else:
+        # Default: use table format
+        formatted = format_acm_context_for_question(records_to_format, "general")
+
+    # Add truncation notice if needed
+    if truncated:
+        formatted += f"\n\n*({max_records} of {total_records} records shown)*"
+
+    return formatted
+
+
 def _format_source_context(context_data: Dict) -> str:
     """
     Format the context data into a readable string for the prompt.
@@ -204,6 +279,11 @@ def _format_source_context(context_data: Dict) -> str:
                     f"**Content:** {insight.get('content', 'No content')}"
                 )
                 context_parts.append("")  # Empty line for separation
+
+    # Add ACM Register Data if present
+    if context_data.get("acm_context"):
+        context_parts.append(context_data["acm_context"])
+        context_parts.append("")
 
     # Add metadata
     if context_data.get("metadata"):

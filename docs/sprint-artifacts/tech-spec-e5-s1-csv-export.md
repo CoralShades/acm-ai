@@ -2,8 +2,9 @@
 
 > **Story:** E5-S1
 > **Epic:** Export Functionality
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2026-01-11
 
 ---
 
@@ -23,11 +24,11 @@ Add CSV export functionality to the ACM spreadsheet, allowing users to download 
 
 ## Acceptance Criteria
 
-- [ ] Export button in spreadsheet toolbar
-- [ ] Exports currently filtered/visible data
-- [ ] File named with source name and date
-- [ ] All columns included with proper headers
-- [ ] UTF-8 encoding for special characters
+- [x] Export button in spreadsheet toolbar
+- [x] Exports currently filtered/visible data
+- [x] File named with source name and date
+- [x] All columns included with proper headers
+- [x] UTF-8 encoding for special characters
 
 ---
 

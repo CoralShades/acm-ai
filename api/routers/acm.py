@@ -8,11 +8,15 @@ listing, filtering, extraction, and export.
 import csv
 import io
 import math
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from loguru import logger
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 from api.command_service import CommandService
 from api.models import (
@@ -22,6 +26,8 @@ from api.models import (
     ACMRecordListResponse,
     ACMRecordResponse,
     ACMRecordUpdateRequest,
+    ACMSearchResponse,
+    ACMSearchResultResponse,
     ACMStatsResponse,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
@@ -287,6 +293,128 @@ async def export_acm_records(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Risk status colors for Excel
+RISK_COLORS = {
+    "Low": "C6EFCE",  # Green
+    "Medium": "FFEB9C",  # Yellow/Orange
+    "High": "FFC7CE",  # Red
+}
+
+
+@router.get("/export/excel")
+async def export_acm_excel(
+    source_id: str = Query(..., description="Source ID to export"),
+):
+    """
+    Export ACM records as formatted Excel file.
+
+    Downloads all records for the specified source as an Excel file
+    with formatted headers, auto-sized columns, and risk status color coding.
+    """
+    try:
+        # Get all records for source
+        records = await ACMRecord.get_by_source(source_id)
+
+        if not records:
+            raise HTTPException(
+                status_code=404, detail="No ACM records found for source"
+            )
+
+        # Get source title for filename
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        source_title = source.title if source else source_id
+
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "ACM Register"
+
+        # Define columns: (header, field, width)
+        columns = [
+            ("Building ID", "building_id", 12),
+            ("Building Name", "building_name", 20),
+            ("Room ID", "room_id", 10),
+            ("Room Name", "room_name", 15),
+            ("Product", "product", 20),
+            ("Material Description", "material_description", 35),
+            ("Extent", "extent", 15),
+            ("Location", "location", 20),
+            ("Friable", "friable", 10),
+            ("Condition", "material_condition", 12),
+            ("Risk Status", "risk_status", 12),
+            ("Result", "result", 15),
+            ("Page", "page_number", 8),
+        ]
+
+        # Header styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(
+            start_color="4472C4", end_color="4472C4", fill_type="solid"
+        )
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        # Write headers
+        for col_idx, (header, _, width) in enumerate(columns, 1):
+            cell = ws.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+            cell.border = thin_border
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        # Write data rows
+        for row_idx, record in enumerate(records, 2):
+            for col_idx, (_, field, _) in enumerate(columns, 1):
+                value = getattr(record, field, None)
+                # Convert value to string if not None
+                if value is not None:
+                    value = str(value) if not isinstance(value, str) else value
+                cell = ws.cell(row=row_idx, column=col_idx, value=value or "")
+                cell.border = thin_border
+
+                # Color code risk status
+                if field == "risk_status" and value in RISK_COLORS:
+                    cell.fill = PatternFill(
+                        start_color=RISK_COLORS[value],
+                        end_color=RISK_COLORS[value],
+                        fill_type="solid",
+                    )
+
+        # Freeze header row
+        ws.freeze_panes = "A2"
+
+        # Auto-filter
+        if records:
+            ws.auto_filter.ref = ws.dimensions
+
+        # Save to bytes
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        filename = f"acm_export_{source_title}_{date.today()}.xlsx".replace(" ", "_")
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting ACM records to Excel: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/stats", response_model=ACMStatsResponse)
 async def get_acm_stats(
     source_id: Optional[str] = Query(None, description="Filter stats by source"),
@@ -340,6 +468,119 @@ async def get_acm_stats(
 
     except Exception as e:
         logger.error(f"Error getting ACM stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/search", response_model=ACMSearchResponse)
+async def semantic_search_acm(
+    query: str = Query(..., min_length=1, description="Natural language search query"),
+    source_id: Optional[str] = Query(None, description="Filter to specific source"),
+    building_id: Optional[str] = Query(None, description="Filter to specific building"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum results to return"),
+    threshold: float = Query(0.7, ge=0.0, le=1.0, description="Minimum similarity score"),
+):
+    """
+    Semantic search across ACM records.
+
+    Uses vector similarity to find records matching natural language queries.
+    Requires records to have embeddings generated via the embedding pipeline.
+
+    Example queries:
+    - "high risk asbestos items"
+    - "floor tiles in poor condition"
+    - "accessible materials in corridors"
+    """
+    try:
+        from api.services.acm_embedding_service import ACMEmbeddingService
+        from open_notebook.domain.models import model_manager
+
+        # Get embedding model
+        embedding_model = await model_manager.get_embedding_model()
+        if not embedding_model:
+            raise HTTPException(
+                status_code=400,
+                detail="No embedding model configured. Please configure one in Settings."
+            )
+
+        # Embed the query
+        try:
+            query_embedding = (await embedding_model.aembed([query]))[0]
+        except Exception as e:
+            logger.error(f"Failed to embed query: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to embed query: {str(e)}"
+            )
+
+        # Build filter clause
+        filters = ["embedding IS NOT NULL"]
+        params = {
+            "query_embedding": query_embedding,
+            "limit": limit,
+        }
+
+        if source_id:
+            filters.append("source_id = $source_id")
+            params["source_id"] = ensure_record_id(source_id)
+        if building_id:
+            filters.append("building_id = $building_id")
+            params["building_id"] = building_id
+
+        where_clause = " AND ".join(filters)
+
+        # Execute vector similarity search
+        # Note: SurrealDB vector::similarity::cosine returns 0-1 where 1 is most similar
+        search_query = f"""
+            SELECT *,
+                   vector::similarity::cosine(embedding, $query_embedding) AS score
+            FROM acm_record
+            WHERE {where_clause}
+            ORDER BY score DESC
+            LIMIT $limit
+        """
+
+        results = await repo_query(search_query, params)
+
+        # Filter by threshold and convert to response
+        search_results = []
+        for r in results:
+            score = r.get("score", 0)
+            if score >= threshold:
+                search_results.append(
+                    ACMSearchResultResponse(
+                        id=str(r.get("id", "")),
+                        source_id=str(r.get("source_id", "")),
+                        school_name=r.get("school_name", ""),
+                        building_id=r.get("building_id", ""),
+                        building_name=r.get("building_name"),
+                        room_id=r.get("room_id"),
+                        room_name=r.get("room_name"),
+                        product=r.get("product", ""),
+                        material_description=r.get("material_description", ""),
+                        extent=r.get("extent"),
+                        location=r.get("location"),
+                        material_condition=r.get("material_condition"),
+                        risk_status=r.get("risk_status"),
+                        result=r.get("result", ""),
+                        score=round(score, 4),
+                    )
+                )
+
+        logger.info(
+            f"Semantic search for '{query}': {len(search_results)} results "
+            f"(threshold={threshold}, limit={limit})"
+        )
+
+        return ACMSearchResponse(
+            query=query,
+            results=search_results,
+            total=len(search_results),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in semantic search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

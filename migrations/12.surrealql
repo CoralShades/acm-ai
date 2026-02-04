@@ -1,0 +1,22 @@
+-- Migration 12: Add Embedding Fields for Semantic Search
+-- Story: E1-S6 Configure Local Embedding Pipeline
+-- Adds vector embedding support for ACM records to enable semantic search
+
+-- Embedding data fields
+DEFINE FIELD IF NOT EXISTS embedding ON TABLE acm_record TYPE option<array<float>>;
+DEFINE FIELD IF NOT EXISTS embedding_text ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS embedding_model ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS embedded_at ON TABLE acm_record TYPE option<datetime>;
+
+-- Create MTREE vector index for cosine similarity search
+-- Using 1024 dimensions for mxbai-embed-large model (Ollama default)
+-- MTREE with COSINE distance is optimal for semantic similarity queries
+DEFINE INDEX IF NOT EXISTS acm_embedding_idx ON TABLE acm_record
+  FIELDS embedding MTREE DIMENSION 1024
+  DIST COSINE TYPE F32;
+
+-- Index for filtering records by embedding model
+DEFINE INDEX IF NOT EXISTS idx_acm_embedding_model ON TABLE acm_record COLUMNS embedding_model;
+
+-- Index for filtering records by embedded timestamp
+DEFINE INDEX IF NOT EXISTS idx_acm_embedded_at ON TABLE acm_record COLUMNS embedded_at;

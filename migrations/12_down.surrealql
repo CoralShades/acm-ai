@@ -1,0 +1,13 @@
+-- Migration 12 Rollback: Remove Embedding Fields
+-- Story: E1-S6 Configure Local Embedding Pipeline
+
+-- Remove indexes first
+REMOVE INDEX IF EXISTS acm_embedding_idx ON TABLE acm_record;
+REMOVE INDEX IF EXISTS idx_acm_embedding_model ON TABLE acm_record;
+REMOVE INDEX IF EXISTS idx_acm_embedded_at ON TABLE acm_record;
+
+-- Remove embedding fields
+REMOVE FIELD IF EXISTS embedding ON TABLE acm_record;
+REMOVE FIELD IF EXISTS embedding_text ON TABLE acm_record;
+REMOVE FIELD IF EXISTS embedding_model ON TABLE acm_record;
+REMOVE FIELD IF EXISTS embedded_at ON TABLE acm_record;

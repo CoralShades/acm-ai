@@ -88,22 +88,77 @@ For development or testing ACM-AI:
 # Clone the repository
 git clone https://github.com/CoralShades/acm-ai
 cd acm-ai
+```
 
+#### Windows (Recommended)
+```batch
+# Ensure Docker Desktop is running first!
+
+# Start all services with one command:
+start-all.bat
+
+# Stop all services:
+stop-all.bat
+
+# Optional: Setup local AI (Ollama)
+start-ollama.bat      # Interactive setup with GPU/CPU choice
+stop-ollama.bat       # Stop Ollama container
+```
+
+#### macOS / Linux
+```bash
 # Start all services (requires make, Docker, and uv)
 make start-all
 
-# Or start services individually:
+# Stop all services
+make stop-all
+```
+
+#### Manual Setup (All Platforms)
+```bash
 docker compose up -d surrealdb        # Database on port 8000
 uv run run_api.py                     # API on port 5055
 uv run surreal-commands-worker --import-modules commands  # Background worker
 cd frontend && npm run dev            # Frontend on port 8502
 ```
 
+#### Docker-Only Development
+```bash
+# Full containerized development with hot-reload:
+docker compose -f docker-compose.dev-local.yml up
+```
+
+#### 🦙 Local AI with Ollama (Optional)
+
+Run AI models locally for complete privacy and zero API costs:
+
+```bash
+# Interactive setup (Windows)
+start-ollama.bat
+
+# Or use Docker Compose profiles directly:
+docker compose --profile ollama-cpu up -d    # Office laptops (no GPU)
+docker compose --profile ollama-gpu up -d    # Machines with NVIDIA GPU
+```
+
+After starting Ollama, pull recommended models:
+```bash
+docker exec acm-ai-ollama ollama pull qwen3              # Language model
+docker exec acm-ai-ollama ollama pull mxbai-embed-large  # Embeddings
+```
+
+Then add to your `.env`:
+```env
+OLLAMA_API_BASE=http://ollama:11434
+```
+
+> **💡 Tip:** No GPU or office laptop restrictions? Just skip the Ollama profile and use cloud providers (OpenAI, Anthropic, etc.) instead.
+
 **Access at:** http://localhost:8502
 
 **Requirements:**
-- Docker and Docker Compose
-- Python 3.11+ (via uv)
+- Docker Desktop (must be running)
+- Python 3.11+ (via [uv](https://docs.astral.sh/uv/))
 - Node.js 18+ (for frontend)
 - API key for at least one AI provider (OpenAI, Anthropic, Ollama, etc.)
 
@@ -117,25 +172,27 @@ cd frontend && npm run dev            # Frontend on port 8502
 
 ACM-AI supports multiple AI providers for flexibility and cost optimization:
 
-| Provider     | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech |
-|--------------|-------------|------------------|----------------|----------------|
-| OpenAI       | ✅          | ✅               | ✅             | ✅             |
-| Anthropic    | ✅          | ❌               | ❌             | ❌             |
-| Groq         | ✅          | ❌               | ✅             | ❌             |
-| Google (GenAI) | ✅          | ✅               | ❌             | ✅             |
-| Vertex AI    | ✅          | ✅               | ❌             | ✅             |
-| Ollama       | ✅          | ✅               | ❌             | ❌             |
-| Perplexity   | ✅          | ❌               | ❌             | ❌             |
-| ElevenLabs   | ❌          | ❌               | ✅             | ✅             |
-| Azure OpenAI | ✅          | ✅               | ❌             | ❌             |
-| Mistral      | ✅          | ✅               | ❌             | ❌             |
-| DeepSeek     | ✅          | ❌               | ❌             | ❌             |
-| Voyage       | ❌          | ✅               | ❌             | ❌             |
-| xAI          | ✅          | ❌               | ❌             | ❌             |
-| OpenRouter   | ✅          | ❌               | ❌             | ❌             |
-| OpenAI Compatible* | ✅          | ❌               | ❌             | ❌             |
+| Provider     | LLM Support | Embedding Support | Speech-to-Text | Text-to-Speech | Notes |
+|--------------|-------------|------------------|----------------|----------------|-------|
+| OpenAI       | ✅          | ✅               | ✅             | ✅             | Full-featured, recommended for getting started |
+| Anthropic    | ✅          | ❌               | ❌             | ❌             | Claude models |
+| Groq         | ✅          | ❌               | ✅             | ❌             | Ultra-fast inference |
+| Google (GenAI) | ✅          | ✅               | ❌             | ✅             | Gemini models |
+| Vertex AI    | ✅          | ✅               | ❌             | ✅             | Enterprise Google Cloud |
+| **Ollama** 🦙 | ✅          | ✅               | ❌             | ❌             | **Local & free** - [Docker setup included](#-local-ai-with-ollama-optional) |
+| Perplexity   | ✅          | ❌               | ❌             | ❌             | Search-augmented |
+| ElevenLabs   | ❌          | ❌               | ✅             | ✅             | Premium voice synthesis |
+| Azure OpenAI | ✅          | ✅               | ❌             | ❌             | Enterprise Azure |
+| Mistral      | ✅          | ✅               | ❌             | ❌             | European AI |
+| DeepSeek     | ✅          | ❌               | ❌             | ❌             | Advanced reasoning (R1) |
+| Voyage       | ❌          | ✅               | ❌             | ❌             | Specialized embeddings |
+| xAI          | ✅          | ❌               | ❌             | ❌             | Grok models |
+| OpenRouter   | ✅          | ❌               | ❌             | ❌             | 100+ models via single API |
+| OpenAI Compatible* | ✅          | ❌               | ❌             | ❌             | LM Studio, custom endpoints |
 
 *Supports LM Studio and any OpenAI-compatible endpoint
+
+> **🔒 Privacy-First Option:** Use Ollama for 100% local processing - your ACM data never leaves your infrastructure. Perfect for sensitive compliance documents.
 
 ## ✨ Key Features
 

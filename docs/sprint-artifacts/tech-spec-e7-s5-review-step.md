@@ -2,8 +2,10 @@
 
 > **Story:** E7-S5
 > **Epic:** Upload Wizard
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Implemented:** 2026-01-11
+> **Code Review:** 2026-01-11
 
 ---
 
@@ -261,6 +263,7 @@ export function ReviewStep() {
 | File | Change |
 |------|--------|
 | `frontend/src/components/upload/ReviewStep.tsx` | New component |
+| `frontend/src/components/upload/index.ts` | Export ReviewStep |
 
 ---
 
