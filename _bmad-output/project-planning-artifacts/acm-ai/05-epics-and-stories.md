@@ -11,7 +11,7 @@
 
 | Epic | Title | Priority | Stories | Status |
 |------|-------|----------|---------|--------|
-| E1 | ACM Data Extraction Pipeline | P0 | **9** (+2 new) | Done (7), New (2) |
+| E1 | ACM Data Extraction Pipeline | P0 | **12** (+5 new) | Done (7), New (5) |
 | E2 | AG Grid Spreadsheet Integration | P0 | **8** (+1 new) | Done (7), New (1) |
 | E3 | Cell Citations & PDF Viewer | P0 | 4 | Done |
 | E4 | Chat with ACM Context | P0 | 4 | Done |
@@ -24,6 +24,12 @@
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
+>
+> **2026-02-05 Update:** Research integration added 3 new stories to E1:
+> - E1-S10: MinerU table extraction
+> - E1-S11: Extensible consultant parser framework
+> - E1-S12: Consultant wording normalization
+> Updated E1-S3 for two-stage pipeline and E1-S9 for official taxonomy.
 
 ---
 
@@ -63,24 +69,35 @@
 
 ---
 
-### E1-S3: Implement ACM Extraction Transformation
+### E1-S3: Implement Two-Stage ACM Extraction Pipeline (UPDATED 2026-02-05)
 **As a** system
-**I want** to extract ACM Register data from Docling output
-**So that** PDF tables become structured records
+**I want** to extract ACM Register data using a two-stage pipeline
+**So that** PDF tables become structured, BAR-compliant records with full provenance
 
 **Acceptance Criteria:**
-- [ ] New transformation `acm_extraction` registered
-- [ ] Parses Docling markdown/JSON for tables
+- [ ] **Stage 1 (EXTRACT):**
+  - [ ] Extract verbatim values from PDF (no normalization)
+  - [ ] Track provenance: page number, table ID, row/column, confidence
+  - [ ] Output `RawExtraction` JSON with `DocumentMeta` and `RawACMItem[]`
+  - [ ] Store raw extraction for audit/debugging
+- [ ] **Stage 2 (INTERPRET):**
+  - [ ] Map consultant columns → BAR columns
+  - [ ] Normalize values to controlled enums (see PRD 5.5)
+  - [ ] Classify products using taxonomy (see PRD 5.6)
+  - [ ] Apply business rules (Negative → N/A for Condition/Disturbance)
+  - [ ] Validate against BAR schema
+  - [ ] Output validated `ACMRecord` objects
 - [ ] Identifies ACM Register tables by header patterns
 - [ ] Extracts hierarchical structure (Building → Room → Item)
-- [ ] Associates page numbers with records
-- [ ] Handles "No Asbestos" entries appropriately
-- [ ] Works on all 3 sample PDFs with >90% accuracy
+- [ ] Works on Prensa and Greencap sample PDFs with >90% accuracy
 
 **Technical Notes:**
-- Location: `open_notebook/transformations/acm_extraction.py`
-- Input: Docling markdown output
-- Output: List of `ACMRecord` objects
+- Location: `open_notebook/extraction/` (new module)
+  - `pipeline.py` - Main orchestrator
+  - `stage1_extract.py` - Verbatim extraction
+  - `stage2_interpret.py` - Normalization and validation
+- Reference: `docs/reference/extraction-pipeline.md`
+- Reference: `docs/reference/bar-schema.md`
 
 ---
 
@@ -170,27 +187,107 @@
 
 ---
 
-### E1-S9: ACM Product Classification (NEW - Victorian BAR)
+### E1-S9: ACM Product Classification (UPDATED 2026-02-05)
 **As a** system
-**I want** to automatically classify ACM items into Product Group/Type
-**So that** BAR export has proper classification columns populated
+**I want** to automatically classify ACM items into Product Group/Type using official taxonomy
+**So that** BAR export has proper classification columns (AA-AC) populated
 
 **Acceptance Criteria:**
-- [ ] AI/rule-based classification from Item Description field
-- [ ] Product Groups: Cement products, Vinyl products, Bitumen products, Gasket products, etc.
-- [ ] Product Types: Flat Sheeting, Vinyl sheet, Mastic, Insulation, etc.
-- [ ] Confidence score for AI classifications
-- [ ] User override capability for manual correction
-- [ ] Classification rules configurable
+- [ ] **Pattern-based classification (primary):**
+  - [ ] Regex patterns for common ACM types (vinyl, cement, gasket, etc.)
+  - [ ] Select taxonomy based on friability (Non-friable: T1-T8, Friable: T1-T6)
+  - [ ] Pattern matching against `docs/reference/product-taxonomy.md`
+- [ ] **LLM fallback (for ambiguous items):**
+  - [ ] Few-shot prompt with taxonomy context
+  - [ ] Return product_group, product_type, confidence
+- [ ] **User override capability:**
+  - [ ] Manual correction via API
+  - [ ] Override persisted in database
+- [ ] **Taxonomy reference:**
+  - [ ] Non-friable: T1 Cement, T2 Bitumen, T3 Vinyl, T4 Gasket, T5 Coatings, T6 Plastics, T7 Other, T8 Insulation
+  - [ ] Friable: T1 Cement(f), T2 Vinyl(f), T3 Insulation(f), T4 Gasket(f), T5 Textiles(f), T6 Other(f)
 - [ ] API endpoint: POST `/api/acm/classify`
 - [ ] Batch classification for existing records
 
 **Technical Notes:**
-- Use LLM for classification with few-shot examples
-- Reference BAR APPENDIX A/B sheets for valid categories
-- Location: `open_notebook/transformations/acm_classification.py`
-- Consider: rule-based fallback for common patterns
-- Reference: Sprint Change Proposal CP#2
+- Location: `open_notebook/extraction/normalizers/taxonomy.py`
+- Reference: `docs/reference/product-taxonomy.md`
+- Reference: `docs/samplePDF/instructions-sample/register_taxonomy.*.json`
+- Integration: Called during Stage 2 (INTERPRET) of extraction pipeline
+
+---
+
+### E1-S10: MinerU Table Extraction Integration (NEW 2026-02-05)
+**As a** system
+**I want** to use MinerU for complex table extraction
+**So that** merged cells and multi-page tables are extracted accurately
+
+**Acceptance Criteria:**
+- [ ] Install MinerU dependency (`pip install mineru[all]`)
+- [ ] Create `MineruTableExtractor` class
+- [ ] Extract tables from PDF pages with HTML structure
+- [ ] Track table bounding boxes for provenance
+- [ ] Handle merged cells correctly
+- [ ] Stitch multi-page tables into single logical table
+- [ ] Fallback to Docling if MinerU fails
+- [ ] Performance: Process 20-page PDF in <30 seconds
+
+**Technical Notes:**
+- Location: `open_notebook/extraction/parsers/mineru_extractor.py`
+- MinerU outputs HTML tables - parse to structured data
+- Use page-level bounding boxes for citation linking
+- Reference: `docs/reference/extraction-pipeline.md`
+
+---
+
+### E1-S11: Extensible Consultant Parser Framework (NEW 2026-02-05)
+**As a** developer
+**I want** a pluggable parser framework for different consultant formats
+**So that** new PDF formats can be added without modifying core extraction code
+
+**Acceptance Criteria:**
+- [ ] Define `ConsultantParser` abstract base class with methods:
+  - `detect(text: str) -> bool`
+  - `extract_metadata(pages: dict) -> DocumentMeta`
+  - `extract_items(tables: list) -> list[RawACMItem]`
+  - `get_column_mapping() -> dict[str, str]`
+- [ ] Implement `PrensaParser` with column mapping:
+  - area_level, room_location, feature, item_description, hazard_status, sample_number, etc.
+- [ ] Implement `GreencapParser` with different column mapping
+- [ ] Implement `GenericParser` as fallback
+- [ ] Parser registry for automatic selection
+- [ ] Document adding new parsers in developer guide
+
+**Technical Notes:**
+- Location: `open_notebook/extraction/parsers/`
+  - `base.py` - Abstract base class
+  - `prensa.py` - Prensa Pty Ltd parser
+  - `greencap.py` - Greencap parser
+  - `generic.py` - Fallback parser
+- Reference: Architecture Section 5.2
+
+---
+
+### E1-S12: Consultant Wording Normalization (NEW 2026-02-05)
+**As a** system
+**I want** to normalize consultant recommendations to canonical actions
+**So that** hygienist recommendations are consistent across different consultants
+
+**Acceptance Criteria:**
+- [ ] Define canonical actions:
+  - `maintain_in_situ` - Keep ACM in place, label, periodic review
+  - `remove_prior_to_refurb` - Remove before demolition by licensed contractor
+  - `restrict_access_immediately` - Restrict access and arrange abatement ASAP
+  - `remedial_within_months` - Organise remedial works within ~3 months
+  - `confirm_status_sampling` - Item not sampled, confirm via sampling
+  - `height_or_access_restriction` - No access, treat as presumed
+- [ ] Regex pattern matching for consultant phrases
+- [ ] Store both raw recommendation and normalized action
+- [ ] Support custom patterns via configuration
+
+**Technical Notes:**
+- Location: `open_notebook/extraction/normalizers/recommendations.py`
+- Reference: `docs/samplePDF/instructions-sample/consultant_wording_rules.json`
 
 ---
 
@@ -659,13 +756,19 @@
 
 ---
 
-## Story Dependencies (UPDATED 2026-02-04)
+## Story Dependencies (UPDATED 2026-02-05)
 
 ```
-# Core Extraction Pipeline (✅ DONE through E1-S7)
-E1-S1 → E1-S2 → E1-S3 → E1-S4 → E1-S5 → E1-S6 → E1-S7 (all done)
-                  ↓
-# NEW Victorian BAR stories branch from completed E1
+# Core Extraction Pipeline - REFACTORED for Two-Stage Architecture
+E1-S1 (Schema) → E1-S2 (Domain Model) → E1-S10 (MinerU) → E1-S11 (Parser Framework)
+                                              ↓
+                                        E1-S3 (Two-Stage Pipeline) → E1-S12 (Wording Normalization)
+                                              ↓
+                                        E1-S9 (Taxonomy Classification)
+                                              ↓
+                                        E1-S4 (API) → E1-S5 (Integration) → E1-S6 → E1-S7
+                                              ↓
+# Victorian BAR stories
 E1-S4 (API) → E1-S8 (Site Config) → E7-S7 (Upload Config)
 E1-S3 (Extraction) → E1-S9 (Product Classification)
 
@@ -704,9 +807,12 @@ E1-S4 → E9-S1 → E9-S2 → E9-S3
 E10-S1 (independent)
 ```
 
-### NEW Story Dependencies (Victorian BAR)
+### NEW Story Dependencies (Victorian BAR + Research Integration 2026-02-05)
 | New Story | Depends On | Blocks |
 |-----------|------------|--------|
+| E1-S10 (MinerU Integration) | E1-S2 (Domain Model) | E1-S3 (Pipeline) |
+| E1-S11 (Parser Framework) | E1-S2 (Domain Model) | E1-S3 (Pipeline) |
+| E1-S12 (Wording Normalization) | E1-S3 (Pipeline) | E5-S2 (Export) |
 | E1-S8 (Site Config) | E1-S4 (API) | E7-S7 (Upload Config) |
 | E1-S9 (Product Classification) | E1-S3 (Extraction) | E5-S2 (Excel Export) |
 | E2-S8 (Column Visibility) | E2-S7 (Building Tabs) | - |
@@ -720,7 +826,8 @@ E10-S1 (independent)
 
 **Must Have (MVP):**
 - E1: S1-S5 (extraction pipeline core) ✅ DONE
-- E1: **S8-S9 (NEW - Site Config, Product Classification)** - Victorian BAR
+- E1: **S10-S11 (NEW - MinerU, Parser Framework)** - Research Integration
+- E1: **S8-S9, S12 (Site Config, Classification, Normalization)** - Victorian BAR
 - E2: S1-S4, S7 (core spreadsheet + building tabs) ✅ DONE
 - E2: **S8 (NEW - Column Visibility)** - Victorian BAR
 - E3: S1-S3 (citations) ✅ DONE
