@@ -271,7 +271,8 @@ const defaultVisibleColumns = [
 
 ### 5.1 ACM Record Schema (Victorian BAR Format - Expanded)
 
-> **Updated 2026-02-04:** Schema expanded from 20 to ~50 fields to support Victorian BAR format.
+> **Updated 2026-02-05:** Schema aligned with official BAR template (47 columns A-AU).
+> See `docs/reference/bar-schema.md` for authoritative field definitions.
 
 ```sql
 -- SurrealDB schema - Victorian BAR Format
@@ -319,16 +320,16 @@ DEFINE FIELD friable ON acm_record TYPE option<string>;  -- Friable, Non-friable
 DEFINE FIELD acm_product_group ON acm_record TYPE option<string>;  -- Cement products, Vinyl products, etc.
 DEFINE FIELD acm_product_type ON acm_record TYPE option<string>;  -- Flat Sheeting, Vinyl sheet, etc.
 
--- Sample & Testing
-DEFINE FIELD nata_sample_number ON acm_record TYPE option<string>;
-DEFINE FIELD sample_result ON acm_record TYPE option<string>;  -- Negative, Positive, Assumed positive
-DEFINE FIELD hygiene_company ON acm_record TYPE option<string>;  -- Prensa Pty Ltd, Greencap, etc.
+-- Sample & Testing (BAR columns AD-AF)
+DEFINE FIELD nata_sample_number ON acm_record TYPE option<string>;  -- BAR column AD
+DEFINE FIELD sample_result ON acm_record TYPE option<string>;  -- Positive, Assumed Positive, Negative, Assumed Negative
+DEFINE FIELD hygiene_company ON acm_record TYPE option<string>;  -- Identifying Hygiene or Consulting Company
 
--- Assessment
-DEFINE FIELD material_condition ON acm_record TYPE option<string>;  -- Good, Fair, Poor
-DEFINE FIELD disturbance_potential ON acm_record TYPE option<string>;  -- Low, Medium, High
-DEFINE FIELD extent ON acm_record TYPE option<string>;  -- Quantity/extent
-DEFINE FIELD risk_status ON acm_record TYPE option<string>;  -- Low, Medium, High, Very High
+-- Assessment (BAR columns AG-AH)
+DEFINE FIELD material_condition ON acm_record TYPE option<string>;  -- Poor, Fair, Good, Unknown, N/A (negative), N/A (assumed negative)
+DEFINE FIELD disturbance_potential ON acm_record TYPE option<string>;  -- High, Moderate, Low, Unknown, N/A (negative), N/A (assumed negative)
+DEFINE FIELD extent ON acm_record TYPE option<string>;  -- Quantity (BAR column AI)
+DEFINE FIELD risk_status ON acm_record TYPE option<string>;  -- Derived field (not in BAR export)
 
 -- Labeling & Documentation
 DEFINE FIELD labelled ON acm_record TYPE option<string>;  -- YES, NO
@@ -427,7 +428,101 @@ The system shall export Excel files compliant with Victorian Government BAR form
 35. Label Details → 36. Hygienist Recommendations → 37. Additional Comments
 38. PSB Supplied ACM ID → 39. Assumed Removed? → 40. Date of Removal
 41. Quantity Removed → 42. Asbestos Removal Notification No
-43. EPA Waste Transport Certificate No → 44-47. (Optional additional fields)
+43. EPA Waste Transport Certificate No → 44. Removal Comments → 45. Photo Reference Number
+
+### 5.4 Extraction Pipeline Architecture (NEW - 2026-02-05)
+
+> See `docs/reference/extraction-pipeline.md` for complete technical specification.
+
+The ACM extraction follows a **two-stage pipeline** design:
+
+**Stage 1: EXTRACT (Verbatim with Provenance)**
+- Extract raw values exactly as written in PDF (no normalization)
+- Track full provenance: page number, table ID, row/column, bounding box
+- Output: `RawExtraction` JSON with `DocumentMeta` and `RawACMItem[]`
+- Parser selection: Docling (text/layout) + MinerU (tables)
+
+**Stage 2: INTERPRET (Normalize to BAR Schema)**
+- Field mapping: Consultant columns → BAR columns
+- Value normalization: Synonyms → Controlled enums
+- Taxonomy classification: Item description → Product Group/Type
+- Business rule application (e.g., Negative → N/A for Condition)
+- Validation against BAR schema
+- Output: Validated `ACMRecord` objects
+
+**Rationale:**
+- Separation improves debugging and traceability
+- Raw extraction preserved for audit/review
+- Normalization rules can be updated without re-extraction
+- Supports multiple consultant formats via pluggable parsers
+
+### 5.5 Enum Definitions (NEW - 2026-02-05)
+
+> Source: `docs/samplePDF/instructions-sample/register_enums.json`
+
+| Enum | Values |
+|------|--------|
+| Sample Result | `Positive`, `Assumed Positive`, `Negative`, `Assumed Negative` |
+| Condition | `Poor`, `Fair`, `Good`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)` |
+| Disturbance Potential | `High`, `Moderate`, `Low`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)` |
+| Friability | `Non-friable`, `Friable` |
+| Internal/External | `Internal`, `External`, `External & Internal` |
+| Owned or Leased | `Owned`, `Leased` |
+| Yes/No | `YES`, `NO` |
+| Frequency of Use | `Every day`, `Every day with intermittent breaks`, `Once every 3–5 days`, `Every 2–3 weeks`, `Once every 2–3 months`, `Annually or less frequently` |
+
+**Business Rules:**
+- If Sample Result is `Negative` or `Assumed Negative`:
+  - Set Condition to `N/A (negative)` or `N/A (assumed negative)`
+  - Set Disturbance Potential to `N/A (negative)` or `N/A (assumed negative)`
+- Note: BAR uses `Moderate` not `Medium` for Disturbance Potential
+
+### 5.6 ACM Product Taxonomy (NEW - 2026-02-05)
+
+> See `docs/reference/product-taxonomy.md` for complete classification.
+
+**Non-Friable Taxonomy (8 Groups):**
+| Code | Product Group | Examples |
+|------|---------------|----------|
+| T1 | Cement products | Flat Sheeting, Corrugated Roof, Weatherboards |
+| T2 | Bitumen products | Mastic, Bituminous Membrane, Malthoid |
+| T3 | Vinyl products | Vinyl sheet, Vinyl Tiles, Hessian backed |
+| T4 | Gasket, friction products | Flange Gaskets, Caulking, Mastic |
+| T5 | Coatings | Paint, Textured Coating |
+| T6 | Reinforced plastics/resins | Electrical Components, Toilet Cisterns |
+| T7 | Other | Mortar, Grout, Plaster, Render |
+| T8 | Insulation | Millboard, Lagging, Fire Door Core |
+
+**Friable Taxonomy (6 Groups):**
+| Code | Product Group | Examples |
+|------|---------------|----------|
+| T1 | Cement products (f) | Damaged/degraded cement products |
+| T2 | Vinyl products (f) | Paper-backed vinyl |
+| T3 | Insulation products (f) | AIB, Lagging, Sprayed Insulation, Vermiculite |
+| T4 | Gasket products (f) | Rope Gasket, Braided Gasket |
+| T5 | Textiles (f) | Fire blanket, Cloth, Gloves |
+| T6 | Other (f) | Plaster/lath, Mortar |
+
+**Classification Approach:**
+1. Pattern-based rules for common ACM types (regex matching)
+2. LLM fallback for ambiguous items (with confidence score)
+3. User override capability for manual correction
+
+### 5.7 Consultant Format Support (NEW - 2026-02-05)
+
+The system supports multiple consultant PDF formats via extensible parser architecture:
+
+| Consultant | Detection Marker | Register Columns | Status |
+|------------|-----------------|------------------|--------|
+| Prensa Pty Ltd | "Division 5 Asbestos Assessment" | 15 columns | Supported |
+| Greencap | "Greencap" + "Asbestos Risk Assessment" | 14 columns | Supported |
+| Generic | Fallback | Variable | Supported |
+
+**Extensibility:**
+- New consultant formats added by implementing `ConsultantParser` interface
+- Column mapping configuration per consultant
+- Metadata extraction patterns per consultant
+- See `docs/reference/extraction-pipeline.md` for parser interface
 
 ---
 
@@ -449,6 +544,9 @@ The system shall export Excel files compliant with Victorian Government BAR form
 | ag-grid-react | ^31.x | Spreadsheet component |
 | ag-grid-community | ^31.x | Core grid functionality |
 | react-pdf | ^7.x | PDF viewer in modal |
+| mineru | ^0.1.0 | Table extraction (MinerU) |
+| docling | ^0.1.0 | Text/layout extraction |
+| openpyxl | ^3.1.0 | Excel BAR export |
 
 ---
 

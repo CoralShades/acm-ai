@@ -471,62 +471,182 @@ interface BARExportOptions {
 
 ## 5. ACM Extraction Pipeline
 
-### 5.1 Pipeline Stages
+> **Updated 2026-02-05:** Refactored to two-stage architecture (Extract → Interpret).
+> See `docs/reference/extraction-pipeline.md` for complete specification.
+
+### 5.1 Two-Stage Pipeline Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        ACM Extraction Pipeline                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Stage 1: Source Processing (Existing)                                  │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  PDF Upload → Docling → Markdown + Table JSON → Store in Source │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                    │                                    │
-│                                    ▼                                    │
-│  Stage 2: ACM Table Detection (NEW)                                     │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  Scan Docling output for ACM Register table patterns:           │   │
-│  │  - Headers: "Product", "Material Description", "Extent", etc.   │   │
-│  │  - Context: "Asbestos Register", "Building", "Room"             │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                    │                                    │
-│                                    ▼                                    │
-│  Stage 3: Hierarchical Parsing (NEW)                                    │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  Parse building/room structure:                                  │   │
-│  │  - Extract building header: "B00A - Admin Block - 1924"         │   │
-│  │  - Extract room sections: "R0001 - External Movement"           │   │
-│  │  - Associate ACM items with their room/building context         │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                    │                                    │
-│                                    ▼                                    │
-│  Stage 4: Record Creation (NEW)                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  Create ACMRecord for each row:                                  │   │
-│  │  - Map columns to schema fields                                  │   │
-│  │  - Capture page number for citations                             │   │
-│  │  - Calculate extraction confidence                               │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                    │                                    │
-│                                    ▼                                    │
-│  Stage 5: Storage & Indexing (NEW)                                      │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  - Save ACMRecords to SurrealDB                                  │   │
-│  │  - Generate embeddings for semantic search                       │   │
-│  │  - Update source status                                          │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          ACM-AI Extraction Pipeline                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  STAGE 0: PREFLIGHT                                                          │
+│  ┌─────────────┐    ┌──────────────┐    ┌────────────────────────────────┐  │
+│  │ PDF Upload  │───▶│ PDF Classifier│───▶│ Parser Router                 │  │
+│  │             │    │ (digital/scan)│    │ (Docling + MinerU)            │  │
+│  └─────────────┘    └──────────────┘    └────────────────────────────────┘  │
+│                                                   │                          │
+│  STAGE 1: EXTRACT (Verbatim with Provenance)      ▼                          │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ ┌──────────────┐   ┌──────────────┐   ┌─────────────────────────────┐ │ │
+│  │ │   Docling    │   │    MinerU    │   │   Consultant Parser         │ │ │
+│  │ │ (Text/Layout)│   │ (Tables→HTML)│   │   (Prensa/Greencap/etc)     │ │ │
+│  │ └──────┬───────┘   └──────┬───────┘   └──────────────┬──────────────┘ │ │
+│  │        │                  │                          │                 │ │
+│  │        └──────────────────┼──────────────────────────┘                 │ │
+│  │                           ▼                                            │ │
+│  │              ┌─────────────────────────────┐                           │ │
+│  │              │    Raw Extraction JSON      │                           │ │
+│  │              │    (verbatim + provenance)  │                           │ │
+│  │              └─────────────────────────────┘                           │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                         │
+│                                    ▼                                         │
+│  STAGE 2: INTERPRET (Normalize to BAR Schema)                                │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ ┌──────────────┐   ┌──────────────┐   ┌─────────────────────────────┐ │ │
+│  │ │ Field Mapper │   │ Normalizer   │   │   Taxonomy Classifier       │ │ │
+│  │ │ (PDF → BAR)  │   │ (Enums)      │   │   (Product Group/Type)      │ │ │
+│  │ └──────────────┘   └──────────────┘   └─────────────────────────────┘ │ │
+│  │         │                  │                          │                │ │
+│  │         └──────────────────┼──────────────────────────┘                │ │
+│  │                            ▼                                           │ │
+│  │ ┌─────────────────┐   ┌─────────────────────────────┐                  │ │
+│  │ │ Business Rules  │   │   Schema Validator          │                  │ │
+│  │ │ (Negative→N/A)  │   │   (BAR Compliance)          │                  │ │
+│  │ └─────────────────┘   └─────────────────────────────┘                  │ │
+│  │                            │                                           │ │
+│  │                            ▼                                           │ │
+│  │              ┌─────────────────────────────┐                           │ │
+│  │              │   BAR-Compliant ACMRecord   │                           │ │
+│  │              │   (validated, normalized)   │                           │ │
+│  │              └─────────────────────────────┘                           │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                         │
+│                                    ▼                                         │
+│  OUTPUT: Store + Index                                                       │
+│  ┌──────────────┐   ┌──────────────┐   ┌─────────────────────────────────┐  │
+│  │  SurrealDB   │   │   Vector     │   │       Excel/CSV Export          │  │
+│  │  (Records)   │   │  Embeddings  │   │       (BAR Format)              │  │
+│  └──────────────┘   └──────────────┘   └─────────────────────────────────┘  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.2 Table Detection Patterns (Multi-Format Support)
+### 5.1.1 Stage 1: EXTRACT
 
-> **Updated 2026-02-04:** Added support for multiple PDF provider formats.
+**Purpose:** Extract verbatim values with full provenance tracking.
+
+**Key Principle:** Do NOT normalize at this stage - keep original consultant wording.
+
+**Output Schema:**
+```python
+@dataclass
+class RawExtraction:
+    document_meta: DocumentMeta      # Site info from cover/header
+    items: list[RawACMItem]          # Raw table rows
+    extraction_timestamp: datetime
+    parser_version: str
+
+@dataclass
+class SourceLocation:
+    page: int
+    table_id: Optional[int]
+    row: Optional[int]
+    confidence: float
+```
+
+### 5.1.2 Stage 2: INTERPRET
+
+**Purpose:** Transform raw extraction to BAR-compliant records.
+
+**Processing Steps:**
+1. **Field Mapping:** Consultant columns → BAR columns
+2. **Value Normalization:** Synonyms → Controlled enums (see PRD 5.5)
+3. **Taxonomy Classification:** Item description → Product Group/Type (see PRD 5.6)
+4. **Business Rules:** Apply BAR rules (e.g., Negative → N/A for Condition)
+5. **Validation:** Validate against BAR schema
+
+### 5.1.3 MinerU Integration
+
+MinerU is used for table extraction due to superior handling of:
+- Complex merged cells
+- Multi-page table continuity
+- HTML structure preservation
 
 ```python
-# Provider detection patterns
-PROVIDER_PATTERNS = {
+from magic_pdf.pipe.UNIPipe import UNIPipe
+from magic_pdf.rw.DiskReaderWriter import DiskReaderWriter
+
+class MineruTableExtractor:
+    def extract_tables(self, pdf_path: str) -> list[dict]:
+        pipe = UNIPipe(pdf_path, DiskReaderWriter())
+        content = pipe.pipe_parse()
+        tables = []
+        for page_num, page_content in enumerate(content.pages):
+            for element in page_content.elements:
+                if element.type == "table":
+                    tables.append({
+                        "page": page_num + 1,
+                        "html": element.html,
+                        "bbox": element.bbox
+                    })
+        return tables
+```
+
+### 5.2 Extensible Consultant Parser Architecture
+
+> **Updated 2026-02-05:** Formalized extensible parser pattern for multi-consultant support.
+
+```python
+from abc import ABC, abstractmethod
+
+class ConsultantParser(ABC):
+    """Abstract base for consultant-specific extraction logic."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Consultant identifier (e.g., 'prensa', 'greencap')"""
+
+    @abstractmethod
+    def detect(self, text: str) -> bool:
+        """Returns True if this parser handles this PDF format."""
+
+    @abstractmethod
+    def extract_metadata(self, pages: dict[int, str]) -> DocumentMeta:
+        """Extract document metadata from cover/header pages."""
+
+    @abstractmethod
+    def extract_items(self, tables: list[dict]) -> list[RawACMItem]:
+        """Extract raw ACM items from table data."""
+
+    @abstractmethod
+    def get_column_mapping(self) -> dict[str, str]:
+        """Map consultant columns to standard raw fields."""
+
+# Parser registry - add new parsers here
+PARSER_REGISTRY: list[type[ConsultantParser]] = [
+    PrensaParser,
+    GreencapParser,
+    GenericParser,  # Fallback
+]
+
+def get_parser(pdf_text: str) -> ConsultantParser:
+    """Select appropriate parser for PDF content."""
+    for parser_cls in PARSER_REGISTRY:
+        parser = parser_cls()
+        if parser.detect(pdf_text):
+            return parser
+    return GenericParser()
+```
+
+### 5.3 Consultant Format Patterns
+
+```python
+# Consultant-specific detection and parsing patterns
+CONSULTANT_PATTERNS = {
     "prensa": {
         "company_marker": "Prensa Pty Ltd",
         "headers": [
