@@ -37,9 +37,11 @@ make status
 ```bash
 docker compose up -d surrealdb        # Database on port 8000
 uv run run_api.py                     # API on port 5055
-uv run surreal-commands-worker --import-modules commands  # Background worker
+uv run run_worker.py --import-modules commands  # Background worker (Windows-compatible)
 cd frontend && npm run dev            # Frontend on port 8502
 ```
+
+**Note:** Use `run_worker.py` instead of `surreal-commands-worker` directly on Windows to avoid Unicode encoding errors (see Issue #1).
 
 ### Docker-Only Development
 ```bash
