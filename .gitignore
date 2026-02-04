@@ -169,3 +169,4 @@ logs/security/
 # Temporary Claude working directories
 tmpclaude-*-cwd/
 tmpclaude-*
+_debug/acm_prompts/*

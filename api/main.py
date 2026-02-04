@@ -31,6 +31,7 @@ from api.routers import (
     transformations,
 )
 from api.routers import commands as commands_router
+from api.model_provisioning import run_model_provisioning
 from open_notebook.database.async_migrate import AsyncMigrationManager
 
 # Import commands to register them in the API process
@@ -67,6 +68,13 @@ async def lifespan(app: FastAPI):
         logger.exception(e)
         # Fail fast - don't start the API with an outdated database schema
         raise RuntimeError(f"Failed to run database migrations: {str(e)}") from e
+
+    # Auto-provision models from environment variables
+    try:
+        await run_model_provisioning()
+    except Exception as e:
+        logger.warning(f"Model provisioning failed (non-fatal): {e}")
+        # Don't fail startup - models can be configured via UI
 
     logger.success("API initialization completed successfully")
 
