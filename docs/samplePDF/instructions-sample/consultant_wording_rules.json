@@ -1,0 +1,70 @@
+{
+  "universal_actions": [
+    {
+      "action": "maintain_in_situ",
+      "description": "Keep ACM in place and manage under AMP; label; periodic review."
+    },
+    {
+      "action": "remove_prior_to_refurb_or_demolition",
+      "description": "Remove ACM before demolition/refurbishment by licensed contractor."
+    },
+    {
+      "action": "restrict_access_immediately",
+      "description": "Restrict access and arrange abatement ASAP."
+    },
+    {
+      "action": "remedial_within_months",
+      "description": "Organise remedial/removal works in next few months (often within ~3 months)."
+    },
+    {
+      "action": "confirm_status_sampling",
+      "description": "Item not sampled; confirm via sampling/investigation; then label/manage."
+    },
+    {
+      "action": "height_or_access_restriction",
+      "description": "No access / height restriction; treat as presumed; manage accordingly."
+    }
+  ],
+  "consultant_phrases_to_actions": [
+    {
+      "pattern": "\\bMaintain in current condition\\b",
+      "action": "maintain_in_situ"
+    },
+    {
+      "pattern": "\\blabel( and incorporate)? into an AMP\\b",
+      "action": "maintain_in_situ"
+    },
+    {
+      "pattern": "\\bRemove (under|by) .*licensed asbestos removal contractor\\b",
+      "action": "remove_prior_to_refurb_or_demolition"
+    },
+    {
+      "pattern": "\\bprior to demolition or refurbishment\\b",
+      "action": "remove_prior_to_refurb_or_demolition"
+    },
+    {
+      "pattern": "\\bRestrict access\\b|\\bASAP\\b",
+      "action": "restrict_access_immediately"
+    },
+    {
+      "pattern": "\\bwithin\\s*3\\s*months\\b|\\bnext few months\\b",
+      "action": "remedial_within_months"
+    },
+    {
+      "pattern": "\\bConfirm status\\b|\\bNot Sampled\\b|\\bPresumed\\b",
+      "action": "confirm_status_sampling"
+    },
+    {
+      "pattern": "\\bHeight restriction\\b|\\bRestricted Access\\b|\\bLive Electrical Hazard\\b",
+      "action": "height_or_access_restriction"
+    },
+    {
+      "pattern": "\\bcontrolled bonded asbestos removal conditions\\b",
+      "action": "remove_prior_to_refurb_or_demolition"
+    }
+  ],
+  "notes": [
+    "Free-text recommendations vary by consultant (Prensa vs Greencap) but usually map to the same small set of canonical actions.",
+    "Normalize by applying regex patterns to recommendations/comments fields, then store both raw_text and normalized actions."
+  ]
+}

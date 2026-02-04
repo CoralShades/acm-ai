@@ -54,6 +54,12 @@ const defaultConfigs: DefaultConfig[] = [
     modelType: 'language'
   },
   {
+    key: 'default_extraction_model',
+    label: 'Extraction Model',
+    description: 'Used for ACM data extraction - precision models recommended',
+    modelType: 'language'
+  },
+  {
     key: 'default_embedding_model',
     label: 'Embedding Model',
     description: 'Used for semantic search and vector embeddings',
