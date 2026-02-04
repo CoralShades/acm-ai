@@ -205,6 +205,12 @@ class ACMExtractionRecord(BaseModel):
         description="Page number where this record was found"
     )
 
+    # Bounding box for provenance linking (MinerU integration)
+    table_bbox: Optional[dict] = Field(
+        default=None,
+        description="Table bounding box coordinates: {x, y, width, height, page}"
+    )
+
 
 class ACMExtractionResult(BaseModel):
     """

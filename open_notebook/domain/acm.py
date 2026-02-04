@@ -94,6 +94,12 @@ class ACMRecord(ObjectModel):
     # Citation support
     page_number: Optional[int] = None
 
+    # Bounding box for provenance linking (MinerU integration)
+    table_bbox: Optional[dict] = Field(
+        default=None,
+        description="Table bounding box coordinates: {x, y, width, height, page}"
+    )
+
     # New fields for AI-powered extraction (Task 1: E1-S7)
     # All optional for backwards compatibility with existing records
     disturbance_potential: Optional[str] = Field(
