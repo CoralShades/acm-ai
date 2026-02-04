@@ -1,0 +1,590 @@
+# RAW_CONTENT Debug Dump
+# Source: source:n3iucymt1r81fi32p4ds
+# Length: 26525 chars
+#============================================================
+
+Department of Education
+School Asbestos Management Plan
+Aldavilla Public School - 4601
+Last Revision: 11-Feb-2025
+11/02/2025
+1/15
+Acknowledgement of Country
+The NSW Department of Education acknowledges the Traditional Custodians of the lands where we work and live. We
+celebrate the diversity of Aboriginal peoples and their ongoing cultures and connections to the lands and waters of NSW.
+We pay our respects to Elders past, present and emerging and acknowledge the Aboriginal and Torres Strait Islander people
+that contributed to the development of this plan.
+School Asbestos Management Plan
+Published by The NSW Department of Education
+https://education.nsw.gov.au/
+Additional Information and Support
+Additional information and support is available through the channels detailed below:
+GPO Box 33
+Sydney NSW 2001
+Office hours:
+Monday to Friday
+8am to 5pm during school terms
+8am to 4:30pm during school holidays
+T: 02 9273 9200
+E: education@yourfeedback.nsw.gov.au
+W: https://education.nsw.gov.au/
+For further advice in relation to this Asbestos Management Plan:
+Email: schoolinfrastructure@det.nsw.edu.au
+For employee-related enquiries:
+Immediate support is available from the Employee Assistance Program. Call them anytime on 1800 060 650.
+11/02/2025
+2/15
+4
+4
+4
+4
+4
+4
+4
+4
+5
+5
+5
+5
+5
+6
+6
+7
+7
+7
+7
+7
+7
+9
+9
+10
+Contents
+1. Introduction
+1.1 Background
+1.2 Purpose and Scope
+1.3 Legislation
+1.4 Information on Asbestos
+2. Roles and Responsibilities
+3. Asbestos Risk Management
+3.1 Identification of Asbestos
+3.1.1 Asbestos Registers
+3.1.2 Warning signage
+3.1.3 Labelling
+3.1.4 Asbestos Work Authorisation System
+3.2 Risk Assessment
+3.3 Control Measures
+3.3.1 Hierarchy of Controls
+4. Safe Work on Facilities
+4.1 Importation of Materials
+5. Unexpected Finds, Accidental Disturbance Incidents & Emergency Management
+5.1 Unexpected Finds
+5.2 Incidents
+5.3 Incident Notification
+5.4 Emergencies, Vandalism & Illegal Dumping
+6. Review
+7. Definitions
+Appendix A: Site Plan
+Appendix B: Asbestos Register
+11/02/2025
+3/15
+1 Introduction
+1.1 Background
+The NSW Department of Education has developed this School Asbestos Management Plan (SAMP) to provide transparency and
+consistency in how the NSW Department of Education manages asbestos at Aldavilla Public School. The NSW Department of
+Education aims to eliminate exposure to asbestos through the identification and removal of asbestos where safe to do so.
+Where elimination is not possible, exposure is to be minimised so far as is reasonably practicable.
+1.2 Purpose and Scope
+The purpose of this SAMP is to:
+meet the requirements of section 429 of the WHS Regulation; and
+set out how asbestos or ACM will be managed, for example what, when and how it is going to be done.
+This SAMP is intended to be read by NSW Department of Education employees, their health and safety representatives, and
+other people involved in the management of asbestos at NSW Department of Education facilities. The SAMP relates to general
+activities at Department of Education facilities. Further management plans or other documentation may be required in specific
+instances, such as when a Principal Contractor undertakes asbestos-related works.
+This SAMP is to be read in conjunction with the overarching AMP for the NSW Department of Education.
+1.3 Legislation
+The management of asbestos within NSW Department of Education facilities, including identification, removal, encapsulation,
+transport, disposal, or potential disturbance of ACM, must be carried out in accordance with current versions of all relevant
+State and Commonwealth legislation, regulations and SafeWork NSW Codes of Practice.
+1.4 Information on Asbestos
+Asbestos is the term given to a group of naturally occurring mineral silicates which are prevalent in the earth's crust and are
+composed of fibres that do not readily break down within the human body. Asbestos was often mixed with other materials
+such as cement, bitumen and vinyl to enhance their properties. ACM was used extensively in the Australian building industry
+between the 1940s and the late 1980s due to their durability and fire resistance. The importation and installation of all forms
+of asbestos has been banned nationally since 31 December 2003. This ban does not apply to asbestos installed prior to this
+date (e.g. in-situ asbestos materials in buildings).
+Inhaling asbestos fibres may lead to asbestos related diseases such as asbestosis, lung cancer or mesothelioma. The risk of
+developing an asbestos-related disease depends on a number of factors, including but not limited to how many fibres have
+been breathed in and for how long and the type of asbestos.
+2 Roles and Responsibilities
+Under the WHS Regulation, NSW Department of Education must eliminate risks relating to asbestos, or if that is not
+reasonably practicable, minimise the risks so far as is reasonably practicable.
+All employees, students, contractors, volunteers and visitors have a responsibility to comply with reasonable direction relating
+to health and safety, including following the directions of this SAMP for any asbestos-related matters.
+Responsibilities on NSW Department of Education employees for managing asbestos are set out in the following procedures:
+Asbestos Management Procedure
+Unexpected Finds, Incidents and Emergencies Procedure; and
+Asbestos In or On Grounds Guide.
+The procedures can be accessed on the School Infrastructure website
+11/02/2025
+4/15
+3 Asbestos Risk Management
+The management of in-situ asbestos is important to ensure asbestos or ACM are not damaged or deteriorated to such an
+extent that NSW Department of Education facility employees, students, contractors, or visitors are unnecessarily exposed to
+airborne asbestos fibres.
+The risk management process attempts to identify asbestos exposure hazards by identifying whether asbestos or ACM is
+present. When asbestos or ACM is identified, a risk assessment will be conducted with the intention to assess the level of risk
+and enable decisions to be made about appropriate risk control measures.
+3.1 Identification of Asbestos
+Identifying asbestos or ACM is the first step in managing the risk of exposure to asbestos.
+The NSW Department of Education ensures, so far as is reasonably practicable, that all asbestos or ACM at NSW Department
+of Education facilities is identified by a competent person / licensed asbestos assessor. This includes but is not limited to
+conducting a thorough inspection of all areas of the facility including buildings, structures, ceiling spaces, storage areas, and
+facility grounds. These inspections may be conducted during school hours, provided they not disrupting school activities.
+Material that cannot be identified, but a competent person / licensed asbestos assessor reasonably believes is asbestos, must
+be assumed to be ACM unless sample analysis indicates otherwise.
+If there is uncertainty as to whether asbestos is present in any part of a NSW Department of Education facility, it can either be
+assumed to contain asbestos, and treated with appropriate caution based on the level of risk, or have a sample analysed.
+Once the presence and location of asbestos has been assumed all requirements for managing asbestos must be followed until
+the material is removed, appropriately contained, or testing has confirmed that it does not contain asbestos.
+If there are inaccessible areas in a NSW Department of Education facility, that a competent person / licensed asbestos assessor
+has identified as likely to have asbestos or ACM, it must be assumed that it contains asbestos until the area is accessed, and
+the competent person determines whether asbestos is present or not. Some materials cannot be visually assessed or sampled
+without damaging the item. If this is the case, the competent person will include the item on the asbestos register if asbestos
+is suspected.
+3.1.1 Asbestos Registers
+When asbestos or ACM has been identified or assumed, its location is noted in the NSW Department of Education's asbestos
+registers. An asbestos register is a document that lists all identified (or assumed) asbestos in a workplace and is intended to
+ensure workers and others in the workplace do not accidently disturb the asbestos. The asbestos register can be found at the
+end of this document.
+3.1.2 Warning signage
+All warning signs are compliant with AS 1319-1994: Safety signs for the occupational environment. Any workplace that
+contain asbestos should be signposted with warning signs to ensure the asbestos is not unknowingly disturbed without the
+correct precautions being taken.
+Signs should be placed at all the main entrances to the work areas where asbestos is present. The presence and location of the
+asbestos should be entered on site plans and the asbestos register and be accessible to all workers to ensure they are aware of
+the presence of asbestos.
+3.1.3 Labelling
+Labelling is the practice of using stickers or other notices to identify the location of asbestos or ACM in a workplace. The NSW
+Department of Education has determined that the labelling of all facility ACMs is not reasonably practicable. Reasoning and
+further detail is provided in the department's Asbestos Management Plan.
+3.1.4 Asbestos Work Authorisation System
+NSW Department of Education has implemented an 'Asbestos Work Authorisation' (AWA) system that enables a systematic
+controlled approach to providing approval to complete asbestos works. The AWA system also enables the systematic
+coordination of access controls to areas identified as restricted due to the presence of asbestos or ACM.
+Asbestos Work Authorisation is required prior to any works which disturb asbestos.
+3.2 Risk Assessment
+If asbestos or ACM is in good condition and left undisturbed, it is unlikely that airborne asbestos will be released into the air
+11/02/2025
+5/15
+and the risk to health is extremely low. It is usually safer to leave it and review its condition over time. However, if the
+asbestos or ACM has deteriorated, has been disturbed, or if asbestos-contaminated dust is present, the likelihood that airborne
+asbestos will be released into the air is increased.
+The type of material that binds asbestos fibres will influence the potential for airborne asbestos to be released into the air from
+different ACM. For example, friable materials such as a loosely bound sprayed (or limpet) coating is more likely to release
+fibres when disturbed than non-friable asbestos cement in which fibres are firmly bound. Friable asbestos is defined as any
+material that contains asbestos and is in a powder form or can be crumbled, pulverised, or reduced to powder by hand
+pressure when dry. Non-friable asbestos is defined as material containing asbestos that is not friable asbestos, including
+material containing asbestos fibres reinforced with a bonding compound.
+When deciding if there is a risk to health from asbestos, consideration should be given to whether the ACM is:
+in poor condition;
+likely to be further damaged or to deteriorate;
+likely to be disturbed due to work practices carried out in the workplace (for example routine and maintenance activities
+and their frequency); or
+in an area where people are exposed to the material.
+A risk assessment of each ACM item is performed by the licensed asbestos assessor / competent person for inclusion in the
+school's asbestos register. Further information about the risk assessment process is provide in the department's overarching
+Asbestos Management Plan.
+3.3 Control Measures
+3.3.1 Hierarchy of Controls
+The NSW Department of Education control the risks arising from asbestos-related work in a way that is consistent with the
+hierarchy of controls which ranks control measures from the highest level of protection and reliability to the lowest. A
+combination of these controls may be required in order to adequately manage, and control risks associated with asbestos and
+ACM.
+The Asbestos Management Procedure lists out the specific control measures which the NSW Department of Education
+implements in line with the hierarchy of controls.
+The most suitable control measure should be selected in consultation with the competent person/licensed asbestos
+assessor.
+3.3.1.1 Elimination
+Elimination of the hazard and associated risk, for example by removing the asbestos, must always be considered first. While
+the ultimate goal is to have workplaces free of asbestos, it may not be reasonably practical or necessary to remove asbestos.
+Detailed guidance for arranging asbestos removal is available in the department's Asbestos Management Procedure.
+Other ways to eliminate the risk include not conducting work that has the potential to disturb asbestos or making decisions as
+to whether the work can be performed without disturbing the asbestos through alternative options such as re-routing services
+to avoid penetrating ACM.
+3.3.1.2 Substitution
+Where products containing asbestos are removed, they must be replaced with products that do not contain asbestos.
+3.3.1.3 Engineering Controls
+Asbestos in NSW Department of Education facilities that is stable and will not be disturbed during routine activities may
+remain in situ and be managed in accordance with the requirements of this SAMP.
+If it is not reasonably practical to eliminate the risk, the risk must be minimised as far as reasonably practicable by using an
+engineering control such as isolation controls which provide physical separation of workers from the asbestos hazard through
+a combination of barriers, distance, and enclosures. Examples may include restricting access to disused areas that contain
+ACM, covering or sealing a deteriorating asbestos-containing material with another material or paint, or using barriers and
+fencing to prevent access into an asbestos removal area by unprotected personnel. Further information relating to
+encapsulation is provided in the department's Asbestos Management Plan.
+3.3.1.4 Administrative Controls
+11/02/2025
+6/15
+If the risk remains, administrative controls can be implemented. Administrative controls include safe work methods and
+procedures that are designed to minimise exposure to asbestos as well as information, training and instruction needed to
+ensure workers can perform their roles safely. Examples include the development of Safe Systems of Work, maintaining and
+communicating the presence and location of ACM through NSW Department of Education's asbestos registers, and reporting.
+3.3.1.5 Personal Protective Equipment
+If a risk to health remains after the higher order control measures have been implemented, personal protective equipment
+must be used to supplement higher order controls.
+Personal protective equipment can be effective in controlling the risk from airborne asbestos fibres if appropriate equipment is
+selected and maintained, and employees are trained and supervised, and comply with the system. Department employees do
+not perform asbestos-related work, therefore personal protective equipment is not generally required.
+4 Safe Work on Facilities
+Detailed information relating to how asbestos is managed during works, including planned asbestos works, is provided in the
+department's Asbestos Management Procedure.
+4.1 Importation of Materials
+Imported material such as fill is a possible source of asbestos contamination. No individual or organisation is permitted to
+import or dump contaminated fill on to a department-owned site. The importation of any type of fill on to a departmentowned site as part of any works must have an appropriate validation certificate ensuring that the fill is certified as virgin
+excavated natural material (VENM) by the supplier.
+5 Incidents & Emergency Management
+5.1 Unexpected Finds
+An unexpected find is the identification of an asbestos hazard (or suspected asbestos hazard) which is not listed in the relevant
+asbestos register.
+The following protocol must be followed in the event of an unexpected find:
+1. Stop work
+2. Isolate the area.
+3. Inform the principal or workplace manager as soon as possible.
+Further steps in the unexpected finds procedure are shown in Asbestos Incident Management Procedure and in Figure
+1.
+5.2 Incidents
+Where there are incidents of damage or disturbance to potential or known asbestos-containing material, the incident response
+procedure detailed in Figure 1 should be implemented as soon as practicable to reduce the risk of exposure to workers in the
+vicinity of the area.
+Further steps in the incidents procedure are shown in Asbestos Incident Management Procedure.
+5.3 Incident Notification
+Asbestos incidents and near misses must be reported as soon as reasonably practicable within a 24- hour period either to the
+principal, other workplace manager or supervisor and/or directly to the Incident Report and Support Hotline on 1800 811 523
+in accordance with the Incident Notification and Response Policy Procedures. Further details regarding notifiable incidents are
+contained in the Asbestos Incident Management Procedure.
+11/02/2025
+7/15
+Figure 1 - Asbestos Management in Schools - User Process
+11/02/2025
+8/15
+5.4 Emergencies, Vandalism & Illegal Dumping
+An emergency can occur if a building, structure, or plant is structurally unsound or the collapse of a building, structure or
+plant is imminent. Information relating to emergency asbestos work can be found in the department's Asbestos Management
+Plan and Asbestos Incident Management Procedure.
+Unexpected finds or accidental disturbances could occur from vandalism (for example, damage to ACM) or illegal dumping. In
+addition to the process outlined above, instances of vandalism and illegal dumping should be reported to the following:
+1. The local police station.
+2. The School Security Unit on 1300 880 021.
+3. The EPA on 131 555 (for illegal dumping).
+6 Review
+To ensure the information is maintained and up to date, the asbestos registers and SAMP are reviewed and updated every 5
+years or whenever.
+Further asbestos or ACM is identified at a facility;
+The SAMP is no longer adequate for managing asbestos or ACM at a facility;
+There is a review of the asbestos register or control measures;
+A health and safety representative requests a review;
+Asbestos or ACM is removed from or disturbed, sealed or enclosed at a facility; or
+Refurbishment or demolition work is to be undertaken.
+When reviewing the register, a competent person / licensed asbestos assessor should carry out a visual inspection of the listed
+ACM to determine its condition and revise the asbestos register as appropriate.
+11/02/2025
+9/15
+7 Definitions
+Term
+Meaning
+Airborne
+asbestos
+Any fibres of asbestos small enough to be made airborne. For the purposes of monitoring airborne asbestos
+fibres, only respirable fibres are counted
+Asbestos
+The asbestiform varieties of mineral silicates belonging to the serpentine or amphibole groups of rock-forming
+minerals, including actinolite asbestos, grunerite (or amosite) asbestos (brown), anthophyllite asbestos,
+chrysotile asbestos (white), crocidolite asbestos (blue) and tremolite asbestos, or a mixture that contains one or
+more of these.
+Asbestos
+containing
+material
+(ACM)
+Any material or thing that, as part of its design, contains asbestos.
+Competent
+Person
+In relation to carrying out clearance inspections under WHS Regulation clause 473â€”a person who has acquired
+through training or experience the knowledge and skills of relevant asbestos removal industry practice and
+holds: a certification in relation to the specified VET course for asbestos assessor work, or - a tertiary
+qualification in occupational health and safety, occupational hygiene, science, building, construction or
+environmental health. For all other purposesâ€”a person who has acquired through training, qualification or
+experience, the knowledge and skills to carry out the task.
+Control
+measure
+In relation to a risk to health and safety, means a measure to eliminate or minimise the risk
+Demolition
+work
+Work to demolish or dismantle a structure, or part of a structure that is loadbearing or otherwise related to the
+physical integrity of the structure, but does not include:
+the dismantling of formwork, falsework, or other structures designed or used to provide support, access
+or containment during construction work, or
+the removal of power, light or telecommunication poles.
+Exposure
+standard
+For asbestos is a respirable fibre level of 0.1 fibres/mL of air measured in a person's breathing zone and
+expressed as a time-weighted average fibre concentration calculated over an eight-hour working day and
+measured over a minimum period of four hours in accordance with: - the Membrane Filter Method - a method
+determined by the relevant regulator
+Friable
+asbestos
+Material that is in a powder form or that can be crumbled, pulverised or reduced to a powder by hand pressure
+when dry, and contains asbestos.
+Hazard
+A situation or thing that has the potential to harm a person. Hazards at work may include asbestos, noisy
+machinery, a moving forklift, chemicals, electricity, working at heights, a repetitive job, bullying and violence at
+the workplace.
+In situ
+asbestos
+Asbestos or ACM fixed or installed in a structure, equipment or plant but does not include naturally occurring
+asbestos.
+Incident
+An unplanned event that could result in an injury to a person or a to loss of, or disruption to, an organisation's
+operations, services or functions.
+Non-friable
+asbestos
+Material containing asbestos that is not friable asbestos, including material containing asbestos fibres reinforced
+with a bonding compound.
+Person
+conducting
+a business
+or
+undertaking
+(PCBU)
+A person conducting a business or undertaking to the extent that the business or undertaking involves the
+management or control, in whole or in part, of the workplace. A person with management or control of a
+workplace does not include: - the occupier of a residence, unless the residence is occupied for the purposes of,
+or as part of, the conduct of a business or undertaking, or - a prescribed person.
+Respirable
+asbestos
+An asbestos fibre that: - is less than 3 microns wide, and - is more than 5 microns long, and - has a length to
+width ratio of more than 3:1
+11/02/2025
+10/15
+Structure
+Anything that is constructed, whether fixed or moveable, temporary or permanent, and includes:
+buildings, masts, towers, framework, pipelines, transport infrastructure and underground works (shafts or
+tunnels)
+any component of a structure
+part of a structure
+volunteer means a person who is acting on a voluntary basis (irrespective of whether the person receives
+out-of-pocket expenses).
+Unexpected
+find
+The identification of an asbestos hazard (or suspected asbestos hazard) which is not listed in the relevant
+asbestos register. Note that an asbestos find as part of hazard identification activities (such as an intrusive
+asbestos survey in preparation for a project) is not an unexpected find.
+11/02/2025
+11/15
+11/02/2025
+12/15
+Asbestos Register - Aldavilla Public School - 4601 - North Coast
+Limitations & Use of the Asbestos Register:
+Asbestos registers maintained for the Department of Education are limited in that inspections are generally limited to
+accessible building materials.
+As part of planning works on a NSW Department of Education facility, including plant, constructed or installed before 31
+December 2003, the Project Manager must review the asbestos register and determine whether the asbestos documentation
+adequately covers the area to be disturbed. If the project will disturb an area listed as inaccessible on the register, or that
+could not reasonably be presumed to have been accessed, further intrusive sampling may be required. Note that this will
+include areas within wall cavities, behind fixed ceilings and subfloor areas where suitable access is not provided without
+damaging building materials, as well as sub-surface soils.
+B001 - Administration - 1992 - Brick/Veneer
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B002 - Pupil Facilities - 1992 - Brick/Block
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B003 - Library - 1992 - Brick/Veneer
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B004 - General Learning - 1992 - Brick/Veneer
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B005 - General Learning - 1992 - Brick/Veneer
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B006 - Communal Facilities - 1992 - Brick/Veneer
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B007 - General Learning/Building Services - 2011 - Brick/Veneer
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B008 - Building Services - 2011 - Brick/Veneer
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+B009 - Special Purpose - 1950 - Steel
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+Exterior
+11/02/2025
+13/15
+Ceiling Voids
+No Asbestos Found
+Underfloor Voids
+No Asbestos Found
+Interior
+B009 - R0001 - General Storeroom - 6.61 m2
+Floor Coverings
+Res/Textile
+Vinyl Sheet
+2m2
+Throughout
+Non asbestoscontaining material
+B009 - R0002 - Movement - 2.77 m2
+No Asbestos
+B009 - R0003 - Kitchen - Pre - 33.1 m2
+No Asbestos
+B009 - R0004 - Movement - 2.77 m2
+No Asbestos
+B009 - R0005 - General Storeroom - 1.45 m2
+Floor Coverings
+Res/Textile
+Vinyl Tiles
+2m2
+Throughout Non Friable
+Minimal
+Damage
+Low
+Asbestos-containing
+material
+B009 - R0006 - External Movement - 86.89 m2
+No Asbestos
+B009 - R0007 - Movement -.97 m2
+Floor Coverings
+Res/Textile
+Vinyl Tiles
+1m2
+Throughout Non Friable
+Minimal
+Damage
+Low
+Asbestos-containing
+material
+B009 - R0008 - General Storeroom - 1.45 m2
+Floor Coverings
+Res/Textile
+Vinyl Tiles
+2m2
+Throughout Non Friable
+Minimal
+Damage
+Low
+Asbestos-containing
+material
+B009 - R0009 - General Storeroom -.51 m2
+No Asbestos
+B009 - R0010 - External Movement - 17.06 m2
+No Asbestos
+B010 - Storage - 2022 - Metal Shed
+Product
+Material
+Description
+Extent Location
+Friable/Non
+Friable
+Material
+Condition
+Risk
+Status
+Result
+No Asbestos
+11/02/2025
+14/15
+Demountables
+There are no Demountable(s) Located at this school as per the AMS records as of 11-Feb-2025
+11/02/2025
+15/15
