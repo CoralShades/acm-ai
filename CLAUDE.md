@@ -183,3 +183,71 @@ Key docs:
 - `docs/development/api-reference.md` - REST API
 - `docs/development/contributing.md` - Contribution guide
 - `docs/bmm-index.md` - Comprehensive project scan/index
+
+## Claude Code Custom Commands
+
+Custom slash commands are available in `.claude/commands/`:
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Start development services (SurrealDB) |
+| `/stop` | Stop all Docker services |
+| `/status` | Check service health (SurrealDB, API, Frontend) |
+| `/logs [service]` | View service logs |
+| `/build [target]` | Build frontend or run backend checks |
+| `/test [path]` | Run pytest tests |
+
+BMAD workflow commands are also available in `.claude/commands/bmad/`.
+
+## Claude Code Modular Rules
+
+Domain-specific rules in `.claude/rules/`:
+
+| Rule File | Applies To |
+|-----------|------------|
+| `docker-compose.md` | `docker-compose*.yml` files |
+| `python-backend.md` | `**/*.py`, `api/**/*`, `open_notebook/**/*` |
+| `nextjs-frontend.md` | `frontend/**/*.ts`, `frontend/**/*.tsx` |
+| `langgraph-ai.md` | `open_notebook/graphs/**/*`, `prompts/**/*` |
+| `surrealdb.md` | `migrations/**/*`, `open_notebook/database/**/*` |
+| `mcp-servers.md` | `.claude/settings*.json` files |
+
+## MCP Configuration
+
+MCP servers configured in `.claude/settings.json`:
+
+| Server | Purpose | Status |
+|--------|---------|--------|
+| `filesystem` | File operations | Enabled |
+| `memory` | Persistent context | Enabled |
+| `playwright` | Browser automation | Enabled (via settings.local.json) |
+| `chrome-devtools` | Page snapshots | Enabled (via settings.local.json) |
+
+### Local Overrides
+Machine-specific configuration in `.claude/settings.local.json` (gitignored):
+- Custom tool permissions
+- Additional MCP servers (n8n, etc.)
+
+## Docker Local Overrides
+
+For port conflicts (e.g., Supabase using port 8000), create `docker-compose.override.yml` (gitignored):
+
+```yaml
+# Example: Remap SurrealDB to port 8001
+services:
+  surrealdb:
+    ports: !override
+      - "8001:8000"
+    healthcheck: !override
+      test: ["CMD", "/surreal", "isready", "--conn", "http://localhost:8000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+```
+
+Then update `.env` to match:
+```bash
+SURREAL_URL=ws://localhost:8001/rpc
+```
+
+This file is automatically merged by Docker Compose and keeps machine-specific config separate from the shared base.
