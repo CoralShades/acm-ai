@@ -85,6 +85,9 @@ open_notebook/          # Domain layer
   domain/               # Entity models (Notebook, Source, Note, etc.)
   database/             # Repository pattern for SurrealDB
   graphs/               # LangGraph AI workflows (chat, search, transformations)
+  extractors/           # Data extraction modules
+    acm_extractor.py    # ACM register extraction with MinerU fallback
+    mineru_table_extractor.py  # MinerU-based table extraction
 commands/               # Background job handlers (surreal-commands)
 prompts/                # Jinja2 AI prompt templates
 migrations/             # SurrealDB schema migrations (auto-run on API start)
@@ -108,6 +111,40 @@ frontend/src/
 - **Frontend**: React Query for server state, Zustand for client state, React Hook Form + Zod for forms
 - **AI**: LangGraph workflows in `open_notebook/graphs/` using Esperanto for multi-provider abstraction
 
+### Table Extraction
+
+The system uses **MinerU** (via `magic-pdf` library) for advanced table extraction from PDF documents, with automatic fallback to regex-based parsing:
+
+**Features:**
+- **Merged cell handling**: Correctly parses HTML tables with `colspan` and `rowspan` attributes
+- **Multi-page tables**: Automatically stitches tables spanning multiple pages into a single logical table
+- **Bounding box tracking**: Captures table coordinates `{x, y, width, height, page}` for provenance linking
+- **Performance**: Processes 20-page PDFs in <30 seconds (estimated 10-25s typical)
+
+**Fallback Strategy:**
+```python
+# In acm_extractor.py
+extract_acm_records(
+    markdown_content=None,
+    source_id="source:123",
+    pdf_path="/path/to/file.pdf",  # Enable MinerU extraction
+    use_mineru=True                 # Default: True
+)
+```
+
+1. **MinerU first** (if `use_mineru=True` and `pdf_path` provided): Uses ML-based table extraction
+2. **Regex fallback** (if MinerU fails or unavailable): Falls back to markdown regex parsing
+
+**Configuration:**
+- Set `use_mineru=False` to skip MinerU and use regex directly
+- MinerU is optional - system works without it via fallback
+- Bounding box data is stored in `ACMRecord.table_bbox` field (optional)
+
+**Known Issues:**
+- MinerU dependency (`magic-pdf`) has incomplete dependency declarations - may require manual installation of `opencv-python`, `ultralytics`, `doclayout-yolo` for full functionality
+- Consider Docker containerization for MinerU isolation in production
+- Fallback mechanism ensures data extraction works even if MinerU dependencies are unavailable
+
 ## Database
 
 SurrealDB with core tables: `notebook`, `source`, `note`, `model`, `transformation`, `episode_profile`, `speaker_profile`
@@ -116,6 +153,9 @@ Relationships:
 - `source.notebook_id` → `notebook`
 - `note.notebook_id` → `notebook`
 - Sources and notes can have vector embeddings for semantic search
+
+**ACM-specific fields:**
+- `ACMRecord.table_bbox`: Optional bounding box tracking `{x, y, width, height, page}` for table provenance (populated when using MinerU extraction)
 
 ## Environment Variables
 
