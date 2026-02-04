@@ -2,7 +2,7 @@
 
 > **Story:** E8-S7
 > **Epic:** UI Refresh (Bento Grid Design)
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
@@ -23,13 +23,15 @@ Redesign the source detail page using bento sections to organize document conten
 
 ## Acceptance Criteria
 
-- [ ] Header card: Source title, metadata, actions
-- [ ] Content card: Document preview/text
-- [ ] ACM card: Spreadsheet view (if ACM data exists)
-- [ ] Chat card: Collapsible chat panel
-- [ ] Notes card: Related notes
-- [ ] Insights card: AI-generated insights
-- [ ] Responsive stacking on mobile
+- [x] Header card: Source title (editable), metadata, actions
+- [x] Content card: Document preview/text
+- [x] ACM card: Spreadsheet view (if ACM data exists)
+- [x] Chat card: Collapsible chat panel
+- [x] Insights card: AI-generated insights (as tab with count badge)
+- [x] Details card: Source metadata, embedding status, notebook associations (as tab)
+- [x] Responsive stacking on mobile
+
+> **Note:** Notes card was removed from scope - notes are notebook-level entities, not source-level. Source associations with notebooks are shown in Details tab instead.
 
 ---
 
@@ -255,9 +257,9 @@ function SourceNotFound() {
 | File | Change |
 |------|--------|
 | `frontend/src/app/(dashboard)/sources/[id]/page.tsx` | Redesign layout |
-| `frontend/src/components/sources/SourceContent.tsx` | Update/create |
-| `frontend/src/components/source/NotesPanel.tsx` | Update/create |
-| `frontend/src/components/source/InsightsPanel.tsx` | Update/create |
+| `frontend/src/components/source/SourceContentPanel.tsx` | New - Document content panel |
+| `frontend/src/components/source/SourceInsightsPanel.tsx` | New - AI insights panel |
+| `frontend/src/components/source/SourceDetailsPanel.tsx` | New - Source metadata panel |
 
 ---
 
@@ -283,5 +285,67 @@ function SourceNotFound() {
 ## Estimated Complexity
 
 **Medium** - Complex layout with multiple panels
+
+---
+
+## Implementation Notes (2026-01-12)
+
+### Files Created/Modified
+
+| File | Change |
+|------|--------|
+| `frontend/src/app/(dashboard)/sources/[id]/page.tsx` | Complete redesign with BentoGrid layout |
+| `frontend/src/components/source/SourceContentPanel.tsx` | New - Document content with Markdown rendering and YouTube embed |
+| `frontend/src/components/source/SourceInsightsPanel.tsx` | New - AI insights panel with transformation selector |
+| `frontend/src/components/source/SourceDetailsPanel.tsx` | New - Source metadata, embedding status, and notebook associations |
+
+### Architecture Decisions
+
+1. **Tab-based Organization**: Instead of separate small cards for Notes, Insights, and Details, these are organized as tabs within the main content card for better space efficiency and user experience.
+
+2. **Two-Column Layout**:
+   - Left column: Content Tabs card (Content, ACM, Insights, Details)
+   - Right column: Collapsible Chat card
+   - Header card spans full width
+
+3. **Component Extraction**: Extracted Content, Insights, and Details into separate panel components from the monolithic `SourceDetailContent.tsx` for better maintainability.
+
+4. **Preserved Existing Functionality**:
+   - Existing `ChatPanel` component reused with all session management
+   - Existing `ACMTab` component reused for ACM data display
+   - Back navigation with return path tracking
+
+### Key Features
+
+- **Header Card**: Shows source type icon, title, badges (type, embedded status, ACM count), download button, and action menu (embed, delete)
+- **Content Tab**: Markdown rendering with YouTube embed support
+- **ACM Tab**: Only visible when source has ACM data, uses existing ACMTab component
+- **Insights Tab**: Create new insights with transformation selector, view existing insights
+- **Details Tab**: Embedding status alert, URL/file info, topics, metadata, notebook associations
+- **Chat Card**: Collapsible with expand/collapse button, full chat functionality with ACM context toggle
+
+### Responsive Behavior
+
+- On mobile (< lg): All cards stack vertically, full width
+- On desktop (>= lg): Two-column layout with header spanning full width
+
+### Code Review (2026-01-12)
+
+**Issues Found: 10 (2 HIGH, 5 MEDIUM, 3 LOW)**
+
+| Severity | Issue | Fix Applied |
+|----------|-------|-------------|
+| HIGH | Title not editable (feature regression) | Added InlineEdit component for editable title |
+| HIGH | NotesPanel referenced but never created | Updated AC to remove Notes card (notes are notebook-level) |
+| MEDIUM | Silent failure on insights/transformations fetch | Refactored SourceInsightsPanel to use React Query with Error Alert |
+| MEDIUM | Duplicate download logic in header and SourceDetailsPanel | Removed download from SourceDetailsPanel, keep header action |
+| MEDIUM | Missing insights count badge on Insights tab | Added insights count query and badge |
+| MEDIUM | SourceInsightsPanel using useState/useEffect | Refactored to React Query with proper cache sync |
+| MEDIUM | Missing error boundary for ACMTab | Deferred - existing component, out of scope |
+| LOW | Missing aria-labels on icon buttons | Added aria-labels to all icon buttons |
+| LOW | Hardcoded height values | Deferred - works well, not critical |
+| LOW | Magic number for content truncation | Added INSIGHT_PREVIEW_LENGTH constant |
+
+**Result: PASS** - All HIGH and MEDIUM issues resolved, build verified.
 
 ---

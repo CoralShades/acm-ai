@@ -6,6 +6,7 @@ import { CheckboxList } from "@/components/ui/checkbox-list"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Transformation } from "@/lib/types/transformations"
 import { SettingsResponse } from "@/lib/types/api"
+import { Shield } from "lucide-react"
 
 interface CreateSourceFormData {
   type: 'link' | 'upload' | 'text'
@@ -17,6 +18,7 @@ interface CreateSourceFormData {
   transformations?: string[]
   embed: boolean
   async_processing: boolean
+  enable_acm_extraction?: boolean
 }
 
 interface ProcessingStepProps {
@@ -44,6 +46,36 @@ export function ProcessingStep({
 
   return (
     <div className="space-y-8">
+      {/* ACM Extraction Section */}
+      <FormSection
+        title="ACM Register Extraction"
+        description="Extract asbestos containing material data from SAMP documents."
+      >
+        <Controller
+          control={control}
+          name="enable_acm_extraction"
+          render={({ field }) => (
+            <label className="flex items-start gap-3 cursor-pointer p-4 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors">
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Enable ACM extraction</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Automatically extract ACM register data from your SAMP/asbestos documents.
+                  Extracted data will appear in the ACM Register view.
+                </p>
+              </div>
+            </label>
+          )}
+        />
+      </FormSection>
+
       <FormSection
         title="Transformations (optional)"
         description="Apply AI transformations to analyze and extract insights from your content."

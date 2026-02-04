@@ -2,8 +2,9 @@
 
 > **Story:** E5-S2
 > **Epic:** Export Functionality
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
+> **Completed:** 2026-01-11
 
 ---
 
@@ -23,10 +24,10 @@ Add Excel (.xlsx) export functionality with formatting, including auto-sized col
 
 ## Acceptance Criteria
 
-- [ ] Export as .xlsx option
-- [ ] Column widths auto-sized
-- [ ] Header row formatted
-- [ ] Risk status cells color-coded (if possible)
+- [x] Export as .xlsx option
+- [x] Column widths auto-sized
+- [x] Header row formatted
+- [x] Risk status cells color-coded (if possible)
 
 ---
 

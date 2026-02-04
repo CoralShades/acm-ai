@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -26,13 +25,12 @@ import {
   useDeleteACMRecord,
   useExtractACM,
   useExportACMCsv,
+  useExportACMExcel,
 } from '@/lib/hooks/use-acm'
 import { useSources } from '@/lib/hooks/use-sources'
 import type { ACMRecord } from '@/lib/types/acm'
 
 export default function ACMPage() {
-  const router = useRouter()
-
   // State
   const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(undefined)
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
@@ -62,6 +60,7 @@ export default function ACMPage() {
   const deleteRecord = useDeleteACMRecord()
   const extractACM = useExtractACM()
   const exportCsv = useExportACMCsv()
+  const exportExcel = useExportACMExcel()
 
   // Compute records
   const records = useMemo(() => recordsData?.records || [], [recordsData])
@@ -107,9 +106,15 @@ export default function ACMPage() {
     }
   }
 
-  const handleExport = () => {
+  const handleExportCsv = () => {
     if (selectedSourceId) {
       exportCsv.mutate(selectedSourceId)
+    }
+  }
+
+  const handleExportExcel = () => {
+    if (selectedSourceId) {
+      exportExcel.mutate(selectedSourceId)
     }
   }
 
@@ -117,16 +122,9 @@ export default function ACMPage() {
     refetchRecords()
   }
 
-  // Navigate to source detail page
-  const handleViewSource = () => {
-    if (selectedSourceId) {
-      router.push(`/sources/${selectedSourceId}`)
-    }
-  }
-
   return (
     <AppShell>
-      <div className="flex flex-col h-full w-full max-w-none px-6 py-6">
+      <div className="flex flex-col h-full w-full max-w-none px-6 py-6 overflow-y-auto">
         {/* Header */}
         <div className="mb-6 flex-shrink-0">
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -198,12 +196,14 @@ export default function ACMPage() {
                 <ACMToolbar
                   onAddNew={handleAddNew}
                   onExtract={handleExtract}
-                  onExport={handleExport}
+                  onExportCsv={handleExportCsv}
+                  onExportExcel={handleExportExcel}
                   onRefresh={handleRefresh}
                   riskFilter={riskFilter}
                   onRiskFilterChange={setRiskFilter}
                   isExtracting={extractACM.isPending}
-                  isExporting={exportCsv.isPending}
+                  isExportingCsv={exportCsv.isPending}
+                  isExportingExcel={exportExcel.isPending}
                   disabled={isLoadingRecords}
                 />
 

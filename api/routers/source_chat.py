@@ -55,6 +55,7 @@ class SourceChatSessionWithMessagesResponse(SourceChatSessionResponse):
 class SendMessageRequest(BaseModel):
     message: str = Field(..., description="User message content")
     model_override: Optional[str] = Field(None, description="Optional model override for this message")
+    include_acm_context: bool = Field(False, description="Include ACM records in chat context")
 
 class SuccessResponse(BaseModel):
     success: bool = Field(True, description="Operation success status")
@@ -318,7 +319,8 @@ async def stream_source_chat_response(
     session_id: str,
     source_id: str,
     message: str,
-    model_override: Optional[str] = None
+    model_override: Optional[str] = None,
+    include_acm_context: bool = False
 ) -> AsyncGenerator[str, None]:
     """Stream the source chat response as Server-Sent Events."""
     try:
@@ -326,12 +328,13 @@ async def stream_source_chat_response(
         current_state = source_chat_graph.get_state(
             config=RunnableConfig(configurable={"thread_id": session_id})
         )
-        
+
         # Prepare state for execution
         state_values = current_state.values if current_state else {}
         state_values["messages"] = state_values.get("messages", [])
         state_values["source_id"] = source_id
         state_values["model_override"] = model_override
+        state_values["include_acm_context"] = include_acm_context
         
         # Add user message to state
         user_message = HumanMessage(content=message)
@@ -429,13 +432,14 @@ async def send_message_to_source_chat(
                 session_id=session_id,
                 source_id=full_source_id,
                 message=request.message,
-                model_override=model_override
+                model_override=model_override,
+                include_acm_context=request.include_acm_context
             ),
-            media_type="text/plain",
+            media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-                "Content-Type": "text/plain; charset=utf-8"
+                "Content-Type": "text/event-stream; charset=utf-8"
             }
         )
         

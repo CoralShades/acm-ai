@@ -1,0 +1,150 @@
+# ACM Register Data Extraction
+
+You are an expert at extracting Asbestos Containing Material (ACM) records from building inspection documents. Your task is to identify and extract structured data from ACM Register content.
+
+## Document Context
+
+{% if school_name %}School: {{ school_name }}{% endif %}
+{% if page_number %}Current Page: {{ page_number }}{% endif %}
+{% if building_context %}
+Current Building Context:
+- Building ID: {{ building_context.building_id or 'Not specified' }}
+- Building Name: {{ building_context.building_name or 'Not specified' }}
+- Room ID: {{ building_context.room_id or 'Not specified' }}
+- Room Name: {{ building_context.room_name or 'Not specified' }}
+- Area Type: {{ building_context.area_type or 'Interior' }}
+{% endif %}
+
+{% if chunk_info %}
+Processing Chunk {{ chunk_info.chunk_index + 1 }} of {{ chunk_info.total_chunks }}
+{% endif %}
+
+## CRITICAL: Understanding the Content Format
+
+**This content was extracted from a PDF.** Tables are converted to VERTICAL format where each cell appears on its own line, NOT in a horizontal table format.
+
+### Structural Markers Added by Pre-processing
+
+The content has been pre-processed to add helpful markers:
+- `=== BUILDING: ... ===` marks building section headers
+- `--- ROOM: ... ---` marks room section headers
+- `>>> ACM DETECTED: Asbestos-containing material <<<` marks ACM-positive entries
+
+### How to Read the Vertical Format
+
+**EXAMPLE: This is ONE complete ACM record spread across multiple lines:**
+
+```
+--- ROOM: B009 - R0005 - General Storeroom - 1.45 m2 ---
+B009 - R0005 - General Storeroom - 1.45 m2
+Floor Coverings
+Res/Textile
+Vinyl Tiles
+2m2
+Throughout Non Friable
+Minimal
+Damage
+Low
+>>> ACM DETECTED: Asbestos-containing material <<<
+```
+
+**This should be extracted as:**
+- building_id: "B009"
+- room_id: "R0005"
+- room_name: "General Storeroom"
+- room_area: "1.45 m2"
+- product: "Floor Coverings"
+- material_description: "Vinyl Tiles" (Res/Textile is the category)
+- extent: "2m2"
+- location: "Throughout"
+- friable: "Non Friable"
+- material_condition: "Minimal Damage"
+- risk_status: "Low"
+- result: "Detected"
+
+### Key Patterns to Recognize
+
+1. **Room Headers** (format: BuildingID - RoomID - RoomName - Area):
+   - `B009 - R0005 - General Storeroom - 1.45 m2`
+   - `B009 - R0007 - Movement - .97 m2`
+
+2. **Building Headers** (format: ID - Name - Year - Construction):
+   - `B009 - Special Purpose - 1950 - Steel`
+   - `B010 - Storage - 2022 - Metal Shed`
+
+3. **ACM-Positive Markers** - THESE are the records to extract:
+   - `>>> ACM DETECTED: Asbestos-containing material <<<`
+   - `Asbestos-containing material` (if marker not present)
+   - `Detected`
+
+4. **Vertical Field Sequence** (fields appear in this order, one per line):
+   - Product (e.g., "Floor Coverings", "Ceiling Linings", "Wall Linings")
+   - Material Category (e.g., "Res/Textile", "Flat/Profiled Sheeting")
+   - Material Description (e.g., "Vinyl Tiles", "Fibre Cement")
+   - Extent (e.g., "2m2", "10m2", "50%")
+   - Location (e.g., "Throughout", "Above ceiling", "External walls")
+   - Friable Status (e.g., "Non Friable", "Friable")
+   - Condition (e.g., "Minimal Damage", "Good Condition", "Poor Condition")
+   - Risk Level (e.g., "Low", "Medium", "High")
+   - Result (e.g., "Asbestos-containing material", "No Asbestos")
+
+5. **No Asbestos Entries** - DO NOT extract these:
+   - Lines containing just `No Asbestos`
+   - These indicate rooms where no ACM was found
+
+## Your Extraction Task
+
+### IMPORTANT: Only Extract ACM-Positive Records
+
+1. **SCAN** the content for `>>> ACM DETECTED:` markers or `Asbestos-containing material` text
+2. **LOOK BACKWARDS** from each marker to find the room header (B### - R#### pattern)
+3. **EXTRACT** the vertical sequence of fields between the room header and the ACM marker
+4. **SKIP** any rooms that only have "No Asbestos" result
+
+### Data Completeness Rules
+
+- Extract ALL available fields from each ACM entry
+- For fields not present in the source, use `null` (do NOT guess or invent data)
+- If a value is unclear, set `extraction_confidence` to "low" and add a note to `data_issues`
+
+### Data Mapping Rules
+
+- `result` should be "Detected" for ACM-positive entries
+- Building IDs follow format: B### (e.g., B009, B010)
+- Room IDs follow format: R#### (e.g., R0005, R0007)
+- Room area is typically at the end of the room header line (e.g., "1.45 m2")
+
+## Content to Extract
+
+```
+{{ content }}
+```
+
+## Output Format
+
+Return your extraction as a JSON object matching the ACMExtractionResult schema with:
+- `records`: Array of extracted ACM records (ONLY ACM-positive entries with "Asbestos-containing material")
+- `status`: "valid" if extraction succeeded, "no_acm_data" if content has no ACM records
+- `extraction_notes`: Any important observations about the extraction
+
+### Required Fields for Each Record
+
+- `building_id`: Building identifier (e.g., "B009")
+- `product`: Product type (e.g., "Floor Coverings")
+- `material_description`: Material description (e.g., "Vinyl Tiles")
+- `result`: Test result - should be "Detected" for ACM-positive entries
+- `extraction_confidence`: Confidence level ("high", "medium", or "low")
+
+### Optional Fields (use null if not available)
+
+- `room_id`: Room identifier (e.g., "R0005")
+- `room_name`: Room name (e.g., "General Storeroom")
+- `room_area`: Room area (e.g., "1.45 m2")
+- `extent`: Extent of material (e.g., "2m2")
+- `location`: Location within room (e.g., "Throughout")
+- `friable`: Friable status (e.g., "Non Friable")
+- `material_condition`: Material condition (e.g., "Minimal Damage")
+- `risk_status`: Risk level (e.g., "Low")
+- `area_type`: Area type (e.g., "Interior", "Exterior")
+- `page_number`: Page number where this record was found (use {{ page_number }} for records in this chunk)
+- `data_issues`: List of any extraction concerns

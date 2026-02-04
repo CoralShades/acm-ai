@@ -161,6 +161,7 @@ export interface UpdateSourceChatSessionRequest {
 export interface SendMessageRequest {
   message: string
   model_override?: string
+  include_acm_context?: boolean
 }
 
 export interface SourceChatStreamEvent {

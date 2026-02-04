@@ -1,5 +1,6 @@
 # Sprint Status - ACM-AI
-# generated: 2025-12-08
+# generated: 2025-12-20
+# updated: 2026-02-04
 # project: acm-ai
 # project_key: acm-ai
 # tracking_system: file-system
@@ -11,6 +12,7 @@
 #   - backlog: Epic exists in epic file but not contexted
 #   - in-progress: Epic being actively worked on
 #   - done: Epic completed
+#   - needs-expansion: Done but needs additional stories per Course Correction
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
@@ -30,52 +32,64 @@
 # - Dev moves story to 'in-progress', then 'review', then 'done'
 # - SM typically drafts next story ONLY after previous one is 'done'
 
-generated: 2025-12-08
+generated: 2025-12-20
+updated: 2026-02-04
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 development_status:
-  # Epic 1: ACM Data Extraction Pipeline (P0)
-  epic-1: in-progress
+  # Epic 1: ACM Data Extraction Pipeline (P0) - NEEDS EXPANSION
+  # 2026-02-04: Added E1-S8, E1-S9 for Victorian BAR support
+  epic-1: needs-expansion  # 7/9 stories complete, 2 new stories added
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
   e1-s4-create-acm-api-endpoints: done  # Extended with POST/PUT/DELETE for full CRUD
-  e1-s5-integrate-acm-extraction-into-source-processing: ready-for-dev
+  e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
+  e1-s6-configure-local-embedding-pipeline: done  # Code review passed 2026-01-07
+  e1-s7-ai-powered-acm-extraction: done  # Completed 2026-01-07 - all 10 review items addressed
+  e1-s8-site-configuration-data-entry: backlog  # NEW 2026-02-04 - Victorian BAR
+  e1-s9-acm-product-classification: backlog  # NEW 2026-02-04 - Victorian BAR
   epic-1-retrospective: optional
 
-  # Epic 2: AG Grid Spreadsheet Integration (P0)
-  epic-2: in-progress
+  # Epic 2: AG Grid Spreadsheet Integration (P0) - NEEDS EXPANSION
+  # 2026-02-04: Added E2-S8 for column visibility management
+  epic-2: needs-expansion  # 7/8 stories complete, 1 new story added
   e2-s1-install-and-configure-ag-grid: done  # ag-grid-community + ag-grid-react installed
   e2-s2-create-acmspreadsheet-component: done  # ACMGrid component with full CRUD
   e2-s3-implement-column-sorting-and-filtering: done  # Built into AG Grid config
-  e2-s4-implement-row-grouping: drafted
+  e2-s4-implement-row-grouping: done  # Building/Room grouping with Expand/Collapse All buttons
   e2-s5-implement-risk-status-color-coding: done  # RiskStatusRenderer with badges
-  e2-s6-add-search-bar-to-spreadsheet: drafted
+  e2-s6-add-search-bar-to-spreadsheet: done  # Code review passed 2025-12-20
+  e2-s7-implement-building-tab-navigation: done  # Code review passed 2026-01-07
+  e2-s8-column-visibility-management: backlog  # NEW 2026-02-04 - Victorian BAR
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
-  epic-3: backlog
-  e3-s1-make-cells-clickable: drafted
-  e3-s2-create-pdf-viewer-modal: drafted
-  e3-s3-implement-acm-citation-reference-type: drafted
-  e3-s4-store-page-numbers-during-extraction: drafted
+  epic-3: done  # All 4 stories complete 2026-01-08
+  e3-s1-make-cells-clickable: done  # Code review passed 2026-01-08
+  e3-s2-create-pdf-viewer-modal: done  # Code review passed 2026-01-08
+  e3-s3-implement-acm-citation-reference-type: done  # Code review passed 2026-01-08
+  e3-s4-store-page-numbers-during-extraction: done  # Code review passed 2026-01-08
   epic-3-retrospective: optional
 
   # Epic 4: Chat with ACM Context (P0)
-  epic-4: backlog
-  e4-s1-add-acm-records-to-chat-context: drafted
-  e4-s2-create-acm-context-toggle: drafted
-  e4-s3-generate-acm-aware-chat-responses: drafted
-  e4-s4-support-acm-specific-questions: drafted
+  epic-4: done  # All 4 stories complete 2026-01-11
+  e4-s1-add-acm-records-to-chat-context: done  # Code review passed 2026-01-08
+  e4-s2-create-acm-context-toggle: done  # Code review passed 2026-01-09
+  e4-s3-generate-acm-aware-chat-responses: done  # Code review passed 2026-01-11
+  e4-s4-support-acm-specific-questions: done  # Code review passed 2026-01-11
   epic-4-retrospective: optional
 
-  # Epic 5: Export Functionality (P1)
-  epic-5: in-progress
-  e5-s1-implement-csv-export: done  # Export CSV button in ACMToolbar
-  e5-s2-implement-excel-export: drafted
+  # Epic 5: Export Functionality (PROMOTED to P0) - NEEDS EXPANSION
+  # 2026-02-04: Promoted from P1 to P0, added E5-S3, E5-S4 for BAR template support
+  epic-5: needs-expansion  # 2/4 stories complete, 2 new stories added
+  e5-s1-implement-csv-export: done  # Export CSV button in ACMToolbar - needs update for BAR columns
+  e5-s2-implement-excel-export: done  # Excel export with formatting - needs update for BAR format
+  e5-s3-bar-template-management: backlog  # NEW 2026-02-04 - Victorian BAR
+  e5-s4-export-field-mapping-configuration: backlog  # NEW 2026-02-04 - Victorian BAR
   epic-5-retrospective: optional
 
   # Epic 6: Rebranding to ACM-AI (P1)
@@ -86,38 +100,84 @@ development_status:
   e6-s4-update-landing-home-page: done  # Implemented 2025-12-18
   epic-6-retrospective: optional
 
-  # Epic 7: Upload Wizard (P0)
-  epic-7: backlog
-  e7-s1-create-wizard-framework-component: drafted
-  e7-s2-file-upload-step-with-drag-drop: drafted
-  e7-s3-document-type-detection-step: drafted
-  e7-s4-processing-options-step: drafted
-  e7-s5-review-confirm-step: drafted
-  e7-s6-upload-progress-results-step: drafted
+  # Epic 7: Upload Wizard (P0) - NEEDS EXPANSION
+  # 2026-02-04: Added E7-S7 for site configuration during upload
+  epic-7: needs-expansion  # 6/7 stories complete, 1 new story added
+  e7-s1-create-wizard-framework-component: done  # Code review passed 2026-01-11
+  e7-s2-file-upload-step-with-drag-drop: done  # Code review passed 2026-01-11
+  e7-s3-document-type-detection-step: done  # Code review passed 2026-01-11
+  e7-s4-processing-options-step: done  # Code review passed 2026-01-11
+  e7-s5-review-confirm-step: done  # Code review passed 2026-01-11
+  e7-s6-upload-progress-results-step: done  # Code review passed 2026-01-11
+  e7-s7-site-configuration-during-upload: backlog  # NEW 2026-02-04 - Victorian BAR
   epic-7-retrospective: optional
 
   # Epic 8: UI Refresh - Bento Grid Design (P1)
-  epic-8: backlog
-  e8-s1-install-ui-ux-pro-max-skill: drafted
-  e8-s2-define-acm-ai-design-tokens: drafted
-  e8-s3-create-bento-card-component: drafted
-  e8-s4-create-bento-grid-layout-component: drafted
-  e8-s5-redesign-dashboard-home-page: drafted
-  e8-s6-redesign-sources-list-page: drafted
-  e8-s7-redesign-source-detail-page: drafted
+  epic-8: in-progress
+  e8-s1-install-ui-ux-pro-max-skill: done  # Code review passed 2026-01-11
+  e8-s2-define-acm-ai-design-tokens: done  # Code review passed 2026-01-11
+  e8-s3-create-bento-card-component: done  # Code review passed 2026-01-11
+  e8-s4-create-bento-grid-layout-component: done  # Code review passed 2026-01-11
+  e8-s5-redesign-dashboard-home-page: done  # Code review passed 2026-01-12
+  e8-s6-redesign-sources-list-page: done  # Code review passed 2026-01-12
+  e8-s7-redesign-source-detail-page: done  # Code review passed 2026-01-12
   e8-s8-update-navigation-sidebar: drafted
   e8-s9-typography-font-updates: drafted
   e8-s10-dark-mode-refinement: drafted
   epic-8-retrospective: optional
 
+  # Epic 9: Document Library Management (P0)
+  epic-9: backlog
+  e9-s1-create-document-library-view: drafted  # Tech-spec created
+  e9-s2-document-processing-status-dashboard: drafted  # Tech-spec created
+  e9-s3-document-actions-and-bulk-operations: drafted  # Tech-spec created
+  epic-9-retrospective: optional
+
+  # Epic 10: ACM-AI UI Simplification (P0)
+  epic-10: backlog
+  e10-s1-simplify-navigation: drafted  # Tech-spec created
+  epic-10-retrospective: optional
+
 # SUMMARY:
 # ========
-# Total Epics: 8 (1 done, 4 in-progress, 3 backlog)
-# Total Stories: 41
-# Stories Done: 13  # E1-S1,S2,S3,S4 + E2-S1,S2,S3,S5 + E5-S1 + E6-S1,S2,S3,S4
-# Stories Ready for Dev: 1  # E1-S5
-# Stories Drafted: 27
-# Stories Backlog: 0
+# Total Epics: 10 (3 done, 4 needs-expansion, 1 in-progress, 2 backlog)
+# Total Stories: 54 (was 48, +6 new Victorian BAR stories)
+# Stories Done: 41  # E1(7) + E2(7) + E3(4) + E4(4) + E5(2) + E6(4) + E7(6) + E8(7)
+# Stories In Review: 0
+# Stories Ready for Dev: 0
+# Stories Drafted: 7  # E8 (s8-s10), E9 (s1-s3), E10 (s1)
+# Stories Backlog: 6  # NEW Victorian BAR stories
 #
-# Last Updated: 2025-12-18
-# Notes: Epic 6 (Rebranding) COMPLETE! All 4 stories done.
+# Last Updated: 2026-02-04
+#
+# Progress: 76% complete (41/54 stories done)
+#
+# COURSE CORRECTION (2026-02-04):
+# ==============================
+# Sprint Change Proposal approved - Victorian BAR Format Expansion
+# - Added 6 new stories across 4 epics
+# - E5 promoted from P1 to P0 (BAR Excel export critical)
+# - PRD, Architecture, Epics documents updated
+# - See: _bmad-output/sprint-change-proposal-20260204.md
+#
+# NEW STORIES ADDED:
+# - E1-S8: Site Configuration Data Entry (P0)
+# - E1-S9: ACM Product Classification (P0)
+# - E2-S8: Column Visibility Management (P1)
+# - E5-S3: BAR Template Management (P1)
+# - E5-S4: Export Field Mapping Configuration (P1)
+# - E7-S7: Site Configuration During Upload (P0)
+#
+# NEXT RECOMMENDED ACTIONS:
+# ========================
+# Option A: Continue E8 (UI Refresh)
+#   - E8-S8: Update Navigation Sidebar (drafted)
+#
+# Option B: Start Victorian BAR stories (P0 priority)
+#   - E1-S8: Site Configuration Data Entry (blocks E7-S7)
+#   - Recommended sequence: E1-S8 → E7-S7 → E1-S9 → E5-S3 → E5-S4 → E2-S8
+#
+# Notes:
+# - Epic 1-7 original stories COMPLETE!
+# - Victorian BAR expansion adds 6 new P0/P1 stories
+# - E5-S1, E5-S2 may need updates to support expanded BAR columns (47 fields)

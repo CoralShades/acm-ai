@@ -60,7 +60,77 @@
 }
 
 :root {
+  /* ========================================
+     ACM-AI DESIGN TOKENS
+     ======================================== */
+
+  /* Border Radius */
   --radius: 0.65rem;
+
+  /* Typography Scale */
+  /* Note: --font-sans and --font-mono are defined in @theme inline using Geist fonts */
+  --font-data: 'Tabular Nums', ui-monospace, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Spacing Scale (base: 4px) */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Shadow / Elevation Tokens */
+  --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.1), 0 1px 2px oklch(0% 0 0 / 0.06);
+  --shadow-md: 0 4px 6px oklch(0% 0 0 / 0.1), 0 2px 4px oklch(0% 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px oklch(0% 0 0 / 0.1), 0 4px 6px oklch(0% 0 0 / 0.05);
+  --shadow-xl: 0 20px 25px oklch(0% 0 0 / 0.1), 0 10px 10px oklch(0% 0 0 / 0.04);
+
+  /* Transition Tokens */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Z-Index Scale */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-modal: 30;
+  --z-popover: 40;
+  --z-toast: 50;
+
+  /* ========================================
+     COLOR TOKENS
+     ======================================== */
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -109,6 +179,13 @@
 }
 
 .dark {
+  /* Dark mode shadow overrides */
+  --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.2);
+  --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.3), 0 1px 2px oklch(0% 0 0 / 0.2);
+  --shadow-md: 0 4px 6px oklch(0% 0 0 / 0.3), 0 2px 4px oklch(0% 0 0 / 0.2);
+  --shadow-lg: 0 10px 15px oklch(0% 0 0 / 0.3), 0 4px 6px oklch(0% 0 0 / 0.2);
+  --shadow-xl: 0 20px 25px oklch(0% 0 0 / 0.35), 0 10px 10px oklch(0% 0 0 / 0.2);
+
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
@@ -156,17 +233,96 @@
   --risk-presumed-foreground: oklch(0.85 0.08 300);
 }
 
+/* AG Grid Theme Customization */
+.ag-theme-custom {
+  --ag-background-color: var(--background);
+  --ag-foreground-color: var(--foreground);
+  --ag-header-background-color: var(--muted);
+  --ag-header-foreground-color: var(--foreground);
+  --ag-odd-row-background-color: var(--background);
+  --ag-row-hover-color: var(--accent);
+  --ag-selected-row-background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+  --ag-border-color: var(--border);
+  --ag-cell-horizontal-border: 1px solid var(--border);
+  --ag-font-family: inherit;
+  --ag-font-size: 14px;
+  --ag-row-height: 40px;
+  --ag-header-height: 44px;
+}
+
+/* Dark mode support for AG Grid */
+.dark .ag-theme-custom {
+  --ag-background-color: var(--background);
+  --ag-foreground-color: var(--foreground);
+  --ag-header-background-color: var(--muted);
+  --ag-odd-row-background-color: var(--card);
+}
+
+/* Clickable cell styles for ACM Grid */
+.ag-theme-alpine .ag-cell {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ag-theme-alpine .ag-cell:hover {
+  /* Fallback for browsers without color-mix() support */
+  background-color: rgba(99, 102, 241, 0.08);
+  /* Modern browsers with color-mix() support */
+  background-color: color-mix(in oklch, var(--primary) 8%, transparent);
+}
+
+.ag-theme-alpine .ag-row-group .ag-cell {
+  cursor: default;
+}
+
+.ag-theme-alpine .ag-row-group .ag-cell:hover {
+  background-color: transparent;
+}
+
+/* Actions column should not show clickable cursor */
+.ag-theme-alpine .ag-cell[col-id="actions"],
+.ag-theme-alpine .ag-pinned-right-cols-container .ag-cell {
+  cursor: default;
+}
+
+.ag-theme-alpine .ag-cell[col-id="actions"]:hover,
+.ag-theme-alpine .ag-pinned-right-cols-container .ag-cell:hover {
+  background-color: transparent;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  
+
   html {
     @apply antialiased;
   }
-  
+
   body {
     @apply bg-background text-foreground transition-colors;
+  }
+
+  /* Ensure pointer cursor for interactive elements */
+  button,
+  [role="button"],
+  a,
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  select,
+  summary,
+  [tabindex]:not([tabindex="-1"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  [type="button"]:disabled,
+  [type="submit"]:disabled,
+  [type="reset"]:disabled,
+  select:disabled {
+    cursor: not-allowed;
   }
   
   /* Ensure proper theme inheritance for popovers and dropdowns */

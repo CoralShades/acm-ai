@@ -131,7 +131,10 @@ docs/custom_gpt
 doc_exports/
 
 specs/
-.claude
+
+# Claude Code - keep commands and rules tracked, ignore local settings
+.claude/sessions/
+.claude/settings.local.json
 
 .playwright-mcp/
 
@@ -139,8 +142,29 @@ specs/
 .bmad/
 .github/agents
 nul
+.agent/
+.codex/
+.opencode/
+_bmad/
+.gemini/
 
 
 #node modules
 node_modules/
 .vercel
+frontend/.next-dev/cache/*
+docker-compose.override.yml
+
+# Auto Claude data directory
+.auto-claude/
+
+# Auto Claude generated files
+.auto-claude-security.json
+.auto-claude-status
+.claude_settings.json
+.worktrees/
+.security-key
+logs/security/
+
+# Temporary Claude working directories
+tmpclaude-*-cwd/
