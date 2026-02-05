@@ -170,3 +170,7 @@ logs/security/
 tmpclaude-*-cwd/
 tmpclaude-*
 _debug/acm_prompts/*
+_bmad-output/bmb-creations/*
+.rovodev/*
+_bmad/bmb/*
+.claude/commands/bmad/bmb/*
