@@ -1,0 +1,23 @@
+INSTRUCTIONS FOR USING
+=_xlfn.CONCAT('DATA ENTRY'!C1:E2)
+Warnings
+* Do not use CTRL-C and CTRL-V to copy and paste as this will corrupt the spreadsheet auto-formatting function
+* Error messages may appear if you copy and paste data from an older version of excel—call 03 9214 7102 if this happens
+* Incorrect values will appear in red font—double-check your entry if this happens
+How-to-guide to data entry
+* Watch the induction video saved on your USB stick
+* Use the A3 spreadsheet instruction sheet to jog your memory
+* Refer to the glossary in the instruction manual and/or the fact sheet for definitions of terms
+* Click on the EXAMPLES tab for tricky entries e.g. safes
+* Call 03 9214 7102 if you need help
+Key points
+* Go to the DATA ENTRY tab to start
+* Complete all required fields—columns A, B, E-L, N-AH
+* Complete optional fields if relevant—columns C, D, M, AI
+* If you answer ‘negative’ or ‘assumed negative’ for the sample analysis in column AB, leave columns AD and AE blank
+* Stop entering data if the building is leased (column L)
+* Use dropdown arrows to select options
+* Do not delete pre-populated data—enter a comment (column AI) if information is incorrect
+Please note
+* Any asbestos containing material (ACM) that has been entirely removed does not need to be entered into this spreadsheet
+* Instead, please supply any clearance certificates you have for the building and/or site

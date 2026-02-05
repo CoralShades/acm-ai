@@ -1,0 +1,820 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Asbestos Register Row (BAR) - Machine Readable Spec",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "Department": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column A"
+    },
+    "Agency": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column B"
+    },
+    "Sub Agency": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column C"
+    },
+    "Site Name (if applicable)": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column D"
+    },
+    "Building Name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column E"
+    },
+    "Building Type": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column F"
+    },
+    "Building Address": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column G"
+    },
+    "Suburb": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column H"
+    },
+    "Postcode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column I"
+    },
+    "Owned or Leased": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column J",
+      "enum": [
+        "Owned",
+        "Leased",
+        null
+      ]
+    },
+    "Building Unique ID": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column K"
+    },
+    "Frequency of use": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column L",
+      "enum": [
+        "Every day",
+        "Every day with intermittent breaks",
+        "Once every 3–5 days",
+        "Every 2–3 weeks",
+        "Once every 2–3 months",
+        "Annually or less frequently",
+        null
+      ]
+    },
+    "Public Access?": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column M",
+      "enum": [
+        "YES",
+        "NO",
+        null
+      ]
+    },
+    "Date of Inspection": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "Date value (YYYY-MM-DD preferred). Source: Excel N."
+    },
+    "Estimated Year Built": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Numeric value. Source: Excel O."
+    },
+    "Est. Building Size (m2)": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Numeric value. Source: Excel P."
+    },
+    "Number of Levels": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Numeric value. Source: Excel Q."
+    },
+    "Construction Type": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column R"
+    },
+    "Roof Type": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column S"
+    },
+    "Internal / External": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column T",
+      "enum": [
+        "Internal",
+        "External",
+        "External & Internal",
+        null
+      ]
+    },
+    "Level": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column U"
+    },
+    "Room or Area": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column V"
+    },
+    "Location in Room": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column W"
+    },
+    "Specific Item/ACM Name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column X"
+    },
+    "Friability of material": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column Y",
+      "enum": [
+        "Non-friable",
+        "Friable",
+        null
+      ]
+    },
+    "FIRABILITY NAME EXCEL": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column Z"
+    },
+    "ACM Product Group": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AA"
+    },
+    "ACM GROUP NAME EXCEL": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AB"
+    },
+    "ACM Product Type": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AC"
+    },
+    "NATA Endorsed Sample number (if available)": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AD"
+    },
+    "Sample Result": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AE",
+      "enum": [
+        "Positive",
+        "Assumed Positive",
+        "Negative",
+        "Assumed Negative",
+        null
+      ]
+    },
+    "Identifying Hygiene or Consulting Company": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AF"
+    },
+    "Condition": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AG",
+      "enum": [
+        "Poor",
+        "Fair",
+        "Good",
+        "Unknown",
+        "N/A (negative)",
+        "N/A (assumed negative)",
+        null
+      ]
+    },
+    "Disturbance Potential": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AH",
+      "enum": [
+        "High",
+        "Moderate",
+        "Low",
+        "Unknown",
+        "N/A (negative)",
+        "N/A (assumed negative)",
+        null
+      ]
+    },
+    "Quantity": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Numeric value. Source: Excel AI."
+    },
+    "Labelled": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AJ",
+      "enum": [
+        "YES",
+        "NO",
+        null
+      ]
+    },
+    "Label Details": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AK"
+    },
+    "Hygienist Recommendations": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AL"
+    },
+    "Additional Comments": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AM"
+    },
+    "PSB Supplied ACM ID": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AN"
+    },
+    "Assumed Removed?": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AO",
+      "enum": [
+        "YES",
+        "NO",
+        null
+      ]
+    },
+    "Date of Removal": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "Date value (YYYY-MM-DD preferred). Source: Excel AP."
+    },
+    "Quantity Removed": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Numeric value. Source: Excel AQ."
+    },
+    "Asbestos Removal Notification No": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AR"
+    },
+    "EPA Waste Transport Certificate No": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AS"
+    },
+    "Removal Comments": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AT"
+    },
+    "Photo Reference Number": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Excel column AU"
+    }
+  },
+  "required": [
+    "Department",
+    "Agency",
+    "Building Name",
+    "Building Type",
+    "Building Address",
+    "Suburb",
+    "Postcode",
+    "Owned or Leased",
+    "Building Unique ID",
+    "Frequency of use",
+    "Date of Inspection",
+    "Estimated Year Built",
+    "Est. Building Size (m2)",
+    "Number of Levels",
+    "Construction Type",
+    "Roof Type",
+    "Internal / External",
+    "Level",
+    "Room or Area",
+    "Location in Room",
+    "Specific Item/ACM Name",
+    "Friability of material",
+    "FIRABILITY NAME EXCEL",
+    "ACM Product Group",
+    "ACM GROUP NAME EXCEL",
+    "ACM Product Type",
+    "NATA Endorsed Sample number (if available)",
+    "Sample Result",
+    "Identifying Hygiene or Consulting Company",
+    "Condition",
+    "Disturbance Potential"
+  ],
+  "x_excel": {
+    "source_workbook": "Clucth_Alexandra_District_BAR.xlsm",
+    "header_row": 3,
+    "required_columns_rule": "Required: A, B, E-L, N-AH; Optional: C, D, M, AI (from Instructions sheet).",
+    "field_specs": [
+      {
+        "col_index": 1,
+        "col_letter": "A",
+        "name": "Department",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 2,
+        "col_letter": "B",
+        "name": "Agency",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 3,
+        "col_letter": "C",
+        "name": "Sub Agency",
+        "required": false,
+        "optional": true,
+        "recommended": false
+      },
+      {
+        "col_index": 4,
+        "col_letter": "D",
+        "name": "Site Name (if applicable)",
+        "required": false,
+        "optional": true,
+        "recommended": false
+      },
+      {
+        "col_index": 5,
+        "col_letter": "E",
+        "name": "Building Name",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 6,
+        "col_letter": "F",
+        "name": "Building Type",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 7,
+        "col_letter": "G",
+        "name": "Building Address",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 8,
+        "col_letter": "H",
+        "name": "Suburb",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 9,
+        "col_letter": "I",
+        "name": "Postcode",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 10,
+        "col_letter": "J",
+        "name": "Owned or Leased",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 11,
+        "col_letter": "K",
+        "name": "Building Unique ID",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 12,
+        "col_letter": "L",
+        "name": "Frequency of use",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 13,
+        "col_letter": "M",
+        "name": "Public Access?",
+        "required": false,
+        "optional": true,
+        "recommended": false
+      },
+      {
+        "col_index": 14,
+        "col_letter": "N",
+        "name": "Date of Inspection",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 15,
+        "col_letter": "O",
+        "name": "Estimated Year Built",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 16,
+        "col_letter": "P",
+        "name": "Est. Building Size (m2)",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 17,
+        "col_letter": "Q",
+        "name": "Number of Levels",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 18,
+        "col_letter": "R",
+        "name": "Construction Type",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 19,
+        "col_letter": "S",
+        "name": "Roof Type",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 20,
+        "col_letter": "T",
+        "name": "Internal / External",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 21,
+        "col_letter": "U",
+        "name": "Level",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 22,
+        "col_letter": "V",
+        "name": "Room or Area",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 23,
+        "col_letter": "W",
+        "name": "Location in Room",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 24,
+        "col_letter": "X",
+        "name": "Specific Item/ACM Name",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 25,
+        "col_letter": "Y",
+        "name": "Friability of material",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 26,
+        "col_letter": "Z",
+        "name": "FIRABILITY NAME EXCEL",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 27,
+        "col_letter": "AA",
+        "name": "ACM Product Group",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 28,
+        "col_letter": "AB",
+        "name": "ACM GROUP NAME EXCEL",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 29,
+        "col_letter": "AC",
+        "name": "ACM Product Type",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 30,
+        "col_letter": "AD",
+        "name": "NATA Endorsed Sample number (if available)",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 31,
+        "col_letter": "AE",
+        "name": "Sample Result",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 32,
+        "col_letter": "AF",
+        "name": "Identifying Hygiene or Consulting Company",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 33,
+        "col_letter": "AG",
+        "name": "Condition",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 34,
+        "col_letter": "AH",
+        "name": "Disturbance Potential",
+        "required": true,
+        "optional": false,
+        "recommended": false
+      },
+      {
+        "col_index": 35,
+        "col_letter": "AI",
+        "name": "Quantity",
+        "required": false,
+        "optional": true,
+        "recommended": true
+      },
+      {
+        "col_index": 36,
+        "col_letter": "AJ",
+        "name": "Labelled",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 37,
+        "col_letter": "AK",
+        "name": "Label Details",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 38,
+        "col_letter": "AL",
+        "name": "Hygienist Recommendations",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 39,
+        "col_letter": "AM",
+        "name": "Additional Comments",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 40,
+        "col_letter": "AN",
+        "name": "PSB Supplied ACM ID",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 41,
+        "col_letter": "AO",
+        "name": "Assumed Removed?",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 42,
+        "col_letter": "AP",
+        "name": "Date of Removal",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 43,
+        "col_letter": "AQ",
+        "name": "Quantity Removed",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 44,
+        "col_letter": "AR",
+        "name": "Asbestos Removal Notification No",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 45,
+        "col_letter": "AS",
+        "name": "EPA Waste Transport Certificate No",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 46,
+        "col_letter": "AT",
+        "name": "Removal Comments",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      },
+      {
+        "col_index": 47,
+        "col_letter": "AU",
+        "name": "Photo Reference Number",
+        "required": false,
+        "optional": false,
+        "recommended": true
+      }
+    ]
+  }
+}
