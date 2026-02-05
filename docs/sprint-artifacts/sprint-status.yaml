@@ -51,7 +51,7 @@ development_status:
   e1-s5-integrate-acm-extraction-into-source-processing: done  # Implemented 2025-12-18
   e1-s6-configure-local-embedding-pipeline: done  # Code review passed 2026-01-07
   e1-s7-ai-powered-acm-extraction: done  # Completed 2026-01-07 - all 10 review items addressed
-  e1-s8-site-configuration-data-entry: backlog  # NEW 2026-02-04 - Victorian BAR
+  e1-s8-site-configuration-data-entry: ready-for-dev  # Tech-spec created 2026-02-05
   e1-s9-acm-product-classification: backlog  # NEW 2026-02-04 - Victorian BAR
   e1-s10-mineru-table-extraction: done  # NEW 2026-02-05 - Research integration (auto-claude)
   e1-s11-extensible-consultant-parser-framework: backlog  # NEW 2026-02-05 - Research integration
@@ -148,9 +148,9 @@ development_status:
 # Total Stories: 57 (was 54, +3 new research integration stories)
 # Stories Done: 42  # E1(9) + E2(7) + E3(4) + E4(4) + E5(2) + E6(4) + E7(6) + E8(7)
 # Stories In Review: 0
-# Stories Ready for Dev: 0
+# Stories Ready for Dev: 1  # E1-S8 (Site Configuration)
 # Stories Drafted: 7  # E8 (s8-s10), E9 (s1-s3), E10 (s1)
-# Stories Backlog: 8  # Victorian BAR (6) + Research Integration (2)
+# Stories Backlog: 7  # Victorian BAR (5) + Research Integration (2)
 #
 # Last Updated: 2026-02-05
 #
