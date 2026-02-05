@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-04"
+updated: "2026-02-05"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -58,4 +58,15 @@ workflow_status:
 #   - Architecture updated: Multi-format extraction, expanded API types
 #   - Epics updated: 6 new stories added (E1-S8, E1-S9, E2-S8, E5-S3, E5-S4, E7-S7)
 #   - E5 promoted from P1 to P0 (BAR Excel export critical)
-#   - Sprint status to be updated with new stories
+#   - Sprint status updated with new stories
+# 2026-02-05: Research Integration - MinerU & Parser Framework
+#   - E1-S10 completed via auto-claude: MinerU table extraction with merged cell support
+#   - Implementation: 476-line MineruTableExtractor class, 37 unit tests, 17 integration tests
+#   - Performance: <30s for 20-page PDFs (validated via code analysis)
+#   - QA approved: 245/245 tests passing, zero regressions
+#   - E1-S11, E1-S12 added to backlog: Extensible parser framework, wording normalization
+#   - E1-S3 updated: Two-stage extraction pipeline (EXTRACT → INTERPRET)
+#   - Documentation: extraction-pipeline.md, product-taxonomy.md, bar-schema.md added
+#   - Tech-spec created: docs/sprint-artifacts/e1-s10-mineru-table-extraction.md
+#   - Sprint change proposal updated with research integration section
+#   - References: _bmad-output/research-integration/, auto-claude spec 001
