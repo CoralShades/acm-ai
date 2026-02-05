@@ -3,9 +3,11 @@ Unit tests for the ACM Register extraction module.
 
 Tests the extraction of ACM records from Docling markdown output,
 including table detection, header parsing, and row extraction.
+Also tests the fallback mechanism from MinerU to markdown parsing.
 """
 
 import pytest
+from unittest.mock import patch, MagicMock
 
 
 class TestExtractACMRecords:
@@ -437,6 +439,180 @@ class TestEdgeCases:
         assert len(result) == 2
         assert result[0]["building_id"] == "B1"
         assert result[1]["building_id"] == "B2"
+
+
+class TestMineruFallback:
+    """Test suite for MinerU extraction with fallback to markdown parsing."""
+
+    @pytest.fixture
+    def sample_markdown(self):
+        """Sample markdown content for testing fallback."""
+        return """# Test School - Asbestos Register
+
+## Building: B00A - Admin Block - 1924
+
+#### Room: B00A-R0001 - Main Office - 45.5m²
+
+| Product | Material Description | Extent | Location | Friable | Condition | Risk | Result |
+|---------|---------------------|--------|----------|---------|-----------|------|--------|
+| Floor Tiles | Vinyl asbestos tiles | 50m² | Floor | Non Friable | Good | Low | Detected |
+"""
+
+    def test_backward_compatibility_markdown_only(self, sample_markdown):
+        """Test that existing code calling with just markdown still works."""
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        # Call without pdf_path or use_mineru - should use markdown parsing
+        result = extract_acm_records(sample_markdown, "source:123")
+
+        assert len(result) == 1
+        assert result[0]["product"] == "Floor Tiles"
+        assert result[0]["building_id"] == "B00A"
+
+    def test_use_mineru_disabled(self, sample_markdown):
+        """Test that use_mineru=False forces markdown parsing."""
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        # Even with pdf_path provided, should skip MinerU if disabled
+        result = extract_acm_records(
+            sample_markdown,
+            "source:123",
+            pdf_path="/fake/path.pdf",
+            use_mineru=False
+        )
+
+        assert len(result) == 1
+        assert result[0]["product"] == "Floor Tiles"
+
+    def test_no_pdf_path_uses_markdown(self, sample_markdown):
+        """Test that missing pdf_path falls back to markdown parsing."""
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        # use_mineru=True but no pdf_path - should use markdown
+        result = extract_acm_records(
+            sample_markdown,
+            "source:123",
+            pdf_path=None,
+            use_mineru=True
+        )
+
+        assert len(result) == 1
+        assert result[0]["product"] == "Floor Tiles"
+
+    @patch("open_notebook.extractors.acm_extractor.MINERU_AVAILABLE", False)
+    def test_mineru_not_available_fallback(self, sample_markdown):
+        """Test fallback when MinerU is not installed."""
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        result = extract_acm_records(
+            sample_markdown,
+            "source:123",
+            pdf_path="/fake/path.pdf",
+            use_mineru=True
+        )
+
+        assert len(result) == 1
+        assert result[0]["product"] == "Floor Tiles"
+
+    @patch("open_notebook.extractors.acm_extractor.MINERU_AVAILABLE", True)
+    @patch("open_notebook.extractors.acm_extractor._extract_with_mineru")
+    def test_mineru_returns_empty_fallback(self, mock_mineru, sample_markdown):
+        """Test fallback when MinerU returns no records."""
+        # Mock MinerU to return empty list
+        mock_mineru.return_value = []
+
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        result = extract_acm_records(
+            sample_markdown,
+            "source:123",
+            pdf_path="/fake/path.pdf",
+            use_mineru=True
+        )
+
+        # Should fall back to markdown parsing
+        assert len(result) == 1
+        assert result[0]["product"] == "Floor Tiles"
+        mock_mineru.assert_called_once_with("/fake/path.pdf", "source:123")
+
+    @patch("open_notebook.extractors.acm_extractor.MINERU_AVAILABLE", True)
+    @patch("open_notebook.extractors.acm_extractor._extract_with_mineru")
+    def test_mineru_exception_fallback(self, mock_mineru, sample_markdown):
+        """Test fallback when MinerU raises an exception."""
+        # Mock MinerU to raise an exception
+        mock_mineru.side_effect = Exception("MinerU extraction failed")
+
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        result = extract_acm_records(
+            sample_markdown,
+            "source:123",
+            pdf_path="/fake/path.pdf",
+            use_mineru=True
+        )
+
+        # Should fall back to markdown parsing
+        assert len(result) == 1
+        assert result[0]["product"] == "Floor Tiles"
+        mock_mineru.assert_called_once()
+
+    @patch("open_notebook.extractors.acm_extractor.MINERU_AVAILABLE", True)
+    @patch("open_notebook.extractors.acm_extractor._extract_with_mineru")
+    def test_mineru_success_no_fallback(self, mock_mineru, sample_markdown):
+        """Test that successful MinerU extraction skips fallback."""
+        # Mock MinerU to return records
+        mineru_records = [
+            {
+                "source_id": "source:123",
+                "school_name": "MinerU School",
+                "building_id": "B99",
+                "product": "MinerU Extracted Tiles",
+                "material_description": "From MinerU",
+                "result": "Detected"
+            }
+        ]
+        mock_mineru.return_value = mineru_records
+
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        result = extract_acm_records(
+            sample_markdown,
+            "source:123",
+            pdf_path="/fake/path.pdf",
+            use_mineru=True
+        )
+
+        # Should use MinerU results, not markdown
+        assert len(result) == 1
+        assert result[0]["product"] == "MinerU Extracted Tiles"
+        assert result[0]["building_id"] == "B99"
+        mock_mineru.assert_called_once()
+
+    def test_empty_markdown_with_pdf_path(self):
+        """Test that empty markdown with pdf_path still returns empty (MinerU returns empty too)."""
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        result = extract_acm_records(
+            "",
+            "source:123",
+            pdf_path="/fake/path.pdf",
+            use_mineru=True
+        )
+
+        assert result == []
+
+    def test_none_markdown_with_pdf_path(self):
+        """Test that None markdown with pdf_path still returns empty (MinerU returns empty too)."""
+        from open_notebook.extractors.acm_extractor import extract_acm_records
+
+        result = extract_acm_records(
+            None,
+            "source:123",
+            pdf_path="/fake/path.pdf",
+            use_mineru=True
+        )
+
+        assert result == []
 
 
 if __name__ == "__main__":

@@ -37,9 +37,11 @@ make status
 ```bash
 docker compose up -d surrealdb        # Database on port 8000
 uv run run_api.py                     # API on port 5055
-uv run surreal-commands-worker --import-modules commands  # Background worker
+uv run run_worker.py --import-modules commands  # Background worker (Windows-compatible)
 cd frontend && npm run dev            # Frontend on port 8502
 ```
+
+**Note:** Use `run_worker.py` instead of `surreal-commands-worker` directly on Windows to avoid Unicode encoding errors (see Issue #1).
 
 ### Docker-Only Development
 ```bash
@@ -83,6 +85,9 @@ open_notebook/          # Domain layer
   domain/               # Entity models (Notebook, Source, Note, etc.)
   database/             # Repository pattern for SurrealDB
   graphs/               # LangGraph AI workflows (chat, search, transformations)
+  extractors/           # Data extraction modules
+    acm_extractor.py    # ACM register extraction with MinerU fallback
+    mineru_table_extractor.py  # MinerU-based table extraction
 commands/               # Background job handlers (surreal-commands)
 prompts/                # Jinja2 AI prompt templates
 migrations/             # SurrealDB schema migrations (auto-run on API start)
@@ -106,6 +111,40 @@ frontend/src/
 - **Frontend**: React Query for server state, Zustand for client state, React Hook Form + Zod for forms
 - **AI**: LangGraph workflows in `open_notebook/graphs/` using Esperanto for multi-provider abstraction
 
+### Table Extraction
+
+The system uses **MinerU** (via `magic-pdf` library) for advanced table extraction from PDF documents, with automatic fallback to regex-based parsing:
+
+**Features:**
+- **Merged cell handling**: Correctly parses HTML tables with `colspan` and `rowspan` attributes
+- **Multi-page tables**: Automatically stitches tables spanning multiple pages into a single logical table
+- **Bounding box tracking**: Captures table coordinates `{x, y, width, height, page}` for provenance linking
+- **Performance**: Processes 20-page PDFs in <30 seconds (estimated 10-25s typical)
+
+**Fallback Strategy:**
+```python
+# In acm_extractor.py
+extract_acm_records(
+    markdown_content=None,
+    source_id="source:123",
+    pdf_path="/path/to/file.pdf",  # Enable MinerU extraction
+    use_mineru=True                 # Default: True
+)
+```
+
+1. **MinerU first** (if `use_mineru=True` and `pdf_path` provided): Uses ML-based table extraction
+2. **Regex fallback** (if MinerU fails or unavailable): Falls back to markdown regex parsing
+
+**Configuration:**
+- Set `use_mineru=False` to skip MinerU and use regex directly
+- MinerU is optional - system works without it via fallback
+- Bounding box data is stored in `ACMRecord.table_bbox` field (optional)
+
+**Known Issues:**
+- MinerU dependency (`magic-pdf`) has incomplete dependency declarations - may require manual installation of `opencv-python`, `ultralytics`, `doclayout-yolo` for full functionality
+- Consider Docker containerization for MinerU isolation in production
+- Fallback mechanism ensures data extraction works even if MinerU dependencies are unavailable
+
 ## Database
 
 SurrealDB with core tables: `notebook`, `source`, `note`, `model`, `transformation`, `episode_profile`, `speaker_profile`
@@ -114,6 +153,9 @@ Relationships:
 - `source.notebook_id` → `notebook`
 - `note.notebook_id` → `notebook`
 - Sources and notes can have vector embeddings for semantic search
+
+**ACM-specific fields:**
+- `ACMRecord.table_bbox`: Optional bounding box tracking `{x, y, width, height, page}` for table provenance (populated when using MinerU extraction)
 
 ## Environment Variables
 
@@ -183,3 +225,71 @@ Key docs:
 - `docs/development/api-reference.md` - REST API
 - `docs/development/contributing.md` - Contribution guide
 - `docs/bmm-index.md` - Comprehensive project scan/index
+
+## Claude Code Custom Commands
+
+Custom slash commands are available in `.claude/commands/`:
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Start development services (SurrealDB) |
+| `/stop` | Stop all Docker services |
+| `/status` | Check service health (SurrealDB, API, Frontend) |
+| `/logs [service]` | View service logs |
+| `/build [target]` | Build frontend or run backend checks |
+| `/test [path]` | Run pytest tests |
+
+BMAD workflow commands are also available in `.claude/commands/bmad/`.
+
+## Claude Code Modular Rules
+
+Domain-specific rules in `.claude/rules/`:
+
+| Rule File | Applies To |
+|-----------|------------|
+| `docker-compose.md` | `docker-compose*.yml` files |
+| `python-backend.md` | `**/*.py`, `api/**/*`, `open_notebook/**/*` |
+| `nextjs-frontend.md` | `frontend/**/*.ts`, `frontend/**/*.tsx` |
+| `langgraph-ai.md` | `open_notebook/graphs/**/*`, `prompts/**/*` |
+| `surrealdb.md` | `migrations/**/*`, `open_notebook/database/**/*` |
+| `mcp-servers.md` | `.claude/settings*.json` files |
+
+## MCP Configuration
+
+MCP servers configured in `.claude/settings.json`:
+
+| Server | Purpose | Status |
+|--------|---------|--------|
+| `filesystem` | File operations | Enabled |
+| `memory` | Persistent context | Enabled |
+| `playwright` | Browser automation | Enabled (via settings.local.json) |
+| `chrome-devtools` | Page snapshots | Enabled (via settings.local.json) |
+
+### Local Overrides
+Machine-specific configuration in `.claude/settings.local.json` (gitignored):
+- Custom tool permissions
+- Additional MCP servers (n8n, etc.)
+
+## Docker Local Overrides
+
+For port conflicts (e.g., Supabase using port 8000), create `docker-compose.override.yml` (gitignored):
+
+```yaml
+# Example: Remap SurrealDB to port 8001
+services:
+  surrealdb:
+    ports: !override
+      - "8001:8000"
+    healthcheck: !override
+      test: ["CMD", "/surreal", "isready", "--conn", "http://localhost:8000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+```
+
+Then update `.env` to match:
+```bash
+SURREAL_URL=ws://localhost:8001/rpc
+```
+
+This file is automatically merged by Docker Compose and keeps machine-specific config separate from the shared base.
