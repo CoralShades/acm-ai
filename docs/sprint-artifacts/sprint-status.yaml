@@ -108,7 +108,7 @@ development_status:
   e8-s5-redesign-dashboard-home-page: done  # Code review passed 2026-01-12
   e8-s6-redesign-sources-list-page: done  # Code review passed 2026-01-12
   e8-s7-redesign-source-detail-page: done  # Code review passed 2026-01-12
-  e8-s8-update-navigation-sidebar: drafted
+  e8-s8-update-navigation-sidebar: in-progress  # Started 2026-01-12
   e8-s9-typography-font-updates: drafted
   e8-s10-dark-mode-refinement: drafted
   epic-8-retrospective: optional

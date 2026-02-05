@@ -22,9 +22,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
 import {
+  LayoutDashboard,
   Book,
   Search,
   Mic,
@@ -33,6 +39,7 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
+  ChevronDown,
   Menu,
   FileText,
   Plus,
@@ -41,7 +48,19 @@ import {
   FileWarning,
 } from 'lucide-react'
 
-const navigation = [
+interface NavItem {
+  name: string
+  href: string
+  icon: React.ElementType
+  badge?: string
+}
+
+interface NavSection {
+  title: string
+  items: NavItem[]
+}
+
+const navigation: NavSection[] = [
   {
     title: 'Collect',
     items: [
@@ -58,9 +77,7 @@ const navigation = [
   },
   {
     title: 'Create',
-    items: [
-      { name: 'Podcasts', href: '/podcasts', icon: Mic },
-    ],
+    items: [{ name: 'Podcasts', href: '/podcasts', icon: Mic }],
   },
   {
     title: 'Manage',
@@ -71,15 +88,17 @@ const navigation = [
       { name: 'Advanced', href: '/advanced', icon: Wrench },
     ],
   },
-] as const
+]
 
 type CreateTarget = 'source' | 'notebook' | 'podcast'
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { logout } = useAuth()
-  const { isCollapsed, toggleCollapse } = useSidebarStore()
-  const { openSourceDialog, openNotebookDialog, openPodcastDialog } = useCreateDialogs()
+  const { isCollapsed, expandedSections, toggleCollapse, toggleSection } =
+    useSidebarStore()
+  const { openSourceDialog, openNotebookDialog, openPodcastDialog } =
+    useCreateDialogs()
 
   const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
@@ -101,6 +120,10 @@ export function AppSidebar() {
     }
   }
 
+  // Check if any item in a section is active
+  const isSectionActive = (section: NavSection) =>
+    section.items.some((item) => pathname.startsWith(item.href))
+
   return (
     <TooltipProvider delayDuration={0}>
       <div
@@ -109,9 +132,10 @@ export function AppSidebar() {
           isCollapsed ? 'w-16' : 'w-64'
         )}
       >
+        {/* Header with Logo */}
         <div
           className={cn(
-            'flex h-16 items-center group',
+            'flex h-16 items-center group border-b border-sidebar-border/50',
             isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
           )}
         >
@@ -126,6 +150,7 @@ export function AppSidebar() {
                 size="sm"
                 onClick={toggleCollapse}
                 className="absolute text-sidebar-foreground hover:bg-sidebar-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Expand sidebar"
               >
                 <Menu className="h-4 w-4" />
               </Button>
@@ -138,6 +163,7 @@ export function AppSidebar() {
                 size="sm"
                 onClick={toggleCollapse}
                 className="text-sidebar-foreground hover:bg-sidebar-accent"
+                aria-label="Collapse sidebar"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -147,16 +173,50 @@ export function AppSidebar() {
 
         <nav
           className={cn(
-            'flex-1 space-y-1 py-4',
+            'flex-1 overflow-y-auto py-4',
             isCollapsed ? 'px-2' : 'px-3'
           )}
         >
-          <div
-            className={cn(
-              'mb-4',
-              isCollapsed ? 'px-0' : 'px-3'
+          {/* Dashboard Link - Always visible at top */}
+          <div className={cn('mb-2', isCollapsed ? 'px-0' : 'px-0')}>
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/">
+                    <Button
+                      variant={pathname === '/' ? 'secondary' : 'ghost'}
+                      className={cn(
+                        'w-full justify-center px-2 text-sidebar-foreground',
+                        pathname === '/' &&
+                          'bg-sidebar-accent text-sidebar-accent-foreground'
+                      )}
+                      aria-label="Dashboard"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Dashboard</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Link href="/">
+                <Button
+                  variant={pathname === '/' ? 'secondary' : 'ghost'}
+                  className={cn(
+                    'w-full justify-start gap-3 text-sidebar-foreground',
+                    pathname === '/' &&
+                      'bg-sidebar-accent text-sidebar-accent-foreground'
+                  )}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Dashboard</span>
+                </Button>
+              </Link>
             )}
-          >
+          </div>
+
+          {/* Create Button */}
+          <div className={cn('mb-4', isCollapsed ? 'px-0' : 'px-0')}>
             <DropdownMenu open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
               {isCollapsed ? (
                 <Tooltip>
@@ -167,7 +227,7 @@ export function AppSidebar() {
                         variant="default"
                         size="sm"
                         className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
-                        aria-label="Create"
+                        aria-label="Create new item"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -228,58 +288,105 @@ export function AppSidebar() {
             </DropdownMenu>
           </div>
 
-          {navigation.map((section, index) => (
-            <div key={section.title}>
-              {index > 0 && (
-                <Separator className="my-3" />
-              )}
-              <div className="space-y-1">
-                {!isCollapsed && (
-                  <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
-                    {section.title}
-                  </h3>
-                )}
+          <Separator className="my-2" />
 
-                {section.items.map((item) => {
-                  const isActive = pathname.startsWith(item.href)
-                  const button = (
-                    <Button
-                      variant={isActive ? 'secondary' : 'ghost'}
-                      className={cn(
-                        'w-full gap-3 text-sidebar-foreground',
-                        isActive && 'bg-sidebar-accent text-sidebar-accent-foreground',
-                        isCollapsed ? 'justify-center px-2' : 'justify-start'
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.name}</span>}
-                    </Button>
-                  )
+          {/* Navigation Sections with Collapsible Groups */}
+          {navigation.map((section, index) => {
+            const isExpanded = expandedSections[section.title] ?? true
+            const hasActiveItem = isSectionActive(section)
 
-                  if (isCollapsed) {
-                    return (
-                      <Tooltip key={item.name}>
-                        <TooltipTrigger asChild>
-                          <Link href={item.href}>
-                            {button}
+            return (
+              <div key={section.title}>
+                {index > 0 && <Separator className="my-2" />}
+
+                {isCollapsed ? (
+                  // Collapsed mode: show items directly with tooltips
+                  <div className="space-y-1">
+                    {section.items.map((item) => {
+                      const isActive = pathname.startsWith(item.href)
+                      return (
+                        <Tooltip key={item.name}>
+                          <TooltipTrigger asChild>
+                            <Link href={item.href}>
+                              <Button
+                                variant={isActive ? 'secondary' : 'ghost'}
+                                className={cn(
+                                  'w-full justify-center px-2 text-sidebar-foreground',
+                                  isActive &&
+                                    'bg-sidebar-accent text-sidebar-accent-foreground'
+                                )}
+                                aria-label={item.name}
+                              >
+                                <item.icon className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            {item.name}
+                          </TooltipContent>
+                        </Tooltip>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  // Expanded mode: show collapsible sections
+                  <Collapsible
+                    open={isExpanded}
+                    onOpenChange={() => toggleSection(section.title)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          'w-full justify-between px-3 py-1.5 h-auto text-xs font-semibold uppercase tracking-wider',
+                          hasActiveItem
+                            ? 'text-sidebar-foreground'
+                            : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                        )}
+                      >
+                        <span>{section.title}</span>
+                        <ChevronDown
+                          className={cn(
+                            'h-3 w-3 transition-transform duration-200',
+                            isExpanded && 'rotate-180'
+                          )}
+                        />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1 pt-1">
+                      {section.items.map((item) => {
+                        const isActive = pathname.startsWith(item.href)
+                        return (
+                          <Link key={item.name} href={item.href}>
+                            <Button
+                              variant={isActive ? 'secondary' : 'ghost'}
+                              className={cn(
+                                'w-full justify-start gap-3 text-sidebar-foreground',
+                                isActive &&
+                                  'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                              )}
+                            >
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.name}</span>
+                              {item.badge && (
+                                <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                                  {item.badge}
+                                </span>
+                              )}
+                            </Button>
                           </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">{item.name}</TooltipContent>
-                      </Tooltip>
-                    )
-                  }
-
-                  return (
-                    <Link key={item.name} href={item.href}>
-                      {button}
-                    </Link>
-                  )
-                })}
+                        )
+                      })}
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </nav>
 
+        {/* Footer */}
         <div
           className={cn(
             'border-t border-sidebar-border p-3 space-y-2',
@@ -288,14 +395,15 @@ export function AppSidebar() {
         >
           {/* Command Palette hint */}
           {!isCollapsed && (
-            <div className="px-3 py-1.5 text-xs text-sidebar-foreground/60">
+            <div className="px-3 py-1.5 text-xs text-sidebar-foreground/60 rounded-md bg-sidebar-accent/30">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Command className="h-3 w-3" />
                   Quick actions
                 </span>
                 <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  {isMac ? <span className="text-xs">⌘</span> : <span>Ctrl+</span>}K
+                  {isMac ? <span className="text-xs">⌘</span> : <span>Ctrl+</span>}
+                  K
                 </kbd>
               </div>
               <p className="mt-1 text-[10px] text-sidebar-foreground/40">
@@ -331,6 +439,7 @@ export function AppSidebar() {
                   variant="outline"
                   className="w-full justify-center"
                   onClick={logout}
+                  aria-label="Sign out"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
