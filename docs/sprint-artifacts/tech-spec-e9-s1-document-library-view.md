@@ -2,7 +2,7 @@
 
 > **Story:** E9-S1
 > **Epic:** Document Library Management
-> **Status:** Drafted
+> **Status:** Done
 > **Created:** 2025-12-19
 
 ---
