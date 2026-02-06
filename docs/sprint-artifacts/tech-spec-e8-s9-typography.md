@@ -2,7 +2,7 @@
 
 > **Story:** E8-S9
 > **Epic:** UI Refresh (Bento Grid Design)
-> **Status:** Draft
+> **Status:** Done
 > **Created:** 2025-12-08
 
 ---
