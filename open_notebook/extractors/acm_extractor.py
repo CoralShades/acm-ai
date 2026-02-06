@@ -75,9 +75,17 @@ class ExtractedACMRow:
     risk_status: Optional[str] = None
     result: str = ""
 
-    def to_acm_record_dict(self, source_id: str) -> dict:
-        """Convert to dict suitable for ACMRecord creation."""
-        return {
+    def to_acm_record_dict(self, source_id: str, classify: bool = True) -> dict:
+        """Convert to dict suitable for ACMRecord creation.
+
+        Args:
+            source_id: ID of the source document
+            classify: Whether to run product classification (default: True)
+
+        Returns:
+            Dict ready for ACMRecord creation
+        """
+        result = {
             "source_id": source_id,
             "school_name": self.school_name,
             "school_code": self.school_code,
@@ -99,6 +107,33 @@ class ExtractedACMRow:
             "result": self.result,
             "page_number": self.page_number,
         }
+
+        # Add product classification if enabled
+        if classify:
+            try:
+                from open_notebook.extractors.normalizers.taxonomy import classify_product
+
+                # Combine product and material description for better classification
+                item_description = self.material_description
+                if self.product:
+                    item_description = f"{self.product} {item_description}"
+
+                classification = classify_product(
+                    item_description=item_description,
+                    friability=self.friable,
+                    product=self.product,
+                )
+
+                if classification.product_group and classification.product_type:
+                    result["acm_product_group"] = classification.product_group
+                    result["acm_product_type"] = classification.product_type
+                    result["classification_confidence"] = classification.confidence
+                    result["classification_method"] = classification.method
+                    result["classification_override"] = False
+            except Exception as e:
+                logger.warning(f"Classification failed for {self.product}: {e}")
+
+        return result
 
 
 # ACM table detection - required headers (case-insensitive)
@@ -140,7 +175,8 @@ def extract_acm_records(
     markdown_content: Optional[str],
     source_id: str,
     pdf_path: Optional[str] = None,
-    use_mineru: bool = True
+    use_mineru: bool = True,
+    classify: bool = True,
 ) -> List[dict]:
     """
     Extract ACM records from PDF or Docling markdown output.
@@ -149,12 +185,14 @@ def extract_acm_records(
     1. If use_mineru=True and pdf_path provided: Try MinerU table extraction
     2. If MinerU fails or unavailable: Fall back to regex-based markdown parsing
     3. Log which extraction method was used
+    4. Optionally classify each record using Victorian BAR taxonomy
 
     Args:
         markdown_content: Markdown text from Docling (used as fallback)
         source_id: ID of the source document
         pdf_path: Path to source PDF file (optional, required for MinerU)
         use_mineru: Whether to attempt MinerU extraction (default: True)
+        classify: Whether to run product classification (default: True)
 
     Returns:
         List of dicts ready for ACMRecord creation
@@ -185,12 +223,13 @@ def extract_acm_records(
 
     # Fall back to regex-based markdown parsing
     logger.info(f"Using regex-based markdown extraction for source {source_id}")
-    return _extract_from_markdown(markdown_content, source_id)
+    return _extract_from_markdown(markdown_content, source_id, classify=classify)
 
 
 def _extract_from_markdown(
     markdown_content: Optional[str],
-    source_id: str
+    source_id: str,
+    classify: bool = True,
 ) -> List[dict]:
     """
     Extract ACM records from Docling markdown output (original regex-based method).
@@ -198,6 +237,7 @@ def _extract_from_markdown(
     Args:
         markdown_content: Markdown text from Docling
         source_id: ID of the source document
+        classify: Whether to run product classification (default: True)
 
     Returns:
         List of dicts ready for ACMRecord creation
@@ -282,8 +322,8 @@ def _extract_from_markdown(
 
         i += 1
 
-    # Convert to dicts
-    result = [row.to_acm_record_dict(source_id) for row in extracted_rows]
+    # Convert to dicts with optional classification
+    result = [row.to_acm_record_dict(source_id, classify=classify) for row in extracted_rows]
     logger.info(f"Extracted {len(result)} ACM records from source {source_id}")
     return result
 
