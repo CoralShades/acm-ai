@@ -138,7 +138,13 @@ class TestGetACMRecord:
         mock_record.risk_status = "Low"
         mock_record.result = "Detected"
         mock_record.page_number = 5
-        mock_record.extraction_confidence = 0.95
+        mock_record.extraction_confidence = "high"  # Must be string: "high", "medium", or "low"
+        # Classification fields (E1-S9)
+        mock_record.acm_product_group = None
+        mock_record.acm_product_type = None
+        mock_record.classification_confidence = None
+        mock_record.classification_method = None
+        mock_record.classification_override = None
         mock_record.created = "2024-01-01T00:00:00Z"
         mock_record.updated = "2024-01-01T00:00:00Z"
 
@@ -304,3 +310,305 @@ class TestGetACMStats:
         data = response.json()
         assert data["total_records"] == 0
         assert data["high_risk_count"] == 0
+
+
+# =============================================================================
+# E1-S9: ACM Product Classification API Tests
+# =============================================================================
+
+
+class TestClassifyACMItem:
+    """Test suite for POST /api/acm/classify endpoint."""
+
+    def test_classify_single_item_pattern_match(self, client):
+        """Test classification of single item with pattern match - uses real classifier."""
+        response = client.post(
+            "/api/acm/classify",
+            json={
+                "item_description": "Vinyl floor tiles",
+                "friability": "Non-friable",
+                "use_llm_fallback": False
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["product_group"] == "T3 Vinyl products"
+        assert data["product_type"] == "Vinyl Tiles"
+        assert data["confidence"] == 0.9
+        assert data["method"] == "pattern"
+
+    def test_classify_with_llm_fallback_pattern_match(self, client):
+        """Test classification with LLM fallback enabled - pattern match first."""
+        response = client.post(
+            "/api/acm/classify",
+            json={
+                "item_description": "Fibre cement sheeting",
+                "friability": "Non-friable",
+                "use_llm_fallback": True
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        # Pattern should match, no need for LLM
+        assert data["method"] == "pattern"
+        assert data["product_group"] == "T1 Cement products"
+
+    def test_classify_no_match(self, client):
+        """Test classification when no pattern matches and LLM disabled."""
+        response = client.post(
+            "/api/acm/classify",
+            json={
+                "item_description": "Unknown xyz material 12345",
+                "use_llm_fallback": False
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["product_group"] is None
+        assert data["product_type"] is None
+        assert data["method"] == "none"
+
+    def test_classify_missing_description(self, client):
+        """Test validation error when item_description is missing."""
+        response = client.post(
+            "/api/acm/classify",
+            json={"friability": "Non-friable"}
+        )
+
+        assert response.status_code == 422
+
+    def test_classify_with_product_field(self, client):
+        """Test classification with optional product field."""
+        response = client.post(
+            "/api/acm/classify",
+            json={
+                "item_description": "Wall cladding",
+                "product": "Fibro",
+                "friability": "Non-friable",
+                "use_llm_fallback": False
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["product_group"] == "T1 Cement products"
+
+
+class TestBatchClassifyACM:
+    """Test suite for POST /api/acm/classify/batch endpoint."""
+
+    @patch("api.routers.acm.ACMRecord.get_by_source", new_callable=AsyncMock)
+    def test_batch_classify_success(self, mock_get_records, client):
+        """Test batch classification of all records for a source."""
+        # Mock records - use real classify_product
+        mock_record1 = MagicMock()
+        mock_record1.id = "acm_record:1"
+        mock_record1.product = "Ceiling Tiles"
+        mock_record1.material_description = "Cement ceiling tiles"
+        mock_record1.friable = "Non-friable"
+        mock_record1.acm_product_group = None
+        mock_record1.save = AsyncMock()
+
+        mock_record2 = MagicMock()
+        mock_record2.id = "acm_record:2"
+        mock_record2.product = "Floor Tiles"
+        mock_record2.material_description = "Vinyl floor tiles"
+        mock_record2.friable = "Non-friable"
+        mock_record2.acm_product_group = None
+        mock_record2.save = AsyncMock()
+
+        mock_get_records.return_value = [mock_record1, mock_record2]
+
+        response = client.post(
+            "/api/acm/classify/batch",
+            json={
+                "source_id": "source:abc",
+                "use_llm_fallback": False,
+                "skip_classified": True
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        assert data["classified"] == 2
+        assert data["skipped"] == 0
+        assert data["errors"] == 0
+
+    @patch("api.routers.acm.ACMRecord.get_by_source", new_callable=AsyncMock)
+    def test_batch_classify_empty_source(self, mock_get_records, client):
+        """Test batch classification when source has no records."""
+        mock_get_records.return_value = []
+
+        response = client.post(
+            "/api/acm/classify/batch",
+            json={"source_id": "source:empty"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["classified"] == 0
+
+    @patch("api.routers.acm.ACMRecord.get_by_source", new_callable=AsyncMock)
+    def test_batch_classify_skip_already_classified(self, mock_get_records, client):
+        """Test that skip_classified=True skips already classified records."""
+        # Record already classified
+        mock_record = MagicMock()
+        mock_record.id = "acm_record:1"
+        mock_record.product = "Ceiling Tiles"
+        mock_record.material_description = "Cement ceiling tiles"
+        mock_record.friable = "Non-friable"
+        mock_record.acm_product_group = "T1 Cement products"  # Already classified
+
+        mock_get_records.return_value = [mock_record]
+
+        response = client.post(
+            "/api/acm/classify/batch",
+            json={
+                "source_id": "source:abc",
+                "skip_classified": True
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["skipped"] == 1
+        assert data["classified"] == 0
+
+    def test_batch_classify_missing_source_id(self, client):
+        """Test validation error when source_id is missing."""
+        response = client.post(
+            "/api/acm/classify/batch",
+            json={"use_llm_fallback": True}
+        )
+
+        assert response.status_code == 422
+
+
+class TestGetTaxonomy:
+    """Test suite for GET /api/acm/taxonomy endpoint."""
+
+    def test_get_taxonomy_nonfriable(self, client):
+        """Test getting non-friable taxonomy - uses real taxonomy."""
+        response = client.get("/api/acm/taxonomy?friability=Non-friable")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["friability"] == "Non-friable"
+        assert len(data["groups"]) == 8  # T1-T8 for non-friable
+        # Verify T1 Cement products is present
+        t1_group = next((g for g in data["groups"] if g["pc_code"] == "T1"), None)
+        assert t1_group is not None
+        assert "Flat Sheeting" in t1_group["product_types"]
+
+    def test_get_taxonomy_friable(self, client):
+        """Test getting friable taxonomy."""
+        response = client.get("/api/acm/taxonomy?friability=Friable")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["friability"] == "Friable"
+        assert len(data["groups"]) == 6  # T1-T6 for friable
+
+    def test_get_taxonomy_default(self, client):
+        """Test getting default taxonomy (non-friable)."""
+        response = client.get("/api/acm/taxonomy")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["friability"] == "Non-friable"
+        assert len(data["groups"]) == 8
+
+
+class TestACMRecordResponseClassificationFields:
+    """Test that ACM record responses include classification fields."""
+
+    @patch("api.routers.acm.ACMRecord.get", new_callable=AsyncMock)
+    def test_get_record_includes_classification(self, mock_get, client):
+        """Test that GET /api/acm/records/{id} returns classification fields."""
+        mock_record = MagicMock()
+        mock_record.id = "acm_record:123"
+        mock_record.source_id = "source:abc"
+        mock_record.school_name = "Test School"
+        mock_record.school_code = None
+        mock_record.building_id = "B001"
+        mock_record.building_name = "Main Building"
+        mock_record.building_year = 1970
+        mock_record.building_construction = "Brick"
+        mock_record.room_id = "R101"
+        mock_record.room_name = "Classroom"
+        mock_record.room_area = 100.0
+        mock_record.area_type = "Interior"
+        mock_record.product = "Vinyl Floor Tiles"
+        mock_record.material_description = "Vinyl tiles with asbestos"
+        mock_record.extent = "100%"
+        mock_record.location = "Floor"
+        mock_record.friable = "Non Friable"
+        mock_record.material_condition = "Good"
+        mock_record.risk_status = "Low"
+        mock_record.result = "Detected"
+        mock_record.page_number = 5
+        mock_record.extraction_confidence = "high"
+        # Classification fields
+        mock_record.acm_product_group = "T3 Vinyl products"
+        mock_record.acm_product_type = "Vinyl Tiles"
+        mock_record.classification_confidence = 0.9
+        mock_record.classification_method = "pattern"
+        mock_record.classification_override = False
+        mock_record.created = "2024-01-01T00:00:00Z"
+        mock_record.updated = "2024-01-01T00:00:00Z"
+
+        mock_get.return_value = mock_record
+
+        response = client.get("/api/acm/records/acm_record:123")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify classification fields are present
+        assert data["acm_product_group"] == "T3 Vinyl products"
+        assert data["acm_product_type"] == "Vinyl Tiles"
+        assert data["classification_confidence"] == 0.9
+        assert data["classification_method"] == "pattern"
+        assert data["classification_override"] is False
+
+    @patch("api.routers.acm.repo_query")
+    def test_list_records_includes_classification(self, mock_repo_query, client):
+        """Test that GET /api/acm/records returns classification fields."""
+        mock_repo_query.side_effect = [
+            [{"total": 1}],  # Count query
+            [  # Data query
+                {
+                    "id": "acm_record:123",
+                    "source_id": "source:abc",
+                    "school_name": "Test School",
+                    "building_id": "B001",
+                    "product": "Vinyl Floor Tiles",
+                    "material_description": "Vinyl tiles",
+                    "result": "Detected",
+                    "acm_product_group": "T3 Vinyl products",
+                    "acm_product_type": "Vinyl Tiles",
+                    "classification_confidence": 0.9,
+                    "classification_method": "pattern",
+                    "classification_override": False,
+                },
+            ],
+        ]
+
+        response = client.get("/api/acm/records?source_id=source:abc")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["records"]) == 1
+
+        record = data["records"][0]
+        assert record["acm_product_group"] == "T3 Vinyl products"
+        assert record["acm_product_type"] == "Vinyl Tiles"
+        assert record["classification_confidence"] == 0.9
+        assert record["classification_method"] == "pattern"
+        assert record["classification_override"] is False
