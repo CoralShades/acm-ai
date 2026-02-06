@@ -46,6 +46,7 @@ import {
   Wrench,
   Command,
   FileWarning,
+  Library,
 } from 'lucide-react'
 
 interface NavItem {
@@ -65,6 +66,7 @@ const navigation: NavSection[] = [
     title: 'Collect',
     items: [
       { name: 'Sources', href: '/sources', icon: FileText },
+      { name: 'Documents', href: '/documents', icon: Library },
       { name: 'ACM Register', href: '/acm', icon: FileWarning },
     ],
   },
