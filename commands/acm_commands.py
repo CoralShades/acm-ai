@@ -173,6 +173,11 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
 
         processing_time = time.time() - start_time
 
+        # Convert ConfidenceDistribution model to dict for output serialization
+        conf_dist = None
+        if result.confidence_distribution:
+            conf_dist = result.confidence_distribution.model_dump()
+
         return ACMExtractionOutput(
             success=True,
             source_id=source_id,
@@ -181,7 +186,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
             records_failed=result.records_failed,
             records_embedded=embedded_count,
             processing_time=processing_time,
-            confidence_distribution=result.confidence_distribution,
+            confidence_distribution=conf_dist,
             extraction_method="ai",
         )
 

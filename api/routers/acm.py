@@ -29,9 +29,15 @@ from api.models import (
     ACMSearchResponse,
     ACMSearchResultResponse,
     ACMStatsResponse,
+    AgencyListResponse,
+    ApplyTemplateRequest,
+    SiteConfigRequest,
+    SiteConfigResponse,
+    SiteConfigTemplateResponse,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.site_config import SiteConfig
 
 router = APIRouter()
 
@@ -728,4 +734,197 @@ async def delete_acm_record(record_id: str):
         raise
     except Exception as e:
         logger.error(f"Error deleting ACM record {record_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Site Configuration Endpoints (E1-S8 - Victorian BAR Compliance)
+# =============================================================================
+
+
+@router.get("/config", response_model=SiteConfigResponse)
+async def get_site_config(
+    source_id: str = Query(..., description="Source document ID"),
+):
+    """
+    Get site configuration for a source document.
+
+    Returns the configuration if it exists, or an empty config template.
+    """
+    try:
+        config = await SiteConfig.get_by_source(source_id)
+
+        if config:
+            return SiteConfigResponse(
+                id=config.id,
+                source_id=config.source_id,
+                department=config.department,
+                agency=config.agency,
+                building_type=config.building_type,
+                owned_or_leased=config.owned_or_leased,
+                frequency_of_use=config.frequency_of_use,
+                public_access=config.public_access,
+                building_unique_id=config.building_unique_id,
+                missing_fields=config.get_missing_bar_fields(),
+                is_bar_complete=config.is_bar_complete(),
+                created=str(config.created) if config.created else None,
+                updated=str(config.updated) if config.updated else None,
+            )
+
+        # Return empty config template for new sources
+        return SiteConfigResponse(
+            source_id=source_id,
+            missing_fields=[
+                "department",
+                "agency",
+                "building_type",
+                "owned_or_leased",
+                "frequency_of_use",
+                "public_access",
+            ],
+            is_bar_complete=False,
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching site config for {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/config", response_model=SiteConfigResponse)
+async def save_site_config(request: SiteConfigRequest):
+    """
+    Create or update site configuration for a source document.
+
+    Uses upsert logic - creates if not exists, updates if exists.
+    """
+    try:
+        config = await SiteConfig.upsert(
+            source_id=request.source_id,
+            department=request.department,
+            agency=request.agency,
+            building_type=request.building_type,
+            owned_or_leased=request.owned_or_leased,
+            frequency_of_use=request.frequency_of_use,
+            public_access=request.public_access,
+            building_unique_id=request.building_unique_id,
+        )
+
+        return SiteConfigResponse(
+            id=config.id,
+            source_id=config.source_id,
+            department=config.department,
+            agency=config.agency,
+            building_type=config.building_type,
+            owned_or_leased=config.owned_or_leased,
+            frequency_of_use=config.frequency_of_use,
+            public_access=config.public_access,
+            building_unique_id=config.building_unique_id,
+            missing_fields=config.get_missing_bar_fields(),
+            is_bar_complete=config.is_bar_complete(),
+            created=str(config.created) if config.created else None,
+            updated=str(config.updated) if config.updated else None,
+        )
+
+    except Exception as e:
+        logger.error(f"Error saving site config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/config/templates", response_model=list[SiteConfigTemplateResponse])
+async def list_site_config_templates(
+    limit: int = Query(20, ge=1, le=100, description="Max templates to return"),
+):
+    """
+    List available site configuration templates.
+
+    Returns previously saved configurations that can be reused for new sources.
+    """
+    try:
+        templates = await SiteConfig.get_templates(limit=limit)
+
+        return [
+            SiteConfigTemplateResponse(
+                source_id=t.get("source_id", ""),
+                source_title=t.get("source_title"),
+                department=t.get("department"),
+                agency=t.get("agency"),
+                building_type=t.get("building_type"),
+                owned_or_leased=t.get("owned_or_leased"),
+                frequency_of_use=t.get("frequency_of_use"),
+                public_access=t.get("public_access"),
+            )
+            for t in templates
+        ]
+
+    except Exception as e:
+        logger.error(f"Error fetching site config templates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/config/apply-template", response_model=SiteConfigResponse)
+async def apply_site_config_template(request: ApplyTemplateRequest):
+    """
+    Apply a template configuration to a source document.
+
+    Copies configuration from the template source to the target source.
+    """
+    try:
+        # Get template config
+        template = await SiteConfig.get_by_source(request.template_source_id)
+        if not template:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Template configuration not found for source {request.template_source_id}",
+            )
+
+        # Apply template to target source
+        config = await SiteConfig.upsert(
+            source_id=request.source_id,
+            department=template.department,
+            agency=template.agency,
+            building_type=template.building_type,
+            owned_or_leased=template.owned_or_leased,
+            frequency_of_use=template.frequency_of_use,
+            public_access=template.public_access,
+            # Don't copy building_unique_id - should be unique per building
+        )
+
+        return SiteConfigResponse(
+            id=config.id,
+            source_id=config.source_id,
+            department=config.department,
+            agency=config.agency,
+            building_type=config.building_type,
+            owned_or_leased=config.owned_or_leased,
+            frequency_of_use=config.frequency_of_use,
+            public_access=config.public_access,
+            building_unique_id=config.building_unique_id,
+            missing_fields=config.get_missing_bar_fields(),
+            is_bar_complete=config.is_bar_complete(),
+            created=str(config.created) if config.created else None,
+            updated=str(config.updated) if config.updated else None,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error applying template: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/config/agencies", response_model=AgencyListResponse)
+async def list_agencies(
+    department: Optional[str] = Query(None, description="Filter by department"),
+):
+    """
+    List distinct agency values for autocomplete.
+
+    Optionally filter by department.
+    """
+    try:
+        agencies = await SiteConfig.get_agencies(department=department)
+        return AgencyListResponse(agencies=agencies)
+
+    except Exception as e:
+        logger.error(f"Error fetching agencies: {e}")
         raise HTTPException(status_code=500, detail=str(e))
