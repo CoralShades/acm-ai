@@ -11,6 +11,9 @@ import type {
   ACMRecordUpdateRequest,
   ACMExtractResponse,
   ACMListParams,
+  SiteConfig,
+  SiteConfigRequest,
+  SiteConfigTemplate,
 } from '@/lib/types/acm'
 
 export const acmApi = {
@@ -102,5 +105,54 @@ export const acmApi = {
       params: { source_id: sourceId, limit: 1 }
     })
     return response.data.total > 0
+  },
+
+  // Site Configuration API
+  /**
+   * Get site configuration for a source
+   */
+  getConfig: async (sourceId: string): Promise<SiteConfig | null> => {
+    const response = await apiClient.get<SiteConfig>('/acm/config', {
+      params: { source_id: sourceId }
+    })
+    return response.data
+  },
+
+  /**
+   * Create or update site configuration
+   */
+  saveConfig: async (data: SiteConfigRequest): Promise<SiteConfig> => {
+    const response = await apiClient.post<SiteConfig>('/acm/config', data)
+    return response.data
+  },
+
+  /**
+   * Get site configuration templates
+   */
+  getConfigTemplates: async (limit: number = 20): Promise<SiteConfigTemplate[]> => {
+    const response = await apiClient.get<{ templates: SiteConfigTemplate[] }>('/acm/config/templates', {
+      params: { limit }
+    })
+    return response.data.templates
+  },
+
+  /**
+   * Apply a template to a source's configuration
+   */
+  applyConfigTemplate: async (sourceId: string, templateSourceId: string): Promise<SiteConfig> => {
+    const response = await apiClient.post<SiteConfig>('/acm/config/apply-template', {
+      source_id: sourceId,
+      template_source_id: templateSourceId
+    })
+    return response.data
+  },
+
+  /**
+   * Get list of agencies for autocomplete
+   */
+  getAgencies: async (department?: string): Promise<string[]> => {
+    const params = department ? { department } : {}
+    const response = await apiClient.get<{ agencies: string[] }>('/acm/config/agencies', { params })
+    return response.data.agencies
   },
 }

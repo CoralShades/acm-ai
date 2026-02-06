@@ -450,7 +450,7 @@ class ACMRecordResponse(BaseModel):
     risk_status: Optional[str] = None
     result: str
     page_number: Optional[int] = None
-    extraction_confidence: Optional[float] = None
+    extraction_confidence: Optional[str] = None  # "high", "medium", "low"
     created: Optional[str] = None
     updated: Optional[str] = None
 
@@ -566,3 +566,61 @@ class ACMRecordUpdateRequest(BaseModel):
     risk_status: Optional[str] = Field(None, description="Risk status: Low/Medium/High")
     result: Optional[str] = Field(None, min_length=1, description="Test result")
     page_number: Optional[int] = Field(None, description="Source page number")
+
+
+# Site Configuration Models (E1-S8 - Victorian BAR Compliance)
+class SiteConfigRequest(BaseModel):
+    """Request to create or update site configuration."""
+
+    source_id: str = Field(..., description="Source document ID")
+    department: Optional[str] = Field(None, description="Victorian Government department")
+    agency: Optional[str] = Field(None, description="Agency within department")
+    building_type: Optional[str] = Field(None, description="Type of building")
+    owned_or_leased: Optional[str] = Field(None, description="Ownership status")
+    frequency_of_use: Optional[str] = Field(None, description="How frequently building is used")
+    public_access: Optional[str] = Field(None, description="Whether public has access (YES/NO)")
+    building_unique_id: Optional[str] = Field(None, description="Unique building identifier")
+
+
+class SiteConfigResponse(BaseModel):
+    """Site configuration response."""
+
+    id: Optional[str] = None
+    source_id: str
+    department: Optional[str] = None
+    agency: Optional[str] = None
+    building_type: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    frequency_of_use: Optional[str] = None
+    public_access: Optional[str] = None
+    building_unique_id: Optional[str] = None
+    missing_fields: List[str] = Field(default_factory=list, description="BAR fields not yet filled")
+    is_bar_complete: bool = Field(default=False, description="Whether all BAR fields are filled")
+    created: Optional[str] = None
+    updated: Optional[str] = None
+
+
+class SiteConfigTemplateResponse(BaseModel):
+    """Site configuration template for reuse."""
+
+    source_id: str
+    source_title: Optional[str] = None
+    department: Optional[str] = None
+    agency: Optional[str] = None
+    building_type: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    frequency_of_use: Optional[str] = None
+    public_access: Optional[str] = None
+
+
+class ApplyTemplateRequest(BaseModel):
+    """Request to apply a template configuration."""
+
+    source_id: str = Field(..., description="Target source document ID")
+    template_source_id: str = Field(..., description="Source ID to copy config from")
+
+
+class AgencyListResponse(BaseModel):
+    """List of agencies for autocomplete."""
+
+    agencies: List[str]

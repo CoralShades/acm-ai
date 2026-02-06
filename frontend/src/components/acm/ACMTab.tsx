@@ -11,6 +11,7 @@ import { ACMRecordDialog } from './ACMRecordDialog'
 import { ACMStatsCards } from './ACMStatsCards'
 import { ACMToolbar } from './ACMToolbar'
 import { BuildingTabs } from './BuildingTabs'
+import { SiteConfigPanel } from './SiteConfigPanel'
 import {
   useACMRecords,
   useACMStats,
@@ -200,13 +201,18 @@ export function ACMTab({ sourceId }: ACMTabProps) {
       {/* ACM Records Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileWarning className="h-5 w-5" />
-            ACM Records
-          </CardTitle>
-          <CardDescription>
-            Asbestos Containing Material records extracted from this source document
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileWarning className="h-5 w-5" />
+                ACM Records
+              </CardTitle>
+              <CardDescription>
+                Asbestos Containing Material records extracted from this source document
+              </CardDescription>
+            </div>
+            <SiteConfigPanel sourceId={sourceId} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Building Tabs */}

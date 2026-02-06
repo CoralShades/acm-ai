@@ -1,0 +1,4 @@
+-- Migration 13 Down: Remove Site Configuration table
+-- Story: E1-S8 Site Configuration Data Entry
+
+REMOVE TABLE IF EXISTS site_config;
