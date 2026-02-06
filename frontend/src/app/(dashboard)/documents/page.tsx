@@ -2,6 +2,9 @@
 
 import { AppShell } from '@/components/layout/AppShell'
 import { DocumentLibrary } from '@/components/documents/DocumentLibrary'
+import { ProcessingStatus } from '@/components/documents/ProcessingStatus'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { FileText, Activity } from 'lucide-react'
 
 export default function DocumentsPage() {
   return (
@@ -13,7 +16,24 @@ export default function DocumentsPage() {
             Manage your ACM documents and SAMP files
           </p>
         </div>
-        <DocumentLibrary />
+        <Tabs defaultValue="library" className="flex flex-col flex-1">
+          <TabsList className="w-fit flex-shrink-0">
+            <TabsTrigger value="library" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Library
+            </TabsTrigger>
+            <TabsTrigger value="processing" className="gap-2">
+              <Activity className="w-4 h-4" />
+              Processing
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="library" className="flex-1 mt-4">
+            <DocumentLibrary />
+          </TabsContent>
+          <TabsContent value="processing" className="flex-1 mt-4">
+            <ProcessingStatus />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppShell>
   )
