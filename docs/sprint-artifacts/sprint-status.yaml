@@ -52,7 +52,7 @@ development_status:
   e1-s6-configure-local-embedding-pipeline: done  # Code review passed 2026-01-07
   e1-s7-ai-powered-acm-extraction: done  # Completed 2026-01-07 - all 10 review items addressed
   e1-s8-site-configuration-data-entry: done  # Completed 2026-02-06 - Site config form with templates
-  e1-s9-acm-product-classification: ready-for-dev  # Tech-spec created 2026-02-05 - Victorian BAR
+  e1-s9-acm-product-classification: done  # Completed 2026-02-06 - Code review passed, 127 tests
   e1-s10-mineru-table-extraction: done  # NEW 2026-02-05 - Research integration (auto-claude)
   e1-s11-extensible-consultant-parser-framework: backlog  # NEW 2026-02-05 - Research integration
   e1-s12-consultant-wording-normalization: backlog  # NEW 2026-02-05 - Research integration
@@ -113,7 +113,7 @@ development_status:
   e7-s4-processing-options-step: done  # Code review passed 2026-01-11
   e7-s5-review-confirm-step: done  # Code review passed 2026-01-11
   e7-s6-upload-progress-results-step: done  # Code review passed 2026-01-11
-  e7-s7-site-configuration-during-upload: backlog  # NEW 2026-02-04 - Victorian BAR
+  e7-s7-site-configuration-during-upload: done  # Completed 2026-02-06 - Code review passed
   epic-7-retrospective: optional
 
   # Epic 8: UI Refresh - Bento Grid Design (P1)
@@ -146,15 +146,15 @@ development_status:
 # ========
 # Total Epics: 10 (3 done, 4 needs-expansion, 1 in-progress, 2 backlog)
 # Total Stories: 57 (was 54, +3 new research integration stories)
-# Stories Done: 43  # E1(10) + E2(7) + E3(4) + E4(4) + E5(2) + E6(4) + E7(6) + E8(7)
+# Stories Done: 45  # E1(11) + E2(7) + E3(4) + E4(4) + E5(2) + E6(4) + E7(7) + E8(7)
 # Stories In Review: 0
-# Stories Ready for Dev: 1  # E1-S9 (Product Classification)
-# Stories Drafted: 7  # E8 (s8-s10), E9 (s1-s3), E10 (s1)
-# Stories Backlog: 6  # Victorian BAR (4) + Research Integration (2)
+# Stories Ready for Dev: 0
+# Stories Drafted: 6  # E8 (s9-s10), E9 (s1-s3), E10 (s1)
+# Stories Backlog: 5  # Victorian BAR (3) + Research Integration (2)
 #
 # Last Updated: 2026-02-06
 #
-# Progress: 75% complete (43/57 stories done)
+# Progress: 79% complete (45/57 stories done)
 #
 # COURSE CORRECTION (2026-02-04 + 2026-02-05):
 # ==============================================
@@ -182,11 +182,15 @@ development_status:
 # NEXT RECOMMENDED ACTIONS:
 # ========================
 # Option A: Continue E8 (UI Refresh)
-#   - E8-S8: Update Navigation Sidebar (drafted)
+#   - E8-S8: Update Navigation Sidebar (in-progress)
+#   - E8-S9: Typography Font Updates (drafted)
+#   - E8-S10: Dark Mode Refinement (drafted)
 #
 # Option B: Continue Victorian BAR stories (P0 priority)
 #   - E1-S8: Site Configuration Data Entry ✅ DONE 2026-02-06
-#   - Recommended sequence: E7-S7 → E1-S9 → E5-S3 → E5-S4 → E2-S8
+#   - E7-S7: Site Configuration During Upload ✅ DONE 2026-02-06
+#   - E1-S9: ACM Product Classification ✅ DONE 2026-02-06 (code review passed)
+#   - Remaining: E5-S3 → E5-S4 → E2-S8
 #
 # Option C: Continue Research Integration (P1 priority)
 #   - E1-S11: Extensible Consultant Parser Framework

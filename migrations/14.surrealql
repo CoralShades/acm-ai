@@ -1,0 +1,18 @@
+-- Migration 14: Add ACM Product Classification Fields
+-- Story: E1-S9 ACM Product Classification
+-- Adds Victorian BAR taxonomy classification fields for ACM records
+
+-- Classification fields for BAR export columns AA-AC
+DEFINE FIELD IF NOT EXISTS acm_product_group ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS acm_product_type ON TABLE acm_record TYPE option<string>;
+
+-- Classification metadata
+DEFINE FIELD IF NOT EXISTS classification_confidence ON TABLE acm_record TYPE option<float>;
+DEFINE FIELD IF NOT EXISTS classification_override ON TABLE acm_record TYPE option<bool>;
+DEFINE FIELD IF NOT EXISTS classification_method ON TABLE acm_record TYPE option<string>;
+
+-- Index for filtering by product group (common query pattern for reports)
+DEFINE INDEX IF NOT EXISTS idx_acm_product_group ON TABLE acm_record COLUMNS acm_product_group;
+
+-- Index for finding records needing classification review
+DEFINE INDEX IF NOT EXISTS idx_acm_classification_confidence ON TABLE acm_record COLUMNS classification_confidence;
