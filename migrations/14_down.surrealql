@@ -1,0 +1,11 @@
+-- Down migration 14: Remove ACM Product Classification Fields
+-- Story: E1-S9 ACM Product Classification
+
+REMOVE INDEX IF EXISTS idx_acm_classification_confidence ON TABLE acm_record;
+REMOVE INDEX IF EXISTS idx_acm_product_group ON TABLE acm_record;
+
+REMOVE FIELD IF EXISTS classification_method ON TABLE acm_record;
+REMOVE FIELD IF EXISTS classification_override ON TABLE acm_record;
+REMOVE FIELD IF EXISTS classification_confidence ON TABLE acm_record;
+REMOVE FIELD IF EXISTS acm_product_type ON TABLE acm_record;
+REMOVE FIELD IF EXISTS acm_product_group ON TABLE acm_record;

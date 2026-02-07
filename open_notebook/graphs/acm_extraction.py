@@ -433,6 +433,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             model_id,
             "extraction",  # Uses default_extraction_model or falls back to chat
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
+            max_tokens=8192,  # Ensure enough tokens for structured ACM output
         )
     except Exception as e:
         logger.error(f"Failed to provision model: {e}")

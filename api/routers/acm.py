@@ -29,9 +29,21 @@ from api.models import (
     ACMSearchResponse,
     ACMSearchResultResponse,
     ACMStatsResponse,
+    AgencyListResponse,
+    ApplyTemplateRequest,
+    BatchClassifyRequest,
+    BatchClassifyResponse,
+    ClassifyRequest,
+    ClassifyResponse,
+    SiteConfigRequest,
+    SiteConfigResponse,
+    SiteConfigTemplateResponse,
+    TaxonomyGroupResponse,
+    TaxonomyResponse,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.site_config import SiteConfig
 
 router = APIRouter()
 
@@ -122,6 +134,11 @@ async def list_acm_records(
                     result=r.get("result", ""),
                     page_number=r.get("page_number"),
                     extraction_confidence=r.get("extraction_confidence"),
+                    acm_product_group=r.get("acm_product_group"),
+                    acm_product_type=r.get("acm_product_type"),
+                    classification_confidence=r.get("classification_confidence"),
+                    classification_method=r.get("classification_method"),
+                    classification_override=r.get("classification_override"),
                     created=str(r.get("created", "")) if r.get("created") else None,
                     updated=str(r.get("updated", "")) if r.get("updated") else None,
                 )
@@ -171,6 +188,11 @@ async def get_acm_record(record_id: str):
             result=record.result,
             page_number=record.page_number,
             extraction_confidence=record.extraction_confidence,
+            acm_product_group=record.acm_product_group,
+            acm_product_type=record.acm_product_type,
+            classification_confidence=record.classification_confidence,
+            classification_method=record.classification_method,
+            classification_override=record.classification_override,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -728,4 +750,414 @@ async def delete_acm_record(record_id: str):
         raise
     except Exception as e:
         logger.error(f"Error deleting ACM record {record_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Site Configuration Endpoints (E1-S8 - Victorian BAR Compliance)
+# =============================================================================
+
+
+@router.get("/config", response_model=SiteConfigResponse)
+async def get_site_config(
+    source_id: str = Query(..., description="Source document ID"),
+):
+    """
+    Get site configuration for a source document.
+
+    Returns the configuration if it exists, or an empty config template.
+    """
+    try:
+        config = await SiteConfig.get_by_source(source_id)
+
+        if config:
+            return SiteConfigResponse(
+                id=config.id,
+                source_id=config.source_id,
+                department=config.department,
+                agency=config.agency,
+                building_type=config.building_type,
+                owned_or_leased=config.owned_or_leased,
+                frequency_of_use=config.frequency_of_use,
+                public_access=config.public_access,
+                building_unique_id=config.building_unique_id,
+                missing_fields=config.get_missing_bar_fields(),
+                is_bar_complete=config.is_bar_complete(),
+                created=str(config.created) if config.created else None,
+                updated=str(config.updated) if config.updated else None,
+            )
+
+        # Return empty config template for new sources
+        return SiteConfigResponse(
+            source_id=source_id,
+            missing_fields=[
+                "department",
+                "agency",
+                "building_type",
+                "owned_or_leased",
+                "frequency_of_use",
+                "public_access",
+            ],
+            is_bar_complete=False,
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching site config for {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/config", response_model=SiteConfigResponse)
+async def save_site_config(request: SiteConfigRequest):
+    """
+    Create or update site configuration for a source document.
+
+    Uses upsert logic - creates if not exists, updates if exists.
+    """
+    try:
+        config = await SiteConfig.upsert(
+            source_id=request.source_id,
+            department=request.department,
+            agency=request.agency,
+            building_type=request.building_type,
+            owned_or_leased=request.owned_or_leased,
+            frequency_of_use=request.frequency_of_use,
+            public_access=request.public_access,
+            building_unique_id=request.building_unique_id,
+        )
+
+        return SiteConfigResponse(
+            id=config.id,
+            source_id=config.source_id,
+            department=config.department,
+            agency=config.agency,
+            building_type=config.building_type,
+            owned_or_leased=config.owned_or_leased,
+            frequency_of_use=config.frequency_of_use,
+            public_access=config.public_access,
+            building_unique_id=config.building_unique_id,
+            missing_fields=config.get_missing_bar_fields(),
+            is_bar_complete=config.is_bar_complete(),
+            created=str(config.created) if config.created else None,
+            updated=str(config.updated) if config.updated else None,
+        )
+
+    except Exception as e:
+        logger.error(f"Error saving site config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/config/templates", response_model=list[SiteConfigTemplateResponse])
+async def list_site_config_templates(
+    limit: int = Query(20, ge=1, le=100, description="Max templates to return"),
+):
+    """
+    List available site configuration templates.
+
+    Returns previously saved configurations that can be reused for new sources.
+    """
+    try:
+        templates = await SiteConfig.get_templates(limit=limit)
+
+        return [
+            SiteConfigTemplateResponse(
+                source_id=t.get("source_id", ""),
+                source_title=t.get("source_title"),
+                department=t.get("department"),
+                agency=t.get("agency"),
+                building_type=t.get("building_type"),
+                owned_or_leased=t.get("owned_or_leased"),
+                frequency_of_use=t.get("frequency_of_use"),
+                public_access=t.get("public_access"),
+            )
+            for t in templates
+        ]
+
+    except Exception as e:
+        logger.error(f"Error fetching site config templates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/config/apply-template", response_model=SiteConfigResponse)
+async def apply_site_config_template(request: ApplyTemplateRequest):
+    """
+    Apply a template configuration to a source document.
+
+    Copies configuration from the template source to the target source.
+    """
+    try:
+        # Get template config
+        template = await SiteConfig.get_by_source(request.template_source_id)
+        if not template:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Template configuration not found for source {request.template_source_id}",
+            )
+
+        # Apply template to target source
+        config = await SiteConfig.upsert(
+            source_id=request.source_id,
+            department=template.department,
+            agency=template.agency,
+            building_type=template.building_type,
+            owned_or_leased=template.owned_or_leased,
+            frequency_of_use=template.frequency_of_use,
+            public_access=template.public_access,
+            # Don't copy building_unique_id - should be unique per building
+        )
+
+        return SiteConfigResponse(
+            id=config.id,
+            source_id=config.source_id,
+            department=config.department,
+            agency=config.agency,
+            building_type=config.building_type,
+            owned_or_leased=config.owned_or_leased,
+            frequency_of_use=config.frequency_of_use,
+            public_access=config.public_access,
+            building_unique_id=config.building_unique_id,
+            missing_fields=config.get_missing_bar_fields(),
+            is_bar_complete=config.is_bar_complete(),
+            created=str(config.created) if config.created else None,
+            updated=str(config.updated) if config.updated else None,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error applying template: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/config/agencies", response_model=AgencyListResponse)
+async def list_agencies(
+    department: Optional[str] = Query(None, description="Filter by department"),
+):
+    """
+    List distinct agency values for autocomplete.
+
+    Optionally filter by department.
+    """
+    try:
+        agencies = await SiteConfig.get_agencies(department=department)
+        return AgencyListResponse(agencies=agencies)
+
+    except Exception as e:
+        logger.error(f"Error fetching agencies: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# ACM Product Classification Endpoints (E1-S9 - Victorian BAR Taxonomy)
+# =============================================================================
+
+
+@router.post("/classify", response_model=ClassifyResponse)
+async def classify_acm_item(request: ClassifyRequest):
+    """
+    Classify a single ACM item into Victorian BAR taxonomy.
+
+    Uses pattern-based matching first, then falls back to LLM if enabled.
+
+    Example:
+        POST /api/acm/classify
+        {"item_description": "Vinyl floor tiles", "friability": "Non-friable"}
+
+    Returns the product group (e.g., "T3 Vinyl products") and product type
+    (e.g., "Vinyl Tiles") with a confidence score.
+    """
+    try:
+        from open_notebook.extractors.normalizers.taxonomy import (
+            classify_product,
+            classify_product_async,
+        )
+
+        if request.use_llm_fallback:
+            # Async version with LLM fallback
+            result = await classify_product_async(
+                item_description=request.item_description,
+                friability=request.friability,
+                product=request.product,
+                use_llm_fallback=True,
+            )
+        else:
+            # Sync pattern-only version
+            result = classify_product(
+                item_description=request.item_description,
+                friability=request.friability,
+                product=request.product,
+            )
+
+        return ClassifyResponse(
+            product_group=result.product_group,
+            product_type=result.product_type,
+            confidence=result.confidence,
+            method=result.method,
+        )
+
+    except Exception as e:
+        logger.error(f"Error classifying ACM item: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/classify/batch", response_model=BatchClassifyResponse)
+async def classify_batch(request: BatchClassifyRequest):
+    """
+    Classify all ACM records for a source document.
+
+    Updates records in the database with classification results.
+    Optionally skips records that already have classification.
+
+    Example:
+        POST /api/acm/classify/batch
+        {"source_id": "source:abc123", "use_llm_fallback": true}
+    """
+    try:
+        from open_notebook.extractors.normalizers.taxonomy import (
+            classify_product,
+            classify_product_async,
+        )
+
+        # Get all records for source
+        records = await ACMRecord.get_by_source(request.source_id)
+
+        if not records:
+            return BatchClassifyResponse(
+                total=0,
+                classified=0,
+                skipped=0,
+                errors=0,
+                results=[],
+            )
+
+        total = len(records)
+        classified = 0
+        skipped = 0
+        errors = 0
+        results = []
+
+        for record in records:
+            try:
+                # Skip if already classified and skip_classified is True
+                if request.skip_classified and record.acm_product_group:
+                    skipped += 1
+                    results.append({
+                        "record_id": str(record.id),
+                        "status": "skipped",
+                        "reason": "already_classified",
+                    })
+                    continue
+
+                # Combine product and material description for classification
+                item_description = record.material_description
+                if record.product:
+                    item_description = f"{record.product} {item_description}"
+
+                # Classify
+                if request.use_llm_fallback:
+                    result = await classify_product_async(
+                        item_description=item_description,
+                        friability=record.friable,
+                        product=record.product,
+                        use_llm_fallback=True,
+                    )
+                else:
+                    result = classify_product(
+                        item_description=item_description,
+                        friability=record.friable,
+                        product=record.product,
+                    )
+
+                if result.product_group and result.product_type:
+                    # Update record
+                    record.acm_product_group = result.product_group
+                    record.acm_product_type = result.product_type
+                    record.classification_confidence = result.confidence
+                    record.classification_method = result.method
+                    record.classification_override = False
+                    await record.save()
+
+                    classified += 1
+                    results.append({
+                        "record_id": str(record.id),
+                        "status": "classified",
+                        "product_group": result.product_group,
+                        "product_type": result.product_type,
+                        "confidence": result.confidence,
+                        "method": result.method,
+                    })
+                else:
+                    skipped += 1
+                    results.append({
+                        "record_id": str(record.id),
+                        "status": "skipped",
+                        "reason": "no_match",
+                    })
+
+            except Exception as e:
+                errors += 1
+                results.append({
+                    "record_id": str(record.id),
+                    "status": "error",
+                    "error": str(e),
+                })
+                logger.warning(f"Error classifying record {record.id}: {e}")
+
+        logger.info(
+            f"Batch classification for {request.source_id}: "
+            f"{classified} classified, {skipped} skipped, {errors} errors (total: {total})"
+        )
+
+        return BatchClassifyResponse(
+            total=total,
+            classified=classified,
+            skipped=skipped,
+            errors=errors,
+            results=results,
+        )
+
+    except Exception as e:
+        logger.error(f"Error in batch classification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/taxonomy", response_model=TaxonomyResponse)
+async def get_taxonomy(
+    friability: Optional[str] = Query(
+        None, description="Friability type: 'Friable' or 'Non-friable' (default)"
+    ),
+):
+    """
+    Get available ACM product taxonomy.
+
+    Returns the Victorian BAR product groups and types for the specified friability.
+    Useful for UI dropdowns and validation.
+
+    Example:
+        GET /api/acm/taxonomy?friability=Non-friable
+    """
+    try:
+        from open_notebook.extractors.normalizers.taxonomy import get_product_groups
+
+        groups = get_product_groups(friability)
+
+        # Determine friability label
+        if friability and "friable" in friability.lower() and "non" not in friability.lower():
+            friability_label = "Friable"
+        else:
+            friability_label = "Non-friable"
+
+        return TaxonomyResponse(
+            friability=friability_label,
+            groups=[
+                TaxonomyGroupResponse(
+                    pc_code=g.get("pc_code", ""),
+                    product_group_header=g.get("product_group_header", ""),
+                    product_types=g.get("product_types", []),
+                )
+                for g in groups
+            ],
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching taxonomy: {e}")
         raise HTTPException(status_code=500, detail=str(e))

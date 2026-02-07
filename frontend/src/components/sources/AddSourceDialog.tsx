@@ -18,6 +18,7 @@ import { WizardContainer, WizardStep } from '@/components/ui/wizard-container'
 import { SourceTypeStep, parseAndValidateUrls } from './steps/SourceTypeStep'
 import { NotebooksStep } from './steps/NotebooksStep'
 import { ProcessingStep } from './steps/ProcessingStep'
+import { SiteConfigStep, SiteConfigFormData } from './steps/SiteConfigStep'
 import { useNotebooks } from '@/lib/hooks/use-notebooks'
 import { useTransformations } from '@/lib/hooks/use-transformations'
 import { useCreateSource } from '@/lib/hooks/use-sources'
@@ -74,11 +75,25 @@ interface AddSourceDialogProps {
   defaultNotebookId?: string
 }
 
-const WIZARD_STEPS: readonly WizardStep[] = [
+// Base wizard steps - dynamically adjusted based on source type
+const BASE_WIZARD_STEPS: readonly WizardStep[] = [
   { number: 1, title: 'Source & Content', description: 'Choose type and add content' },
   { number: 2, title: 'Organization', description: 'Select notebooks' },
   { number: 3, title: 'Processing', description: 'Choose transformations and options' },
 ]
+
+// Steps with site config (for upload type)
+const UPLOAD_WIZARD_STEPS: readonly WizardStep[] = [
+  { number: 1, title: 'Source & Content', description: 'Choose type and add content' },
+  { number: 2, title: 'Site Configuration', description: 'Configure BAR metadata' },
+  { number: 3, title: 'Organization', description: 'Select notebooks' },
+  { number: 4, title: 'Processing', description: 'Choose transformations and options' },
+]
+
+// Get wizard steps based on source type
+function getWizardSteps(sourceType: 'link' | 'upload' | 'text' | undefined): readonly WizardStep[] {
+  return sourceType === 'upload' ? UPLOAD_WIZARD_STEPS : BASE_WIZARD_STEPS
+}
 
 interface ProcessingState {
   message: string
@@ -109,6 +124,11 @@ export function AddSourceDialog({
   // Batch-specific state
   const [urlValidationErrors, setUrlValidationErrors] = useState<{ url: string; line: number }[]>([])
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null)
+
+  // Site configuration state (for upload type)
+  const [siteConfig, setSiteConfig] = useState<SiteConfigFormData>({})
+  const [applyConfigToAll, setApplyConfigToAll] = useState(true)
+  const [skipSiteConfig, setSkipSiteConfig] = useState(false)
 
   // Cleanup timeouts to prevent memory leaks
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -236,6 +256,7 @@ export function AddSourceDialog({
         return true
       case 2:
       case 3:
+      case 4:  // Step 4 exists for upload type (Processing step)
         return true
       default:
         return false
@@ -257,7 +278,9 @@ export function AddSourceDialog({
       setUrlValidationErrors([])
     }
 
-    if (currentStep < 3 && isStepValid(currentStep)) {
+    // Use dynamic totalSteps for upload type (4 steps) vs link/text (3 steps)
+    const steps = getWizardSteps(selectedType)
+    if (currentStep < steps.length && isStepValid(currentStep)) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -328,6 +351,20 @@ export function AddSourceDialog({
         toast.error('Source created but ACM extraction failed to start')
       }
     }
+
+    // Save site config if configured (for upload type)
+    if (data.type === 'upload' && createdSource?.id && !skipSiteConfig && Object.keys(siteConfig).length > 0) {
+      try {
+        await acmApi.saveConfig({
+          source_id: createdSource.id,
+          ...siteConfig,
+        })
+        toast.success('Site configuration saved')
+      } catch (error) {
+        console.error('Failed to save site config:', error)
+        toast.warning('Source created but site config failed to save')
+      }
+    }
   }
 
   // Batch submission
@@ -385,6 +422,19 @@ export function AddSourceDialog({
             await acmApi.extract(createdSource.id)
           } catch (acmError) {
             console.error(`ACM extraction failed for ${itemLabel}:`, acmError)
+          }
+        }
+
+        // Save site config if configured (for batch uploads with apply to all)
+        if (item.type === 'file' && createdSource?.id && applyConfigToAll && !skipSiteConfig && Object.keys(siteConfig).length > 0) {
+          try {
+            await acmApi.saveConfig({
+              source_id: createdSource.id,
+              ...siteConfig,
+            })
+          } catch (configError) {
+            console.error(`Site config failed for ${itemLabel}:`, configError)
+            // Non-blocking - source was created successfully
           }
         }
       } catch (error) {
@@ -456,6 +506,9 @@ export function AddSourceDialog({
     setSelectedNotebooks(defaultNotebookId ? [defaultNotebookId] : [])
     setUrlValidationErrors([])
     setBatchProgress(null)
+    setSiteConfig({})
+    setApplyConfigToAll(true)
+    setSkipSiteConfig(false)
 
     // Reset to default transformations
     if (transformations.length > 0) {
@@ -552,6 +605,29 @@ export function AddSourceDialog({
 
   const currentStepValid = isStepValid(currentStep)
 
+  // Get dynamic wizard steps based on source type
+  const wizardSteps = getWizardSteps(selectedType)
+  const totalSteps = wizardSteps.length
+  const hasSiteConfigStep = selectedType === 'upload'
+
+  // Calculate which step content to show based on source type
+  // For upload: 1=Source, 2=SiteConfig, 3=Notebooks, 4=Processing
+  // For link/text: 1=Source, 2=Notebooks, 3=Processing
+  const getStepContent = () => {
+    if (currentStep === 1) return 'source'
+    if (hasSiteConfigStep) {
+      if (currentStep === 2) return 'siteConfig'
+      if (currentStep === 3) return 'notebooks'
+      if (currentStep === 4) return 'processing'
+    } else {
+      if (currentStep === 2) return 'notebooks'
+      if (currentStep === 3) return 'processing'
+    }
+    return 'source'
+  }
+
+  const stepContent = getStepContent()
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[700px] p-0">
@@ -565,11 +641,11 @@ export function AddSourceDialog({
         <form onSubmit={handleSubmit(onSubmit)}>
           <WizardContainer
             currentStep={currentStep}
-            steps={WIZARD_STEPS}
+            steps={wizardSteps}
             onStepClick={handleStepClick}
             className="border-0"
           >
-            {currentStep === 1 && (
+            {stepContent === 'source' && (
               <SourceTypeStep
                 // @ts-expect-error - Type inference issue with zod schema
                 control={control}
@@ -580,8 +656,22 @@ export function AddSourceDialog({
                 onClearUrlErrors={handleClearUrlErrors}
               />
             )}
-            
-            {currentStep === 2 && (
+
+            {stepContent === 'siteConfig' && (
+              <SiteConfigStep
+                siteConfig={siteConfig}
+                onSiteConfigChange={setSiteConfig}
+                isBatchMode={isBatchMode}
+                fileCount={itemCount}
+                applyToAll={applyConfigToAll}
+                onApplyToAllChange={setApplyConfigToAll}
+                skipConfig={skipSiteConfig}
+                onSkipConfigChange={setSkipSiteConfig}
+                fileNames={parsedFiles.map(f => f.name)}
+              />
+            )}
+
+            {stepContent === 'notebooks' && (
               <NotebooksStep
                 notebooks={notebooks}
                 selectedNotebooks={selectedNotebooks}
@@ -589,8 +679,8 @@ export function AddSourceDialog({
                 loading={notebooksLoading}
               />
             )}
-            
-            {currentStep === 3 && (
+
+            {stepContent === 'processing' && (
               <ProcessingStep
                 // @ts-expect-error - Type inference issue with zod schema
                 control={control}
@@ -605,9 +695,9 @@ export function AddSourceDialog({
 
           {/* Navigation */}
           <div className="flex justify-between items-center px-6 py-4 border-t border-border bg-muted">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={handleClose}
             >
               Cancel
@@ -624,8 +714,8 @@ export function AddSourceDialog({
                 </Button>
               )}
 
-              {/* Show Next button on steps 1 and 2, styled as outline/secondary */}
-              {currentStep < 3 && (
+              {/* Show Next button when not on last step */}
+              {currentStep < totalSteps && (
                 <Button
                   type="button"
                   variant="outline"

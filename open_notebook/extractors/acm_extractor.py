@@ -6,6 +6,7 @@ ACM (Asbestos Containing Material) records with hierarchical
 Building > Room > Item relationships.
 
 Supports fallback from MinerU table extraction to regex-based markdown parsing.
+Uses the consultant parser framework (E1-S11) for format-specific handling.
 """
 
 import re
@@ -14,11 +15,14 @@ from typing import Dict, List, Optional, Tuple
 
 from loguru import logger
 
+from open_notebook.extractors.parsers import get_parser
+from open_notebook.extractors.parsers.base import ConsultantParser
+
 # Optional MinerU support - graceful degradation if not available
 try:
     from open_notebook.extractors.mineru_table_extractor import (
-        MineruTableExtractor,
         ExtractedTable,
+        MineruTableExtractor,
     )
     MINERU_AVAILABLE = True
 except ImportError:
@@ -75,9 +79,17 @@ class ExtractedACMRow:
     risk_status: Optional[str] = None
     result: str = ""
 
-    def to_acm_record_dict(self, source_id: str) -> dict:
-        """Convert to dict suitable for ACMRecord creation."""
-        return {
+    def to_acm_record_dict(self, source_id: str, classify: bool = True) -> dict:
+        """Convert to dict suitable for ACMRecord creation.
+
+        Args:
+            source_id: ID of the source document
+            classify: Whether to run product classification (default: True)
+
+        Returns:
+            Dict ready for ACMRecord creation
+        """
+        result = {
             "source_id": source_id,
             "school_name": self.school_name,
             "school_code": self.school_code,
@@ -99,6 +111,35 @@ class ExtractedACMRow:
             "result": self.result,
             "page_number": self.page_number,
         }
+
+        # Add product classification if enabled
+        if classify:
+            try:
+                from open_notebook.extractors.normalizers.taxonomy import (
+                    classify_product,
+                )
+
+                # Combine product and material description for better classification
+                item_description = self.material_description
+                if self.product:
+                    item_description = f"{self.product} {item_description}"
+
+                classification = classify_product(
+                    item_description=item_description,
+                    friability=self.friable,
+                    product=self.product,
+                )
+
+                if classification.product_group and classification.product_type:
+                    result["acm_product_group"] = classification.product_group
+                    result["acm_product_type"] = classification.product_type
+                    result["classification_confidence"] = classification.confidence
+                    result["classification_method"] = classification.method
+                    result["classification_override"] = False
+            except Exception as e:
+                logger.warning(f"Classification failed for {self.product}: {e}")
+
+        return result
 
 
 # ACM table detection - required headers (case-insensitive)
@@ -140,7 +181,8 @@ def extract_acm_records(
     markdown_content: Optional[str],
     source_id: str,
     pdf_path: Optional[str] = None,
-    use_mineru: bool = True
+    use_mineru: bool = True,
+    classify: bool = True,
 ) -> List[dict]:
     """
     Extract ACM records from PDF or Docling markdown output.
@@ -149,12 +191,14 @@ def extract_acm_records(
     1. If use_mineru=True and pdf_path provided: Try MinerU table extraction
     2. If MinerU fails or unavailable: Fall back to regex-based markdown parsing
     3. Log which extraction method was used
+    4. Optionally classify each record using Victorian BAR taxonomy
 
     Args:
         markdown_content: Markdown text from Docling (used as fallback)
         source_id: ID of the source document
         pdf_path: Path to source PDF file (optional, required for MinerU)
         use_mineru: Whether to attempt MinerU extraction (default: True)
+        classify: Whether to run product classification (default: True)
 
     Returns:
         List of dicts ready for ACMRecord creation
@@ -184,13 +228,22 @@ def extract_acm_records(
         logger.debug("MinerU extraction enabled but no PDF path provided, using markdown parser")
 
     # Fall back to regex-based markdown parsing
-    logger.info(f"Using regex-based markdown extraction for source {source_id}")
-    return _extract_from_markdown(markdown_content, source_id)
+    # Select parser based on markdown content (parser framework E1-S11)
+    selected_parser = get_parser(markdown_content or "")
+    logger.info(
+        f"Using regex-based markdown extraction for source {source_id} "
+        f"(parser: {selected_parser.name})"
+    )
+    return _extract_from_markdown(
+        markdown_content, source_id, classify=classify, parser=selected_parser
+    )
 
 
 def _extract_from_markdown(
     markdown_content: Optional[str],
-    source_id: str
+    source_id: str,
+    classify: bool = True,
+    parser: Optional[ConsultantParser] = None,
 ) -> List[dict]:
     """
     Extract ACM records from Docling markdown output (original regex-based method).
@@ -198,6 +251,8 @@ def _extract_from_markdown(
     Args:
         markdown_content: Markdown text from Docling
         source_id: ID of the source document
+        classify: Whether to run product classification (default: True)
+        parser: Selected consultant parser (uses generic if None)
 
     Returns:
         List of dicts ready for ACMRecord creation
@@ -271,19 +326,19 @@ def _extract_from_markdown(
             logger.debug(f"Room: {context.room_id} - {context.room_name}")
 
         # Check for table start (line with pipes)
-        if "|" in line and _looks_like_table_header(line):
+        if "|" in line and _looks_like_table_header(line, parser=parser):
             # Found potential table, parse it
             table_lines, end_idx = _extract_table_lines(lines, i)
             if table_lines:
-                rows = _parse_acm_table(table_lines, context)
+                rows = _parse_acm_table(table_lines, context, parser=parser)
                 extracted_rows.extend(rows)
             i = end_idx
             continue
 
         i += 1
 
-    # Convert to dicts
-    result = [row.to_acm_record_dict(source_id) for row in extracted_rows]
+    # Convert to dicts with optional classification
+    result = [row.to_acm_record_dict(source_id, classify=classify) for row in extracted_rows]
     logger.info(f"Extracted {len(result)} ACM records from source {source_id}")
     return result
 
@@ -329,11 +384,27 @@ def _extract_with_mineru(pdf_path: str, source_id: str) -> List[dict]:
     return []
 
 
-def _looks_like_table_header(line: str) -> bool:
-    """Check if line looks like a markdown table header."""
+def _looks_like_table_header(
+    line: str, parser: Optional[ConsultantParser] = None
+) -> bool:
+    """Check if line looks like a markdown table header.
+
+    Uses the parser's register headers for detection if available,
+    otherwise falls back to the default ACM required headers.
+    """
     cells = [c.strip().lower() for c in line.split("|") if c.strip()]
-    # Check if any required ACM headers are present
-    return any(header in " ".join(cells) for header in ACM_REQUIRED_HEADERS)
+    joined = " ".join(cells)
+
+    # If a specific parser is provided, check its headers too
+    if parser and parser.name != "generic":
+        parser_headers = parser.get_register_headers()
+        # Match if enough parser-specific headers are found
+        matches = sum(1 for h in parser_headers if h in joined)
+        if matches >= 3:
+            return True
+
+    # Default: check for standard ACM required headers
+    return any(header in joined for header in ACM_REQUIRED_HEADERS)
 
 
 def _extract_table_lines(lines: List[str], start_idx: int) -> Tuple[List[str], int]:
@@ -373,7 +444,9 @@ def _extract_table_lines(lines: List[str], start_idx: int) -> Tuple[List[str], i
 
 
 def _parse_acm_table(
-    table_lines: List[str], context: ParseContext
+    table_lines: List[str],
+    context: ParseContext,
+    parser: Optional[ConsultantParser] = None,
 ) -> List[ExtractedACMRow]:
     """Parse markdown table lines into ExtractedACMRow objects."""
     if len(table_lines) < 2:
@@ -383,13 +456,23 @@ def _parse_acm_table(
     header_line = table_lines[0]
     headers = [h.strip().lower() for h in header_line.split("|") if h.strip()]
 
-    # Check if this is an ACM table
-    if not any(h in " ".join(headers) for h in ACM_REQUIRED_HEADERS):
+    # Check if this is an ACM table (using parser headers if available)
+    joined_headers = " ".join(headers)
+    is_acm_table = any(h in joined_headers for h in ACM_REQUIRED_HEADERS)
+    if not is_acm_table and parser and parser.name != "generic":
+        parser_headers = parser.get_register_headers()
+        matches = sum(1 for h in parser_headers if h in joined_headers)
+        is_acm_table = matches >= 3
+
+    if not is_acm_table:
         logger.debug(f"Skipping non-ACM table with headers: {headers}")
         return []
 
-    # Map headers to field names
-    header_map = _create_header_map(headers)
+    # Map headers to field names using parser's mapping if available
+    if parser and parser.name != "generic":
+        header_map = _create_header_map_from_parser(headers, parser)
+    else:
+        header_map = _create_header_map(headers)
 
     rows = []
     # Skip header and separator lines
@@ -441,6 +524,48 @@ def _create_header_map(headers: List[str]) -> Dict[str, int]:
             mapping["result"] = i
 
     return mapping
+
+
+def _create_header_map_from_parser(
+    headers: List[str], parser: ConsultantParser
+) -> Dict[str, int]:
+    """Create mapping from standard field names to column indices using parser's column mapping.
+
+    The parser's get_column_mapping() maps consultant column names to standard field names.
+    This function reverses that to map standard field names to header indices.
+    """
+    column_mapping = parser.get_column_mapping()
+    mapping: Dict[str, int] = {}
+
+    for i, header in enumerate(headers):
+        header_lower = header.lower().strip()
+        # Check if this header matches a consultant column name
+        if header_lower in column_mapping:
+            standard_field = column_mapping[header_lower]
+            mapping[standard_field] = i
+
+    # Ensure we have the critical fields mapped with standard names for _create_row_from_cells
+    # Map parser-specific field names to the names expected by ExtractedACMRow
+    field_renames = {
+        "level": None,  # Not directly used in ExtractedACMRow
+        "room_name": None,  # Context, not row field
+        "sample_result": "result",
+        "hazard_type": None,  # Not in ExtractedACMRow
+        "item_number": None,  # Not in ExtractedACMRow
+        "photo_number": None,  # Not in ExtractedACMRow
+        "reinspect_date": None,  # Not in ExtractedACMRow
+    }
+
+    renamed: Dict[str, int] = {}
+    for field_name, idx in mapping.items():
+        if field_name in field_renames:
+            new_name = field_renames[field_name]
+            if new_name:
+                renamed[new_name] = idx
+        else:
+            renamed[field_name] = idx
+
+    return renamed
 
 
 def _create_row_from_cells(

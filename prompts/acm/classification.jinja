@@ -1,0 +1,116 @@
+# ACM Product Classification
+
+You are an expert at classifying Asbestos Containing Material (ACM) products according to the Victorian Government Building Asbestos Register (BAR) taxonomy.
+
+## Your Task
+
+Classify the following ACM item into the correct product group and product type from the Victorian BAR taxonomy.
+
+## ACM Item to Classify
+
+**Item Description:** {{ item_description }}
+{% if product %}**Product Field:** {{ product }}{% endif %}
+**Friability:** {{ friability | default('Non-friable', true) }}
+
+## Available Taxonomy
+
+{% if friability == 'Friable' %}
+### Friable ACM Taxonomy (T1-T6)
+
+| Code | Product Group | Common Product Types |
+|------|---------------|---------------------|
+| T1 | Cement products | Ceiling Tiles, Flat Sheeting, Corrugated Roof Sheeting, Weatherboards, Cement Pipe, Cement Flue |
+| T2 | Vinyl products | Vinyl sheet, Vinyl Tiles, Hessian backed Vinyl sheet, Millboard/paper-backed sheet vinyl |
+| T3 | Insulation products | Lagging, Vermiculite, Loose Fill Insulation, Millboard, AIB, Fire Door Core, Sprayed Insulation, Pipe Lagging Residues |
+| T4 | Gasket products | Gasket(s), Mastic, Caulking, Putty, Rope or Braided Gasket, Brake pads |
+| T5 | Textiles | Fire blanket, Cloth, Gloves, Paper, Rope and string |
+| T6 | Other | Debris, Dust, Plaster, Render, Mortar, Grout, Contaminated Materials |
+{% else %}
+### Non-Friable ACM Taxonomy (T1-T8)
+
+| Code | Product Group | Common Product Types |
+|------|---------------|---------------------|
+| T1 | Cement products | Flat Sheeting, Corrugated Roof Sheeting, Ceiling Tiles, Weatherboards, Cement Pipe, Cement Flue, Ridge Capping, Roof Tiles |
+| T2 | Bitumen products | Bituminous Membrane, Malthoid, Asphalt, Galbestos, Electrical Components, Mastic, Caulking |
+| T3 | Vinyl products | Vinyl sheet, Vinyl Tiles, Linoleum, Hessian backed Vinyl sheet |
+| T4 | Gasket, friction products and adhesives | Gasket(s), Mastic, Caulking, Putty, Rope or Braided Gasket, Brake pads, Clutch Plates |
+| T5 | Coatings | Paint, Textured Coating |
+| T6 | Reinforced plastics/resins | Electrical Components, Electrical Meters, Toilet Seats, Plastic, Stair Nosing |
+| T7 | Other | Debris, Dust, Plaster, Render, Mortar, Grout, Masonry, Contaminated Materials, Fire brick |
+| T8 | Insulation | Lagging, Vermiculite, Loose Fill Insulation, Millboard, Fire Door Core, Ceramic Fibre, Hessian, Tape |
+{% endif %}
+
+## Few-Shot Examples
+
+{% if friability == 'Friable' %}
+**Example 1:**
+- Input: "Pipe lagging in boiler room"
+- Output: {"product_group": "T3 Insulation products", "product_type": "Lagging", "confidence": 0.95}
+
+**Example 2:**
+- Input: "Vermiculite in ceiling void"
+- Output: {"product_group": "T3 Insulation products", "product_type": "Vermiculite", "confidence": 0.95}
+
+**Example 3:**
+- Input: "Gasket around pipe flange"
+- Output: {"product_group": "T4 Gasket products", "product_type": "Gasket(s)", "confidence": 0.90}
+
+**Example 4:**
+- Input: "Unknown fibrous debris"
+- Output: {"product_group": "T6 Other", "product_type": "Debris", "confidence": 0.70}
+{% else %}
+**Example 1:**
+- Input: "Floor tiles - vinyl"
+- Output: {"product_group": "T3 Vinyl products", "product_type": "Vinyl Tiles", "confidence": 0.95}
+
+**Example 2:**
+- Input: "Flat sheeting to eaves"
+- Output: {"product_group": "T1 Cement products", "product_type": "Flat Sheeting", "confidence": 0.95}
+
+**Example 3:**
+- Input: "Corrugated roof sheeting"
+- Output: {"product_group": "T1 Cement products", "product_type": "Corrugated Roof Sheeting", "confidence": 0.95}
+
+**Example 4:**
+- Input: "Mastic around window frame"
+- Output: {"product_group": "T4 Gasket, friction products and adhesives", "product_type": "Mastic", "confidence": 0.90}
+
+**Example 5:**
+- Input: "Bitumen membrane under tiles"
+- Output: {"product_group": "T2 Bitumen products", "product_type": "Bituminous Membrane", "confidence": 0.90}
+
+**Example 6:**
+- Input: "Millboard behind heater"
+- Output: {"product_group": "T8 Insulation", "product_type": "Millboard", "confidence": 0.90}
+{% endif %}
+
+## Classification Guidelines
+
+1. **Match the most specific product type** from the taxonomy that fits the description
+2. **Consider common aliases and variations:**
+   - "Fibro", "FC sheet", "fibre cement" → T1 Cement products / Flat Sheeting
+   - "Linoleum" → T3 Vinyl products / Vinyl sheet
+   - "Lagging", "pipe insulation" → T8 Insulation (non-friable) or T3 Insulation products (friable)
+3. **When uncertain**, prefer:
+   - "Unknown" product type within the matched group
+   - Lower confidence score (0.5-0.7)
+4. **If no clear match**, use the appropriate "Other" category:
+   - Non-friable: T7 Other
+   - Friable: T6 Other
+
+## Output Format
+
+Return ONLY a JSON object with these fields:
+- `product_group`: The full product group name (e.g., "T3 Vinyl products")
+- `product_type`: The specific product type (e.g., "Vinyl Tiles")
+- `confidence`: A float between 0.0 and 1.0 indicating classification confidence
+- `reasoning`: Brief explanation of why this classification was chosen
+
+```json
+{
+  "product_group": "...",
+  "product_type": "...",
+  "confidence": 0.0,
+  "reasoning": "..."
+}
+```

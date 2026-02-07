@@ -174,3 +174,11 @@ _bmad-output/bmb-creations/*
 .rovodev/*
 _bmad/bmb/*
 .claude/commands/bmad/bmb/*
+.claude/commands/design.md
+.claude/commands/bmad/bmm/workflows/create-epics-stories.md
+.claude/commands/bmad/bmm/workflows/create-prd.md
+.claude/commands/bmad/bmm/workflows/create-tech-spec.md
+.claude/commands/bmad/core/tasks/advanced-elicitation.md
+.claude/commands/bmad/core/tools/shard-doc.md
+.claude/commands/bmad/core/workflows/brainstorming-session.md
+.claude/skills/README.md

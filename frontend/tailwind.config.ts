@@ -9,7 +9,12 @@ const config: Config = {
   darkMode: "class",
   theme: {
     extend: {
-      // Note: fontFamily handled by @theme inline in globals.css (Geist fonts)
+      // Font family mapped from CSS variables (Inter + JetBrains Mono)
+      fontFamily: {
+        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains)", "ui-monospace", "monospace"],
+        data: ["var(--font-jetbrains)", "ui-monospace", "monospace"],
+      },
       // Font Size tokens with line-height
       fontSize: {
         xs: ["var(--text-xs)", { lineHeight: "var(--leading-normal)" }],
@@ -65,6 +70,18 @@ const config: Config = {
         modal: "var(--z-modal)",
         popover: "var(--z-popover)",
         toast: "var(--z-toast)",
+      },
+      // Typography prose customization
+      typography: {
+        DEFAULT: {
+          css: {
+            "--tw-prose-body": "var(--foreground)",
+            "--tw-prose-headings": "var(--foreground)",
+            "--tw-prose-links": "var(--primary)",
+            "--tw-prose-code": "var(--foreground)",
+            maxWidth: "none",
+          },
+        },
       },
     },
   },
