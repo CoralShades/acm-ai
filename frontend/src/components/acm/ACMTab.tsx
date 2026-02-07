@@ -8,9 +8,11 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ACMGrid, type ACMGridRef, type CellSelectionDetails } from './ACMGrid'
 import { ACMCellViewer } from './ACMCellViewer'
 import { ACMRecordDialog } from './ACMRecordDialog'
+import { ACMExtractionBanner } from './ACMExtractionBanner'
 import { ACMStatsCards } from './ACMStatsCards'
 import { ACMToolbar } from './ACMToolbar'
 import { BuildingTabs } from './BuildingTabs'
+import { SiteConfigPanel } from './SiteConfigPanel'
 import {
   useACMRecords,
   useACMStats,
@@ -19,6 +21,7 @@ import {
   useExportACMCsv,
   useExportACMExcel,
 } from '@/lib/hooks/use-acm'
+import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { useSessionStorage } from '@/lib/hooks/use-session-storage'
@@ -92,9 +95,12 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     return null
   }, [sourceData?.asset?.file_path, sourceId])
 
+  // Extraction status tracking
+  const extractionStatus = useExtractionStatus(sourceId)
+
   // Mutations
   const deleteRecord = useDeleteACMRecord()
-  const extractACM = useExtractACM()
+  const extractACM = useExtractACM(extractionStatus.startTracking)
   const exportCsv = useExportACMCsv()
   const exportExcel = useExportACMExcel()
 
@@ -200,13 +206,18 @@ export function ACMTab({ sourceId }: ACMTabProps) {
       {/* ACM Records Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileWarning className="h-5 w-5" />
-            ACM Records
-          </CardTitle>
-          <CardDescription>
-            Asbestos Containing Material records extracted from this source document
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileWarning className="h-5 w-5" />
+                ACM Records
+              </CardTitle>
+              <CardDescription>
+                Asbestos Containing Material records extracted from this source document
+              </CardDescription>
+            </div>
+            <SiteConfigPanel sourceId={sourceId} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Building Tabs */}
@@ -229,7 +240,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             onCollapseAll={handleCollapseAll}
             riskFilter={riskFilter}
             onRiskFilterChange={setRiskFilter}
-            isExtracting={extractACM.isPending}
+            isExtracting={extractACM.isPending || extractionStatus.phase === 'extracting'}
             isExportingCsv={exportCsv.isPending}
             isExportingExcel={exportExcel.isPending}
             disabled={isLoadingRecords}
@@ -240,8 +251,16 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             totalCount={filteredCount}
           />
 
+          {/* Extraction Progress Banner */}
+          <ACMExtractionBanner
+            phase={extractionStatus.phase}
+            recordsCreated={extractionStatus.recordsCreated}
+            errorMessage={extractionStatus.errorMessage}
+            onDismiss={extractionStatus.dismiss}
+          />
+
           {/* No Records Alert */}
-          {!isLoadingRecords && !hasRecords && (
+          {!isLoadingRecords && !hasRecords && extractionStatus.phase !== 'extracting' && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>No ACM Records Found</AlertTitle>

@@ -450,7 +450,13 @@ class ACMRecordResponse(BaseModel):
     risk_status: Optional[str] = None
     result: str
     page_number: Optional[int] = None
-    extraction_confidence: Optional[float] = None
+    extraction_confidence: Optional[str] = None  # "high", "medium", "low"
+    # Classification fields (E1-S9 - Victorian BAR taxonomy)
+    acm_product_group: Optional[str] = None
+    acm_product_type: Optional[str] = None
+    classification_confidence: Optional[float] = None
+    classification_method: Optional[str] = None
+    classification_override: Optional[bool] = None
     created: Optional[str] = None
     updated: Optional[str] = None
 
@@ -566,3 +572,136 @@ class ACMRecordUpdateRequest(BaseModel):
     risk_status: Optional[str] = Field(None, description="Risk status: Low/Medium/High")
     result: Optional[str] = Field(None, min_length=1, description="Test result")
     page_number: Optional[int] = Field(None, description="Source page number")
+
+    # Classification fields (E1-S9 - Victorian BAR taxonomy)
+    acm_product_group: Optional[str] = Field(None, description="BAR taxonomy product group")
+    acm_product_type: Optional[str] = Field(None, description="BAR taxonomy product type")
+    classification_override: Optional[bool] = Field(
+        None, description="Mark as manual override (set to True when user corrects classification)"
+    )
+
+
+# Site Configuration Models (E1-S8 - Victorian BAR Compliance)
+class SiteConfigRequest(BaseModel):
+    """Request to create or update site configuration."""
+
+    source_id: str = Field(..., description="Source document ID")
+    department: Optional[str] = Field(None, description="Victorian Government department")
+    agency: Optional[str] = Field(None, description="Agency within department")
+    building_type: Optional[str] = Field(None, description="Type of building")
+    owned_or_leased: Optional[str] = Field(None, description="Ownership status")
+    frequency_of_use: Optional[str] = Field(None, description="How frequently building is used")
+    public_access: Optional[str] = Field(None, description="Whether public has access (YES/NO)")
+    building_unique_id: Optional[str] = Field(None, description="Unique building identifier")
+
+
+class SiteConfigResponse(BaseModel):
+    """Site configuration response."""
+
+    id: Optional[str] = None
+    source_id: str
+    department: Optional[str] = None
+    agency: Optional[str] = None
+    building_type: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    frequency_of_use: Optional[str] = None
+    public_access: Optional[str] = None
+    building_unique_id: Optional[str] = None
+    missing_fields: List[str] = Field(default_factory=list, description="BAR fields not yet filled")
+    is_bar_complete: bool = Field(default=False, description="Whether all BAR fields are filled")
+    created: Optional[str] = None
+    updated: Optional[str] = None
+
+
+class SiteConfigTemplateResponse(BaseModel):
+    """Site configuration template for reuse."""
+
+    source_id: str
+    source_title: Optional[str] = None
+    department: Optional[str] = None
+    agency: Optional[str] = None
+    building_type: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    frequency_of_use: Optional[str] = None
+    public_access: Optional[str] = None
+
+
+class ApplyTemplateRequest(BaseModel):
+    """Request to apply a template configuration."""
+
+    source_id: str = Field(..., description="Target source document ID")
+    template_source_id: str = Field(..., description="Source ID to copy config from")
+
+
+class AgencyListResponse(BaseModel):
+    """List of agencies for autocomplete."""
+
+    agencies: List[str]
+
+
+# =============================================================================
+# ACM Product Classification Models (E1-S9 - Victorian BAR Taxonomy)
+# =============================================================================
+
+
+class ClassifyRequest(BaseModel):
+    """Request to classify an ACM item into taxonomy."""
+
+    item_description: str = Field(..., min_length=1, description="ACM item description")
+    friability: Optional[Literal["Friable", "Non-friable"]] = Field(
+        None, description="Friability status (optional, defaults to Non-friable)"
+    )
+    product: Optional[str] = Field(None, description="Optional product field to improve classification")
+    use_llm_fallback: bool = Field(
+        True, description="Use LLM for classification if pattern matching fails"
+    )
+
+
+class ClassifyResponse(BaseModel):
+    """Response from classification request."""
+
+    product_group: Optional[str] = Field(None, description="BAR taxonomy product group (e.g., 'T3 Vinyl products')")
+    product_type: Optional[str] = Field(None, description="BAR taxonomy product type (e.g., 'Vinyl Tiles')")
+    confidence: float = Field(..., description="Classification confidence score (0.0-1.0)")
+    method: Literal["pattern", "llm", "none"] = Field(
+        ..., description="Classification method used"
+    )
+
+
+class BatchClassifyRequest(BaseModel):
+    """Request to classify all ACM records for a source."""
+
+    source_id: str = Field(..., description="Source document ID")
+    use_llm_fallback: bool = Field(
+        True, description="Use LLM for classification if pattern matching fails"
+    )
+    skip_classified: bool = Field(
+        True, description="Skip records that already have classification"
+    )
+
+
+class BatchClassifyResponse(BaseModel):
+    """Response from batch classification request."""
+
+    total: int = Field(..., description="Total records processed")
+    classified: int = Field(..., description="Records successfully classified")
+    skipped: int = Field(..., description="Records skipped (already classified or no match)")
+    errors: int = Field(..., description="Records that failed classification")
+    results: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Individual classification results"
+    )
+
+
+class TaxonomyGroupResponse(BaseModel):
+    """Response for taxonomy product group."""
+
+    pc_code: str = Field(..., description="Product code (e.g., 'T1', 'T2')")
+    product_group_header: str = Field(..., description="Full product group name")
+    product_types: List[str] = Field(..., description="Available product types in this group")
+
+
+class TaxonomyResponse(BaseModel):
+    """Response for full taxonomy listing."""
+
+    friability: str = Field(..., description="Taxonomy type: 'Friable' or 'Non-friable'")
+    groups: List[TaxonomyGroupResponse] = Field(..., description="Product groups in taxonomy")

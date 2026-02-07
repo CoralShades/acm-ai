@@ -119,3 +119,80 @@ export type AreaType = 'Interior' | 'Exterior' | 'Grounds'
 
 // Friable type
 export type FriableType = 'Friable' | 'Non Friable'
+
+// Site Configuration Types for Victorian BAR Compliance
+export interface SiteConfig {
+  id?: string
+  source_id: string
+  department?: string | null
+  agency?: string | null
+  building_type?: string | null
+  owned_or_leased?: string | null
+  frequency_of_use?: string | null
+  public_access?: string | null
+  building_unique_id?: string | null
+  is_bar_complete?: boolean
+  missing_bar_fields?: string[]
+}
+
+export interface SiteConfigRequest {
+  source_id: string
+  department?: string
+  agency?: string
+  building_type?: string
+  owned_or_leased?: string
+  frequency_of_use?: string
+  public_access?: string
+  building_unique_id?: string
+}
+
+export interface SiteConfigTemplate {
+  source_id: string
+  source_title?: string
+  department?: string
+  agency?: string
+  building_type?: string
+  owned_or_leased?: string
+  frequency_of_use?: string
+  public_access?: string
+}
+
+// BAR Field Options
+export const DEPARTMENTS = [
+  'DJCS',
+  'DHHS',
+  'DET',
+  'DOT',
+  'DJPR',
+  'Other',
+] as const
+
+export const BUILDING_TYPES = [
+  'Police Station',
+  'Hospital',
+  'School',
+  'Office',
+  'Residential',
+  'Industrial',
+  'Other',
+] as const
+
+export const OWNERSHIP_OPTIONS = ['Owned', 'Leased'] as const
+
+export const FREQUENCY_OPTIONS = [
+  'Every day',
+  'Every day with intermittent breaks',
+  'Once every 3-5 days',
+  'Every 2-3 weeks',
+  'Once every 2-3 months',
+  'Annually or less frequently',
+] as const
+
+export const PUBLIC_ACCESS_OPTIONS = ['YES', 'NO'] as const
+
+export interface CommandJobStatusResponse {
+  job_id: string
+  status: 'new' | 'running' | 'completed' | 'failed' | 'canceled'
+  result?: { success?: boolean; records_created?: number; error_message?: string }
+  error_message?: string | null
+}

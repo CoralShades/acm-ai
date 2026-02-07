@@ -157,6 +157,28 @@ class ACMRecord(ObjectModel):
         description="List of data quality issues identified during extraction"
     )
 
+    # Product Classification fields (E1-S9: Victorian BAR taxonomy)
+    acm_product_group: Optional[str] = Field(
+        default=None,
+        description="BAR taxonomy product group (e.g., 'T3 Vinyl products')"
+    )
+    acm_product_type: Optional[str] = Field(
+        default=None,
+        description="BAR taxonomy product type (e.g., 'Vinyl Tiles')"
+    )
+    classification_confidence: Optional[float] = Field(
+        default=None,
+        description="Confidence score for the classification (0.0-1.0)"
+    )
+    classification_override: Optional[bool] = Field(
+        default=None,
+        description="Whether the classification was manually overridden"
+    )
+    classification_method: Optional[str] = Field(
+        default=None,
+        description="Classification method: 'pattern', 'llm', or 'manual'"
+    )
+
     # Embedding fields for semantic search (E1-S6)
     embedding: Optional[List[float]] = Field(
         default=None,

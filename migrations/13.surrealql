@@ -1,0 +1,29 @@
+-- Migration 13: Site Configuration for Victorian BAR Compliance
+-- Story: E1-S8 Site Configuration Data Entry
+-- Stores non-extractable metadata required for BAR exports
+
+DEFINE TABLE IF NOT EXISTS site_config SCHEMAFULL;
+
+-- Foreign key to source document (one config per source)
+DEFINE FIELD IF NOT EXISTS source_id ON TABLE site_config TYPE record<source>;
+
+-- Victorian Government organizational fields
+DEFINE FIELD IF NOT EXISTS department ON TABLE site_config TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS agency ON TABLE site_config TYPE option<string>;
+
+-- Building classification fields
+DEFINE FIELD IF NOT EXISTS building_type ON TABLE site_config TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS owned_or_leased ON TABLE site_config TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS frequency_of_use ON TABLE site_config TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS public_access ON TABLE site_config TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_unique_id ON TABLE site_config TYPE option<string>;
+
+-- Timestamps
+DEFINE FIELD IF NOT EXISTS created ON TABLE site_config DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD IF NOT EXISTS updated ON TABLE site_config DEFAULT time::now() VALUE time::now();
+
+-- Unique index: one config per source
+DEFINE INDEX IF NOT EXISTS idx_site_config_source ON TABLE site_config COLUMNS source_id UNIQUE;
+
+-- Index for template queries (group by department/agency)
+DEFINE INDEX IF NOT EXISTS idx_site_config_dept_agency ON TABLE site_config COLUMNS department, agency;

@@ -23,6 +23,22 @@ class ExtractionStatus(str, Enum):
     NO_ACM_DATA = "no_acm_data"
 
 
+class TableBoundingBox(BaseModel):
+    """Bounding box for table provenance linking."""
+    x: Optional[float] = Field(default=None, description="X coordinate")
+    y: Optional[float] = Field(default=None, description="Y coordinate")
+    width: Optional[float] = Field(default=None, description="Width")
+    height: Optional[float] = Field(default=None, description="Height")
+    page: Optional[int] = Field(default=None, description="Page number")
+
+
+class ConfidenceDistribution(BaseModel):
+    """Distribution of extraction confidence levels."""
+    high: int = Field(default=0, description="Count of high confidence records")
+    medium: int = Field(default=0, description="Count of medium confidence records")
+    low: int = Field(default=0, description="Count of low confidence records")
+
+
 class BuildingRoomContext(BaseModel):
     """
     Context for building and room hierarchy.
@@ -204,12 +220,7 @@ class ACMExtractionRecord(BaseModel):
         default=None,
         description="Page number where this record was found"
     )
-
-    # Bounding box for provenance linking (MinerU integration)
-    table_bbox: Optional[dict] = Field(
-        default=None,
-        description="Table bounding box coordinates: {x, y, width, height, page}"
-    )
+    # Note: table_bbox is added post-extraction by MinerU, not by LLM
 
 
 class ACMExtractionResult(BaseModel):
@@ -233,8 +244,8 @@ class ACMExtractionResult(BaseModel):
         default=0,
         description="Number of records rejected during validation"
     )
-    confidence_distribution: dict = Field(
-        default_factory=lambda: {"high": 0, "medium": 0, "low": 0},
+    confidence_distribution: ConfidenceDistribution = Field(
+        default_factory=ConfidenceDistribution,
         description="Count of records by confidence level"
     )
     extraction_notes: Optional[str] = Field(
@@ -245,11 +256,15 @@ class ACMExtractionResult(BaseModel):
     def update_stats(self) -> "ACMExtractionResult":
         """Update computed statistics based on records."""
         self.total_records = len(self.records)
-        self.confidence_distribution = {"high": 0, "medium": 0, "low": 0}
+        self.confidence_distribution = ConfidenceDistribution()
         for record in self.records:
             conf = record.extraction_confidence.lower()
-            if conf in self.confidence_distribution:
-                self.confidence_distribution[conf] += 1
+            if conf == "high":
+                self.confidence_distribution.high += 1
+            elif conf == "medium":
+                self.confidence_distribution.medium += 1
+            elif conf == "low":
+                self.confidence_distribution.low += 1
         return self
 
 
@@ -307,8 +322,8 @@ class ACMExtractionOutput(BaseModel):
         default=0,
         description="Number of records that failed validation and were rejected"
     )
-    confidence_distribution: dict = Field(
-        default_factory=lambda: {"high": 0, "medium": 0, "low": 0},
+    confidence_distribution: ConfidenceDistribution = Field(
+        default_factory=ConfidenceDistribution,
         description="Count of records by confidence level"
     )
     error: Optional[str] = Field(
