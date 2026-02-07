@@ -14,6 +14,7 @@ import type {
   SiteConfig,
   SiteConfigRequest,
   SiteConfigTemplate,
+  CommandJobStatusResponse,
 } from '@/lib/types/acm'
 
 export const acmApi = {
@@ -94,6 +95,14 @@ export const acmApi = {
       params: { source_id: sourceId },
       responseType: 'blob',
     })
+    return response.data
+  },
+
+  /**
+   * Get job status for an extraction command
+   */
+  getJobStatus: async (jobId: string): Promise<CommandJobStatusResponse> => {
+    const response = await apiClient.get<CommandJobStatusResponse>(`/commands/jobs/${jobId}`)
     return response.data
   },
 
