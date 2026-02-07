@@ -54,6 +54,13 @@ development_status:
   e1-s10-mineru-table-extraction: done
   e1-s11-extensible-consultant-parser-framework: review
   e1-s12-consultant-wording-normalization: ready-for-dev
+  e1-s13-agentic-extraction-orchestrator: backlog
+  e1-s14-contextual-embedding-enrichment: backlog
+  e1-s15-corrective-rag-validation-loop: backlog
+  e1-s16-document-structure-toc-extraction: backlog
+  e1-s17-building-inventory-compilation: backlog
+  e1-s18-page-level-section-tagging: backlog
+  e1-s19-document-metadata-extraction-enhancement: backlog
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -141,45 +148,70 @@ development_status:
   e10-s1-simplify-navigation: drafted
   epic-10-retrospective: optional
 
+  # Epic 11: Search & Retrieval Enhancement (P0/P1) - RAG Strategy
+  # 0/2 stories complete
+  epic-11: backlog
+  e11-s1-parent-document-retrieval: backlog
+  e11-s2-hybrid-search-service: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: Extraction Settings & Configuration UI (P1) - NEW 2026-02-07
+  # 0/4 stories complete
+  epic-12: backlog
+  e12-s1-extraction-method-settings: backlog
+  e12-s2-ai-model-configuration-ui: backlog
+  e12-s3-processing-options-configuration: backlog
+  e12-s4-parser-configuration-management: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Knowledge Graph Visualization (P1) - NEW 2026-02-07
+  # 0/3 stories complete
+  epic-13: backlog
+  e13-s1-surrealdb-graph-entity-schema: backlog
+  e13-s2-knowledge-graph-api-data-service: backlog
+  e13-s3-react-flow-knowledge-graph-visualization: backlog
+  epic-13-retrospective: optional
+
 # SUMMARY:
 # ========
-# Total Epics: 10 (6 done, 3 in-progress, 1 backlog)
-# Total Stories: 57
-# Stories Done: 50 (88%)
+# Total Epics: 13 (6 done, 3 in-progress, 4 backlog)
+# Total Stories: 73
+# Stories Done: 50 (68%)
+# Stories Review: 1 (E1-S11)
+# Stories Ready-for-dev: 1 (E1-S12)
 # Stories Drafted: 2 (E9-S3, E10-S1)
-# Stories Backlog: 5 (E1-S11, E1-S12, E2-S8, E5-S3, E5-S4)
+# Stories Backlog: 19 (E1-S13..S19, E2-S8, E5-S3, E5-S4, E11-S1..S2, E12-S1..S4, E13-S1..S3)
 #
 # Last Updated: 2026-02-07
 #
-# COMPLETED EPICS: E3, E4, E6, E7, E8 (+ E7 newly completed since all 7 stories done)
-# IN-PROGRESS EPICS: E1 (10/12), E2 (7/8), E5 (2/4), E9 (2/3)
-# BACKLOG EPICS: E10 (0/1)
+# COMPLETED EPICS: E3, E4, E6, E7, E8
+# IN-PROGRESS EPICS: E1 (10/19), E2 (7/8), E5 (2/4), E9 (2/3)
+# BACKLOG EPICS: E10 (0/1), E11 (0/2), E12 (0/4), E13 (0/3)
 #
-# KEY CHANGES THIS REGENERATION (2026-02-07):
-# ============================================
-# - E7 status upgraded: needs-expansion → done (E7-S7 completed 2026-02-06)
-# - E1 status cleaned: needs-expansion → in-progress (standard status)
-# - E2 status cleaned: needs-expansion → in-progress (standard status)
-# - E5 status cleaned: needs-expansion → in-progress (standard status)
-# - Removed legacy 'needs-expansion' status (non-standard, replaced with in-progress)
-#
-# PENDING: RAG Strategy Alignment (Sprint Change Proposal 2026-02-07)
-# ====================================================================
-# 25 change proposals approved but NOT YET APPLIED to epic files.
-# When applied, will add:
-# - E1-S13: Schema Versioning (backlog)
-# - E1-S14: Schema Migration Tools (backlog)
-# - E1-S15: Schema Validation (backlog)
-# - Epic 11: Search & Retrieval Enhancement (NEW)
-# - E11-S1: Vector Search Integration (backlog)
-# - E11-S2: Retrieval Accuracy Metrics (backlog)
-# Total will become: 62 stories (50/62 = 81% complete)
-# Re-run sprint planning after CPs are applied to epics file.
+# KEY CHANGES (2026-02-07 - Document Intelligence + Settings + Knowledge Graph):
+# ================================================================================
+# - E1 expanded: +4 Document Intelligence stories (E1-S16..S19)
+#   - E1-S16: Document Structure & TOC Extraction (from n8n "AI #TOC" agent)
+#   - E1-S17: Building Inventory Compilation (from n8n "Get Building List" agent)
+#   - E1-S18: Page-Level Section Tagging (from n8n "Tag Page with Sections" agent)
+#   - E1-S19: Document Metadata Extraction Enhancement
+# - E1 expanded: +3 RAG Strategy stories (E1-S13..S15) - from RAG alignment proposal
+# - NEW Epic 11: Search & Retrieval Enhancement (2 stories) - from RAG alignment proposal
+# - NEW Epic 12: Extraction Settings & Configuration UI (4 stories)
+#   - E12-S1: Extraction Method Settings Page
+#   - E12-S2: AI Model Configuration UI
+#   - E12-S3: Processing Options Configuration
+#   - E12-S4: Parser Configuration Management
+# - NEW Epic 13: Knowledge Graph Visualization (3 stories) - uses React Flow
+#   - E13-S1: SurrealDB Graph Entity Schema
+#   - E13-S2: Knowledge Graph API & Data Service
+#   - E13-S3: React Flow Knowledge Graph Visualization
 #
 # NEXT RECOMMENDED ACTIONS:
 # =========================
-# 1. Apply 25 RAG change proposals to PRD, Architecture, Epics docs
-# 2. Draft tech-specs for new stories (E1-S13, E1-S14, E1-S15, E11-S1, E11-S2)
+# 1. Approve sprint change proposal (CP#6-CP#11)
+# 2. Draft tech-specs for E1-S16 through E1-S19 (Document Intelligence, P0)
 # 3. Implement E9-S3 (Document Actions - drafted, ready for dev)
 # 4. Implement E10-S1 (UI Simplification - drafted, ready for dev)
-# 5. Then tackle RAG stories in priority order
+# 5. Begin E1-S16 (Document Structure/TOC) - foundation for document intelligence
+# 6. Then tackle E12 (Settings) and E13 (Knowledge Graph) in parallel
