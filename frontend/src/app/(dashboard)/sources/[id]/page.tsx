@@ -334,17 +334,15 @@ export default function SourceDetailPage() {
                     <FileText className="w-4 h-4" />
                     Content
                   </TabsTrigger>
-                  {hasAcmData && (
-                    <TabsTrigger value="acm" className="gap-1.5">
-                      <TableProperties className="w-4 h-4" />
-                      ACM
-                      {acmStats?.total_records ? (
-                        <Badge variant="secondary" className="ml-1 text-xs">
-                          {acmStats.total_records}
-                        </Badge>
-                      ) : null}
-                    </TabsTrigger>
-                  )}
+                  <TabsTrigger value="acm" className="gap-1.5">
+                    <TableProperties className="w-4 h-4" />
+                    ACM
+                    {acmStats?.total_records ? (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {acmStats.total_records}
+                      </Badge>
+                    ) : null}
+                  </TabsTrigger>
                   <TabsTrigger value="insights" className="gap-1.5">
                     <Lightbulb className="w-4 h-4" />
                     Insights
@@ -364,14 +362,12 @@ export default function SourceDetailPage() {
                 <TabsContent value="content" className="h-full m-0 p-4">
                   <SourceContentPanel source={source} />
                 </TabsContent>
-                {hasAcmData && (
-                  <TabsContent
-                    value="acm"
-                    className="h-full m-0 p-4 overflow-auto"
-                  >
-                    <ACMTab sourceId={sourceId} />
-                  </TabsContent>
-                )}
+                <TabsContent
+                  value="acm"
+                  className="h-full m-0 p-4 overflow-auto"
+                >
+                  <ACMTab sourceId={sourceId} />
+                </TabsContent>
                 <TabsContent
                   value="insights"
                   className="h-full m-0 p-4 overflow-auto"

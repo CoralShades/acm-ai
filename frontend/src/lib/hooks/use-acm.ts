@@ -173,26 +173,19 @@ export function useDeleteACMRecord() {
 /**
  * Hook to trigger ACM extraction
  */
-export function useExtractACM() {
-  const queryClient = useQueryClient()
+export function useExtractACM(onCommandStarted?: (commandId: string) => void) {
   const { toast } = useToast()
 
   return useMutation({
     mutationFn: (sourceId: string) => acmApi.extract(sourceId),
-    onSuccess: (result, sourceId) => {
+    onSuccess: (result) => {
       toast({
         title: 'Extraction Started',
         description: result.message,
       })
-      // Invalidate after a delay to allow processing
-      setTimeout(() => {
-        queryClient.invalidateQueries({
-          queryKey: ['acm', 'records', sourceId],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ACM_QUERY_KEYS.stats(sourceId),
-        })
-      }, 2000)
+      if (onCommandStarted && result.command_id) {
+        onCommandStarted(result.command_id)
+      }
     },
     onError: () => {
       toast({
