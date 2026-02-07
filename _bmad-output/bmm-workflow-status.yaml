@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-05"
+updated: "2026-02-07"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -47,8 +47,10 @@ workflow_status:
   # PHASE 3: Implementation
   sprint-planning: "docs/sprint-artifacts/sprint-status.yaml"
 
-  # PHASE 4: Course Correction (2026-02-04)
-  correct-course: "_bmad-output/sprint-change-proposal-20260204.md"
+  # PHASE 4: Course Corrections
+  correct-course-bar: "_bmad-output/sprint-change-proposal-20260204.md"
+  correct-course-rag: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-07.md"
+  correct-course-docint: "_bmad-output/sprint-change-proposal-20260207-workflow-extraction.md"
 
 # CHANGE LOG:
 # ===========
@@ -70,3 +72,12 @@ workflow_status:
 #   - Tech-spec created: docs/sprint-artifacts/e1-s10-mineru-table-extraction.md
 #   - Sprint change proposal updated with research integration section
 #   - References: _bmad-output/research-integration/, auto-claude spec 001
+# 2026-02-07: Document Intelligence Pipeline + Settings UI + Knowledge Graph
+#   - N8N workflow gap analysis: identified 5 critical extraction intelligence gaps
+#   - E1 expanded: +4 stories (E1-S16..S19) for document structure/TOC, building inventory,
+#     page tagging, metadata extraction - matching original n8n workflow capabilities
+#   - RAG stories applied: E1-S13..S15, E11-S1..S2 from RAG alignment proposal
+#   - NEW Epic 12: Extraction Settings & Configuration UI (4 stories)
+#   - NEW Epic 13: Knowledge Graph Visualization with React Flow (3 stories)
+#   - Sprint status: 73 stories total (50 done, 23 remaining)
+#   - Change proposal: _bmad-output/sprint-change-proposal-20260207-workflow-extraction.md
