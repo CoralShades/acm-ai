@@ -189,3 +189,10 @@ export const FREQUENCY_OPTIONS = [
 ] as const
 
 export const PUBLIC_ACCESS_OPTIONS = ['YES', 'NO'] as const
+
+export interface CommandJobStatusResponse {
+  job_id: string
+  status: 'new' | 'running' | 'completed' | 'failed' | 'canceled'
+  result?: { success?: boolean; records_created?: number; error_message?: string }
+  error_message?: string | null
+}
