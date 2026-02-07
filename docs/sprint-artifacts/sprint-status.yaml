@@ -73,7 +73,7 @@ development_status:
   e2-s5-implement-risk-status-color-coding: done
   e2-s6-add-search-bar-to-spreadsheet: done
   e2-s7-implement-building-tab-navigation: done
-  e2-s8-column-visibility-management: backlog
+  e2-s8-column-visibility-management: ready-for-dev
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
@@ -97,7 +97,7 @@ development_status:
   epic-5: in-progress
   e5-s1-implement-csv-export: done
   e5-s2-implement-excel-export: done
-  e5-s3-bar-template-management: backlog
+  e5-s3-bar-template-management: ready-for-dev
   e5-s4-export-field-mapping-configuration: backlog
   epic-5-retrospective: optional
 
