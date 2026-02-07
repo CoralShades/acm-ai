@@ -54,13 +54,7 @@ development_status:
   e1-s10-mineru-table-extraction: done
   e1-s11-extensible-consultant-parser-framework: review
   e1-s12-consultant-wording-normalization: ready-for-dev
-  e1-s13-agentic-extraction-orchestrator: backlog
-  e1-s14-contextual-embedding-enrichment: backlog
-  e1-s15-corrective-rag-validation-loop: backlog
-  e1-s16-document-structure-toc-extraction: backlog
-  e1-s17-building-inventory-compilation: backlog
-  e1-s18-page-level-section-tagging: backlog
-  e1-s19-document-metadata-extraction-enhancement: backlog
+  e1-s13-fix-page-reference-tracking: ready-for-dev
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -73,7 +67,7 @@ development_status:
   e2-s5-implement-risk-status-color-coding: done
   e2-s6-add-search-bar-to-spreadsheet: done
   e2-s7-implement-building-tab-navigation: done
-  e2-s8-column-visibility-management: backlog
+  e2-s8-column-visibility-management: ready-for-dev
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
@@ -97,7 +91,7 @@ development_status:
   epic-5: in-progress
   e5-s1-implement-csv-export: done
   e5-s2-implement-excel-export: done
-  e5-s3-bar-template-management: backlog
+  e5-s3-bar-template-management: ready-for-dev
   e5-s4-export-field-mapping-configuration: backlog
   epic-5-retrospective: optional
 
