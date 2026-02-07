@@ -1,8 +1,8 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-04)
-> **Status:** Draft - Updated for Victorian BAR Format
+> **Date:** 2025-12-07 (Updated: 2026-02-07)
+> **Status:** Draft - Updated for Document Intelligence Pipeline & Knowledge Graph
 > **Change Log:** Sprint Change Proposal approved 2026-02-04 - Added 6 new stories, modified 6 existing
 
 ---
@@ -11,7 +11,7 @@
 
 | Epic | Title | Priority | Stories | Status |
 |------|-------|----------|---------|--------|
-| E1 | ACM Data Extraction Pipeline | P0 | **12** (+5 new) | Done (7), New (5) |
+| E1 | ACM Data Extraction Pipeline | P0 | **19** (+4 doc intel) | Done (10), Backlog (9) |
 | E2 | AG Grid Spreadsheet Integration | P0 | **8** (+1 new) | Done (7), New (1) |
 | E3 | Cell Citations & PDF Viewer | P0 | 4 | Done |
 | E4 | Chat with ACM Context | P0 | 4 | Done |
@@ -21,6 +21,9 @@
 | E8 | UI Refresh (Bento Grid) | P1 | 10 | In Progress |
 | E9 | Document Library Management | P0 | 3 | Backlog |
 | E10 | ACM-AI UI Simplification | P0 | 1 | Backlog |
+| E11 | Search & Retrieval Enhancement | P0/P1 | 2 | Backlog |
+| E12 | Extraction Settings & Configuration UI | P1 | 4 | Backlog |
+| E13 | Knowledge Graph Visualization | P1 | 3 | Backlog |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -30,6 +33,15 @@
 > - E1-S11: Extensible consultant parser framework
 > - E1-S12: Consultant wording normalization
 > Updated E1-S3 for two-stage pipeline and E1-S9 for official taxonomy.
+>
+> **2026-02-07 Update:** Document Intelligence Pipeline + Settings UI + Knowledge Graph:
+> - E1-S16: Document Structure & TOC Extraction
+> - E1-S17: Building Inventory Compilation
+> - E1-S18: Page-Level Section Tagging
+> - E1-S19: Document Metadata Extraction Enhancement
+> - NEW Epic 12: Extraction Settings & Configuration UI (4 stories)
+> - NEW Epic 13: Knowledge Graph Visualization (3 stories)
+> Based on n8n workflow validation gap analysis.
 
 ---
 
@@ -288,6 +300,98 @@
 **Technical Notes:**
 - Location: `open_notebook/extraction/normalizers/recommendations.py`
 - Reference: `docs/samplePDF/instructions-sample/consultant_wording_rules.json`
+
+---
+
+### E1-S16: Document Structure & TOC Extraction (NEW 2026-02-07)
+**As a** system
+**I want** to extract document structure, table of contents, and hierarchical page mapping
+**So that** the extraction pipeline understands document organization before processing
+
+**Acceptance Criteria:**
+- [ ] Extract TOC from document (if present) with page ranges
+- [ ] Build content hierarchy: Section -> Subsection -> Page Range
+- [ ] Identify register start pages (typically pages 13+ for SAMPs)
+- [ ] Map document sections: policy pages vs register pages vs appendices
+- [ ] Detect document type (SAMP, Asbestos Risk Assessment, Division 5, etc.)
+- [ ] Extract total page count and document structure statistics
+- [ ] Output: `DocumentStructure` Pydantic model with section hierarchy
+- [ ] Works on Prensa, Greencap, and generic SAMP formats
+
+**Technical Notes:**
+- Location: `open_notebook/extractors/document_structure.py`
+- Prompt: `prompts/acm/structure_extraction.jinja`
+- Integration: Runs as Stage -1, before Stage 0 (Preflight)
+- Reference: N8N "AI #TOC and Page Indexes" agent
+
+---
+
+### E1-S17: Building Inventory Compilation (NEW 2026-02-07)
+**As a** system
+**I want** to compile a complete building inventory with page locations
+**So that** extraction can target specific page ranges per building for higher accuracy
+
+**Acceptance Criteria:**
+- [ ] Identify all building codes (B000-series, D-series for demountables)
+- [ ] Extract building metadata: name, year, construction type, purpose
+- [ ] Map each building to its document page range
+- [ ] Classify building complexity (simple "No Asbestos" vs complex register)
+- [ ] Create processing groups of 3-5 pages based on building complexity
+- [ ] Output: `BuildingInventory` with `BuildingMeta` entries
+- [ ] Handles buildings spanning multiple pages
+- [ ] Detects room codes (R000-series) within each building
+
+**Technical Notes:**
+- Location: `open_notebook/extractors/building_inventory.py`
+- Prompt: `prompts/acm/building_inventory.jinja`
+- Integration: Stage -1.5, between structure and per-building extraction
+- Reference: N8N "Get Complete Building List and Metadata" agent
+
+---
+
+### E1-S18: Page-Level Section Tagging (NEW 2026-02-07)
+**As a** system
+**I want** to tag each page with its section classification and confidence score
+**So that** the extraction pipeline can apply section-specific strategies
+
+**Acceptance Criteria:**
+- [ ] Standardized section taxonomy (0-7):
+  - 0: Executive Summary, 1: Introduction, 2: Site Description
+  - 3: Methodology, 4: Asbestos Register, 5: Risk Assessment
+  - 6: Conclusion, 7: Appendix
+- [ ] Each page tagged with: section_id, section_title, confidence (0.0-1.0)
+- [ ] Page type classification: title_page, toc_page, content, special
+- [ ] Subsection detection using document's actual numbering
+- [ ] Contextual awareness: tracks progression through document
+- [ ] Batch processing (3-5 pages per LLM call for efficiency)
+
+**Technical Notes:**
+- Location: `open_notebook/extractors/page_tagger.py`
+- Prompt: `prompts/acm/page_tagging.jinja`
+- Use efficient model (Haiku) for cost-effective page-level processing
+- Reference: N8N "AI - Tag Page with Sections" agent
+
+---
+
+### E1-S19: Document Metadata Extraction Enhancement (NEW 2026-02-07)
+**As a** system
+**I want** to extract comprehensive document metadata beyond school_name and school_code
+**So that** all BAR export fields are populated automatically where possible
+
+**Acceptance Criteria:**
+- [ ] Extract from cover page/header: address, suburb, postcode, organization, consultant, report reference, revision date, regional classification
+- [ ] Extract from document body: inspection dates, inspector names, document scope, methodology
+- [ ] Populate `DocumentMeta` Pydantic model with all extracted fields
+- [ ] Auto-fill SiteConfig fields from extracted metadata
+- [ ] Confidence scoring per field (extracted vs inferred)
+- [ ] Works on Prensa, Greencap, and generic formats
+- [ ] Integration with existing ConsultantParser.extract_metadata()
+
+**Technical Notes:**
+- Location: `open_notebook/extractors/metadata_extractor.py`
+- Prompt: `prompts/acm/metadata_extraction.jinja`
+- Enhance existing `parsers/prensa.py` and `parsers/greencap.py`
+- Auto-fill `site_config` table during upload flow
 
 ---
 
@@ -820,6 +924,21 @@ E10-S1 (independent)
 | E5-S4 (Field Mapping) | E5-S3 (Templates) | - |
 | E7-S7 (Upload Site Config) | E1-S8, E7-S4 | - |
 
+### NEW Story Dependencies (Document Intelligence + Settings + Knowledge Graph 2026-02-07)
+| New Story | Depends On | Blocks |
+|-----------|------------|--------|
+| E1-S16 (TOC/Structure) | E1-S3 (Pipeline, done) | E1-S17 (Inventory) |
+| E1-S17 (Building Inventory) | E1-S16 (Structure) | E1-S18 (Page Tagging) |
+| E1-S18 (Page Tagging) | E1-S17 (Inventory) | - |
+| E1-S19 (Metadata Enhancement) | E1-S16 (Structure) | - |
+| E12-S1 (Extraction Settings) | E1-S16/17/18/19 | E12-S2, E12-S3 |
+| E12-S2 (Model Config UI) | E12-S1 | - |
+| E12-S3 (Processing Config) | E12-S1 | - |
+| E12-S4 (Parser Config UI) | E1-S11 (Parser Framework) | - |
+| E13-S1 (Graph Schema) | E1-S4 (API, done) | E13-S2 |
+| E13-S2 (Graph API) | E13-S1 | E13-S3 |
+| E13-S3 (React Flow UI) | E13-S2 | - |
+
 ---
 
 ## MVP Scope Summary (UPDATED 2026-02-04)
@@ -847,6 +966,16 @@ E10-S1 (independent)
 - E5: **S3-S4 (NEW - Template Management, Field Mapping)**
 - E6: S2-S4 (full rebrand) ✅ DONE
 - E9: S2, S3 (processing status, bulk actions)
+
+**Must Have (MVP) - Document Intelligence (NEW 2026-02-07):**
+- E1: **S16 (Document Structure & TOC)** - Pre-extraction intelligence
+- E1: **S17 (Building Inventory)** - Targeted per-building extraction
+- E1: **S19 (Metadata Enhancement)** - Auto-populate BAR fields
+
+**Should Have - Document Intelligence:**
+- E1: **S18 (Page-Level Section Tagging)** - Section-aware extraction
+- E12: **S1-S4 (Settings & Configuration UI)** - Operational flexibility
+- E13: **S1-S3 (Knowledge Graph Visualization)** - Visual compliance auditing
 
 **Could Have:**
 - E8: All stories (UI refresh - nice to have) - In Progress
@@ -1273,3 +1402,176 @@ E10-S1 (independent)
   - "Search": Ask and Search
   - "Settings": Models, Settings
 - Reference: Analysis of `AppSidebar.tsx` navigation structure
+
+---
+
+## Epic 12: Extraction Settings & Configuration UI (NEW 2026-02-07)
+
+> **Created:** 2026-02-07 (Sprint Change Proposal - Document Intelligence Pipeline)
+> **Rationale:** Operators need to manage extraction methods, AI models, processing options,
+> and parser configurations without developer intervention.
+
+### E12-S1: Extraction Method Settings Page
+**As a** user
+**I want** a settings page to configure extraction methods and preferences
+**So that** I can control how documents are processed without changing code
+
+**Acceptance Criteria:**
+- [ ] Settings page accessible from navigation under "Settings"
+- [ ] Extraction method selection: MinerU / Docling / Hybrid (default: Hybrid)
+- [ ] Fallback behavior: Enable/Disable automatic fallback
+- [ ] Document intelligence pipeline toggles:
+  - Enable/Disable TOC extraction
+  - Enable/Disable building inventory compilation
+  - Enable/Disable page-level section tagging
+  - Enable/Disable document metadata extraction
+- [ ] Settings persisted in SurrealDB `extraction_settings` table
+- [ ] Settings applied globally (default) or per-source override
+- [ ] API endpoints: GET/PUT `/api/settings/extraction`
+- [ ] Reset to defaults button
+
+**Technical Notes:**
+- Location: `frontend/src/app/(dashboard)/settings/extraction/page.tsx`
+- Backend: `api/routers/settings.py`
+- Domain: `open_notebook/domain/settings.py`
+
+---
+
+### E12-S2: AI Model Configuration UI
+**As a** user
+**I want** to configure which AI models are used for each extraction stage
+**So that** I can balance cost, speed, and accuracy per operation
+
+**Acceptance Criteria:**
+- [ ] Model selection per extraction stage:
+  - Structure analysis, Building inventory, ACM extraction
+  - Page tagging, Product classification, Corrective validation
+- [ ] Available models populated from existing model registry
+- [ ] Cost/speed indicator per model
+- [ ] Test button: run extraction on sample page with selected model
+- [ ] Settings saved per extraction stage
+- [ ] API endpoints: GET/PUT `/api/settings/models`
+
+**Technical Notes:**
+- Location: `frontend/src/app/(dashboard)/settings/models/page.tsx`
+- Integrate with existing Esperanto model abstraction
+- Use existing `model` table for available models
+
+---
+
+### E12-S3: Processing Options Configuration
+**As a** user
+**I want** to configure processing parameters like chunk size and confidence thresholds
+**So that** I can tune extraction performance for different document types
+
+**Acceptance Criteria:**
+- [ ] Processing parameters: Chunk size (2000-8000), Confidence threshold (0.0-1.0), Max correction attempts (1-5), Batch size (1-10)
+- [ ] Timeout settings: Per-page (10-120s), Total document (1-30min)
+- [ ] Output preferences: Store raw JSON, Auto-classify, Auto-normalize
+- [ ] Presets: "Fast", "Balanced" (default), "Thorough"
+- [ ] API endpoints: GET/PUT `/api/settings/processing`
+
+**Technical Notes:**
+- Location: `frontend/src/app/(dashboard)/settings/processing/page.tsx`
+- Store in `processing_settings` SurrealDB table
+
+---
+
+### E12-S4: Parser Configuration Management
+**As a** user
+**I want** to view and manage consultant parser configurations
+**So that** I can add support for new document formats and tune existing parsers
+
+**Acceptance Criteria:**
+- [ ] List all registered parsers with status (active/inactive)
+- [ ] Per-parser details: name, detection patterns, column mapping
+- [ ] Sample detection test: paste text, see if parser detects it
+- [ ] Enable/disable individual parsers
+- [ ] Parser priority ordering (drag-and-drop)
+- [ ] Column mapping editor: visual table mapping source -> target fields
+- [ ] Export/import parser configuration as JSON
+- [ ] API endpoints: GET/PUT/POST `/api/settings/parsers`
+
+**Technical Notes:**
+- Location: `frontend/src/app/(dashboard)/settings/parsers/page.tsx`
+- Backend: Extend `api/routers/settings.py`
+- Built-in parsers read-only, custom parsers editable
+
+---
+
+## Epic 13: Knowledge Graph Visualization (NEW 2026-02-07)
+
+> **Created:** 2026-02-07 (Sprint Change Proposal - Document Intelligence Pipeline)
+> **Rationale:** Visual mapping of document entity relationships enables compliance auditing,
+> risk assessment at a glance, and understanding extraction provenance.
+> Uses React Flow for interactive graph rendering and SurrealDB native graph capabilities.
+
+### E13-S1: SurrealDB Graph Entity Schema
+**As a** developer
+**I want** separate entity tables and relationship tables in SurrealDB
+**So that** document entities have proper graph relationships
+
+**Acceptance Criteria:**
+- [ ] New entity tables: `school`, `building`, `room`
+- [ ] New relationship tables (SurrealDB RELATION type):
+  - `school_has_building` (FROM school TO building)
+  - `building_has_room` (FROM building TO room)
+  - `room_has_acm` (FROM room TO acm_record)
+  - `extracted_from` (FROM acm_record TO source)
+- [ ] Migration script to create tables and backfill from existing acm_record data
+- [ ] `acm_record` retains embedded fields for backward compatibility
+- [ ] Graph traversal queries work end-to-end
+- [ ] Pydantic models for all new entities
+
+**Technical Notes:**
+- Migration: `migrations/XX.surrealql`
+- Domain: `open_notebook/domain/graph_entities.py`
+- Backfill: Extract unique schools/buildings/rooms from existing acm_records
+
+---
+
+### E13-S2: Knowledge Graph API & Data Service
+**As a** frontend developer
+**I want** API endpoints that return graph-structured data for React Flow
+**So that** the frontend can render entity relationship diagrams
+
+**Acceptance Criteria:**
+- [ ] API endpoints:
+  - `GET /api/graph/source/{source_id}` - Full graph for a source
+  - `GET /api/graph/school/{school_id}` - School-centric graph
+  - `GET /api/graph/building/{building_id}` - Building-centric graph
+  - `GET /api/graph/stats/{source_id}` - Graph statistics
+- [ ] Response format: React Flow compatible nodes and edges JSON
+- [ ] Auto-layout calculation (hierarchical top-down via dagre)
+- [ ] Risk summary aggregation per node
+- [ ] Filter options: by risk level, by building, by ACM status
+
+**Technical Notes:**
+- Location: `api/routers/graph.py`, `api/graph_service.py`
+- Use SurrealDB graph traversal for data fetching
+- Auto-layout: dagre algorithm
+
+---
+
+### E13-S3: React Flow Knowledge Graph Visualization
+**As a** user
+**I want** an interactive knowledge graph showing entity relationships for each PDF
+**So that** I can visually understand document structure and identify risk areas
+
+**Acceptance Criteria:**
+- [ ] Knowledge Graph tab in source detail view
+- [ ] React Flow canvas with custom nodes:
+  - School node (top level): name, code, address
+  - Building node: name, year, construction, risk summary badge
+  - Room node: name, area, ACM count
+  - ACM node: product, risk color (red/yellow/green), friability icon
+- [ ] Interactive features: click for details, zoom/pan, expand/collapse groups, risk filter, minimap
+- [ ] Layout options: Hierarchical (default), Force-directed
+- [ ] Export graph as PNG/SVG
+- [ ] Toggle between graph view and spreadsheet view
+
+**Technical Notes:**
+- Location: `frontend/src/components/acm/KnowledgeGraph.tsx`
+- Dependencies: `@xyflow/react` (React Flow v12+), `dagre`
+- Custom nodes: `frontend/src/components/acm/graph-nodes/`
+- Integration: Tab in source detail page alongside spreadsheet
