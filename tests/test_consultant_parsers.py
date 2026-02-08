@@ -93,7 +93,7 @@ class TestRawACMItem:
 
 
 class TestDocumentMeta:
-    """Test DocumentMeta dataclass."""
+    """Test DocumentMeta Pydantic model."""
 
     def test_document_meta_creation(self):
         """DocumentMeta can be created with consultant_name."""

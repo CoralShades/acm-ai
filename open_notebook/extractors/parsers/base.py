@@ -8,8 +8,10 @@ Story: E1-S11 Generic Configurable Parser with BAR Field Schema
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 @dataclass
@@ -45,10 +47,14 @@ class RawACMItem:
     page_number: Optional[int] = None
 
 
-@dataclass
-class DocumentMeta:
-    """Document-level metadata extracted from report cover/header pages."""
+class DocumentMeta(BaseModel):
+    """Document-level metadata extracted from report cover/header pages.
 
+    Enhanced in E1-S19 with additional fields for comprehensive metadata
+    extraction, confidence scoring, and SiteConfig auto-fill support.
+    """
+
+    # Original fields (preserved from dataclass version)
     consultant_name: str
     site_name: Optional[str] = None
     site_address: Optional[str] = None
@@ -56,7 +62,43 @@ class DocumentMeta:
     report_reference: Optional[str] = None
     building_size: Optional[str] = None
     building_age: Optional[str] = None
-    additional: Dict[str, str] = field(default_factory=dict)
+    additional: Dict[str, str] = Field(default_factory=dict)
+
+    # New fields (E1-S19)
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    organization: Optional[str] = None
+    inspection_dates: Optional[List[str]] = None
+    inspector_names: Optional[List[str]] = None
+    document_scope: Optional[str] = None
+    methodology: Optional[str] = None
+    revision_date: Optional[str] = None
+    regional_classification: Optional[str] = None
+
+    # Confidence scoring per field (E1-S19)
+    field_confidence: Dict[str, str] = Field(default_factory=dict)
+
+    def get_extracted_fields(self) -> Dict[str, Any]:
+        """Return only non-None data fields (excludes meta fields)."""
+        exclude_fields = {"field_confidence", "additional"}
+        result = {}
+        for name, value in self.model_dump().items():
+            if name in exclude_fields:
+                continue
+            if value is not None:
+                result[name] = value
+        return result
+
+    def get_site_config_mappings(self) -> Dict[str, Any]:
+        """Return fields that map to SiteConfig.
+
+        Only returns non-None values. Caller should only apply to empty
+        SiteConfig fields.
+        """
+        mappings: Dict[str, Any] = {}
+        if self.organization:
+            mappings["agency"] = self.organization
+        return mappings
 
 
 @dataclass

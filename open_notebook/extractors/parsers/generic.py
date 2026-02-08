@@ -62,6 +62,12 @@ class GenericParser(ConsultantParser):
         return True
 
     def extract_metadata(self, pages: Dict[int, str]) -> DocumentMeta:
+        """Extract metadata from pages. Returns basic metadata for now.
+
+        Full extraction is handled by metadata_extractor.py (E1-S19)
+        in the LangGraph pipeline. This method remains for parser interface
+        compatibility.
+        """
         return DocumentMeta(consultant_name="Generic")
 
     def extract_items(self, tables: List[dict]) -> List[RawACMItem]:

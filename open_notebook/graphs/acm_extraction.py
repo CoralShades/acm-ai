@@ -46,11 +46,16 @@ from open_notebook.extractors.document_structure import (
     DocumentStructure,
     extract_document_structure,
 )
+from open_notebook.extractors.metadata_extractor import (
+    auto_populate_site_config,
+    extract_document_metadata,
+)
+from open_notebook.extractors.normalizers.enums import normalize_enum_value
 from open_notebook.extractors.page_tagger import (
     PageTaggingResult,
     tag_pages,
 )
-from open_notebook.extractors.normalizers.enums import normalize_enum_value
+from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.extractors.validators.acm_validator import (
     CorrectionStats,
     validate_acm_record,
@@ -218,6 +223,8 @@ class ExtractionState(TypedDict):
     building_inventory: Optional[BuildingInventory]
     # Page tags (E1-S18)
     page_tags: Optional[PageTaggingResult]
+    # Document metadata (E1-S19)
+    document_metadata: Optional[DocumentMeta]
 
 
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
@@ -412,6 +419,33 @@ def _assign_record_page(
             break
 
     return assigned_page, pos
+
+
+async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
+    """Extract document metadata as Stage -2 pre-extraction intelligence.
+
+    Story: E1-S19 Document Metadata Extraction Enhancement
+    """
+    source: Source = state["source"]
+    content = source.full_text or ""
+    model_id = state.get("model_id")
+
+    if not content:
+        logger.warning(f"Source {source.id} has no content for metadata extraction")
+        return {"document_metadata": None}
+
+    try:
+        metadata = await extract_document_metadata(content, model_id=model_id)
+        if metadata:
+            logger.info(
+                f"Document metadata extracted for source {source.id}: "
+                f"consultant={metadata.consultant_name}, "
+                f"fields={len(metadata.get_extracted_fields())}"
+            )
+        return {"document_metadata": metadata}
+    except Exception as e:
+        logger.warning(f"Metadata extraction failed for source {source.id}: {e}")
+        return {"document_metadata": None}
 
 
 async def extract_structure(state: dict, config: RunnableConfig) -> dict:
@@ -1209,6 +1243,14 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     )
     result.update_stats()
 
+    # Auto-fill SiteConfig from document metadata (E1-S19)
+    document_metadata: Optional[DocumentMeta] = state.get("document_metadata")
+    if document_metadata and saved_count > 0:
+        try:
+            await auto_populate_site_config(document_metadata, str(source.id))
+        except Exception as e:
+            logger.warning(f"SiteConfig auto-fill failed: {e}")
+
     # Log correction stats (E1-S15)
     correction_stats = state.get("correction_stats", {})
     if any(correction_stats.get(k, 0) > 0 for k in ("auto_corrected", "llm_corrected", "failed")):
@@ -1269,6 +1311,7 @@ def should_save(state: dict) -> str:
 agent_state = StateGraph(ExtractionState)
 
 # Add nodes
+agent_state.add_node("extract_metadata", extract_metadata_node)  # E1-S19: Stage -2
 agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
 agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
 agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
@@ -1279,8 +1322,9 @@ agent_state.add_node("correct", correct_records)
 agent_state.add_node("deduplicate", deduplicate_records)
 agent_state.add_node("save", save_records)
 
-# Add edges: START → structure → inventory → tag_pages → prepare → ...
-agent_state.add_edge(START, "structure")
+# Add edges: START → extract_metadata → structure → inventory → tag_pages → prepare → ...
+agent_state.add_edge(START, "extract_metadata")
+agent_state.add_edge("extract_metadata", "structure")
 agent_state.add_edge("structure", "inventory")
 agent_state.add_edge("inventory", "tag_pages")
 agent_state.add_edge("tag_pages", "prepare")
@@ -1358,6 +1402,8 @@ async def extract_acm_from_source(
         "building_inventory": None,
         # Page tags (E1-S18)
         "page_tags": None,
+        # Document metadata (E1-S19)
+        "document_metadata": None,
     }
 
     try:

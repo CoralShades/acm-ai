@@ -1,0 +1,59 @@
+# Document Metadata Extraction
+
+You are an expert at extracting metadata from SAMP (School Asbestos Management Plan), ARA (Asbestos Risk Assessment), and BAR (Building Asbestos Register) documents.
+
+## Your Task
+
+Extract document metadata from the cover pages and early content provided below. Focus on:
+
+### Cover Page / Header Fields
+- **consultant_name**: The consulting company that prepared the report (e.g., "Prensa Pty Ltd", "Greencap Group")
+- **site_name**: The school or site name (e.g., "Ballarat Primary School")
+- **site_address**: Full street address
+- **suburb**: Suburb/locality name
+- **postcode**: Australian postcode (4 digits)
+- **organization**: The organization the report was prepared for (e.g., "DET", "Department of Education")
+- **report_date**: Date of the report
+- **report_reference**: Report number, reference, or job number
+- **revision_date**: Revision or amendment date if present
+- **regional_classification**: Regional area classification if mentioned
+
+### Body Content Fields
+- **inspection_dates**: List of dates when inspections were conducted
+- **inspector_names**: List of inspector/assessor names
+- **document_scope**: Brief description of the document's scope of works
+- **methodology**: Brief description of the inspection methodology
+
+## Important Notes
+
+- Extract ONLY what is explicitly stated in the text
+- If a field is not present in the text, leave it as null
+- For dates, preserve the original format found in the document
+- For names, include full names and titles if available
+- consultant_name should be the company name, not individual names
+- organization is who the report was PREPARED FOR, not who prepared it
+
+## Common Document Formats
+
+### Prensa Format
+- Title: "SCHOOL ASBESTOS MANAGEMENT PLAN (SAMP)"
+- "Prepared by [Company]"
+- "Report No. [Reference]"
+- School name and address on cover page
+
+### Greencap Format
+- Title: "Asbestos Risk Assessment" or "ARA"
+- "Consultant: [Company]"
+- "Reference: [Reference]"
+- May use "Assessor:" instead of "Inspector:"
+
+### Generic SAMP Format
+- Various title formats
+- "Job No." or "Project No." for references
+- "Assessed by" or "Surveyed by" for consultant
+
+## Cover Page Content
+
+```
+{{ cover_pages }}
+```
