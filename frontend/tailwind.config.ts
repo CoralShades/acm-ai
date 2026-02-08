@@ -9,6 +9,24 @@ const config: Config = {
   darkMode: "class",
   theme: {
     extend: {
+      // VAEA color shortcuts for convenience
+      colors: {
+        vaea: {
+          teal: {
+            100: '#9AD9D9',
+            300: '#53A69D',
+            500: '#01A09C',
+            700: '#2A5951',
+            900: '#01706D',
+          },
+          green: {
+            200: '#A9D9AC',
+            500: '#95D60C',
+          },
+          coral: '#EB787A',
+          gold: '#D4A843',
+        },
+      },
       // Font family mapped from CSS variables (Inter + JetBrains Mono)
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
