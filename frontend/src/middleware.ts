@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server'
 const REDIRECTS: Record<string, string> = {
   '/sources': '/documents',
   '/advanced': '/settings',
+  '/models': '/settings/models',
 }
 
 export function middleware(request: NextRequest) {
