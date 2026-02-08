@@ -51,6 +51,11 @@ from open_notebook.extractors.metadata_extractor import (
     extract_document_metadata,
 )
 from open_notebook.extractors.normalizers.enums import normalize_enum_value
+from open_notebook.extractors.orchestrator import (
+    OrchestratorStats,
+    orchestrate_extraction,
+    should_use_orchestrator,
+)
 from open_notebook.extractors.page_tagger import (
     PageTaggingResult,
     tag_pages,
@@ -225,6 +230,8 @@ class ExtractionState(TypedDict):
     page_tags: Optional[PageTaggingResult]
     # Document metadata (E1-S19)
     document_metadata: Optional[DocumentMeta]
+    # Orchestrator stats (E1-S20)
+    orchestrator_stats: Optional[OrchestratorStats]
 
 
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
@@ -1315,6 +1322,7 @@ agent_state.add_node("extract_metadata", extract_metadata_node)  # E1-S19: Stage
 agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
 agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
 agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
+agent_state.add_node("orchestrate", orchestrate_extraction)  # E1-S20: Agentic orchestrator
 agent_state.add_node("prepare", prepare_context)
 agent_state.add_node("extract", extract_records)
 agent_state.add_node("validate", validate_records_strict)
@@ -1327,7 +1335,13 @@ agent_state.add_edge(START, "extract_metadata")
 agent_state.add_edge("extract_metadata", "structure")
 agent_state.add_edge("structure", "inventory")
 agent_state.add_edge("inventory", "tag_pages")
-agent_state.add_edge("tag_pages", "prepare")
+# E1-S20: Conditional routing after page tagging
+agent_state.add_conditional_edges(
+    "tag_pages",
+    lambda s: "orchestrate" if should_use_orchestrator(s) else "prepare",
+    {"orchestrate": "orchestrate", "prepare": "prepare"},
+)
+agent_state.add_edge("orchestrate", "validate")  # Orchestrator feeds into validation
 agent_state.add_conditional_edges(
     "prepare",
     lambda s: "error" if s.get("error") else "extract",
@@ -1404,6 +1418,8 @@ async def extract_acm_from_source(
         "page_tags": None,
         # Document metadata (E1-S19)
         "document_metadata": None,
+        # Orchestrator stats (E1-S20)
+        "orchestrator_stats": None,
     }
 
     try:
@@ -1423,6 +1439,10 @@ async def extract_acm_from_source(
             for k in ("auto_corrected", "llm_corrected", "failed")
         )
 
+        # Extract orchestrator stats (E1-S20)
+        orch_stats = result.get("orchestrator_stats")
+        orch_stats_dict = orch_stats.model_dump() if orch_stats else None
+
         if error:
             return ACMExtractionOutput(
                 source_id=str(source.id),
@@ -1432,6 +1452,7 @@ async def extract_acm_from_source(
                 error=error,
                 extraction_time_ms=extraction_time,
                 correction_stats=correction_stats if has_corrections else None,
+                orchestrator_stats=orch_stats_dict,
             )
 
         status = "success" if extraction_result.total_records > 0 else "no_data"
@@ -1444,6 +1465,7 @@ async def extract_acm_from_source(
             confidence_distribution=extraction_result.confidence_distribution,
             extraction_time_ms=extraction_time,
             correction_stats=correction_stats if has_corrections else None,
+            orchestrator_stats=orch_stats_dict,
         )
 
     except Exception as e:

@@ -338,3 +338,7 @@ class ACMExtractionOutput(BaseModel):
         default=None,
         description="Corrective RAG stats: {auto_corrected, llm_corrected, failed, total_validated}"
     )
+    orchestrator_stats: Optional[dict] = Field(
+        default=None,
+        description="Orchestrator stats: per-building extraction plan, strategy distribution, timing"
+    )

@@ -8,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from open_notebook.extractors.page_tagger import (
+    _SECTION_TITLES,
     PageTag,
     PageTagBatch,
     PageTaggingResult,
@@ -18,7 +19,6 @@ from open_notebook.extractors.page_tagger import (
     _create_batches,
     _heuristic_tag_all,
     _heuristic_tag_page,
-    _SECTION_TITLES,
     _split_into_pages,
 )
 
@@ -245,7 +245,6 @@ class TestPageTaggingResult:
     """Test PageTaggingResult model (Task 1.5)."""
 
     def test_create_empty_result(self):
-        from open_notebook.extractors.page_tagger import PageTaggingResult
 
         result = PageTaggingResult(
             pages=[], total_pages=0, register_page_range=None,
@@ -257,7 +256,6 @@ class TestPageTaggingResult:
     def test_create_result_with_pages(self):
         from open_notebook.extractors.page_tagger import (
             PageTag,
-            PageTaggingResult,
             PageType,
         )
 
@@ -781,13 +779,22 @@ class TestLangGraphIntegration:
         assert ("inventory", "tag_pages") in edges or any(
             e == ("inventory", "tag_pages") for e in edges
         )
-        assert ("tag_pages", "prepare") in edges or any(
-            e == ("tag_pages", "prepare") for e in edges
+        # tag_pages -> prepare is now a conditional edge (E1-S20 orchestrator routing)
+        assert "tag_pages" in agent_state.branches, (
+            "tag_pages should have conditional edges for orchestrator routing"
+        )
+        tag_pages_targets = set()
+        for branch in agent_state.branches["tag_pages"].values():
+            if hasattr(branch, "ends") and branch.ends:
+                tag_pages_targets.update(branch.ends.values())
+        assert "prepare" in tag_pages_targets, (
+            f"tag_pages conditional edges should include 'prepare', got {tag_pages_targets}"
         )
 
     def test_extraction_state_has_page_tags(self):
-        from open_notebook.graphs.acm_extraction import ExtractionState
         import typing
+
+        from open_notebook.graphs.acm_extraction import ExtractionState
 
         annotations = typing.get_type_hints(ExtractionState)
         assert "page_tags" in annotations
