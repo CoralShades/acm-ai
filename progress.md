@@ -1,157 +1,98 @@
-# Progress Log: Victorian BAR Format Expansion
+# Progress: UX Audit & Enterprise Readiness
 
-## Session: 2026-02-04
+> **Session started:** 2026-02-08
+> **Session completed:** 2026-02-08
 
-### Overview
-Completed Course Correction workflow to expand ACM-AI support from NSW SAMP format (20 fields) to Victorian BAR format (~50 fields).
+---
 
-### Trigger
-User analysis of actual input/output documents revealed schema gap:
-- **Input PDFs**: Victorian asbestos risk assessments (Prensa & Greencap formats)
-- **Output Excel**: BAR (Building Asbestos Register) files with 43-47 columns
-- **Gap**: Current PRD had 20 fields, actual requirement is ~50 fields
+## Session Log
 
-### Phases Completed
+### 2026-02-08 10:50 AM - Session Start
+- Activated planning-with-files workflow
+- Asked clarifying questions about branding, personas, agent visibility, feature cleanup
+- **User answers:** VAEA branding, both personas, full transparency, remove podcasts/transformations/notebooks
 
-#### Phase 1: PRD Update (COMPLETE)
-**File**: `_bmad-output/project-planning-artifacts/acm-ai/03-prd.md`
+### 2026-02-08 10:55 AM - Brand Asset Collection
+- Read VAEA brand assets from `docs/vaea-assets/`
+- Collected color palette: teal primary (#53A69D), deep teal (#2A5951), light teal (#9AD9D9)
+- Read dark mode tokens from sample CSS
+- Fetched VAEA website (vaea.vic.gov.au) design patterns
+- Confirmed: VAEA gradient = teal -> lime -> gold
+- Vendor branding: CoralShades (CS_Logo.svg, CS_Favicon.svg)
 
-Changes made:
-- Added Section 1.4 Document Formats Supported (NSW SAMP, Victorian BAR)
-- Updated FR-103, FR-104 for multi-format support
-- Added FR-107, FR-108 for format detection
-- Added FR-205 to FR-208 for data model
-- Added FR-310 to FR-312 for export functionality
-- Rewrote Section 4.3 AG Grid Column Configuration (7 column groups)
-- Rewrote Section 5.1 ACM Record Schema (~50 fields)
-- Added Section 5.1.1 Site Configuration Schema
-- Expanded Section 5.2 API Endpoints
-- Added Section 5.3 BAR Export Format Specification
-- Updated Section 7 test data and scenarios
-- Updated glossary with Victorian terms
+### 2026-02-08 11:00 AM - Frontend Audit
+- Read current sidebar navigation (4 sections, 11 items)
+- Read dashboard page (bento grid with risk stats)
+- Read ACMTab, ACMExtractionBanner, useExtractionStatus
+- Key finding: extraction status is basic (idle/extracting/completed/failed) with no stage detail
+- Launched background agents:
+  - Agent 1: Comprehensive frontend component audit (COMPLETED)
+  - Agent 2: AG-UI protocol + design system research (COMPLETED)
 
-#### Phase 2: Architecture Update (COMPLETE)
-**File**: `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md`
+### 2026-02-08 11:20 AM - Research Complete
+- Agent 1 returned: Full component inventory (16 pages, 11 ACM components, 36 UI components, 6 stores, 25+ hooks, 15 API modules, full design token audit)
+- Agent 2 returned: AG-UI/CopilotKit integration guide, pydantic-to-typescript pipeline, enterprise UI patterns, shimmer skeletons, Sonner toast enhancement, React Flow knowledge graph, Tailwind 4 best practices
 
-Changes made:
-- Added new frontend components (SiteConfigForm, ColumnVisibility, BARExportDialog)
-- Rewrote Section 3.1 SurrealDB Tables (~50 fields + site_config table)
-- Expanded Section 4.2 API Response Types (ACMRecord, SiteConfig, BARExportOptions)
-- Added multi-format provider detection patterns (Prensa, Greencap)
-- Rewrote Section 6.1 AG Grid Configuration (7 column groups, COLUMN_PRESETS)
+### 2026-02-08 11:25 AM - Team Created & Tasks Assigned
+- Created `ux-audit` agent team
+- Created 7 tasks for parallel specification work
+- Spawned 6 teammates:
+  1. **ux-auditor** → Task #1: UX Audit document
+  2. **design-system-architect** → Task #2: VAEA Design System spec
+  3. **ux-designer** → Task #3: UI/UX Specification with user flows
+  4. **pipeline-architect** → Task #4: AG-UI Pipeline Transparency spec
+  5. **state-architect** → Task #5: State Management & Loading Patterns spec
+  6. **nav-cleanup** → Task #6: Navigation Redesign & Feature Cleanup spec
+- Team lead (self) → Task #7: Planning files update & implementation priorities
 
-#### Phase 3: Epics & Stories Update (COMPLETE)
-**File**: `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md`
+### 2026-02-08 11:30 AM - Planning Files Updated
+- Updated findings.md with research synthesis (AG-UI, pydantic-to-typescript, skeleton loading, toast, React Flow, animation, design system research)
+- Updated progress.md with full session log
+- Created implementation-priorities.md with priority matrix and sprint story mapping
 
-Changes made:
-- Updated Epic Overview table (story counts, new status column)
-- Added E1-S8: Site Configuration Data Entry
-- Added E1-S9: ACM Product Classification
-- Added E2-S8: Column Visibility Management
-- Rewrote Epic 5 section (promoted to P0)
-- Added E5-S3: BAR Template Management
-- Added E5-S4: Export Field Mapping Configuration
-- Added E7-S7: Site Configuration During Upload
-- Added Story Dependencies table
-- Updated MVP Scope Summary with completion markers
+### 2026-02-08 11:35 AM - Tasks #1, #2, #3 Complete
+- ux-auditor completed: `docs/ux-audit.md` (38KB) - 30 findings, severity ratings, mermaid flowcharts
+- design-system-architect completed: `docs/design-system.md` (45KB) - Full VAEA token system, OKLCH colors, component variants
+- ux-designer completed: `docs/ui-ux-spec.md` (47KB) - User flows, wireframes, interaction patterns
 
-#### Phase 4: Workflow Status Update (COMPLETE)
-**File**: `_bmad-output/bmm-workflow-status.yaml`
+### 2026-02-08 11:38 AM - Tasks #5, #6 Complete
+- nav-cleanup completed: `docs/navigation-cleanup-spec.md` (31KB) - Before/after nav code, route merging, middleware redirects
+- state-architect completed: `docs/state-loading-spec.md` (65KB) - Store audits, 3 new stores, skeleton specs, toast patterns
 
-Changes made:
-- Updated timestamp to 2026-02-04
-- Added `correct-course` entry pointing to sprint change proposal
-- Added change log documenting course correction
+### 2026-02-08 11:42 AM - Task #4 Complete, All Specs Done
+- pipeline-architect completed: `docs/ag-ui-pipeline-spec.md` (53KB) - 12-section spec with SSE events, CopilotKit integration, component hierarchy, Pydantic models, mermaid data flow diagrams
+- All 6 teammates shut down
+- Team cleanup complete
 
-#### Phase 5: Sprint Status Update (COMPLETE)
-**File**: `docs/sprint-artifacts/sprint-status.yaml`
+---
 
-Changes made:
-- Added "needs-expansion" status for epics with new stories
-- Added 6 new stories to backlog:
-  - e1-s8-site-configuration-data-entry
-  - e1-s9-acm-product-classification
-  - e2-s8-column-visibility-management
-  - e5-s3-bar-template-management
-  - e5-s4-export-field-mapping-configuration
-  - e7-s7-site-configuration-during-upload
-- Updated epic statuses (E1, E2, E5, E7 → needs-expansion)
-- Updated summary: 54 total stories (was 48), 76% complete
-- Added Course Correction section
-- Added recommended next actions
+## Final Phase Status
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 0: Research | **COMPLETE** | All agents finished, findings synthesized |
+| Phase 1: UX Audit | **COMPLETE** | `docs/ux-audit.md` (38KB) |
+| Phase 2: UI/UX Spec | **COMPLETE** | `docs/ui-ux-spec.md` (47KB) |
+| Phase 3: Design System | **COMPLETE** | `docs/design-system.md` (45KB) |
+| Phase 4: AG-UI Pipeline | **COMPLETE** | `docs/ag-ui-pipeline-spec.md` (53KB) |
+| Phase 5: State Management | **COMPLETE** | `docs/state-loading-spec.md` (65KB) |
+| Phase 6: Feature Cleanup | **COMPLETE** | `docs/navigation-cleanup-spec.md` (31KB) |
+| Phase 7: VAEA Branding | **COMPLETE** | Covered in design system spec |
+| Phase 8: Enterprise Ready | **COMPLETE** | Covered across all specs |
+| Phase 9: Documentation | **COMPLETE** | Implementation priorities + all deliverables |
 
-### New Stories Added
+---
 
-| Story ID | Title | Epic | Priority | Status |
-|----------|-------|------|----------|--------|
-| E1-S8 | Site Configuration Data Entry | E1 | P0 | backlog |
-| E1-S9 | ACM Product Classification | E1 | P0 | backlog |
-| E2-S8 | Column Visibility Management | E2 | P1 | backlog |
-| E5-S3 | BAR Template Management | E5 | P1 | backlog |
-| E5-S4 | Export Field Mapping Configuration | E5 | P1 | backlog |
-| E7-S7 | Site Configuration During Upload | E7 | P0 | backlog |
+## Final Deliverables
+| Deliverable | File | Size | Status |
+|-------------|------|------|--------|
+| UX Audit | `docs/ux-audit.md` | 38KB | Complete |
+| Design System | `docs/design-system.md` | 45KB | Complete |
+| UI/UX Spec | `docs/ui-ux-spec.md` | 47KB | Complete |
+| AG-UI Pipeline Spec | `docs/ag-ui-pipeline-spec.md` | 53KB | Complete |
+| State/Loading Spec | `docs/state-loading-spec.md` | 65KB | Complete |
+| Nav Cleanup Spec | `docs/navigation-cleanup-spec.md` | 31KB | Complete |
+| Implementation Priorities | `docs/implementation-priorities.md` | 6KB | Complete |
+| Findings (Research) | `findings.md` | 11KB | Complete |
+| Task Plan | `task_plan.md` | 4KB | Complete |
 
-### Field Expansion Summary
-
-| Category | Count | Examples |
-|----------|-------|----------|
-| Organization Hierarchy | 5 | department, agency, region, program, building_type |
-| Location Metadata | 5 | property_id, street_address, suburb, postcode, gps_coords |
-| Building Info | 5 | building_name, floor_level, room_name, specific_location, functional_area |
-| ACM Details | 10 | item_id, acm_type, friability, condition, extent, quantity, etc. |
-| Risk Assessment | 8 | condition_score, risk_rating, risk_level, priority_ranking, etc. |
-| Management | 8 | recommendation, date_identified, next_review_date, etc. |
-| Classification | 4 | product_group, product_type, asbestos_type, material_form |
-| Removal Tracking | 5 | removal_status, removal_date, removal_contractor, etc. |
-
-### Decisions Made
-
-| Decision | Rationale |
-|----------|-----------|
-| Union schema (50 fields) | Supports both NSW SAMP and Victorian BAR formats |
-| Add to existing epics | Maintains epic coherence rather than creating new Epic 11 |
-| Complete E8 first | Don't disrupt in-progress work |
-| E5 promoted to P0 | BAR Excel export is critical for compliance |
-
-### Recommended Next Actions
-
-**Option A**: Continue Epic 8 (UI Refresh)
-- E8-S8: Update Navigation Sidebar (drafted)
-
-**Option B**: Start Victorian BAR stories (P0 priority)
-- Recommended sequence: E1-S8 → E7-S7 → E1-S9 → E5-S3 → E5-S4 → E2-S8
-
-### Files Modified
-
-| File | Action |
-|------|--------|
-| `_bmad-output/project-planning-artifacts/acm-ai/03-prd.md` | Major expansion |
-| `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md` | Major expansion |
-| `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md` | Added 6 stories |
-| `_bmad-output/bmm-workflow-status.yaml` | Added course correction entry |
-| `docs/sprint-artifacts/sprint-status.yaml` | Added 6 stories, updated statuses |
-| `_bmad-output/sprint-change-proposal-20260204.md` | Created (approved) |
-| `task_plan.md` | Updated phases |
-| `findings.md` | Contains field analysis |
-
-### Verification Checklist
-
-- [x] PRD updated with 50-field schema
-- [x] Architecture updated with expanded types
-- [x] Epics document has 6 new stories
-- [x] Workflow status records course correction
-- [x] Sprint status has new stories in backlog
-- [x] Sprint change proposal approved and saved
-- [x] No build-breaking changes (planning docs only)
-
-### Session Summary
-
-Successfully completed Course Correction workflow per BMAD methodology:
-1. Analyzed actual input/output document requirements
-2. Identified 27+ missing fields in current schema
-3. Created and approved 5 change proposals
-4. Updated all planning documents (PRD, Architecture, Epics)
-5. Updated tracking files (workflow status, sprint status)
-6. Added 6 new stories to implement Victorian BAR support
-
-**Progress**: 76% complete (41/54 stories done)
+**Total specification output: ~300KB across 9 documents**
