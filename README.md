@@ -105,14 +105,31 @@ start-ollama.bat      # Interactive setup with GPU/CPU choice
 stop-ollama.bat       # Stop Ollama container
 ```
 
-#### macOS / Linux
+#### macOS / Linux / WSL
 ```bash
-# Start all services (requires make, Docker, and uv)
-make start-all
+# Option 1: Start all 4 services in background (logs to /tmp/)
+./start-all.sh                # Start all services
+./stop-all.sh                 # Stop all services
 
-# Stop all services
+# Option 2: Start with make (same as Option 1)
+make start-all
 make stop-all
+
+# Option 3: Start in tmux with 4 visible terminal panes (recommended for development)
+./start-all-tmux.sh           # Starts in tmux session
+# Use Ctrl+B then D to detach, Ctrl+B then arrow keys to switch panes
+
+# View logs (for Option 1 & 2):
+tail -f /tmp/acm-ai-api.log
+tail -f /tmp/acm-ai-worker.log
 ```
+
+**The 4 services are:**
+
+1. **SurrealDB** (Database) - Port 8000
+2. **FastAPI Backend** (API) - Port 5055
+3. **Background Worker** (Async job processor)
+4. **Next.js Frontend** (UI) - Port 8502
 
 #### Manual Setup (All Platforms)
 ```bash
