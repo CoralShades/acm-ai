@@ -23,20 +23,23 @@ import {
 } from '@/components/ui/collapsible'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
+import { VendorAttribution } from '@/components/brand/VendorAttribution'
 import {
   LayoutDashboard,
   Search,
   Bot,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronDown,
   Menu,
-  FileText,
-  Wrench,
+  Upload,
   Command,
   FileWarning,
   Library,
+  FlaskConical,
+  FileCode,
+  Cog,
+  SlidersHorizontal,
 } from 'lucide-react'
 
 interface NavItem {
@@ -53,25 +56,22 @@ interface NavSection {
 
 const navigation: NavSection[] = [
   {
-    title: 'Collect',
+    title: 'Workspace',
     items: [
-      { name: 'Sources', href: '/sources', icon: FileText },
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
       { name: 'Documents', href: '/documents', icon: Library },
       { name: 'ACM Register', href: '/acm', icon: FileWarning },
+      { name: 'Search', href: '/search', icon: Search },
     ],
   },
   {
-    title: 'Process',
+    title: 'Configure',
     items: [
-      { name: 'Ask and Search', href: '/search', icon: Search },
-    ],
-  },
-  {
-    title: 'Manage',
-    items: [
-      { name: 'Models', href: '/models', icon: Bot },
-      { name: 'Settings', href: '/settings', icon: Settings },
-      { name: 'Advanced', href: '/advanced', icon: Wrench },
+      { name: 'Extraction', href: '/settings/extraction', icon: FlaskConical },
+      { name: 'AI Models', href: '/models', icon: Bot },
+      { name: 'Parsers', href: '/settings/parsers', icon: FileCode },
+      { name: 'Processing', href: '/settings/processing', icon: Cog },
+      { name: 'General', href: '/settings', icon: SlidersHorizontal },
     ],
   },
 ]
@@ -90,9 +90,13 @@ export function AppSidebar() {
     setIsMac(navigator.platform.toLowerCase().includes('mac'))
   }, [])
 
+  // Check if a nav item is active (exact match for root, prefix match for others)
+  const isItemActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href)
+
   // Check if any item in a section is active
   const isSectionActive = (section: NavSection) =>
-    section.items.some((item) => pathname.startsWith(item.href))
+    section.items.some((item) => isItemActive(item.href))
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -147,44 +151,6 @@ export function AppSidebar() {
             isCollapsed ? 'px-2' : 'px-3'
           )}
         >
-          {/* Dashboard Link - Always visible at top */}
-          <div className={cn('mb-2', isCollapsed ? 'px-0' : 'px-0')}>
-            {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/">
-                    <Button
-                      variant={pathname === '/' ? 'secondary' : 'ghost'}
-                      className={cn(
-                        'w-full justify-center px-2 text-sidebar-foreground',
-                        pathname === '/' &&
-                          'bg-sidebar-accent text-sidebar-accent-foreground'
-                      )}
-                      aria-label="Dashboard"
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Dashboard</TooltipContent>
-              </Tooltip>
-            ) : (
-              <Link href="/">
-                <Button
-                  variant={pathname === '/' ? 'secondary' : 'ghost'}
-                  className={cn(
-                    'w-full justify-start gap-3 text-sidebar-foreground',
-                    pathname === '/' &&
-                      'bg-sidebar-accent text-sidebar-accent-foreground'
-                  )}
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </Button>
-              </Link>
-            )}
-          </div>
-
           {/* Upload Document button - directly opens AddSourceDialog */}
           <div className={cn('mb-4', isCollapsed ? 'px-0' : 'px-0')}>
             {isCollapsed ? (
@@ -197,7 +163,7 @@ export function AppSidebar() {
                     className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
                     aria-label="Upload Document"
                   >
-                    <FileText className="h-4 w-4" />
+                    <Upload className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Upload Document</TooltipContent>
@@ -209,7 +175,7 @@ export function AppSidebar() {
                 size="sm"
                 className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"
               >
-                <FileText className="h-4 w-4 mr-2" />
+                <Upload className="h-4 w-4 mr-2" />
                 Upload Document
               </Button>
             )}
@@ -230,7 +196,7 @@ export function AppSidebar() {
                   // Collapsed mode: show items directly with tooltips
                   <div className="space-y-1">
                     {section.items.map((item) => {
-                      const isActive = pathname.startsWith(item.href)
+                      const isActive = isItemActive(item.href)
                       return (
                         <Tooltip key={item.name}>
                           <TooltipTrigger asChild>
@@ -283,7 +249,7 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-1 pt-1">
                       {section.items.map((item) => {
-                        const isActive = pathname.startsWith(item.href)
+                        const isActive = isItemActive(item.href)
                         return (
                           <Link key={item.name} href={item.href}>
                             <Button
@@ -320,6 +286,9 @@ export function AppSidebar() {
             isCollapsed && 'px-2'
           )}
         >
+          {/* Vendor Attribution */}
+          {!isCollapsed && <VendorAttribution className="mb-1" />}
+
           {/* Command Palette hint */}
           {!isCollapsed && (
             <div className="px-3 py-1.5 text-xs text-sidebar-foreground/60 rounded-md bg-sidebar-accent/30">
