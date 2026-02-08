@@ -33,7 +33,7 @@ export const queryClient = new QueryClient({
 
         return false
       },
-      retryDelay: (attemptIndex) => {
+      retryDelay: (attemptIndex: number) => {
         // Exponential backoff: 1s, 2s, 4s, 8s, max 10s
         return Math.min(1000 * Math.pow(2, attemptIndex), 10000)
       }
