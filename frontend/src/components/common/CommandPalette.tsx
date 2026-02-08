@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
-import { useNotebooks } from '@/lib/hooks/use-notebooks'
 import { useTheme } from '@/lib/stores/theme-store'
 import {
   CommandDialog,
@@ -14,11 +13,8 @@ import {
   CommandSeparator,
 } from '@/components/ui/command'
 import {
-  Book,
   Search,
-  Mic,
   Bot,
-  Shuffle,
   Settings,
   FileText,
   Wrench,
@@ -27,24 +23,18 @@ import {
   Sun,
   Moon,
   Monitor,
-  Loader2,
 } from 'lucide-react'
 
 const navigationItems = [
   { name: 'Sources', href: '/sources', icon: FileText, keywords: ['files', 'documents', 'upload'] },
-  { name: 'Notebooks', href: '/notebooks', icon: Book, keywords: ['notes', 'research', 'projects'] },
   { name: 'Ask and Search', href: '/search', icon: Search, keywords: ['find', 'query'] },
-  { name: 'Podcasts', href: '/podcasts', icon: Mic, keywords: ['audio', 'episodes', 'generate'] },
   { name: 'Models', href: '/models', icon: Bot, keywords: ['ai', 'llm', 'providers', 'openai', 'anthropic'] },
-  { name: 'Transformations', href: '/transformations', icon: Shuffle, keywords: ['prompts', 'templates', 'actions'] },
   { name: 'Settings', href: '/settings', icon: Settings, keywords: ['preferences', 'config', 'options'] },
   { name: 'Advanced', href: '/advanced', icon: Wrench, keywords: ['debug', 'system', 'tools'] },
 ]
 
 const createItems = [
-  { name: 'Create Source', action: 'source', icon: FileText },
-  { name: 'Create Notebook', action: 'notebook', icon: Book },
-  { name: 'Create Podcast', action: 'podcast', icon: Mic },
+  { name: 'Upload Document', action: 'source', icon: FileText },
 ]
 
 const themeItems = [
@@ -57,9 +47,8 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const router = useRouter()
-  const { openSourceDialog, openNotebookDialog, openPodcastDialog } = useCreateDialogs()
+  const { openSourceDialog } = useCreateDialogs()
   const { setTheme } = useTheme()
-  const { data: notebooks, isLoading: notebooksLoading } = useNotebooks(false)
 
   // Global keyboard listener for ⌘K / Ctrl+K
   useEffect(() => {
@@ -117,10 +106,8 @@ export function CommandPalette() {
   const handleCreate = useCallback((action: string) => {
     handleSelect(() => {
       if (action === 'source') openSourceDialog()
-      else if (action === 'notebook') openNotebookDialog()
-      else if (action === 'podcast') openPodcastDialog()
     })
-  }, [handleSelect, openSourceDialog, openNotebookDialog, openPodcastDialog])
+  }, [handleSelect, openSourceDialog])
 
   const handleTheme = useCallback((theme: 'light' | 'dark' | 'system') => {
     handleSelect(() => setTheme(theme))
@@ -141,13 +128,9 @@ export function CommandPalette() {
       themeItems.some(item =>
         item.name.toLowerCase().includes(queryLower) ||
         item.keywords.some(k => k.includes(queryLower))
-      ) ||
-      (notebooks?.some(nb =>
-        nb.name.toLowerCase().includes(queryLower) ||
-        (nb.description && nb.description.toLowerCase().includes(queryLower))
-      ) ?? false)
+      )
     )
-  }, [queryLower, notebooks])
+  }, [queryLower])
 
   // Determine if we should show the Search/Ask section at the top
   const showSearchFirst = query.trim() && !hasCommandMatch
@@ -200,27 +183,6 @@ export function CommandPalette() {
               <span>{item.name}</span>
             </CommandItem>
           ))}
-        </CommandGroup>
-
-        {/* Notebooks */}
-        <CommandGroup heading="Notebooks">
-          {notebooksLoading ? (
-            <CommandItem disabled>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading notebooks...</span>
-            </CommandItem>
-          ) : notebooks && notebooks.length > 0 ? (
-            notebooks.map((notebook) => (
-              <CommandItem
-                key={notebook.id}
-                value={`notebook ${notebook.name} ${notebook.description || ''}`}
-                onSelect={() => handleNavigate(`/notebooks/${notebook.id}`)}
-              >
-                <Book className="h-4 w-4" />
-                <span>{notebook.name}</span>
-              </CommandItem>
-            ))
-          ) : null}
         </CommandGroup>
 
         {/* Create */}
