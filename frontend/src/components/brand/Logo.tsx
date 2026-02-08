@@ -1,6 +1,8 @@
 'use client'
 
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { BRANDING } from '@/config/branding'
 
 interface LogoProps {
   variant?: 'full' | 'icon'
@@ -9,38 +11,20 @@ interface LogoProps {
 }
 
 /**
- * ACM-AI Logo Component
+ * VAEA ACM-AI Logo Component
  *
- * Shield design representing:
- * - Safety and compliance (shield shape)
- * - Document/data analysis (horizontal lines)
- * - AI capability (circuit node)
+ * Uses the official VAEA Ripple logo for government branding compliance.
  */
 export function Logo({ variant = 'full', className, iconClassName }: LogoProps) {
   const icon = (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <Image
+      src="/logo.png"
+      alt="VAEA Logo"
+      width={32}
+      height={32}
       className={cn('w-8 h-8', iconClassName)}
-      aria-hidden="true"
-    >
-      {/* Shield shape */}
-      <path
-        d="M16 2L4 7v9c0 8.4 5.12 16.24 12 18 6.88-1.76 12-9.6 12-18V7L16 2z"
-        className="fill-primary"
-      />
-      {/* Document lines representing data/registers */}
-      <path
-        d="M10 11h12M10 15h12M10 19h8"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      {/* AI circuit node */}
-      <circle cx="22" cy="19" r="2.5" fill="white" />
-      <circle cx="22" cy="19" r="1" className="fill-primary" />
-    </svg>
+      priority
+    />
   )
 
   if (variant === 'icon') {
@@ -54,7 +38,7 @@ export function Logo({ variant = 'full', className, iconClassName }: LogoProps) 
   return (
     <div className={cn('flex items-center gap-2', className)}>
       {icon}
-      <span className="font-semibold text-lg text-foreground">ACM-AI</span>
+      <span className="font-semibold text-lg text-foreground">{BRANDING.name}</span>
     </div>
   )
 }
