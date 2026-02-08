@@ -12,7 +12,7 @@
 | # | Story | Priority | Tech Spec | Status |
 |---|-------|----------|-----------|--------|
 | 1 | E14-S1 | P0 | tech-spec-e14-s1-vaea-branding-design-tokens.md | done |
-| 2 | E14-S3 | P0 | tech-spec-e14-s3-hide-brownfield-features.md | pending |
+| 2 | E14-S3 | P0 | tech-spec-e14-s3-hide-brownfield-features.md | done |
 | 3 | E14-S2 | P0 | tech-spec-e14-s2-sidebar-navigation.md | pending |
 | 4 | E14-S4 | P1 | tech-spec-e14-s4-skeleton-loading-screens.md | pending |
 | 5 | E14-S5 | P1 | tech-spec-e14-s5-toast-system.md | pending |
@@ -24,7 +24,7 @@
 | 11 | E14-S11 | P2 | tech-spec-e14-s11-pydantic-typescript-types.md | pending |
 
 ## Current Focus
-- **Active Story:** E14-S3 (Hide Brownfield Features)
+- **Active Story:** E14-S2 (Sidebar Navigation Redesign)
 - **Phase:** 1 - PLAN
 
 ## Ordering Rationale

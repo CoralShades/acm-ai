@@ -1,7 +1,7 @@
 # E14 Implementation Progress
 
-## Current Story: E14-S3
-## Stories Completed: 1/11
+## Current Story: E14-S2
+## Stories Completed: 2/11
 ## Last Updated: 2026-02-08 14:05 AEDT
 
 ---
@@ -14,19 +14,19 @@
 - **Lint:** PASS
 - **UX Audit:** PASS (all 8 acceptance criteria met)
 - **Files Modified:** globals.css, branding.ts, Logo.tsx, VendorAttribution.tsx (new), AcknowledgmentFooter.tsx (new), logo.png (new), icon.png (new), favicon.ico (new), manifest.json, tailwind.config.ts
-- **Commit:** (pending)
+- **Commit:** fb6ac64
 - **Notes:** VAEA teal palette, OKLCH tokens, 12px radius, system fonts, coral focus rings, dark mode with dark teal bg
 
 ### E14-S3: Hide Brownfield Features
-- **Status:** pending
-- **Started:**
-- **Completed:**
-- **Build:**
-- **Lint:**
-- **UX Audit:**
-- **Files Modified:**
-- **Commit:**
-- **Notes:**
+- **Status:** done
+- **Started:** 2026-02-08 14:10 AEDT
+- **Completed:** 2026-02-08 14:25 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 6 acceptance criteria met)
+- **Files Modified:** AppSidebar.tsx, CommandPalette.tsx, AddButton.tsx
+- **Commit:** (pending)
+- **Notes:** Removed Notebooks, Podcasts, Transformations from nav. Create button simplified to "Upload Document". Pages preserved at original URLs.
 
 ### E14-S2: Sidebar Navigation Redesign
 - **Status:** pending

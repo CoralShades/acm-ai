@@ -17,12 +17,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -31,18 +25,14 @@ import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
 import {
   LayoutDashboard,
-  Book,
   Search,
-  Mic,
   Bot,
-  Shuffle,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronDown,
   Menu,
   FileText,
-  Plus,
   Wrench,
   Command,
   FileWarning,
@@ -73,54 +63,32 @@ const navigation: NavSection[] = [
   {
     title: 'Process',
     items: [
-      { name: 'Notebooks', href: '/notebooks', icon: Book },
       { name: 'Ask and Search', href: '/search', icon: Search },
     ],
-  },
-  {
-    title: 'Create',
-    items: [{ name: 'Podcasts', href: '/podcasts', icon: Mic }],
   },
   {
     title: 'Manage',
     items: [
       { name: 'Models', href: '/models', icon: Bot },
-      { name: 'Transformations', href: '/transformations', icon: Shuffle },
       { name: 'Settings', href: '/settings', icon: Settings },
       { name: 'Advanced', href: '/advanced', icon: Wrench },
     ],
   },
 ]
 
-type CreateTarget = 'source' | 'notebook' | 'podcast'
-
 export function AppSidebar() {
   const pathname = usePathname()
   const { logout } = useAuth()
   const { isCollapsed, expandedSections, toggleCollapse, toggleSection } =
     useSidebarStore()
-  const { openSourceDialog, openNotebookDialog, openPodcastDialog } =
-    useCreateDialogs()
+  const { openSourceDialog } = useCreateDialogs()
 
-  const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
 
   // Detect platform for keyboard shortcut display
   useEffect(() => {
     setIsMac(navigator.platform.toLowerCase().includes('mac'))
   }, [])
-
-  const handleCreateSelection = (target: CreateTarget) => {
-    setCreateMenuOpen(false)
-
-    if (target === 'source') {
-      openSourceDialog()
-    } else if (target === 'notebook') {
-      openNotebookDialog()
-    } else if (target === 'podcast') {
-      openPodcastDialog()
-    }
-  }
 
   // Check if any item in a section is active
   const isSectionActive = (section: NavSection) =>
@@ -217,77 +185,34 @@ export function AppSidebar() {
             )}
           </div>
 
-          {/* Create Button */}
+          {/* Upload Document button - directly opens AddSourceDialog */}
           <div className={cn('mb-4', isCollapsed ? 'px-0' : 'px-0')}>
-            <DropdownMenu open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
-              {isCollapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        onClick={() => setCreateMenuOpen(true)}
-                        variant="default"
-                        size="sm"
-                        className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
-                        aria-label="Create new item"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Create</TooltipContent>
-                </Tooltip>
-              ) : (
-                <DropdownMenuTrigger asChild>
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
-                    onClick={() => setCreateMenuOpen(true)}
+                    onClick={() => openSourceDialog()}
                     variant="default"
                     size="sm"
-                    className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                    className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                    aria-label="Upload Document"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create
+                    <FileText className="h-4 w-4" />
                   </Button>
-                </DropdownMenuTrigger>
-              )}
-
-              <DropdownMenuContent
-                align={isCollapsed ? 'end' : 'start'}
-                side={isCollapsed ? 'right' : 'bottom'}
-                className="w-48"
+                </TooltipTrigger>
+                <TooltipContent side="right">Upload Document</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                onClick={() => openSourceDialog()}
+                variant="default"
+                size="sm"
+                className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"
               >
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault()
-                    handleCreateSelection('source')
-                  }}
-                  className="gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Source
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault()
-                    handleCreateSelection('notebook')
-                  }}
-                  className="gap-2"
-                >
-                  <Book className="h-4 w-4" />
-                  Notebook
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault()
-                    handleCreateSelection('podcast')
-                  }}
-                  className="gap-2"
-                >
-                  <Mic className="h-4 w-4" />
-                  Podcast
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <FileText className="h-4 w-4 mr-2" />
+                Upload Document
+              </Button>
+            )}
           </div>
 
           <Separator className="my-2" />
