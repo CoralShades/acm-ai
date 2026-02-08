@@ -6,7 +6,7 @@ ACM (Asbestos Containing Material) records with hierarchical
 Building > Room > Item relationships.
 
 Supports fallback from MinerU table extraction to regex-based markdown parsing.
-Uses the consultant parser framework (E1-S11) for format-specific handling.
+Uses the config-driven GenericParser (E1-S11) for all formats.
 """
 
 import re
@@ -16,7 +16,6 @@ from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
 from open_notebook.extractors.parsers import get_parser
-from open_notebook.extractors.parsers.base import ConsultantParser
 
 # Optional MinerU support - graceful degradation if not available
 try:
@@ -251,8 +250,8 @@ def extract_acm_records(
         logger.debug("MinerU extraction enabled but no PDF path provided, using markdown parser")
 
     # Fall back to regex-based markdown parsing
-    # Select parser based on markdown content (parser framework E1-S11)
-    selected_parser = get_parser(markdown_content or "")
+    # Single config-driven parser (E1-S11)
+    selected_parser = get_parser()
     logger.info(
         f"Using regex-based markdown extraction for source {source_id} "
         f"(parser: {selected_parser.name})"
@@ -266,7 +265,7 @@ def _extract_from_markdown(
     markdown_content: Optional[str],
     source_id: str,
     classify: bool = True,
-    parser: Optional[ConsultantParser] = None,
+    parser=None,
 ) -> List[dict]:
     """
     Extract ACM records from Docling markdown output (original regex-based method).
@@ -412,7 +411,7 @@ def _extract_with_mineru(pdf_path: str, source_id: str) -> List[dict]:
 
 
 def _looks_like_table_header(
-    line: str, parser: Optional[ConsultantParser] = None
+    line: str, parser=None,
 ) -> bool:
     """Check if line looks like a markdown table header.
 
@@ -422,15 +421,7 @@ def _looks_like_table_header(
     cells = [c.strip().lower() for c in line.split("|") if c.strip()]
     joined = " ".join(cells)
 
-    # If a specific parser is provided, check its headers too
-    if parser and parser.name != "generic":
-        parser_headers = parser.get_register_headers()
-        # Match if enough parser-specific headers are found
-        matches = sum(1 for h in parser_headers if h in joined)
-        if matches >= 3:
-            return True
-
-    # Default: check for standard ACM required headers
+    # Check for standard ACM required headers
     return any(header in joined for header in ACM_REQUIRED_HEADERS)
 
 
@@ -507,7 +498,7 @@ def _extract_table_lines(lines: List[str], start_idx: int) -> Tuple[List[str], i
 def _parse_acm_table(
     table_lines: List[str],
     context: ParseContext,
-    parser: Optional[ConsultantParser] = None,
+    parser=None,
 ) -> List[ExtractedACMRow]:
     """Parse markdown table lines into ExtractedACMRow objects."""
     if len(table_lines) < 2:
@@ -517,23 +508,16 @@ def _parse_acm_table(
     header_line = table_lines[0]
     headers = [h.strip().lower() for h in header_line.split("|") if h.strip()]
 
-    # Check if this is an ACM table (using parser headers if available)
+    # Check if this is an ACM table
     joined_headers = " ".join(headers)
     is_acm_table = any(h in joined_headers for h in ACM_REQUIRED_HEADERS)
-    if not is_acm_table and parser and parser.name != "generic":
-        parser_headers = parser.get_register_headers()
-        matches = sum(1 for h in parser_headers if h in joined_headers)
-        is_acm_table = matches >= 3
 
     if not is_acm_table:
         logger.debug(f"Skipping non-ACM table with headers: {headers}")
         return []
 
-    # Map headers to field names using parser's mapping if available
-    if parser and parser.name != "generic":
-        header_map = _create_header_map_from_parser(headers, parser)
-    else:
-        header_map = _create_header_map(headers)
+    # Map headers to field names
+    header_map = _create_header_map(headers)
 
     rows = []
     # Skip header and separator lines
@@ -594,53 +578,6 @@ def _create_header_map(headers: List[str]) -> Dict[str, int]:
             mapping["result"] = i
 
     return mapping
-
-
-def _create_header_map_from_parser(
-    headers: List[str], parser: ConsultantParser
-) -> Dict[str, int]:
-    """Create mapping from standard field names to column indices using parser's column mapping.
-
-    The parser's get_column_mapping() maps consultant column names to standard field names.
-    This function reverses that to map standard field names to header indices.
-    """
-    column_mapping = parser.get_column_mapping()
-    mapping: Dict[str, int] = {}
-
-    for i, header in enumerate(headers):
-        header_lower = header.lower().strip()
-        # Check if this header matches a consultant column name
-        if header_lower in column_mapping:
-            standard_field = column_mapping[header_lower]
-            mapping[standard_field] = i
-
-    # Ensure we have the critical fields mapped with standard names for _create_row_from_cells
-    # Map parser-specific field names to the names expected by ExtractedACMRow
-    field_renames = {
-        "level": None,  # Not directly used in ExtractedACMRow
-        "room_name": None,  # Context, not row field
-        "sample_result": "result",
-        "hazard_type": None,  # Not in ExtractedACMRow
-        "item_number": None,  # Not in ExtractedACMRow
-        "photo_number": None,  # Not in ExtractedACMRow
-        "reinspect_date": None,  # Not in ExtractedACMRow
-    }
-
-    renamed: Dict[str, int] = {}
-    for field_name, idx in mapping.items():
-        if field_name in field_renames:
-            new_name = field_renames[field_name]
-            if new_name:
-                renamed[new_name] = idx
-            else:
-                logger.debug(
-                    f"Parser '{parser.name}': dropping field '{field_name}' "
-                    f"(no ExtractedACMRow equivalent)"
-                )
-        else:
-            renamed[field_name] = idx
-
-    return renamed
 
 
 def _create_row_from_cells(

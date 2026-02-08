@@ -334,3 +334,7 @@ class ACMExtractionOutput(BaseModel):
         default=None,
         description="Time taken for extraction in milliseconds"
     )
+    correction_stats: Optional[dict] = Field(
+        default=None,
+        description="Corrective RAG stats: {auto_corrected, llm_corrected, failed, total_validated}"
+    )

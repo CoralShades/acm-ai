@@ -107,6 +107,17 @@ Low
 - For fields not present in the source, use `null` (do NOT guess or invent data)
 - If a value is unclear, set `extraction_confidence` to "low" and add a note to `data_issues`
 
+### Controlled Vocabulary (BAR Enum Values)
+
+The following fields MUST use values from the Victorian BAR (Building Asbestos Register) controlled vocabulary. If the document uses non-standard terminology, map to the closest valid value.
+
+- **sample_result**: `Positive`, `Assumed Positive`, `Negative`, `Assumed Negative`
+- **material_condition** (Condition): `Poor`, `Fair`, `Good`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)`
+- **friable** (Friability): `Non-friable`, `Friable`
+- **disturbance_potential**: `High`, `Moderate`, `Low`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)`
+
+**Important:** BAR uses "Moderate" not "Medium" for disturbance potential. Map "Medium" → "Moderate".
+
 ### Data Mapping Rules
 
 - `result` should be "Detected" for ACM-positive entries
