@@ -174,25 +174,24 @@ export function useDeleteACMRecord() {
  * Hook to trigger ACM extraction
  */
 export function useExtractACM(onCommandStarted?: (commandId: string) => void) {
-  const { toast } = useToast()
+  const { promise } = useToast()
 
   return useMutation({
-    mutationFn: (sourceId: string) => acmApi.extract(sourceId),
-    onSuccess: (result) => {
-      toast({
-        title: 'Extraction Started',
-        description: result.message,
+    mutationFn: (sourceId: string) => {
+      const extractPromise = acmApi.extract(sourceId)
+
+      promise(extractPromise, {
+        loading: 'Starting ACM extraction...',
+        success: (result) => result.message || 'Extraction started successfully',
+        error: 'Failed to start ACM extraction',
       })
+
+      return extractPromise
+    },
+    onSuccess: (result) => {
       if (onCommandStarted && result.command_id) {
         onCommandStarted(result.command_id)
       }
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to start ACM extraction',
-        variant: 'destructive',
-      })
     },
   })
 }
@@ -201,33 +200,29 @@ export function useExtractACM(onCommandStarted?: (commandId: string) => void) {
  * Hook to export ACM records as CSV
  */
 export function useExportACMCsv() {
-  const { toast } = useToast()
+  const { promise } = useToast()
 
   return useMutation({
     mutationFn: async (sourceId: string) => {
-      const blob = await acmApi.exportCsv(sourceId)
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `acm_export_${sourceId}.csv`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'CSV exported successfully',
+      const exportPromise = acmApi.exportCsv(sourceId).then((blob) => {
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `acm_export_${sourceId}.csv`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        return blob
       })
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to export CSV',
-        variant: 'destructive',
+
+      promise(exportPromise, {
+        loading: 'Generating CSV export...',
+        success: 'CSV downloaded successfully',
+        error: 'Failed to export CSV',
       })
+
+      return exportPromise
     },
   })
 }
@@ -236,33 +231,29 @@ export function useExportACMCsv() {
  * Hook to export ACM records as Excel
  */
 export function useExportACMExcel() {
-  const { toast } = useToast()
+  const { promise } = useToast()
 
   return useMutation({
     mutationFn: async (sourceId: string) => {
-      const blob = await acmApi.exportExcel(sourceId)
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `acm_export_${sourceId}.xlsx`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Excel file exported successfully',
+      const exportPromise = acmApi.exportExcel(sourceId).then((blob) => {
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `acm_export_${sourceId}.xlsx`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        return blob
       })
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to export Excel file',
-        variant: 'destructive',
+
+      promise(exportPromise, {
+        loading: 'Generating Excel export...',
+        success: 'Excel file downloaded successfully',
+        error: 'Failed to export Excel file',
       })
+
+      return exportPromise
     },
   })
 }

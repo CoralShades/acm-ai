@@ -1,4 +1,13 @@
 import { toast as sonnerToast } from 'sonner'
+import {
+  toastPromise,
+  createProgressToast,
+  riskToast,
+  actionToast,
+  criticalToast,
+  type RiskToastOptions,
+  type ToastAction,
+} from '@/lib/toast-patterns'
 
 type ToastProps = {
   title?: string
@@ -18,6 +27,21 @@ export function useToast() {
           description,
         })
       }
-    }
+    },
+
+    promise: toastPromise,
+    loading: sonnerToast.loading,
+    success: sonnerToast.success,
+    error: sonnerToast.error,
+    info: sonnerToast.info,
+    warning: sonnerToast.warning,
+    dismiss: sonnerToast.dismiss,
+
+    createProgress: createProgressToast,
+    riskToast,
+    actionToast,
+    criticalToast,
   }
 }
+
+export type { RiskToastOptions, ToastAction }
