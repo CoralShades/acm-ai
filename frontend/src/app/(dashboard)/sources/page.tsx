@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { sourcesApi } from '@/lib/api/sources';
 import { SourceListResponse } from '@/lib/types/api';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -26,7 +28,7 @@ import { SourcesGridView } from '@/components/sources/SourcesGridView';
 import { SourcesTableView } from '@/components/sources/SourcesTableView';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function SourcesPage() {
+function SourcesPageContent() {
   const [sources, setSources] = useState<SourceListResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -491,6 +493,22 @@ export default function SourcesPage() {
       />
     </AppShell>
   );
+}
+
+export default function SourcesPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="Sources"
+          reloadUrl="/sources"
+        />
+      )}
+    >
+      <SourcesPageContent />
+    </ErrorBoundary>
+  )
 }
 
 function SourcesLoadingSkeleton({ view }: { view: 'grid' | 'list' }) {

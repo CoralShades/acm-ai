@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { ACMRegisterSkeleton } from '@/components/skeletons/ACMRegisterSkeleton'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -31,7 +33,7 @@ import {
 import { useSources } from '@/lib/hooks/use-sources'
 import type { ACMRecord } from '@/lib/types/acm'
 
-export default function ACMPage() {
+function ACMPageContent() {
   // State
   const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(undefined)
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
@@ -274,5 +276,21 @@ export default function ACMPage() {
         />
       </div>
     </AppShell>
+  )
+}
+
+export default function ACMPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="ACM Register"
+          reloadUrl="/acm"
+        />
+      )}
+    >
+      <ACMPageContent />
+    </ErrorBoundary>
   )
 }
