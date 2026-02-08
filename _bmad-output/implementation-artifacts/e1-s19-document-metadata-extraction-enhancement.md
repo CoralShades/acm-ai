@@ -1,6 +1,6 @@
 # Story 1.19: Document Metadata Extraction Enhancement
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -349,6 +349,7 @@ None - implementation was straightforward with no blocking issues.
 ### Change Log
 
 - 2026-02-09: E1-S19 implementation complete - document metadata extraction enhancement
+- 2026-02-09: Code review completed. 1 HIGH fix (confidence scoring "inferred" was dead code), 3 MEDIUM fixes (address regex case sensitivity, date regex greedy match, double DB lookup). All fixes applied and verified. Tests updated from 51 to 56 (added inferred confidence, ALL CAPS address, date rejection tests). All 56 tests pass. Marked done.
 
 ### File List
 

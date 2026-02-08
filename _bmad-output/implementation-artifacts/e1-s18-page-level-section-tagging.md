@@ -1,6 +1,6 @@
 # Story 1.18: Page-Level Section Tagging
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -298,3 +298,4 @@ Claude Opus 4.6
 ### Change Log
 
 - **2026-02-09**: E1-S18 implementation complete. Added page-level section tagging module with LLM+heuristic dual path, LangGraph integration, Jinja prompt template, and 63 tests. All acceptance criteria satisfied.
+- **2026-02-09**: Code review passed. All 8 ACs verified implemented. All tasks verified complete. 63 tests confirmed passing. No HIGH or MEDIUM issues found. Marked done.

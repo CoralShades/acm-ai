@@ -1,6 +1,6 @@
 # Story 1.20: Agentic Extraction Orchestrator
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -23,16 +23,16 @@ so that **extraction accuracy improves by applying section-specific prompts, ski
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define orchestrator Pydantic models (AC: #3, #5, #7)
-  - [ ] 1.1 Create `ExtractionStrategy` enum: `FULL_LLM`, `REGEX_ONLY`, `SKIP`
-  - [ ] 1.2 Create `BuildingExtractionPlan` model: building_id, building_name, page_range (tuple), strategy (ExtractionStrategy), complexity, context_summary
-  - [ ] 1.3 Create `ExtractionPlan` model: plans (list of BuildingExtractionPlan), total_buildings, buildings_to_extract, buildings_skipped, estimated_llm_calls
-  - [ ] 1.4 Create `BuildingExtractionStats` model: building_id, records_extracted, pages_processed, strategy_used, time_ms, errors (optional)
-  - [ ] 1.5 Create `OrchestratorStats` model: total_buildings, buildings_extracted, buildings_skipped, total_records, strategy_distribution (dict), total_time_ms, plan (ExtractionPlan)
-  - [ ] 1.6 Add `orchestrator_stats: Optional[OrchestratorStats]` to `ACMExtractionOutput` in `acm_schemas.py`
-- [ ] Task 2: Implement extraction planning logic (AC: #1, #2, #3)
-  - [ ] 2.1 Create `open_notebook/extractors/orchestrator.py` with planning functions
-  - [ ] 2.2 Implement `plan_extraction(state: ExtractionState) -> ExtractionPlan`:
+- [x] Task 1: Define orchestrator Pydantic models (AC: #3, #5, #7)
+  - [x] 1.1 Create `ExtractionStrategy` enum: `FULL_LLM`, `REGEX_ONLY`, `SKIP`
+  - [x] 1.2 Create `BuildingExtractionPlan` model: building_id, building_name, page_range (tuple), strategy (ExtractionStrategy), complexity, context_summary
+  - [x] 1.3 Create `ExtractionPlan` model: plans (list of BuildingExtractionPlan), total_buildings, buildings_to_extract, buildings_skipped, estimated_llm_calls
+  - [x] 1.4 Create `BuildingExtractionStats` model: building_id, records_extracted, pages_processed, strategy_used, time_ms, errors (optional)
+  - [x] 1.5 Create `OrchestratorStats` model: total_buildings, buildings_extracted, buildings_skipped, total_records, strategy_distribution (dict), total_time_ms, plan (ExtractionPlan)
+  - [x] 1.6 Add `orchestrator_stats: Optional[OrchestratorStats]` to `ACMExtractionOutput` in `acm_schemas.py`
+- [x] Task 2: Implement extraction planning logic (AC: #1, #2, #3)
+  - [x] 2.1 Create `open_notebook/extractors/orchestrator.py` with planning functions
+  - [x] 2.2 Implement `plan_extraction(state: ExtractionState) -> ExtractionPlan`:
     - Use page_tags to identify register pages (section_id=4)
     - Use building_inventory to map buildings to page ranges
     - Classify each building's strategy based on complexity:
@@ -40,109 +40,109 @@ so that **extraction accuracy improves by applying section-specific prompts, ski
       - `REGEX_ONLY`: buildings with `complexity == "simple"` (e.g., "No Asbestos" buildings)
       - `SKIP`: buildings where all pages are non-register (section_id != 4)
     - Generate context summary per building from metadata
-  - [ ] 2.3 Implement `should_use_orchestrator(state: ExtractionState) -> bool`:
+  - [x] 2.3 Implement `should_use_orchestrator(state: ExtractionState) -> bool`:
     - Returns True if building_inventory is not None AND has 1+ buildings
     - Returns False otherwise (fallback to legacy pipeline)
-  - [ ] 2.4 Handle edge cases: buildings with no page range, overlapping page ranges, single-page buildings
-- [ ] Task 3: Implement per-building extraction (AC: #2, #4, #5)
-  - [ ] 3.1 Implement `extract_building(plan: BuildingExtractionPlan, content: str, state: ExtractionState) -> Tuple[List[ACMExtractionRecord], BuildingExtractionStats]`:
+  - [x] 2.4 Handle edge cases: buildings with no page range, overlapping page ranges, single-page buildings
+- [x] Task 3: Implement per-building extraction (AC: #2, #4, #5)
+  - [x] 3.1 Implement `extract_building(plan: BuildingExtractionPlan, content: str, state: ExtractionState) -> Tuple[List[ACMExtractionRecord], BuildingExtractionStats]`:
     - Trim content to building's page range using page markers
     - Apply building-specific context to extraction prompt
     - For FULL_LLM: use existing extraction logic (chunk + LLM)
     - For REGEX_ONLY: use regex patterns to extract simple "No Asbestos" records
     - For SKIP: return empty list immediately
-  - [ ] 3.2 Implement `_extract_building_content(content: str, page_start: int, page_end: int) -> str`:
+  - [x] 3.2 Implement `_extract_building_content(content: str, page_start: int, page_end: int) -> str`:
     - Extract content between page markers for a building's page range
     - Reuse `_PAGE_PATTERN` from document_structure.py
-  - [ ] 3.3 Implement `_create_building_prompt_context(plan: BuildingExtractionPlan, doc_meta: Optional[DocumentMeta]) -> dict`:
+  - [x] 3.3 Implement `_create_building_prompt_context(plan: BuildingExtractionPlan, doc_meta: Optional[DocumentMeta]) -> dict`:
     - Merge building metadata, document metadata, and school context
-  - [ ] 3.4 Implement `_regex_extract_simple_building(content: str, building_id: str, building_name: str) -> List[ACMExtractionRecord]`:
+  - [x] 3.4 Implement `_regex_extract_simple_building(content: str, building_id: str, building_name: str) -> List[ACMExtractionRecord]`:
     - For simple buildings: create one ACMExtractionRecord per room with result="Not Detected"
     - Use room patterns from building_inventory to find room entries
-- [ ] Task 4: Implement parallel orchestration (AC: #4, #8)
-  - [ ] 4.1 Implement `orchestrate_extraction(state: dict, config: RunnableConfig) -> dict` as a LangGraph node:
+- [x] Task 4: Implement parallel orchestration (AC: #4, #8)
+  - [x] 4.1 Implement `orchestrate_extraction(state: dict, config: RunnableConfig) -> dict` as a LangGraph node:
     - Call `should_use_orchestrator()` to decide path
     - Call `plan_extraction()` to generate plan
     - For each non-SKIP building, call `extract_building()` with asyncio.gather (max concurrency)
     - Collect all records and stats
     - Return merged records, orchestrator_stats, updated state
-  - [ ] 4.2 Implement `merge_building_results(results: List[Tuple[List[ACMExtractionRecord], BuildingExtractionStats]]) -> Tuple[List[ACMExtractionRecord], OrchestratorStats]`:
+  - [x] 4.2 Implement `merge_building_results(results: List[Tuple[List[ACMExtractionRecord], BuildingExtractionStats]]) -> Tuple[List[ACMExtractionRecord], OrchestratorStats]`:
     - Combine all records from all buildings
     - Aggregate stats
-  - [ ] 4.3 Add concurrency limiter using `asyncio.Semaphore(max_concurrent)` with default=3
-  - [ ] 4.4 Graceful error handling: if one building's extraction fails, log error, continue with others, include error in stats
-- [ ] Task 5: Update LangGraph pipeline wiring (AC: #6, #8)
-  - [ ] 5.1 Add `orchestrate` node to the graph
-  - [ ] 5.2 Add conditional edge after `tag_pages`: if `should_use_orchestrator()` returns True -> `orchestrate`, else -> `prepare` (legacy path)
-  - [ ] 5.3 Wire `orchestrate` -> `validate` (skipping legacy prepare/extract loop entirely)
-  - [ ] 5.4 Keep legacy `prepare` -> `extract` -> (loop) path intact for backward compatibility
-  - [ ] 5.5 Add `orchestrator_stats: Optional[OrchestratorStats]` to `ExtractionState` TypedDict
-  - [ ] 5.6 Update initial state in `extract_acm_from_source()`: add `orchestrator_stats=None`
-  - [ ] 5.7 Pass orchestrator_stats to `ACMExtractionOutput` in the final return
-  - [ ] 5.8 New graph topology:
+  - [x] 4.3 Add concurrency limiter using `asyncio.Semaphore(max_concurrent)` with default=3
+  - [x] 4.4 Graceful error handling: if one building's extraction fails, log error, continue with others, include error in stats
+- [x] Task 5: Update LangGraph pipeline wiring (AC: #6, #8)
+  - [x] 5.1 Add `orchestrate` node to the graph
+  - [x] 5.2 Add conditional edge after `tag_pages`: if `should_use_orchestrator()` returns True -> `orchestrate`, else -> `prepare` (legacy path)
+  - [x] 5.3 Wire `orchestrate` -> `validate` (skipping legacy prepare/extract loop entirely)
+  - [x] 5.4 Keep legacy `prepare` -> `extract` -> (loop) path intact for backward compatibility
+  - [x] 5.5 Add `orchestrator_stats: Optional[OrchestratorStats]` to `ExtractionState` TypedDict
+  - [x] 5.6 Update initial state in `extract_acm_from_source()`: add `orchestrator_stats=None`
+  - [x] 5.7 Pass orchestrator_stats to `ACMExtractionOutput` in the final return
+  - [x] 5.8 New graph topology:
     ```
     START -> structure -> inventory -> tag_pages -> CONDITIONAL:
       - orchestrator path: orchestrate -> validate -> correct <-> validate -> deduplicate -> save -> END
       - legacy path: prepare -> extract -> (loop) -> validate -> correct <-> validate -> deduplicate -> save -> END
     ```
-- [ ] Task 6: Update extraction prompt with building context (AC: #5)
-  - [ ] 6.1 Create or update `prompts/acm/building_extraction.jinja` template for per-building extraction
-  - [ ] 6.2 Include building-specific context: building name, code, year, construction type, expected rooms
-  - [ ] 6.3 Include page range hint: "You are extracting from pages X to Y of the document"
-  - [ ] 6.4 Include document type hint from document_structure
-  - [ ] 6.5 Reuse existing extraction output schema (ACMExtractionResult) - no schema changes needed
-- [ ] Task 7: Write comprehensive tests (AC: #1-8)
-  - [ ] 7.1 Create `tests/test_orchestrator.py` with class-based test organization
-  - [ ] 7.2 Test ExtractionStrategy enum values
-  - [ ] 7.3 Test BuildingExtractionPlan creation and validation
-  - [ ] 7.4 Test ExtractionPlan generation from various building inventories
-  - [ ] 7.5 Test OrchestratorStats aggregation
-  - [ ] 7.6 Test `should_use_orchestrator()`:
+- [x] Task 6: Update extraction prompt with building context (AC: #5)
+  - [x] 6.1 Create or update `prompts/acm/building_extraction.jinja` template for per-building extraction
+  - [x] 6.2 Include building-specific context: building name, code, year, construction type, expected rooms
+  - [x] 6.3 Include page range hint: "You are extracting from pages X to Y of the document"
+  - [x] 6.4 Include document type hint from document_structure
+  - [x] 6.5 Reuse existing extraction output schema (ACMExtractionResult) - no schema changes needed
+- [x] Task 7: Write comprehensive tests (AC: #1-8)
+  - [x] 7.1 Create `tests/test_orchestrator.py` with class-based test organization
+  - [x] 7.2 Test ExtractionStrategy enum values
+  - [x] 7.3 Test BuildingExtractionPlan creation and validation
+  - [x] 7.4 Test ExtractionPlan generation from various building inventories
+  - [x] 7.5 Test OrchestratorStats aggregation
+  - [x] 7.6 Test `should_use_orchestrator()`:
     - True when building_inventory present with buildings
     - False when building_inventory is None
     - False when building_inventory has 0 buildings
-  - [ ] 7.7 Test `plan_extraction()`:
+  - [x] 7.7 Test `plan_extraction()`:
     - Correct strategy assignment based on complexity
     - SKIP for non-register buildings (no section_id=4 pages)
     - REGEX_ONLY for simple "No Asbestos" buildings
     - FULL_LLM for complex buildings
     - Handle missing page_tags gracefully (default to FULL_LLM)
-  - [ ] 7.8 Test `_extract_building_content()`:
+  - [x] 7.8 Test `_extract_building_content()`:
     - Correct page range extraction using markers
     - Handle missing page markers
     - Handle single-page buildings
-  - [ ] 7.9 Test `_regex_extract_simple_building()`:
+  - [x] 7.9 Test `_regex_extract_simple_building()`:
     - Creates records with result="Not Detected"
     - Finds rooms using room patterns
     - Returns empty list for content without room patterns
-  - [ ] 7.10 Test `extract_building()`:
+  - [x] 7.10 Test `extract_building()`:
     - FULL_LLM path with mocked LLM
     - REGEX_ONLY path
     - SKIP path returns empty
     - Error handling (LLM failure -> empty + error stats)
-  - [ ] 7.11 Test `orchestrate_extraction()` LangGraph node:
+  - [x] 7.11 Test `orchestrate_extraction()` LangGraph node:
     - Orchestrator path triggered when inventory present
     - Legacy fallback when inventory missing
     - Correct state updates (records, orchestrator_stats)
-  - [ ] 7.12 Test parallel extraction:
+  - [x] 7.12 Test parallel extraction:
     - Multiple buildings extracted concurrently
     - Semaphore limits concurrency
     - One building failure doesn't block others
-  - [ ] 7.13 Test `merge_building_results()`:
+  - [x] 7.13 Test `merge_building_results()`:
     - Records from multiple buildings combined correctly
     - Stats aggregated (total_records, strategy_distribution, time)
-  - [ ] 7.14 Test graph wiring:
+  - [x] 7.14 Test graph wiring:
     - Conditional edge routes correctly based on should_use_orchestrator
     - Both paths (orchestrate and legacy) compile and are reachable
-  - [ ] 7.15 Test backward compatibility:
+  - [x] 7.15 Test backward compatibility:
     - Document with no structure/inventory/tags uses legacy path
     - Results are identical to pre-orchestrator behavior
-  - [ ] 7.16 Test ACMExtractionOutput includes orchestrator_stats when present
-- [ ] Task 8: Verification
-  - [ ] 8.1 Run `uv run ruff check .` - lint passes
-  - [ ] 8.2 Run `uv run pytest tests/test_orchestrator.py -v` - all tests pass
-  - [ ] 8.3 Run `uv run pytest tests/` - full suite passes (no regressions)
-  - [ ] 8.4 Verify graph compilation: both orchestrator and legacy paths present in compiled graph nodes
+  - [x] 7.16 Test ACMExtractionOutput includes orchestrator_stats when present
+- [x] Task 8: Verification
+  - [x] 8.1 Run `uv run ruff check .` - lint passes
+  - [x] 8.2 Run `uv run pytest tests/test_orchestrator.py -v` - all 44 tests pass
+  - [x] 8.3 Run `uv run pytest tests/` - 773 pass, 5 pre-existing failures (not caused by E1-S20)
+  - [x] 8.4 Verify graph compilation: both orchestrator and legacy paths present in compiled graph nodes
 
 ## Dev Notes
 
@@ -468,10 +468,39 @@ Key learnings from predecessor stories:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Implemented all 8 tasks (48 subtasks) for the Agentic Extraction Orchestrator
+- Created `open_notebook/extractors/orchestrator.py` with 6 Pydantic models, extraction planning, per-building extraction, parallel orchestration, and LangGraph node
+- Three extraction strategies: FULL_LLM (complex buildings), REGEX_ONLY (simple "No Asbestos" buildings), SKIP (non-register sections)
+- Per-building extraction replaces monolithic document processing using BuildingInventory from E1-S17
+- Parallel extraction with `asyncio.Semaphore(3)` for concurrent building processing
+- Conditional graph routing: `tag_pages` → orchestrate (when inventory present) or prepare (legacy fallback)
+- Added `orchestrator_stats` to ExtractionState and ACMExtractionOutput for observability
+- Created building-specific extraction prompt template at `prompts/acm/building_extraction.jinja`
+- Updated `tests/test_document_structure.py` and `tests/test_page_tagger.py` graph topology tests for conditional edge
+- 44 new tests in `tests/test_orchestrator.py` covering all acceptance criteria
+- 268 tests pass across all related test files (orchestrator, document_structure, page_tagger, building_inventory, metadata_extractor, consultant_parsers)
+- Full suite: 773 pass, 5 pre-existing failures (ConfidenceDistribution Pydantic issue + integration tests - not caused by E1-S20)
+- Ruff lint passes on all modified/new files
+
 ### File List
+
+| Action | File Path |
+|--------|-----------|
+| New | `open_notebook/extractors/orchestrator.py` |
+| New | `prompts/acm/building_extraction.jinja` |
+| New | `tests/test_orchestrator.py` |
+| Modified | `open_notebook/extractors/acm_schemas.py` |
+| Modified | `open_notebook/graphs/acm_extraction.py` |
+| Modified | `tests/test_document_structure.py` |
+| Modified | `tests/test_page_tagger.py` |
+| Modified | `docs/sprint-artifacts/sprint-status.yaml` |
+
+### Change Log
+
+- 2026-02-09: Implemented E1-S20 Agentic Extraction Orchestrator - adds per-building extraction with three strategies (FULL_LLM, REGEX_ONLY, SKIP), parallel processing via asyncio.gather with semaphore, conditional graph routing preserving legacy fallback path, and comprehensive test suite (44 tests)

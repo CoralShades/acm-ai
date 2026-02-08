@@ -1,7 +1,6 @@
 # Story 2.8: Column Visibility Management
 
-Status: ready-for-dev
-
+Status: Archived (Outdated)
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
 ## Story

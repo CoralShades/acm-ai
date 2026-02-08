@@ -1,6 +1,6 @@
 # Story 5.3: BAR Template Management
 
-Status: ready-for-dev
+Status: Archived (Outdated)
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
