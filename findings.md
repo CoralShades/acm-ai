@@ -1,322 +1,310 @@
-# Findings & Decisions - Course Correction Analysis
+# Findings: UX Audit & Enterprise Readiness
 
-## Requirements
-- Input: PDF Asbestos Risk Assessment documents
-- Output: Excel BAR (Building Asbestos Register) spreadsheets
-- UI: View extracted records, process, manipulate, reference, edit
-- Goal: Accurate extraction and transformation without guessing mappings
-
-## Research Findings
-
-### Project Documents Analysis
-
-#### PRD ACM Data Model (Current)
-From PRD Section 5.1, the current schema has **20 fields**:
-- source_id, school_name, school_code
-- building_id, building_name, building_year, building_construction
-- room_id, room_name, room_area, area_type
-- product, material_description, extent, location
-- friable, material_condition, risk_status, result
-- page_number, extraction_confidence, created_at
-
-#### Architecture ACM Schema (Current)
-Same 20 fields as PRD, designed for NSW School SAMP documents.
-
-### Output Excel Analysis (CRITICAL FINDINGS)
-
-#### Clutch_Broadmeadows_Police_BAR.xlsx
-- **Single sheet**: Sheet1
-- **43 columns** (vs 20 in PRD - MAJOR GAP!)
-- **32 data rows**
-
-**Excel Columns NOT in PRD Schema:**
-1. Department (DJCS) - NEW
-2. Agency (Victoria Police) - NEW
-3. Sub Agency - NEW
-4. Site Name (if applicable) - NEW
-5. Building Type (Police Station) - NEW
-6. Building Address - NEW
-7. Suburb - NEW
-8. Postcode - NEW
-9. Owned or Leased - NEW
-10. Building Unique ID - NEW
-11. Frequency of use - NEW
-12. Public Access? - NEW
-13. Date of Inspection - NEW
-14. Est. Building Size (m2) - NEW
-15. Number of Levels - NEW
-16. Construction Type - maps to building_construction
-17. Roof Type - NEW
-18. Internal / External - maps to area_type
-19. Level - NEW
-20. Room or Area - maps to room_name
-21. Location in Room - maps to location
-22. Specific Item/ACM Name - maps to product
-23. Friability of material - maps to friable
-24. ACM Product Group - NEW
-25. ACM Product Type - NEW (more specific than "product")
-26. NATA Endorsed Sample number - NEW
-27. Sample Result - NEW (different from "result")
-28. Identifying Hygiene or Consulting Company - NEW
-29. Condition - maps to material_condition
-30. Disturbance Potential - NEW
-31. Quantity - NEW (was "extent" but different meaning)
-32. Labelled - NEW
-33. Label Details - NEW
-34. Hygienist Recommendations - NEW
-35. Additional Comments - NEW
-36. PSB Supplied ACM ID - NEW
-37. Assumed Removed? - NEW
-38. Date of Removal - NEW
-39. Quantity Removed - NEW
-40. Asbestos Removal Notification No - NEW
-41. EPA Waste Transport Certificate No - NEW
-
-#### Clucth_Alexandra_District_BAR.xlsm
-- **26 sheets** (reference data + DATA ENTRY main sheet)
-- **47 columns in DATA ENTRY** (even more than Broadmeadows!)
-- **533 data rows**
-- **5 unique buildings**
-
-**Additional columns vs Broadmeadows:**
-- FRIABILITY NAME EXCEL (lookup field)
-- ACM GROUP NAME EXCEL (lookup field)
-- Removal Comments
-- Photo Reference Number
-
-### Input PDF Analysis (COMPLETED)
-
-#### Clutch_Broadmeadows Police Station PDF (19 pages)
-**Provider:** Prensa Pty Ltd
-**PDF Table Headers (Asbestos Register):**
-1. Area / Level
-2. Room & Location
-3. Feature
-4. Item Description
-5. Hazard Type
-6. Hazard Status (Negative, Assumed positive, etc.)
-7. Sample Number
-8. Friability
-9. Labelled Y/N
-10. Source of Asbestos That is Not Fixed or Installed
-11. Workplace Activities Likely to Disturb Asbestos
-12. Disturb. Potential
-13. Condition
-14. Risk Status
-15. Approx. Quantity
-16. Control Priority
-17. Comments & Recommendations
-18. Date of Identification
-19. Reinspect Date
-20. Photograph
-
-**Site metadata available in PDF:**
-- Job No (34511-039)
-- Address (15 Dimboola Road, Broadmeadows, Victoria)
-- Client (Victoria Police)
-- Date (June 2020)
-
-#### Clucth_Alexandra District Hospital PDF (34 pages)
-**Provider:** Greencap
-**PDF Table Headers (Asbestos Register):**
-1. Item No.
-2. Location - Item Description
-3. Hazard Type
-4. Sample No.
-5. Item Status
-6. Photo No.
-7. Est. Extent
-8. Condition
-9. Friability
-10. Dist. Potential
-11. Risk Rating
-12. Current Label
-13. Reinspect Date
-14. Control Priority
-15. Control Recommendation
-16. Record Of Works Undertaken
-
-**Site/Building metadata in each register section:**
-- Full Address
-- Building Name
-- Number of Levels
-- Survey Date
-- Property ID
-- Est. Building Size
-- Est. Building Age
-- Roof Type
-- Construction Type
-- Client Name
-- Inspected By
-- Company
-
-## Technical Decisions
-| Decision | Rationale |
-|----------|-----------|
-| PRD schema needs major expansion | 20 fields → 47+ fields required for BAR export |
-| Victorian Government format differs from NSW SAMP | Different agency structure, more metadata |
-
-## Issues Encountered
-| Issue | Resolution |
-|-------|------------|
-| PDF tool unavailable (pdftoppm not installed) | Will use Python pdf libraries instead |
-| Excel files have different structures | Need flexible schema to handle variations |
-
-## Resources
-- Input PDF 1: docs/samplePDF/Clutch_Broadmeadows Police Station Div 5 34511-039 V2_done.pdf
-- Input PDF 2: docs/samplePDF/Clucth_Alexander_District_Hospital_Asbestos_Risk_Assessment_2020-09-07 (1) 24 Cooper.pdf
-- Output Excel 1: docs/samplePDF/Clutch_Broadmeadows_Police_BAR.xlsx (43 columns)
-- Output Excel 2: docs/samplePDF/Clucth_Alexandra_District_BAR.xlsm (47 columns, 26 sheets)
-
-## Visual/Browser Findings
-
-### Excel Column Mapping Analysis (CRITICAL)
-
-#### Required Output Fields NOT in Current PRD:
-
-**Building/Site Metadata (NEW SECTION NEEDED):**
-| Excel Column | PRD Field | Gap Analysis |
-|--------------|-----------|--------------|
-| Department | MISSING | Need new field |
-| Agency | MISSING | Need new field |
-| Sub Agency | MISSING | Need new field |
-| Site Name | MISSING | Need new field |
-| Building Type | MISSING | Need new field |
-| Building Address | MISSING | Need new field |
-| Suburb | MISSING | Need new field |
-| Postcode | MISSING | Need new field |
-| Owned or Leased | MISSING | Need new field |
-| Building Unique ID | MISSING | Need new field |
-| Frequency of use | MISSING | Need new field |
-| Public Access? | MISSING | Need new field |
-| Date of Inspection | MISSING | Need new field |
-| Est. Building Size (m2) | MISSING | Need new field |
-| Number of Levels | MISSING | Need new field |
-| Roof Type | MISSING | Need new field |
-
-**ACM Item Details (NEW FIELDS NEEDED):**
-| Excel Column | PRD Field | Gap Analysis |
-|--------------|-----------|--------------|
-| Level | MISSING | Need new field |
-| ACM Product Group | MISSING | Need new field (classification) |
-| ACM Product Type | MISSING | Need new field (specific type) |
-| NATA Sample Number | MISSING | Need new field |
-| Sample Result | result | Need clarification - different meaning |
-| Hygiene Company | MISSING | Need new field |
-| Disturbance Potential | MISSING | Need new field |
-| Quantity | extent | Need clarification - different semantics |
-| Labelled | MISSING | Need new field |
-| Label Details | MISSING | Need new field |
-| Hygienist Recommendations | MISSING | Need new field |
-| Additional Comments | MISSING | Need new field |
-| PSB Supplied ACM ID | MISSING | Need new field |
-
-**Removal Tracking (ENTIRE NEW SECTION):**
-| Excel Column | PRD Field | Gap Analysis |
-|--------------|-----------|--------------|
-| Assumed Removed? | MISSING | Need new field |
-| Date of Removal | MISSING | Need new field |
-| Quantity Removed | MISSING | Need new field |
-| Asbestos Removal Notification No | MISSING | Need new field |
-| EPA Waste Transport Certificate No | MISSING | Need new field |
-| Removal Comments | MISSING | Need new field |
-| Photo Reference Number | MISSING | Need new field |
-
-## COMPLETE FIELD MAPPING: PDF Input → Excel BAR Output
-
-### Organization/Site Metadata (MUST be captured from PDF or configured)
-| Excel BAR Column | PDF Source | Notes |
-|------------------|------------|-------|
-| Department | NOT IN PDF | Must be configured per client (DJCS, DHHS, etc.) |
-| Agency | PDF: Client/Organization | Victoria Police, Alexandra District Health |
-| Sub Agency | PDF: Site Name | Broadmeadows Police Station, Alexandra District Hospital |
-| Site Name (if applicable) | PDF: Site Address area | May need parsing |
-| Building Name | PDF: Building Name (per register section) | Direct mapping |
-| Building Type | NOT IN PDF | Must be configured (Police Station, Hospital, etc.) |
-| Building Address | PDF: Full Address | Direct mapping |
-| Suburb | PDF: Address parsing | Extract from address |
-| Postcode | PDF: Address parsing | Extract from address |
-| Owned or Leased | NOT IN PDF | Must be configured |
-| Building Unique ID | NOT IN PDF | May auto-generate or configure |
-| Frequency of use | NOT IN PDF | Must be configured |
-| Public Access? | NOT IN PDF | Must be configured |
-| Date of Inspection | PDF: Survey Date | Direct mapping |
-| Estimated Year Built | PDF: Est. Building Age | Parse "1990s" → 1990 |
-
-### Building Characteristics
-| Excel BAR Column | PDF Source | Notes |
-|------------------|------------|-------|
-| Est. Building Size (m2) | PDF: Est. Building Size | Parse "800m²" → 800 |
-| Number of Levels | PDF: Number of Levels | Direct mapping |
-| Construction Type | PDF: Construction Type | Direct mapping |
-| Roof Type | PDF: Roof Type | Direct mapping |
-
-### ACM Item Location
-| Excel BAR Column | PDF Source | Notes |
-|------------------|------------|-------|
-| Internal / External | PDF: Location | Parse "External - Throughout" → External |
-| Level | PDF: Area / Level | "Ground floor", "First floor", "Ground Level" |
-| Room or Area | PDF: Room & Location / Location | "Main foyer", "External - Throughout" |
-| Location in Room | PDF: Feature / Location detail | "Floor", "Eaves", "Window Frames" |
-
-### ACM Item Details
-| Excel BAR Column | PDF Source | Notes |
-|------------------|------------|-------|
-| Specific Item/ACM Name | PDF: Item Description | "Vinyl sheet (cream)", "Flat Cement Sheeting" |
-| Friability of material | PDF: Friability | "Non-friable", "Friable" |
-| ACM Product Group | NOT IN PDF | Must derive from Item Description |
-| ACM Product Type | NOT IN PDF | Must derive from Item Description |
-| NATA Endorsed Sample number | PDF: Sample Number | Direct mapping |
-| Sample Result | PDF: Hazard Status / Item Status | "Negative", "Positive", "Assumed positive" |
-| Identifying Hygiene Company | PDF: Company header | Prensa Pty Ltd, Greencap |
-| Condition | PDF: Condition | "Good", "Fair", etc. |
-| Disturbance Potential | PDF: Disturb. Potential | Direct mapping |
-| Quantity | PDF: Approx. Quantity / Est. Extent | "3 units", "5 m²" |
-
-### Labeling & Documentation
-| Excel BAR Column | PDF Source | Notes |
-|------------------|------------|-------|
-| Labelled | PDF: Labelled Y/N / Current Label | "Yes", "No", "Not Labelled" |
-| Label Details | NOT IN PDF | Optional |
-| Hygienist Recommendations | PDF: Comments & Recommendations / Control Recommendation | Direct mapping |
-| Additional Comments | PDF: Extra notes | May combine fields |
-| PSB Supplied ACM ID | NOT IN PDF | May be blank |
-| Photo Reference Number | PDF: Photograph / Photo No. | Direct mapping |
-
-### Removal Tracking (NEW SECTION - rarely in source PDF)
-| Excel BAR Column | PDF Source | Notes |
-|------------------|------------|-------|
-| Assumed Removed? | NOT IN PDF | Default: blank |
-| Date of Removal | NOT IN PDF | Default: blank |
-| Quantity Removed | NOT IN PDF | Default: blank |
-| Asbestos Removal Notification No | NOT IN PDF | Default: blank |
-| EPA Waste Transport Certificate No | NOT IN PDF | Default: blank |
-| Removal Comments | PDF: Record Of Works Undertaken | If available |
-
-## GAP ANALYSIS SUMMARY
-
-### Fields That CANNOT Be Extracted from PDF (Require Configuration)
-1. **Department** - Government department (DJCS, DHHS, DET, etc.)
-2. **Building Type** - Classification (Police Station, Hospital, School, etc.)
-3. **Owned or Leased** - Property ownership status
-4. **Frequency of use** - How often building is used
-5. **Public Access?** - Whether public has access
-6. **Building Unique ID** - Unique identifier
-7. **ACM Product Group** - Classification category
-8. **ACM Product Type** - Specific ACM type
-
-### Fields That Require Parsing/Derivation
-1. **Suburb** - Parse from address
-2. **Postcode** - Parse from address
-3. **Estimated Year Built** - Parse "1990s" → numeric
-4. **Est. Building Size** - Parse "800m²" → numeric
-5. **Internal/External** - Derive from location text
-6. **ACM Product Group/Type** - AI classification from item description
-
-### Fields That Are Direct Mappings
-- Building Name, Address, Date of Inspection, Roof Type, Construction Type
-- Room, Level, Item Description, Friability, Sample Number, Condition
-- Risk Rating, Disturbance Potential, Quantity, Recommendations, Photos
+> **Updated:** 2026-02-08
+> **Project:** ACM-AI Frontend -> VAEA ACM-AI
 
 ---
-*Update this file after every 2 view/browser/search operations*
+
+## 1. Current Frontend Architecture
+
+### Navigation Structure (Brownfield)
+The sidebar has 4 sections with 11 nav items:
+- **Collect:** Sources, Documents, ACM Register
+- **Process:** Notebooks, Ask and Search
+- **Create:** Podcasts
+- **Manage:** Models, Transformations, Settings, Advanced
+
+**Issues:**
+- "Collect/Process/Create/Manage" taxonomy is confusing for ACM compliance officers
+- Podcasts, Transformations, Notebooks are irrelevant to ACM workflow
+- "Create" button offers Source/Notebook/Podcast - should be single "Upload Document"
+- No extraction settings in navigation (needed for E12 stories)
+
+### Current Pages
+| Route | Purpose | Keep/Remove |
+|-------|---------|-------------|
+| `/` | Dashboard with bento grid stats | KEEP - redesign for VAEA |
+| `/sources` | Source list (grid/table view) | KEEP - rename "Documents" |
+| `/sources/[id]` | Source detail with ACM tab | KEEP - core workflow |
+| `/documents` | Document library view | KEEP - merge with sources |
+| `/acm` | Standalone ACM register view | KEEP - core feature |
+| `/search` | Ask and search | KEEP - simplify |
+| `/notebooks` | Notebook list | HIDE from nav |
+| `/notebooks/[id]` | Notebook detail with chat | HIDE from nav |
+| `/podcasts` | Podcast generation | HIDE from nav |
+| `/models` | AI model configuration | KEEP -> move to Settings |
+| `/transformations` | Text transformations | HIDE from nav |
+| `/settings` | General settings | KEEP - expand for extraction |
+| `/advanced` | System info, rebuild embeddings | KEEP -> merge into Settings |
+
+### Component Quality Assessment
+- **ACM Components (good):** Well-structured - ACMGrid, ACMToolbar, BuildingTabs, SiteConfigPanel, ACMCellViewer, ACMRecordDialog, ACMStatsCards, ACMExtractionBanner
+- **Upload Components (good):** Multi-step wizard with FileDropzone, DocumentTypeStep, ProcessingOptionsStep, ReviewStep, UploadProgressStep
+- **UI Components (good):** Full shadcn/ui library - 30+ base components
+- **State Management (good):** Zustand stores (auth, navigation, sidebar, theme, upload, notebook-columns) + React Query hooks for server state
+- **Loading (basic):** Simple LoadingSpinner, basic extraction banner with spinner. NO skeleton screens, NO multi-stage pipeline progress
+
+### Extraction Status (Current)
+The `useExtractionStatus` hook tracks: `idle -> extracting -> completed -> failed`
+- Only shows a basic Alert banner with a spinning icon
+- No visibility into WHICH stage is running
+- No detail about what the AI is doing
+- No progress percentage or time estimate
+
+---
+
+## 2. VAEA Brand Analysis
+
+### Official Brand Colors
+| Token | Hex | Usage |
+|-------|-----|-------|
+| Primary Teal | #01A09C / #53A69D | Primary action color |
+| Deep Teal | #2A5951 / #01706D | Hover states, headings |
+| Light Teal | #9AD9D9 / #75D4D0 | Backgrounds, soft accents |
+| Green Accent | #A9D9AC / #95D60C | Success, environmental theme |
+| Focus Ring | #EB787A | Accessibility focus indicator |
+| Grey Background | #F2F2F2 | Page background |
+| Charcoal | #1F1F1F / #4C4D52 | Primary text |
+| VAEA Gradient | teal -> lime -> gold | Hero/accent gradient |
+
+### Dark Mode Palette (from sample)
+| Token | Hex |
+|-------|-----|
+| Page BG | #0F1F1D |
+| Surface | #162B28 |
+| Text Primary | #E6F2F1 |
+| Text Secondary | #B8D9D6 |
+| Border | #244743 |
+| Brand Primary | #9AD9D9 |
+| Brand Hover | #A9D9AC |
+
+### Government Design Patterns
+- Left-border accent cards (6px teal border)
+- System font stack (no custom fonts - accessibility)
+- 12px border radius (modern but professional)
+- Subtle shadows: `0 4px 12px rgba(42, 89, 81, 0.08)`
+- Aboriginal/Torres Strait Islander acknowledgment in footer
+- Accessibility: WCAG 2.1 AA minimum for government
+
+### Brand Assets Collected
+- `VAEA_Ripple2_FavIcon_0.png` - Square icon (ripple pattern)
+- `VAEA-Ripple2-Logo_Print.png` - Full logo with text
+- `favicon.ico` - Browser favicon
+- `CS_Logo.svg` - CoralShades vendor logo (for footer)
+- `CS_Favicon.svg` - CoralShades vendor icon
+
+---
+
+## 3. Extraction Pipeline Stages (for AG-UI)
+
+From sprint change proposals, the full extraction pipeline:
+
+```
+STAGE -1: STRUCTURE ANALYSIS (E1-S16..S19)
++-- TOC Extraction & Document Structure
++-- Building Inventory Compilation
++-- Page-Level Section Tagging
++-- Document Metadata Extraction
+
+STAGE 0: PREFLIGHT
++-- Format detection (Prensa/Greencap/Generic)
++-- Content hash & dedup check
++-- Parser selection
+
+STAGE 0.5: AGENTIC ORCHESTRATOR (E1-S20)
++-- Section analysis
++-- Tool selection (MinerU/Docling/Regex)
++-- Dynamic routing per section
+
+STAGE 1: EXTRACT
++-- Verbatim extraction with provenance
++-- Page, table ID, row/column, bounding box
++-- Raw ACM items output
+
+STAGE 2: INTERPRET
++-- Field mapping (consultant -> BAR)
++-- Value normalization (synonyms -> enums)
++-- Product classification (taxonomy)
++-- Business rule application
+
+STAGE 2.5: CORRECTIVE VALIDATION (E1-S15)
++-- Schema validation
++-- LLM re-extraction on failure
++-- Max 3 correction attempts
+
+STAGE 3: ENRICH & STORE
++-- Contextual embedding enrichment (E1-S14)
++-- Parent document sections (E11-S1)
++-- SurrealDB storage
++-- Vector embedding generation
+```
+
+Each stage should be visualized in the UI with:
+- Stage name and icon
+- Status: pending / running / complete / failed
+- Duration timer
+- Expandable detail showing agent decisions
+- Record count (where applicable)
+
+---
+
+## 4. Features to Hide/Remove
+
+### Components to Hide from Navigation
+| Component | Directory | Action |
+|-----------|-----------|--------|
+| Podcasts page | `app/(dashboard)/podcasts/` | Remove from sidebar |
+| Podcast components | `components/podcasts/` | Keep code, remove nav entry |
+| Transformations page | `app/(dashboard)/transformations/` | Remove from sidebar |
+| Transformation components | `components/(dashboard)/transformations/` | Keep code, remove nav entry |
+| Notebooks page | `app/(dashboard)/notebooks/` | Remove from sidebar |
+| Notebook components | `components/notebooks/` | Keep code, remove nav entry |
+
+### Navigation Redesign Target
+```
+VAEA ACM-AI
+---------------------
+[Upload Document]  (primary CTA)
+---------------------
+WORKSPACE
+  Dashboard
+  Documents         (merged sources + documents)
+  ACM Register
+  Search
+---------------------
+CONFIGURE
+  Extraction        (E12-S1)
+  AI Models         (existing models page)
+  Parsers           (E12-S4)
+  Processing        (E12-S3)
+  General           (existing settings + advanced merged)
+---------------------
+[VAEA Logo]
+Powered by CoralShades
+[Theme Toggle] [Sign Out]
+```
+
+---
+
+## 5. Enterprise Readiness Gaps
+
+### Current Gaps
+1. **No skeleton loading** - Just a spinner, no content placeholders
+2. **No pipeline progress** - Basic "extracting..." banner, no stage visibility
+3. **No offline/disconnect handling** - ConnectionGuard exists but basic
+4. **No session timeout** - Auth check on mount only
+5. **No WCAG audit** - Color contrast, focus management, aria labels incomplete
+6. **No breadcrumbs** - Deep pages have no context
+7. **No toast system for long ops** - Using Alert inline only
+8. **No keyboard shortcuts beyond Cmd+K** - CommandPalette exists but limited
+9. **No export progress** - No feedback during BAR Excel generation
+10. **No batch operation feedback** - Bulk actions have no progress
+
+### Priority Fixes for Enterprise
+1. Multi-stage pipeline visualization (AG-UI) - P0
+2. VAEA branding + design tokens - P0
+3. Skeleton loading screens - P1
+4. Navigation simplification - P1
+5. Toast/notification system enhancement - P1
+6. WCAG 2.1 AA accessibility - P1
+7. Error recovery patterns - P2
+8. Keyboard navigation - P2
+
+---
+
+## 6. Dual-Persona UX Considerations
+
+### Compliance Officer (Non-technical)
+- Simple upload -> wait -> review -> export flow
+- Clear risk indicators (color-coded, large text)
+- Minimal configuration options (use defaults)
+- PDF viewer with highlighted citations
+- One-click BAR Excel export
+
+### Asbestos Consultant (Technical)
+- Bulk document processing
+- Parser configuration management
+- Extraction method tuning
+- Knowledge graph exploration
+- Advanced search with filters
+- Record editing and validation
+
+### Approach
+- Default view optimized for compliance officers
+- "Advanced" toggles/tabs reveal consultant features
+- Settings pages only in "Configure" section (not in main flow)
+- Pipeline transparency is opt-in detail (collapsed by default, expandable)
+
+---
+
+## 7. Technology Research Findings (from Agent Teams)
+
+### AG-UI Protocol (CopilotKit)
+- **Status**: Production-ready, backed by Google, LangChain, AWS, Microsoft
+- **Core capabilities**: Streaming chat, thinking steps visualization, frontend tool calls, human-in-the-loop interrupts, shared state, tool output streaming
+- **Packages**: `@copilotkit/react-core`, `@copilotkit/react-ui`, `@copilotkit/runtime` (frontend), `copilotkit` (Python backend)
+- **Integration**: Works directly with LangGraph (already in use at `open_notebook/graphs/acm_extraction.py`)
+- **Key hooks**: `useCopilotAction` for extraction actions, replaces polling-based `useExtractionStatus`
+- **Impact**: Replace 3-second polling with real-time streaming; show LLM reasoning for product classification
+
+### Pydantic-to-TypeScript Pipeline
+- **Recommended tool**: `pydantic-to-typescript` (mature, Pydantic V2 compatible)
+- **Alternative**: `datamodel-code-generator` (for OpenAPI schema sync)
+- **Usage**: `pydantic2ts --module open_notebook.domain.acm --output frontend/src/lib/types/acm-generated.ts`
+- **CI/CD**: GitHub Action watches `open_notebook/domain/*.py` changes, auto-generates and commits TypeScript types
+- **Impact**: Single source of truth, catches API contract mismatches at build time
+
+### Skeleton Loading (Enterprise Pattern)
+- **Shimmer animation**: CSS keyframes with `background-position` animation (2s linear infinite)
+- **ACM-specific**: Grid skeleton matching 8-column layout with 10 shimmer rows
+- **Key principle**: Skeleton dimensions must match actual content to prevent CLS (Cumulative Layout Shift)
+- **Accessibility**: `aria-busy="true"` and screen reader announcements required
+
+### Toast/Notification Enhancement (Sonner)
+- **Promise-based**: `toast.promise()` for extraction jobs (loading → success → error)
+- **Manual progress**: `toast.loading()` with `id` for SSE/WebSocket progress updates
+- **Human-in-the-loop**: Action buttons in toasts for review workflows
+- **Risk-aware**: Custom `className` with `border-l-4 border-risk-high` for alert variants
+- **Persistent**: `duration: Infinity` for critical alerts and background job tracking
+
+### Knowledge Graph (React Flow)
+- **Package**: `reactflow@11` (latest stable)
+- **ACM hierarchy**: School → Building → Room → ACM Item nodes with risk-color edges
+- **Custom nodes**: Building nodes show record count + high-risk count
+- **Performance**: Virtualization for 1000+ nodes, viewport-based lazy loading
+
+### Animation Strategy
+- **CSS**: Hover effects, skeleton loaders, spinners, simple transitions
+- **Framer Motion**: Layout animations, gesture interactions, complex orchestration, physics-based movement
+- **Motion.dev**: 8KB alternative for performance-critical scenarios
+
+### Design System (Tailwind 4 CSS-First)
+- **@theme vs :root**: Use `@theme` for utility class generation, `:root` for CSS-only variables
+- **OKLCH**: Already in use - perceptual uniformity for color adjustments
+- **v4 benefits**: 5x faster full builds, 100x faster incremental (Rust engine), runtime theming
+- **Radix UI update**: Unified `radix-ui` single package (Feb 2026) replaces per-component `@radix-ui/react-*`
+
+---
+
+## 8. Current Component Inventory Summary
+
+### By Domain
+| Domain | Components | Files | Quality |
+|--------|-----------|-------|---------|
+| ACM | 11 | 11 | Good - well-structured, clear separation |
+| Upload | 6 | 7 (+ types) | Good - wizard pattern with dropzone |
+| UI (shadcn) | 36 | 38 (+ wizard/) | Good - full library |
+| Common | 10 | 10 | Good - CommandPalette, ErrorBoundary, etc. |
+| Source | 10 | 10 | Good - detail, chat, insights panels |
+| Documents | 7 | 7 | Good - library view with filters |
+| Podcasts | 7 | 7 | HIDE - not ACM relevant |
+| Notebooks | 3 | 3 | HIDE - not ACM relevant |
+| Dashboard | 2 | 2 | Redesign for VAEA |
+| Layout | 2 | 2 | Redesign sidebar |
+| Auth | 1 | 1 | Keep |
+
+### API Modules (15 files)
+All at `frontend/src/lib/api/`: client, acm, sources, notebooks, notes, chat, source-chat, search, models, transformations, podcasts, insights, embedding, settings, query-client
+
+### Hooks (25+)
+ACM-specific (4), General domain (11), Utility (10+)
