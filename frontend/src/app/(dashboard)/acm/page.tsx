@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { FileWarning, AlertCircle } from 'lucide-react'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { ACMGrid } from '@/components/acm/ACMGrid'
 import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
 import { ACMStatsCards } from '@/components/acm/ACMStatsCards'
@@ -136,6 +137,15 @@ function ACMPageContent() {
   return (
     <AppShell>
       <div className="flex flex-col h-full w-full max-w-none px-6 py-6 overflow-y-auto">
+        {/* Breadcrumbs */}
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'ACM Register' },
+          ]}
+          className="mb-4 flex-shrink-0"
+        />
+
         {/* Header */}
         <div className="mb-6 flex-shrink-0">
           <h1 className="text-3xl font-bold flex items-center gap-2">
