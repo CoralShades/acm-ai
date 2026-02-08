@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) - ACM-AI
 
 > **Product:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-04)
-> **Status:** Draft - Updated for Victorian BAR Format
+> **Date:** 2025-12-07 (Updated: 2026-02-08)
+> **Status:** Draft - Updated for UX Audit &amp; Enterprise Readiness
 > **Author:** John (Product Manager)
-> **Change Log:** Sprint Change Proposal approved 2026-02-04 - Victorian BAR format expansion
+> **Change Log:** 2026-02-08 - UX Audit &amp; Enterprise Readiness (FR-700 series)
 
 ---
 
@@ -102,6 +102,26 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-602 | Logo shall reflect ACM-AI branding | P1 | New logo in header and favicon |
 | FR-603 | Color scheme shall be professional/compliance-focused | P1 | Updated theme colors |
 | FR-604 | Landing page shall describe ACM-AI purpose | P1 | Hero section explains value prop |
+
+### 2.7 UX &amp; Enterprise Readiness (FR-700 Series)
+
+> **Added:** 2026-02-08 (UX Audit &amp; Enterprise Readiness Initiative - Lane B)
+> **Spec References:** `docs/ux-audit.md`, `docs/design-system.md`, `docs/ui-ux-spec.md`,
+> `docs/navigation-cleanup-spec.md`, `docs/state-loading-spec.md`, `docs/ag-ui-pipeline-spec.md`
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-701 | System shall use VAEA government branding (teal palette, logo, favicon) | P0 | All brand colors match VAEA specification |
+| FR-702 | Navigation shall use WORKSPACE + CONFIGURE taxonomy | P0 | Sidebar redesigned per navigation-cleanup-spec |
+| FR-703 | Brownfield features (Podcasts, Transformations, Notebooks) shall be hidden from navigation | P0 | Features inaccessible from nav but code preserved |
+| FR-704 | All pages shall display skeleton loading placeholders during data fetch | P1 | Zero CLS, shimmer animation, aria-busy |
+| FR-705 | Toast notifications shall provide promise-based feedback for long operations | P1 | Extraction/export shows loading→success→error toasts |
+| FR-706 | Application shall meet WCAG 2.1 AA accessibility standards | P1 | Color contrast, focus management, aria labels verified |
+| FR-707 | Sources and Documents pages shall be merged into unified Documents view | P1 | Single /documents route with redirect from /sources |
+| FR-708 | Application shall gracefully handle connection drops and session timeouts | P2 | Reconnection, offline indicator, timeout prompt |
+| FR-709 | Keyboard navigation shall support all primary workflows | P2 | Command palette, grid nav, dialog shortcuts |
+| FR-710 | Deep pages shall display breadcrumb navigation | P2 | Source detail, ACM register breadcrumbs |
+| FR-711 | TypeScript types shall be auto-generated from Python Pydantic models | P2 | generate_types.py script, CI drift detection |
 
 ---
 
@@ -651,3 +671,4 @@ The system supports multiple consultant PDF formats via extensible parser archit
 |------|---------|---------|
 | 2025-12-07 | 1.0 | Initial PRD |
 | 2026-02-04 | 1.1 | Victorian BAR format expansion (Sprint Change Proposal) |
+| 2026-02-08 | 1.2 | UX Audit &amp; Enterprise Readiness - FR-700 series (11 requirements) |

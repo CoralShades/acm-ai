@@ -2,7 +2,7 @@
 
 > **Project:** ACM-AI v1.0
 > **Date:** 2025-12-07 (Updated: 2026-02-07)
-> **Status:** Draft - Updated for Document Intelligence Pipeline & Knowledge Graph
+> **Status:** Draft - Updated for UX Audit & Enterprise Readiness
 > **Change Log:** Sprint Change Proposal approved 2026-02-04 - Added 6 new stories, modified 6 existing
 
 ---
@@ -24,6 +24,7 @@
 | E11 | Search & Retrieval Enhancement | P0/P1 | 2 | Backlog |
 | E12 | Extraction Settings & Configuration UI | P1 | 4 | Backlog |
 | E13 | Knowledge Graph Visualization | P1 | 3 | Backlog |
+| E14 | UX & Enterprise Readiness | P0/P1 | 11 | Backlog |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -42,6 +43,20 @@
 > - NEW Epic 12: Extraction Settings & Configuration UI (4 stories)
 > - NEW Epic 13: Knowledge Graph Visualization (3 stories)
 > Based on n8n workflow validation gap analysis.
+>
+> **2026-02-08 Update:** UX Audit & Enterprise Readiness initiative (Lane B):
+> - NEW Epic 14: UX & Enterprise Readiness (11 stories)
+> - E14-S1: VAEA Branding & Design Tokens (P0)
+> - E14-S2: Sidebar Navigation Redesign (P0)
+> - E14-S3: Hide Brownfield Features (P0)
+> - E14-S4: Shimmer Skeleton Loading (P1)
+> - E14-S5: Toast System Enhancement (P1)
+> - E14-S6: WCAG 2.1 AA Accessibility (P1)
+> - E14-S7: Merge Sources/Documents (P1)
+> - E14-S8: Error Recovery Handling (P2)
+> - E14-S9: Keyboard Navigation (P2)
+> - E14-S10: Breadcrumb Navigation (P2)
+> - E14-S11: Pydantic-to-TypeScript Pipeline (P2)
 
 ---
 
@@ -1575,3 +1590,265 @@ E10-S1 (independent)
 - Dependencies: `@xyflow/react` (React Flow v12+), `dagre`
 - Custom nodes: `frontend/src/components/acm/graph-nodes/`
 - Integration: Tab in source detail page alongside spreadsheet
+
+---
+
+## Epic 14: UX & Enterprise Readiness (NEW 2026-02-08)
+
+> **Created:** 2026-02-08 (UX Audit & Enterprise Readiness Initiative - Lane B)
+> **Rationale:** Government compliance mandates professional branding, accessibility standards,
+> and streamlined navigation. UX audit findings drive 30 improvements across 11 stories.
+> **Owner:** Lane B (Frontend)
+> **Dependency:** E14-S1 (Design Tokens) is foundational -- all visual E14 stories depend on it.
+> **Spec References:** `docs/ux-audit.md`, `docs/design-system.md`, `docs/ui-ux-spec.md`,
+> `docs/navigation-cleanup-spec.md`, `docs/state-loading-spec.md`, `docs/ag-ui-pipeline-spec.md`
+
+### E14-S1: Apply VAEA Branding and Design Tokens (P0)
+**As a** government client
+**I want** the application to use VAEA's official branding
+**So that** it meets government presentation standards
+
+**Acceptance Criteria:**
+- [ ] CSS custom properties defined for VAEA color palette (light + dark mode)
+- [ ] Tailwind 4 `@theme inline` configured with VAEA tokens
+- [ ] OKLCH color space used for all brand colors
+- [ ] VAEA logo (`VAEA-Ripple2-Logo_Print.png`) replaces current logo
+- [ ] VAEA favicon replaces current favicon
+- [ ] CoralShades vendor attribution in sidebar footer
+- [ ] Focus ring color set to VAEA coral (#EB787A) for accessibility
+- [ ] Government design patterns: left-border accent cards, system font stack, 12px border-radius
+
+**Spec Reference:** `docs/design-system.md` Sections 1-6, 14 (Migration Checklist)
+
+**Key Files to Modify:**
+- `frontend/src/app/globals.css` -- Replace `:root` and `.dark` token blocks
+- `frontend/tailwind.config.ts` -- Update `@theme inline` section
+- `frontend/src/config/branding.ts` -- Update brand config
+- `frontend/src/components/brand/Logo.tsx` -- Replace with VAEA logo
+- `frontend/public/` -- Replace logo.svg, icon.svg, favicon, manifest.json
+
+---
+
+### E14-S2: Redesign Sidebar Navigation (P0)
+**As a** compliance officer
+**I want** a simplified navigation with WORKSPACE and CONFIGURE sections
+**So that** I can easily find ACM-related features
+
+**Acceptance Criteria:**
+- [ ] Sidebar sections changed to WORKSPACE (Dashboard, Documents, ACM Register, Search) and CONFIGURE (Extraction, AI Models, Parsers, Processing, General)
+- [ ] "Upload Document" primary CTA button at top of sidebar
+- [ ] Create button dropdown replaced with single "Upload Document" action
+- [ ] VAEA logo and CoralShades footer in sidebar
+- [ ] Theme toggle and sign out in sidebar footer
+
+**Spec Reference:** `docs/navigation-cleanup-spec.md` Section 3, `docs/ui-ux-spec.md` Section 3
+**Depends On:** E14-S1 (needs VAEA tokens for sidebar styling)
+
+**Key Files to Modify:**
+- `frontend/src/components/layout/AppSidebar.tsx`
+- `frontend/src/lib/stores/navigation-store.ts`
+- `frontend/src/components/common/AddButton.tsx`
+
+---
+
+### E14-S3: Hide Brownfield Features from Navigation (P0)
+**As a** product owner
+**I want** Podcasts, Transformations, and Notebooks hidden from navigation
+**So that** the UI focuses on ACM compliance workflow
+
+**Acceptance Criteria:**
+- [ ] Podcasts removed from sidebar nav items
+- [ ] Transformations removed from sidebar nav items
+- [ ] Notebooks removed from sidebar nav items (pages still accessible via direct URL)
+- [ ] Command palette entries for hidden features removed
+- [ ] Create dialog no longer shows Notebook or Podcast options
+- [ ] Code is preserved (not deleted) -- only nav entries removed
+
+**Spec Reference:** `docs/navigation-cleanup-spec.md` Section 4
+
+**Key Files to Modify:**
+- `frontend/src/components/layout/AppSidebar.tsx`
+- `frontend/src/components/common/CommandPalette.tsx`
+- `frontend/src/components/common/AddButton.tsx` or create dialog
+
+---
+
+### E14-S4: Add Shimmer Skeleton Loading Screens (P1)
+**As a** user
+**I want** skeleton loading placeholders on every page
+**So that** I see content structure immediately instead of a blank screen
+
+**Acceptance Criteria:**
+- [ ] Skeleton screen for Dashboard (bento grid layout)
+- [ ] Skeleton screen for Documents page (card grid + filters)
+- [ ] Skeleton screen for ACM Register (toolbar + AG Grid rows)
+- [ ] Skeleton screen for Source Detail (panels layout)
+- [ ] Skeleton screen for Search page
+- [ ] Shimmer animation with CSS keyframes (2s linear infinite)
+- [ ] Dark mode adaptation (lighter shimmer on dark surfaces)
+- [ ] `aria-busy="true"` and screen reader announcements
+- [ ] Zero CLS (skeleton dimensions match actual content)
+
+**Spec Reference:** `docs/state-loading-spec.md` Section 4
+
+**Key Files to Create:**
+- `frontend/src/components/skeletons/DashboardSkeleton.tsx`
+- `frontend/src/components/skeletons/DocumentsSkeleton.tsx`
+- `frontend/src/components/skeletons/ACMRegisterSkeleton.tsx`
+- `frontend/src/components/skeletons/SourceDetailSkeleton.tsx`
+- `frontend/src/components/skeletons/SearchSkeleton.tsx`
+
+---
+
+### E14-S5: Enhance Toast System with Promise-Based Patterns (P1)
+**As a** user
+**I want** informative toast notifications during long operations
+**So that** I know what's happening with extraction, export, and processing
+
+**Acceptance Criteria:**
+- [ ] Sonner `toast.promise()` used for extraction start/complete/fail
+- [ ] Sonner `toast.promise()` used for Excel/CSV export
+- [ ] Loading toast with manual ID for SSE/polling progress updates
+- [ ] Risk-aware toast variants (border-l-4 with risk colors)
+- [ ] Persistent toasts (`duration: Infinity`) for critical alerts
+- [ ] Action buttons in toasts for human-in-the-loop workflows
+
+**Spec Reference:** `docs/state-loading-spec.md` Section 6
+
+**Key Files to Modify:**
+- `frontend/src/lib/toast-patterns.ts` (new)
+- `frontend/src/components/acm/ACMExtractionBanner.tsx`
+- `frontend/src/lib/api/acm.ts`
+
+---
+
+### E14-S6: WCAG 2.1 AA Accessibility Audit and Fixes (P1)
+**As a** government application
+**I want** WCAG 2.1 AA compliance
+**So that** the application meets government accessibility mandates
+
+**Acceptance Criteria:**
+- [ ] All interactive elements have visible focus indicators (VAEA coral ring)
+- [ ] Color contrast ratio meets 4.5:1 for normal text, 3:1 for large text
+- [ ] All images and icons have appropriate alt text or aria-labels
+- [ ] AG Grid keyboard navigation verified and documented
+- [ ] Form inputs have associated labels
+- [ ] Pipeline visualization has `aria-live` regions for status updates
+- [ ] Skip-to-content link on all pages
+- [ ] Reduced motion preference respected (`prefers-reduced-motion`)
+
+**Spec Reference:** `docs/ux-audit.md` Finding ACC-01, `docs/design-system.md` Section 8
+**Depends On:** E14-S1 (needs VAEA tokens for focus ring colors)
+
+**Key Files to Modify:**
+- `frontend/src/app/globals.css` -- Focus ring styles, skip-to-content
+- `frontend/src/app/layout.tsx` -- Skip-to-content link
+- `frontend/src/components/acm/ACMSpreadsheet.tsx` -- AG Grid a11y
+- Multiple component files for aria-labels
+
+---
+
+### E14-S7: Merge Sources and Documents into Unified View (P1)
+**As a** user
+**I want** a single Documents page instead of separate Sources and Documents views
+**So that** I have one place to find all my uploaded files
+
+**Acceptance Criteria:**
+- [ ] `/sources` and `/documents` merged into unified `/documents` route
+- [ ] `/sources` redirects to `/documents` via middleware
+- [ ] `/sources/[id]` continues to work (source detail page)
+- [ ] Grid/table/list view toggle preserved
+- [ ] All document filters available
+- [ ] Bulk actions preserved
+
+**Spec Reference:** `docs/navigation-cleanup-spec.md` Section 5
+
+**Key Files to Modify:**
+- `frontend/src/app/documents/page.tsx` (new or merge)
+- `frontend/src/middleware.ts` -- Add redirect
+- `frontend/src/components/layout/AppSidebar.tsx` -- Update nav
+
+---
+
+### E14-S8: Improve Error Recovery and Disconnect Handling (P2)
+**As a** user
+**I want** graceful handling of connection drops and errors
+**So that** I don't lose my work or get confused when something fails
+
+**Acceptance Criteria:**
+- [ ] Enhanced `ConnectionGuard` with reconnection attempts
+- [ ] Session timeout detection with re-authentication prompt
+- [ ] Offline indicator banner
+- [ ] Route-level error boundaries on all dashboard pages
+- [ ] Retry logic in API client for transient failures
+- [ ] Network status check on window focus
+
+**Spec Reference:** `docs/state-loading-spec.md` Section 8
+
+**Key Files to Create/Modify:**
+- `frontend/src/components/common/ConnectionGuard.tsx` (enhance)
+- `frontend/src/components/common/OfflineBanner.tsx` (new)
+- `frontend/src/components/common/ErrorBoundary.tsx` (new or enhance)
+- `frontend/src/lib/api/client.ts` -- Retry logic
+
+---
+
+### E14-S9: Expand Keyboard Navigation and Shortcuts (P2)
+**As a** power user
+**I want** keyboard shortcuts for common actions
+**So that** I can work efficiently without a mouse
+
+**Acceptance Criteria:**
+- [ ] Command palette (Cmd+K) entries for all primary actions
+- [ ] AG Grid keyboard navigation (arrow keys, Enter to expand)
+- [ ] Escape to close dialogs/panels
+- [ ] Tab navigation through pipeline stages
+- [ ] Shortcut cheat sheet accessible via `?` key
+
+**Spec Reference:** `docs/ux-audit.md` Finding NAV-03
+
+**Key Files to Modify:**
+- `frontend/src/components/common/CommandPalette.tsx`
+- `frontend/src/components/acm/ACMSpreadsheet.tsx`
+- `frontend/src/components/common/KeyboardShortcutSheet.tsx` (new)
+
+---
+
+### E14-S10: Add Breadcrumb Navigation for Deep Pages (P2)
+**As a** user viewing a source detail page
+**I want** breadcrumb navigation showing my location
+**So that** I can easily navigate back to the parent page
+
+**Acceptance Criteria:**
+- [ ] Breadcrumb component created following VAEA design tokens
+- [ ] Breadcrumbs shown on: Source detail, ACM Register (within source), Notebook detail
+- [ ] Links are functional (clicking "Documents" goes to documents list)
+- [ ] Responsive: truncated with ellipsis on mobile
+
+**Spec Reference:** `docs/ui-ux-spec.md` Section 7
+
+**Key Files to Create/Modify:**
+- `frontend/src/components/common/Breadcrumbs.tsx` (new)
+- `frontend/src/app/sources/[id]/page.tsx` -- Add breadcrumbs
+- `frontend/src/app/sources/[id]/acm/page.tsx` -- Add breadcrumbs
+
+---
+
+### E14-S11: Set Up Pydantic-to-TypeScript Type Generation (P2)
+**As a** developer
+**I want** TypeScript types auto-generated from Python Pydantic models
+**So that** frontend and backend types are always in sync
+
+**Acceptance Criteria:**
+- [ ] `scripts/generate_types.py` created
+- [ ] Generates TypeScript interfaces from ACMRecord, ACMExtractionOutput, etc.
+- [ ] Output to `frontend/src/lib/types/generated/`
+- [ ] `npm run generate:types` script in package.json
+- [ ] CI workflow detects type drift on PRD model changes
+
+**Spec Reference:** `docs/ag-ui-pipeline-spec.md` Section 7
+
+**Key Files to Create:**
+- `scripts/generate_types.py`
+- `frontend/src/lib/types/generated/acm.ts` (output)
+- `.github/workflows/type-check.yml` (CI)
