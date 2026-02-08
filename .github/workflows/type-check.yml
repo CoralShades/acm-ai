@@ -1,0 +1,61 @@
+name: Type Drift Check
+
+on:
+  pull_request:
+    paths:
+      - 'open_notebook/domain/**/*.py'
+      - 'open_notebook/extractors/**/*.py'
+      - 'scripts/generate_types.py'
+      - 'frontend/src/lib/types/generated/**/*.ts'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-type-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Regenerate TypeScript types
+        run: uv run python scripts/generate_types.py
+
+      - name: Check for type drift
+        id: drift
+        run: |
+          if git diff --quiet frontend/src/lib/types/generated/; then
+            echo "drift=false" >> $GITHUB_OUTPUT
+            echo "Generated types are up to date"
+          else
+            echo "drift=true" >> $GITHUB_OUTPUT
+            echo "Generated types are out of sync with Pydantic models"
+            git diff frontend/src/lib/types/generated/
+          fi
+
+      - name: Fail if drift detected
+        if: steps.drift.outputs.drift == 'true'
+        run: |
+          echo "Type drift detected. Run 'npm run generate:types' and commit the changes."
+          exit 1
