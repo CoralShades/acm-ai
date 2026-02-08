@@ -17,36 +17,29 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
+import { VendorAttribution } from '@/components/brand/VendorAttribution'
 import {
   LayoutDashboard,
-  Book,
   Search,
-  Mic,
   Bot,
-  Shuffle,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronDown,
   Menu,
-  FileText,
-  Plus,
-  Wrench,
+  Upload,
   Command,
   FileWarning,
   Library,
+  FlaskConical,
+  FileCode,
+  Cog,
+  SlidersHorizontal,
 } from 'lucide-react'
 
 interface NavItem {
@@ -63,46 +56,33 @@ interface NavSection {
 
 const navigation: NavSection[] = [
   {
-    title: 'Collect',
+    title: 'Workspace',
     items: [
-      { name: 'Sources', href: '/sources', icon: FileText },
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
       { name: 'Documents', href: '/documents', icon: Library },
       { name: 'ACM Register', href: '/acm', icon: FileWarning },
+      { name: 'Search', href: '/search', icon: Search },
     ],
   },
   {
-    title: 'Process',
+    title: 'Configure',
     items: [
-      { name: 'Notebooks', href: '/notebooks', icon: Book },
-      { name: 'Ask and Search', href: '/search', icon: Search },
-    ],
-  },
-  {
-    title: 'Create',
-    items: [{ name: 'Podcasts', href: '/podcasts', icon: Mic }],
-  },
-  {
-    title: 'Manage',
-    items: [
-      { name: 'Models', href: '/models', icon: Bot },
-      { name: 'Transformations', href: '/transformations', icon: Shuffle },
-      { name: 'Settings', href: '/settings', icon: Settings },
-      { name: 'Advanced', href: '/advanced', icon: Wrench },
+      { name: 'Extraction', href: '/settings/extraction', icon: FlaskConical },
+      { name: 'AI Models', href: '/models', icon: Bot },
+      { name: 'Parsers', href: '/settings/parsers', icon: FileCode },
+      { name: 'Processing', href: '/settings/processing', icon: Cog },
+      { name: 'General', href: '/settings', icon: SlidersHorizontal },
     ],
   },
 ]
-
-type CreateTarget = 'source' | 'notebook' | 'podcast'
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { logout } = useAuth()
   const { isCollapsed, expandedSections, toggleCollapse, toggleSection } =
     useSidebarStore()
-  const { openSourceDialog, openNotebookDialog, openPodcastDialog } =
-    useCreateDialogs()
+  const { openSourceDialog } = useCreateDialogs()
 
-  const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
 
   // Detect platform for keyboard shortcut display
@@ -110,21 +90,13 @@ export function AppSidebar() {
     setIsMac(navigator.platform.toLowerCase().includes('mac'))
   }, [])
 
-  const handleCreateSelection = (target: CreateTarget) => {
-    setCreateMenuOpen(false)
-
-    if (target === 'source') {
-      openSourceDialog()
-    } else if (target === 'notebook') {
-      openNotebookDialog()
-    } else if (target === 'podcast') {
-      openPodcastDialog()
-    }
-  }
+  // Check if a nav item is active (exact match for root, prefix match for others)
+  const isItemActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   // Check if any item in a section is active
   const isSectionActive = (section: NavSection) =>
-    section.items.some((item) => pathname.startsWith(item.href))
+    section.items.some((item) => isItemActive(item.href))
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -179,115 +151,34 @@ export function AppSidebar() {
             isCollapsed ? 'px-2' : 'px-3'
           )}
         >
-          {/* Dashboard Link - Always visible at top */}
-          <div className={cn('mb-2', isCollapsed ? 'px-0' : 'px-0')}>
+          {/* Upload Document button - directly opens AddSourceDialog */}
+          <div className={cn('mb-4', isCollapsed ? 'px-0' : 'px-0')}>
             {isCollapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link href="/">
-                    <Button
-                      variant={pathname === '/' ? 'secondary' : 'ghost'}
-                      className={cn(
-                        'w-full justify-center px-2 text-sidebar-foreground',
-                        pathname === '/' &&
-                          'bg-sidebar-accent text-sidebar-accent-foreground'
-                      )}
-                      aria-label="Dashboard"
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Dashboard</TooltipContent>
-              </Tooltip>
-            ) : (
-              <Link href="/">
-                <Button
-                  variant={pathname === '/' ? 'secondary' : 'ghost'}
-                  className={cn(
-                    'w-full justify-start gap-3 text-sidebar-foreground',
-                    pathname === '/' &&
-                      'bg-sidebar-accent text-sidebar-accent-foreground'
-                  )}
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </Button>
-              </Link>
-            )}
-          </div>
-
-          {/* Create Button */}
-          <div className={cn('mb-4', isCollapsed ? 'px-0' : 'px-0')}>
-            <DropdownMenu open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
-              {isCollapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        onClick={() => setCreateMenuOpen(true)}
-                        variant="default"
-                        size="sm"
-                        className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
-                        aria-label="Create new item"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Create</TooltipContent>
-                </Tooltip>
-              ) : (
-                <DropdownMenuTrigger asChild>
                   <Button
-                    onClick={() => setCreateMenuOpen(true)}
+                    onClick={() => openSourceDialog()}
                     variant="default"
                     size="sm"
-                    className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                    className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
+                    aria-label="Upload Document"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create
+                    <Upload className="h-4 w-4" />
                   </Button>
-                </DropdownMenuTrigger>
-              )}
-
-              <DropdownMenuContent
-                align={isCollapsed ? 'end' : 'start'}
-                side={isCollapsed ? 'right' : 'bottom'}
-                className="w-48"
+                </TooltipTrigger>
+                <TooltipContent side="right">Upload Document</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                onClick={() => openSourceDialog()}
+                variant="default"
+                size="sm"
+                className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"
               >
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault()
-                    handleCreateSelection('source')
-                  }}
-                  className="gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Source
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault()
-                    handleCreateSelection('notebook')
-                  }}
-                  className="gap-2"
-                >
-                  <Book className="h-4 w-4" />
-                  Notebook
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault()
-                    handleCreateSelection('podcast')
-                  }}
-                  className="gap-2"
-                >
-                  <Mic className="h-4 w-4" />
-                  Podcast
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Document
+              </Button>
+            )}
           </div>
 
           <Separator className="my-2" />
@@ -305,7 +196,7 @@ export function AppSidebar() {
                   // Collapsed mode: show items directly with tooltips
                   <div className="space-y-1">
                     {section.items.map((item) => {
-                      const isActive = pathname.startsWith(item.href)
+                      const isActive = isItemActive(item.href)
                       return (
                         <Tooltip key={item.name}>
                           <TooltipTrigger asChild>
@@ -358,7 +249,7 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-1 pt-1">
                       {section.items.map((item) => {
-                        const isActive = pathname.startsWith(item.href)
+                        const isActive = isItemActive(item.href)
                         return (
                           <Link key={item.name} href={item.href}>
                             <Button
@@ -395,6 +286,9 @@ export function AppSidebar() {
             isCollapsed && 'px-2'
           )}
         >
+          {/* Vendor Attribution */}
+          {!isCollapsed && <VendorAttribution className="mb-1" />}
+
           {/* Command Palette hint */}
           {!isCollapsed && (
             <div className="px-3 py-1.5 text-xs text-sidebar-foreground/60 rounded-md bg-sidebar-accent/30">

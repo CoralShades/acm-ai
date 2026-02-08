@@ -1,48 +1,128 @@
-# Progress: Agent Creation Session
+# E14 Implementation Progress
 
-## Session: 2026-02-08
+## Current Story: E14-S6
+## Stories Completed: 6/11
+## Last Updated: 2026-02-08 15:50 AEDT
 
-### Completed
-- [x] Enabled agent teams in `~/.claude/settings.json` (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
-- [x] Created 7 generic agents in `~/.claude/agents/`
-- [x] Interviewed user: all 3 categories, ACM-specialized, Sonnet, full BMad team, grouped pipeline, full-stack testing
-- [x] Created task_plan.md, findings.md, progress.md
-- [x] Phase 1: BMad Methodology Agents (7 agents) - bmad-pm, bmad-sm, bmad-dev, bmad-architect, bmad-qa, bmad-tech-writer, bmad-analyst
-- [x] Phase 2: ACM Domain Agents (5 agents) - acm-extraction-pre, acm-extraction-core, acm-extraction-post, acm-schema-expert, acm-rag-strategist
-- [x] Phase 3: Browser/E2E Testing Agents (2 agents) - acm-e2e-tester, acm-ui-tester
-- [x] Phase 4: Team Lead Agents (2 agents) - acm-sprint-lead, acm-research-lead
-- [x] Phase 5: Verification - all 23 agents created, split into global vs project
-- [x] Moved ACM agents to project `.claude/agents/`, kept generic + BMad global
+---
 
-### Final Agent Inventory
+### E14-S1: VAEA Branding & Design Tokens
+- **Status:** done
+- **Started:** 2026-02-08 13:35 AEDT
+- **Completed:** 2026-02-08 14:05 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 8 acceptance criteria met)
+- **Files Modified:** globals.css, branding.ts, Logo.tsx, VendorAttribution.tsx (new), AcknowledgmentFooter.tsx (new), logo.png (new), icon.png (new), favicon.ico (new), manifest.json, tailwind.config.ts
+- **Commit:** fb6ac64
+- **Notes:** VAEA teal palette, OKLCH tokens, 12px radius, system fonts, coral focus rings, dark mode with dark teal bg
 
-#### Global (`~/.claude/agents/`) - 14 agents
-| # | Agent | Category |
-|---|-------|----------|
-| 1 | architect.md | Generic |
-| 2 | debugger.md | Generic |
-| 3 | docs-writer.md | Generic |
-| 4 | refactorer.md | Generic |
-| 5 | researcher.md | Generic |
-| 6 | security-reviewer.md | Generic |
-| 7 | test-writer.md | Generic |
-| 8 | bmad-pm.md | BMad Methodology |
-| 9 | bmad-sm.md | BMad Methodology |
-| 10 | bmad-dev.md | BMad Methodology |
-| 11 | bmad-architect.md | BMad Methodology |
-| 12 | bmad-qa.md | BMad Methodology |
-| 13 | bmad-tech-writer.md | BMad Methodology |
-| 14 | bmad-analyst.md | BMad Methodology |
+### E14-S3: Hide Brownfield Features
+- **Status:** done
+- **Started:** 2026-02-08 14:10 AEDT
+- **Completed:** 2026-02-08 14:25 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 6 acceptance criteria met)
+- **Files Modified:** AppSidebar.tsx, CommandPalette.tsx, AddButton.tsx
+- **Commit:** f371dd0
+- **Notes:** Removed Notebooks, Podcasts, Transformations from nav. Create button simplified to "Upload Document". Pages preserved at original URLs.
 
-#### Project (`acm-ai/.claude/agents/`) - 9 agents
-| # | Agent | Category |
-|---|-------|----------|
-| 15 | acm-extraction-pre.md | ACM Pipeline |
-| 16 | acm-extraction-core.md | ACM Pipeline |
-| 17 | acm-extraction-post.md | ACM Pipeline |
-| 18 | acm-schema-expert.md | ACM Domain |
-| 19 | acm-rag-strategist.md | ACM Domain |
-| 20 | acm-e2e-tester.md | ACM Testing |
-| 21 | acm-ui-tester.md | ACM Testing |
-| 22 | acm-sprint-lead.md | ACM Team Lead |
-| 23 | acm-research-lead.md | ACM Team Lead |
+### E14-S2: Sidebar Navigation Redesign
+- **Status:** done
+- **Started:** 2026-02-08 14:35 AEDT
+- **Completed:** 2026-02-08 15:10 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 9 acceptance criteria met)
+- **Files Modified:** AppSidebar.tsx, sidebar-store.ts, middleware.ts
+- **Commit:** 3a638d3
+- **Notes:** WORKSPACE/CONFIGURE sections, Dashboard in Workspace, Upload icon, VendorAttribution in footer, Configure collapsed by default, isItemActive bug fix for root path, legacy redirects (/sources, /advanced)
+
+### E14-S4: Skeleton Loading Screens
+- **Status:** done
+- **Started:** 2026-02-08 15:15 AEDT
+- **Completed:** 2026-02-08 15:30 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 9 acceptance criteria met)
+- **Files Modified:** skeleton.tsx, globals.css, tailwind.config.ts, DashboardSkeleton.tsx (new), DocumentsSkeleton.tsx (new), ACMRegisterSkeleton.tsx (new), SourceDetailSkeleton.tsx (new), SearchSkeleton.tsx (new), page.tsx (dashboard), acm/page.tsx, sources/[id]/page.tsx
+- **Commit:** 2755c32
+- **Notes:** Shimmer animation (2s linear infinite), dark mode auto-adapt via CSS vars, reduced motion support, aria-busy+sr-only on all skeletons, zero CLS layout matching
+
+### E14-S5: Toast System Enhancement
+- **Status:** done
+- **Started:** 2026-02-08 15:35 AEDT
+- **Completed:** 2026-02-08 15:50 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 6 acceptance criteria met)
+- **Files Modified:** toast-patterns.ts (new), use-toast.ts, use-acm.ts, use-extraction-status.ts
+- **Commit:** 2cdcb29
+- **Notes:** Promise-based toasts for extraction/export, progress toast controller with ID-based updates, risk-aware toasts with VAEA colors, persistent critical alerts, action button support
+
+### E14-S7: Unified Documents View
+- **Status:** done
+- **Started:** 2026-02-08 16:00 AEDT
+- **Completed:** 2026-02-08 16:20 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 10 acceptance criteria met)
+- **Files Modified:** DocumentLibrary.tsx, ViewToggle.tsx, middleware.ts, use-sources-paginated.ts (new), progress.md, task_plan.md
+- **Commit:** (pending)
+- **Notes:** 3-way view toggle (grid/list/table), useSourcesPaginated hook for infinite scroll, keyboard nav (Arrow/Enter/Home/End) in table view, SourcesTableView reused from sources page, middleware query param preservation, delete confirm dialog for table view, smart sorting (server-side for table, client-side for grid/list)
+
+### E14-S6: WCAG Accessibility Compliance
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
+
+### E14-S8: Error Recovery & Disconnect Handling
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
+
+### E14-S9: Keyboard Navigation
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
+
+### E14-S10: Breadcrumb Navigation
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
+
+### E14-S11: Pydantic-TypeScript Type Generation
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**

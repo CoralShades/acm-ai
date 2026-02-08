@@ -1,61 +1,34 @@
-# Task Plan: Create ACM-AI Specialized Agent Teams
+# Epic 14: UX & Enterprise Readiness - Story Execution Queue
 
-## Goal
-Create ~20+ specialized Claude Code agents in `~/.claude/agents/` that are globally available, ACM-AI specialized, and designed to work as agent teams across 4 compositions: sprint execution, research & design, pipeline development, and browser/E2E testing.
+> **Created:** 2026-02-08
+> **Mode:** IMPLEMENTATION (Ralph Loop)
+> **Branch:** lane-b
+> **Worktree:** `/mnt/d/ailocal/acm-ai-frontend/`
 
-## Decisions
-- **Scope:** All three categories (ACM domain + BMad methodology + Pipeline)
-- **Specificity:** ACM-AI specialized
-- **Model:** Sonnet for all agents
-- **Location:** `~/.claude/agents/` (global)
-- **Team patterns:** Sprint execution, Research & design, Pipeline dev, Browser/E2E testing
+---
 
-## Phase 1: BMad Methodology Agents (7 agents) — `in_progress`
-Mirror the full BMad team roles as autonomous teammates:
+## Story Queue
 
-| Agent | BMad Role | Key Responsibilities |
-|-------|-----------|---------------------|
-| `bmad-pm` | Product Manager | PRD management, requirements, change proposals, stakeholder alignment |
-| `bmad-sm` | Scrum Master | Sprint planning, status tracking, story creation, backlog management |
-| `bmad-dev` | Developer | Story implementation, TDD, code delivery |
-| `bmad-architect` | Architect | Architecture docs, tech decisions, system design |
-| `bmad-qa` | QA/TEA | Test design, test review, acceptance testing, regression |
-| `bmad-tech-writer` | Tech Writer | Documentation, tech specs, API docs |
-| `bmad-analyst` | Analyst | Research, domain analysis, gap identification |
+| # | Story | Priority | Tech Spec | Status |
+|---|-------|----------|-----------|--------|
+| 1 | E14-S1 | P0 | tech-spec-e14-s1-vaea-branding-design-tokens.md | done |
+| 2 | E14-S3 | P0 | tech-spec-e14-s3-hide-brownfield-features.md | done |
+| 3 | E14-S2 | P0 | tech-spec-e14-s2-sidebar-navigation.md | done |
+| 4 | E14-S4 | P1 | tech-spec-e14-s4-skeleton-loading-screens.md | done |
+| 5 | E14-S5 | P1 | tech-spec-e14-s5-toast-system.md | done |
+| 6 | E14-S7 | P1 | tech-spec-e14-s7-unified-documents-view.md | done |
+| 7 | E14-S6 | P1 | tech-spec-e14-s6-wcag-accessibility.md | pending |
+| 8 | E14-S8 | P2 | tech-spec-e14-s8-error-recovery-disconnect.md | pending |
+| 9 | E14-S9 | P2 | tech-spec-e14-s9-keyboard-navigation.md | pending |
+| 10 | E14-S10 | P2 | tech-spec-e14-s10-breadcrumb-navigation.md | pending |
+| 11 | E14-S11 | P2 | tech-spec-e14-s11-pydantic-typescript-types.md | pending |
 
-## Phase 2: ACM Domain Agents (5 agents) — `pending`
-ACM-AI specialized domain experts:
+## Current Focus
+- **Active Story:** E14-S6 (WCAG Accessibility Compliance)
+- **Phase:** 1 - PLAN
 
-| Agent | Domain | Key Responsibilities |
-|-------|--------|---------------------|
-| `acm-extraction-pre` | Pre-extraction | TOC extraction, building inventory, page tagging, document structure |
-| `acm-extraction-core` | Core extraction | ACM table extraction, metadata extraction, parser framework |
-| `acm-extraction-post` | Post-extraction | Corrective validation, contextual enrichment, embedding, BAR compliance |
-| `acm-schema-expert` | Schema/DB | SurrealDB migrations, BAR schema, graph entities, data model |
-| `acm-rag-strategist` | RAG/Search | Agentic RAG, hybrid search, parent-doc retrieval, reranking |
-
-## Phase 3: Browser/E2E Testing Agent (2 agents) — `pending`
-Full-stack testing via MCP tools:
-
-| Agent | Focus | Key Responsibilities |
-|-------|-------|---------------------|
-| `acm-e2e-tester` | E2E workflows | Upload PDF → extraction → grid verification → export via Playwright/browser |
-| `acm-ui-tester` | UI verification | Page navigation, form testing, component rendering, accessibility |
-
-## Phase 4: Team Lead Agents (2 agents) — `pending`
-Specialized coordination agents:
-
-| Agent | Role | Key Responsibilities |
-|-------|------|---------------------|
-| `acm-sprint-lead` | Sprint team lead | Coordinate sprint execution teams, delegate stories, synthesize results |
-| `acm-research-lead` | Research team lead | Coordinate research/design teams, evaluate competing approaches |
-
-## Phase 5: Verification & Documentation — `pending`
-- Verify all agents load correctly
-- Test agent team creation
-- Update progress.md
-
-## Errors Encountered
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| (none yet) | | |
+## Ordering Rationale
+- S1 first: Foundational design tokens that all other stories depend on
+- S3 before S2: S3 is independent; S2 depends on S1 token system
+- S7 before S6: S6 (accessibility audit) benefits from all UI changes being in place
+- P2 stories last: Lower priority, fewer dependencies

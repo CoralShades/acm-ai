@@ -3,6 +3,7 @@
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { SourceDetailSkeleton } from '@/components/skeletons/SourceDetailSkeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -449,26 +450,6 @@ export default function SourceDetailPage() {
           </BentoCard>
         </BentoGrid>
       </div>
-    </div>
-  );
-}
-
-function SourceDetailSkeleton() {
-  return (
-    <div className="p-6">
-      <BentoGrid columns={4} gap="md">
-        <BentoCard size="full" isLoading className="col-span-full" />
-        <BentoCard
-          size="lg"
-          isLoading
-          className="col-span-full lg:col-span-2 lg:row-span-2 min-h-[500px]"
-        />
-        <BentoCard
-          size="md"
-          isLoading
-          className="col-span-full lg:col-span-2 lg:row-span-2 min-h-[500px]"
-        />
-      </BentoGrid>
     </div>
   );
 }
