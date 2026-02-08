@@ -50,7 +50,9 @@ export default function DashboardLayout({
   return (
     <ErrorBoundary>
       <CreateDialogsProvider>
-        {children}
+        <main id="main-content">
+          {children}
+        </main>
         <ModalProvider />
         <CommandPalette />
       </CreateDialogsProvider>

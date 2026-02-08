@@ -30,7 +30,7 @@ export function ModelSelector({
     <div className="space-y-2">
       {label && <Label>{label}</Label>}
       <Select value={value} onValueChange={onChange} disabled={disabled || isLoading}>
-        <SelectTrigger>
+        <SelectTrigger aria-label={label || `Select ${modelType.replace('_', ' ')} model`}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>

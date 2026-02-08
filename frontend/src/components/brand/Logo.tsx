@@ -19,7 +19,7 @@ export function Logo({ variant = 'full', className, iconClassName }: LogoProps) 
   const icon = (
     <Image
       src="/logo.png"
-      alt="VAEA Logo"
+      alt="VAEA - Victorian Asbestos Eradication Agency"
       width={32}
       height={32}
       className={cn('w-8 h-8', iconClassName)}
