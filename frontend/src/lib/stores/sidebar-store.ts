@@ -15,10 +15,8 @@ export const useSidebarStore = create<SidebarState>()(
     (set) => ({
       isCollapsed: false,
       expandedSections: {
-        Collect: true,
-        Process: true,
-        Create: true,
-        Manage: false, // Manage section collapsed by default
+        Workspace: true,
+        Configure: false,
       },
       toggleCollapse: () => set((state) => ({ isCollapsed: !state.isCollapsed })),
       setCollapsed: (collapsed) => set({ isCollapsed: collapsed }),
