@@ -6,7 +6,8 @@ Each record links to a source document and captures the hierarchical
 structure: School > Building > Room > ACM Item.
 """
 
-from dataclasses import dataclass, field as dataclass_field
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from datetime import datetime
 from enum import Enum
 from typing import ClassVar, List, Literal, Optional
@@ -157,6 +158,12 @@ class ACMRecord(ObjectModel):
         description="List of data quality issues identified during extraction"
     )
 
+    # Recommendation normalization (E1-S12: Consultant wording normalization)
+    normalized_action: Optional[str] = Field(
+        default=None,
+        description="Canonical action from recommendation normalization (e.g., 'maintain_in_situ')"
+    )
+
     # Product Classification fields (E1-S9: Victorian BAR taxonomy)
     acm_product_group: Optional[str] = Field(
         default=None,
@@ -256,6 +263,21 @@ class ACMRecord(ObjectModel):
                 f"extraction_confidence must be one of {valid_values}, got '{v}'"
             )
         return v_lower
+
+    @field_validator("normalized_action")
+    @classmethod
+    def validate_normalized_action(cls, v):
+        """Validate normalized_action is a known canonical action."""
+        if v is None:
+            return v
+        from open_notebook.extractors.normalizers.recommendations import (
+            CANONICAL_ACTIONS,
+        )
+        if v not in CANONICAL_ACTIONS:
+            logger.warning(
+                f"normalized_action '{v}' is not a recognized canonical action"
+            )
+        return v
 
     # Class methods for filtered queries
     @classmethod

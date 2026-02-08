@@ -215,9 +215,11 @@ class TestPrensaParser:
         }
         meta = parser.extract_metadata(pages)
         assert meta.consultant_name == "Prensa Pty Ltd"
+        assert meta.site_name == "Test Primary School"
+        assert meta.report_date == "15/03/2024"
 
     def test_extract_items_from_table(self):
-        """Extracts RawACMItem list from table data."""
+        """Extracts RawACMItem list from table data with all fields verified."""
         from open_notebook.extractors.parsers.prensa import PrensaParser
 
         parser = PrensaParser()
@@ -236,7 +238,20 @@ class TestPrensaParser:
         ]
         items = parser.extract_items(tables)
         assert len(items) == 1
-        assert items[0].product == "Ceiling tiles"
+        item = items[0]
+        assert item.product == "Ceiling tiles"
+        assert item.material_description == "Ceiling Ceiling tiles"
+        assert item.result == "Detected"
+        assert item.extent == "50m²"
+        assert item.location == "Ceiling"
+        assert item.friable == "Non Friable"
+        assert item.material_condition == "Good"
+        assert item.risk_status == "Low"
+        assert item.sample_number == "S001"
+        assert item.disturbance_potential == "Low"
+        assert item.labelled == "Y"
+        assert item.control_priority == "P3"
+        assert item.comments == "Monitor condition"
 
 
 # ============================================================================
@@ -275,7 +290,7 @@ class TestGreencapParser:
 
         parser = GreencapParser()
         mapping = parser.get_column_mapping()
-        assert len(mapping) >= 10  # At least 10 meaningful mappings
+        assert len(mapping) == 14  # All 14 Greencap columns mapped
 
     def test_register_headers(self):
         """Returns the 14 expected Greencap headers."""
@@ -298,9 +313,11 @@ class TestGreencapParser:
         meta = parser.extract_metadata(pages)
         assert meta.consultant_name == "Greencap"
         assert meta.site_address == "123 Test St, Melbourne VIC"
+        assert meta.building_size == "500m²"
+        assert meta.building_age == "1970"
 
     def test_extract_items_from_table(self):
-        """Extracts RawACMItem list from Greencap table data."""
+        """Extracts RawACMItem list from Greencap table data with all fields verified."""
         from open_notebook.extractors.parsers.greencap import GreencapParser
 
         parser = GreencapParser()
@@ -320,6 +337,19 @@ class TestGreencapParser:
         ]
         items = parser.extract_items(tables)
         assert len(items) == 1
+        item = items[0]
+        assert item.product == "Ceiling tiles"
+        assert item.location == "Room 1"
+        assert item.material_description == "Ceiling tiles"
+        assert item.result == "Detected"
+        assert item.extent == "50m²"
+        assert item.friable == "Non Friable"
+        assert item.material_condition == "Good"
+        assert item.risk_status == "Low"
+        assert item.sample_number == "S001"
+        assert item.disturbance_potential == "Low"
+        assert item.labelled == "Y"
+        assert item.control_priority == "P3"
 
 
 # ============================================================================
@@ -480,7 +510,7 @@ class TestIntegration:
         assert record["building_year"] == 1924
         assert record["product"] == "Floor Tiles"
         assert record["material_description"] == "Vinyl asbestos tiles"
-        assert record["result"] == "Detected"
+        assert record["result"] == "Positive"  # "Detected" normalized to BAR canonical
 
     def test_multiple_buildings_extraction(self):
         """Multi-building extraction still works after refactor."""

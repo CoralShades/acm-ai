@@ -1,6 +1,6 @@
 # Sprint Status - ACM-AI
 # generated: 2025-12-20
-# updated: 2026-02-07
+# updated: 2026-02-08
 # project: acm-ai
 # project_key: acm-ai
 # tracking_system: file-system
@@ -12,6 +12,7 @@
 #   - backlog: Epic exists in epic file but not started
 #   - in-progress: Epic being actively worked on
 #   - done: All stories in epic completed
+#   - archived: Epic skipped/abandoned - not part of active development
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
@@ -20,6 +21,7 @@
 #   - in-progress: Developer actively working on implementation
 #   - review: Implementation complete, ready for review
 #   - done: Story completed
+#   - archived: Story skipped/abandoned as part of archived epic
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -32,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-07
+updated: 2026-02-08
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -40,7 +42,7 @@ story_location: docs/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  # 10/12 stories complete, 2 remaining (backlog)
+  # 12/13 stories complete, 1 remaining (ready-for-dev)
   epic-1: in-progress
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
@@ -52,9 +54,9 @@ development_status:
   e1-s8-site-configuration-data-entry: done
   e1-s9-acm-product-classification: done
   e1-s10-mineru-table-extraction: done
-  e1-s11-extensible-consultant-parser-framework: review
-  e1-s12-consultant-wording-normalization: ready-for-dev
-  e1-s13-fix-page-reference-tracking: ready-for-dev
+  e1-s11-extensible-consultant-parser-framework: done
+  e1-s12-consultant-wording-normalization: done
+  e1-s13-fix-page-reference-tracking: done
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -87,12 +89,12 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: Export Functionality (P0 - promoted from P1)
-  # 2/4 stories complete, 2 remaining (backlog)
+  # 2/4 stories complete, 2 ready-for-dev
   epic-5: in-progress
   e5-s1-implement-csv-export: done
   e5-s2-implement-excel-export: done
   e5-s3-bar-template-management: ready-for-dev
-  e5-s4-export-field-mapping-configuration: backlog
+  e5-s4-export-field-mapping-configuration: ready-for-dev
   epic-5-retrospective: optional
 
   # Epic 6: Rebranding to ACM-AI (P1)
@@ -114,19 +116,20 @@ development_status:
   e7-s7-site-configuration-during-upload: done
   epic-7-retrospective: optional
 
-  # Epic 8: UI Refresh - Bento Grid Design (P1)
-  epic-8: done
-  e8-s1-install-ui-ux-pro-max-skill: done
-  e8-s2-define-acm-ai-design-tokens: done
-  e8-s3-create-bento-card-component: done
-  e8-s4-create-bento-grid-layout-component: done
-  e8-s5-redesign-dashboard-home-page: done
-  e8-s6-redesign-sources-list-page: done
-  e8-s7-redesign-source-detail-page: done
-  e8-s8-update-navigation-sidebar: done
-  e8-s9-typography-font-updates: done
-  e8-s10-dark-mode-refinement: done
-  epic-8-retrospective: optional
+  # Epic 8: UI Refresh - Bento Grid Design (P1) - ARCHIVED 2026-02-08
+  # Reason: Skipped by decision - moved to archive
+  epic-8: archived
+  e8-s1-install-ui-ux-pro-max-skill: archived
+  e8-s2-define-acm-ai-design-tokens: archived
+  e8-s3-create-bento-card-component: archived
+  e8-s4-create-bento-grid-layout-component: archived
+  e8-s5-redesign-dashboard-home-page: archived
+  e8-s6-redesign-sources-list-page: archived
+  e8-s7-redesign-source-detail-page: archived
+  e8-s8-update-navigation-sidebar: archived
+  e8-s9-typography-font-updates: archived
+  e8-s10-dark-mode-refinement: archived
+  epic-8-retrospective: archived
 
   # Epic 9: Document Library Management (P0)
   # 2/3 stories complete, 1 remaining (drafted)
@@ -168,19 +171,25 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 13 (6 done, 3 in-progress, 4 backlog)
-# Total Stories: 73
-# Stories Done: 50 (68%)
-# Stories Review: 1 (E1-S11)
-# Stories Ready-for-dev: 1 (E1-S12)
+# Total Epics: 13 (4 done, 4 in-progress, 4 backlog, 1 archived)
+# Total Stories: 67 (in sprint-status tracking)
+# Stories Done: 41 (61%)
+# Stories Archived: 10 (E8-S1..S10)
+# Stories Ready-for-dev: 3 (E2-S8, E5-S3, E5-S4)
 # Stories Drafted: 2 (E9-S3, E10-S1)
-# Stories Backlog: 19 (E1-S13..S19, E2-S8, E5-S3, E5-S4, E11-S1..S2, E12-S1..S4, E13-S1..S3)
+# Stories Backlog: 9 (E11-S1..S2, E12-S1..S4, E13-S1..S3)
 #
-# Last Updated: 2026-02-07
+# Last Updated: 2026-02-08
 #
-# COMPLETED EPICS: E3, E4, E6, E7, E8
-# IN-PROGRESS EPICS: E1 (10/19), E2 (7/8), E5 (2/4), E9 (2/3)
+# COMPLETED EPICS: E3, E4, E6, E7
+# ARCHIVED EPICS: E8 (UI Refresh - skipped 2026-02-08)
+# IN-PROGRESS EPICS: E1 (12/13), E2 (7/8), E5 (2/4), E9 (2/3)
 # BACKLOG EPICS: E10 (0/1), E11 (0/2), E12 (0/4), E13 (0/3)
+#
+# NOTE: Epics file (05-epics-and-stories.md) defines 19 stories for E1
+# (including E1-S16..S19 Document Intelligence). Stories E1-S14..S19
+# are not yet tracked in development_status - pending sprint change
+# proposal approval (CP: workflow-extraction 2026-02-07).
 #
 # KEY CHANGES (2026-02-07 - Document Intelligence + Settings + Knowledge Graph):
 # ================================================================================

@@ -11,8 +11,6 @@ Site metadata: "Full Address:", "Est. Building Size:", "Est. Building Age:"
 import re
 from typing import Dict, List, Optional
 
-from loguru import logger
-
 from open_notebook.extractors.parsers.base import (
     ConsultantParser,
     DocumentMeta,

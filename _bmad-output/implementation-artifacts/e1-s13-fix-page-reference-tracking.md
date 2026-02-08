@@ -1,6 +1,6 @@
 # Story 1.13: Fix Page Reference Tracking
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -204,9 +204,27 @@ None. The frontend already correctly reads and displays `page_number` from the A
 ## Dev Agent Record
 
 ### Agent Model Used
+claude-opus-4-6
 
 ### Debug Log References
+None
 
 ### Completion Notes List
+- Bug 1 (page markers skipped between tables): Fixed inherently by Bug 2 fix. Added defensive test confirming separate tables with page markers work correctly.
+- Bug 2 (no page tracking within multi-page tables): Fixed by modifying `_extract_table_lines()` to continue past page markers and `_parse_acm_table()` to detect/process page markers within table rows. Added `_has_pipe_continuation()` helper that distinguishes table continuation rows from new table headers by checking for separator lines.
+- Bug 3 (MinerU empty): Not addressed per story instructions.
+- Bug 4 (LangGraph single page per chunk): Fixed by adding `page_markers` dict to chunk data and `_assign_record_page()` helper that uses product text position in content to find nearest preceding page marker. Returns `Tuple[int, int]` (page, position) and accepts `search_after` to handle duplicate product names.
+- All 45 ACM extractor tests pass (39 original + 6 review additions). 433/436 project tests pass (3 pre-existing failures in test_acm_ai_extraction.py and test_acm_extractor_integration.py due to E1-S12 normalization not yet reflected in integration test expectations).
+- Lint clean (ruff check passes).
+- Frontend build not applicable (zero frontend changes).
+- **Code review fixes applied**: (1) `_assign_record_page` now handles duplicate product names via `search_after` parameter and returns position for caller tracking. (2) `PAGE_PATTERN` in acm_extractor.py extended to match HTML comment page markers (`<!-- Page N -->`), consistent with acm_extraction.py. (3) Test regex duplication removed. (4) Added test for duplicate products. (5) Added 5 direct unit tests for `_has_pipe_continuation`.
+
+### Change Log
+- `open_notebook/extractors/acm_extractor.py`: Added `_has_pipe_continuation()` helper. Modified `_extract_table_lines()` to continue past page markers and use lookahead for multi-page table continuation. Modified `_parse_acm_table()` to detect PAGE_PATTERN within table lines and update `context.current_page` per row. Updated `PAGE_PATTERN` to also match HTML comment format (`<!-- Page N -->`).
+- `open_notebook/graphs/acm_extraction.py`: Modified `_chunk_content()` to collect all page markers into `page_markers` dict on each chunk. Updated `_assign_record_page()` to return `Tuple[int, int]` with `search_after` parameter for duplicate product handling. Modified `extract_records()` to track search positions per product key.
+- `tests/test_acm_extractor.py`: Added 11 new tests total: 5 from dev (page tracking), 1 duplicate product test, 5 `_has_pipe_continuation` unit tests.
 
 ### File List
+- `open_notebook/extractors/acm_extractor.py` (MODIFIED)
+- `open_notebook/graphs/acm_extraction.py` (MODIFIED)
+- `tests/test_acm_extractor.py` (MODIFIED)

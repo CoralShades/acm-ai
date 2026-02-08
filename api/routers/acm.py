@@ -35,6 +35,8 @@ from api.models import (
     BatchClassifyResponse,
     ClassifyRequest,
     ClassifyResponse,
+    NormalizeRequest,
+    NormalizeResponse,
     SiteConfigRequest,
     SiteConfigResponse,
     SiteConfigTemplateResponse,
@@ -1117,6 +1119,39 @@ async def classify_batch(request: BatchClassifyRequest):
 
     except Exception as e:
         logger.error(f"Error in batch classification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/normalize", response_model=NormalizeResponse)
+async def normalize_recommendation_text(request: NormalizeRequest):
+    """
+    Normalize a consultant recommendation to a canonical action.
+
+    Uses pattern-based matching against known consultant wording patterns
+    to map free-text recommendations to standardized actions.
+
+    Example:
+        POST /api/acm/normalize
+        {"recommendation": "Maintain in current condition and label"}
+
+    Returns the canonical action (e.g., "maintain_in_situ") with confidence.
+    """
+    try:
+        from open_notebook.extractors.normalizers.recommendations import (
+            normalize_recommendation,
+        )
+
+        result = normalize_recommendation(request.recommendation)
+
+        return NormalizeResponse(
+            raw_text=result.raw_text,
+            normalized_action=result.normalized_action,
+            confidence=result.confidence,
+            method=result.method,
+        )
+
+    except Exception as e:
+        logger.error(f"Error normalizing recommendation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
