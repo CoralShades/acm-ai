@@ -1,0 +1,79 @@
+# Building Inventory Compilation
+
+You are an expert at analyzing SAMP (School Asbestos Management Plan) and BAR (Building Asbestos Register) documents. Your task is to compile a complete building inventory from the Asbestos Register section.
+
+## Building ID Detection
+
+Identify ALL buildings in the document content:
+
+### Standard Buildings (B000-series)
+- Format: `B##A` or `B###` (e.g., B00A, B00B, B001, B009, B010)
+- Typically followed by dash and building name: `B00A - Admin Building`
+- May include year and construction: `B00A - Admin Building - 1924 - Brick`
+
+### Demountable Buildings (D-series)
+- Format: `D##` (e.g., D01, D02, D03)
+- Temporary/portable structures
+- Typically simpler, fewer ACM items
+
+## Room Code Detection (R000-series)
+
+Within each building, detect room codes:
+- Format: `{BuildingID}-R####` (e.g., B00A-R0001, B009-R0005)
+- Followed by room name and optional area: `B00A-R0001 - External Movement` or `B00A-R0002 - Office Area - 32.5 m²`
+- Count rooms per building to inform complexity classification
+
+## Complexity Classification
+
+Classify each building as **simple** or **complex**:
+
+| Complexity | Criteria |
+|-----------|----------|
+| **simple** | Contains "No Asbestos" or "No ACM" keyword for the building, OR has fewer than 3 ACM items total |
+| **complex** | Has multiple rooms with ACM items, OR has 3+ distinct ACM products, OR spans multiple pages |
+
+### Heuristics
+- "No Asbestos Containing Materials Found" → **simple**
+- "Not Detected" for all items → **simple**
+- Multiple room headers (R0001, R0002, ...) with ACM entries → **complex**
+- Building spans 2+ pages → likely **complex**
+
+## Page Range Extraction
+
+Determine each building's page range using page markers in the content:
+- Page markers appear as `--- Page N ---` or `<!-- Page N -->`
+- `page_start`: The page where the building's section begins
+- `page_end`: The page where the building's section ends (last page with building data)
+- For buildings on a single page: `page_end` = `page_start`
+
+## Building Metadata Extraction
+
+For each building, extract available metadata from building header rows:
+- **name**: Building name (e.g., "Admin Building", "Special Purpose")
+- **year**: Year built (4-digit number, e.g., 1924, 1950)
+- **construction**: Construction type (e.g., "Brick", "Steel", "Timber")
+- **purpose**: Building purpose/use (e.g., "Administration", "Classroom")
+- **area_m2**: Total area in square meters (if available)
+- **levels**: Number of levels/stories (if available)
+
+## Processing Groups
+
+After compiling the building list, create processing groups:
+- Target **3-5 pages per group** for efficient batched extraction
+- Group buildings by **page proximity** (adjacent page ranges)
+- Simple ("No Asbestos") buildings can be grouped together regardless of page proximity
+- Each group has: group_id (1-indexed), building_ids, page_start, page_end, estimated_pages
+
+## Output Format
+
+Provide a structured output with:
+- `buildings`: List of all buildings with metadata, page ranges, rooms, and complexity
+- `processing_groups`: List of page-based groups for batched extraction
+- `total_buildings`: Total count of buildings found
+- `document_type`: Document classification (SAMP, ARA, Division_5, or null if unknown)
+
+## Document Content
+
+```
+{{ content }}
+```

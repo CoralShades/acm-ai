@@ -1,0 +1,2 @@
+-- Down Migration 17: Remove field_schema table (E1-S11)
+REMOVE TABLE field_schema;

@@ -1,0 +1,7 @@
+-- Migration 17: Create field_schema table for runtime field config (E1-S11)
+DEFINE TABLE field_schema SCHEMAFULL;
+
+DEFINE FIELD config_json ON TABLE field_schema TYPE string;
+DEFINE FIELD version ON TABLE field_schema TYPE string;
+DEFINE FIELD created ON TABLE field_schema TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated ON TABLE field_schema TYPE datetime DEFAULT time::now();

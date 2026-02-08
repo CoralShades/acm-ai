@@ -38,6 +38,23 @@ from open_notebook.extractors.acm_schemas import (
     BuildingRoomContext,
     ExtractionStatus,
 )
+from open_notebook.extractors.building_inventory import (
+    BuildingInventory,
+    compile_building_inventory,
+)
+from open_notebook.extractors.document_structure import (
+    DocumentStructure,
+    extract_document_structure,
+)
+from open_notebook.extractors.page_tagger import (
+    PageTaggingResult,
+    tag_pages,
+)
+from open_notebook.extractors.normalizers.enums import normalize_enum_value
+from open_notebook.extractors.validators.acm_validator import (
+    CorrectionStats,
+    validate_acm_record,
+)
 from open_notebook.graphs.utils import provision_langchain_model
 from open_notebook.utils import token_count
 
@@ -190,6 +207,17 @@ class ExtractionState(TypedDict):
     model_id: Optional[str]
     start_time: float
     retry_count: int
+    # Corrective RAG loop fields (E1-S15)
+    correction_attempt: int
+    correction_stats: Dict[str, int]
+    enable_corrective_loop: bool
+    max_correction_attempts: int
+    # Document structure (E1-S16)
+    document_structure: Optional[DocumentStructure]
+    # Building inventory (E1-S17)
+    building_inventory: Optional[BuildingInventory]
+    # Page tags (E1-S18)
+    page_tags: Optional[PageTaggingResult]
 
 
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
@@ -386,6 +414,94 @@ def _assign_record_page(
     return assigned_page, pos
 
 
+async def extract_structure(state: dict, config: RunnableConfig) -> dict:
+    """Extract document structure as Stage -1 pre-extraction intelligence.
+
+    Story: E1-S16 Document Structure & TOC Extraction
+    """
+    source: Source = state["source"]
+    content = source.full_text or ""
+    model_id = state.get("model_id")
+
+    if not content:
+        logger.warning(f"Source {source.id} has no content for structure extraction")
+        return {"document_structure": None}
+
+    try:
+        structure = await extract_document_structure(content, model_id=model_id)
+        logger.info(
+            f"Document structure extracted for source {source.id}: "
+            f"type={structure.document_type}, register_start={structure.register_start_page}, "
+            f"buildings={len(structure.building_ids)}"
+        )
+        return {"document_structure": structure}
+    except Exception as e:
+        logger.warning(f"Structure extraction failed for source {source.id}: {e}")
+        return {"document_structure": None}
+
+
+async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
+    """Compile building inventory as Stage -1.5 pre-extraction intelligence.
+
+    Story: E1-S17 Building Inventory Compilation
+    """
+    source: Source = state["source"]
+    content = source.full_text or ""
+    model_id = state.get("model_id")
+    doc_structure: Optional[DocumentStructure] = state.get("document_structure")
+
+    if not content:
+        logger.warning(f"Source {source.id} has no content for building inventory")
+        return {"building_inventory": None}
+
+    try:
+        inventory = await compile_building_inventory(
+            content, document_structure=doc_structure, model_id=model_id,
+        )
+        logger.info(
+            f"Building inventory compiled for source {source.id}: "
+            f"{inventory.total_buildings} buildings, "
+            f"{len(inventory.processing_groups)} groups"
+        )
+        return {"building_inventory": inventory}
+    except Exception as e:
+        logger.warning(f"Building inventory compilation failed for source {source.id}: {e}")
+        return {"building_inventory": None}
+
+
+async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
+    """Tag each page with section classification as Stage -1.25.
+
+    Story: E1-S18 Page-Level Section Tagging
+    """
+    source: Source = state["source"]
+    content = source.full_text or ""
+    model_id = state.get("model_id")
+    doc_structure: Optional[DocumentStructure] = state.get("document_structure")
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
+
+    if not content:
+        logger.warning(f"Source {source.id} has no content for page tagging")
+        return {"page_tags": None}
+
+    try:
+        result = await tag_pages(
+            content,
+            document_structure=doc_structure,
+            building_inventory=inventory,
+            model_id=model_id,
+        )
+        logger.info(
+            f"Page tagging complete for source {source.id}: "
+            f"{len(result.pages)} pages tagged, "
+            f"register_range={result.register_page_range}"
+        )
+        return {"page_tags": result}
+    except Exception as e:
+        logger.warning(f"Page tagging failed for source {source.id}: {e}")
+        return {"page_tags": None}
+
+
 async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     """Prepare extraction context and chunk content if needed."""
     source: Source = state["source"]
@@ -403,6 +519,23 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     source_id = str(source.id) if source.id else "unknown"
     log_extraction_preview(content, source_id)
     dump_content_to_file(content, source_id, "raw_content")
+
+    # Use register_start_page from document structure to trim content (E1-S16)
+    doc_structure: Optional[DocumentStructure] = state.get("document_structure")
+    if doc_structure and doc_structure.register_start_page:
+        # Find the page marker for register_start_page and trim content
+        page_pattern = re.compile(
+            rf"(?:[-—]+|<!--)\s*Page\s+{doc_structure.register_start_page}\s*(?:[-—]+|-->)",
+            re.IGNORECASE,
+        )
+        match = page_pattern.search(content)
+        if match and match.start() > 500:
+            trimmed = content[match.start():]
+            acm_debug(
+                f"Trimmed content using register_start_page={doc_structure.register_start_page}: "
+                f"{len(content)} -> {len(trimmed)} chars"
+            )
+            content = trimmed
 
     # Pre-process content to add structural markers
     processed_content, preprocess_meta = _preprocess_acm_content(content)
@@ -641,6 +774,327 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
     return {"records": validated_records, "records_rejected": rejected_count}
 
 
+async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
+    """Validate extracted records against BAR enum values and business rules.
+
+    Uses acm_validator for strict validation. Records with issues are flagged
+    for correction by the corrective loop.
+
+    Story: E1-S15 Corrective RAG Validation Loop
+    """
+    records: List[ACMExtractionRecord] = state.get("records", [])
+    context: BuildingRoomContext = state.get("context", BuildingRoomContext())
+    correction_stats = state.get("correction_stats", {
+        "auto_corrected": 0, "llm_corrected": 0, "failed": 0, "total_validated": 0,
+    })
+
+    if not records:
+        logger.info("No records to validate")
+        return {"records": [], "records_rejected": 0}
+
+    validated_records = []
+    rejected_count = 0
+    records_with_issues: List[Dict[str, Any]] = []
+
+    for record in records:
+        issues = list(record.data_issues) if record.data_issues else []
+
+        # Check required fields
+        if not record.building_id:
+            if context.building_id:
+                record.building_id = context.building_id
+                issues.append("Building ID inferred from context")
+            else:
+                issues.append("Missing required field: building_id")
+
+        if not record.product:
+            issues.append("Missing required field: product")
+        if not record.material_description:
+            issues.append("Missing required field: material_description")
+
+        # Validate confidence value
+        if record.extraction_confidence not in {"high", "medium", "low"}:
+            record.extraction_confidence = "medium"
+            issues.append("Invalid confidence value normalized to medium")
+
+        record.data_issues = issues
+
+        # Reject records missing critical fields
+        if not record.building_id or not record.product or not record.material_description:
+            rejected_count += 1
+            logger.warning(f"Rejected record due to missing required fields: {issues}")
+            continue
+
+        # Run strict enum + business rule validation
+        record_dict = {
+            "sample_result": record.sample_result or record.result,
+            "material_condition": record.material_condition,
+            "friable": record.friable,
+            "disturbance_potential": record.disturbance_potential,
+            "building_id": record.building_id,
+            "product": record.product,
+            "material_description": record.material_description,
+        }
+        validation = validate_acm_record(record_dict)
+        correction_stats["total_validated"] = correction_stats.get("total_validated", 0) + 1
+
+        if not validation.is_valid:
+            # Track issues on the record for potential correction
+            for vi in validation.issues:
+                if vi.issue_type in ("enum_mismatch", "business_rule"):
+                    record.data_issues.append(
+                        f"Validation: {vi.field_name}='{vi.current_value}' "
+                        f"({vi.issue_type})"
+                    )
+            records_with_issues.append({
+                "record_index": len(validated_records),
+                "issues": [i.model_dump() for i in validation.issues],
+            })
+
+        validated_records.append(record)
+
+    if rejected_count > 0:
+        logger.info(f"Validated {len(validated_records)} records, rejected {rejected_count}")
+
+    if records_with_issues:
+        logger.info(f"Found {len(records_with_issues)} records with validation issues")
+
+    return {
+        "records": validated_records,
+        "records_rejected": rejected_count,
+        "correction_stats": correction_stats,
+    }
+
+
+async def correct_records(state: dict, config: RunnableConfig) -> dict:
+    """Apply corrections to records with validation issues.
+
+    Two-layer correction strategy:
+    1. Layer 1 (fast, deterministic): Apply normalize_enum_value() for known synonyms
+    2. Layer 2 (slow, LLM-based): Call LLM with correction prompt for remaining issues
+
+    Story: E1-S15 Corrective RAG Validation Loop
+    """
+    records: List[ACMExtractionRecord] = state.get("records", [])
+    correction_attempt = state.get("correction_attempt", 0)
+    correction_stats = state.get("correction_stats", {
+        "auto_corrected": 0, "llm_corrected": 0, "failed": 0, "total_validated": 0,
+    })
+    model_id = state.get("model_id")
+
+    if not records:
+        return {"records": [], "correction_attempt": correction_attempt + 1}
+
+    # Field name mapping for normalize_enum_value
+    enum_fields = {
+        "sample_result": "sample_result",
+        "material_condition": "condition",
+        "friable": "friability",
+        "disturbance_potential": "disturbance_potential",
+    }
+
+    records_needing_llm: List[int] = []
+
+    for i, record in enumerate(records):
+        record_dict = {
+            "sample_result": record.sample_result or record.result,
+            "material_condition": record.material_condition,
+            "friable": record.friable,
+            "disturbance_potential": record.disturbance_potential,
+            "building_id": record.building_id,
+            "product": record.product,
+            "material_description": record.material_description,
+        }
+        validation = validate_acm_record(record_dict)
+
+        if validation.is_valid:
+            continue
+
+        # Layer 1: Try deterministic normalization first
+        still_invalid = []
+        for issue in validation.issues:
+            if issue.issue_type != "enum_mismatch":
+                still_invalid.append(issue)
+                continue
+
+            field = issue.field_name
+            normalizer_field = enum_fields.get(field, field)
+            current_val = issue.current_value
+
+            normalized = normalize_enum_value(current_val, normalizer_field)
+            if normalized != current_val and normalized in (issue.valid_values or []):
+                # Layer 1 success — apply correction
+                logger.info(
+                    f"Corrected {field}: '{current_val}' -> '{normalized}' "
+                    f"via normalizer (attempt {correction_attempt + 1})"
+                )
+                _apply_field_correction(record, field, normalized)
+                correction_stats["auto_corrected"] = correction_stats.get("auto_corrected", 0) + 1
+            else:
+                still_invalid.append(issue)
+
+        if still_invalid:
+            records_needing_llm.append(i)
+
+    # Layer 2: LLM correction for remaining issues
+    if records_needing_llm:
+        try:
+            await _llm_correct_records(
+                records, records_needing_llm, correction_stats, model_id, correction_attempt,
+            )
+        except Exception as e:
+            logger.warning(f"LLM correction failed: {e}")
+            for idx in records_needing_llm:
+                correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+
+    return {
+        "records": records,
+        "correction_attempt": correction_attempt + 1,
+        "correction_stats": correction_stats,
+    }
+
+
+def _apply_field_correction(record: ACMExtractionRecord, field_name: str, value: str) -> None:
+    """Apply a corrected value to an extraction record field."""
+    if field_name == "sample_result":
+        record.sample_result = value
+    elif field_name == "material_condition":
+        record.material_condition = value
+    elif field_name == "friable":
+        record.friable = value
+    elif field_name == "disturbance_potential":
+        record.disturbance_potential = value
+
+
+async def _llm_correct_records(
+    records: List[ACMExtractionRecord],
+    record_indices: List[int],
+    correction_stats: Dict[str, int],
+    model_id: Optional[str],
+    correction_attempt: int,
+) -> None:
+    """Use LLM to correct records that failed Layer 1 normalization."""
+    import json
+
+    from open_notebook.extractors.validators.acm_validator import validate_acm_record
+
+    enum_fields = {
+        "sample_result": "sample_result",
+        "material_condition": "condition",
+        "friable": "friability",
+        "disturbance_potential": "disturbance_potential",
+    }
+
+    for idx in record_indices:
+        record = records[idx]
+        record_dict = {
+            "sample_result": record.sample_result or record.result,
+            "material_condition": record.material_condition,
+            "friable": record.friable,
+            "disturbance_potential": record.disturbance_potential,
+            "building_id": record.building_id,
+            "product": record.product,
+            "material_description": record.material_description,
+        }
+        validation = validate_acm_record(record_dict)
+
+        if validation.is_valid:
+            continue
+
+        # Render correction prompt
+        prompter = Prompter(prompt_template="acm/correction")
+        correction_prompt = prompter.render(
+            data={
+                "record_json": json.dumps(record_dict, indent=2, default=str),
+                "validation_issues": [i.model_dump() for i in validation.issues],
+            }
+        )
+
+        try:
+            model = await provision_langchain_model(
+                correction_prompt,
+                model_id,
+                "extraction",
+                temperature=0.1,
+                max_tokens=1024,
+            )
+
+            messages = [
+                SystemMessage(content=correction_prompt),
+                HumanMessage(content="Correct the invalid field values as instructed."),
+            ]
+
+            response = await model.ainvoke(messages)
+            response_text = response.content if hasattr(response, "content") else str(response)
+
+            # Strip markdown code block wrappers if present
+            text = response_text.strip()
+            if text.startswith("```"):
+                # Remove opening ```json or ``` line
+                first_newline = text.index("\n") if "\n" in text else len(text)
+                text = text[first_newline + 1:]
+                # Remove closing ```
+                if text.rstrip().endswith("```"):
+                    text = text.rstrip()[:-3].rstrip()
+
+            # Parse JSON response
+            corrected = json.loads(text)
+            if isinstance(corrected, dict):
+                for field, value in corrected.items():
+                    if field in enum_fields and value:
+                        old_val = getattr(record, field, None) or record_dict.get(field)
+                        _apply_field_correction(record, field, value)
+                        logger.info(
+                            f"Corrected {field}: '{old_val}' -> '{value}' "
+                            f"via LLM (attempt {correction_attempt + 1})"
+                        )
+                        correction_stats["llm_corrected"] = correction_stats.get("llm_corrected", 0) + 1
+
+        except Exception as e:
+            logger.warning(f"LLM correction failed for record {idx}: {e}")
+            correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+
+
+def should_correct(state: dict) -> str:
+    """Route to correction or continue to deduplication.
+
+    Story: E1-S15 Corrective RAG Validation Loop
+    """
+    if not state.get("enable_corrective_loop", True):
+        return "deduplicate"
+
+    records: List[ACMExtractionRecord] = state.get("records", [])
+    attempt = state.get("correction_attempt", 0)
+    max_attempts = state.get("max_correction_attempts", 2)
+
+    if attempt >= max_attempts:
+        return "deduplicate"
+
+    # Check if any records have validation issues
+    enum_fields = ["sample_result", "material_condition", "friable", "disturbance_potential"]
+    for record in records:
+        record_dict = {
+            "sample_result": record.sample_result or record.result,
+            "material_condition": record.material_condition,
+            "friable": record.friable,
+            "disturbance_potential": record.disturbance_potential,
+            "building_id": record.building_id,
+            "product": record.product,
+            "material_description": record.material_description,
+        }
+        validation = validate_acm_record(record_dict)
+        if not validation.is_valid:
+            # Filter to only correctable issues (enum + business rule)
+            correctable = [
+                i for i in validation.issues
+                if i.issue_type in ("enum_mismatch", "business_rule")
+            ]
+            if correctable:
+                return "correct"
+
+    return "deduplicate"
+
+
 async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
     """Deduplicate records using composite key."""
     records: List[ACMExtractionRecord] = state.get("records", [])
@@ -755,6 +1209,16 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     )
     result.update_stats()
 
+    # Log correction stats (E1-S15)
+    correction_stats = state.get("correction_stats", {})
+    if any(correction_stats.get(k, 0) > 0 for k in ("auto_corrected", "llm_corrected", "failed")):
+        logger.info(
+            f"Correction stats: auto={correction_stats.get('auto_corrected', 0)}, "
+            f"llm={correction_stats.get('llm_corrected', 0)}, "
+            f"failed={correction_stats.get('failed', 0)}, "
+            f"total_validated={correction_stats.get('total_validated', 0)}"
+        )
+
     logger.info(
         f"Saved {saved_count}/{len(records)} ACM records for source {source.id} "
         f"in {extraction_time}ms"
@@ -805,14 +1269,21 @@ def should_save(state: dict) -> str:
 agent_state = StateGraph(ExtractionState)
 
 # Add nodes
+agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
+agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
+agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
 agent_state.add_node("prepare", prepare_context)
 agent_state.add_node("extract", extract_records)
-agent_state.add_node("validate", validate_records)
+agent_state.add_node("validate", validate_records_strict)
+agent_state.add_node("correct", correct_records)
 agent_state.add_node("deduplicate", deduplicate_records)
 agent_state.add_node("save", save_records)
 
-# Add edges
-agent_state.add_edge(START, "prepare")
+# Add edges: START → structure → inventory → tag_pages → prepare → ...
+agent_state.add_edge(START, "structure")
+agent_state.add_edge("structure", "inventory")
+agent_state.add_edge("inventory", "tag_pages")
+agent_state.add_edge("tag_pages", "prepare")
 agent_state.add_conditional_edges(
     "prepare",
     lambda s: "error" if s.get("error") else "extract",
@@ -823,11 +1294,14 @@ agent_state.add_conditional_edges(
     should_continue_extraction,
     {"extract": "extract", "validate": "validate", "error": END}
 )
+# Corrective RAG loop: validate → should_correct → {correct, deduplicate}
 agent_state.add_conditional_edges(
     "validate",
-    should_save,
-    {"save": "deduplicate", "error": END}
+    should_correct,
+    {"correct": "correct", "deduplicate": "deduplicate"}
 )
+# After correction, re-validate
+agent_state.add_edge("correct", "validate")
 agent_state.add_edge("deduplicate", "save")
 agent_state.add_edge("save", END)
 
@@ -873,6 +1347,17 @@ async def extract_acm_from_source(
         "model_id": model_id,
         "start_time": start_time,
         "retry_count": 0,
+        # Corrective RAG loop (E1-S15)
+        "correction_attempt": 0,
+        "correction_stats": {"auto_corrected": 0, "llm_corrected": 0, "failed": 0, "total_validated": 0},
+        "enable_corrective_loop": True,
+        "max_correction_attempts": 2,
+        # Document structure (E1-S16)
+        "document_structure": None,
+        # Building inventory (E1-S17)
+        "building_inventory": None,
+        # Page tags (E1-S18)
+        "page_tags": None,
     }
 
     try:
@@ -885,6 +1370,13 @@ async def extract_acm_from_source(
 
         extraction_time = int((time.time() - start_time) * 1000)
 
+        # Extract correction stats for API consumers (AC #8)
+        correction_stats = result.get("correction_stats")
+        has_corrections = correction_stats and any(
+            correction_stats.get(k, 0) > 0
+            for k in ("auto_corrected", "llm_corrected", "failed")
+        )
+
         if error:
             return ACMExtractionOutput(
                 source_id=str(source.id),
@@ -893,6 +1385,7 @@ async def extract_acm_from_source(
                 records_failed=extraction_result.records_rejected,
                 error=error,
                 extraction_time_ms=extraction_time,
+                correction_stats=correction_stats if has_corrections else None,
             )
 
         status = "success" if extraction_result.total_records > 0 else "no_data"
@@ -904,6 +1397,7 @@ async def extract_acm_from_source(
             records_failed=extraction_result.records_rejected,
             confidence_distribution=extraction_result.confidence_distribution,
             extraction_time_ms=extraction_time,
+            correction_stats=correction_stats if has_corrections else None,
         )
 
     except Exception as e:
