@@ -1,0 +1,10 @@
+[data-theme="dark"] {
+  --bg-page:        #0F1F1D;
+  --bg-surface:     #162B28;
+  --text-primary:   #E6F2F1;
+  --text-secondary: #B8D9D6;
+  --border-default: #244743;
+
+  --brand-primary:       #9AD9D9;
+  --brand-primary-hover: #A9D9AC;
+}

@@ -1,157 +1,128 @@
-# Progress Log: Victorian BAR Format Expansion
+# E14 Implementation Progress
 
-## Session: 2026-02-04
+## Current Story: E14-S6
+## Stories Completed: 6/11
+## Last Updated: 2026-02-08 15:50 AEDT
 
-### Overview
-Completed Course Correction workflow to expand ACM-AI support from NSW SAMP format (20 fields) to Victorian BAR format (~50 fields).
+---
 
-### Trigger
-User analysis of actual input/output documents revealed schema gap:
-- **Input PDFs**: Victorian asbestos risk assessments (Prensa & Greencap formats)
-- **Output Excel**: BAR (Building Asbestos Register) files with 43-47 columns
-- **Gap**: Current PRD had 20 fields, actual requirement is ~50 fields
+### E14-S1: VAEA Branding & Design Tokens
+- **Status:** done
+- **Started:** 2026-02-08 13:35 AEDT
+- **Completed:** 2026-02-08 14:05 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 8 acceptance criteria met)
+- **Files Modified:** globals.css, branding.ts, Logo.tsx, VendorAttribution.tsx (new), AcknowledgmentFooter.tsx (new), logo.png (new), icon.png (new), favicon.ico (new), manifest.json, tailwind.config.ts
+- **Commit:** fb6ac64
+- **Notes:** VAEA teal palette, OKLCH tokens, 12px radius, system fonts, coral focus rings, dark mode with dark teal bg
 
-### Phases Completed
+### E14-S3: Hide Brownfield Features
+- **Status:** done
+- **Started:** 2026-02-08 14:10 AEDT
+- **Completed:** 2026-02-08 14:25 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 6 acceptance criteria met)
+- **Files Modified:** AppSidebar.tsx, CommandPalette.tsx, AddButton.tsx
+- **Commit:** f371dd0
+- **Notes:** Removed Notebooks, Podcasts, Transformations from nav. Create button simplified to "Upload Document". Pages preserved at original URLs.
 
-#### Phase 1: PRD Update (COMPLETE)
-**File**: `_bmad-output/project-planning-artifacts/acm-ai/03-prd.md`
+### E14-S2: Sidebar Navigation Redesign
+- **Status:** done
+- **Started:** 2026-02-08 14:35 AEDT
+- **Completed:** 2026-02-08 15:10 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 9 acceptance criteria met)
+- **Files Modified:** AppSidebar.tsx, sidebar-store.ts, middleware.ts
+- **Commit:** 3a638d3
+- **Notes:** WORKSPACE/CONFIGURE sections, Dashboard in Workspace, Upload icon, VendorAttribution in footer, Configure collapsed by default, isItemActive bug fix for root path, legacy redirects (/sources, /advanced)
 
-Changes made:
-- Added Section 1.4 Document Formats Supported (NSW SAMP, Victorian BAR)
-- Updated FR-103, FR-104 for multi-format support
-- Added FR-107, FR-108 for format detection
-- Added FR-205 to FR-208 for data model
-- Added FR-310 to FR-312 for export functionality
-- Rewrote Section 4.3 AG Grid Column Configuration (7 column groups)
-- Rewrote Section 5.1 ACM Record Schema (~50 fields)
-- Added Section 5.1.1 Site Configuration Schema
-- Expanded Section 5.2 API Endpoints
-- Added Section 5.3 BAR Export Format Specification
-- Updated Section 7 test data and scenarios
-- Updated glossary with Victorian terms
+### E14-S4: Skeleton Loading Screens
+- **Status:** done
+- **Started:** 2026-02-08 15:15 AEDT
+- **Completed:** 2026-02-08 15:30 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 9 acceptance criteria met)
+- **Files Modified:** skeleton.tsx, globals.css, tailwind.config.ts, DashboardSkeleton.tsx (new), DocumentsSkeleton.tsx (new), ACMRegisterSkeleton.tsx (new), SourceDetailSkeleton.tsx (new), SearchSkeleton.tsx (new), page.tsx (dashboard), acm/page.tsx, sources/[id]/page.tsx
+- **Commit:** 2755c32
+- **Notes:** Shimmer animation (2s linear infinite), dark mode auto-adapt via CSS vars, reduced motion support, aria-busy+sr-only on all skeletons, zero CLS layout matching
 
-#### Phase 2: Architecture Update (COMPLETE)
-**File**: `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md`
+### E14-S5: Toast System Enhancement
+- **Status:** done
+- **Started:** 2026-02-08 15:35 AEDT
+- **Completed:** 2026-02-08 15:50 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 6 acceptance criteria met)
+- **Files Modified:** toast-patterns.ts (new), use-toast.ts, use-acm.ts, use-extraction-status.ts
+- **Commit:** 2cdcb29
+- **Notes:** Promise-based toasts for extraction/export, progress toast controller with ID-based updates, risk-aware toasts with VAEA colors, persistent critical alerts, action button support
 
-Changes made:
-- Added new frontend components (SiteConfigForm, ColumnVisibility, BARExportDialog)
-- Rewrote Section 3.1 SurrealDB Tables (~50 fields + site_config table)
-- Expanded Section 4.2 API Response Types (ACMRecord, SiteConfig, BARExportOptions)
-- Added multi-format provider detection patterns (Prensa, Greencap)
-- Rewrote Section 6.1 AG Grid Configuration (7 column groups, COLUMN_PRESETS)
+### E14-S7: Unified Documents View
+- **Status:** done
+- **Started:** 2026-02-08 16:00 AEDT
+- **Completed:** 2026-02-08 16:20 AEDT
+- **Build:** PASS
+- **Lint:** PASS
+- **UX Audit:** PASS (all 10 acceptance criteria met)
+- **Files Modified:** DocumentLibrary.tsx, ViewToggle.tsx, middleware.ts, use-sources-paginated.ts (new), progress.md, task_plan.md
+- **Commit:** (pending)
+- **Notes:** 3-way view toggle (grid/list/table), useSourcesPaginated hook for infinite scroll, keyboard nav (Arrow/Enter/Home/End) in table view, SourcesTableView reused from sources page, middleware query param preservation, delete confirm dialog for table view, smart sorting (server-side for table, client-side for grid/list)
 
-#### Phase 3: Epics & Stories Update (COMPLETE)
-**File**: `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md`
+### E14-S6: WCAG Accessibility Compliance
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
 
-Changes made:
-- Updated Epic Overview table (story counts, new status column)
-- Added E1-S8: Site Configuration Data Entry
-- Added E1-S9: ACM Product Classification
-- Added E2-S8: Column Visibility Management
-- Rewrote Epic 5 section (promoted to P0)
-- Added E5-S3: BAR Template Management
-- Added E5-S4: Export Field Mapping Configuration
-- Added E7-S7: Site Configuration During Upload
-- Added Story Dependencies table
-- Updated MVP Scope Summary with completion markers
+### E14-S8: Error Recovery & Disconnect Handling
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
 
-#### Phase 4: Workflow Status Update (COMPLETE)
-**File**: `_bmad-output/bmm-workflow-status.yaml`
+### E14-S9: Keyboard Navigation
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
 
-Changes made:
-- Updated timestamp to 2026-02-04
-- Added `correct-course` entry pointing to sprint change proposal
-- Added change log documenting course correction
+### E14-S10: Breadcrumb Navigation
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**
 
-#### Phase 5: Sprint Status Update (COMPLETE)
-**File**: `docs/sprint-artifacts/sprint-status.yaml`
-
-Changes made:
-- Added "needs-expansion" status for epics with new stories
-- Added 6 new stories to backlog:
-  - e1-s8-site-configuration-data-entry
-  - e1-s9-acm-product-classification
-  - e2-s8-column-visibility-management
-  - e5-s3-bar-template-management
-  - e5-s4-export-field-mapping-configuration
-  - e7-s7-site-configuration-during-upload
-- Updated epic statuses (E1, E2, E5, E7 → needs-expansion)
-- Updated summary: 54 total stories (was 48), 76% complete
-- Added Course Correction section
-- Added recommended next actions
-
-### New Stories Added
-
-| Story ID | Title | Epic | Priority | Status |
-|----------|-------|------|----------|--------|
-| E1-S8 | Site Configuration Data Entry | E1 | P0 | backlog |
-| E1-S9 | ACM Product Classification | E1 | P0 | backlog |
-| E2-S8 | Column Visibility Management | E2 | P1 | backlog |
-| E5-S3 | BAR Template Management | E5 | P1 | backlog |
-| E5-S4 | Export Field Mapping Configuration | E5 | P1 | backlog |
-| E7-S7 | Site Configuration During Upload | E7 | P0 | backlog |
-
-### Field Expansion Summary
-
-| Category | Count | Examples |
-|----------|-------|----------|
-| Organization Hierarchy | 5 | department, agency, region, program, building_type |
-| Location Metadata | 5 | property_id, street_address, suburb, postcode, gps_coords |
-| Building Info | 5 | building_name, floor_level, room_name, specific_location, functional_area |
-| ACM Details | 10 | item_id, acm_type, friability, condition, extent, quantity, etc. |
-| Risk Assessment | 8 | condition_score, risk_rating, risk_level, priority_ranking, etc. |
-| Management | 8 | recommendation, date_identified, next_review_date, etc. |
-| Classification | 4 | product_group, product_type, asbestos_type, material_form |
-| Removal Tracking | 5 | removal_status, removal_date, removal_contractor, etc. |
-
-### Decisions Made
-
-| Decision | Rationale |
-|----------|-----------|
-| Union schema (50 fields) | Supports both NSW SAMP and Victorian BAR formats |
-| Add to existing epics | Maintains epic coherence rather than creating new Epic 11 |
-| Complete E8 first | Don't disrupt in-progress work |
-| E5 promoted to P0 | BAR Excel export is critical for compliance |
-
-### Recommended Next Actions
-
-**Option A**: Continue Epic 8 (UI Refresh)
-- E8-S8: Update Navigation Sidebar (drafted)
-
-**Option B**: Start Victorian BAR stories (P0 priority)
-- Recommended sequence: E1-S8 → E7-S7 → E1-S9 → E5-S3 → E5-S4 → E2-S8
-
-### Files Modified
-
-| File | Action |
-|------|--------|
-| `_bmad-output/project-planning-artifacts/acm-ai/03-prd.md` | Major expansion |
-| `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md` | Major expansion |
-| `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md` | Added 6 stories |
-| `_bmad-output/bmm-workflow-status.yaml` | Added course correction entry |
-| `docs/sprint-artifacts/sprint-status.yaml` | Added 6 stories, updated statuses |
-| `_bmad-output/sprint-change-proposal-20260204.md` | Created (approved) |
-| `task_plan.md` | Updated phases |
-| `findings.md` | Contains field analysis |
-
-### Verification Checklist
-
-- [x] PRD updated with 50-field schema
-- [x] Architecture updated with expanded types
-- [x] Epics document has 6 new stories
-- [x] Workflow status records course correction
-- [x] Sprint status has new stories in backlog
-- [x] Sprint change proposal approved and saved
-- [x] No build-breaking changes (planning docs only)
-
-### Session Summary
-
-Successfully completed Course Correction workflow per BMAD methodology:
-1. Analyzed actual input/output document requirements
-2. Identified 27+ missing fields in current schema
-3. Created and approved 5 change proposals
-4. Updated all planning documents (PRD, Architecture, Epics)
-5. Updated tracking files (workflow status, sprint status)
-6. Added 6 new stories to implement Victorian BAR support
-
-**Progress**: 76% complete (41/54 stories done)
+### E14-S11: Pydantic-TypeScript Type Generation
+- **Status:** pending
+- **Started:**
+- **Completed:**
+- **Build:**
+- **Lint:**
+- **UX Audit:**
+- **Files Modified:**
+- **Commit:**
+- **Notes:**

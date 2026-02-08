@@ -1,0 +1,10 @@
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(42, 89, 81, 0.08);
+}
+
+.card-accent {
+  border-left: 6px solid var(--brand-primary);
+}

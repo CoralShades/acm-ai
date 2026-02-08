@@ -3,6 +3,7 @@
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { SourceDetailSkeleton } from '@/components/skeletons/SourceDetailSkeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,6 +45,7 @@ import {
 import { useSourceChat } from '@/lib/hooks/useSourceChat';
 import { ChatPanel } from '@/components/source/ChatPanel';
 import { useNavigation } from '@/lib/hooks/use-navigation';
+import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { acmApi } from '@/lib/api/acm';
 import { useSource } from '@/lib/hooks/use-sources';
 import { useACMStats } from '@/lib/hooks/use-acm';
@@ -212,12 +214,19 @@ export default function SourceDetailPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Back button */}
-      <div className="pt-4 pb-2 px-6 flex-shrink-0">
+      {/* Back button + Breadcrumbs */}
+      <div className="pt-4 pb-2 px-6 flex-shrink-0 space-y-2">
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           {navigation.getReturnLabel()}
         </Button>
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'Documents', href: '/documents' },
+            { label: source.title || 'Untitled Source' },
+          ]}
+        />
       </div>
 
       {/* Main Bento Grid Layout */}
@@ -449,26 +458,6 @@ export default function SourceDetailPage() {
           </BentoCard>
         </BentoGrid>
       </div>
-    </div>
-  );
-}
-
-function SourceDetailSkeleton() {
-  return (
-    <div className="p-6">
-      <BentoGrid columns={4} gap="md">
-        <BentoCard size="full" isLoading className="col-span-full" />
-        <BentoCard
-          size="lg"
-          isLoading
-          className="col-span-full lg:col-span-2 lg:row-span-2 min-h-[500px]"
-        />
-        <BentoCard
-          size="md"
-          isLoading
-          className="col-span-full lg:col-span-2 lg:row-span-2 min-h-[500px]"
-        />
-      </BentoGrid>
     </div>
   );
 }

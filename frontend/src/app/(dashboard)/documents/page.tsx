@@ -1,12 +1,14 @@
 'use client'
 
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { AppShell } from '@/components/layout/AppShell'
 import { DocumentLibrary } from '@/components/documents/DocumentLibrary'
 import { ProcessingStatus } from '@/components/documents/ProcessingStatus'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FileText, Activity } from 'lucide-react'
 
-export default function DocumentsPage() {
+function DocumentsPageContent() {
   return (
     <AppShell>
       <div className="flex flex-col h-full w-full max-w-none px-6 py-6">
@@ -36,5 +38,21 @@ export default function DocumentsPage() {
         </Tabs>
       </div>
     </AppShell>
+  )
+}
+
+export default function DocumentsPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="Documents"
+          reloadUrl="/documents"
+        />
+      )}
+    >
+      <DocumentsPageContent />
+    </ErrorBoundary>
   )
 }

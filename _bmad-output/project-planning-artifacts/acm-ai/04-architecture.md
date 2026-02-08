@@ -1,9 +1,9 @@
 # Technical Architecture - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-04)
-> **Status:** Draft - Updated for Victorian BAR Format
-> **Change Log:** Sprint Change Proposal approved 2026-02-04 - Victorian BAR format expansion
+> **Date:** 2025-12-07 (Updated: 2026-02-08)
+> **Status:** Draft - Updated for UX &amp; Enterprise Readiness
+> **Change Log:** 2026-02-08 - Frontend Design System Architecture (UX Audit)
 
 ---
 
@@ -1075,6 +1075,158 @@ Migrations run automatically on API startup, or manually via:
 ```bash
 uv run python -c "from dotenv import load_dotenv; load_dotenv(); import asyncio; from open_notebook.database.async_migrate import AsyncMigrationManager; asyncio.run(AsyncMigrationManager().run_migration_up())"
 ```
+
+---
+
+## 13. Frontend Design System Architecture
+
+> **Added:** 2026-02-08 (UX Audit &amp; Enterprise Readiness Initiative - Lane B)
+> **Spec References:** `docs/design-system.md`, `docs/ag-ui-pipeline-spec.md`, `docs/state-loading-spec.md`
+
+### 13.1 VAEA Design Token System
+
+```
+CSS Custom Properties (:root / .dark)
+    └── Tailwind 4 @theme inline
+        └── Component-level tokens (shadcn/ui variants)
+            └── AG Grid theme overrides
+```
+
+**Architecture:**
+- **Color Space:** OKLCH for perceptual uniformity across light/dark modes
+- **Token Layers:** Brand → Semantic → Component (3-tier cascade)
+- **Dark Mode:** Class-based toggle (`.dark` class on `<html>`) via `next-themes`
+- **Brand Colors:** VAEA Teal primary (#0D7377), Coral accent (#EB787A), Navy (#1B2B4B)
+- **Reference:** `docs/design-system.md`
+
+**Token Flow:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Brand Layer (VAEA Palette)                                  │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ --vaea-teal: oklch(0.52 0.09 185)                       ││
+│  │ --vaea-coral: oklch(0.65 0.14 15)                       ││
+│  │ --vaea-navy: oklch(0.27 0.04 260)                       ││
+│  └──────────────────────┬──────────────────────────────────┘│
+│                         ▼                                    │
+│  Semantic Layer (Role-based)                                 │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ --primary: var(--vaea-teal)                              ││
+│  │ --accent: var(--vaea-coral)                              ││
+│  │ --destructive: oklch(0.55 0.2 25)                       ││
+│  │ --background, --foreground, --muted, --border           ││
+│  └──────────────────────┬──────────────────────────────────┘│
+│                         ▼                                    │
+│  Component Layer (shadcn/ui + AG Grid)                       │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ Button, Card, Dialog → use semantic tokens               ││
+│  │ AG Grid → .ag-theme-custom uses --ag-* mapped tokens    ││
+│  │ Risk badges → use --risk-low/medium/high/very-high      ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 13.2 Pipeline Visualization Architecture
+
+```
+Browser ──SSE──▶ FastAPI ──Events──▶ LangGraph Nodes
+                    │
+    PipelineEventEmitter (asyncio.Queue per subscriber)
+```
+
+**Transport Strategy:**
+- **Phase 1:** SSE (Server-Sent Events) for real-time extraction progress
+- **Phase 2:** AG-UI protocol / CopilotKit integration (future)
+- **Fallback:** 3-second polling via existing `useExtractionStatus` hook
+
+**State Management:**
+- Zustand `pipeline-progress-store` tracks multi-stage extraction
+- 7-stage pipeline: Upload → Parse → Extract → Interpret → Validate → Store → Index
+- Each stage has: status (pending/active/complete/error), progress %, timing
+
+**Event Schema:**
+```typescript
+interface PipelineEvent {
+  type: 'stage_start' | 'stage_progress' | 'stage_complete' | 'stage_error';
+  stage: string;
+  progress?: number;
+  message?: string;
+  timestamp: string;
+}
+```
+
+**Reference:** `docs/ag-ui-pipeline-spec.md`
+
+### 13.3 State Management Extensions
+
+Three new Zustand stores extend the existing state management architecture:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Existing Stores                                          │
+│  ├── source-store (React Query)                          │
+│  ├── chat-store (Zustand)                                │
+│  └── notebook-store (Zustand)                            │
+│                                                           │
+│  New Stores (E14)                                        │
+│  ├── pipeline-progress-store  ← SSE events               │
+│  │   └── Multi-stage extraction tracking                 │
+│  │   └── Per-source progress state                       │
+│  │                                                        │
+│  ├── notification-store  ← Background job alerts          │
+│  │   └── Persistent notification queue                    │
+│  │   └── Toast integration (Sonner)                      │
+│  │   └── Read/unread state                               │
+│  │                                                        │
+│  └── feature-flags-store  ← Dual-persona mode            │
+│      └── Simple vs Advanced UI toggle                    │
+│      └── Per-user preference persistence                 │
+│      └── Feature visibility rules                        │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Store Patterns:**
+- All stores use Zustand with `persist` middleware for local storage
+- Pipeline store uses `subscribeWithSelector` for granular re-renders
+- Notification store integrates with Sonner toast library
+- Feature flags drive conditional rendering of advanced features
+
+**Reference:** `docs/state-loading-spec.md`
+
+### 13.4 Navigation Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  AppSidebar                                               │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │ VAEA Logo + Brand Header                            │  │
+│  ├────────────────────────────────────────────────────┤  │
+│  │ [Upload Document] CTA Button                        │  │
+│  ├────────────────────────────────────────────────────┤  │
+│  │ WORKSPACE                                           │  │
+│  │  ├── Dashboard (/)                                  │  │
+│  │  ├── Documents (/documents)                         │  │
+│  │  ├── ACM Register (/sources/[id]/acm)              │  │
+│  │  └── Search (/search)                               │  │
+│  ├────────────────────────────────────────────────────┤  │
+│  │ CONFIGURE                                           │  │
+│  │  ├── Extraction (/settings/extraction)              │  │
+│  │  ├── AI Models (/settings/models)                   │  │
+│  │  ├── Parsers (/settings/parsers)                    │  │
+│  │  ├── Processing (/settings/processing)              │  │
+│  │  └── General (/settings/general)                    │  │
+│  ├────────────────────────────────────────────────────┤  │
+│  │ Footer: Theme Toggle | CoralShades | Sign Out      │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Hidden Features (preserved, no nav entry):**
+- Podcasts (`/podcasts`) - accessible via direct URL only
+- Transformations (`/transformations`) - accessible via direct URL only
+- Notebooks (`/notebooks`) - accessible via direct URL only
+
+**Reference:** `docs/navigation-cleanup-spec.md`
 
 ---
 

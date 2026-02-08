@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { AppShell } from '@/components/layout/AppShell'
 import { NotebookHeader } from '../components/NotebookHeader'
 import { SourcesColumn } from '../components/SourcesColumn'
@@ -24,7 +27,7 @@ export interface ContextSelections {
   notes: Record<string, ContextMode>
 }
 
-export default function NotebookPage() {
+function NotebookPageContent() {
   const params = useParams()
 
   // Ensure the notebook ID is properly decoded from URL
@@ -115,7 +118,14 @@ export default function NotebookPage() {
   return (
     <AppShell>
       <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex-shrink-0 p-6 pb-0">
+        <div className="flex-shrink-0 p-6 pb-0 space-y-2">
+          <Breadcrumbs
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Notebooks', href: '/notebooks' },
+              { label: notebook.name || 'Untitled Notebook' },
+            ]}
+          />
           <NotebookHeader notebook={notebook} />
         </div>
 
@@ -220,5 +230,21 @@ export default function NotebookPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+export default function NotebookPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="Notebook"
+          reloadUrl="/notebooks"
+        />
+      )}
+    >
+      <NotebookPageContent />
+    </ErrorBoundary>
   )
 }

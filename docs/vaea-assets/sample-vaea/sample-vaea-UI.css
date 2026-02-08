@@ -1,0 +1,27 @@
+:root {
+  /* Backgrounds */
+  --bg-page:        var(--vaea-grey-50);
+  --bg-surface:     #ffffff;
+  --bg-muted:       var(--vaea-teal-100);
+  --bg-accent:      var(--vaea-green-200);
+
+  /* Text */
+  --text-primary:   var(--vaea-grey-900);
+  --text-secondary: var(--vaea-grey-700);
+  --text-muted:     var(--vaea-grey-300);
+  --text-inverse:   #ffffff;
+
+  /* Borders */
+  --border-default: var(--vaea-grey-100);
+  --border-accent:  var(--vaea-teal-300);
+
+  /* Brand actions */
+  --brand-primary:        var(--vaea-teal-300);
+  --brand-primary-hover:  var(--vaea-teal-700);
+  --brand-primary-soft:   var(--vaea-teal-100);
+
+  /* Status */
+  --success: var(--vaea-green-200);
+  --info:    var(--vaea-teal-100);
+  --focus:   var(--vaea-teal-300);
+}

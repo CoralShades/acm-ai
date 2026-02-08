@@ -176,11 +176,27 @@ development_status:
   e13-s3-react-flow-knowledge-graph-visualization: backlog
   epic-13-retrospective: optional
 
+  # Epic 14: UX & Enterprise Readiness (P0/P1) - NEW 2026-02-08
+  # 11/11 stories complete
+  epic-14: done
+  e14-s1-vaea-branding-design-tokens: done
+  e14-s2-sidebar-navigation-redesign: done
+  e14-s3-hide-brownfield-features: done
+  e14-s4-skeleton-loading-screens: done
+  e14-s5-toast-system-enhancement: done
+  e14-s6-wcag-accessibility-compliance: done
+  e14-s7-unified-documents-view: done
+  e14-s8-error-recovery-disconnect-handling: done
+  e14-s9-keyboard-navigation-shortcuts: done
+  e14-s10-breadcrumb-navigation: done
+  e14-s11-pydantic-typescript-type-generation: done
+  epic-14-retrospective: optional
+
 # SUMMARY:
 # ========
-# Total Epics: 13 (4 done, 4 in-progress, 4 backlog, 1 archived)
-# Total Stories: 74 (in sprint-status tracking)
-# Stories Done: 43 (58%)
+# Total Epics: 14 (5 done, 4 in-progress, 4 backlog, 1 archived)
+# Total Stories: 85 (in sprint-status tracking)
+# Stories Done: 54 (64%)
 # Stories Archived: 10 (E8-S1..S10)
 # Stories Ready-for-dev: 4 (E1-S14, E2-S8, E5-S3, E5-S4)
 # Stories Drafted: 2 (E9-S3, E10-S1)
@@ -188,17 +204,33 @@ development_status:
 #
 # Last Updated: 2026-02-08
 #
-# COMPLETED EPICS: E3, E4, E6, E7
+# COMPLETED EPICS: E3, E4, E6, E7, E14
 # ARCHIVED EPICS: E8 (UI Refresh - skipped 2026-02-08)
 # IN-PROGRESS EPICS: E1 (13/20), E2 (7/8), E5 (2/4), E9 (2/3)
 # BACKLOG EPICS: E10 (0/1), E11 (0/2), E12 (0/4), E13 (0/3)
 #
-# KEY CHANGES (2026-02-08 - YAML Reconciliation + E1-S20):
-# =========================================================
+# KEY CHANGES (2026-02-08 - Epic 14 Complete + E1-S11..S13 Done):
+# ================================================================
+# - NEW Epic 14: UX & Enterprise Readiness (11 stories, ALL DONE)
+#   - E14-S1: VAEA Branding & Design Tokens (OKLch palette, system fonts, coral focus rings)
+#   - E14-S2: Sidebar Navigation Redesign (WORKSPACE/CONFIGURE sections)
+#   - E14-S3: Hide Brownfield Features (remove Notebooks, Podcasts, Transformations)
+#   - E14-S4: Skeleton Loading Screens (shimmer animation, zero CLS)
+#   - E14-S5: Toast System Enhancement (promise-based, risk-aware toasts)
+#   - E14-S6: WCAG 2.1 AA Accessibility Compliance (focus rings, skip-to-content, ARIA)
+#   - E14-S7: Unified Documents View (3-way toggle: grid/list/table, infinite scroll)
+#   - E14-S8: Error Recovery & Disconnect Handling (exponential backoff, OfflineBanner)
+#   - E14-S9: Keyboard Navigation & Shortcuts (Cmd+K actions, G+key nav, ? cheat sheet)
+#   - E14-S10: Breadcrumb Navigation (responsive, semantic HTML, ARIA)
+#   - E14-S11: Pydantic-TypeScript Type Generation (quicktype pipeline, CI drift detection)
+# - E1-S11 done: Extensible Consultant Parser Framework
+# - E1-S12 done: Consultant Wording Normalization
+# - E1-S13 done: Fix Page Reference Tracking
+# - E1-S14 created: Contextual Embedding Enrichment (ready-for-dev)
 # - E1-S13 identity resolved: YAML key "fix-page-reference-tracking" kept as-is
 # - E1-S20 added: Agentic Extraction Orchestrator (was previously conflated with E1-S13)
 # - Added 7 missing YAML entries: E1-S14..S20 (all backlog)
-# - Fixed summary counts (total stories: 73→74, done: 50/74=68%)
+# - Fixed summary counts (total stories: 74→85, done: 54/85=64%)
 # - E2-S8 corrected to ready-for-dev (has tech-spec drafted)
 #
 # KEY CHANGES (2026-02-07 - Document Intelligence + Settings + Knowledge Graph):
@@ -222,7 +254,7 @@ development_status:
 #
 # NEXT RECOMMENDED ACTIONS:
 # =========================
-# 1. E1-S11..S13 all done - E1 core extraction pipeline complete through S13
+# 1. Run Epic 14 retrospective (optional but recommended - first fully completed UX epic)
 # 2. Lane A (Backend): E1-S14 ready-for-dev → E1-S15..S20 chain
 # 3. Lane B (Frontend): E2-S8 → E9-S3 → E10-S1
 # 4. Lane C (Export): E5-S3 → E5-S4

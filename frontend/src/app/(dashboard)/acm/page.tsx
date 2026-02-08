@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
+import { ACMRegisterSkeleton } from '@/components/skeletons/ACMRegisterSkeleton'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -15,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { FileWarning, AlertCircle } from 'lucide-react'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { ACMGrid } from '@/components/acm/ACMGrid'
 import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
 import { ACMStatsCards } from '@/components/acm/ACMStatsCards'
@@ -30,7 +34,7 @@ import {
 import { useSources } from '@/lib/hooks/use-sources'
 import type { ACMRecord } from '@/lib/types/acm'
 
-export default function ACMPage() {
+function ACMPageContent() {
   // State
   const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(undefined)
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
@@ -65,6 +69,14 @@ export default function ACMPage() {
   // Compute records
   const records = useMemo(() => recordsData?.records || [], [recordsData])
   const hasRecords = records.length > 0
+
+  if (isLoadingSources) {
+    return (
+      <AppShell>
+        <ACMRegisterSkeleton />
+      </AppShell>
+    )
+  }
 
   // Handlers
   const handleSourceChange = (sourceId: string) => {
@@ -125,6 +137,15 @@ export default function ACMPage() {
   return (
     <AppShell>
       <div className="flex flex-col h-full w-full max-w-none px-6 py-6 overflow-y-auto">
+        {/* Breadcrumbs */}
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'ACM Register' },
+          ]}
+          className="mb-4 flex-shrink-0"
+        />
+
         {/* Header */}
         <div className="mb-6 flex-shrink-0">
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -265,5 +286,21 @@ export default function ACMPage() {
         />
       </div>
     </AppShell>
+  )
+}
+
+export default function ACMPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="ACM Register"
+          reloadUrl="/acm"
+        />
+      )}
+    >
+      <ACMPageContent />
+    </ErrorBoundary>
   )
 }
