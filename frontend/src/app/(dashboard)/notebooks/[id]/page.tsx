@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { AppShell } from '@/components/layout/AppShell'
 import { NotebookHeader } from '../components/NotebookHeader'
 import { SourcesColumn } from '../components/SourcesColumn'
@@ -117,7 +118,14 @@ function NotebookPageContent() {
   return (
     <AppShell>
       <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex-shrink-0 p-6 pb-0">
+        <div className="flex-shrink-0 p-6 pb-0 space-y-2">
+          <Breadcrumbs
+            items={[
+              { label: 'Home', href: '/' },
+              { label: 'Notebooks', href: '/notebooks' },
+              { label: notebook.name || 'Untitled Notebook' },
+            ]}
+          />
           <NotebookHeader notebook={notebook} />
         </div>
 
