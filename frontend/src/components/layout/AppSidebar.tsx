@@ -68,7 +68,7 @@ const navigation: NavSection[] = [
     title: 'Configure',
     items: [
       { name: 'Extraction', href: '/settings/extraction', icon: FlaskConical },
-      { name: 'AI Models', href: '/models', icon: Bot },
+      { name: 'AI Models', href: '/settings/models', icon: Bot },
       { name: 'Parsers', href: '/settings/parsers', icon: FileCode },
       { name: 'Processing', href: '/settings/processing', icon: Cog },
       { name: 'General', href: '/settings', icon: SlidersHorizontal },
@@ -87,7 +87,7 @@ export function AppSidebar() {
 
   // Detect platform for keyboard shortcut display
   useEffect(() => {
-    setIsMac(navigator.platform.toLowerCase().includes('mac'))
+    setIsMac(navigator.userAgent.toLowerCase().includes('mac'))
   }, [])
 
   // Check if a nav item is active (exact match for root, prefix match for others)

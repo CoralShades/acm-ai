@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { acmApi } from '@/lib/api/acm'
 import { useToast } from '@/lib/hooks/use-toast'
+import { toastPromise, criticalToast } from '@/lib/toast-patterns'
 import type {
   ACMListParams,
   ACMRecordCreateRequest,
@@ -78,7 +79,7 @@ export function useCreateACMRecord() {
         queryKey: ACM_QUERY_KEYS.stats(variables.source_id),
       })
       toast({
-        title: 'Success',
+        title: 'Record created',
         description: 'ACM record created successfully',
       })
     },
@@ -161,10 +162,9 @@ export function useDeleteACMRecord() {
       })
     },
     onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete ACM record',
-        variant: 'destructive',
+      criticalToast({
+        title: 'Failed to delete ACM record',
+        description: 'The record could not be removed. Please try again.',
       })
     },
   })
@@ -174,13 +174,11 @@ export function useDeleteACMRecord() {
  * Hook to trigger ACM extraction
  */
 export function useExtractACM(onCommandStarted?: (commandId: string) => void) {
-  const { promise } = useToast()
-
   return useMutation({
     mutationFn: (sourceId: string) => {
       const extractPromise = acmApi.extract(sourceId)
 
-      promise(extractPromise, {
+      toastPromise(extractPromise, {
         loading: 'Starting ACM extraction...',
         success: (result) => result.message || 'Extraction started successfully',
         error: 'Failed to start ACM extraction',
@@ -200,8 +198,6 @@ export function useExtractACM(onCommandStarted?: (commandId: string) => void) {
  * Hook to export ACM records as CSV
  */
 export function useExportACMCsv() {
-  const { promise } = useToast()
-
   return useMutation({
     mutationFn: async (sourceId: string) => {
       const exportPromise = acmApi.exportCsv(sourceId).then((blob) => {
@@ -216,7 +212,7 @@ export function useExportACMCsv() {
         return blob
       })
 
-      promise(exportPromise, {
+      toastPromise(exportPromise, {
         loading: 'Generating CSV export...',
         success: 'CSV downloaded successfully',
         error: 'Failed to export CSV',
@@ -231,8 +227,6 @@ export function useExportACMCsv() {
  * Hook to export ACM records as Excel
  */
 export function useExportACMExcel() {
-  const { promise } = useToast()
-
   return useMutation({
     mutationFn: async (sourceId: string) => {
       const exportPromise = acmApi.exportExcel(sourceId).then((blob) => {
@@ -247,7 +241,7 @@ export function useExportACMExcel() {
         return blob
       })
 
-      promise(exportPromise, {
+      toastPromise(exportPromise, {
         loading: 'Generating Excel export...',
         success: 'Excel file downloaded successfully',
         error: 'Failed to export Excel file',

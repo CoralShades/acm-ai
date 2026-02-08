@@ -95,7 +95,7 @@
   --radius: 0.75rem;  /* 12px government standard */
 
   /* Typography Scale */
-  /* Note: --font-sans (Inter) and --font-mono (JetBrains Mono) are defined in @theme inline */
+  /* Note: --font-sans uses system font stack (defined in @theme inline). --font-mono uses JetBrains Mono. */
   --font-data: var(--font-jetbrains, ui-monospace, monospace);
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -631,6 +631,17 @@ pre {
   );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
+}
+
+/* Dark mode: lighter shimmer on dark surfaces for visibility */
+.dark .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.15) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {

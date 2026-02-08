@@ -157,6 +157,7 @@ node_modules/
 .vercel
 frontend/.next-dev/cache/*
 docker-compose.override.yml
+package-lock.json
 
 # Auto Claude data directory
 .auto-claude/

@@ -36,9 +36,9 @@ const config: Config = {
           gold: '#D4A843',
         },
       },
-      // Font family mapped from CSS variables (Inter + JetBrains Mono)
+      // Font family: system font stack for government compliance, Inter as optional enhancement
       fontFamily: {
-        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
         mono: ["var(--font-jetbrains)", "ui-monospace", "monospace"],
         data: ["var(--font-jetbrains)", "ui-monospace", "monospace"],
       },

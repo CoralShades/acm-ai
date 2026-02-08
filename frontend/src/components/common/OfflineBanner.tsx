@@ -5,6 +5,8 @@ import { WifiOff, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getConfig, resetConfig } from '@/lib/config'
 
+// TODO(E14-S8): Consolidate with ConnectionGuard to avoid duplicate connection checks.
+// Both OfflineBanner and ConnectionGuard independently track online/offline state.
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false)
   const [isReconnecting, setIsReconnecting] = useState(false)

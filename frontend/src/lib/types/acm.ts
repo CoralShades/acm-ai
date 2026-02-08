@@ -2,6 +2,11 @@
  * ACM (Asbestos Containing Material) Record Types
  */
 
+// NOTE: Generated types exist in ./generated/ (from Pydantic models).
+// The ACMRecord type below is manually maintained for frontend compatibility.
+// When the backend ACMRecord model changes, run 'npm run generate:types' and
+// reconcile any field differences with this file.
+
 export interface ACMRecord {
   id: string
   source_id: string
@@ -196,3 +201,15 @@ export interface CommandJobStatusResponse {
   result?: { success?: boolean; records_created?: number; error_message?: string }
   error_message?: string | null
 }
+
+// Re-export generated types that complement the manual types above.
+// Generated from Pydantic models via 'npm run generate:types'.
+// See frontend/src/lib/types/generated/ for the full generated type set.
+export type { ACMExtractionOutput } from './generated/ACMExtractionOutput'
+export type { ACMExtractionRecord } from './generated/ACMExtractionRecord'
+export type { ACMExtractionResult } from './generated/ACMExtractionResult'
+export type { BuildingRoomContext } from './generated/BuildingRoomContext'
+export type { ConfidenceDistribution } from './generated/ConfidenceDistribution'
+export type { ExtractionConfidence } from './generated/ExtractionConfidence'
+export type { ExtractionStatus } from './generated/ExtractionStatus'
+export type { TableBoundingBox } from './generated/TableBoundingBox'
