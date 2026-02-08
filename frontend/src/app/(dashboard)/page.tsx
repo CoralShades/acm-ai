@@ -1,5 +1,6 @@
 'use client';
 
+import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BentoGrid } from '@/components/ui/bento-grid';
 import {
   BentoCard,
@@ -54,6 +55,10 @@ export default function DashboardPage() {
         return created > weekAgo;
       }).length
     : 0;
+
+  if (sourcesLoading || acmLoading) {
+    return <DashboardSkeleton />
+  }
 
   return (
     <div className="p-6">
