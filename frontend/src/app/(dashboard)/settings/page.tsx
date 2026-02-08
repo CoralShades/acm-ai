@@ -1,12 +1,14 @@
 'use client'
 
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { AppShell } from '@/components/layout/AppShell'
 import { SettingsForm } from './components/SettingsForm'
 import { useSettings } from '@/lib/hooks/use-settings'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-react'
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const { refetch } = useSettings()
 
   return (
@@ -25,5 +27,21 @@ export default function SettingsPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="Settings"
+          reloadUrl="/settings"
+        />
+      )}
+    >
+      <SettingsPageContent />
+    </ErrorBoundary>
   )
 }
