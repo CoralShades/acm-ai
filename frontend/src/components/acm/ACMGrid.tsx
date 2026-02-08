@@ -320,14 +320,18 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     [onEdit, onCellSelect]
   )
 
-  // Keyboard navigation: Enter key opens cell citation viewer
+  // Keyboard navigation: Enter, Space, E, Delete key handlers
   const onCellKeyDown = useCallback(
     (event: CellKeyDownEvent<ACMRecord>) => {
       const keyboardEvent = event.event as KeyboardEvent
-      if (keyboardEvent?.key === 'Enter' && event.data && !event.node.group) {
+      const key = keyboardEvent?.key
+
+      if (!key || !event.data) return
+
+      // Enter key: Open cell citation viewer or edit record
+      if (key === 'Enter' && !event.node.group) {
         const field = event.colDef?.field
         const recordId = event.data.id
-        // Guard: Skip if no field, Actions column, or no record ID
         if (field && event.colDef?.headerName !== 'Actions' && recordId) {
           if (onCellSelect) {
             onCellSelect({
@@ -342,8 +346,26 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
           }
         }
       }
+
+      // Space key: Expand/collapse group row
+      if (key === ' ' && event.node.group) {
+        keyboardEvent.preventDefault()
+        event.node.setExpanded(!event.node.expanded)
+      }
+
+      // E key: Edit record (when not in group row)
+      if (key === 'e' && !event.node.group && event.data.id) {
+        keyboardEvent.preventDefault()
+        onEdit(event.data)
+      }
+
+      // Delete key: Delete record (when not in group row)
+      if (key === 'Delete' && !event.node.group && event.data.id) {
+        keyboardEvent.preventDefault()
+        onDelete(event.data)
+      }
     },
-    [onEdit, onCellSelect]
+    [onEdit, onDelete, onCellSelect]
   )
 
   return (
@@ -408,6 +430,13 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         // Use legacy theming for v32 CSS compatibility (ag-theme-alpine)
         theme="legacy"
       />
+      <div className="text-xs text-muted-foreground mt-2 flex items-center gap-4">
+        <span>Arrow keys to navigate</span>
+        <span>Enter to view</span>
+        <span>E to edit</span>
+        <span>Space to expand/collapse</span>
+        <span>? for all shortcuts</span>
+      </div>
     </div>
   )
 })
