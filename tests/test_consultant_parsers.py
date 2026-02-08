@@ -1,15 +1,14 @@
 """
-Unit tests for the Extensible Consultant Parser Framework.
+Unit tests for the Config-Driven Parser Framework.
 
 Tests cover:
 - ConsultantParser ABC (cannot instantiate directly)
-- PrensaParser detection, column mapping, metadata extraction
-- GreencapParser detection, column mapping, metadata extraction
-- GenericParser detection (always True), backward compatibility
-- Parser registry: correct selection for each format
-- Fallback: unknown format gets GenericParser
+- GenericParser config-driven behavior
+- Parser module: get_parser() returns GenericParser
+- Backward compatibility with existing extraction
 
-Story: E1-S11 Extensible Consultant Parser Framework
+Story: E1-S11 Generic Configurable Parser with BAR Field Schema
+(Replaces old 3-parser framework tests)
 """
 
 from abc import ABC
@@ -100,8 +99,8 @@ class TestDocumentMeta:
         """DocumentMeta can be created with consultant_name."""
         from open_notebook.extractors.parsers.base import DocumentMeta
 
-        meta = DocumentMeta(consultant_name="Prensa Pty Ltd")
-        assert meta.consultant_name == "Prensa Pty Ltd"
+        meta = DocumentMeta(consultant_name="Generic")
+        assert meta.consultant_name == "Generic"
 
     def test_document_meta_optional_fields(self):
         """DocumentMeta optional fields default to None."""
@@ -146,219 +145,12 @@ class TestSourceLocation:
 
 
 # ============================================================================
-# Task 2: PrensaParser tests
-# ============================================================================
-
-
-class TestPrensaParser:
-    """Test detection, header mapping, metadata extraction for Prensa."""
-
-    def test_detect_prensa_marker(self):
-        """Detects 'Prensa Pty Ltd' marker in text."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        assert parser.detect("... Prensa Pty Ltd ... Division 5 report")
-
-    def test_detect_division5_marker(self):
-        """Detects 'Division 5 Asbestos Assessment' marker."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        assert parser.detect("Division 5 Asbestos Assessment Report 2024")
-
-    def test_detect_non_prensa(self):
-        """Returns False for non-Prensa text."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        assert not parser.detect("Greencap Asbestos Risk Assessment")
-        assert not parser.detect("Some other consultant report")
-
-    def test_name_property(self):
-        """Parser name is 'prensa'."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        assert parser.name == "prensa"
-
-    def test_column_mapping_complete(self):
-        """Column mapping contains all 15 Prensa columns mapped to raw fields."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        mapping = parser.get_column_mapping()
-        # Must have mappings for the key Prensa columns
-        assert "area / level" in mapping
-        assert "item description" in mapping
-        assert len(mapping) == 15  # All 15 Prensa columns mapped
-
-    def test_register_headers(self):
-        """Returns the 15 expected Prensa headers."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        headers = parser.get_register_headers()
-        assert len(headers) == 15
-        assert "area / level" in headers
-        assert "item description" in headers
-        assert "risk status" in headers
-
-    def test_extract_metadata(self):
-        """Extracts document metadata from Prensa cover pages."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        pages = {
-            1: "Prensa Pty Ltd\nDivision 5 Asbestos Assessment\nTest Primary School\nReport Date: 15/03/2024",
-            2: "Table of Contents...",
-        }
-        meta = parser.extract_metadata(pages)
-        assert meta.consultant_name == "Prensa Pty Ltd"
-        assert meta.site_name == "Test Primary School"
-        assert meta.report_date == "15/03/2024"
-
-    def test_extract_items_from_table(self):
-        """Extracts RawACMItem list from table data with all fields verified."""
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = PrensaParser()
-        tables = [
-            {
-                "headers": ["area / level", "room & location", "feature", "item description",
-                            "hazard type", "hazard status", "sample number", "friability",
-                            "labelled y/n", "disturb. potential", "condition", "risk status",
-                            "approx. quantity", "control priority", "comments & recommendations"],
-                "rows": [
-                    ["Ground floor", "Room 1", "Ceiling", "Ceiling tiles", "ACM",
-                     "Detected", "S001", "Non Friable", "Y", "Low", "Good", "Low",
-                     "50m²", "P3", "Monitor condition"],
-                ],
-            }
-        ]
-        items = parser.extract_items(tables)
-        assert len(items) == 1
-        item = items[0]
-        assert item.product == "Ceiling tiles"
-        assert item.material_description == "Ceiling Ceiling tiles"
-        assert item.result == "Detected"
-        assert item.extent == "50m²"
-        assert item.location == "Ceiling"
-        assert item.friable == "Non Friable"
-        assert item.material_condition == "Good"
-        assert item.risk_status == "Low"
-        assert item.sample_number == "S001"
-        assert item.disturbance_potential == "Low"
-        assert item.labelled == "Y"
-        assert item.control_priority == "P3"
-        assert item.comments == "Monitor condition"
-
-
-# ============================================================================
-# Task 3: GreencapParser tests
-# ============================================================================
-
-
-class TestGreencapParser:
-    """Test detection, header mapping, metadata extraction for Greencap."""
-
-    def test_detect_greencap_marker(self):
-        """Detects 'Greencap' marker in text."""
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = GreencapParser()
-        assert parser.detect("Greencap Asbestos Risk Assessment Report")
-
-    def test_detect_non_greencap(self):
-        """Returns False for non-Greencap text."""
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = GreencapParser()
-        assert not parser.detect("Prensa Pty Ltd Division 5 Assessment")
-        assert not parser.detect("Some generic ACM report")
-
-    def test_name_property(self):
-        """Parser name is 'greencap'."""
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = GreencapParser()
-        assert parser.name == "greencap"
-
-    def test_column_mapping_complete(self):
-        """Column mapping contains all 14 Greencap columns mapped to raw fields."""
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = GreencapParser()
-        mapping = parser.get_column_mapping()
-        assert len(mapping) == 14  # All 14 Greencap columns mapped
-
-    def test_register_headers(self):
-        """Returns the 14 expected Greencap headers."""
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = GreencapParser()
-        headers = parser.get_register_headers()
-        assert len(headers) == 14
-        assert "item no." in headers
-        assert "risk rating" in headers
-
-    def test_site_metadata_extraction(self):
-        """Extracts site metadata (address, building size, age)."""
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = GreencapParser()
-        pages = {
-            1: "Greencap\nAsbestos Risk Assessment\nFull Address: 123 Test St, Melbourne VIC\nEst. Building Size: 500m²\nEst. Building Age: 1970",
-        }
-        meta = parser.extract_metadata(pages)
-        assert meta.consultant_name == "Greencap"
-        assert meta.site_address == "123 Test St, Melbourne VIC"
-        assert meta.building_size == "500m²"
-        assert meta.building_age == "1970"
-
-    def test_extract_items_from_table(self):
-        """Extracts RawACMItem list from Greencap table data with all fields verified."""
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = GreencapParser()
-        tables = [
-            {
-                "headers": ["item no.", "location - item description", "hazard type",
-                            "sample no.", "item status", "photo no.", "est. extent",
-                            "condition", "friability", "dist. potential", "risk rating",
-                            "current label", "reinspect date", "control priority"],
-                "rows": [
-                    ["1", "Room 1 - Ceiling tiles", "ACM",
-                     "S001", "Detected", "P1", "50m²",
-                     "Good", "Non Friable", "Low", "Low",
-                     "Y", "2025-01-01", "P3"],
-                ],
-            }
-        ]
-        items = parser.extract_items(tables)
-        assert len(items) == 1
-        item = items[0]
-        assert item.product == "Ceiling tiles"
-        assert item.location == "Room 1"
-        assert item.material_description == "Ceiling tiles"
-        assert item.result == "Detected"
-        assert item.extent == "50m²"
-        assert item.friable == "Non Friable"
-        assert item.material_condition == "Good"
-        assert item.risk_status == "Low"
-        assert item.sample_number == "S001"
-        assert item.disturbance_potential == "Low"
-        assert item.labelled == "Y"
-        assert item.control_priority == "P3"
-
-
-# ============================================================================
-# Task 4: GenericParser tests
+# Task 2: GenericParser tests (config-driven)
 # ============================================================================
 
 
 class TestGenericParser:
-    """Test fallback behavior and backward compatibility."""
+    """Test config-driven GenericParser behavior."""
 
     def test_detect_always_true(self):
         """GenericParser.detect() always returns True."""
@@ -367,7 +159,7 @@ class TestGenericParser:
         parser = GenericParser()
         assert parser.detect("Any random text")
         assert parser.detect("")
-        assert parser.detect("Prensa Pty Ltd")  # Even consultant-specific text
+        assert parser.detect("Prensa Pty Ltd")
 
     def test_name_property(self):
         """Parser name is 'generic'."""
@@ -377,7 +169,7 @@ class TestGenericParser:
         assert parser.name == "generic"
 
     def test_column_mapping_matches_existing(self):
-        """GenericParser column mapping matches the existing header map logic."""
+        """GenericParser column mapping includes standard ACM headers."""
         from open_notebook.extractors.parsers.generic import GenericParser
 
         parser = GenericParser()
@@ -391,90 +183,79 @@ class TestGenericParser:
         assert mapping["material description"] == "material_description"
         assert mapping["result"] == "result"
 
+    def test_column_mapping_includes_bar_fields(self):
+        """Column mapping also includes full BAR display names."""
+        from open_notebook.extractors.parsers.generic import GenericParser
+
+        parser = GenericParser()
+        mapping = parser.get_column_mapping()
+        assert "building name" in mapping
+        assert mapping["building name"] == "building_name"
+        assert "specific item/acm name" in mapping
+        assert mapping["specific item/acm name"] == "product"
+
     def test_register_headers_include_required(self):
-        """Register headers include all required ACM headers."""
+        """Register headers include BAR field display names."""
         from open_notebook.extractors.parsers.generic import GenericParser
 
         parser = GenericParser()
         headers = parser.get_register_headers()
-        assert "product" in headers
-        assert "material description" in headers
-        assert "result" in headers
+        assert "building name" in headers
+        assert "specific item/acm name" in headers
+        assert "sample result" in headers
 
-    def test_register_headers_include_optional(self):
-        """Register headers include optional ACM headers."""
+    def test_register_headers_count(self):
+        """Register headers include all 47 BAR fields."""
         from open_notebook.extractors.parsers.generic import GenericParser
 
         parser = GenericParser()
         headers = parser.get_register_headers()
-        assert "extent" in headers
-        assert "location" in headers
-        assert "friable" in headers
+        assert len(headers) == 47
 
 
 # ============================================================================
-# Task 5: Parser Registry tests
+# Task 3: Parser module tests
 # ============================================================================
 
 
-class TestParserRegistry:
-    """Test auto-selection and registry ordering."""
+class TestParserModule:
+    """Test parser module get_parser() function."""
 
-    def test_prensa_selected_for_prensa_text(self):
-        """Registry returns PrensaParser for Prensa text."""
-        from open_notebook.extractors.parsers import get_parser
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        parser = get_parser("Report by Prensa Pty Ltd - Division 5")
-        assert isinstance(parser, PrensaParser)
-
-    def test_greencap_selected_for_greencap_text(self):
-        """Registry returns GreencapParser for Greencap text."""
-        from open_notebook.extractors.parsers import get_parser
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-
-        parser = get_parser("Greencap Asbestos Risk Assessment")
-        assert isinstance(parser, GreencapParser)
-
-    def test_generic_selected_for_unknown(self):
-        """Registry returns GenericParser for unrecognized text."""
+    def test_get_parser_returns_generic(self):
+        """get_parser() returns GenericParser for any text."""
         from open_notebook.extractors.parsers import get_parser
         from open_notebook.extractors.parsers.generic import GenericParser
 
-        parser = get_parser("Some unknown consultant report about ACM")
+        parser = get_parser("Report by Prensa Pty Ltd")
         assert isinstance(parser, GenericParser)
 
-    def test_registry_order(self):
-        """PARSER_REGISTRY has correct priority order."""
-        from open_notebook.extractors.parsers import PARSER_REGISTRY
-        from open_notebook.extractors.parsers.generic import GenericParser
-        from open_notebook.extractors.parsers.greencap import GreencapParser
-        from open_notebook.extractors.parsers.prensa import PrensaParser
-
-        assert len(PARSER_REGISTRY) >= 3
-        assert isinstance(PARSER_REGISTRY[0], PrensaParser)
-        assert isinstance(PARSER_REGISTRY[1], GreencapParser)
-        # GenericParser is last
-        assert isinstance(PARSER_REGISTRY[-1], GenericParser)
-
-    def test_generic_always_last(self):
-        """GenericParser is always the last parser in the registry."""
-        from open_notebook.extractors.parsers import PARSER_REGISTRY
-        from open_notebook.extractors.parsers.generic import GenericParser
-
-        assert isinstance(PARSER_REGISTRY[-1], GenericParser)
-
-    def test_empty_text_gets_generic(self):
-        """Empty text falls through to GenericParser."""
+    def test_get_parser_empty_text(self):
+        """get_parser() returns GenericParser for empty text."""
         from open_notebook.extractors.parsers import get_parser
         from open_notebook.extractors.parsers.generic import GenericParser
 
         parser = get_parser("")
         assert isinstance(parser, GenericParser)
 
+    def test_get_parser_no_args(self):
+        """get_parser() works without arguments."""
+        from open_notebook.extractors.parsers import get_parser
+        from open_notebook.extractors.parsers.generic import GenericParser
+
+        parser = get_parser()
+        assert isinstance(parser, GenericParser)
+
+    def test_parser_has_config(self):
+        """Returned parser has loaded field config."""
+        from open_notebook.extractors.parsers import get_parser
+
+        parser = get_parser()
+        assert parser.config is not None
+        assert len(parser.config.fields) == 47
+
 
 # ============================================================================
-# Task 6: Integration tests (backward compatibility)
+# Task 4: Integration tests (backward compatibility)
 # ============================================================================
 
 

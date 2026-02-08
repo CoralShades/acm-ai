@@ -1,14 +1,12 @@
 """
-Generic / NSW SAMP Consultant Parser (Fallback)
+Generic Config-Driven ACM Parser.
 
-Handles standard ACM register tables with columns like:
-Product, Material Description, Result, Extent, Location, Friable, Condition, Risk Status.
+A single universal parser driven by FieldSchemaConfig that replaces the
+previous three-parser framework (PrensaParser, GreencapParser, GenericParser).
 
-This parser wraps the existing regex-based extraction logic from acm_extractor.py,
-preserving full backward compatibility with NSW SAMP format documents.
+detect() always returns True — there is only one parser now.
 
-detect() always returns True - this is the fallback parser when no specific
-consultant format is detected.
+Story: E1-S11 Generic Configurable Parser with BAR Field Schema
 """
 
 from typing import Dict, List, Optional
@@ -18,61 +16,49 @@ from open_notebook.extractors.parsers.base import (
     DocumentMeta,
     RawACMItem,
 )
+from open_notebook.extractors.parsers.field_config import FieldSchemaConfig
 
-# Required headers for generic ACM table detection
-GENERIC_REQUIRED_HEADERS = ["product", "material description", "result"]
-
-# Optional headers
-GENERIC_OPTIONAL_HEADERS = [
-    "extent",
-    "location",
-    "friable",
-    "material condition",
-    "risk status",
-    "risk",
-]
-
-# All expected headers in typical order
-GENERIC_HEADERS = [
-    "product",
-    "material description",
-    "extent",
-    "location",
-    "friable",
-    "material condition",
-    "risk status",
-    "result",
-]
-
-# Mapping: column header text -> standard field name
-# This replicates the logic in _create_header_map() from acm_extractor.py
-GENERIC_COLUMN_MAPPING: Dict[str, str] = {
+# Backward-compatible short header names used in existing markdown tables.
+# These map to internal field names so old-format tables still parse.
+_COMPAT_COLUMN_MAP: Dict[str, str] = {
     "product": "product",
     "material description": "material_description",
     "extent": "extent",
     "location": "location",
     "friable": "friable",
     "material condition": "material_condition",
+    "condition": "material_condition",
     "risk status": "risk_status",
     "risk": "risk_status",
-    "condition": "material_condition",
     "result": "result",
 }
 
+# Minimum headers needed to identify an ACM table (short names)
+_REQUIRED_HEADERS = {"product", "material description", "result"}
+
+# BAR display name equivalents for ACM table detection
+_BAR_REQUIRED_HEADERS = {"specific item/acm name", "sample result"}
+
 
 class GenericParser(ConsultantParser):
-    """Fallback parser for standard ACM register tables (NSW SAMP format).
+    """Config-driven parser for all ACM register table formats.
 
-    Always matches - used when no specific consultant parser detects the format.
-    Preserves backward compatibility with the existing regex-based extraction.
+    Loads field configuration from FieldSchemaConfig to determine which
+    columns to extract and how to map them. Falls back to backward-compatible
+    short header names for existing markdown table formats.
     """
+
+    def __init__(self, config: Optional[FieldSchemaConfig] = None):
+        self.config = config
+        if self.config is None:
+            from open_notebook.extractors.parsers.config_loader import load_field_schema
+            self.config = load_field_schema()
 
     @property
     def name(self) -> str:
         return "generic"
 
     def detect(self, text: str) -> bool:
-        # Always returns True - this is the fallback parser
         return True
 
     def extract_metadata(self, pages: Dict[int, str]) -> DocumentMeta:
@@ -80,51 +66,74 @@ class GenericParser(ConsultantParser):
 
     def extract_items(self, tables: List[dict]) -> List[RawACMItem]:
         items: List[RawACMItem] = []
+        column_mapping = self.get_column_mapping()
 
         for table in tables:
             headers = [h.lower().strip() for h in table.get("headers", [])]
             rows = table.get("rows", [])
 
-            # Check if this looks like an ACM table
-            if not any(h in " ".join(headers) for h in GENERIC_REQUIRED_HEADERS):
+            # Check if this looks like an ACM table using either short or BAR names
+            joined = " ".join(headers)
+            has_short = any(h in joined for h in _REQUIRED_HEADERS)
+            has_bar = any(h in joined for h in _BAR_REQUIRED_HEADERS)
+            if not has_short and not has_bar:
                 continue
 
-            header_index: Dict[str, int] = {}
+            # Build header index mapping internal_name → column index
+            # using the full column mapping (compat + config-driven)
+            field_index: Dict[str, int] = {}
             for i, h in enumerate(headers):
-                header_index[h] = i
+                if h in column_mapping:
+                    internal = column_mapping[h]
+                    if internal not in field_index:
+                        field_index[internal] = i
 
             for row in rows:
-                item = self._parse_row(row, header_index)
+                item = self._parse_row(row, field_index)
                 if item:
                     items.append(item)
 
         return items
 
     def get_column_mapping(self) -> Dict[str, str]:
-        return dict(GENERIC_COLUMN_MAPPING)
+        """Return display_name (lowercase) → internal_name mapping.
+
+        Includes both config-driven BAR field names and backward-compatible
+        short names for existing markdown table formats.
+        """
+        mapping = dict(_COMPAT_COLUMN_MAP)
+        for field in self.config.get_active_fields():
+            mapping[field.display_name.lower()] = field.internal_name
+        return mapping
 
     def get_register_headers(self) -> List[str]:
-        return list(GENERIC_HEADERS)
+        """Return lowercase display names of all active fields."""
+        return [f.display_name.lower() for f in self.config.get_active_fields()]
 
     def _parse_row(
-        self, row: List[str], header_index: Dict[str, int]
+        self, row: List[str], field_index: Dict[str, int]
     ) -> Optional[RawACMItem]:
-        """Parse a single generic table row into a RawACMItem."""
+        """Parse a single table row into a RawACMItem.
 
-        def get_cell(header_name: str) -> Optional[str]:
-            idx = header_index.get(header_name)
+        Args:
+            row: Cell values from a table row.
+            field_index: Mapping of internal_name → column index.
+        """
+
+        def get_field(internal_name: str) -> Optional[str]:
+            idx = field_index.get(internal_name)
             if idx is not None and idx < len(row):
                 val = row[idx].strip()
                 return val if val else None
             return None
 
-        product = get_cell("product")
-        material_desc = get_cell("material description")
+        product = get_field("product")
+        material_desc = get_field("material_description")
 
         if not product or not material_desc:
             return None
 
-        result = get_cell("result") or ""
+        result = get_field("result") or get_field("sample_result") or ""
         if "no asbestos" in result.lower():
             result = "Not Detected"
         elif "detected" in result.lower():
@@ -134,9 +143,9 @@ class GenericParser(ConsultantParser):
             product=product,
             material_description=material_desc,
             result=result,
-            extent=get_cell("extent"),
-            location=get_cell("location"),
-            friable=get_cell("friable"),
-            material_condition=get_cell("material condition") or get_cell("condition"),
-            risk_status=get_cell("risk status") or get_cell("risk"),
+            extent=get_field("extent"),
+            location=get_field("location"),
+            friable=get_field("friable"),
+            material_condition=get_field("material_condition"),
+            risk_status=get_field("risk_status"),
         )

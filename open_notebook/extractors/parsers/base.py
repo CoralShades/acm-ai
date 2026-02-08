@@ -1,20 +1,10 @@
 """
 Consultant Parser Abstract Base Class and shared data types.
 
-To add a new consultant parser:
-1. Create a new file in this package (e.g., `my_consultant.py`)
-2. Subclass `ConsultantParser` and implement all abstract methods:
-   - `name` property: Return a unique identifier string (e.g., "my_consultant")
-   - `detect(text)`: Return True if this parser handles the given PDF text
-   - `extract_metadata(pages)`: Extract document-level metadata from page text
-   - `extract_items(tables)`: Extract raw ACM items from parsed table data
-   - `get_column_mapping()`: Map consultant column names to standard raw fields
-   - `get_register_headers()`: Return expected column headers for this format
-3. Register it in `parsers/__init__.py` by adding to `PARSER_REGISTRY`
-   (before GenericParser, which must always be last as the fallback)
-4. Write tests: provide sample text for detection, expected headers, and mapping
+The system uses a single config-driven GenericParser (see generic.py) that
+handles all ACM PDF formats via FieldSchemaConfig from BAR field definitions.
 
-Story: E1-S11 Extensible Consultant Parser Framework
+Story: E1-S11 Generic Configurable Parser with BAR Field Schema
 """
 
 from abc import ABC, abstractmethod
