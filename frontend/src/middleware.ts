@@ -7,10 +7,10 @@ const REDIRECTS: Record<string, string> = {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
 
   if (pathname in REDIRECTS) {
-    return NextResponse.redirect(new URL(REDIRECTS[pathname], request.url))
+    return NextResponse.redirect(new URL(`${REDIRECTS[pathname]}${search}`, request.url))
   }
 
   return NextResponse.next()
