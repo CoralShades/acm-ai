@@ -19,6 +19,7 @@ from langchain_core.runnables import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_schemas import (
     ACMExtractionRecord,
     ACMExtractionResult,
@@ -190,7 +191,7 @@ def should_use_orchestrator(state: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 
-ROOM_ENTRY_PATTERN = re.compile(r"([A-Z]\d+[A-Z]?-R\d+)\s*[-\u2013]\s*(.+?)(?:\n|$)")
+ROOM_ENTRY_PATTERN = re.compile(r"([A-Z]\d+[A-Z]?-R\d+)\s*(?:[-\u2013]|\t)\s*(.+?)(?:\n|$)")
 NO_ACM_PATTERN = re.compile(r"(?:No\s+Asbestos|Not\s+Detected|NAD|No\s+ACM)", re.IGNORECASE)
 
 
@@ -336,17 +337,29 @@ async def extract_building(
         )
 
     if plan.strategy == ExtractionStrategy.REGEX_ONLY:
-        records = _regex_extract_simple_building(
-            building_content, plan.building_id, plan.building_name,
-        )
-        elapsed = int((time.time() - start) * 1000)
-        return records, BuildingExtractionStats(
-            building_id=plan.building_id,
-            records_extracted=len(records),
-            pages_processed=pages_processed,
-            strategy_used=ExtractionStrategy.REGEX_ONLY.value,
-            time_ms=elapsed,
-        )
+        try:
+            records = _regex_extract_simple_building(
+                building_content, plan.building_id, plan.building_name,
+            )
+            elapsed = int((time.time() - start) * 1000)
+            return records, BuildingExtractionStats(
+                building_id=plan.building_id,
+                records_extracted=len(records),
+                pages_processed=pages_processed,
+                strategy_used=ExtractionStrategy.REGEX_ONLY.value,
+                time_ms=elapsed,
+            )
+        except Exception as e:
+            logger.error(f"Building {plan.building_id} regex extraction failed: {e}")
+            elapsed = int((time.time() - start) * 1000)
+            return [], BuildingExtractionStats(
+                building_id=plan.building_id,
+                records_extracted=0,
+                pages_processed=pages_processed,
+                strategy_used=ExtractionStrategy.REGEX_ONLY.value,
+                time_ms=elapsed,
+                errors=[str(e)],
+            )
 
     # FULL_LLM path
     try:
@@ -390,7 +403,7 @@ def merge_building_results(
     for records, stats in results:
         all_records.extend(records)
         strategy_dist[stats.strategy_used] = strategy_dist.get(stats.strategy_used, 0) + 1
-        if stats.strategy_used != ExtractionStrategy.SKIP.value:
+        if stats.strategy_used != ExtractionStrategy.SKIP.value and not stats.errors:
             buildings_extracted += 1
 
     total_time = int((time.time() - total_start_time) * 1000)
@@ -455,11 +468,16 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
     This replaces the legacy prepare -> extract -> loop path when
     building inventory is available.
     """
-    source = state["source"]
+    source: Source = state["source"]
     content = source.full_text or ""
     inventory: BuildingInventory = state["building_inventory"]
     page_tags: Optional[PageTaggingResult] = state.get("page_tags")
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+
+    # Build context (mirrors prepare_context enrichment)
+    context = BuildingRoomContext()
+    if source.title:
+        context.school_name = source.title
 
     total_start = time.time()
 
@@ -505,6 +523,7 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
     return {
         "records": all_records,
         "orchestrator_stats": orchestrator_stats,
+        "context": context,
         "content": content,
         "start_time": state.get("start_time", time.time()),
     }

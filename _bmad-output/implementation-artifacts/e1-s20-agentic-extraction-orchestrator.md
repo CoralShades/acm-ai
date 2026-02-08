@@ -1,6 +1,6 @@
 # Story 1.20: Agentic Extraction Orchestrator
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -483,10 +483,29 @@ Claude Opus 4.6
 - Added `orchestrator_stats` to ExtractionState and ACMExtractionOutput for observability
 - Created building-specific extraction prompt template at `prompts/acm/building_extraction.jinja`
 - Updated `tests/test_document_structure.py` and `tests/test_page_tagger.py` graph topology tests for conditional edge
-- 44 new tests in `tests/test_orchestrator.py` covering all acceptance criteria
-- 268 tests pass across all related test files (orchestrator, document_structure, page_tagger, building_inventory, metadata_extractor, consultant_parsers)
-- Full suite: 773 pass, 5 pre-existing failures (ConfidenceDistribution Pydantic issue + integration tests - not caused by E1-S20)
+- 47 tests in `tests/test_orchestrator.py` covering all acceptance criteria (44 original + 3 added by code review)
+- 204 tests pass across related test files (orchestrator: 47, document_structure+page_tagger+metadata_extractor: 157)
 - Ruff lint passes on all modified/new files
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 4.6 (adversarial code review workflow)
+**Date:** 2026-02-09
+**Outcome:** Approved with fixes applied
+
+**Issues Found & Fixed:**
+
+| # | Severity | Issue | Fix |
+|---|----------|-------|-----|
+| H1 | HIGH | `orchestrate_extraction` didn't return `context` — downstream `save_records` would use "Unknown School" for all orchestrated records | Added `BuildingRoomContext` enrichment from `source.title` + return `context` in state |
+| H2 | HIGH | `OrchestratorStats` type inconsistency between `ExtractionState` (Pydantic model) and `ACMExtractionOutput` (dict) | Added `model_dump()` serialization roundtrip test to validate the bridge |
+| H3 | HIGH | Task 7.12 "Semaphore limits concurrency" marked complete but no test actually verified it | Added `test_semaphore_limits_concurrency` with tracked concurrent execution counts |
+| M1 | MEDIUM | `buildings_extracted` stat counted failed buildings (with errors) as extracted | Added `and not stats.errors` condition to exclude failed buildings |
+| M2 | MEDIUM | REGEX_ONLY path in `extract_building` lacked error handling (inconsistent with FULL_LLM) | Wrapped REGEX_ONLY extraction in try/except with same error stats pattern |
+| M3 | MEDIUM | `ROOM_ENTRY_PATTERN` only matched dash/en-dash separators, missing tab separators | Broadened regex to `(?:[-\u2013]|\t)` for dash, en-dash, or tab |
+
+**Tests Added:** 3 new tests (context enrichment, serialization roundtrip, semaphore verification)
+**All 47 orchestrator tests pass, 157 related tests pass, 0 regressions**
 
 ### File List
 
@@ -504,3 +523,4 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-02-09: Implemented E1-S20 Agentic Extraction Orchestrator - adds per-building extraction with three strategies (FULL_LLM, REGEX_ONLY, SKIP), parallel processing via asyncio.gather with semaphore, conditional graph routing preserving legacy fallback path, and comprehensive test suite (44 tests)
+- 2026-02-09: Code review fixes - 6 issues (3 HIGH, 3 MEDIUM) found and fixed: context enrichment for orchestrator path, OrchestratorStats type consistency, semaphore concurrency test, accurate building stats counting, REGEX_ONLY error handling, broader room pattern matching. 3 new tests added (47 total).

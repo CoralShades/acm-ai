@@ -502,6 +502,38 @@ class TestOrchestrateExtraction:
         assert stats.total_buildings == 1
 
     @pytest.mark.asyncio
+    async def test_orchestrator_returns_enriched_context(self):
+        """Orchestrator should return BuildingRoomContext with school_name from source.title."""
+        from open_notebook.extractors.acm_schemas import BuildingRoomContext
+
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = "Springfield Primary School"
+        source.full_text = _make_content_with_pages([
+            (10, "## B00A - Storage Shed\nB00A-R0001 - External Movement\nNo Asbestos"),
+        ])
+
+        inventory = _make_inventory([
+            _make_building("B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE),
+        ])
+        tags = _make_page_tags([(10, 4, 0.9)])
+
+        state = {
+            "source": source,
+            "building_inventory": inventory,
+            "page_tags": tags,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+        config = MagicMock()
+        result = await orchestrate_extraction(state, config)
+
+        assert "context" in result
+        ctx = result["context"]
+        assert isinstance(ctx, BuildingRoomContext)
+        assert ctx.school_name == "Springfield Primary School"
+
+    @pytest.mark.asyncio
     async def test_legacy_fallback_not_triggered(self):
         """When inventory is present, orchestrator should be used (not legacy)."""
         state = {"building_inventory": _make_inventory()}
@@ -589,6 +621,53 @@ class TestParallelExtraction:
         assert len(result["records"]) >= 1
         stats = result["orchestrator_stats"]
         assert stats.total_buildings == 2
+
+    @pytest.mark.asyncio
+    async def test_semaphore_limits_concurrency(self):
+        """Semaphore should limit concurrent building extractions."""
+        from open_notebook.extractors.orchestrator import _extract_buildings_parallel
+
+        max_concurrent_seen = 0
+        current_concurrent = 0
+        lock = asyncio.Lock()
+
+        original_extract = extract_building
+
+        async def tracked_extract(plan, content, state):
+            nonlocal max_concurrent_seen, current_concurrent
+            async with lock:
+                current_concurrent += 1
+                if current_concurrent > max_concurrent_seen:
+                    max_concurrent_seen = current_concurrent
+            await asyncio.sleep(0.05)  # Small delay to allow overlap
+            async with lock:
+                current_concurrent -= 1
+            return [], BuildingExtractionStats(
+                building_id=plan.building_id,
+                records_extracted=0,
+                pages_processed=1,
+                strategy_used=plan.strategy.value,
+                time_ms=50,
+            )
+
+        plans = [
+            BuildingExtractionPlan(
+                building_id=f"B{i:03d}", page_range=(i, i),
+                strategy=ExtractionStrategy.FULL_LLM,
+            )
+            for i in range(6)  # 6 buildings, max_concurrent=2
+        ]
+
+        with patch(
+            "open_notebook.extractors.orchestrator.extract_building",
+            side_effect=tracked_extract,
+        ):
+            results = await _extract_buildings_parallel(plans, "content", {}, max_concurrent=2)
+
+        assert len(results) == 6
+        assert max_concurrent_seen <= 2, (
+            f"Semaphore should limit to 2 concurrent, saw {max_concurrent_seen}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -715,3 +794,29 @@ class TestACMExtractionOutputOrchestratorStats:
             status="success",
         )
         assert output.orchestrator_stats is None
+
+    def test_model_dump_serialization_roundtrip(self):
+        """Verify OrchestratorStats.model_dump() produces valid dict for ACMExtractionOutput."""
+        plan = ExtractionPlan(
+            plans=[], total_buildings=2, buildings_to_extract=2,
+            buildings_skipped=0, estimated_llm_calls=1,
+        )
+        stats = OrchestratorStats(
+            total_buildings=2,
+            buildings_extracted=2,
+            buildings_skipped=0,
+            total_records=10,
+            strategy_distribution={"full_llm": 1, "regex_only": 1},
+            total_time_ms=3000,
+            plan=plan,
+        )
+        stats_dict = stats.model_dump()
+        output = ACMExtractionOutput(
+            source_id="source:test",
+            status="success",
+            total_records=10,
+            orchestrator_stats=stats_dict,
+        )
+        assert output.orchestrator_stats["total_buildings"] == 2
+        assert output.orchestrator_stats["strategy_distribution"]["full_llm"] == 1
+        assert output.orchestrator_stats["plan"]["total_buildings"] == 2
