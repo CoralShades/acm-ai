@@ -397,6 +397,79 @@ class TestClassifyACMItem:
         assert data["product_group"] == "T1 Cement products"
 
 
+class TestNormalizeRecommendation:
+    """Test suite for POST /api/acm/normalize endpoint."""
+
+    def test_normalize_maintain_in_situ(self, client):
+        """Test normalization of maintain-in-situ wording."""
+        response = client.post(
+            "/api/acm/normalize",
+            json={"recommendation": "Maintain in current condition and label"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["normalized_action"] == "maintain_in_situ"
+        assert data["confidence"] > 0
+        assert data["method"] in ("pattern", "config")
+        assert data["raw_text"] == "Maintain in current condition and label"
+
+    def test_normalize_remove_prior(self, client):
+        """Test normalization of removal recommendation."""
+        response = client.post(
+            "/api/acm/normalize",
+            json={
+                "recommendation": "Remove under controlled bonded asbestos removal conditions"
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["normalized_action"] == "remove_prior_to_refurb_or_demolition"
+
+    def test_normalize_restrict_access(self, client):
+        """Test normalization of restrict access recommendation."""
+        response = client.post(
+            "/api/acm/normalize",
+            json={"recommendation": "Restrict access ASAP"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["normalized_action"] == "restrict_access_immediately"
+
+    def test_normalize_unknown_returns_review_required(self, client):
+        """Test that unknown text returns review_required."""
+        response = client.post(
+            "/api/acm/normalize",
+            json={"recommendation": "Something completely unknown xyz 12345"}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["normalized_action"] == "review_required"
+        assert data["method"] == "none"
+        assert data["confidence"] == 0.0
+
+    def test_normalize_missing_recommendation(self, client):
+        """Test validation error when recommendation is missing."""
+        response = client.post(
+            "/api/acm/normalize",
+            json={}
+        )
+
+        assert response.status_code == 422
+
+    def test_normalize_empty_recommendation(self, client):
+        """Test validation error for empty recommendation."""
+        response = client.post(
+            "/api/acm/normalize",
+            json={"recommendation": ""}
+        )
+
+        assert response.status_code == 422
+
+
 class TestBatchClassifyACM:
     """Test suite for POST /api/acm/classify/batch endpoint."""
 

@@ -1,0 +1,3 @@
+-- Migration 15: Add normalized_action field for consultant wording normalization (E1-S12)
+DEFINE FIELD normalized_action ON acm_record TYPE option<string>;
+DEFINE INDEX acm_normalized_action ON acm_record FIELDS normalized_action;

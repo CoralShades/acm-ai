@@ -4,13 +4,10 @@ Prensa Pty Ltd Consultant Parser
 Handles "Division 5 Asbestos Assessment" PDF format with 15-column register tables.
 
 Detection markers: "Prensa Pty Ltd", "Division 5 Asbestos Assessment"
-Building pattern: floor-based (e.g., "Ground floor", "First floor", "Exterior")
 """
 
 import re
 from typing import Dict, List, Optional
-
-from loguru import logger
 
 from open_notebook.extractors.parsers.base import (
     ConsultantParser,
@@ -58,13 +55,6 @@ PRENSA_COLUMN_MAPPING: Dict[str, str] = {
     "control priority": "control_priority",
     "comments & recommendations": "comments",
 }
-
-# Building detection: floor-based patterns
-PRENSA_BUILDING_PATTERN = re.compile(
-    r"^([A-Za-z]+\s*floor|Exterior|Ground floor|First floor)",
-    re.IGNORECASE,
-)
-
 
 class PrensaParser(ConsultantParser):
     """Parser for Prensa Pty Ltd Division 5 Asbestos Assessment reports."""

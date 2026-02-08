@@ -1,0 +1,3 @@
+-- Migration 15 down: Remove normalized_action field
+REMOVE INDEX acm_normalized_action ON acm_record;
+REMOVE FIELD normalized_action ON acm_record;

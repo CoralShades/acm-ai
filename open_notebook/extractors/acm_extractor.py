@@ -112,6 +112,27 @@ class ExtractedACMRow:
             "page_number": self.page_number,
         }
 
+        # Normalize enum field values (E1-S12)
+        # Note: hygienist_recommendations, sample_result, disturbance_potential
+        # are populated by E1-S7 AI extraction — normalize those when available.
+        try:
+            from open_notebook.extractors.normalizers.enums import normalize_enum_value
+
+            if result.get("material_condition"):
+                result["material_condition"] = normalize_enum_value(
+                    result["material_condition"], "condition"
+                )
+            if result.get("result"):
+                result["result"] = normalize_enum_value(
+                    result["result"], "sample_result"
+                )
+            if result.get("friable"):
+                result["friable"] = normalize_enum_value(
+                    result["friable"], "friability"
+                )
+        except Exception as e:
+            logger.warning(f"Enum normalization failed for {self.product}: {e}")
+
         # Add product classification if enabled
         if classify:
             try:
@@ -153,7 +174,7 @@ ACM_OPTIONAL_HEADERS = {
     "risk",
 }
 
-# Regex patterns - using possessive quantifiers and atomic groups to prevent ReDoS
+# Regex patterns for structural markdown parsing
 BUILDING_PATTERN = re.compile(
     r"^#+\s*(?:Building[:\s]*)?([A-Z]\d+[A-Z]?)\s*[-–]\s*([^-–\n]+?)(?:\s*[-–]\s*(\d{4}))?(?:\s*[-–]\s*([^-–\n]+?))?$",
     re.IGNORECASE | re.MULTILINE,
@@ -174,7 +195,9 @@ SCHOOL_PATTERN = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
-PAGE_PATTERN = re.compile(r"(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+", re.IGNORECASE)
+PAGE_PATTERN = re.compile(
+    r"(?:[-—]+|<!--)\s*Page\s+(\d+)\s*(?:[-—]+|-->)", re.IGNORECASE
+)
 
 
 def extract_acm_records(
@@ -407,8 +430,37 @@ def _looks_like_table_header(
     return any(header in joined for header in ACM_REQUIRED_HEADERS)
 
 
+def _has_pipe_continuation(lines: List[str], from_idx: int) -> bool:
+    """Check if pipe lines after a gap are a table continuation (not a new table).
+
+    A new table starts with a header row followed by a separator (|---|).
+    A continuation is just data rows without a new header+separator.
+    Used by _extract_table_lines to determine if a table continues after a gap.
+    """
+    j = from_idx
+    while j < len(lines):
+        ahead = lines[j].strip()
+        if ahead == "" or PAGE_PATTERN.search(ahead):
+            j += 1
+            continue
+        if "|" not in ahead:
+            return False
+        # Found a pipe line - check if the NEXT line is a separator (|---|)
+        # If so, this is a new table header, not a continuation
+        if j + 1 < len(lines):
+            next_line = lines[j + 1].strip()
+            if "|" in next_line and "---" in next_line:
+                return False  # New table (header + separator)
+        return True  # Continuation row (no separator follows)
+    return False
+
+
 def _extract_table_lines(lines: List[str], start_idx: int) -> Tuple[List[str], int]:
     """Extract all lines belonging to a table starting at start_idx.
+
+    Handles multi-page tables by continuing past page markers (Bug 2 fix).
+    Page markers are included in the returned table_lines so that
+    _parse_acm_table can update context.current_page per row.
 
     Args:
         lines: All lines from the markdown document
@@ -416,7 +468,8 @@ def _extract_table_lines(lines: List[str], start_idx: int) -> Tuple[List[str], i
 
     Returns:
         Tuple of (table_lines, end_index) where:
-        - table_lines: List of all lines in the table (including header and separator)
+        - table_lines: List of all lines in the table (including header, separator,
+          and any page markers embedded in a multi-page table)
         - end_index: Index of the first line after the table
     """
     table_lines = []
@@ -427,14 +480,18 @@ def _extract_table_lines(lines: List[str], start_idx: int) -> Tuple[List[str], i
         if "|" in line:
             table_lines.append(line)
             i += 1
+        elif table_lines and PAGE_PATTERN.search(line):
+            # Page marker within a multi-page table - include for tracking
+            table_lines.append(line)
+            i += 1
         elif line == "" and table_lines:
-            # Empty line might end table, but check next line
-            if i + 1 < len(lines) and "|" in lines[i + 1]:
-                i += 1
+            # Empty line - check if table continues after gap (possibly past page markers)
+            if _has_pipe_continuation(lines, i + 1):
+                i += 1  # Skip empty line, continue collecting
             else:
                 break
         elif table_lines:
-            # Non-pipe line ends table
+            # Non-pipe, non-page-marker line ends table
             break
         else:
             i += 1
@@ -479,7 +536,16 @@ def _parse_acm_table(
     data_start = 2 if len(table_lines) > 2 and "---" in table_lines[1] else 1
 
     for line in table_lines[data_start:]:
+        # Check for page markers FIRST (before "---" check since page markers contain ---)
+        page_match = PAGE_PATTERN.search(line)
+        if page_match:
+            context.current_page = int(page_match.group(1))
+            continue
+
         if "---" in line:
+            continue
+
+        if not line or "|" not in line:
             continue
 
         cells = [c.strip() for c in line.split("|")]
@@ -562,6 +628,11 @@ def _create_header_map_from_parser(
             new_name = field_renames[field_name]
             if new_name:
                 renamed[new_name] = idx
+            else:
+                logger.debug(
+                    f"Parser '{parser.name}': dropping field '{field_name}' "
+                    f"(no ExtractedACMRow equivalent)"
+                )
         else:
             renamed[field_name] = idx
 

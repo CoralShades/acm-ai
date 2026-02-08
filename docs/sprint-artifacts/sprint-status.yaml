@@ -12,6 +12,7 @@
 #   - backlog: Epic exists in epic file but not started
 #   - in-progress: Epic being actively worked on
 #   - done: All stories in epic completed
+#   - archived: Epic skipped/abandoned - not part of active development
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
@@ -20,6 +21,7 @@
 #   - in-progress: Developer actively working on implementation
 #   - review: Implementation complete, ready for review
 #   - done: Story completed
+#   - archived: Story skipped/abandoned as part of archived epic
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -93,12 +95,12 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: Export Functionality (P0 - promoted from P1)
-  # 2/4 stories complete, 2 remaining (backlog)
+  # 2/4 stories complete, 2 ready-for-dev
   epic-5: in-progress
   e5-s1-implement-csv-export: done
   e5-s2-implement-excel-export: done
   e5-s3-bar-template-management: ready-for-dev
-  e5-s4-export-field-mapping-configuration: backlog
+  e5-s4-export-field-mapping-configuration: ready-for-dev
   epic-5-retrospective: optional
 
   # Epic 6: Rebranding to ACM-AI (P1)
@@ -120,19 +122,20 @@ development_status:
   e7-s7-site-configuration-during-upload: done
   epic-7-retrospective: optional
 
-  # Epic 8: UI Refresh - Bento Grid Design (P1)
-  epic-8: done
-  e8-s1-install-ui-ux-pro-max-skill: done
-  e8-s2-define-acm-ai-design-tokens: done
-  e8-s3-create-bento-card-component: done
-  e8-s4-create-bento-grid-layout-component: done
-  e8-s5-redesign-dashboard-home-page: done
-  e8-s6-redesign-sources-list-page: done
-  e8-s7-redesign-source-detail-page: done
-  e8-s8-update-navigation-sidebar: done
-  e8-s9-typography-font-updates: done
-  e8-s10-dark-mode-refinement: done
-  epic-8-retrospective: optional
+  # Epic 8: UI Refresh - Bento Grid Design (P1) - ARCHIVED 2026-02-08
+  # Reason: Skipped by decision - moved to archive
+  epic-8: archived
+  e8-s1-install-ui-ux-pro-max-skill: archived
+  e8-s2-define-acm-ai-design-tokens: archived
+  e8-s3-create-bento-card-component: archived
+  e8-s4-create-bento-grid-layout-component: archived
+  e8-s5-redesign-dashboard-home-page: archived
+  e8-s6-redesign-sources-list-page: archived
+  e8-s7-redesign-source-detail-page: archived
+  e8-s8-update-navigation-sidebar: archived
+  e8-s9-typography-font-updates: archived
+  e8-s10-dark-mode-refinement: archived
+  epic-8-retrospective: archived
 
   # Epic 9: Document Library Management (P0)
   # 2/3 stories complete, 1 remaining (drafted)

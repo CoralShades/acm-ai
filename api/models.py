@@ -692,6 +692,25 @@ class BatchClassifyResponse(BaseModel):
     )
 
 
+class NormalizeRequest(BaseModel):
+    """Request to normalize a consultant recommendation."""
+
+    recommendation: str = Field(..., min_length=1, description="Raw consultant recommendation text")
+
+
+class NormalizeResponse(BaseModel):
+    """Response from recommendation normalization."""
+
+    raw_text: str = Field(..., description="Original input text")
+    normalized_action: Optional[str] = Field(
+        None, description="Canonical action (e.g., 'maintain_in_situ', 'review_required')"
+    )
+    confidence: float = Field(..., description="Normalization confidence score (0.0-1.0)")
+    method: Literal["pattern", "config", "none"] = Field(
+        ..., description="Normalization method used"
+    )
+
+
 class TaxonomyGroupResponse(BaseModel):
     """Response for taxonomy product group."""
 

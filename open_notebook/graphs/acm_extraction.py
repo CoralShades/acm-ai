@@ -247,10 +247,14 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
     if tokens <= threshold:
         # No chunking needed, but still extract first page number if available
         page_num = 1
-        first_match = re.search(page_pattern, content, re.IGNORECASE)
-        if first_match:
-            page_num = int(next(g for g in first_match.groups() if g is not None))
-        return [{"content": content, "page_number": page_num, "chunk_index": 0}]
+        # Collect ALL page markers for per-record page assignment
+        page_markers = {}
+        for match in re.finditer(page_pattern, content, re.IGNORECASE):
+            pg = int(next(g for g in match.groups() if g is not None))
+            page_markers[match.start()] = pg
+        if page_markers:
+            page_num = page_markers[min(page_markers.keys())]
+        return [{"content": content, "page_number": page_num, "page_markers": page_markers, "chunk_index": 0}]
 
     chunks = []
 
@@ -275,12 +279,14 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
                     chunks.append({
                         "content": sub,
                         "page_number": page_num,
+                        "page_markers": {0: page_num},
                         "chunk_index": len(chunks)
                     })
             else:
                 chunks.append({
                     "content": page_content,
                     "page_number": page_num,
+                    "page_markers": {0: page_num},
                     "chunk_index": len(chunks)
                 })
     else:
@@ -302,6 +308,7 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
             chunks.append({
                 "content": content[start:end],
                 "page_number": page_num,
+                "page_markers": {},
                 "chunk_index": len(chunks)
             })
 
@@ -335,6 +342,48 @@ def _split_by_sections(content: str, max_tokens: int, base_page: int) -> List[st
         chunks.append(current_chunk)
 
     return chunks if chunks else [content]
+
+
+def _assign_record_page(
+    product: Optional[str],
+    chunk_content: str,
+    page_markers: Dict[int, int],
+    default_page: int,
+    search_after: int = 0,
+) -> Tuple[int, int]:
+    """Assign a page number to a record based on its position in chunk content.
+
+    Searches for the record's product text in the chunk content, then finds the
+    nearest preceding page marker to determine the correct page number.
+
+    Args:
+        product: The record's product name to search for in content
+        chunk_content: The chunk's text content
+        page_markers: Dict mapping character offset -> page number
+        default_page: Fallback page if product not found
+        search_after: Start searching for product after this character offset.
+            Used to handle duplicate product names within the same chunk.
+
+    Returns:
+        Tuple of (assigned_page, found_position). Position is -1 if not found.
+    """
+    if not product or not page_markers:
+        return default_page, -1
+
+    # Find where the product appears in the chunk content
+    pos = chunk_content.lower().find(product.lower(), search_after)
+    if pos < 0:
+        return default_page, -1
+
+    # Find the last page marker before this position
+    assigned_page = default_page
+    for offset in sorted(page_markers.keys()):
+        if offset <= pos:
+            assigned_page = page_markers[offset]
+        else:
+            break
+
+    return assigned_page, pos
 
 
 async def prepare_context(state: dict, config: RunnableConfig) -> dict:
@@ -464,10 +513,21 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         new_records = result.records
 
         # Ensure page_number is set on all records from this chunk
-        # This provides fallback when LLM doesn't extract page numbers
+        # Use page_markers for position-based assignment instead of blanket chunk page
+        # Track search positions per product to handle duplicate product names
+        page_markers = chunk.get("page_markers", {})
+        search_positions: Dict[str, int] = {}
         for record in new_records:
             if record.page_number is None:
-                record.page_number = page_number
+                product_key = (record.product or "").lower()
+                search_start = search_positions.get(product_key, 0)
+                page, pos = _assign_record_page(
+                    record.product, chunk_content, page_markers, page_number,
+                    search_start,
+                )
+                record.page_number = page
+                if record.product and pos >= 0:
+                    search_positions[product_key] = pos + len(record.product)
 
         if new_records:
             # Update context from the last record for continuity
