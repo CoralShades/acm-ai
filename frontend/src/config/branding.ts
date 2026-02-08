@@ -1,31 +1,42 @@
 /**
  * Centralized branding configuration for ACM-AI
  *
- * This file contains all branding-related constants used throughout the application.
- * Update values here to change branding across the entire app.
+ * VAEA (Victorian Asbestos Eradication Agency) branding
  */
 
 export const BRANDING = {
+  /** Organization name */
+  organization: 'VAEA',
+
+  /** Full organization name */
+  organizationFull: 'Victorian Asbestos Eradication Agency',
+
   /** Short application name */
   name: 'ACM-AI',
 
   /** Full application name with description */
-  fullName: 'ACM-AI - Asbestos Register Management',
+  fullName: 'VAEA ACM-AI - Asbestos Register Management',
 
   /** Brief tagline for the application */
   tagline: 'AI-powered compliance document analysis',
 
   /** Longer description for metadata and marketing */
-  description: 'Analyze and manage Asbestos Containing Material registers with AI assistance',
+  description: 'Victorian government platform for managing Asbestos Containing Material registers with AI assistance',
 
   /** SEO keywords */
-  keywords: ['ACM', 'asbestos', 'SAMP', 'compliance', 'AI', 'register', 'management'],
+  keywords: ['VAEA', 'ACM', 'asbestos', 'SAMP', 'compliance', 'AI', 'register', 'management', 'Victorian government'],
 
   /** API information */
   api: {
-    title: 'ACM-AI API',
-    description: 'API for ACM-AI - Asbestos Containing Material Register Analysis',
+    title: 'VAEA ACM-AI API',
+    description: 'API for VAEA ACM-AI - Asbestos Containing Material Register Analysis',
     version: '1.0.0',
+  },
+
+  /** Footer text */
+  footer: {
+    acknowledgment: 'VAEA acknowledges the Traditional Owners of Country throughout Victoria and recognises their continuing connection to land, waters and culture. We pay our respects to their Elders past, present and emerging.',
+    vendor: 'Powered by CoralShades',
   },
 } as const
 

@@ -1,17 +1,21 @@
 {
-  "name": "ACM-AI",
+  "name": "VAEA ACM-AI",
   "short_name": "ACM-AI",
-  "description": "AI-powered Asbestos Register Management",
+  "description": "Victorian government platform for managing Asbestos Containing Material registers",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "background_color": "#F2F2F2",
+  "theme_color": "#53A69D",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
