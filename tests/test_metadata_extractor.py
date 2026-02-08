@@ -315,6 +315,41 @@ class TestHeuristicRegexExtraction:
         assert result.inspection_dates is not None
         assert len(result.inspection_dates) >= 1
 
+    def test_extract_address_all_caps(self):
+        """Extracts address even when PDF text is ALL CAPS."""
+        from open_notebook.extractors.metadata_extractor import _heuristic_extract
+
+        content = """SAMP REPORT
+        123 SMITH STREET
+        RICHMOND VIC 3121
+        """
+        result = _heuristic_extract(content)
+        assert result.site_address is not None
+        assert "SMITH" in result.site_address or "Smith" in result.site_address
+
+    def test_extract_suburb_all_caps(self):
+        """Extracts suburb and postcode from ALL CAPS address."""
+        from open_notebook.extractors.metadata_extractor import _heuristic_extract
+
+        content = """REPORT
+        45 MAIN ROAD
+        BALLARAT VIC 3350
+        """
+        result = _heuristic_extract(content)
+        assert result.suburb is not None
+        assert result.postcode == "3350"
+
+    def test_date_regex_rejects_short_years(self):
+        """Date regex requires 4-digit year, rejects ambiguous patterns."""
+        from open_notebook.extractors.metadata_extractor import _heuristic_extract
+
+        # Should NOT match version-like patterns
+        content = """Version 1/2/3
+        No real dates here.
+        """
+        result = _heuristic_extract(content)
+        assert result.report_date is None
+
     def test_heuristic_empty_content(self):
         """Heuristic returns minimal DocumentMeta for empty content."""
         from open_notebook.extractors.metadata_extractor import _heuristic_extract
@@ -535,6 +570,39 @@ Ballarat VIC 3350
         assert confidence["site_name"] == "extracted"
         assert confidence["suburb"] == "missing"
         assert confidence["postcode"] == "missing"
+
+    @pytest.mark.asyncio
+    async def test_confidence_scoring_inferred(self):
+        """Fields from heuristic (not LLM) are marked 'inferred'."""
+        from open_notebook.extractors.metadata_extractor import _compute_confidence
+        from open_notebook.extractors.parsers.base import DocumentMeta
+
+        meta = DocumentMeta(
+            consultant_name="Prensa",
+            site_name="Test School",
+            report_reference="REF-001",
+        )
+        # Only consultant_name came from LLM; site_name and report_reference from heuristic
+        confidence = _compute_confidence(meta, llm_fields={"consultant_name"})
+        assert confidence["consultant_name"] == "extracted"
+        assert confidence["site_name"] == "inferred"
+        assert confidence["report_reference"] == "inferred"
+
+    @pytest.mark.asyncio
+    async def test_confidence_scoring_no_llm_fields(self):
+        """All non-None fields are 'inferred' when no LLM was used."""
+        from open_notebook.extractors.metadata_extractor import _compute_confidence
+        from open_notebook.extractors.parsers.base import DocumentMeta
+
+        meta = DocumentMeta(
+            consultant_name="Prensa",
+            report_reference="REF-001",
+            suburb=None,
+        )
+        confidence = _compute_confidence(meta, llm_fields=None)
+        assert confidence["consultant_name"] == "inferred"
+        assert confidence["report_reference"] == "inferred"
+        assert confidence["suburb"] == "missing"
 
 
 # ============================================================================

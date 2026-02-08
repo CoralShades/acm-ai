@@ -26,15 +26,15 @@ COVER_PAGE_COUNT = 5
 
 # Australian address patterns
 _ADDRESS_PATTERN = re.compile(
-    r"(\d+[-/]?\d*)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+"
+    r"(\d+[-/]?\d*)\s+([A-Za-z]+(?:\s+[A-Za-z]+)*\s+"
     r"(?:Street|St|Road|Rd|Avenue|Ave|Drive|Dr|Lane|Ln|Court|Ct|"
     r"Crescent|Cres|Boulevard|Blvd|Way|Place|Pl))",
-    re.MULTILINE,
+    re.MULTILINE | re.IGNORECASE,
 )
 _SUBURB_STATE_POSTCODE = re.compile(
-    r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+"
+    r"([A-Za-z]+(?:\s+[A-Za-z]+)*)\s+"
     r"(?:VIC|NSW|QLD|SA|WA|TAS|NT|ACT)\s+(\d{4})",
-    re.MULTILINE,
+    re.MULTILINE | re.IGNORECASE,
 )
 
 # Report reference patterns
@@ -47,7 +47,7 @@ _REPORT_REF_PATTERNS = [
 
 # Date patterns (Australian format)
 _DATE_PATTERNS = [
-    re.compile(r"(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})"),
+    re.compile(r"(?<!\d)(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})(?!\d)"),
     re.compile(
         r"(\d{1,2}\s+(?:January|February|March|April|May|June|July|August|"
         r"September|October|November|December)\s+\d{4})",
@@ -314,7 +314,7 @@ def _compute_confidence(
         elif name in llm_fields:
             confidence[name] = "extracted"
         else:
-            confidence[name] = "extracted"
+            confidence[name] = "inferred"
 
     return confidence
 
@@ -343,11 +343,10 @@ async def auto_populate_site_config(
     if not mappings:
         return
 
-    # Check existing config
+    # Check existing config and filter out fields that already have values
     existing = await SiteConfig.get_by_source(source_id)
 
     if existing:
-        # Filter out fields that already have values
         fields_to_fill = {}
         for field_name, value in mappings.items():
             current = getattr(existing, field_name, None)
@@ -355,14 +354,21 @@ async def auto_populate_site_config(
                 fields_to_fill[field_name] = value
         if not fields_to_fill:
             return
-        mappings = fields_to_fill
-
-    # Apply auto-fill
-    await SiteConfig.upsert(source_id, **mappings)
-    logger.info(
-        f"Auto-filled SiteConfig for source {source_id}: "
-        f"{list(mappings.keys())}"
-    )
+        # Update existing record directly to avoid double DB lookup
+        for field_name, value in fields_to_fill.items():
+            setattr(existing, field_name, value)
+        await existing.save()
+        logger.info(
+            f"Auto-filled SiteConfig for source {source_id}: "
+            f"{list(fields_to_fill.keys())}"
+        )
+    else:
+        # No existing config - create via upsert
+        await SiteConfig.upsert(source_id, **mappings)
+        logger.info(
+            f"Auto-filled SiteConfig for source {source_id}: "
+            f"{list(mappings.keys())}"
+        )
 
 
 # ============================================================================
@@ -418,6 +424,7 @@ async def extract_document_metadata(
         f"fields={len(merged.get_extracted_fields())}, "
         f"confidence_breakdown="
         f"{sum(1 for v in merged.field_confidence.values() if v == 'extracted')} extracted, "
+        f"{sum(1 for v in merged.field_confidence.values() if v == 'inferred')} inferred, "
         f"{sum(1 for v in merged.field_confidence.values() if v == 'missing')} missing"
     )
 
