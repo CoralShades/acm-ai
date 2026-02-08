@@ -1,5 +1,7 @@
 'use client';
 
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BentoGrid } from '@/components/ui/bento-grid';
 import {
@@ -28,7 +30,7 @@ import Link from 'next/link';
 import { RiskChart } from '@/components/dashboard/RiskChart';
 import { RecentSourcesList } from '@/components/dashboard/RecentSourcesList';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const { data: sources, isLoading: sourcesLoading, error: sourcesError } = useSources();
   const { data: acmSummary, isLoading: acmLoading, error: acmError } = useACMSummary();
 
@@ -228,4 +230,20 @@ export default function DashboardPage() {
       </BentoGrid>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="Dashboard"
+          reloadUrl="/"
+        />
+      )}
+    >
+      <DashboardPageContent />
+    </ErrorBoundary>
+  )
 }
