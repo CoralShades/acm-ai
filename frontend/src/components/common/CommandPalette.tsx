@@ -23,6 +23,11 @@ import {
   Sun,
   Moon,
   Monitor,
+  Upload,
+  FileSpreadsheet,
+  Sparkles,
+  LayoutDashboard,
+  FileWarning,
 } from 'lucide-react'
 
 const navigationItems = [
@@ -41,6 +46,19 @@ const themeItems = [
   { name: 'Light Theme', value: 'light' as const, icon: Sun, keywords: ['bright', 'day'] },
   { name: 'Dark Theme', value: 'dark' as const, icon: Moon, keywords: ['night'] },
   { name: 'System Theme', value: 'system' as const, icon: Monitor, keywords: ['auto', 'default'] },
+]
+
+const actionItems = [
+  { name: 'Upload Document', action: 'upload', icon: Upload, keywords: ['add', 'import', 'pdf', 'file'] },
+  { name: 'Export ACM to CSV', action: 'export-csv', icon: FileText, keywords: ['download', 'save', 'export'] },
+  { name: 'Export ACM to Excel', action: 'export-excel', icon: FileSpreadsheet, keywords: ['download', 'save', 'bar', 'xlsx'] },
+  { name: 'Extract ACM Records', action: 'extract', icon: Sparkles, keywords: ['ai', 'analyze', 'process', 'run'] },
+  { name: 'Add ACM Record', action: 'add-record', icon: Plus, keywords: ['create', 'new', 'manual'] },
+]
+
+const viewItems = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, keywords: ['home', 'overview', 'stats'] },
+  { name: 'ACM Register', href: '/acm', icon: FileWarning, keywords: ['records', 'grid', 'data', 'table'] },
 ]
 
 export function CommandPalette() {
@@ -113,6 +131,13 @@ export function CommandPalette() {
     handleSelect(() => setTheme(theme))
   }, [handleSelect, setTheme])
 
+  const handleAction = useCallback((action: string) => {
+    handleSelect(() => {
+      const event = new CustomEvent('acm-command', { detail: { action } })
+      window.dispatchEvent(event)
+    })
+  }, [handleSelect])
+
   // Check if query matches any command (navigation, create, theme, or notebook)
   const queryLower = query.toLowerCase().trim()
   const hasCommandMatch = useMemo(() => {
@@ -126,6 +151,14 @@ export function CommandPalette() {
         item.name.toLowerCase().includes(queryLower)
       ) ||
       themeItems.some(item =>
+        item.name.toLowerCase().includes(queryLower) ||
+        item.keywords.some(k => k.includes(queryLower))
+      ) ||
+      actionItems.some(item =>
+        item.name.toLowerCase().includes(queryLower) ||
+        item.keywords.some(k => k.includes(queryLower))
+      ) ||
+      viewItems.some(item =>
         item.name.toLowerCase().includes(queryLower) ||
         item.keywords.some(k => k.includes(queryLower))
       )
@@ -174,6 +207,34 @@ export function CommandPalette() {
         {/* Navigation */}
         <CommandGroup heading="Navigation">
           {navigationItems.map((item) => (
+            <CommandItem
+              key={item.href}
+              value={`${item.name} ${item.keywords.join(' ')}`}
+              onSelect={() => handleNavigate(item.href)}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.name}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+
+        {/* Actions */}
+        <CommandGroup heading="Actions">
+          {actionItems.map((item) => (
+            <CommandItem
+              key={item.action}
+              value={`${item.name} ${item.keywords.join(' ')}`}
+              onSelect={() => handleAction(item.action)}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.name}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+
+        {/* Quick Views */}
+        <CommandGroup heading="Go to">
+          {viewItems.map((item) => (
             <CommandItem
               key={item.href}
               value={`${item.name} ${item.keywords.join(' ')}`}
