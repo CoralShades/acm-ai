@@ -362,6 +362,10 @@ def _extract_from_markdown(
 
     # Convert to dicts with optional classification
     result = [row.to_acm_record_dict(source_id, classify=classify) for row in extracted_rows]
+
+    # Generate enriched_text for each record (E1-S14)
+    _enrich_record_dicts(result)
+
     logger.info(f"Extracted {len(result)} ACM records from source {source_id}")
     return result
 
@@ -686,3 +690,19 @@ def _create_row_from_cells(
         risk_status=get_cell("risk_status"),
         result=result or "",
     )
+
+
+def _enrich_record_dicts(record_dicts: List[dict]) -> None:
+    """Generate enriched_text for each record dict (E1-S14).
+
+    Creates temporary ACMRecord instances to use the enrichment method,
+    then stores the result back in the dict.
+    """
+    from open_notebook.domain.acm import ACMRecord
+
+    for record_dict in record_dicts:
+        try:
+            temp_record = ACMRecord(**record_dict)
+            record_dict["enriched_text"] = temp_record.get_enriched_embedding_text()
+        except Exception as e:
+            logger.debug(f"Could not generate enriched_text: {e}")

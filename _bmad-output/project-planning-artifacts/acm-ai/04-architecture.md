@@ -3,7 +3,9 @@
 > **Project:** ACM-AI v1.0
 > **Date:** 2025-12-07 (Updated: 2026-02-08)
 > **Status:** Draft - Updated for UX &amp; Enterprise Readiness
-> **Change Log:** 2026-02-08 - Frontend Design System Architecture (UX Audit)
+> **Change Log:**
+> - 2026-02-08 - Frontend Design System Architecture (UX Audit)
+> - 2026-02-08 - Sections 5.2, 5.3 rewritten: Generic Configurable Parser Architecture (course correction per `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md`)
 
 ---
 
@@ -595,99 +597,139 @@ class MineruTableExtractor:
         return tables
 ```
 
-### 5.2 Extensible Consultant Parser Architecture
+### 5.2 Generic Configurable Parser Architecture
 
-> **Updated 2026-02-05:** Formalized extensible parser pattern for multi-consultant support.
+> **Updated 2026-02-08:** Course correction -- replaced ConsultantParser ABC + registry pattern
+> with a single GenericParser driven by `FieldSchemaConfig`. See
+> `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md`.
 
-```python
-from abc import ABC, abstractmethod
+**Design Rationale:** Instead of building a separate parser class per consultant (Prensa,
+Greencap, etc.), a single `GenericParser` consumes a declarative field configuration that
+describes column mappings, enums, and business rules. New consultant formats are supported
+by adding/editing JSON config files rather than writing new Python classes.
 
-class ConsultantParser(ABC):
-    """Abstract base for consultant-specific extraction logic."""
+#### 5.2.1 Config Source-of-Truth Flow
 
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Consultant identifier (e.g., 'prensa', 'greencap')"""
-
-    @abstractmethod
-    def detect(self, text: str) -> bool:
-        """Returns True if this parser handles this PDF format."""
-
-    @abstractmethod
-    def extract_metadata(self, pages: dict[int, str]) -> DocumentMeta:
-        """Extract document metadata from cover/header pages."""
-
-    @abstractmethod
-    def extract_items(self, tables: list[dict]) -> list[RawACMItem]:
-        """Extract raw ACM items from table data."""
-
-    @abstractmethod
-    def get_column_mapping(self) -> dict[str, str]:
-        """Map consultant columns to standard raw fields."""
-
-# Parser registry - add new parsers here
-PARSER_REGISTRY: list[type[ConsultantParser]] = [
-    PrensaParser,
-    GreencapParser,
-    GenericParser,  # Fallback
-]
-
-def get_parser(pdf_text: str) -> ConsultantParser:
-    """Select appropriate parser for PDF content."""
-    for parser_cls in PARSER_REGISTRY:
-        parser = parser_cls()
-        if parser.detect(pdf_text):
-            return parser
-    return GenericParser()
+```
+BAR Excel Template (authoritative field list)
+        │
+        ▼
+JSON Config Files  (checked into repo: config/field_schemas/*.json)
+        │
+        ▼
+SurrealDB `field_schema` table  (loaded at API startup / on-demand)
+        │
+        ├──▶ GenericParser        — loads config at extraction time
+        ├──▶ AG Grid columns      — reads config for column definitions & groups
+        └──▶ Excel / CSV export   — reads config for column order & display names
 ```
 
-### 5.3 Consultant Format Patterns
+#### 5.2.2 Pydantic Configuration Models
 
 ```python
-# Consultant-specific detection and parsing patterns
-CONSULTANT_PATTERNS = {
-    "prensa": {
-        "company_marker": "Prensa Pty Ltd",
-        "headers": [
-            "area / level", "room & location", "feature", "item description",
-            "hazard type", "hazard status", "sample number", "friability",
-            "labelled y/n", "disturb. potential", "condition", "risk status",
-            "approx. quantity", "control priority", "comments & recommendations"
-        ],
-        "building_pattern": r"^([A-Za-z]+\s*floor|Exterior|Ground floor|First floor)",
-    },
-    "greencap": {
-        "company_marker": "Greencap",
-        "headers": [
-            "item no.", "location - item description", "hazard type",
-            "sample no.", "item status", "photo no.", "est. extent",
-            "condition", "friability", "dist. potential", "risk rating",
-            "current label", "reinspect date", "control priority"
-        ],
-        "building_pattern": r"Building Name:\s*(.+)",
-        "site_metadata": ["Full Address:", "Est. Building Size:", "Est. Building Age:"]
-    }
-}
+from pydantic import BaseModel
+from typing import Optional
 
-# Generic ACM table headers (fallback)
-ACM_TABLE_HEADERS = [
-    "product",
-    "material description",
-    "extent",
-    "location",
-    "friable",
-    "material condition",
-    "risk status",
-    "result"
-]
+class FieldDef(BaseModel):
+    """Single field definition derived from the BAR Excel template."""
+    internal_name: str          # e.g. "material_condition"
+    display_name: str           # e.g. "Material Condition"
+    excel_column: str           # e.g. "AH" (BAR column letter)
+    col_index: int              # 0-based position in BAR spreadsheet
+    field_type: str             # "string" | "int" | "float" | "datetime" | "enum"
+    required: bool              # True if BAR marks this as mandatory
+    active: bool                # False to soft-hide without schema migration
+    enum_name: Optional[str]    # Key into FieldSchemaConfig.enums (if field_type == "enum")
+    group: str                  # UI column group: "Organization", "Building", "Location", etc.
 
+class FieldSchemaConfig(BaseModel):
+    """Complete field schema configuration loaded from JSON / SurrealDB."""
+    fields: list[FieldDef]
+    enums: dict[str, list[str]]          # e.g. {"risk_status": ["Low","Medium","High","Very High"]}
+    business_rules: dict[str, str]       # e.g. {"negative_result_clears_condition": "true"}
+    version: str                         # Semantic version of this config
+    source_template: str                 # e.g. "Victorian BAR v4.2"
+```
+
+#### 5.2.3 GenericParser
+
+```python
+class GenericParser:
+    """Single parser that handles any consultant format via FieldSchemaConfig."""
+
+    def __init__(self, config: FieldSchemaConfig):
+        self.config = config
+        self._field_map = {f.internal_name: f for f in config.fields}
+
+    def extract_items(self, tables: list[dict]) -> list[RawACMItem]:
+        """Extract raw ACM items using config-driven column mapping."""
+        ...
+
+    def get_column_mapping(self) -> dict[str, str]:
+        """Return mapping of display_name -> internal_name from config."""
+        return {f.display_name: f.internal_name for f in self.config.fields if f.active}
+
+    def get_export_columns(self) -> list[tuple[str, str]]:
+        """Return (internal_name, excel_column) pairs in BAR column order."""
+        return [
+            (f.internal_name, f.excel_column)
+            for f in sorted(self.config.fields, key=lambda f: f.col_index)
+            if f.active
+        ]
+```
+
+### 5.3 Unified Field Configuration Schema
+
+> **Updated 2026-02-08:** Replaced hardcoded consultant pattern dictionaries with the
+> unified `FieldSchemaConfig` described in Section 5.2. Consultant-specific header lists
+> and regex patterns are no longer maintained in Python source; they are expressed
+> declaratively in JSON config files.
+
+#### 5.3.1 Configuration File Layout
+
+```
+config/field_schemas/
+├── bar_v4.json            # Victorian BAR v4 template (default)
+└── README.md              # How to derive a new config from a BAR Excel file
+```
+
+Each JSON file conforms to the `FieldSchemaConfig` Pydantic model (Section 5.2.2).
+
+#### 5.3.2 SurrealDB `field_schema` Table
+
+```sql
+DEFINE TABLE field_schema SCHEMAFULL;
+DEFINE FIELD version        ON field_schema TYPE string;
+DEFINE FIELD source_template ON field_schema TYPE string;
+DEFINE FIELD fields          ON field_schema TYPE array;       -- array of FieldDef objects
+DEFINE FIELD enums           ON field_schema TYPE object;      -- enum_name -> values
+DEFINE FIELD business_rules  ON field_schema TYPE object;      -- rule_name -> value
+DEFINE FIELD active          ON field_schema TYPE bool DEFAULT true;
+DEFINE FIELD created_at      ON field_schema TYPE datetime DEFAULT time::now();
+DEFINE INDEX schema_version  ON field_schema FIELDS version;
+```
+
+#### 5.3.3 Config Consumers
+
+| Consumer | How It Uses Config |
+|----------|-------------------|
+| **GenericParser** | Loads active `FieldSchemaConfig` at extraction time to map PDF columns to internal field names |
+| **AG Grid (frontend)** | Fetches `/api/acm/field-schema` to build `ColDef[]` dynamically (field groups, display names, visibility) |
+| **Excel/CSV Export** | Reads `col_index` and `excel_column` to produce BAR-ordered output with correct column headers |
+| **Validation** | Uses `enums` and `business_rules` to validate and normalize extracted values |
+
+#### 5.3.4 Regex Helpers (Retained)
+
+The following structural patterns are still used by `GenericParser` for detecting building
+and room header rows within extracted table data. They are not consultant-specific.
+
+```python
 # Building header pattern
-BUILDING_PATTERN = r"^([A-Z]\d+[A-Z]?)\s*[-–]\s*(.+?)(?:\s*[-–]\s*(\d{4}))?$"
+BUILDING_PATTERN = r"^([A-Z]\d+[A-Z]?)\s*[-\u2013]\s*(.+?)(?:\s*[-\u2013]\s*(\d{4}))?$"
 # Example: "B00A - Other-Dse Admin - 1924"
 
 # Room header pattern
-ROOM_PATTERN = r"^([A-Z]\d+[A-Z]?-R\d+)\s*[-–]\s*(.+?)(?:\s*[-–]\s*([\d.]+)\s*m²)?$"
+ROOM_PATTERN = r"^([A-Z]\d+[A-Z]?-R\d+)\s*[-\u2013]\s*(.+?)(?:\s*[-\u2013]\s*([\d.]+)\s*m\u00b2)?$"
 # Example: "B00A-R0001 - External Movement"
 ```
 

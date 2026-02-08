@@ -75,8 +75,10 @@ class ACMEmbeddingService:
 
             logger.debug(f"Processing batch {batch_num}/{total_batches} ({len(batch)} records)")
 
-            # Generate embedding text for each record
-            texts = [r.get_embedding_text() for r in batch]
+            # Generate enriched embedding text for each record (E1-S14)
+            for r in batch:
+                r.enriched_text = r.get_enriched_embedding_text()
+            texts = [r.enriched_text or r.get_embedding_text() for r in batch]
 
             # Filter out empty texts
             valid_indices = [idx for idx, text in enumerate(texts) if text]
@@ -95,7 +97,7 @@ class ACMEmbeddingService:
                 for idx, embedding in zip(valid_indices, embeddings):
                     record = batch[idx]
                     record.embedding = embedding
-                    record.embedding_text = texts[idx]
+                    record.embedding_text = record.get_embedding_text()
                     record.embedding_model = model_name
                     record.embedded_at = now
                     embedded_count += 1
@@ -150,6 +152,63 @@ class ACMEmbeddingService:
         except Exception as e:
             logger.error(f"Query embedding failed: {e}")
             raise
+
+    async def re_embed_acm_records(
+        self, source_id: Optional[str] = None, force: bool = False
+    ) -> int:
+        """Re-embed ACM records with contextual enrichment (E1-S14).
+
+        Fetches ACM records, generates enriched_text, re-embeds in batches,
+        and saves updated records to the database.
+
+        Args:
+            source_id: Optional source ID to filter records.
+            force: If True, re-embed all records even if already embedded.
+
+        Returns:
+            Number of records processed.
+        """
+        from open_notebook.database.repository import repo_query
+
+        # Fetch records
+        if source_id:
+            records = await ACMRecord.get_by_source(source_id)
+        else:
+            result = await repo_query("SELECT * FROM acm_record")
+            records = [ACMRecord(**r) for r in result] if result else []
+
+        if not records:
+            logger.info("No ACM records found for re-embedding")
+            return 0
+
+        # Filter: skip already-embedded unless force=True
+        if not force:
+            records = [r for r in records if r.embedding is None]
+            if not records:
+                logger.info("All records already embedded, use force=True to re-embed")
+                return 0
+
+        logger.info(f"Re-embedding {len(records)} ACM records (force={force})")
+
+        # Generate enriched_text for each record
+        for record in records:
+            record.enriched_text = record.get_enriched_embedding_text()
+
+        # Embed records in batches
+        embedded_records = await self.embed_records(records)
+
+        # Save updated records to database
+        saved = 0
+        for record in embedded_records:
+            if record.embedding is not None:
+                try:
+                    await record.save()
+                    saved += 1
+                except Exception as e:
+                    logger.error(f"Failed to save re-embedded record {record.id}: {e}")
+
+        logger.info(f"Re-embedding complete: {saved}/{len(records)} records saved")
+        return saved
 
 
 # Global service instance for convenience

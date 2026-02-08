@@ -1,6 +1,6 @@
 # Story 1.14: Contextual Embedding Enrichment
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -20,34 +20,34 @@ so that **semantic search understands the document hierarchy and returns more re
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `enriched_text` field to schema (AC: #3, #7)
-  - [ ] 1.1 Create migration `migrations/XX.surrealql` adding `enriched_text` field to `acm_record`
-  - [ ] 1.2 Add `enriched_text: Optional[str]` field to `ACMRecord` Pydantic model in `open_notebook/domain/acm.py`
-- [ ] Task 2: Implement enrichment function (AC: #1)
-  - [ ] 2.1 Add `get_enriched_embedding_text()` method to `ACMRecord` in `open_notebook/domain/acm.py`
-  - [ ] 2.2 Hierarchical context format: `"Building: {building_name} | Level: {area_type} | Room: {room_name} | Page: {page_number} | "` prepended to existing field concatenation
-  - [ ] 2.3 Graceful handling: skip context fields that are None
-- [ ] Task 3: Update embedding pipeline to use enriched text (AC: #4)
-  - [ ] 3.1 Modify `ACMEmbeddingService.embed_records()` in `api/services/acm_embedding_service.py` to call `get_enriched_embedding_text()` instead of `get_embedding_text()`
-  - [ ] 3.2 Store the enriched text in `record.enriched_text` and the raw text in `record.embedding_text`
-  - [ ] 3.3 Fallback: if `get_enriched_embedding_text()` returns empty, use `get_embedding_text()`
-- [ ] Task 4: Update extraction pipeline to generate enriched text (AC: #2)
-  - [ ] 4.1 After ACM extraction completes (in `open_notebook/extractors/acm_extractor.py` and `open_notebook/graphs/acm_extraction.py`), call `record.enriched_text = record.get_enriched_embedding_text()` on each record
-  - [ ] 4.2 Ensure `enriched_text` is populated before records are saved to database
-- [ ] Task 5: Re-embedding command for existing records (AC: #6)
-  - [ ] 5.1 Add `re_embed_acm_records()` function to `api/services/acm_embedding_service.py`
-  - [ ] 5.2 Function should: fetch all ACM records (optionally filtered by source_id), generate enriched_text, re-embed in batches, update database
-  - [ ] 5.3 Add API endpoint `POST /api/acm/re-embed` to trigger re-embedding (with optional source_id filter)
-  - [ ] 5.4 Support `force` parameter: if True, re-embed all records even if already embedded
-- [ ] Task 6: Unit tests (AC: #1, #2, #3, #5, #7)
-  - [ ] 6.1 Test `get_enriched_embedding_text()` with full context, partial context, and empty record
-  - [ ] 6.2 Test `ACMEmbeddingService.embed_records()` uses enriched text
-  - [ ] 6.3 Test fallback: record without enriched_text uses embedding_text
-  - [ ] 6.4 Test re-embedding endpoint
-- [ ] Task 7: Verification
-  - [ ] 7.1 Run all existing tests (must pass, no regressions)
-  - [ ] 7.2 Run ruff lint check
-  - [ ] 7.3 Verify migration applies cleanly
+- [x] Task 1: Add `enriched_text` field to schema (AC: #3, #7)
+  - [x] 1.1 Create migration `migrations/XX.surrealql` adding `enriched_text` field to `acm_record`
+  - [x] 1.2 Add `enriched_text: Optional[str]` field to `ACMRecord` Pydantic model in `open_notebook/domain/acm.py`
+- [x] Task 2: Implement enrichment function (AC: #1)
+  - [x] 2.1 Add `get_enriched_embedding_text()` method to `ACMRecord` in `open_notebook/domain/acm.py`
+  - [x] 2.2 Hierarchical context format: `"Building: {building_name} | Level: {area_type} | Room: {room_name} | Page: {page_number} | "` prepended to existing field concatenation
+  - [x] 2.3 Graceful handling: skip context fields that are None
+- [x] Task 3: Update embedding pipeline to use enriched text (AC: #4)
+  - [x] 3.1 Modify `ACMEmbeddingService.embed_records()` in `api/services/acm_embedding_service.py` to call `get_enriched_embedding_text()` instead of `get_embedding_text()`
+  - [x] 3.2 Store the enriched text in `record.enriched_text` and the raw text in `record.embedding_text`
+  - [x] 3.3 Fallback: if `get_enriched_embedding_text()` returns empty, use `get_embedding_text()`
+- [x] Task 4: Update extraction pipeline to generate enriched text (AC: #2)
+  - [x] 4.1 After ACM extraction completes (in `open_notebook/extractors/acm_extractor.py` and `open_notebook/graphs/acm_extraction.py`), call `record.enriched_text = record.get_enriched_embedding_text()` on each record
+  - [x] 4.2 Ensure `enriched_text` is populated before records are saved to database
+- [x] Task 5: Re-embedding command for existing records (AC: #6)
+  - [x] 5.1 Add `re_embed_acm_records()` function to `api/services/acm_embedding_service.py`
+  - [x] 5.2 Function should: fetch all ACM records (optionally filtered by source_id), generate enriched_text, re-embed in batches, update database
+  - [x] 5.3 Add API endpoint `POST /api/acm/re-embed` to trigger re-embedding (with optional source_id filter)
+  - [x] 5.4 Support `force` parameter: if True, re-embed all records even if already embedded
+- [x] Task 6: Unit tests (AC: #1, #2, #3, #5, #7)
+  - [x] 6.1 Test `get_enriched_embedding_text()` with full context, partial context, and empty record
+  - [x] 6.2 Test `ACMEmbeddingService.embed_records()` uses enriched text
+  - [x] 6.3 Test fallback: record without enriched_text uses embedding_text
+  - [x] 6.4 Test re-embedding endpoint
+- [x] Task 7: Verification
+  - [x] 7.1 Run all existing tests (465 passed — 5 pre-existing failures unrelated to E1-S14)
+  - [x] 7.2 Run ruff lint check (all checks passed)
+  - [x] 7.3 Verify migration applies cleanly (migration 16.surrealql verified)
 
 ## Dev Notes
 
@@ -256,12 +256,43 @@ Extend existing tests in `tests/test_acm_embedding.py`:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- All 7 tasks implemented via red-green-refactor TDD cycle
+- 13 new tests added to test_acm_embedding.py (30 total tests, all passing)
+- Enrichment generates hierarchical context: `Building | Level | Room | Page | <raw fields>`
+- Embedding pipeline uses enriched_text with fallback to raw embedding_text
+- Both extraction pipelines (regex + LangGraph) generate enriched_text before save
+- Re-embed endpoint supports source_id filter and force parameter
+- 5 pre-existing test failures confirmed (E1-S12 enum normalization changes) — not caused by E1-S14
+- No new dependencies added, no frontend changes, backward compatible
+
 ### Change Log
 
+| File | Change Type | Description |
+|------|-------------|-------------|
+| open_notebook/domain/acm.py | Modified | Added `enriched_text` field and `get_enriched_embedding_text()` method |
+| api/services/acm_embedding_service.py | Modified | Updated `embed_records()` to use enriched text; added `re_embed_acm_records()` |
+| api/routers/acm.py | Modified | Added `POST /api/acm/re-embed` endpoint |
+| api/models.py | Modified | Added `ReEmbedRequest` and `ReEmbedResponse` models |
+| open_notebook/extractors/acm_extractor.py | Modified | Added `_enrich_record_dicts()` helper for regex pipeline |
+| open_notebook/graphs/acm_extraction.py | Modified | Added enriched_text generation in `save_records()` |
+| migrations/16.surrealql | Created | Add `enriched_text` field to `acm_record` table |
+| migrations/16_down.surrealql | Created | Down migration to remove `enriched_text` field |
+| tests/test_acm_embedding.py | Modified | Added 13 new tests across 3 test classes |
+
 ### File List
+
+- open_notebook/domain/acm.py
+- api/services/acm_embedding_service.py
+- api/routers/acm.py
+- api/models.py
+- open_notebook/extractors/acm_extractor.py
+- open_notebook/graphs/acm_extraction.py
+- migrations/16.surrealql
+- migrations/16_down.surrealql
+- tests/test_acm_embedding.py

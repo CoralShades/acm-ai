@@ -4,7 +4,7 @@
 > **Date:** 2025-12-07 (Updated: 2026-02-08)
 > **Status:** Draft - Updated for UX Audit &amp; Enterprise Readiness
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-02-08 - UX Audit &amp; Enterprise Readiness (FR-700 series)
+> **Change Log:** 2026-02-08 - UX Audit &amp; Enterprise Readiness (FR-700 series); Course correction: single generic configurable parser (see sprint-change-proposal-2026-02-08)
 
 ---
 
@@ -39,7 +39,7 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-102 | System shall extract text and tables from PDFs using Docling | P0 | Docling processes file and returns structured output |
 | FR-103 | System shall identify ACM Register tables within SAMP/BAR documents | P0 | Tables matching ACM schema are extracted with >90% accuracy |
 | FR-104 | System shall parse hierarchical structure (Dept → Agency → Site → Building → Room → ACM Item) | P0 | Hierarchy correctly represented in data model |
-| FR-107 | System shall support multiple PDF provider formats (Prensa, Greencap) | P0 | Auto-detects and parses different assessment formats |
+| FR-107 | System shall use configurable field definitions to parse any ACM PDF format via a single generic parser | P0 | Field schema config (register_row.schema.json, register_enums.json) drives parsing; single parser handles all consultant formats |
 | FR-108 | System shall allow configuration of non-extractable fields | P0 | User can set Department, Building Type, etc. |
 | FR-105 | System shall store page numbers for each extracted data row | P0 | Every ACM record has associated page_number |
 | FR-106 | System shall handle multi-page tables | P1 | Tables spanning pages are merged correctly |
@@ -528,21 +528,31 @@ The ACM extraction follows a **two-stage pipeline** design:
 2. LLM fallback for ambiguous items (with confidence score)
 3. User override capability for manual correction
 
-### 5.7 Consultant Format Support (NEW - 2026-02-05)
+### 5.7 Consultant Format Support (Updated 2026-02-08)
 
-The system supports multiple consultant PDF formats via extensible parser architecture:
+The system uses a **single generic configurable parser** driven by BAR field schema configuration, rather than per-consultant parser implementations.
 
-| Consultant | Detection Marker | Register Columns | Status |
-|------------|-----------------|------------------|--------|
-| Prensa Pty Ltd | "Division 5 Asbestos Assessment" | 15 columns | Supported |
-| Greencap | "Greencap" + "Asbestos Risk Assessment" | 14 columns | Supported |
-| Generic | Fallback | Variable | Supported |
+**Configuration-Driven Parsing Pipeline:**
+```
+BAR Excel template → JSON config files → SurrealDB field_schema table → runtime parser
+```
+
+**Schema Sources:**
+| Config File | Purpose | Content |
+|-------------|---------|---------|
+| `register_row.schema.json` | Field definitions | 47 BAR fields with types, validation rules, and column mappings |
+| `register_enums.json` | Picklist values | Controlled vocabulary for all enum fields (Sample Result, Condition, etc.) |
+
+**Runtime Flow:**
+1. Field definitions loaded from `field_schema` table in SurrealDB (seeded from JSON configs)
+2. Generic parser uses field schema to map extracted columns to BAR fields
+3. Enum validation applied from `register_enums.json` picklists
+4. Same parser handles all consultant formats (Prensa, Greencap, or any other) without format-specific code
 
 **Extensibility:**
-- New consultant formats added by implementing `ConsultantParser` interface
-- Column mapping configuration per consultant
-- Metadata extraction patterns per consultant
-- See `docs/reference/extraction-pipeline.md` for parser interface
+- New fields added by updating `register_row.schema.json` and re-seeding the `field_schema` table
+- New picklist values added by updating `register_enums.json`
+- No per-consultant parser code required; column mapping is configuration, not code
 
 ---
 
@@ -672,3 +682,4 @@ The system supports multiple consultant PDF formats via extensible parser archit
 | 2025-12-07 | 1.0 | Initial PRD |
 | 2026-02-04 | 1.1 | Victorian BAR format expansion (Sprint Change Proposal) |
 | 2026-02-08 | 1.2 | UX Audit &amp; Enterprise Readiness - FR-700 series (11 requirements) |
+| 2026-02-08 | 1.3 | Course correction: replaced 3 consultant parsers (Prensa, Greencap, Generic) with 1 generic configurable parser driven by BAR field schema configuration (FR-107, Section 5.7). See `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md` |

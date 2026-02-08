@@ -184,4 +184,4 @@ _bmad/bmb/*
 .claude/commands/bmad/core/tasks/advanced-elicitation.md
 .claude/commands/bmad/core/tools/shard-doc.md
 .claude/commands/bmad/core/workflows/brainstorming-session.md
-.claude/skills/README.md
+.claude/skills/

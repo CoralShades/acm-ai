@@ -203,6 +203,10 @@ class ACMRecord(ObjectModel):
         default=None,
         description="Timestamp when embedding was generated"
     )
+    enriched_text: Optional[str] = Field(
+        default=None,
+        description="Contextually enriched text with hierarchical metadata for embedding (E1-S14)"
+    )
 
     # Validators for required fields
     @field_validator("source_id", mode="before")
@@ -413,6 +417,28 @@ class ACMRecord(ObjectModel):
         from open_notebook.domain.notebook import Source
 
         return await Source.get(self.source_id)
+
+    def get_enriched_embedding_text(self) -> str:
+        """Generate text with hierarchical context for embedding (E1-S14).
+
+        Prepends Building, Level, Room, Page context to the raw embedding text.
+        Skips context fields that are None.
+        """
+        context_parts = []
+        if self.building_name:
+            context_parts.append(f"Building: {self.building_name}")
+        if self.area_type:
+            context_parts.append(f"Level: {self.area_type}")
+        if self.room_name:
+            context_parts.append(f"Room: {self.room_name}")
+        if self.page_number:
+            context_parts.append(f"Page: {self.page_number}")
+
+        raw_text = self.get_embedding_text()
+
+        if context_parts and raw_text:
+            return " | ".join(context_parts) + " | " + raw_text
+        return raw_text or " | ".join(context_parts) or ""
 
     def get_embedding_text(self) -> str:
         """

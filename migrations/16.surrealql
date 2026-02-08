@@ -1,0 +1,2 @@
+-- Migration 16: Add enriched_text for contextual embedding enrichment (E1-S14)
+DEFINE FIELD enriched_text ON TABLE acm_record TYPE option<string>;

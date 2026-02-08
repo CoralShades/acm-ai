@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-07)
-> **Status:** Draft - Updated for UX Audit & Enterprise Readiness
-> **Change Log:** Sprint Change Proposal approved 2026-02-04 - Added 6 new stories, modified 6 existing
+> **Date:** 2025-12-07 (Updated: 2026-02-08)
+> **Status:** Draft - Updated for Generic Configurable Parser Course Correction
+> **Change Log:** Sprint Change Proposal approved 2026-02-08 - E1-S11 redefined, E12-S4 redefined, E2-S8 enhanced
 
 ---
 
@@ -11,20 +11,20 @@
 
 | Epic | Title | Priority | Stories | Status |
 |------|-------|----------|---------|--------|
-| E1 | ACM Data Extraction Pipeline | P0 | **19** (+4 doc intel) | Done (10), Backlog (9) |
-| E2 | AG Grid Spreadsheet Integration | P0 | **8** (+1 new) | Done (7), New (1) |
+| E1 | ACM Data Extraction Pipeline | P0 | **20** | Done (12), Ready (1), Backlog (7) |
+| E2 | AG Grid Spreadsheet Integration | P0 | **8** | Done (7), Ready (1) |
 | E3 | Cell Citations & PDF Viewer | P0 | 4 | Done |
 | E4 | Chat with ACM Context | P0 | 4 | Done |
-| E5 | Export Functionality | **P0** (promoted) | **4** (+2 new) | Done (2), New (2) |
+| E5 | Export Functionality | **P0** (promoted) | **4** | Done (2), Ready (2) |
 | E6 | Rebranding to ACM-AI | P1 | 4 | Done |
-| E7 | Upload Wizard | P0 | **7** (+1 new) | Done (6), New (1) |
-| E8 | UI Refresh (Bento Grid) | P1 | 10 | In Progress |
-| E9 | Document Library Management | P0 | 3 | Backlog |
-| E10 | ACM-AI UI Simplification | P0 | 1 | Backlog |
+| E7 | Upload Wizard | P0 | **7** | Done |
+| E8 | UI Refresh (Bento Grid) | P1 | 10 | Archived |
+| E9 | Document Library Management | P0 | 3 | Done (2), Drafted (1) |
+| E10 | ACM-AI UI Simplification | P0 | 1 | Drafted |
 | E11 | Search & Retrieval Enhancement | P0/P1 | 2 | Backlog |
 | E12 | Extraction Settings & Configuration UI | P1 | 4 | Backlog |
 | E13 | Knowledge Graph Visualization | P1 | 3 | Backlog |
-| E14 | UX & Enterprise Readiness | P0/P1 | 11 | Backlog |
+| E14 | UX & Enterprise Readiness | P0/P1 | 11 | Done |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -45,18 +45,16 @@
 > Based on n8n workflow validation gap analysis.
 >
 > **2026-02-08 Update:** UX Audit & Enterprise Readiness initiative (Lane B):
-> - NEW Epic 14: UX & Enterprise Readiness (11 stories)
-> - E14-S1: VAEA Branding & Design Tokens (P0)
-> - E14-S2: Sidebar Navigation Redesign (P0)
-> - E14-S3: Hide Brownfield Features (P0)
-> - E14-S4: Shimmer Skeleton Loading (P1)
-> - E14-S5: Toast System Enhancement (P1)
-> - E14-S6: WCAG 2.1 AA Accessibility (P1)
-> - E14-S7: Merge Sources/Documents (P1)
-> - E14-S8: Error Recovery Handling (P2)
-> - E14-S9: Keyboard Navigation (P2)
-> - E14-S10: Breadcrumb Navigation (P2)
-> - E14-S11: Pydantic-to-TypeScript Pipeline (P2)
+> - NEW Epic 14: UX & Enterprise Readiness (11 stories, ALL DONE)
+> - E14-S1 through E14-S11 implemented and merged to main via PR #7
+>
+> **2026-02-08 Update:** Course Correction - Generic Configurable Parser:
+> - E1-S11 REDEFINED: "Extensible Parser Framework" -> "Generic Configurable Parser with BAR Field Schema"
+>   - 3 parsers (Prensa, Greencap, Generic) -> 1 configurable parser driven by BAR template
+>   - Status reset from done to backlog (requires reimplementation)
+> - E12-S4 REDEFINED: "Parser Configuration Management" -> "BAR Field Schema Configuration UI"
+> - E2-S8 ENHANCED: AG Grid columns generated from field config API
+> - See: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md`
 
 ---
 
@@ -267,31 +265,39 @@
 
 ---
 
-### E1-S11: Extensible Consultant Parser Framework (NEW 2026-02-05)
-**As a** developer
-**I want** a pluggable parser framework for different consultant formats
-**So that** new PDF formats can be added without modifying core extraction code
+### E1-S11: Generic Configurable Parser with BAR Field Schema (REDEFINED 2026-02-08)
+**As a** system
+**I want** a single generic configurable parser driven by field schema configuration
+**So that** any ACM PDF format can be parsed using configurable field definitions from the BAR template
+
+> **Course Correction 2026-02-08:** Redefined from "Extensible Consultant Parser Framework".
+> 3 specialized parsers (Prensa, Greencap, Generic) replaced by 1 configurable parser.
+> BAR Excel template as single source of truth for fields, enums, rules.
+> See: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md` (CP-1)
 
 **Acceptance Criteria:**
-- [ ] Define `ConsultantParser` abstract base class with methods:
-  - `detect(text: str) -> bool`
-  - `extract_metadata(pages: dict) -> DocumentMeta`
-  - `extract_items(tables: list) -> list[RawACMItem]`
-  - `get_column_mapping() -> dict[str, str]`
-- [ ] Implement `PrensaParser` with column mapping:
-  - area_level, room_location, feature, item_description, hazard_status, sample_number, etc.
-- [ ] Implement `GreencapParser` with different column mapping
-- [ ] Implement `GenericParser` as fallback
-- [ ] Parser registry for automatic selection
-- [ ] Document adding new parsers in developer guide
+- [ ] Load field schema from `register_row.schema.json` (47 fields with types, required/optional, column letters)
+- [ ] Load enum picklists from `register_enums.json` (controlled values per field)
+- [ ] Load business rules from config (e.g., Negative -> N/A for Condition)
+- [ ] Single GenericParser class replaces PrensaParser, GreencapParser, GenericParser
+- [ ] Parser accepts field config at initialization (which fields to extract, column mappings)
+- [ ] Field config drives: extraction field list, enum validation, display names
+- [ ] Default config seeded from BAR Excel template (Clucth_Alexandra_District_BAR.xlsm)
+- [ ] API endpoint to read/update field configuration: GET/PUT /api/acm/field-config
+- [ ] UI can override field config (see E12-S4)
+- [ ] Remove PrensaParser and GreencapParser classes (consolidate into generic)
 
 **Technical Notes:**
-- Location: `open_notebook/extraction/parsers/`
-  - `base.py` - Abstract base class
-  - `prensa.py` - Prensa Pty Ltd parser
-  - `greencap.py` - Greencap parser
-  - `generic.py` - Fallback parser
-- Reference: Architecture Section 5.2
+- Location: `open_notebook/extractors/parsers/`
+  - `generic.py` - Rewritten GenericParser driven by FieldSchemaConfig
+  - `field_config.py` - NEW: FieldSchemaConfig, FieldDef Pydantic models
+  - `config_loader.py` - NEW: Load config from JSON/SurrealDB/Excel
+  - `base.py` - KEEP: RawACMItem, DocumentMeta data classes still useful
+  - `prensa.py` - DELETE: Absorbed into generic parser + config
+  - `greencap.py` - DELETE: Absorbed into generic parser + config
+- Reference: Architecture Section 5.2 (rewritten)
+- Reference: `docs/samplePDF/instructions-sample/register_row.schema.json`
+- Reference: `docs/samplePDF/instructions-sample/register_enums.json`
 
 ---
 
@@ -949,7 +955,7 @@ E10-S1 (independent)
 | E12-S1 (Extraction Settings) | E1-S16/17/18/19 | E12-S2, E12-S3 |
 | E12-S2 (Model Config UI) | E12-S1 | - |
 | E12-S3 (Processing Config) | E12-S1 | - |
-| E12-S4 (Parser Config UI) | E1-S11 (Parser Framework) | - |
+| E12-S4 (BAR Field Schema Config UI) | E1-S11 (Generic Configurable Parser) | - |
 | E13-S1 (Graph Schema) | E1-S4 (API, done) | E13-S2 |
 | E13-S2 (Graph API) | E13-S1 | E13-S3 |
 | E13-S3 (React Flow UI) | E13-S2 | - |
@@ -1492,25 +1498,27 @@ E10-S1 (independent)
 
 ---
 
-### E12-S4: Parser Configuration Management
+### E12-S4: BAR Field Schema Configuration UI (REDEFINED 2026-02-08)
 **As a** user
-**I want** to view and manage consultant parser configurations
-**So that** I can add support for new document formats and tune existing parsers
+**I want** a UI to view and manage the BAR field schema configuration
+**So that** I can configure which fields are extracted, customize display names, and manage picklist values
+
+> **Course Correction 2026-02-08:** Redefined from "Parser Configuration Management".
+> Replaces "manage multiple parsers" with "configure one field schema."
+> See: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md` (CP-2)
 
 **Acceptance Criteria:**
-- [ ] List all registered parsers with status (active/inactive)
-- [ ] Per-parser details: name, detection patterns, column mapping
-- [ ] Sample detection test: paste text, see if parser detects it
-- [ ] Enable/disable individual parsers
-- [ ] Parser priority ordering (drag-and-drop)
-- [ ] Column mapping editor: visual table mapping source -> target fields
-- [ ] Export/import parser configuration as JSON
-- [ ] API endpoints: GET/PUT/POST `/api/settings/parsers`
+- [ ] Field Schema Editor: View/toggle/reorder 47 BAR fields, edit display names
+- [ ] Picklist Value Editor: View/edit enum values per field, import from BAR template
+- [ ] Business Rules Editor: View/enable/disable rules, add custom rules
+- [ ] Config Import/Export: Import from BAR Excel, export as JSON, reset to defaults
+- [ ] Config applies to: extraction, AG Grid columns, Excel/CSV export
+- [ ] API endpoints: GET/PUT /api/settings/field-schema
 
 **Technical Notes:**
-- Location: `frontend/src/app/(dashboard)/settings/parsers/page.tsx`
-- Backend: Extend `api/routers/settings.py`
-- Built-in parsers read-only, custom parsers editable
+- Location: `frontend/src/app/(dashboard)/settings/field-schema/page.tsx`
+- Backend: Extend `api/routers/settings.py` with field-schema endpoints
+- Depends on: E1-S11 (Generic Configurable Parser must provide the config API)
 
 ---
 
