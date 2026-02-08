@@ -176,6 +176,30 @@ OPENAI_API_KEY=sk-...  # At least one AI provider
 - **Python**: Ruff for linting/formatting, 88 char line length, type hints required, Google-style docstrings
 - **Commits**: Conventional commits (feat:, fix:, docs:, refactor:, test:)
 
+## Sub-Agent Model Selection
+
+When delegating tasks to sub-agents via the Task tool:
+
+- **Default**: Use `model: "sonnet"` for most tasks - provides good speed/quality balance for well-documented codebase areas
+- **Complex/Undocumented Tasks**: Use `model: "opus"` when:
+  - Task involves areas with minimal documentation or known patterns
+  - Requires deep architectural reasoning or cross-cutting concerns
+  - Involves novel problem-solving not covered by existing patterns
+  - Risk of incomplete understanding with smaller models
+
+**Example:**
+```python
+# Well-documented feature area → sonnet
+Task(description="Add new field to existing table",
+     subagent_type="Explore",
+     model="sonnet")
+
+# Complex, undocumented area → opus
+Task(description="Design new RAG strategy for novel extraction pattern",
+     subagent_type="acm-rag-strategist",
+     model="opus")
+```
+
 ## Story Verification Protocol
 
 **CRITICAL:** Before marking ANY story as complete, you MUST perform these verification steps. Never trust task checkmarks alone.

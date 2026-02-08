@@ -7,6 +7,12 @@ echo.
 
 cd /d "D:\ailocal\acm-ai"
 
+echo [0/4] Syncing Python dependencies...
+set UV_LINK_MODE=copy
+uv sync --quiet
+echo Dependencies synced.
+echo.
+
 echo [1/4] Checking SurrealDB...
 docker compose ps surrealdb 2>nul | findstr /i "running" >nul
 if %errorlevel% neq 0 (

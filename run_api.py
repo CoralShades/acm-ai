@@ -27,5 +27,11 @@ if __name__ == "__main__":
         host=host,
         port=port,
         reload=reload,
-        reload_dirs=[str(current_dir)] if reload else None,
+        reload_dirs=[
+            str(current_dir / "api"),
+            str(current_dir / "open_notebook"),
+            str(current_dir / "commands"),
+            str(current_dir / "prompts"),
+        ] if reload else None,
+        reload_excludes=["*.pyc", "__pycache__"] if reload else None,
     )

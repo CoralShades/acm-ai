@@ -12,6 +12,13 @@ echo "  ACM-AI - Starting All Services"
 echo "========================================"
 echo ""
 
+# [0/4] Sync Python dependencies (must happen BEFORE launching services)
+echo "[0/4] Syncing Python dependencies..."
+cd "$SCRIPT_DIR"
+UV_LINK_MODE=copy uv sync --quiet
+echo "Dependencies synced."
+echo ""
+
 # [1/4] Start SurrealDB
 echo "[1/4] Checking SurrealDB..."
 if docker compose ps surrealdb 2>/dev/null | grep -q "running"; then
