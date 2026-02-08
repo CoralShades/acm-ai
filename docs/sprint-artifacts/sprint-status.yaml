@@ -42,7 +42,7 @@ story_location: docs/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  # 12/13 stories complete, 1 remaining (ready-for-dev)
+  # 13/20 stories complete, 7 remaining
   epic-1: in-progress
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
@@ -57,6 +57,13 @@ development_status:
   e1-s11-extensible-consultant-parser-framework: done
   e1-s12-consultant-wording-normalization: done
   e1-s13-fix-page-reference-tracking: done
+  e1-s14-contextual-embedding-enrichment: backlog
+  e1-s15-corrective-rag-validation-loop: backlog
+  e1-s16-document-structure-toc-extraction: backlog
+  e1-s17-building-inventory-compilation: backlog
+  e1-s18-page-level-section-tagging: backlog
+  e1-s19-document-metadata-extraction-enhancement: backlog
+  e1-s20-agentic-extraction-orchestrator: backlog
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -172,24 +179,27 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 13 (4 done, 4 in-progress, 4 backlog, 1 archived)
-# Total Stories: 67 (in sprint-status tracking)
-# Stories Done: 41 (61%)
+# Total Stories: 74 (in sprint-status tracking)
+# Stories Done: 43 (58%)
 # Stories Archived: 10 (E8-S1..S10)
 # Stories Ready-for-dev: 3 (E2-S8, E5-S3, E5-S4)
 # Stories Drafted: 2 (E9-S3, E10-S1)
-# Stories Backlog: 9 (E11-S1..S2, E12-S1..S4, E13-S1..S3)
+# Stories Backlog: 16 (E1-S14..S20, E11-S1..S2, E12-S1..S4, E13-S1..S3)
 #
 # Last Updated: 2026-02-08
 #
 # COMPLETED EPICS: E3, E4, E6, E7
 # ARCHIVED EPICS: E8 (UI Refresh - skipped 2026-02-08)
-# IN-PROGRESS EPICS: E1 (12/13), E2 (7/8), E5 (2/4), E9 (2/3)
+# IN-PROGRESS EPICS: E1 (13/20), E2 (7/8), E5 (2/4), E9 (2/3)
 # BACKLOG EPICS: E10 (0/1), E11 (0/2), E12 (0/4), E13 (0/3)
 #
-# NOTE: Epics file (05-epics-and-stories.md) defines 19 stories for E1
-# (including E1-S16..S19 Document Intelligence). Stories E1-S14..S19
-# are not yet tracked in development_status - pending sprint change
-# proposal approval (CP: workflow-extraction 2026-02-07).
+# KEY CHANGES (2026-02-08 - YAML Reconciliation + E1-S20):
+# =========================================================
+# - E1-S13 identity resolved: YAML key "fix-page-reference-tracking" kept as-is
+# - E1-S20 added: Agentic Extraction Orchestrator (was previously conflated with E1-S13)
+# - Added 7 missing YAML entries: E1-S14..S20 (all backlog)
+# - Fixed summary counts (total stories: 73→74, done: 50/74=68%)
+# - E2-S8 corrected to ready-for-dev (has tech-spec drafted)
 #
 # KEY CHANGES (2026-02-07 - Document Intelligence + Settings + Knowledge Graph):
 # ================================================================================
@@ -212,9 +222,9 @@ development_status:
 #
 # NEXT RECOMMENDED ACTIONS:
 # =========================
-# 1. Approve sprint change proposal (CP#6-CP#11)
-# 2. Draft tech-specs for E1-S16 through E1-S19 (Document Intelligence, P0)
-# 3. Implement E9-S3 (Document Actions - drafted, ready for dev)
-# 4. Implement E10-S1 (UI Simplification - drafted, ready for dev)
-# 5. Begin E1-S16 (Document Structure/TOC) - foundation for document intelligence
-# 6. Then tackle E12 (Settings) and E13 (Knowledge Graph) in parallel
+# 1. E1-S11..S13 all done - E1 core extraction pipeline complete through S13
+# 2. Lane A (Backend): Draft tech-spec for E1-S14 → E1-S16..S19 chain
+# 3. Lane B (Frontend): E2-S8 → E9-S3 → E10-S1
+# 4. Lane C (Export): E5-S3 → E5-S4
+# 5. Draft tech-specs for E1-S14..S20 as needed before implementation
+# 6. Cross-lane handoffs: E1-S16..S19 → E12-S1..S3, E13-S1 → E13-S2..S3

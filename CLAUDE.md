@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Critical** : Always use AskUserQuestion Tool when you want to clarify, interview or ask questions from the user.
+
 ## Project Overview
 
 ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms SAMP (School Asbestos Management Plan) documents into structured, queryable data. It's a monorepo with two parts:

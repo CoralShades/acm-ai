@@ -145,42 +145,57 @@ worker-restart: worker-stop
 
 # === Service Management ===
 start-all:
-	@echo "🚀 Starting Open Notebook (Database + API + Worker + Frontend)..."
+	@echo "🚀 Starting ACM-AI (Database + API + Worker + Frontend)..."
 	@echo "📊 Starting SurrealDB..."
 	@docker compose up -d surrealdb
 	@sleep 3
-	@echo "🔧 Starting API backend..."
-	@uv run run_api.py &
+	@echo "🔧 Starting API backend (port 5055)..."
+	@nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 & echo $$! > /tmp/acm-ai-api.pid
 	@sleep 3
 	@echo "⚙️ Starting background worker..."
-	@uv run --env-file .env surreal-commands-worker --import-modules commands &
+	@nohup uv run surreal-commands-worker --import-modules commands > /tmp/acm-ai-worker.log 2>&1 & echo $$! > /tmp/acm-ai-worker.pid
 	@sleep 2
-	@echo "🌐 Starting Next.js frontend..."
+	@echo "🌐 Starting Next.js frontend (port 8502)..."
 	@echo "✅ All services started!"
-	@echo "📱 Frontend: http://localhost:3000"
+	@echo "📱 Frontend: http://localhost:8502"
 	@echo "🔗 API: http://localhost:5055"
 	@echo "📚 API Docs: http://localhost:5055/docs"
-	cd frontend && npm run dev
+	@echo ""
+	@echo "📋 Logs available at:"
+	@echo "  API:    tail -f /tmp/acm-ai-api.log"
+	@echo "  Worker: tail -f /tmp/acm-ai-worker.log"
+	@echo ""
+	cd frontend && PORT=8502 npm run dev -- -p 8502
 
 stop-all:
-	@echo "🛑 Stopping all Open Notebook services..."
+	@echo "🛑 Stopping all ACM-AI services..."
+	@pkill -f "npm run dev.*8502" || true
 	@pkill -f "next dev" || true
 	@pkill -f "surreal-commands-worker" || true
 	@pkill -f "run_api.py" || true
 	@pkill -f "uvicorn api.main:app" || true
+	@[ -f /tmp/acm-ai-frontend.pid ] && kill $$(cat /tmp/acm-ai-frontend.pid) 2>/dev/null || true
+	@[ -f /tmp/acm-ai-worker.pid ] && kill $$(cat /tmp/acm-ai-worker.pid) 2>/dev/null || true
+	@[ -f /tmp/acm-ai-api.pid ] && kill $$(cat /tmp/acm-ai-api.pid) 2>/dev/null || true
+	@rm -f /tmp/acm-ai-*.pid 2>/dev/null || true
 	@docker compose down
 	@echo "✅ All services stopped!"
 
 status:
-	@echo "📊 Open Notebook Service Status:"
+	@echo "📊 ACM-AI Service Status:"
+	@echo ""
 	@echo "Database (SurrealDB):"
-	@docker compose ps surrealdb 2>/dev/null || echo "  ❌ Not running"
-	@echo "API Backend:"
-	@pgrep -f "run_api.py\|uvicorn api.main:app" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
+	@docker compose ps surrealdb 2>/dev/null | grep -q "Up" && echo "  ✅ Running" || echo "  ❌ Not running"
+	@echo ""
+	@echo "API Backend (port 5055):"
+	@curl -s http://localhost:5055/health >/dev/null 2>&1 && echo "  ✅ Running (healthy)" || echo "  ❌ Not running"
+	@echo ""
 	@echo "Background Worker:"
 	@pgrep -f "surreal-commands-worker" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
-	@echo "Next.js Frontend:"
-	@pgrep -f "next dev" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
+	@echo ""
+	@echo "Frontend (port 8502):"
+	@curl -s http://localhost:8502 >/dev/null 2>&1 && echo "  ✅ Running" || echo "  ❌ Not running"
+	@echo ""
 
 # === Documentation Export ===
 export-docs:

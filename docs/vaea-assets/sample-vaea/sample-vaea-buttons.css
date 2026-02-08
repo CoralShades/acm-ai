@@ -1,0 +1,19 @@
+.btn-primary {
+  background: var(--brand-primary);
+  color: var(--text-inverse);
+  border: none;
+}
+
+.btn-primary:hover {
+  background: var(--brand-primary-hover);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--brand-primary-soft);
+}

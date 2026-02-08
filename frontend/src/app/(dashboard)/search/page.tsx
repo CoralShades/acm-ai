@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { AppShell } from '@/components/layout/AppShell'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
@@ -23,7 +25,7 @@ import { StreamingResponse } from '@/components/search/StreamingResponse'
 import { AdvancedModelsDialog } from '@/components/search/AdvancedModelsDialog'
 import { SaveToNotebooksDialog } from '@/components/search/SaveToNotebooksDialog'
 
-export default function SearchPage() {
+function SearchPageContent() {
   // URL params
   const searchParams = useSearchParams()
   const urlQuery = searchParams.get('q') || ''
@@ -480,5 +482,21 @@ export default function SearchPage() {
         </Tabs>
       </div>
     </AppShell>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="Search"
+          reloadUrl="/search"
+        />
+      )}
+    >
+      <SearchPageContent />
+    </ErrorBoundary>
   )
 }
