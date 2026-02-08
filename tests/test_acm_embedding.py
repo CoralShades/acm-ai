@@ -332,6 +332,228 @@ class TestACMEmbeddingService:
         assert result == [0.7, 0.8, 0.9]
         mock_embedding_model.aembed.assert_called_once_with(["high risk asbestos"])
 
+    @pytest.mark.asyncio
+    @patch("api.services.acm_embedding_service.model_manager")
+    async def test_embed_records_uses_enriched_text(
+        self, mock_model_manager, mock_embedding_model
+    ):
+        """Test that embed_records uses enriched text for embedding (E1-S14)."""
+        from api.services.acm_embedding_service import ACMEmbeddingService
+
+        mock_embedding_model.aembed = AsyncMock(return_value=[[0.1, 0.2, 0.3]])
+        mock_model_manager.get_embedding_model = AsyncMock(
+            return_value=mock_embedding_model
+        )
+
+        records = [
+            ACMRecord(
+                source_id="source:test",
+                school_name="Test School",
+                building_id="B001",
+                building_name="Main Block",
+                area_type="Ground Floor",
+                room_name="Kitchen",
+                page_number=5,
+                product="Ceiling Tiles",
+                material_description="Asbestos tiles",
+                result="Detected",
+            )
+        ]
+
+        service = ACMEmbeddingService()
+        result = await service.embed_records(records)
+
+        # The text passed to embedding model should be the enriched version
+        call_args = mock_embedding_model.aembed.call_args[0][0]
+        assert "Building: Main Block" in call_args[0]
+        assert "Level: Ground Floor" in call_args[0]
+        assert "Room: Kitchen" in call_args[0]
+        assert "Page: 5" in call_args[0]
+
+        # enriched_text should be stored on the record
+        assert result[0].enriched_text is not None
+        assert "Building: Main Block" in result[0].enriched_text
+
+        # embedding_text (raw) should also be stored
+        assert result[0].embedding_text is not None
+
+    @pytest.mark.asyncio
+    @patch("api.services.acm_embedding_service.model_manager")
+    async def test_embed_records_fallback_to_raw(
+        self, mock_model_manager, mock_embedding_model
+    ):
+        """Test fallback: when enriched text is empty, uses raw embedding_text (E1-S14)."""
+        from api.services.acm_embedding_service import ACMEmbeddingService
+
+        mock_embedding_model.aembed = AsyncMock(return_value=[[0.1, 0.2, 0.3]])
+        mock_model_manager.get_embedding_model = AsyncMock(
+            return_value=mock_embedding_model
+        )
+
+        # Record with no hierarchy context fields
+        records = [
+            ACMRecord(
+                source_id="source:test",
+                school_name="Test School",
+                building_id="B001",
+                product="Ceiling Tiles",
+                material_description="Asbestos tiles",
+                result="Detected",
+            )
+        ]
+
+        service = ACMEmbeddingService()
+        result = await service.embed_records(records)
+
+        # With no context, enriched == raw, so embedding_text should still be set
+        assert result[0].embedding is not None
+        assert result[0].embedding_text is not None
+
+
+class TestACMRecordEnrichedTextField:
+    """Test ACMRecord enriched_text field (E1-S14)."""
+
+    def test_enriched_text_field_exists(self):
+        """Test that enriched_text field is defined on ACMRecord."""
+        record = ACMRecord(
+            source_id="source:test",
+            school_name="Test School",
+            building_id="B001",
+            product="Ceiling Tiles",
+            material_description="Asbestos ceiling tiles",
+            result="Detected",
+        )
+        assert hasattr(record, "enriched_text")
+        assert record.enriched_text is None
+
+    def test_enriched_text_field_can_be_set(self):
+        """Test that enriched_text field can be populated."""
+        record = ACMRecord(
+            source_id="source:test",
+            school_name="Test School",
+            building_id="B001",
+            product="Ceiling Tiles",
+            material_description="Asbestos ceiling tiles",
+            result="Detected",
+            enriched_text="Building: Main Block | Product: Ceiling Tiles",
+        )
+        assert record.enriched_text == "Building: Main Block | Product: Ceiling Tiles"
+
+
+class TestACMRecordGetEnrichedEmbeddingText:
+    """Test ACMRecord.get_enriched_embedding_text() method (E1-S14)."""
+
+    def test_enriched_text_with_full_context(self):
+        """Test enriched text with all hierarchy fields populated."""
+        record = ACMRecord(
+            source_id="source:test",
+            school_name="Test School",
+            building_id="B001",
+            building_name="B00A Main Block",
+            area_type="Ground Floor",
+            room_name="R001 Kitchen",
+            page_number=14,
+            product="Vinyl Floor Tiles",
+            material_description="Sheet vinyl flooring",
+            material_condition="Good",
+            risk_status="Medium",
+            friable="Non-friable",
+            result="Detected",
+            hygienist_recommendations="Maintain in situ, label and monitor",
+        )
+
+        text = record.get_enriched_embedding_text()
+
+        # Hierarchical context should be prepended
+        assert text.startswith("Building: B00A Main Block")
+        assert "Level: Ground Floor" in text
+        assert "Room: R001 Kitchen" in text
+        assert "Page: 14" in text
+
+        # Raw embedding fields should follow
+        assert "Product: Vinyl Floor Tiles" in text
+        assert "Material: Sheet vinyl flooring" in text
+        assert "Condition: Good" in text
+        assert "Risk: Medium" in text
+        assert "Result: Detected" in text
+
+    def test_enriched_text_with_partial_context(self):
+        """Test enriched text when only building_name is set."""
+        record = ACMRecord(
+            source_id="source:test",
+            school_name="Test School",
+            building_id="B001",
+            building_name="Main Building",
+            product="Ceiling Tiles",
+            material_description="Asbestos ceiling tiles",
+            result="Detected",
+        )
+
+        text = record.get_enriched_embedding_text()
+
+        assert "Building: Main Building" in text
+        assert "Level:" not in text  # area_type is None
+        assert "Room:" not in text   # room_name is None
+        assert "Page:" not in text   # page_number is None
+        assert "Product: Ceiling Tiles" in text
+
+    def test_enriched_text_with_no_context(self):
+        """Test enriched text when no hierarchy fields set, falls back to raw text."""
+        record = ACMRecord(
+            source_id="source:test",
+            school_name="Test School",
+            building_id="B001",
+            product="Ceiling Tiles",
+            material_description="Asbestos ceiling tiles",
+            result="Detected",
+        )
+
+        enriched = record.get_enriched_embedding_text()
+        raw = record.get_embedding_text()
+
+        # With no hierarchy context, enriched should equal raw
+        assert enriched == raw
+        assert "Product: Ceiling Tiles" in enriched
+
+    def test_enriched_text_empty_record(self):
+        """Test enriched text for minimal record returns empty string."""
+        record = ACMRecord(
+            source_id="source:test",
+            school_name="Test School",
+            building_id="B001",
+            product="Unknown",
+            material_description="Unknown",
+            result="Pending",
+        )
+
+        # Even minimal records should produce some text
+        text = record.get_enriched_embedding_text()
+        assert len(text) > 0
+
+    def test_enriched_text_includes_raw_fields(self):
+        """Verify raw field text is appended after context prefix."""
+        record = ACMRecord(
+            source_id="source:test",
+            school_name="Test School",
+            building_id="B001",
+            building_name="Block A",
+            room_name="Room 5",
+            product="Pipe Insulation",
+            material_description="Asbestos pipe lagging",
+            location="Above ceiling",
+            result="Detected",
+        )
+
+        text = record.get_enriched_embedding_text()
+        raw = record.get_embedding_text()
+
+        # The enriched text should contain ALL the raw fields
+        assert raw in text or all(part in text for part in raw.split(" | "))
+        # Context should appear before raw fields
+        building_pos = text.find("Building: Block A")
+        product_pos = text.find("Product: Pipe Insulation")
+        assert building_pos < product_pos
+
 
 class TestSemanticSearchEndpoint:
     """Test ACM semantic search API endpoint."""
@@ -464,3 +686,92 @@ class TestSemanticSearchEndpoint:
         call_args = mock_repo_query.call_args
         # The params are in the second positional argument (call_args[0][1])
         assert "source_id" in str(call_args)  # source_id should be in the query
+
+
+class TestReEmbedEndpoint:
+    """Test ACM re-embed API endpoint (E1-S14)."""
+
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        from api.main import app
+        from fastapi.testclient import TestClient
+
+        return TestClient(app)
+
+    @patch("api.services.acm_embedding_service.model_manager")
+    @patch("open_notebook.database.repository.repo_query")
+    @patch("open_notebook.domain.acm.ACMRecord.save")
+    def test_re_embed_all_records(
+        self, mock_save, mock_repo_query, mock_model_manager, client
+    ):
+        """Test re-embedding all records."""
+        # Mock embedding model
+        mock_embedding_model = AsyncMock()
+        mock_embedding_model.aembed = AsyncMock(return_value=[[0.1, 0.2, 0.3]])
+        mock_embedding_model.__str__ = MagicMock(return_value="mock-model")
+        mock_model_manager.get_embedding_model = AsyncMock(
+            return_value=mock_embedding_model
+        )
+
+        # Mock repo_query to return one record without embedding
+        mock_repo_query.return_value = [
+            {
+                "id": "acm_record:1",
+                "source_id": "source:abc",
+                "school_name": "Test School",
+                "building_id": "B001",
+                "building_name": "Main Block",
+                "product": "Tiles",
+                "material_description": "Asbestos",
+                "result": "Detected",
+                "embedding": None,
+            }
+        ]
+
+        mock_save.return_value = None
+
+        response = client.post("/api/acm/re-embed", json={"force": False})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["records_processed"] >= 0
+
+    @patch("api.services.acm_embedding_service.model_manager")
+    @patch("open_notebook.domain.acm.ACMRecord.get_by_source")
+    @patch("open_notebook.domain.acm.ACMRecord.save")
+    def test_re_embed_filtered_by_source(
+        self, mock_save, mock_get_by_source, mock_model_manager, client
+    ):
+        """Test re-embedding filtered by source_id."""
+        mock_embedding_model = AsyncMock()
+        mock_embedding_model.aembed = AsyncMock(return_value=[[0.1, 0.2, 0.3]])
+        mock_embedding_model.__str__ = MagicMock(return_value="mock-model")
+        mock_model_manager.get_embedding_model = AsyncMock(
+            return_value=mock_embedding_model
+        )
+
+        mock_get_by_source.return_value = [
+            ACMRecord(
+                id="acm_record:1",
+                source_id="source:abc",
+                school_name="Test School",
+                building_id="B001",
+                building_name="Block A",
+                product="Tiles",
+                material_description="Asbestos",
+                result="Detected",
+            )
+        ]
+
+        mock_save.return_value = None
+
+        response = client.post(
+            "/api/acm/re-embed", json={"source_id": "source:abc", "force": True}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        mock_get_by_source.assert_called_once()

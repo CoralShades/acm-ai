@@ -1,0 +1,2 @@
+-- Down Migration 16: Remove enriched_text field (E1-S14)
+REMOVE FIELD enriched_text ON TABLE acm_record;

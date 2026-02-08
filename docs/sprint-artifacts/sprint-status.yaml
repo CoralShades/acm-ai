@@ -66,7 +66,7 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
-  # 7/8 stories complete, 1 remaining (backlog)
+  # 7/8 stories complete, 1 remaining (ready-for-dev, enhanced by course correction)
   epic-2: in-progress
   e2-s1-install-and-configure-ag-grid: done
   e2-s2-create-acmspreadsheet-component: done
@@ -75,6 +75,8 @@ development_status:
   e2-s5-implement-risk-status-color-coding: done
   e2-s6-add-search-bar-to-spreadsheet: done
   e2-s7-implement-building-tab-navigation: done
+  # ENHANCED 2026-02-08 (Course Correction CP-3):
+  # Added: AG Grid columns generated from field schema config API
   e2-s8-column-visibility-management: ready-for-dev
   epic-2-retrospective: optional
 
@@ -164,7 +166,11 @@ development_status:
   e12-s1-extraction-method-settings: backlog
   e12-s2-ai-model-configuration-ui: backlog
   e12-s3-processing-options-configuration: backlog
-  e12-s4-parser-configuration-management: backlog
+  # REDEFINED 2026-02-08 (Course Correction CP-2):
+  # WAS: "Parser Configuration Management" - key: e12-s4-parser-configuration-management
+  # NOW: "BAR Field Schema Configuration UI"
+  # See: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
+  e12-s4-bar-field-schema-config-ui: backlog
   epic-12-retrospective: optional
 
   # Epic 13: Knowledge Graph Visualization (P1) - NEW 2026-02-07
@@ -230,21 +236,10 @@ development_status:
 # KEY CHANGES (2026-02-07 - Document Intelligence + Settings + Knowledge Graph):
 # ================================================================================
 # - E1 expanded: +4 Document Intelligence stories (E1-S16..S19)
-#   - E1-S16: Document Structure & TOC Extraction (from n8n "AI #TOC" agent)
-#   - E1-S17: Building Inventory Compilation (from n8n "Get Building List" agent)
-#   - E1-S18: Page-Level Section Tagging (from n8n "Tag Page with Sections" agent)
-#   - E1-S19: Document Metadata Extraction Enhancement
 # - E1 expanded: +3 RAG Strategy stories (E1-S13..S15) - from RAG alignment proposal
-# - NEW Epic 11: Search & Retrieval Enhancement (2 stories) - from RAG alignment proposal
+# - NEW Epic 11: Search & Retrieval Enhancement (2 stories)
 # - NEW Epic 12: Extraction Settings & Configuration UI (4 stories)
-#   - E12-S1: Extraction Method Settings Page
-#   - E12-S2: AI Model Configuration UI
-#   - E12-S3: Processing Options Configuration
-#   - E12-S4: Parser Configuration Management
-# - NEW Epic 13: Knowledge Graph Visualization (3 stories) - uses React Flow
-#   - E13-S1: SurrealDB Graph Entity Schema
-#   - E13-S2: Knowledge Graph API & Data Service
-#   - E13-S3: React Flow Knowledge Graph Visualization
+# - NEW Epic 13: Knowledge Graph Visualization (3 stories)
 #
 # NEXT RECOMMENDED ACTIONS:
 # =========================

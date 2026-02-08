@@ -724,3 +724,18 @@ class TaxonomyResponse(BaseModel):
 
     friability: str = Field(..., description="Taxonomy type: 'Friable' or 'Non-friable'")
     groups: List[TaxonomyGroupResponse] = Field(..., description="Product groups in taxonomy")
+
+
+class ReEmbedRequest(BaseModel):
+    """Request to re-embed ACM records with contextual enrichment (E1-S14)."""
+
+    source_id: Optional[str] = Field(None, description="Optional source ID filter")
+    force: bool = Field(False, description="Re-embed all records even if already embedded")
+
+
+class ReEmbedResponse(BaseModel):
+    """Response from re-embedding request."""
+
+    success: bool = Field(..., description="Whether re-embedding completed successfully")
+    records_processed: int = Field(..., description="Number of records processed")
+    message: str = Field(..., description="Status message")

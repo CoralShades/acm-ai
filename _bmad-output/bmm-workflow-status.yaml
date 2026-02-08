@@ -51,6 +51,7 @@ workflow_status:
   correct-course-bar: "_bmad-output/sprint-change-proposal-20260204.md"
   correct-course-rag: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-07.md"
   correct-course-docint: "_bmad-output/sprint-change-proposal-20260207-workflow-extraction.md"
+  correct-course-generic-parser: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md"
 
 # CHANGE LOG:
 # ===========
@@ -89,3 +90,12 @@ workflow_status:
 #   - All stories verified: build PASS, lint PASS, UX audit PASS
 #   - Sprint status: 85 stories total (61 done, 24 remaining)
 #   - Merged to main via PR #7 (rebase and merge)
+# 2026-02-08: Course Correction - Generic Configurable Parser
+#   - 3 consultant parsers (Prensa, Greencap, Generic) → 1 configurable generic parser
+#   - BAR Excel template as single source of truth for fields, enums, rules
+#   - E1-S11 redefined: Extensible Parser Framework → Generic Configurable Parser
+#   - E12-S4 redefined: Parser Config Management → BAR Field Schema Config UI
+#   - E2-S8 enhanced: AG Grid columns from field config
+#   - Architecture 5.2 rewritten, PRD 5.7 + FR-107 updated
+#   - Change scope: Moderate | Risk: Low | Path: Direct Adjustment
+#   - Proposal: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md

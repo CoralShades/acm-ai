@@ -734,6 +734,9 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 data_issues=record.data_issues if record.data_issues else None,
             )
 
+            # Generate enriched text for contextual embedding (E1-S14)
+            acm_record.enriched_text = acm_record.get_enriched_embedding_text()
+
             await acm_record.save()
             saved_count += 1
 

@@ -37,6 +37,8 @@ from api.models import (
     ClassifyResponse,
     NormalizeRequest,
     NormalizeResponse,
+    ReEmbedRequest,
+    ReEmbedResponse,
     SiteConfigRequest,
     SiteConfigResponse,
     SiteConfigTemplateResponse,
@@ -605,6 +607,37 @@ async def semantic_search_acm(
         raise
     except Exception as e:
         logger.error(f"Error in semantic search: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/re-embed", response_model=ReEmbedResponse)
+async def re_embed_acm_records(request: ReEmbedRequest):
+    """
+    Re-embed ACM records with contextual enrichment (E1-S14).
+
+    Generates enriched_text with hierarchical context (Building, Level, Room, Page)
+    and re-embeds records. Optionally filter by source_id.
+    Use force=True to re-embed records that already have embeddings.
+    """
+    try:
+        from api.services.acm_embedding_service import ACMEmbeddingService
+
+        service = ACMEmbeddingService()
+        count = await service.re_embed_acm_records(
+            source_id=request.source_id,
+            force=request.force,
+        )
+
+        return ReEmbedResponse(
+            success=True,
+            records_processed=count,
+            message=f"Re-embedded {count} ACM records with contextual enrichment",
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error re-embedding ACM records: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
