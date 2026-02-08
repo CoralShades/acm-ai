@@ -52,8 +52,19 @@ function RiskStatusRenderer({ value }: { value: string | null | undefined }) {
     Presumed: 'bg-risk-presumed-bg text-risk-presumed-foreground',
   }
 
+  const ariaLabels: Record<string, string> = {
+    High: 'High risk asbestos material',
+    Medium: 'Medium risk asbestos material',
+    Low: 'Low risk asbestos material',
+    Presumed: 'Presumed asbestos material',
+  }
+
   return (
-    <Badge variant="secondary" className={variants[value] || ''}>
+    <Badge
+      variant="secondary"
+      className={variants[value] || ''}
+      aria-label={ariaLabels[value] || `Risk status: ${value}`}
+    >
       {value}
     </Badge>
   )
@@ -79,6 +90,7 @@ function ActionsRenderer({
           e.stopPropagation()
           onEdit(data)
         }}
+        aria-label="Edit ACM record"
       >
         <Edit2 className="h-4 w-4" />
       </Button>
@@ -90,6 +102,7 @@ function ActionsRenderer({
           e.stopPropagation()
           onDelete(data)
         }}
+        aria-label="Delete ACM record"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -146,6 +159,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       {
         field: 'building_id',
         headerName: 'Building ID',
+        headerTooltip: 'Building identifier and name',
         width: 110,
         sortable: true,
         filter: true,
@@ -169,6 +183,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       {
         field: 'room_id',
         headerName: 'Room ID',
+        headerTooltip: 'Room identifier and name',
         width: 100,
         sortable: true,
         filter: true,
@@ -192,6 +207,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       {
         field: 'product',
         headerName: 'Product',
+        headerTooltip: 'Asbestos product type',
         width: 140,
         sortable: true,
         filter: true,
@@ -199,6 +215,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       {
         field: 'material_description',
         headerName: 'Description',
+        headerTooltip: 'Material description and location details',
         flex: 1,
         minWidth: 200,
         sortable: true,
@@ -207,6 +224,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       {
         field: 'risk_status',
         headerName: 'Risk',
+        headerTooltip: 'Risk status: High, Medium, Low, or Presumed',
         width: 100,
         sortable: true,
         filter: true,
@@ -329,7 +347,11 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
   )
 
   return (
-    <div className="ag-theme-alpine h-[500px] w-full">
+    <div
+      className="ag-theme-alpine h-[500px] w-full"
+      role="region"
+      aria-label="ACM Records Data Grid - Use arrow keys to navigate, Enter to view details"
+    >
       <style jsx global>{`
         .ag-theme-alpine {
           --ag-header-background-color: hsl(var(--muted));

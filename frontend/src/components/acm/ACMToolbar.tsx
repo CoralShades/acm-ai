@@ -176,7 +176,7 @@ export function ACMToolbar({
           )}
 
           {/* Refresh Button */}
-          <Button variant="outline" size="icon" onClick={onRefresh} disabled={disabled}>
+          <Button variant="outline" size="icon" onClick={onRefresh} disabled={disabled} aria-label="Refresh ACM records">
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
