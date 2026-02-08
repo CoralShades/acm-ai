@@ -442,7 +442,7 @@ To start implementing stories, use these BMAD workflows:
 # Run sprint status
 /bmad-bmm-sprint-status
 
-# Create sprint change proposal (for Lane A coordination)
+# Create sprint change proposal (for Lane A coordination) - Only After everything is done
 /bmad-bmm-correct-course
 ```
 
@@ -452,11 +452,12 @@ To start implementing stories, use these BMAD workflows:
 
 1. **Read specs before coding.** Every story has a "Spec Reference" pointing to the exact section in the spec documents. Read that section FIRST.
 2. **Don't overwrite existing code patterns.** The codebase has established patterns (React Query, Zustand, shadcn/ui). Follow them.
-3. **Build verification required.** Run `cd frontend && npm run build` after every story. A build failure = incomplete story.
-4. **Browser verification for UI stories.** Navigate to the affected page and verify elements exist.
-5. **Keep brownfield code.** When hiding features (E14-S3), remove nav entries only. Do NOT delete page files or components.
-6. **Lane B only.** Do not modify files owned by Lane A (migrations, sprint-status.yaml, backend Python code). Create change proposals instead.
-7. **VAEA tokens are foundational.** E14-S1 MUST be completed before any other E14 story that involves visual changes.
-8. **Conventional commits.** Use `feat:`, `fix:`, `refactor:`, `docs:` prefixes.
-9. **One story per feature branch.** Branch from `lane-b` as `feature/e14-s1`, merge back to `lane-b`.
-10. **Test on both light and dark mode.** VAEA has explicit dark mode tokens -- verify both.
+3. 
+4. **Build verification required.** Run `cd frontend && npm run build` after every story. Use MCP tools to take a screenshot of the build output. A build failure = incomplete story.
+5. **Browser verification for UI stories.** Navigate to the affected page and verify elements exist.
+6. **Keep brownfield code.** When hiding features (E14-S3), remove nav entries only. Do NOT delete page files or components.
+7. **Lane B only.** Do not modify files owned by Lane A (migrations, sprint-status.yaml, backend Python code). Create change proposals instead.
+8. **VAEA tokens are foundational.** E14-S1 MUST be completed before any other E14 story that involves visual changes.
+9. **Conventional commits.** Use `feat:`, `fix:`, `refactor:`, `docs:` prefixes.
+10. **One story per feature branch.** Branch from `lane-b` as `feature/e14-s1`, merge back to `lane-b`.
+11. **Test on both light and dark mode.** VAEA has explicit dark mode tokens -- verify both.
