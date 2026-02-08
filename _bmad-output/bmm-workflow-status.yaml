@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-07"
+updated: "2026-02-08"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -81,3 +81,11 @@ workflow_status:
 #   - NEW Epic 13: Knowledge Graph Visualization with React Flow (3 stories)
 #   - Sprint status: 73 stories total (50 done, 23 remaining)
 #   - Change proposal: _bmad-output/sprint-change-proposal-20260207-workflow-extraction.md
+# 2026-02-08: Epic 14 - UX & Enterprise Readiness (Lane B, Complete)
+#   - 11 stories implemented and committed on lane-b branch
+#   - VAEA branding, sidebar redesign, brownfield cleanup, skeleton loaders
+#   - Toast system, WCAG 2.1 AA accessibility, unified documents view
+#   - Error recovery, keyboard navigation, breadcrumbs, type generation pipeline
+#   - All stories verified: build PASS, lint PASS, UX audit PASS
+#   - Sprint status: 85 stories total (61 done, 24 remaining)
+#   - Merged to main via PR #7 (rebase and merge)
