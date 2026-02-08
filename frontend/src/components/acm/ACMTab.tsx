@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FileWarning, AlertCircle } from 'lucide-react'
@@ -32,6 +33,9 @@ interface ACMTabProps {
 }
 
 export function ACMTab({ sourceId }: ACMTabProps) {
+  // Hooks
+  const router = useRouter()
+
   // Refs
   const gridRef = useRef<ACMGridRef>(null)
 
@@ -160,6 +164,36 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const handleVisibleCountChange = useCallback((count: number) => {
     setVisibleCount(count)
   }, [])
+
+  // Listen for acm-command custom events from Command Palette
+  useEffect(() => {
+    const handleACMCommand = (e: Event) => {
+      const customEvent = e as CustomEvent<{ action: string }>
+      const action = customEvent.detail?.action
+      if (!action) return
+
+      switch (action) {
+        case 'extract':
+          handleExtract()
+          break
+        case 'export-csv':
+          handleExportCsv()
+          break
+        case 'export-excel':
+          handleExportExcel()
+          break
+        case 'add-record':
+          handleAddNew()
+          break
+        case 'upload':
+          router.push('/sources?action=upload')
+          break
+      }
+    }
+
+    window.addEventListener('acm-command', handleACMCommand)
+    return () => window.removeEventListener('acm-command', handleACMCommand)
+  }, [handleExtract, handleExportCsv, handleExportExcel, handleAddNew, router])
 
   // Cell citation viewer handler
   const handleCellSelect = useCallback((details: CellSelectionDetails) => {
