@@ -15,7 +15,7 @@ services:
     user: root
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "/surreal", "isready", "--conn", "http://localhost:8000"]
       interval: 10s
       timeout: 5s
       retries: 5

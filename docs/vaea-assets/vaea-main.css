@@ -1,0 +1,16 @@
+:root {
+  /* Primary brand colours */
+  --vaea-teal-100: #9AD9D9; /* Light teal */
+  --vaea-teal-300: #53A69D; /* Primary teal */
+  --vaea-teal-700: #2A5951; /* Deep teal */
+
+  /* Accent / environmental green */
+  --vaea-green-200: #A9D9AC;
+
+  /* Neutral */
+  --vaea-grey-50:  #F2F2F2;
+  --vaea-grey-100: #E6E6E6;
+  --vaea-grey-300: #BFBFBF;
+  --vaea-grey-700: #4D4D4D;
+  --vaea-grey-900: #1F1F1F;
+}

@@ -8,5 +8,9 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"]
     }
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
+
 }
