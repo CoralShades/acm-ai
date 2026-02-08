@@ -5,7 +5,15 @@
 > **Branch:** lane-b
 > **Worktree:** `/mnt/d/ailocal/acm-ai-frontend/`
 
----
+| Agent | BMad Role | Key Responsibilities |
+|-------|-----------|---------------------|
+| `bmad-pm` | Product Manager | PRD management, requirements, change proposals, stakeholder alignment |
+| `bmad-sm` | Scrum Master | Sprint planning, status tracking, story creation, backlog management |
+| `bmad-dev` | Developer | Story implementation, TDD, code delivery |
+| `bmad-architect` | Architect | Architecture docs, tech decisions, system design |
+| `bmad-qa` | QA/TEA | Test design, test review, acceptance testing, regression |
+| `bmad-tech-writer` | Tech Writer | Documentation, tech specs, API docs |
+| `bmad-analyst` | Analyst | Research, domain analysis, gap identification |
 
 ## Story Queue
 
