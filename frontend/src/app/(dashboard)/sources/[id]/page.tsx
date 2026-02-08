@@ -45,6 +45,7 @@ import {
 import { useSourceChat } from '@/lib/hooks/useSourceChat';
 import { ChatPanel } from '@/components/source/ChatPanel';
 import { useNavigation } from '@/lib/hooks/use-navigation';
+import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { acmApi } from '@/lib/api/acm';
 import { useSource } from '@/lib/hooks/use-sources';
 import { useACMStats } from '@/lib/hooks/use-acm';
@@ -213,12 +214,19 @@ export default function SourceDetailPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Back button */}
-      <div className="pt-4 pb-2 px-6 flex-shrink-0">
+      {/* Back button + Breadcrumbs */}
+      <div className="pt-4 pb-2 px-6 flex-shrink-0 space-y-2">
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           {navigation.getReturnLabel()}
         </Button>
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'Documents', href: '/documents' },
+            { label: source.title || 'Untitled Source' },
+          ]}
+        />
       </div>
 
       {/* Main Bento Grid Layout */}
