@@ -154,9 +154,9 @@ development_status:
   epic-10-retrospective: optional
 
   # Epic 11: Search & Retrieval Enhancement (P0/P1) - RAG Strategy
-  # 0/2 stories complete
-  epic-11: backlog
-  e11-s1-parent-document-retrieval: backlog
+  # 0/2 stories complete, 1 ready-for-dev
+  epic-11: in-progress
+  e11-s1-parent-document-retrieval: review
   e11-s2-hybrid-search-service: backlog
   epic-11-retrospective: optional
 

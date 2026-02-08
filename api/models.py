@@ -522,6 +522,17 @@ class ACMRecordCreateRequest(BaseModel):
     page_number: Optional[int] = Field(None, description="Source page number")
 
 
+class ParentContextResponse(BaseModel):
+    """Parent table section context for search results (E11-S1)."""
+
+    id: str
+    building_name: Optional[str] = None
+    page_start: int
+    page_end: int
+    table_type: Optional[str] = None
+    raw_text: Optional[str] = None
+
+
 class ACMSearchResultResponse(BaseModel):
     """Single ACM search result with similarity score."""
 
@@ -540,6 +551,9 @@ class ACMSearchResultResponse(BaseModel):
     risk_status: Optional[str] = None
     result: str
     score: float = Field(..., description="Semantic similarity score (0-1)")
+    parent_context: Optional[ParentContextResponse] = Field(
+        None, description="Parent table section context (when include_parent=true)"
+    )
 
 
 class ACMSearchResponse(BaseModel):
@@ -798,4 +812,17 @@ class ReEmbedResponse(BaseModel):
 
     success: bool = Field(..., description="Whether re-embedding completed successfully")
     records_processed: int = Field(..., description="Number of records processed")
+    message: str = Field(..., description="Status message")
+
+
+class BackfillParentsRequest(BaseModel):
+    """Request to backfill parent_table_id for existing records (E11-S1)."""
+
+    source_id: Optional[str] = Field(None, description="Optional source ID filter")
+
+
+class BackfillParentsResponse(BaseModel):
+    """Response from backfill parents operation."""
+
+    records_updated: int = Field(..., description="Number of records linked to parents")
     message: str = Field(..., description="Status message")

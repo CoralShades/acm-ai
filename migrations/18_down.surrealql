@@ -1,0 +1,4 @@
+-- Down Migration 18: Remove Parent Document Retrieval (E11-S1)
+REMOVE INDEX acm_parent ON TABLE acm_record;
+REMOVE FIELD parent_table_id ON TABLE acm_record;
+REMOVE TABLE acm_table_section;

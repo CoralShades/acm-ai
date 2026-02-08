@@ -31,6 +31,8 @@ from api.models import (
     ACMStatsResponse,
     AgencyListResponse,
     ApplyTemplateRequest,
+    BackfillParentsRequest,
+    BackfillParentsResponse,
     BatchClassifyRequest,
     BatchClassifyResponse,
     BusinessRuleResponse,
@@ -41,6 +43,7 @@ from api.models import (
     FieldSchemaConfigUpdateRequest,
     NormalizeRequest,
     NormalizeResponse,
+    ParentContextResponse,
     ReEmbedRequest,
     ReEmbedResponse,
     SiteConfigRequest,
@@ -50,7 +53,7 @@ from api.models import (
     TaxonomyResponse,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.acm import ACMRecord, ACMTableSection
 from open_notebook.domain.site_config import SiteConfig
 
 router = APIRouter()
@@ -508,12 +511,16 @@ async def semantic_search_acm(
     building_id: Optional[str] = Query(None, description="Filter to specific building"),
     limit: int = Query(10, ge=1, le=100, description="Maximum results to return"),
     threshold: float = Query(0.7, ge=0.0, le=1.0, description="Minimum similarity score"),
+    include_parent: bool = Query(False, description="Include parent table section context (E11-S1)"),
 ):
     """
     Semantic search across ACM records.
 
     Uses vector similarity to find records matching natural language queries.
     Requires records to have embeddings generated via the embedding pipeline.
+
+    When include_parent=true, returns parent table section context alongside
+    matched records for richer retrieval (E11-S1 Parent Document Retrieval).
 
     Example queries:
     - "high risk asbestos items"
@@ -576,6 +583,28 @@ async def semantic_search_acm(
         for r in results:
             score = r.get("score", 0)
             if score >= threshold:
+                # Build parent context if requested
+                parent_ctx = None
+                if include_parent and r.get("parent_table_id"):
+                    try:
+                        page_num = r.get("page_number")
+                        source = str(r.get("source_id", ""))
+                        if page_num and source:
+                            section = await ACMTableSection.get_by_page_range(
+                                source, page_num
+                            )
+                            if section:
+                                parent_ctx = ParentContextResponse(
+                                    id=str(section.id) if section.id else "",
+                                    building_name=section.building_name,
+                                    page_start=section.page_start,
+                                    page_end=section.page_end,
+                                    table_type=section.table_type,
+                                    raw_text=section.raw_text,
+                                )
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch parent context: {e}")
+
                 search_results.append(
                     ACMSearchResultResponse(
                         id=str(r.get("id", "")),
@@ -593,12 +622,13 @@ async def semantic_search_acm(
                         risk_status=r.get("risk_status"),
                         result=r.get("result", ""),
                         score=round(score, 4),
+                        parent_context=parent_ctx,
                     )
                 )
 
         logger.info(
             f"Semantic search for '{query}': {len(search_results)} results "
-            f"(threshold={threshold}, limit={limit})"
+            f"(threshold={threshold}, limit={limit}, include_parent={include_parent})"
         )
 
         return ACMSearchResponse(
@@ -642,6 +672,76 @@ async def re_embed_acm_records(request: ReEmbedRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error re-embedding ACM records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backfill-parents", response_model=BackfillParentsResponse)
+async def backfill_parent_references(
+    request: BackfillParentsRequest = BackfillParentsRequest(),
+):
+    """
+    Backfill parent_table_id for existing ACM records (E11-S1).
+
+    Matches each record's source_id + page_number to an acm_table_section
+    page range and sets parent_table_id. Optionally filter by source_id.
+    """
+    try:
+        # Build query for records without parent
+        conditions = ["parent_table_id IS NULL OR parent_table_id IS NONE"]
+        params: dict = {}
+        if request.source_id:
+            conditions.append("source_id = $source_id")
+            params["source_id"] = ensure_record_id(request.source_id)
+
+        where_clause = " AND ".join(conditions)
+        orphan_query = f"SELECT id, source_id, page_number FROM acm_record WHERE {where_clause} LIMIT 10000"
+        orphan_records = await repo_query(orphan_query, params)
+
+        if not orphan_records:
+            return BackfillParentsResponse(
+                records_updated=0,
+                message="No records found without parent references",
+            )
+
+        updated = 0
+        for record in orphan_records:
+            page_num = record.get("page_number")
+            source = str(record.get("source_id", ""))
+            record_id = str(record.get("id", ""))
+
+            if not page_num or not source or not record_id:
+                continue
+
+            # Find matching section
+            section_query = (
+                "SELECT id FROM acm_table_section "
+                "WHERE source_id = $source_id AND page_start <= $page AND page_end >= $page "
+                "LIMIT 1"
+            )
+            sections = await repo_query(
+                section_query,
+                {"source_id": ensure_record_id(source), "page": page_num},
+            )
+
+            if sections:
+                section_id = str(sections[0].get("id", ""))
+                if section_id:
+                    await repo_query(
+                        "UPDATE $record_id SET parent_table_id = $section_id",
+                        {
+                            "record_id": ensure_record_id(record_id),
+                            "section_id": ensure_record_id(section_id),
+                        },
+                    )
+                    updated += 1
+
+        return BackfillParentsResponse(
+            records_updated=updated,
+            message=f"Linked {updated} records to parent table sections",
+        )
+
+    except Exception as e:
+        logger.error(f"Error backfilling parent references: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

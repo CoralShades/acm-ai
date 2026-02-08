@@ -208,6 +208,12 @@ class ACMRecord(ObjectModel):
         description="Contextually enriched text with hierarchical metadata for embedding (E1-S14)"
     )
 
+    # Parent document retrieval (E11-S1)
+    parent_table_id: Optional[str] = Field(
+        default=None,
+        description="Reference to parent ACMTableSection for table-level context"
+    )
+
     # Validators for required fields
     @field_validator("source_id", mode="before")
     @classmethod
@@ -466,6 +472,95 @@ class ACMRecord(ObjectModel):
                 parts.append(f"{label}: {value}")
 
         return " | ".join(parts) if parts else ""
+
+    def _prepare_save_data(self) -> dict:
+        """Override to ensure source_id and parent_table_id are proper record format."""
+        data = super()._prepare_save_data()
+        if data.get("source_id"):
+            data["source_id"] = ensure_record_id(data["source_id"])
+        if data.get("parent_table_id"):
+            data["parent_table_id"] = ensure_record_id(data["parent_table_id"])
+        return data
+
+
+class ACMTableSection(ObjectModel):
+    """Parent document model for ACM table sections (E11-S1).
+
+    Represents a full table section extracted from a PDF, spanning one or more
+    pages. Individual ACMRecords link back to their parent section via
+    parent_table_id, enabling parent-document retrieval for richer search context.
+    """
+
+    table_name: ClassVar[str] = "acm_table_section"
+
+    source_id: str  # record<source> in DB
+    page_start: int
+    page_end: int
+    raw_html: Optional[str] = None
+    raw_text: Optional[str] = None
+    building_name: Optional[str] = None
+    table_type: Optional[str] = Field(
+        default=None,
+        description="Type of table section: 'register', 'lab_report', or 'metadata'"
+    )
+
+    @field_validator("source_id", mode="before")
+    @classmethod
+    def validate_source_id(cls, v):
+        if not v:
+            raise InvalidInputError("source_id is required")
+        if isinstance(v, str) and not v.startswith("source:"):
+            return f"source:{v}"
+        return str(v)
+
+    @classmethod
+    async def get_by_source(cls, source_id: str) -> List["ACMTableSection"]:
+        """Get all table sections for a specific source document."""
+        if not source_id:
+            raise InvalidInputError("source_id is required")
+        try:
+            result = await repo_query(
+                "SELECT * FROM acm_table_section WHERE source_id = $source_id ORDER BY page_start",
+                {"source_id": ensure_record_id(source_id)},
+            )
+            return [cls(**record) for record in result]
+        except Exception as e:
+            logger.error(f"Error fetching table sections for source {source_id}: {e}")
+            raise DatabaseOperationError(e)
+
+    @classmethod
+    async def get_by_page_range(
+        cls, source_id: str, page: int
+    ) -> Optional["ACMTableSection"]:
+        """Find the table section that contains the given page number."""
+        if not source_id:
+            raise InvalidInputError("source_id is required")
+        try:
+            result = await repo_query(
+                "SELECT * FROM acm_table_section WHERE source_id = $source_id AND page_start <= $page AND page_end >= $page LIMIT 1",
+                {"source_id": ensure_record_id(source_id), "page": page},
+            )
+            return cls(**result[0]) if result else None
+        except Exception as e:
+            logger.error(
+                f"Error fetching table section for source {source_id} page {page}: {e}"
+            )
+            raise DatabaseOperationError(e)
+
+    @classmethod
+    async def delete_by_source(cls, source_id: str) -> int:
+        """Delete all table sections for a source. Returns count of deleted sections."""
+        if not source_id:
+            raise InvalidInputError("source_id is required")
+        try:
+            result = await repo_query(
+                "DELETE acm_table_section WHERE source_id = $source_id RETURN BEFORE",
+                {"source_id": ensure_record_id(source_id)},
+            )
+            return len(result) if result else 0
+        except Exception as e:
+            logger.error(f"Error deleting table sections for source {source_id}: {e}")
+            raise DatabaseOperationError(e)
 
     def _prepare_save_data(self) -> dict:
         """Override to ensure source_id is proper record format."""

@@ -8,6 +8,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
+from loguru import logger
 from typing_extensions import TypedDict
 
 from api.utils.acm_context import detect_question_type, format_acm_context_for_question
@@ -206,6 +207,9 @@ async def format_acm_context(
     """
     Format ACM records for chat context, optimized for the question type.
 
+    Includes parent table section context (E11-S1) for records that have
+    parent_table_id set, providing richer table-level context for the chat.
+
     Args:
         source_id: The source ID to fetch ACM records for
         max_records: Maximum number of records to include (default 50)
@@ -231,6 +235,19 @@ async def format_acm_context(
     else:
         # Default: use table format
         formatted = format_acm_context_for_question(records_to_format, "general")
+
+    # Add parent table context summary (E11-S1)
+    try:
+        from open_notebook.domain.acm import ACMTableSection
+
+        sections = await ACMTableSection.get_by_source(source_id)
+        if sections:
+            formatted += "\n\n**Table Sections:**\n"
+            for s in sections:
+                name = s.building_name or "Unknown"
+                formatted += f"- {name} (pages {s.page_start}-{s.page_end}, type: {s.table_type or 'register'})\n"
+    except Exception as e:
+        logger.debug(f"Could not fetch parent table sections: {e}")
 
     # Add truncation notice if needed
     if truncated:

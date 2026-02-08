@@ -1186,11 +1186,38 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             "error": None,
         }
 
+    # Create parent table sections from building inventory (E11-S1)
+    from open_notebook.domain.acm import ACMTableSection
+
+    section_map: Dict[str, str] = {}  # building_id -> section_id
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
+    if inventory and inventory.buildings:
+        for building in inventory.buildings:
+            try:
+                section = ACMTableSection(
+                    source_id=str(source.id),
+                    page_start=building.page_start,
+                    page_end=building.page_end or building.page_start,
+                    building_name=f"{building.building_id} {building.name}" if building.name else building.building_id,
+                    table_type="register",
+                )
+                await section.save()
+                if section.id:
+                    section_map[building.building_id] = str(section.id)
+            except Exception as e:
+                logger.warning(f"Failed to create table section for building {building.building_id}: {e}")
+
+        if section_map:
+            logger.info(f"Created {len(section_map)} parent table sections for source {source.id}")
+
     saved_count = 0
     errors = []
 
     for record in records:
         try:
+            # Resolve parent section (E11-S1)
+            parent_id = section_map.get(record.building_id)
+
             # Convert extraction record to ACMRecord
             acm_record = ACMRecord(
                 source_id=str(source.id),
@@ -1213,6 +1240,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 risk_status=record.risk_status,
                 result=record.result,
                 page_number=record.page_number,
+                parent_table_id=parent_id,
                 # New AI extraction fields
                 disturbance_potential=record.disturbance_potential,
                 sample_no=record.sample_no,
@@ -1386,7 +1414,16 @@ async def extract_acm_from_source(
     start_time = time.time()
 
     if force:
-        # Delete existing records
+        # Delete existing table sections and records (E11-S1)
+        from open_notebook.domain.acm import ACMTableSection
+
+        try:
+            sections_deleted = await ACMTableSection.delete_by_source(str(source.id))
+            if sections_deleted > 0:
+                logger.info(f"Deleted {sections_deleted} existing table sections for source {source.id}")
+        except Exception as e:
+            logger.warning(f"Failed to delete table sections: {e}")
+
         deleted = await ACMRecord.delete_by_source(str(source.id))
         if deleted > 0:
             logger.info(f"Deleted {deleted} existing ACM records for source {source.id}")

@@ -1,0 +1,23 @@
+-- Migration 18: Parent Document Retrieval (E11-S1)
+-- Creates acm_table_section table for storing raw table sections as parent documents
+-- Adds parent_table_id to acm_record for child-to-parent linking
+
+-- Create parent table section table
+DEFINE TABLE acm_table_section SCHEMAFULL;
+
+DEFINE FIELD source_id ON acm_table_section TYPE record<source>;
+DEFINE FIELD page_start ON acm_table_section TYPE int;
+DEFINE FIELD page_end ON acm_table_section TYPE int;
+DEFINE FIELD raw_html ON acm_table_section TYPE option<string>;
+DEFINE FIELD raw_text ON acm_table_section TYPE option<string>;
+DEFINE FIELD building_name ON acm_table_section TYPE option<string>;
+DEFINE FIELD table_type ON acm_table_section TYPE option<string>;
+DEFINE FIELD created ON acm_table_section TYPE datetime DEFAULT time::now();
+
+-- Indexes for efficient lookups
+DEFINE INDEX section_source ON acm_table_section FIELDS source_id;
+DEFINE INDEX section_pages ON acm_table_section FIELDS page_start, page_end;
+
+-- Add parent reference to acm_record
+DEFINE FIELD parent_table_id ON acm_record TYPE option<record<acm_table_section>>;
+DEFINE INDEX acm_parent ON acm_record FIELDS parent_table_id;
