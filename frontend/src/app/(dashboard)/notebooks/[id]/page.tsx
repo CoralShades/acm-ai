@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { ErrorBoundary } from '@/components/common/ErrorBoundary'
+import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { AppShell } from '@/components/layout/AppShell'
 import { NotebookHeader } from '../components/NotebookHeader'
 import { SourcesColumn } from '../components/SourcesColumn'
@@ -24,7 +26,7 @@ export interface ContextSelections {
   notes: Record<string, ContextMode>
 }
 
-export default function NotebookPage() {
+function NotebookPageContent() {
   const params = useParams()
 
   // Ensure the notebook ID is properly decoded from URL
@@ -220,5 +222,21 @@ export default function NotebookPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+export default function NotebookPage() {
+  return (
+    <ErrorBoundary
+      fallback={(props) => (
+        <PageErrorFallback
+          {...props}
+          pageName="Notebook"
+          reloadUrl="/notebooks"
+        />
+      )}
+    >
+      <NotebookPageContent />
+    </ErrorBoundary>
   )
 }
