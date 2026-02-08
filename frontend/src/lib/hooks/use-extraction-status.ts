@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { acmApi } from '@/lib/api/acm'
 import { ACM_QUERY_KEYS } from './use-acm'
+import { useToast } from './use-toast'
+import type { ProgressToastController } from '@/lib/toast-patterns'
 
 export type ExtractionPhase = 'idle' | 'extracting' | 'completed' | 'failed'
 
@@ -11,7 +13,7 @@ interface ExtractionStatus {
   phase: ExtractionPhase
   recordsCreated: number | undefined
   errorMessage: string | undefined
-  startTracking: (commandId: string) => void
+  startTracking: (commandId: string, options?: { showToast?: boolean; sourceName?: string }) => void
   dismiss: () => void
 }
 
@@ -19,9 +21,10 @@ const SESSION_KEY_PREFIX = 'acm-extraction-'
 
 export function useExtractionStatus(sourceId: string): ExtractionStatus {
   const queryClient = useQueryClient()
+  const { createProgress } = useToast()
   const sessionKey = `${SESSION_KEY_PREFIX}${sourceId}`
+  const toastControllerRef = useRef<ProgressToastController | null>(null)
 
-  // Read initial commandId from sessionStorage (survives tab navigation)
   const [commandId, setCommandId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null
     return sessionStorage.getItem(sessionKey) || null
@@ -35,7 +38,6 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
   const [recordsCreated, setRecordsCreated] = useState<number | undefined>(undefined)
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 
-  // Poll job status while we have a commandId and phase is extracting
   const { data: jobStatus } = useQuery({
     queryKey: ['extraction-job', commandId],
     queryFn: () => acmApi.getJobStatus(commandId!),
@@ -52,7 +54,6 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
     retry: 2,
   })
 
-  // React to job status changes
   useEffect(() => {
     if (!jobStatus || phase !== 'extracting') return
 
@@ -61,7 +62,14 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
       setRecordsCreated(jobStatus.result?.records_created)
       sessionStorage.removeItem(sessionKey)
 
-      // Invalidate ACM queries so grid refreshes
+      if (toastControllerRef.current) {
+        toastControllerRef.current.complete(
+          'Extraction complete',
+          `${jobStatus.result?.records_created || 0} records extracted`
+        )
+        toastControllerRef.current = null
+      }
+
       queryClient.invalidateQueries({
         queryKey: ['acm', 'records', sourceId],
       })
@@ -69,23 +77,42 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
         queryKey: ACM_QUERY_KEYS.stats(sourceId),
       })
     } else if (jobStatus.status === 'failed' || jobStatus.status === 'canceled') {
+      const errMsg = jobStatus.result?.error_message || jobStatus.error_message || 'Extraction failed'
       setPhase('failed')
-      setErrorMessage(
-        jobStatus.result?.error_message || jobStatus.error_message || 'Extraction failed'
-      )
+      setErrorMessage(errMsg)
       sessionStorage.removeItem(sessionKey)
+
+      if (toastControllerRef.current) {
+        toastControllerRef.current.fail('Extraction failed', errMsg)
+        toastControllerRef.current = null
+      }
+    } else if (jobStatus.status === 'running' && toastControllerRef.current) {
+      toastControllerRef.current.updateProgress(
+        'Processing document...',
+        'AI is analyzing the document'
+      )
     }
   }, [jobStatus, phase, sourceId, sessionKey, queryClient])
 
   const startTracking = useCallback(
-    (newCommandId: string) => {
+    (newCommandId: string, options?: { showToast?: boolean; sourceName?: string }) => {
       setCommandId(newCommandId)
       setPhase('extracting')
       setRecordsCreated(undefined)
       setErrorMessage(undefined)
       sessionStorage.setItem(sessionKey, newCommandId)
+
+      if (options?.showToast) {
+        toastControllerRef.current = createProgress(
+          `Extracting ${options.sourceName || 'document'}...`,
+          {
+            description: 'AI is analyzing the document',
+            persistent: true,
+          }
+        )
+      }
     },
-    [sessionKey]
+    [sessionKey, createProgress]
   )
 
   const dismiss = useCallback(() => {
@@ -94,6 +121,11 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
     setRecordsCreated(undefined)
     setErrorMessage(undefined)
     sessionStorage.removeItem(sessionKey)
+
+    if (toastControllerRef.current) {
+      toastControllerRef.current.dismiss()
+      toastControllerRef.current = null
+    }
   }, [sessionKey])
 
   return { phase, recordsCreated, errorMessage, startTracking, dismiss }
