@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { ACMRegisterSkeleton } from '@/components/skeletons/ACMRegisterSkeleton'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -65,6 +66,14 @@ export default function ACMPage() {
   // Compute records
   const records = useMemo(() => recordsData?.records || [], [recordsData])
   const hasRecords = records.length > 0
+
+  if (isLoadingSources) {
+    return (
+      <AppShell>
+        <ACMRegisterSkeleton />
+      </AppShell>
+    )
+  }
 
   // Handlers
   const handleSourceChange = (sourceId: string) => {
