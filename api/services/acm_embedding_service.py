@@ -174,7 +174,7 @@ class ACMEmbeddingService:
         if source_id:
             records = await ACMRecord.get_by_source(source_id)
         else:
-            result = await repo_query("SELECT * FROM acm_record")
+            result = await repo_query("SELECT * FROM acm_record LIMIT 10000")
             records = [ACMRecord(**r) for r in result] if result else []
 
         if not records:
@@ -190,11 +190,7 @@ class ACMEmbeddingService:
 
         logger.info(f"Re-embedding {len(records)} ACM records (force={force})")
 
-        # Generate enriched_text for each record
-        for record in records:
-            record.enriched_text = record.get_enriched_embedding_text()
-
-        # Embed records in batches
+        # Embed records in batches (embed_records generates enriched_text internally)
         embedded_records = await self.embed_records(records)
 
         # Save updated records to database

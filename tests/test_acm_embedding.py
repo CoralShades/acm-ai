@@ -365,14 +365,15 @@ class TestACMEmbeddingService:
 
         # The text passed to embedding model should be the enriched version
         call_args = mock_embedding_model.aembed.call_args[0][0]
-        assert "Building: Main Block" in call_args[0]
         assert "Level: Ground Floor" in call_args[0]
-        assert "Room: Kitchen" in call_args[0]
         assert "Page: 5" in call_args[0]
+        # Building/Room come from raw text (not duplicated in context prefix)
+        assert "Building: Main Block" in call_args[0]
+        assert "Room: Kitchen" in call_args[0]
 
         # enriched_text should be stored on the record
         assert result[0].enriched_text is not None
-        assert "Building: Main Block" in result[0].enriched_text
+        assert "Level: Ground Floor" in result[0].enriched_text
 
         # embedding_text (raw) should also be stored
         assert result[0].embedding_text is not None
@@ -464,11 +465,17 @@ class TestACMRecordGetEnrichedEmbeddingText:
 
         text = record.get_enriched_embedding_text()
 
-        # Hierarchical context should be prepended
-        assert text.startswith("Building: B00A Main Block")
-        assert "Level: Ground Floor" in text
-        assert "Room: R001 Kitchen" in text
+        # Level and Page context should be prepended (not already in raw text)
+        assert text.startswith("Level: Ground Floor")
         assert "Page: 14" in text
+
+        # Building and Room come from raw text (not duplicated in context)
+        assert "Building: B00A Main Block" in text
+        assert "Room: R001 Kitchen" in text
+
+        # Verify no duplication: Building/Room should appear exactly once
+        assert text.count("Building: B00A Main Block") == 1
+        assert text.count("Room: R001 Kitchen") == 1
 
         # Raw embedding fields should follow
         assert "Product: Vinyl Floor Tiles" in text
@@ -478,12 +485,13 @@ class TestACMRecordGetEnrichedEmbeddingText:
         assert "Result: Detected" in text
 
     def test_enriched_text_with_partial_context(self):
-        """Test enriched text when only building_name is set."""
+        """Test enriched text when only area_type is set as extra context."""
         record = ACMRecord(
             source_id="source:test",
             school_name="Test School",
             building_id="B001",
             building_name="Main Building",
+            area_type="First Floor",
             product="Ceiling Tiles",
             material_description="Asbestos ceiling tiles",
             result="Detected",
@@ -491,9 +499,8 @@ class TestACMRecordGetEnrichedEmbeddingText:
 
         text = record.get_enriched_embedding_text()
 
-        assert "Building: Main Building" in text
-        assert "Level:" not in text  # area_type is None
-        assert "Room:" not in text   # room_name is None
+        assert "Level: First Floor" in text  # area_type adds context
+        assert "Building: Main Building" in text  # from raw text
         assert "Page:" not in text   # page_number is None
         assert "Product: Ceiling Tiles" in text
 
@@ -538,6 +545,8 @@ class TestACMRecordGetEnrichedEmbeddingText:
             building_id="B001",
             building_name="Block A",
             room_name="Room 5",
+            area_type="Ground Floor",
+            page_number=3,
             product="Pipe Insulation",
             material_description="Asbestos pipe lagging",
             location="Above ceiling",
@@ -549,10 +558,10 @@ class TestACMRecordGetEnrichedEmbeddingText:
 
         # The enriched text should contain ALL the raw fields
         assert raw in text or all(part in text for part in raw.split(" | "))
-        # Context should appear before raw fields
-        building_pos = text.find("Building: Block A")
+        # Level/Page context should appear before raw fields
+        level_pos = text.find("Level: Ground Floor")
         product_pos = text.find("Product: Pipe Insulation")
-        assert building_pos < product_pos
+        assert level_pos < product_pos
 
 
 class TestSemanticSearchEndpoint:
@@ -561,8 +570,9 @@ class TestSemanticSearchEndpoint:
     @pytest.fixture
     def client(self):
         """Create test client."""
-        from api.main import app
         from fastapi.testclient import TestClient
+
+        from api.main import app
 
         return TestClient(app)
 
@@ -694,8 +704,9 @@ class TestReEmbedEndpoint:
     @pytest.fixture
     def client(self):
         """Create test client."""
-        from api.main import app
         from fastapi.testclient import TestClient
+
+        from api.main import app
 
         return TestClient(app)
 
@@ -775,3 +786,51 @@ class TestReEmbedEndpoint:
         data = response.json()
         assert data["success"] is True
         mock_get_by_source.assert_called_once()
+
+    @patch("api.services.acm_embedding_service.model_manager")
+    @patch("open_notebook.domain.acm.ACMRecord.get_by_source")
+    @patch("open_notebook.domain.acm.ACMRecord.save")
+    def test_re_embed_force(
+        self, mock_save, mock_get_by_source, mock_model_manager, client
+    ):
+        """Test force flag re-embeds already-embedded records (E1-S14 AC#6)."""
+        mock_embedding_model = AsyncMock()
+        mock_embedding_model.aembed = AsyncMock(return_value=[[0.7, 0.8, 0.9]])
+        mock_embedding_model.__str__ = MagicMock(return_value="mock-model")
+        mock_model_manager.get_embedding_model = AsyncMock(
+            return_value=mock_embedding_model
+        )
+
+        # Record that already has an embedding — should be skipped without force
+        already_embedded = ACMRecord(
+            id="acm_record:2",
+            source_id="source:abc",
+            school_name="Test School",
+            building_id="B001",
+            building_name="Block A",
+            product="Tiles",
+            material_description="Asbestos",
+            result="Detected",
+            embedding=[0.1, 0.2, 0.3],
+            embedding_model="old-model",
+        )
+
+        mock_get_by_source.return_value = [already_embedded]
+        mock_save.return_value = None
+
+        # Without force, already-embedded records should be skipped
+        response = client.post(
+            "/api/acm/re-embed", json={"source_id": "source:abc", "force": False}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["records_processed"] == 0
+
+        # With force, already-embedded records should be re-embedded
+        mock_get_by_source.return_value = [already_embedded]
+        response = client.post(
+            "/api/acm/re-embed", json={"source_id": "source:abc", "force": True}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["records_processed"] >= 1

@@ -726,6 +726,66 @@ class TaxonomyResponse(BaseModel):
     groups: List[TaxonomyGroupResponse] = Field(..., description="Product groups in taxonomy")
 
 
+# =============================================================================
+# Field Schema Config Models (E1-S11 - Generic Configurable Parser)
+# =============================================================================
+
+
+class FieldDefResponse(BaseModel):
+    """Single BAR field definition."""
+
+    internal_name: str = Field(..., description="Snake_case field name")
+    display_name: str = Field(..., description="BAR column header display name")
+    excel_column: str = Field(..., description="Excel column letter")
+    col_index: int = Field(..., description="1-based position in BAR spreadsheet")
+    field_type: str = Field(..., description="Field type: string, number, date, enum")
+    required: bool = Field(..., description="Whether field is required by BAR")
+    active: bool = Field(True, description="Whether field is active for extraction")
+    enum_name: Optional[str] = Field(None, description="Key into enums dict")
+    group: Optional[str] = Field(None, description="UI grouping category")
+
+
+class BusinessRuleResponse(BaseModel):
+    """BAR business rule."""
+
+    rule_id: str = Field(..., description="Rule identifier")
+    description: str = Field(..., description="Human-readable description")
+    enabled: bool = Field(True, description="Whether rule is active")
+
+
+class FieldSchemaConfigResponse(BaseModel):
+    """Full field schema configuration response."""
+
+    fields: List[FieldDefResponse] = Field(..., description="All 47 BAR field definitions")
+    enums: Dict[str, List[str]] = Field(..., description="Enum picklist definitions")
+    business_rules: List[BusinessRuleResponse] = Field(..., description="BAR business rules")
+    version: str = Field(..., description="Schema version")
+    source_template: Optional[str] = Field(None, description="Source BAR template name")
+
+
+class FieldSchemaConfigUpdateRequest(BaseModel):
+    """Request to update field schema configuration."""
+
+    fields: List[FieldDefResponse] = Field(..., description="Updated field definitions")
+    enums: Dict[str, List[str]] = Field(..., description="Enum picklist definitions")
+    business_rules: List[BusinessRuleResponse] = Field(..., description="BAR business rules")
+    version: str = Field(..., description="Schema version")
+    source_template: Optional[str] = Field(None, description="Source BAR template name")
+
+    @model_validator(mode="after")
+    def validate_field_config(self):
+        # Check internal_name uniqueness
+        names = [f.internal_name for f in self.fields]
+        if len(names) != len(set(names)):
+            raise ValueError("Field internal_name values must be unique")
+        # Check field_type values
+        allowed_types = {"string", "number", "date", "enum"}
+        for f in self.fields:
+            if f.field_type not in allowed_types:
+                raise ValueError(f"Invalid field_type '{f.field_type}' for field '{f.internal_name}'")
+        return self
+
+
 class ReEmbedRequest(BaseModel):
     """Request to re-embed ACM records with contextual enrichment (E1-S14)."""
 

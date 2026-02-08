@@ -33,8 +33,12 @@ from api.models import (
     ApplyTemplateRequest,
     BatchClassifyRequest,
     BatchClassifyResponse,
+    BusinessRuleResponse,
     ClassifyRequest,
     ClassifyResponse,
+    FieldDefResponse,
+    FieldSchemaConfigResponse,
+    FieldSchemaConfigUpdateRequest,
     NormalizeRequest,
     NormalizeResponse,
     ReEmbedRequest,
@@ -1185,6 +1189,143 @@ async def normalize_recommendation_text(request: NormalizeRequest):
 
     except Exception as e:
         logger.error(f"Error normalizing recommendation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Field Schema Configuration Endpoints (E1-S11 - Generic Configurable Parser)
+# =============================================================================
+
+async def _load_db_field_config() -> dict | None:
+    """Load field config override from SurrealDB field_schema table."""
+    try:
+        result = await repo_query(
+            "SELECT * FROM field_schema ORDER BY updated DESC LIMIT 1"
+        )
+        if result and result[0].get("config_json"):
+            import json
+            return json.loads(result[0]["config_json"])
+    except Exception as e:
+        logger.debug(f"No DB field config found: {e}")
+    return None
+
+
+async def _save_db_field_config(config_dict: dict) -> None:
+    """Save field config override to SurrealDB field_schema table."""
+    import json
+    config_json = json.dumps(config_dict)
+    version = config_dict.get("version", "1.0.0")
+    # Upsert using a fixed ID so there's only ever one config record
+    await repo_query(
+        """
+        UPSERT field_schema:default SET
+            config_json = $config_json,
+            version = $version,
+            updated = time::now()
+        """,
+        {"config_json": config_json, "version": version},
+    )
+
+
+async def _delete_db_field_config() -> None:
+    """Delete field config override from SurrealDB."""
+    await repo_query("DELETE field_schema:default")
+
+
+def _config_to_response(config) -> FieldSchemaConfigResponse:
+    """Convert a FieldSchemaConfig to API response model."""
+    return FieldSchemaConfigResponse(
+        fields=[
+            FieldDefResponse(
+                internal_name=f.internal_name,
+                display_name=f.display_name,
+                excel_column=f.excel_column,
+                col_index=f.col_index,
+                field_type=f.field_type,
+                required=f.required,
+                active=f.active,
+                enum_name=f.enum_name,
+                group=f.group,
+            )
+            for f in config.fields
+        ],
+        enums=config.enums,
+        business_rules=[
+            BusinessRuleResponse(
+                rule_id=r.rule_id,
+                description=r.description,
+                enabled=r.enabled,
+            )
+            for r in config.business_rules
+        ],
+        version=config.version,
+        source_template=config.source_template,
+    )
+
+
+@router.get("/field-config", response_model=FieldSchemaConfigResponse)
+async def get_field_config():
+    """
+    Get the current field schema configuration.
+
+    Returns the 47 BAR field definitions, enum picklists, and business rules
+    that drive the GenericParser extraction behavior. Checks the database for
+    overrides first, then falls back to the default JSON config.
+    """
+    try:
+        db_config = await _load_db_field_config()
+        if db_config is not None:
+            return FieldSchemaConfigResponse(**db_config)
+
+        from open_notebook.extractors.parsers.config_loader import load_field_schema
+
+        config = load_field_schema()
+        return _config_to_response(config)
+
+    except Exception as e:
+        logger.error(f"Error getting field config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/field-config", response_model=FieldSchemaConfigResponse)
+async def update_field_config(request: FieldSchemaConfigUpdateRequest):
+    """
+    Update the field schema configuration.
+
+    Allows toggling field active status, modifying business rules,
+    and updating enum definitions. Persists to the database so changes
+    survive server restarts.
+    """
+    try:
+        config_dict = request.model_dump()
+        await _save_db_field_config(config_dict)
+        return FieldSchemaConfigResponse(**config_dict)
+
+    except Exception as e:
+        logger.error(f"Error updating field config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/field-config/reset", response_model=FieldSchemaConfigResponse)
+async def reset_field_config():
+    """
+    Reset field schema configuration to defaults.
+
+    Clears any database overrides and reloads the default config
+    from the BAR JSON schema files.
+    """
+    try:
+        await _delete_db_field_config()
+
+        from open_notebook.extractors.parsers import config_loader
+
+        # Clear the cached config to force reload from JSON
+        config_loader._FIELD_SCHEMA = None
+        config = config_loader.load_field_schema()
+        return _config_to_response(config)
+
+    except Exception as e:
+        logger.error(f"Error resetting field config: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
