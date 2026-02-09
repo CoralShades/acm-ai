@@ -1,51 +1,57 @@
-# Task Plan: Parallel BMad Code Review for E1-S15, E1-S16, E1-S17
+# Task Plan: Fix Critical Regressions + E2E Validation
 
-## Goal
-Run the BMad adversarial code review workflow for 3 stories currently in `review` status, auto-fix all HIGH/MEDIUM issues, mark stories as `done`, and update sprint-status.yaml.
+## Status: PLANNING → RESEARCHING
+## Created: 2026-02-09
+## Last Updated: 2026-02-09
 
 ## User Answers (Clarification)
 
-## Workflow Per Story (BMad code-review workflow)
-Each reviewer agent executes these steps:
-1. **Load story** - Read complete story file, parse ACs, tasks, file list
-2. **Discover changes** - `git status/diff` to find actual changed files
-3. **Cross-reference** - Compare story claims vs git reality
-4. **Build attack plan** - AC validation, task audit, code quality, test quality
-5. **Execute adversarial review** - Find 3-10 specific issues minimum
-6. **Auto-fix** - Fix all HIGH and MEDIUM issues in code
-7. **Run tests** - Verify fixes don't break anything
-8. **Update story status** - Mark as `done` in story file
-9. **Update sprint-status.yaml** - Sync status to `done`
+## Objective
+Fix two critical regressions (Source Not Found, AG Grid RowGroupingModule error) introduced during E1-S11..S20, verify fixes with Playwright MCP, and create a true end-to-end PDF extraction test.
+
+---
 
 ## Phases
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| 1 | pending | Create agent team and tasks |
-| 2 | pending | Launch 3 parallel code review agents (E1-S15, E1-S16, E1-S17) |
-| 3 | pending | Monitor progress, handle any escalations |
-| 4 | pending | Verify all 3 stories marked done, sprint-status updated |
-| 5 | pending | Update sprint-status.yaml summary counts |
+### Phase 1: Research & Diagnosis
+- [ ] 1.1 Verify services are running (SurrealDB, API, Frontend)
+- [ ] 1.2 Use Playwright MCP to reproduce "Source Not Found" bug
+- [ ] 1.3 Use Playwright MCP to reproduce AG Grid RowGroupingModule error
+- [ ] 1.4 Investigate backend source routes/services for regression
+- [ ] 1.5 Investigate frontend AG Grid configuration
+- [ ] 1.6 Check git diff for E1-S11..S20 changes that could cause regressions
 
-## Key Files
-- Workflow config: `_bmad/bmm/workflows/4-implementation/code-review/workflow.yaml`
-- Workflow instructions: `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml`
-- Validation checklist: `_bmad/bmm/workflows/4-implementation/code-review/checklist.md`
-- Sprint status: `docs/sprint-artifacts/sprint-status.yaml`
-- Architecture: `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md`
-- Epics: `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md`
+### Phase 2: Fix Source Not Found
+- [ ] 2.1 Identify root cause
+- [ ] 2.2 Implement fix
+- [ ] 2.3 Verify fix with Playwright MCP
 
-## Agent Team Design
-- **Team Lead** (this agent): Coordinates reviews, handles sprint-status updates
-- **Reviewer-S15**: Reviews E1-S15 (Corrective RAG Validation Loop)
-- **Reviewer-S16**: Reviews E1-S16 (Document Structure & TOC Extraction)
-- **Reviewer-S17**: Reviews E1-S17 (Building Inventory Compilation)
+### Phase 3: Fix AG Grid RowGroupingModule Error
+- [ ] 3.1 Find AG Grid configuration in frontend
+- [ ] 3.2 Register RowGroupingModule from ag-grid-enterprise
+- [ ] 3.3 Verify fix with Playwright MCP
 
-## Constraints
-- Agents must NOT edit sprint-status.yaml (team lead does this to avoid conflicts)
-- Agents auto-fix code issues and update story files
-- Each agent runs `uv run pytest` on affected test files after fixes
-- If a story has unresolvable CRITICAL issues, agent reports back instead of marking done
+### Phase 4: E2E PDF Extraction Test
+- [ ] 4.1 Identify test fixtures and existing patterns
+- [ ] 4.2 Design E2E test: PDF → MinerU → LangGraph pipeline → assertions
+- [ ] 4.3 Implement and run E2E test
+
+### Phase 5: Final Verification
+- [ ] 5.1 Full Playwright verification of both fixes
+- [ ] 5.2 Run test suite for regression check
+- [ ] 5.3 Update sprint status if needed
+
+---
+
+## Decisions Log
+| # | Decision | Rationale | Date |
+|---|----------|-----------|------|
+| - | - | - | - |
+
+## Blockers
+| # | Blocker | Status | Resolution |
+|---|---------|--------|------------|
+| - | - | - | - |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |

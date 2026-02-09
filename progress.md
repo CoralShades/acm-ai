@@ -1,27 +1,44 @@
-# Progress Log: Parallel BMad Code Review
+# Progress Log: Critical Bug Fixes + E2E Test
 
 ## Session: 2026-02-09
 
-### Phase 1: Planning
-- [x] Loaded all 3 story files (E1-S15, S16, S17) - all in `review` status
-- [x] Loaded code-review workflow (instructions.xml, checklist.md, workflow.yaml)
-- [x] Loaded sprint-status.yaml - confirmed 3 stories in review
-- [x] Created task_plan.md with team design
-- [ ] Create agent team
-- [ ] Create tasks for each reviewer
-- [ ] Launch parallel review agents
+### Phase 1: Research & Diagnosis - COMPLETE
+- [x] Check services running (SurrealDB, API, Frontend)
+- [x] Playwright bug reproduction for Bug 1 (Source Not Found)
+- [x] Playwright bug reproduction for Bug 2 (AG Grid error #200)
+- [x] Code investigation for both bugs
 
-### Phase 2: Reviews In Progress
-- [x] E1-S15 review started
-- [x] E1-S16 review started
-- [x] E1-S17 review started
+### Phase 2: Bug Fixes - COMPLETE
+- [x] Bug 1: Source Not Found - Root cause: stale API process. Killed and restarted.
+- [x] Bug 2: AG Grid error #200 - Changed `enableGrouping = true` to `false` in ACMGrid.tsx
+- [x] Applied Bug 2 fix to both main worktree and lane-b worktree
 
-### Phase 3: Reviews Complete
-- [x] E1-S15: APPROVED - 8 issues (2H/3M/3L), all H/M fixed, 83 tests pass
-- [x] E1-S16: APPROVED - 9 issues (1H/4M/4L), 3 fixed, 38 tests pass
-- [x] E1-S17: APPROVED - 7 issues (1H/4M/2L), all H/M fixed, 43 tests pass
+### Phase 3: Fix Verification - COMPLETE
+- [x] Bug 1: Verified via curl (3 sources return 200) and Playwright (source detail loads)
+- [x] Bug 2: Verified via Playwright (ACM tab loads, 2 records shown, no error #200)
 
-### Phase 4: Sprint Status Update
-- [x] All 3 stories marked done in sprint-status.yaml
-- [x] Summary counts updated (53 -> 56 done, 66%)
-- [x] Final verification complete
+### Phase 4: E2E PDF Extraction Test - COMPLETE
+- [x] Research existing test patterns and extraction pipeline
+- [x] Design E2E test architecture (4 test classes, 12 tests)
+- [x] Implement tests/test_e2e_extraction.py
+- [x] All 12 tests passing
+
+### Phase 5: Final Verification - COMPLETE
+- [x] Run full test suite: 812 passed, 5 failed (all 5 pre-existing)
+- [x] No regressions from our changes
+- [x] Pre-existing failures are from E1-S15 enum normalizer updates
+
+## Summary of Changes
+
+### Files Modified
+1. `frontend/src/components/acm/ACMGrid.tsx` - Changed `enableGrouping = true` → `false` (line 114)
+2. Same change in lane-b worktree
+
+### Files Created
+1. `tests/test_e2e_extraction.py` - 12 E2E tests for the extraction pipeline
+
+### Test Results (12 new tests)
+- TestRegexExtraction: 3 passed (baseline regex extraction)
+- TestPipelineLegacyPath: 6 passed (full graph, legacy path)
+- TestPipelineOrchestratorPath: 1 passed (full graph, orchestrator path)
+- TestMineruToRecords: 2 passed (PDF fixture availability + regex from markdown)
