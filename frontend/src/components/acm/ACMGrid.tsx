@@ -111,7 +111,7 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, isLoading, onEdit, onDelete, enableGrouping = true, quickFilterText, onVisibleCountChange, onCellSelect },
+  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
@@ -163,7 +163,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         width: 110,
         sortable: true,
         filter: true,
-        rowGroup: enableGrouping,
+        ...(enableGrouping && { rowGroup: true }),
         hide: enableGrouping,
         valueFormatter: (params) => {
           if (params.data?.building_name) {
@@ -187,7 +187,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         width: 100,
         sortable: true,
         filter: true,
-        rowGroup: enableGrouping,
+        ...(enableGrouping && { rowGroup: true }),
         hide: enableGrouping,
         valueFormatter: (params) => {
           if (params.data?.room_name) {
@@ -422,11 +422,13 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         paginationPageSize={50}
         paginationPageSizeSelector={[20, 50, 100]}
         domLayout="normal"
-        // Row grouping configuration
-        groupDisplayType={enableGrouping ? 'groupRows' : undefined}
-        groupDefaultExpanded={1}
-        autoGroupColumnDef={enableGrouping ? autoGroupColumnDef : undefined}
-        suppressAggFuncInHeader={true}
+        // Row grouping configuration (enterprise-only, conditionally applied)
+        {...(enableGrouping ? {
+          groupDisplayType: 'groupRows' as const,
+          groupDefaultExpanded: 1,
+          autoGroupColumnDef: autoGroupColumnDef,
+          suppressAggFuncInHeader: true,
+        } : {})}
         // Use legacy theming for v32 CSS compatibility (ag-theme-alpine)
         theme="legacy"
       />
