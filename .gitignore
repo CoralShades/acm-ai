@@ -186,3 +186,7 @@ _bmad/bmb/*
 .claude/commands/bmad/core/tools/shard-doc.md
 .claude/commands/bmad/core/workflows/brainstorming-session.md
 .claude/skills/
+
+google-cloud-sdk/*
+google-cloud-cli-*.tar.gz
+screenshot-*.png
