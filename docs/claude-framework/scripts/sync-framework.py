@@ -26,19 +26,19 @@ def get_framework_dir():
 
 def get_template_files(framework_dir: Path) -> Dict[str, List[Path]]:
     """Get all template files from framework."""
-    templates = {
-        "commands": [],
-        "rules": [],
-        "settings": []
-    }
+    templates = {"commands": [], "rules": [], "settings": []}
 
     commands_dir = framework_dir / "templates" / "commands"
     if commands_dir.exists():
-        templates["commands"] = [f for f in commands_dir.glob("*.md") if f.stem != "_template"]
+        templates["commands"] = [
+            f for f in commands_dir.glob("*.md") if f.stem != "_template"
+        ]
 
     rules_dir = framework_dir / "templates" / "rules"
     if rules_dir.exists():
-        templates["rules"] = [f for f in rules_dir.glob("*.md") if f.stem != "_template"]
+        templates["rules"] = [
+            f for f in rules_dir.glob("*.md") if f.stem != "_template"
+        ]
 
     settings_dir = framework_dir / "templates" / "settings"
     if settings_dir.exists():
@@ -49,11 +49,7 @@ def get_template_files(framework_dir: Path) -> Dict[str, List[Path]]:
 
 def get_project_files(project_dir: Path) -> Dict[str, Set[str]]:
     """Get existing files in project's Claude Code setup."""
-    existing = {
-        "commands": set(),
-        "rules": set(),
-        "settings": set()
-    }
+    existing = {"commands": set(), "rules": set(), "settings": set()}
 
     commands_dir = project_dir / ".claude" / "commands"
     if commands_dir.exists():
@@ -77,7 +73,7 @@ def sync_commands(
     templates: List[Path],
     existing: Set[str],
     force: bool = False,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> List[str]:
     """Sync command templates to project."""
     changes = []
@@ -106,7 +102,7 @@ def sync_rules(
     templates: List[Path],
     existing: Set[str],
     force: bool = False,
-    dry_run: bool = False
+    dry_run: bool = False,
 ) -> List[str]:
     """Sync rule templates to project."""
     changes = []
@@ -130,9 +126,7 @@ def sync_rules(
 
 
 def sync_settings(
-    project_dir: Path,
-    framework_dir: Path,
-    dry_run: bool = False
+    project_dir: Path, framework_dir: Path, dry_run: bool = False
 ) -> List[str]:
     """Sync MCP server configurations (merge, don't overwrite)."""
     changes = []
@@ -170,7 +164,7 @@ def sync_settings(
             changes.append(f"Add MCP servers to {dst}: {', '.join(new_servers)}")
             if not dry_run:
                 project_settings["mcpServers"] = project_servers
-                with open(dst, 'w') as f:
+                with open(dst, "w") as f:
                     json.dump(project_settings, f, indent=2)
 
     return changes
@@ -184,27 +178,17 @@ def main():
         "project_dir",
         nargs="?",
         default=".",
-        help="Project directory (default: current directory)"
+        help="Project directory (default: current directory)",
     )
+    parser.add_argument("--force", action="store_true", help="Overwrite existing files")
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing files"
+        "--commands-only", action="store_true", help="Only sync commands"
     )
-    parser.add_argument(
-        "--commands-only",
-        action="store_true",
-        help="Only sync commands"
-    )
-    parser.add_argument(
-        "--rules-only",
-        action="store_true",
-        help="Only sync rules"
-    )
+    parser.add_argument("--rules-only", action="store_true", help="Only sync rules")
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes"
+        help="Show what would be done without making changes",
     )
 
     args = parser.parse_args()
@@ -230,18 +214,24 @@ def main():
     # Sync commands
     if not args.rules_only:
         changes = sync_commands(
-            project_dir, framework_dir,
-            templates["commands"], existing["commands"],
-            args.force, args.dry_run
+            project_dir,
+            framework_dir,
+            templates["commands"],
+            existing["commands"],
+            args.force,
+            args.dry_run,
         )
         all_changes.extend(changes)
 
     # Sync rules
     if not args.commands_only:
         changes = sync_rules(
-            project_dir, framework_dir,
-            templates["rules"], existing["rules"],
-            args.force, args.dry_run
+            project_dir,
+            framework_dir,
+            templates["rules"],
+            existing["rules"],
+            args.force,
+            args.dry_run,
         )
         all_changes.extend(changes)
 

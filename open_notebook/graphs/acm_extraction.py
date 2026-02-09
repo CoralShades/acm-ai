@@ -116,9 +116,13 @@ def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
             # Go back a bit to include potential headers
             start_idx = max(0, match.start() - 200)
 
-    if start_idx != -1 and start_idx > 500:  # Only extract if there's significant boilerplate
+    if (
+        start_idx != -1 and start_idx > 500
+    ):  # Only extract if there's significant boilerplate
         extracted = content[start_idx:]
-        acm_debug(f"Extracted ACM Register section: {len(content)} -> {len(extracted)} chars (saved {len(content) - len(extracted)} chars)")
+        acm_debug(
+            f"Extracted ACM Register section: {len(content)} -> {len(extracted)} chars (saved {len(content) - len(extracted)} chars)"
+        )
         return extracted, True
 
     return content, False
@@ -166,7 +170,9 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
 
     if debug_config.DEBUG_ENABLED:
         acm_debug(f"Pre-process found: {len(rooms)} rooms, {len(buildings)} buildings")
-        acm_debug(f"ACM indicators: {metadata['acm_indicators_found']}, No Asbestos: {metadata['no_asbestos_found']}")
+        acm_debug(
+            f"ACM indicators: {metadata['acm_indicators_found']}, No Asbestos: {metadata['no_asbestos_found']}"
+        )
 
     # Add section markers to help LLM understand structure
     processed = content
@@ -195,7 +201,7 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     while ">>> ACM DETECTED: >>> ACM DETECTED:" in processed:
         processed = processed.replace(
             ">>> ACM DETECTED: >>> ACM DETECTED: Asbestos-containing material <<< <<<",
-            acm_marker
+            acm_marker,
         )
 
     metadata["processed_length"] = len(processed)
@@ -205,6 +211,7 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
 
 class ExtractionState(TypedDict):
     """State for the ACM extraction graph."""
+
     source: Source
     content: str
     chunks: List[Dict[str, Any]]
@@ -252,7 +259,9 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
     return f"{school}_{building}_{room}_{desc_hash}"
 
 
-def _merge_records(existing: ACMExtractionRecord, new: ACMExtractionRecord) -> ACMExtractionRecord:
+def _merge_records(
+    existing: ACMExtractionRecord, new: ACMExtractionRecord
+) -> ACMExtractionRecord:
     """Merge two records, keeping the one with higher confidence and merging data_issues."""
     # Confidence ranking
     confidence_rank = {"high": 3, "medium": 2, "low": 1}
@@ -272,7 +281,9 @@ def _merge_records(existing: ACMExtractionRecord, new: ACMExtractionRecord) -> A
     return base
 
 
-def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -> List[Dict[str, Any]]:
+def _chunk_content(
+    content: str, context_window: int = DEFAULT_CONTEXT_WINDOW
+) -> List[Dict[str, Any]]:
     """Split content into chunks if it exceeds threshold.
 
     Chunks are split by page markers or logical sections to preserve context.
@@ -296,7 +307,14 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
             page_markers[match.start()] = pg
         if page_markers:
             page_num = page_markers[min(page_markers.keys())]
-        return [{"content": content, "page_number": page_num, "page_markers": page_markers, "chunk_index": 0}]
+        return [
+            {
+                "content": content,
+                "page_number": page_num,
+                "page_markers": page_markers,
+                "chunk_index": 0,
+            }
+        ]
 
     chunks = []
 
@@ -307,7 +325,11 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
         # Split by pages
         for i, match in enumerate(page_matches):
             start = match.start()
-            end = page_matches[i + 1].start() if i + 1 < len(page_matches) else len(content)
+            end = (
+                page_matches[i + 1].start()
+                if i + 1 < len(page_matches)
+                else len(content)
+            )
 
             page_content = content[start:end]
             # Extract page number from whichever capture group matched
@@ -318,19 +340,23 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
                 # Split this page further by sections (headings)
                 sub_chunks = _split_by_sections(page_content, threshold, page_num)
                 for j, sub in enumerate(sub_chunks):
-                    chunks.append({
-                        "content": sub,
+                    chunks.append(
+                        {
+                            "content": sub,
+                            "page_number": page_num,
+                            "page_markers": {0: page_num},
+                            "chunk_index": len(chunks),
+                        }
+                    )
+            else:
+                chunks.append(
+                    {
+                        "content": page_content,
                         "page_number": page_num,
                         "page_markers": {0: page_num},
-                        "chunk_index": len(chunks)
-                    })
-            else:
-                chunks.append({
-                    "content": page_content,
-                    "page_number": page_num,
-                    "page_markers": {0: page_num},
-                    "chunk_index": len(chunks)
-                })
+                        "chunk_index": len(chunks),
+                    }
+                )
     else:
         # No page markers - split by character count with overlap
         chunk_size = threshold * CHARS_PER_TOKEN_ESTIMATE
@@ -347,12 +373,14 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
                 if newline_pos > start:
                     end = newline_pos + 1
 
-            chunks.append({
-                "content": content[start:end],
-                "page_number": page_num,
-                "page_markers": {},
-                "chunk_index": len(chunks)
-            })
+            chunks.append(
+                {
+                    "content": content[start:end],
+                    "page_number": page_num,
+                    "page_markers": {},
+                    "chunk_index": len(chunks),
+                }
+            )
 
             start = end - overlap if end < len(content) else end
             page_num += 1
@@ -364,7 +392,7 @@ def _chunk_content(content: str, context_window: int = DEFAULT_CONTEXT_WINDOW) -
 def _split_by_sections(content: str, max_tokens: int, base_page: int) -> List[str]:
     """Split content by section headers if it's too large."""
     # Split by markdown headers
-    sections = re.split(r'(^#{1,3}\s+.+$)', content, flags=re.MULTILINE)
+    sections = re.split(r"(^#{1,3}\s+.+$)", content, flags=re.MULTILINE)
 
     chunks = []
     current_chunk = ""
@@ -497,7 +525,9 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
 
     try:
         inventory = await compile_building_inventory(
-            content, document_structure=doc_structure, model_id=model_id,
+            content,
+            document_structure=doc_structure,
+            model_id=model_id,
         )
         logger.info(
             f"Building inventory compiled for source {source.id}: "
@@ -506,7 +536,9 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
         )
         return {"building_inventory": inventory}
     except Exception as e:
-        logger.warning(f"Building inventory compilation failed for source {source.id}: {e}")
+        logger.warning(
+            f"Building inventory compilation failed for source {source.id}: {e}"
+        )
         return {"building_inventory": None}
 
 
@@ -571,7 +603,7 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
         )
         match = page_pattern.search(content)
         if match and match.start() > 500:
-            trimmed = content[match.start():]
+            trimmed = content[match.start() :]
             acm_debug(
                 f"Trimmed content using register_start_page={doc_structure.register_start_page}: "
                 f"{len(content)} -> {len(trimmed)} chars"
@@ -594,8 +626,10 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     chunks = _chunk_content(processed_content)
 
     logger.info(f"Prepared {len(chunks)} chunks for extraction from source {source.id}")
-    acm_debug(f"Content stats: {preprocess_meta['acm_indicators_found']} ACM indicators, "
-              f"{preprocess_meta['no_asbestos_found']} No Asbestos entries")
+    acm_debug(
+        f"Content stats: {preprocess_meta['acm_indicators_found']} ACM indicators, "
+        f"{preprocess_meta['no_asbestos_found']} No Asbestos entries"
+    )
 
     return {
         "content": processed_content,
@@ -665,7 +699,9 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     # Create messages
     messages = [
         SystemMessage(content=system_prompt),
-        HumanMessage(content="Extract ACM records from the content provided in the system prompt."),
+        HumanMessage(
+            content="Extract ACM records from the content provided in the system prompt."
+        ),
     ]
 
     # Use structured output
@@ -674,11 +710,15 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         result: ACMExtractionResult = await chain.ainvoke(messages)
 
         # Debug: Log raw result before processing
-        logger.debug(f"Raw extraction result: status={result.status}, records_count={len(result.records)}")
+        logger.debug(
+            f"Raw extraction result: status={result.status}, records_count={len(result.records)}"
+        )
         if result.records:
             logger.debug(f"First record: {result.records[0].model_dump_json()[:500]}")
         else:
-            logger.warning(f"No records extracted. Extraction notes: {result.extraction_notes}")
+            logger.warning(
+                f"No records extracted. Extraction notes: {result.extraction_notes}"
+            )
 
         # Update stats
         result.update_stats()
@@ -696,7 +736,10 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
                 product_key = (record.product or "").lower()
                 search_start = search_positions.get(product_key, 0)
                 page, pos = _assign_record_page(
-                    record.product, chunk_content, page_markers, page_number,
+                    record.product,
+                    chunk_content,
+                    page_markers,
+                    page_number,
                     search_start,
                 )
                 record.page_number = page
@@ -729,21 +772,35 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         logger.warning(f"Structured output validation failed: {e}")
         if retry_count < MAX_RETRIES:
             # Apply exponential backoff delay before retry
-            delay = RETRY_DELAYS[retry_count] if retry_count < len(RETRY_DELAYS) else RETRY_DELAYS[-1]
-            logger.info(f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})")
+            delay = (
+                RETRY_DELAYS[retry_count]
+                if retry_count < len(RETRY_DELAYS)
+                else RETRY_DELAYS[-1]
+            )
+            logger.info(
+                f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})"
+            )
             await asyncio.sleep(delay)
             return {
                 "retry_count": retry_count + 1,
                 "error": None,  # Clear error to allow retry
             }
-        return {"error": f"Extraction validation failed after {MAX_RETRIES} retries: {e}"}
+        return {
+            "error": f"Extraction validation failed after {MAX_RETRIES} retries: {e}"
+        }
 
     except Exception as e:
         logger.error(f"Extraction failed: {e}")
         if retry_count < MAX_RETRIES:
             # Apply exponential backoff delay before retry
-            delay = RETRY_DELAYS[retry_count] if retry_count < len(RETRY_DELAYS) else RETRY_DELAYS[-1]
-            logger.info(f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})")
+            delay = (
+                RETRY_DELAYS[retry_count]
+                if retry_count < len(RETRY_DELAYS)
+                else RETRY_DELAYS[-1]
+            )
+            logger.info(
+                f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})"
+            )
             await asyncio.sleep(delay)
             return {
                 "retry_count": retry_count + 1,
@@ -783,7 +840,11 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
         # Normalize result field
         if record.result:
             result_lower = record.result.lower()
-            if "no asbestos" in result_lower or "nad" in result_lower or "not detected" in result_lower:
+            if (
+                "no asbestos" in result_lower
+                or "nad" in result_lower
+                or "not detected" in result_lower
+            ):
                 record.result = "Not Detected"
             elif "detected" in result_lower or "positive" in result_lower:
                 record.result = "Detected"
@@ -802,7 +863,11 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
         record.data_issues = issues
 
         # Reject records missing critical fields
-        if not record.building_id or not record.product or not record.material_description:
+        if (
+            not record.building_id
+            or not record.product
+            or not record.material_description
+        ):
             rejected_count += 1
             logger.warning(f"Rejected record due to missing required fields: {issues}")
             continue
@@ -810,7 +875,9 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
         validated_records.append(record)
 
     if rejected_count > 0:
-        logger.info(f"Validated {len(validated_records)} records, rejected {rejected_count}")
+        logger.info(
+            f"Validated {len(validated_records)} records, rejected {rejected_count}"
+        )
 
     return {"records": validated_records, "records_rejected": rejected_count}
 
@@ -825,9 +892,15 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    correction_stats = state.get("correction_stats", {
-        "auto_corrected": 0, "llm_corrected": 0, "failed": 0, "total_validated": 0,
-    })
+    correction_stats = state.get(
+        "correction_stats",
+        {
+            "auto_corrected": 0,
+            "llm_corrected": 0,
+            "failed": 0,
+            "total_validated": 0,
+        },
+    )
 
     if not records:
         logger.info("No records to validate")
@@ -861,7 +934,11 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
         record.data_issues = issues
 
         # Reject records missing critical fields
-        if not record.building_id or not record.product or not record.material_description:
+        if (
+            not record.building_id
+            or not record.product
+            or not record.material_description
+        ):
             rejected_count += 1
             logger.warning(f"Rejected record due to missing required fields: {issues}")
             continue
@@ -877,7 +954,9 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             "material_description": record.material_description,
         }
         validation = validate_acm_record(record_dict)
-        correction_stats["total_validated"] = correction_stats.get("total_validated", 0) + 1
+        correction_stats["total_validated"] = (
+            correction_stats.get("total_validated", 0) + 1
+        )
 
         if not validation.is_valid:
             # Track issues on the record for potential correction
@@ -887,15 +966,19 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
                         f"Validation: {vi.field_name}='{vi.current_value}' "
                         f"({vi.issue_type})"
                     )
-            records_with_issues.append({
-                "record_index": len(validated_records),
-                "issues": [i.model_dump() for i in validation.issues],
-            })
+            records_with_issues.append(
+                {
+                    "record_index": len(validated_records),
+                    "issues": [i.model_dump() for i in validation.issues],
+                }
+            )
 
         validated_records.append(record)
 
     if rejected_count > 0:
-        logger.info(f"Validated {len(validated_records)} records, rejected {rejected_count}")
+        logger.info(
+            f"Validated {len(validated_records)} records, rejected {rejected_count}"
+        )
 
     if records_with_issues:
         logger.info(f"Found {len(records_with_issues)} records with validation issues")
@@ -918,9 +1001,15 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     correction_attempt = state.get("correction_attempt", 0)
-    correction_stats = state.get("correction_stats", {
-        "auto_corrected": 0, "llm_corrected": 0, "failed": 0, "total_validated": 0,
-    })
+    correction_stats = state.get(
+        "correction_stats",
+        {
+            "auto_corrected": 0,
+            "llm_corrected": 0,
+            "failed": 0,
+            "total_validated": 0,
+        },
+    )
     model_id = state.get("model_id")
 
     if not records:
@@ -970,7 +1059,9 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
                     f"via normalizer (attempt {correction_attempt + 1})"
                 )
                 _apply_field_correction(record, field, normalized)
-                correction_stats["auto_corrected"] = correction_stats.get("auto_corrected", 0) + 1
+                correction_stats["auto_corrected"] = (
+                    correction_stats.get("auto_corrected", 0) + 1
+                )
             else:
                 still_invalid.append(issue)
 
@@ -981,7 +1072,11 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     if records_needing_llm:
         try:
             await _llm_correct_records(
-                records, records_needing_llm, correction_stats, model_id, correction_attempt,
+                records,
+                records_needing_llm,
+                correction_stats,
+                model_id,
+                correction_attempt,
             )
         except Exception as e:
             logger.warning(f"LLM correction failed: {e}")
@@ -995,7 +1090,9 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     }
 
 
-def _apply_field_correction(record: ACMExtractionRecord, field_name: str, value: str) -> None:
+def _apply_field_correction(
+    record: ACMExtractionRecord, field_name: str, value: str
+) -> None:
     """Apply a corrected value to an extraction record field."""
     if field_name == "sample_result":
         record.sample_result = value
@@ -1066,14 +1163,16 @@ async def _llm_correct_records(
             ]
 
             response = await model.ainvoke(messages)
-            response_text = response.content if hasattr(response, "content") else str(response)
+            response_text = (
+                response.content if hasattr(response, "content") else str(response)
+            )
 
             # Strip markdown code block wrappers if present
             text = response_text.strip()
             if text.startswith("```"):
                 # Remove opening ```json or ``` line
                 first_newline = text.index("\n") if "\n" in text else len(text)
-                text = text[first_newline + 1:]
+                text = text[first_newline + 1 :]
                 # Remove closing ```
                 if text.rstrip().endswith("```"):
                     text = text.rstrip()[:-3].rstrip()
@@ -1089,7 +1188,9 @@ async def _llm_correct_records(
                             f"Corrected {field}: '{old_val}' -> '{value}' "
                             f"via LLM (attempt {correction_attempt + 1})"
                         )
-                        correction_stats["llm_corrected"] = correction_stats.get("llm_corrected", 0) + 1
+                        correction_stats["llm_corrected"] = (
+                            correction_stats.get("llm_corrected", 0) + 1
+                        )
 
         except Exception as e:
             logger.warning(f"LLM correction failed for record {idx}: {e}")
@@ -1112,7 +1213,12 @@ def should_correct(state: dict) -> str:
         return "deduplicate"
 
     # Check if any records have validation issues
-    enum_fields = ["sample_result", "material_condition", "friable", "disturbance_potential"]
+    enum_fields = [
+        "sample_result",
+        "material_condition",
+        "friable",
+        "disturbance_potential",
+    ]
     for record in records:
         record_dict = {
             "sample_result": record.sample_result or record.result,
@@ -1127,7 +1233,8 @@ def should_correct(state: dict) -> str:
         if not validation.is_valid:
             # Filter to only correctable issues (enum + business rule)
             correctable = [
-                i for i in validation.issues
+                i
+                for i in validation.issues
                 if i.issue_type in ("enum_mismatch", "business_rule")
             ]
             if correctable:
@@ -1198,17 +1305,23 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                     source_id=str(source.id),
                     page_start=building.page_start,
                     page_end=building.page_end or building.page_start,
-                    building_name=f"{building.building_id} {building.name}" if building.name else building.building_id,
+                    building_name=f"{building.building_id} {building.name}"
+                    if building.name
+                    else building.building_id,
                     table_type="register",
                 )
                 await section.save()
                 if section.id:
                     section_map[building.building_id] = str(section.id)
             except Exception as e:
-                logger.warning(f"Failed to create table section for building {building.building_id}: {e}")
+                logger.warning(
+                    f"Failed to create table section for building {building.building_id}: {e}"
+                )
 
         if section_map:
-            logger.info(f"Created {len(section_map)} parent table sections for source {source.id}")
+            logger.info(
+                f"Created {len(section_map)} parent table sections for source {source.id}"
+            )
 
     saved_count = 0
     errors = []
@@ -1272,7 +1385,9 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     # Build final result
     result = ACMExtractionResult(
         records=records,
-        status=ExtractionStatus.VALID if saved_count > 0 else ExtractionStatus.NO_ACM_DATA,
+        status=ExtractionStatus.VALID
+        if saved_count > 0
+        else ExtractionStatus.NO_ACM_DATA,
         total_records=saved_count,
         records_rejected=records_rejected,
     )
@@ -1288,7 +1403,10 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
 
     # Log correction stats (E1-S15)
     correction_stats = state.get("correction_stats", {})
-    if any(correction_stats.get(k, 0) > 0 for k in ("auto_corrected", "llm_corrected", "failed")):
+    if any(
+        correction_stats.get(k, 0) > 0
+        for k in ("auto_corrected", "llm_corrected", "failed")
+    ):
         logger.info(
             f"Correction stats: auto={correction_stats.get('auto_corrected', 0)}, "
             f"llm={correction_stats.get('llm_corrected', 0)}, "
@@ -1350,7 +1468,9 @@ agent_state.add_node("extract_metadata", extract_metadata_node)  # E1-S19: Stage
 agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
 agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
 agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
-agent_state.add_node("orchestrate", orchestrate_extraction)  # E1-S20: Agentic orchestrator
+agent_state.add_node(
+    "orchestrate", orchestrate_extraction
+)  # E1-S20: Agentic orchestrator
 agent_state.add_node("prepare", prepare_context)
 agent_state.add_node("extract", extract_records)
 agent_state.add_node("validate", validate_records_strict)
@@ -1373,18 +1493,16 @@ agent_state.add_edge("orchestrate", "validate")  # Orchestrator feeds into valid
 agent_state.add_conditional_edges(
     "prepare",
     lambda s: "error" if s.get("error") else "extract",
-    {"extract": "extract", "error": END}
+    {"extract": "extract", "error": END},
 )
 agent_state.add_conditional_edges(
     "extract",
     should_continue_extraction,
-    {"extract": "extract", "validate": "validate", "error": END}
+    {"extract": "extract", "validate": "validate", "error": END},
 )
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}
 agent_state.add_conditional_edges(
-    "validate",
-    should_correct,
-    {"correct": "correct", "deduplicate": "deduplicate"}
+    "validate", should_correct, {"correct": "correct", "deduplicate": "deduplicate"}
 )
 # After correction, re-validate
 agent_state.add_edge("correct", "validate")
@@ -1420,13 +1538,17 @@ async def extract_acm_from_source(
         try:
             sections_deleted = await ACMTableSection.delete_by_source(str(source.id))
             if sections_deleted > 0:
-                logger.info(f"Deleted {sections_deleted} existing table sections for source {source.id}")
+                logger.info(
+                    f"Deleted {sections_deleted} existing table sections for source {source.id}"
+                )
         except Exception as e:
             logger.warning(f"Failed to delete table sections: {e}")
 
         deleted = await ACMRecord.delete_by_source(str(source.id))
         if deleted > 0:
-            logger.info(f"Deleted {deleted} existing ACM records for source {source.id}")
+            logger.info(
+                f"Deleted {deleted} existing ACM records for source {source.id}"
+            )
 
     # Run the extraction graph
     initial_state: ExtractionState = {
@@ -1444,7 +1566,12 @@ async def extract_acm_from_source(
         "retry_count": 0,
         # Corrective RAG loop (E1-S15)
         "correction_attempt": 0,
-        "correction_stats": {"auto_corrected": 0, "llm_corrected": 0, "failed": 0, "total_validated": 0},
+        "correction_stats": {
+            "auto_corrected": 0,
+            "llm_corrected": 0,
+            "failed": 0,
+            "total_validated": 0,
+        },
         "enable_corrective_loop": True,
         "max_correction_attempts": 2,
         # Document structure (E1-S16)

@@ -76,7 +76,8 @@ _INSPECTOR_PATTERNS = [
 
 # Inspection date pattern
 _INSPECTION_DATE_PATTERN = re.compile(
-    r"(?:Inspection\s+Date[:\s]+)(.+?)(?:\n|$)", re.IGNORECASE,
+    r"(?:Inspection\s+Date[:\s]+)(.+?)(?:\n|$)",
+    re.IGNORECASE,
 )
 
 
@@ -366,8 +367,7 @@ async def auto_populate_site_config(
         # No existing config - create via upsert
         await SiteConfig.upsert(source_id, **mappings)
         logger.info(
-            f"Auto-filled SiteConfig for source {source_id}: "
-            f"{list(mappings.keys())}"
+            f"Auto-filled SiteConfig for source {source_id}: {list(mappings.keys())}"
         )
 
 

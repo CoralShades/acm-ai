@@ -565,7 +565,9 @@ Ballarat VIC 3350
             suburb=None,
             postcode=None,
         )
-        confidence = _compute_confidence(meta, llm_fields={"consultant_name", "site_name"})
+        confidence = _compute_confidence(
+            meta, llm_fields={"consultant_name", "site_name"}
+        )
         assert confidence["consultant_name"] == "extracted"
         assert confidence["site_name"] == "extracted"
         assert confidence["suburb"] == "missing"
@@ -718,7 +720,9 @@ class TestSiteConfigAutoFill:
                 "open_notebook.domain.site_config.SiteConfig.upsert",
                 new_callable=AsyncMock,
             ):
-                with patch("open_notebook.extractors.metadata_extractor.logger") as mock_logger:
+                with patch(
+                    "open_notebook.extractors.metadata_extractor.logger"
+                ) as mock_logger:
                     await auto_populate_site_config(meta, "source:test123")
                     mock_logger.info.assert_called()
 
@@ -753,6 +757,7 @@ class TestPipelineIntegration:
         import inspect
 
         from open_notebook.graphs import acm_extraction
+
         source_code = inspect.getsource(acm_extraction.extract_acm_from_source)
         assert "document_metadata" in source_code
 

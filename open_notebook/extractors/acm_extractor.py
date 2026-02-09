@@ -23,6 +23,7 @@ try:
         ExtractedTable,
         MineruTableExtractor,
     )
+
     MINERU_AVAILABLE = True
 except ImportError:
     MINERU_AVAILABLE = False
@@ -236,7 +237,9 @@ def extract_acm_records(
                 )
                 return records
             else:
-                logger.warning("MinerU extraction returned no records, falling back to markdown parser")
+                logger.warning(
+                    "MinerU extraction returned no records, falling back to markdown parser"
+                )
         except Exception as e:
             logger.warning(
                 f"MinerU extraction failed: {e}. Falling back to markdown parser"
@@ -247,7 +250,9 @@ def extract_acm_records(
             "Falling back to markdown parser"
         )
     elif use_mineru and not pdf_path:
-        logger.debug("MinerU extraction enabled but no PDF path provided, using markdown parser")
+        logger.debug(
+            "MinerU extraction enabled but no PDF path provided, using markdown parser"
+        )
 
     # Fall back to regex-based markdown parsing
     # Single config-driven parser (E1-S11)
@@ -360,7 +365,9 @@ def _extract_from_markdown(
         i += 1
 
     # Convert to dicts with optional classification
-    result = [row.to_acm_record_dict(source_id, classify=classify) for row in extracted_rows]
+    result = [
+        row.to_acm_record_dict(source_id, classify=classify) for row in extracted_rows
+    ]
 
     # Generate enriched_text for each record (E1-S14)
     _enrich_record_dicts(result)
@@ -388,8 +395,7 @@ def _extract_with_mineru(pdf_path: str, source_id: str) -> List[dict]:
 
     # Extract tables from PDF
     tables: List[ExtractedTable] = extractor.extract_tables_from_pdf(
-        pdf_path=pdf_path,
-        stitch_multipage=True
+        pdf_path=pdf_path, stitch_multipage=True
     )
 
     if not tables:
@@ -411,7 +417,8 @@ def _extract_with_mineru(pdf_path: str, source_id: str) -> List[dict]:
 
 
 def _looks_like_table_header(
-    line: str, parser=None,
+    line: str,
+    parser=None,
 ) -> bool:
     """Check if line looks like a markdown table header.
 

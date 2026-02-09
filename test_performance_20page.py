@@ -20,14 +20,15 @@ try:
 except ImportError:
     try:
         import pypdf
+
         PdfReader = pypdf.PdfReader
     except ImportError:
         PdfReader = None
 
 from open_notebook.extractors.mineru_table_extractor import (
-    MineruTableExtractor,
-    ExtractedTable,
     MINERU_AVAILABLE,
+    ExtractedTable,
+    MineruTableExtractor,
 )
 
 
@@ -71,7 +72,9 @@ def find_suitable_pdf(min_pages: int = 15, max_pages: int = 30) -> Optional[Path
     # If none in range, use the largest available
     if pdfs_with_counts:
         largest = max(pdfs_with_counts, key=lambda x: x[1])
-        logger.warning(f"No PDF in {min_pages}-{max_pages} page range, using largest: {largest[0].name} ({largest[1]} pages)")
+        logger.warning(
+            f"No PDF in {min_pages}-{max_pages} page range, using largest: {largest[0].name} ({largest[1]} pages)"
+        )
         return largest[0]
 
     logger.error("No suitable PDFs found")
@@ -93,7 +96,9 @@ def check_merged_cells(tables: List[ExtractedTable]) -> dict:
         "total_tables": total_tables,
         "tables_with_merged_cells": tables_with_merged,
         "html_with_colspan_rowspan": html_merged_count,
-        "merged_cell_detection": "✓ PASS" if tables_with_merged > 0 or html_merged_count > 0 else "✗ FAIL (no merged cells detected)",
+        "merged_cell_detection": "✓ PASS"
+        if tables_with_merged > 0 or html_merged_count > 0
+        else "✗ FAIL (no merged cells detected)",
     }
 
 
@@ -117,14 +122,18 @@ def check_multipage_stitching(tables: List[ExtractedTable]) -> dict:
             for t1 in pages_with_tables[page1]:
                 for t2 in pages_with_tables[page2]:
                     if abs(t1.col_count - t2.col_count) <= 1:  # Similar column count
-                        multipage_candidates.append((page1, page2, t1.col_count, t2.col_count))
+                        multipage_candidates.append(
+                            (page1, page2, t1.col_count, t2.col_count)
+                        )
 
     return {
         "pages_with_tables": len(pages_with_tables),
         "total_tables": len(tables),
         "multipage_candidates": len(multipage_candidates),
         "candidate_details": multipage_candidates[:5],  # First 5 examples
-        "multipage_stitching": "✓ PASS (stitching logic available)" if len(multipage_candidates) > 0 else "✓ PASS (single-page tables or no adjacent candidates)",
+        "multipage_stitching": "✓ PASS (stitching logic available)"
+        if len(multipage_candidates) > 0
+        else "✓ PASS (single-page tables or no adjacent candidates)",
     }
 
 
@@ -149,7 +158,9 @@ def check_bounding_boxes(tables: List[ExtractedTable]) -> dict:
         "total_tables": total,
         "valid_bounding_boxes": valid_bbox,
         "invalid_bounding_boxes": total - valid_bbox,
-        "bounding_box_accuracy": "✓ PASS" if valid_bbox == total else f"✗ FAIL ({total - valid_bbox} invalid)",
+        "bounding_box_accuracy": "✓ PASS"
+        if valid_bbox == total
+        else f"✗ FAIL ({total - valid_bbox} invalid)",
     }
 
 
@@ -196,9 +207,9 @@ def run_performance_test():
         return False
 
     # Report results
-    logger.info(f"\n{'='*70}")
+    logger.info(f"\n{'=' * 70}")
     logger.info("PERFORMANCE TEST RESULTS")
-    logger.info(f"{'='*70}")
+    logger.info(f"{'=' * 70}")
 
     # 1. Extraction time
     logger.info(f"\n1. EXTRACTION TIME")
@@ -233,7 +244,7 @@ def run_performance_test():
         logger.info(f"   {key}: {value}")
 
     # Overall result
-    logger.info(f"\n{'='*70}")
+    logger.info(f"\n{'=' * 70}")
     all_pass = (
         time_pass
         and len(tables) > 0
@@ -247,7 +258,7 @@ def run_performance_test():
     else:
         logger.warning("✗ SOME TESTS FAILED - Review results above")
 
-    logger.info(f"{'='*70}\n")
+    logger.info(f"{'=' * 70}\n")
 
     return all_pass
 

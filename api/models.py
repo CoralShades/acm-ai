@@ -510,9 +510,13 @@ class ACMRecordCreateRequest(BaseModel):
     room_id: Optional[str] = Field(None, description="Room ID")
     room_name: Optional[str] = Field(None, description="Room name")
     room_area: Optional[float] = Field(None, description="Room area in m²")
-    area_type: Optional[str] = Field(None, description="Area type: Interior/Exterior/Grounds")
+    area_type: Optional[str] = Field(
+        None, description="Area type: Interior/Exterior/Grounds"
+    )
     product: str = Field(..., min_length=1, description="ACM product name")
-    material_description: str = Field(..., min_length=1, description="Material description")
+    material_description: str = Field(
+        ..., min_length=1, description="Material description"
+    )
     extent: Optional[str] = Field(None, description="Extent of ACM")
     location: Optional[str] = Field(None, description="Location within room")
     friable: Optional[str] = Field(None, description="Friable/Non Friable")
@@ -576,9 +580,13 @@ class ACMRecordUpdateRequest(BaseModel):
     room_id: Optional[str] = Field(None, description="Room ID")
     room_name: Optional[str] = Field(None, description="Room name")
     room_area: Optional[float] = Field(None, description="Room area in m²")
-    area_type: Optional[str] = Field(None, description="Area type: Interior/Exterior/Grounds")
+    area_type: Optional[str] = Field(
+        None, description="Area type: Interior/Exterior/Grounds"
+    )
     product: Optional[str] = Field(None, min_length=1, description="ACM product name")
-    material_description: Optional[str] = Field(None, min_length=1, description="Material description")
+    material_description: Optional[str] = Field(
+        None, min_length=1, description="Material description"
+    )
     extent: Optional[str] = Field(None, description="Extent of ACM")
     location: Optional[str] = Field(None, description="Location within room")
     friable: Optional[str] = Field(None, description="Friable/Non Friable")
@@ -588,10 +596,15 @@ class ACMRecordUpdateRequest(BaseModel):
     page_number: Optional[int] = Field(None, description="Source page number")
 
     # Classification fields (E1-S9 - Victorian BAR taxonomy)
-    acm_product_group: Optional[str] = Field(None, description="BAR taxonomy product group")
-    acm_product_type: Optional[str] = Field(None, description="BAR taxonomy product type")
+    acm_product_group: Optional[str] = Field(
+        None, description="BAR taxonomy product group"
+    )
+    acm_product_type: Optional[str] = Field(
+        None, description="BAR taxonomy product type"
+    )
     classification_override: Optional[bool] = Field(
-        None, description="Mark as manual override (set to True when user corrects classification)"
+        None,
+        description="Mark as manual override (set to True when user corrects classification)",
     )
 
 
@@ -600,13 +613,21 @@ class SiteConfigRequest(BaseModel):
     """Request to create or update site configuration."""
 
     source_id: str = Field(..., description="Source document ID")
-    department: Optional[str] = Field(None, description="Victorian Government department")
+    department: Optional[str] = Field(
+        None, description="Victorian Government department"
+    )
     agency: Optional[str] = Field(None, description="Agency within department")
     building_type: Optional[str] = Field(None, description="Type of building")
     owned_or_leased: Optional[str] = Field(None, description="Ownership status")
-    frequency_of_use: Optional[str] = Field(None, description="How frequently building is used")
-    public_access: Optional[str] = Field(None, description="Whether public has access (YES/NO)")
-    building_unique_id: Optional[str] = Field(None, description="Unique building identifier")
+    frequency_of_use: Optional[str] = Field(
+        None, description="How frequently building is used"
+    )
+    public_access: Optional[str] = Field(
+        None, description="Whether public has access (YES/NO)"
+    )
+    building_unique_id: Optional[str] = Field(
+        None, description="Unique building identifier"
+    )
 
 
 class SiteConfigResponse(BaseModel):
@@ -621,8 +642,12 @@ class SiteConfigResponse(BaseModel):
     frequency_of_use: Optional[str] = None
     public_access: Optional[str] = None
     building_unique_id: Optional[str] = None
-    missing_fields: List[str] = Field(default_factory=list, description="BAR fields not yet filled")
-    is_bar_complete: bool = Field(default=False, description="Whether all BAR fields are filled")
+    missing_fields: List[str] = Field(
+        default_factory=list, description="BAR fields not yet filled"
+    )
+    is_bar_complete: bool = Field(
+        default=False, description="Whether all BAR fields are filled"
+    )
     created: Optional[str] = None
     updated: Optional[str] = None
 
@@ -665,7 +690,9 @@ class ClassifyRequest(BaseModel):
     friability: Optional[Literal["Friable", "Non-friable"]] = Field(
         None, description="Friability status (optional, defaults to Non-friable)"
     )
-    product: Optional[str] = Field(None, description="Optional product field to improve classification")
+    product: Optional[str] = Field(
+        None, description="Optional product field to improve classification"
+    )
     use_llm_fallback: bool = Field(
         True, description="Use LLM for classification if pattern matching fails"
     )
@@ -674,9 +701,15 @@ class ClassifyRequest(BaseModel):
 class ClassifyResponse(BaseModel):
     """Response from classification request."""
 
-    product_group: Optional[str] = Field(None, description="BAR taxonomy product group (e.g., 'T3 Vinyl products')")
-    product_type: Optional[str] = Field(None, description="BAR taxonomy product type (e.g., 'Vinyl Tiles')")
-    confidence: float = Field(..., description="Classification confidence score (0.0-1.0)")
+    product_group: Optional[str] = Field(
+        None, description="BAR taxonomy product group (e.g., 'T3 Vinyl products')"
+    )
+    product_type: Optional[str] = Field(
+        None, description="BAR taxonomy product type (e.g., 'Vinyl Tiles')"
+    )
+    confidence: float = Field(
+        ..., description="Classification confidence score (0.0-1.0)"
+    )
     method: Literal["pattern", "llm", "none"] = Field(
         ..., description="Classification method used"
     )
@@ -699,7 +732,9 @@ class BatchClassifyResponse(BaseModel):
 
     total: int = Field(..., description="Total records processed")
     classified: int = Field(..., description="Records successfully classified")
-    skipped: int = Field(..., description="Records skipped (already classified or no match)")
+    skipped: int = Field(
+        ..., description="Records skipped (already classified or no match)"
+    )
     errors: int = Field(..., description="Records that failed classification")
     results: List[Dict[str, Any]] = Field(
         default_factory=list, description="Individual classification results"
@@ -709,7 +744,9 @@ class BatchClassifyResponse(BaseModel):
 class NormalizeRequest(BaseModel):
     """Request to normalize a consultant recommendation."""
 
-    recommendation: str = Field(..., min_length=1, description="Raw consultant recommendation text")
+    recommendation: str = Field(
+        ..., min_length=1, description="Raw consultant recommendation text"
+    )
 
 
 class NormalizeResponse(BaseModel):
@@ -717,9 +754,12 @@ class NormalizeResponse(BaseModel):
 
     raw_text: str = Field(..., description="Original input text")
     normalized_action: Optional[str] = Field(
-        None, description="Canonical action (e.g., 'maintain_in_situ', 'review_required')"
+        None,
+        description="Canonical action (e.g., 'maintain_in_situ', 'review_required')",
     )
-    confidence: float = Field(..., description="Normalization confidence score (0.0-1.0)")
+    confidence: float = Field(
+        ..., description="Normalization confidence score (0.0-1.0)"
+    )
     method: Literal["pattern", "config", "none"] = Field(
         ..., description="Normalization method used"
     )
@@ -730,14 +770,20 @@ class TaxonomyGroupResponse(BaseModel):
 
     pc_code: str = Field(..., description="Product code (e.g., 'T1', 'T2')")
     product_group_header: str = Field(..., description="Full product group name")
-    product_types: List[str] = Field(..., description="Available product types in this group")
+    product_types: List[str] = Field(
+        ..., description="Available product types in this group"
+    )
 
 
 class TaxonomyResponse(BaseModel):
     """Response for full taxonomy listing."""
 
-    friability: str = Field(..., description="Taxonomy type: 'Friable' or 'Non-friable'")
-    groups: List[TaxonomyGroupResponse] = Field(..., description="Product groups in taxonomy")
+    friability: str = Field(
+        ..., description="Taxonomy type: 'Friable' or 'Non-friable'"
+    )
+    groups: List[TaxonomyGroupResponse] = Field(
+        ..., description="Product groups in taxonomy"
+    )
 
 
 # =============================================================================
@@ -770,9 +816,13 @@ class BusinessRuleResponse(BaseModel):
 class FieldSchemaConfigResponse(BaseModel):
     """Full field schema configuration response."""
 
-    fields: List[FieldDefResponse] = Field(..., description="All 47 BAR field definitions")
+    fields: List[FieldDefResponse] = Field(
+        ..., description="All 47 BAR field definitions"
+    )
     enums: Dict[str, List[str]] = Field(..., description="Enum picklist definitions")
-    business_rules: List[BusinessRuleResponse] = Field(..., description="BAR business rules")
+    business_rules: List[BusinessRuleResponse] = Field(
+        ..., description="BAR business rules"
+    )
     version: str = Field(..., description="Schema version")
     source_template: Optional[str] = Field(None, description="Source BAR template name")
 
@@ -782,7 +832,9 @@ class FieldSchemaConfigUpdateRequest(BaseModel):
 
     fields: List[FieldDefResponse] = Field(..., description="Updated field definitions")
     enums: Dict[str, List[str]] = Field(..., description="Enum picklist definitions")
-    business_rules: List[BusinessRuleResponse] = Field(..., description="BAR business rules")
+    business_rules: List[BusinessRuleResponse] = Field(
+        ..., description="BAR business rules"
+    )
     version: str = Field(..., description="Schema version")
     source_template: Optional[str] = Field(None, description="Source BAR template name")
 
@@ -796,7 +848,9 @@ class FieldSchemaConfigUpdateRequest(BaseModel):
         allowed_types = {"string", "number", "date", "enum"}
         for f in self.fields:
             if f.field_type not in allowed_types:
-                raise ValueError(f"Invalid field_type '{f.field_type}' for field '{f.internal_name}'")
+                raise ValueError(
+                    f"Invalid field_type '{f.field_type}' for field '{f.internal_name}'"
+                )
         return self
 
 
@@ -804,13 +858,17 @@ class ReEmbedRequest(BaseModel):
     """Request to re-embed ACM records with contextual enrichment (E1-S14)."""
 
     source_id: Optional[str] = Field(None, description="Optional source ID filter")
-    force: bool = Field(False, description="Re-embed all records even if already embedded")
+    force: bool = Field(
+        False, description="Re-embed all records even if already embedded"
+    )
 
 
 class ReEmbedResponse(BaseModel):
     """Response from re-embedding request."""
 
-    success: bool = Field(..., description="Whether re-embedding completed successfully")
+    success: bool = Field(
+        ..., description="Whether re-embedding completed successfully"
+    )
     records_processed: int = Field(..., description="Number of records processed")
     message: str = Field(..., description="Status message")
 

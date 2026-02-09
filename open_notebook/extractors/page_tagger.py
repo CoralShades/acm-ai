@@ -202,7 +202,11 @@ def _heuristic_tag_page(
     # Check if page falls within known section ranges from DocumentStructure
     if document_structure and document_structure.sections:
         for section in document_structure.sections:
-            if section.page_start <= page_number <= (section.page_end or section.page_start):
+            if (
+                section.page_start
+                <= page_number
+                <= (section.page_end or section.page_start)
+            ):
                 return PageTag(
                     page_number=page_number,
                     section_id=section.section_id,
@@ -270,7 +274,11 @@ def _heuristic_tag_page(
         )
 
     # Default: inherit previous section
-    sid = SectionTaxonomy(previous_section_id) if 0 <= previous_section_id <= 7 else SectionTaxonomy.EXECUTIVE_SUMMARY
+    sid = (
+        SectionTaxonomy(previous_section_id)
+        if 0 <= previous_section_id <= 7
+        else SectionTaxonomy.EXECUTIVE_SUMMARY
+    )
     return PageTag(
         page_number=page_number,
         section_id=sid,
@@ -292,8 +300,12 @@ def _heuristic_tag_all(
 
     for page_num, page_text in pages:
         tag = _heuristic_tag_page(
-            page_num, page_text, total_pages, previous_section_id,
-            document_structure, building_inventory,
+            page_num,
+            page_text,
+            total_pages,
+            previous_section_id,
+            document_structure,
+            building_inventory,
         )
         tagged.append(tag)
         previous_section_id = tag.section_id
@@ -320,11 +332,13 @@ async def _llm_tag_batch(
     batch_pages = [{"page_number": pn, "text": text} for pn, text in batch]
 
     prompter = Prompter(prompt_template="acm/page_tagging")
-    system_prompt = prompter.render(data={
-        "batch_pages": batch_pages,
-        "previous_section_id": previous_section_id,
-        "document_type": document_type,
-    })
+    system_prompt = prompter.render(
+        data={
+            "batch_pages": batch_pages,
+            "previous_section_id": previous_section_id,
+            "document_type": document_type,
+        }
+    )
 
     # Concatenate batch text for model provisioning (token estimation)
     batch_text = "\n".join(text for _, text in batch)
@@ -353,8 +367,7 @@ async def _llm_tag_batch(
 def _compute_register_range(tags: List[PageTag]) -> Optional[Tuple[int, int]]:
     """Compute the register page range from tagged pages (Task 3.9)."""
     register_pages = [
-        t.page_number for t in tags
-        if t.section_id == SectionTaxonomy.ASBESTOS_REGISTER
+        t.page_number for t in tags if t.section_id == SectionTaxonomy.ASBESTOS_REGISTER
     ]
     if not register_pages:
         return None
@@ -406,7 +419,10 @@ async def tag_pages(
 
         for batch in batches:
             batch_tags = await _llm_tag_batch(
-                batch, previous_section_id, document_type, model_id,
+                batch,
+                previous_section_id,
+                document_type,
+                model_id,
             )
             all_tags.extend(batch_tags)
             # Track previous section for contextual continuity
@@ -427,7 +443,9 @@ async def tag_pages(
     except Exception as e:
         logger.warning(f"LLM page tagging failed: {e}. Using heuristic fallback.")
         fallback_tags = _heuristic_tag_all(
-            pages, document_structure, building_inventory,
+            pages,
+            document_structure,
+            building_inventory,
         )
         register_range = _compute_register_range(fallback_tags)
         return PageTaggingResult(

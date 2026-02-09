@@ -99,7 +99,9 @@ class TestExtractACMRecords:
         result = extract_acm_records(markdown, "source:789")
 
         assert len(result) == 1
-        assert result[0]["result"] == "Negative"  # "Not Detected" normalized to BAR canonical
+        assert (
+            result[0]["result"] == "Negative"
+        )  # "Not Detected" normalized to BAR canonical
 
     def test_skips_non_acm_tables(self):
         """Test that tables without ACM headers are skipped."""
@@ -271,7 +273,9 @@ class TestPageNumberTracking:
         chunks = _chunk_content(content)
 
         assert len(chunks) == 1
-        assert chunks[0]["page_number"] == 5, "Should extract page 5 from marker, not default to 1"
+        assert chunks[0]["page_number"] == 5, (
+            "Should extract page 5 from marker, not default to 1"
+        )
 
     def test_small_content_without_page_markers(self):
         """Test that small content without page markers defaults to page 1."""
@@ -292,7 +296,6 @@ class TestPageNumberTracking:
 
         assert len(chunks) == 1
         assert chunks[0]["page_number"] == 12
-
 
     def test_multi_page_table_per_row_page_numbers(self):
         """Bug 2: Table spanning multiple pages - rows after page marker get correct page.
@@ -426,7 +429,11 @@ Third page content with ACM items"""
 
         # Build page_markers from known marker positions (no regex duplication)
         page_markers = {}
-        for marker, page in [("--- Page 1 ---", 1), ("--- Page 3 ---", 3), ("--- Page 5 ---", 5)]:
+        for marker, page in [
+            ("--- Page 1 ---", 1),
+            ("--- Page 3 ---", 3),
+            ("--- Page 5 ---", 5),
+        ]:
             page_markers[chunk_content.find(marker)] = page
 
         page, pos = _assign_record_page("Floor Tiles", chunk_content, page_markers, 1)
@@ -600,7 +607,16 @@ class TestHeaderMapping:
         """Test header mapping creation."""
         from open_notebook.extractors.acm_extractor import _create_header_map
 
-        headers = ["product", "material description", "extent", "location", "friable", "condition", "risk", "result"]
+        headers = [
+            "product",
+            "material description",
+            "extent",
+            "location",
+            "friable",
+            "condition",
+            "risk",
+            "result",
+        ]
         mapping = _create_header_map(headers)
 
         assert mapping["product"] == 0
@@ -707,10 +723,7 @@ class TestMineruFallback:
 
         # Even with pdf_path provided, should skip MinerU if disabled
         result = extract_acm_records(
-            sample_markdown,
-            "source:123",
-            pdf_path="/fake/path.pdf",
-            use_mineru=False
+            sample_markdown, "source:123", pdf_path="/fake/path.pdf", use_mineru=False
         )
 
         assert len(result) == 1
@@ -722,10 +735,7 @@ class TestMineruFallback:
 
         # use_mineru=True but no pdf_path - should use markdown
         result = extract_acm_records(
-            sample_markdown,
-            "source:123",
-            pdf_path=None,
-            use_mineru=True
+            sample_markdown, "source:123", pdf_path=None, use_mineru=True
         )
 
         assert len(result) == 1
@@ -737,10 +747,7 @@ class TestMineruFallback:
         from open_notebook.extractors.acm_extractor import extract_acm_records
 
         result = extract_acm_records(
-            sample_markdown,
-            "source:123",
-            pdf_path="/fake/path.pdf",
-            use_mineru=True
+            sample_markdown, "source:123", pdf_path="/fake/path.pdf", use_mineru=True
         )
 
         assert len(result) == 1
@@ -756,10 +763,7 @@ class TestMineruFallback:
         from open_notebook.extractors.acm_extractor import extract_acm_records
 
         result = extract_acm_records(
-            sample_markdown,
-            "source:123",
-            pdf_path="/fake/path.pdf",
-            use_mineru=True
+            sample_markdown, "source:123", pdf_path="/fake/path.pdf", use_mineru=True
         )
 
         # Should fall back to markdown parsing
@@ -777,10 +781,7 @@ class TestMineruFallback:
         from open_notebook.extractors.acm_extractor import extract_acm_records
 
         result = extract_acm_records(
-            sample_markdown,
-            "source:123",
-            pdf_path="/fake/path.pdf",
-            use_mineru=True
+            sample_markdown, "source:123", pdf_path="/fake/path.pdf", use_mineru=True
         )
 
         # Should fall back to markdown parsing
@@ -800,7 +801,7 @@ class TestMineruFallback:
                 "building_id": "B99",
                 "product": "MinerU Extracted Tiles",
                 "material_description": "From MinerU",
-                "result": "Detected"
+                "result": "Detected",
             }
         ]
         mock_mineru.return_value = mineru_records
@@ -808,10 +809,7 @@ class TestMineruFallback:
         from open_notebook.extractors.acm_extractor import extract_acm_records
 
         result = extract_acm_records(
-            sample_markdown,
-            "source:123",
-            pdf_path="/fake/path.pdf",
-            use_mineru=True
+            sample_markdown, "source:123", pdf_path="/fake/path.pdf", use_mineru=True
         )
 
         # Should use MinerU results, not markdown
@@ -825,10 +823,7 @@ class TestMineruFallback:
         from open_notebook.extractors.acm_extractor import extract_acm_records
 
         result = extract_acm_records(
-            "",
-            "source:123",
-            pdf_path="/fake/path.pdf",
-            use_mineru=True
+            "", "source:123", pdf_path="/fake/path.pdf", use_mineru=True
         )
 
         assert result == []
@@ -838,10 +833,7 @@ class TestMineruFallback:
         from open_notebook.extractors.acm_extractor import extract_acm_records
 
         result = extract_acm_records(
-            None,
-            "source:123",
-            pdf_path="/fake/path.pdf",
-            use_mineru=True
+            None, "source:123", pdf_path="/fake/path.pdf", use_mineru=True
         )
 
         assert result == []

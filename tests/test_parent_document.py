@@ -262,7 +262,10 @@ class TestSearchWithParentContext:
 
     @patch("api.routers.acm.repo_query")
     @patch("api.routers.acm.ACMTableSection.get_by_page_range", new_callable=AsyncMock)
-    @patch("open_notebook.domain.models.model_manager.get_embedding_model", new_callable=AsyncMock)
+    @patch(
+        "open_notebook.domain.models.model_manager.get_embedding_model",
+        new_callable=AsyncMock,
+    )
     def test_search_without_parent_default(
         self, mock_embedding_model, mock_get_page_range, mock_repo_query, client
     ):
@@ -300,7 +303,10 @@ class TestSearchWithParentContext:
 
     @patch("api.routers.acm.repo_query")
     @patch("api.routers.acm.ACMTableSection.get_by_page_range", new_callable=AsyncMock)
-    @patch("open_notebook.domain.models.model_manager.get_embedding_model", new_callable=AsyncMock)
+    @patch(
+        "open_notebook.domain.models.model_manager.get_embedding_model",
+        new_callable=AsyncMock,
+    )
     def test_search_with_parent_true(
         self, mock_embedding_model, mock_get_page_range, mock_repo_query, client
     ):

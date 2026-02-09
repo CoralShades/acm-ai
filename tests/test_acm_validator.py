@@ -45,7 +45,12 @@ class TestValidateEnumFields:
         issues = validate_enum_fields(record)
         assert len(issues) == 4
         fields_flagged = {i.field_name for i in issues}
-        assert fields_flagged == {"sample_result", "material_condition", "friable", "disturbance_potential"}
+        assert fields_flagged == {
+            "sample_result",
+            "material_condition",
+            "friable",
+            "disturbance_potential",
+        }
 
     def test_none_values_pass(self):
         """None values should not trigger validation issues."""
@@ -114,7 +119,9 @@ class TestValidateBusinessRules:
         }
         issues = validate_business_rules(record)
         condition_issues = [i for i in issues if i.field_name == "material_condition"]
-        disturbance_issues = [i for i in issues if i.field_name == "disturbance_potential"]
+        disturbance_issues = [
+            i for i in issues if i.field_name == "disturbance_potential"
+        ]
         assert len(condition_issues) == 1
         assert len(disturbance_issues) == 1
 
@@ -323,7 +330,12 @@ class TestCorrectionPromptTemplate:
             {
                 "field_name": "sample_result",
                 "current_value": "Bonded",
-                "valid_values": ["Positive", "Assumed Positive", "Negative", "Assumed Negative"],
+                "valid_values": [
+                    "Positive",
+                    "Assumed Positive",
+                    "Negative",
+                    "Assumed Negative",
+                ],
                 "issue_type": "enum_mismatch",
             },
             {
@@ -585,12 +597,20 @@ class TestCorrectionStatsAccumulation:
         }
 
         # Simulate corrections
-        correction_stats["auto_corrected"] = correction_stats.get("auto_corrected", 0) + 1
-        correction_stats["total_validated"] = correction_stats.get("total_validated", 0) + 1
+        correction_stats["auto_corrected"] = (
+            correction_stats.get("auto_corrected", 0) + 1
+        )
+        correction_stats["total_validated"] = (
+            correction_stats.get("total_validated", 0) + 1
+        )
         correction_stats["llm_corrected"] = correction_stats.get("llm_corrected", 0) + 1
-        correction_stats["total_validated"] = correction_stats.get("total_validated", 0) + 1
+        correction_stats["total_validated"] = (
+            correction_stats.get("total_validated", 0) + 1
+        )
         correction_stats["failed"] = correction_stats.get("failed", 0) + 1
-        correction_stats["total_validated"] = correction_stats.get("total_validated", 0) + 1
+        correction_stats["total_validated"] = (
+            correction_stats.get("total_validated", 0) + 1
+        )
 
         assert correction_stats["auto_corrected"] == 1
         assert correction_stats["llm_corrected"] == 1

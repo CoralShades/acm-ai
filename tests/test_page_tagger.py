@@ -215,14 +215,20 @@ class TestPageTag:
 
         with pytest.raises(ValidationError):
             PageTag(
-                page_number=1, section_id=0, section_title="Test",
-                confidence=1.5, page_type=PageType.CONTENT,
+                page_number=1,
+                section_id=0,
+                section_title="Test",
+                confidence=1.5,
+                page_type=PageType.CONTENT,
             )
 
         with pytest.raises(ValidationError):
             PageTag(
-                page_number=1, section_id=0, section_title="Test",
-                confidence=-0.1, page_type=PageType.CONTENT,
+                page_number=1,
+                section_id=0,
+                section_title="Test",
+                confidence=-0.1,
+                page_type=PageType.CONTENT,
             )
 
     def test_page_tag_section_id_bounds(self):
@@ -230,14 +236,20 @@ class TestPageTag:
 
         with pytest.raises(ValidationError):
             PageTag(
-                page_number=1, section_id=8, section_title="Test",
-                confidence=0.9, page_type=PageType.CONTENT,
+                page_number=1,
+                section_id=8,
+                section_title="Test",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
             )
 
         with pytest.raises(ValidationError):
             PageTag(
-                page_number=1, section_id=-1, section_title="Test",
-                confidence=0.9, page_type=PageType.CONTENT,
+                page_number=1,
+                section_id=-1,
+                section_title="Test",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
             )
 
 
@@ -245,9 +257,10 @@ class TestPageTaggingResult:
     """Test PageTaggingResult model (Task 1.5)."""
 
     def test_create_empty_result(self):
-
         result = PageTaggingResult(
-            pages=[], total_pages=0, register_page_range=None,
+            pages=[],
+            total_pages=0,
+            register_page_range=None,
         )
         assert result.pages == []
         assert result.total_pages == 0
@@ -261,12 +274,18 @@ class TestPageTaggingResult:
 
         pages = [
             PageTag(
-                page_number=1, section_id=0, section_title="Executive Summary",
-                confidence=0.9, page_type=PageType.TITLE_PAGE,
+                page_number=1,
+                section_id=0,
+                section_title="Executive Summary",
+                confidence=0.9,
+                page_type=PageType.TITLE_PAGE,
             ),
             PageTag(
-                page_number=13, section_id=4, section_title="Asbestos Register",
-                confidence=0.95, page_type=PageType.CONTENT,
+                page_number=13,
+                section_id=4,
+                section_title="Asbestos Register",
+                confidence=0.95,
+                page_type=PageType.CONTENT,
             ),
         ]
         result = PageTaggingResult(
@@ -372,17 +391,27 @@ class TestHeuristicTagging:
         assert tag.confidence == 0.7
 
     def test_toc_page_detection(self):
-        toc_text = "Table of Contents\n1.0 Introduction ... 3\n2.0 Site Description ... 5"
+        toc_text = (
+            "Table of Contents\n1.0 Introduction ... 3\n2.0 Site Description ... 5"
+        )
         tag = _heuristic_tag_page(
-            page_number=2, page_text=toc_text, total_pages=30, previous_section_id=0,
+            page_number=2,
+            page_text=toc_text,
+            total_pages=30,
+            previous_section_id=0,
         )
         assert tag.page_type == PageType.TOC_PAGE
         assert tag.confidence == 0.9
 
     def test_register_page_via_building_header(self):
-        register_text = "### B00A - Admin Building - 1924 - Brick\n\n| Material | Product |"
+        register_text = (
+            "### B00A - Admin Building - 1924 - Brick\n\n| Material | Product |"
+        )
         tag = _heuristic_tag_page(
-            page_number=13, page_text=register_text, total_pages=30, previous_section_id=3,
+            page_number=13,
+            page_text=register_text,
+            total_pages=30,
+            previous_section_id=3,
         )
         assert tag.section_id == SectionTaxonomy.ASBESTOS_REGISTER
         assert tag.page_type == PageType.CONTENT
@@ -447,7 +476,10 @@ class TestHeuristicTagging:
         inventory = BuildingInventory(
             buildings=[
                 BuildingMeta(
-                    building_id="B00A", page_start=13, page_end=19, rooms=[],
+                    building_id="B00A",
+                    page_start=13,
+                    page_end=19,
+                    rooms=[],
                 ),
             ],
             processing_groups=[],
@@ -550,7 +582,9 @@ class TestConfidenceScoring:
         )
 
         inventory = BuildingInventory(
-            buildings=[BuildingMeta(building_id="B00A", page_start=13, page_end=19, rooms=[])],
+            buildings=[
+                BuildingMeta(building_id="B00A", page_start=13, page_end=19, rooms=[])
+            ],
             processing_groups=[],
             total_buildings=1,
         )
@@ -628,7 +662,9 @@ class TestHeuristicTagAll:
         pages = _split_into_pages(SAMPLE_CONTENT)
         tags = _heuristic_tag_all(pages)
         # Find register pages (section 4) - should be contiguous
-        register_tags = [t for t in tags if t.section_id == SectionTaxonomy.ASBESTOS_REGISTER]
+        register_tags = [
+            t for t in tags if t.section_id == SectionTaxonomy.ASBESTOS_REGISTER
+        ]
         if register_tags:
             # Register pages should be consecutive
             page_nums = [t.page_number for t in register_tags]
@@ -645,26 +681,74 @@ class TestComputeRegisterRange:
 
     def test_compute_range_with_register_pages(self):
         tags = [
-            PageTag(page_number=1, section_id=0, section_title="ES", confidence=0.9, page_type=PageType.TITLE_PAGE),
-            PageTag(page_number=13, section_id=4, section_title="Reg", confidence=0.9, page_type=PageType.CONTENT),
-            PageTag(page_number=14, section_id=4, section_title="Reg", confidence=0.9, page_type=PageType.CONTENT),
-            PageTag(page_number=20, section_id=4, section_title="Reg", confidence=0.9, page_type=PageType.CONTENT),
-            PageTag(page_number=25, section_id=5, section_title="RA", confidence=0.9, page_type=PageType.CONTENT),
+            PageTag(
+                page_number=1,
+                section_id=0,
+                section_title="ES",
+                confidence=0.9,
+                page_type=PageType.TITLE_PAGE,
+            ),
+            PageTag(
+                page_number=13,
+                section_id=4,
+                section_title="Reg",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
+            ),
+            PageTag(
+                page_number=14,
+                section_id=4,
+                section_title="Reg",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
+            ),
+            PageTag(
+                page_number=20,
+                section_id=4,
+                section_title="Reg",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
+            ),
+            PageTag(
+                page_number=25,
+                section_id=5,
+                section_title="RA",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
+            ),
         ]
         result = _compute_register_range(tags)
         assert result == (13, 20)
 
     def test_compute_range_no_register(self):
         tags = [
-            PageTag(page_number=1, section_id=0, section_title="ES", confidence=0.9, page_type=PageType.TITLE_PAGE),
-            PageTag(page_number=2, section_id=1, section_title="Intro", confidence=0.9, page_type=PageType.CONTENT),
+            PageTag(
+                page_number=1,
+                section_id=0,
+                section_title="ES",
+                confidence=0.9,
+                page_type=PageType.TITLE_PAGE,
+            ),
+            PageTag(
+                page_number=2,
+                section_id=1,
+                section_title="Intro",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
+            ),
         ]
         result = _compute_register_range(tags)
         assert result is None
 
     def test_compute_range_single_register_page(self):
         tags = [
-            PageTag(page_number=10, section_id=4, section_title="Reg", confidence=0.9, page_type=PageType.CONTENT),
+            PageTag(
+                page_number=10,
+                section_id=4,
+                section_title="Reg",
+                confidence=0.9,
+                page_type=PageType.CONTENT,
+            ),
         ]
         result = _compute_register_range(tags)
         assert result == (10, 10)
@@ -705,7 +789,9 @@ class TestTagPagesAsync:
         assert len(result.pages) > 0
         assert result.total_pages == 30
         # Should detect register pages
-        register_pages = [p for p in result.pages if p.section_id == SectionTaxonomy.ASBESTOS_REGISTER]
+        register_pages = [
+            p for p in result.pages if p.section_id == SectionTaxonomy.ASBESTOS_REGISTER
+        ]
         assert len(register_pages) > 0
         assert result.register_page_range is not None
 
@@ -723,7 +809,9 @@ class TestTagPagesAsync:
             total_pages=30,
             register_start_page=13,
             sections=[
-                Section(section_id=4, title="Asbestos Register", page_start=13, page_end=24),
+                Section(
+                    section_id=4, title="Asbestos Register", page_start=13, page_end=24
+                ),
             ],
         )
         result = await tag_pages(SAMPLE_CONTENT, document_structure=doc_structure)
@@ -809,7 +897,12 @@ class TestLangGraphIntegration:
         mock_source.id = "test:123"
         mock_source.full_text = ""
 
-        state = {"source": mock_source, "model_id": None, "document_structure": None, "building_inventory": None}
+        state = {
+            "source": mock_source,
+            "model_id": None,
+            "document_structure": None,
+            "building_inventory": None,
+        }
         config = MagicMock()
 
         result = await tag_page_sections(state, config)

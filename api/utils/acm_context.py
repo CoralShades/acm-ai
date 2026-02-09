@@ -81,9 +81,7 @@ def detect_question_type(message: str) -> str:
     return "general"
 
 
-def format_acm_context_for_question(
-    records: List[Any], question_type: str
-) -> str:
+def format_acm_context_for_question(records: List[Any], question_type: str) -> str:
     """Format ACM context based on question type.
 
     This function formats ACM records in a way that's optimized for the type
@@ -226,7 +224,9 @@ def _format_as_table(records: List[Any]) -> str:
         risk = r.risk_status or "-"
         result = r.result or "-"
 
-        lines.append(f"| {building} | {room} | {product} | {material} | {risk} | {result} |")
+        lines.append(
+            f"| {building} | {room} | {product} | {material} | {risk} | {result} |"
+        )
 
     if len(records) > 50:
         lines.extend(["", f"*({len(records)} total records, showing first 50)*"])

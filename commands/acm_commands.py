@@ -95,7 +95,9 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         if force:
             deleted_count = await ACMRecord.delete_by_source(source_id)
             if deleted_count > 0:
-                logger.info(f"Deleted {deleted_count} existing ACM records for source {source_id}")
+                logger.info(
+                    f"Deleted {deleted_count} existing ACM records for source {source_id}"
+                )
 
         # 3. Run AI extraction (deletion already handled above, so pass force=False)
         result = await extract_acm_from_source(
@@ -108,9 +110,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
 
         # 4. Return result
         if result.status == "failed":
-            logger.error(
-                f"AI ACM extraction failed for {source_id}: {result.error}"
-            )
+            logger.error(f"AI ACM extraction failed for {source_id}: {result.error}")
             return ACMExtractionOutput(
                 success=False,
                 source_id=source_id,
@@ -147,7 +147,9 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 from api.services.acm_embedding_service import ACMEmbeddingService
                 from open_notebook.domain.acm import ACMEmbeddingConfig
 
-                logger.info(f"Starting embedding for {result.total_records} ACM records")
+                logger.info(
+                    f"Starting embedding for {result.total_records} ACM records"
+                )
 
                 # Load the freshly created records
                 records = await ACMRecord.get_by_source(source_id)

@@ -501,7 +501,7 @@ class TestACMRecordGetEnrichedEmbeddingText:
 
         assert "Level: First Floor" in text  # area_type adds context
         assert "Building: Main Building" in text  # from raw text
-        assert "Page:" not in text   # page_number is None
+        assert "Page:" not in text  # page_number is None
         assert "Product: Ceiling Tiles" in text
 
     def test_enriched_text_with_no_context(self):
@@ -686,9 +686,7 @@ class TestSemanticSearchEndpoint:
 
         mock_repo_query.return_value = []
 
-        response = client.get(
-            "/api/acm/search?query=test&source_id=source:specific"
-        )
+        response = client.get("/api/acm/search?query=test&source_id=source:specific")
 
         assert response.status_code == 200
 

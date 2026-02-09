@@ -66,7 +66,9 @@ def _make_building(
 def _make_inventory(buildings: list[BuildingMeta] | None = None) -> BuildingInventory:
     if buildings is None:
         buildings = [
-            _make_building("B00A", "Admin Building", 10, 15, BuildingComplexity.COMPLEX),
+            _make_building(
+                "B00A", "Admin Building", 10, 15, BuildingComplexity.COMPLEX
+            ),
             _make_building("B00B", "Storage Shed", 16, 17, BuildingComplexity.SIMPLE),
             _make_building("B00C", "Portables", 18, 20, BuildingComplexity.COMPLEX),
         ]
@@ -89,7 +91,9 @@ def _make_page_tags(page_ranges: list[tuple[int, int, int]]) -> PageTaggingResul
         )
         for pn, sid, conf in page_ranges
     ]
-    return PageTaggingResult(pages=pages, total_pages=max(pn for pn, _, _ in page_ranges))
+    return PageTaggingResult(
+        pages=pages, total_pages=max(pn for pn, _, _ in page_ranges)
+    )
 
 
 def _make_content_with_pages(page_ranges: list[tuple[int, str]]) -> str:
@@ -155,12 +159,21 @@ class TestExtractionPlan:
     def test_plan_from_inventory(self):
         inventory = _make_inventory()
         # All register pages for B00A (complex) and B00C (complex), some for B00B (simple)
-        tags = _make_page_tags([
-            (10, 4, 0.9), (11, 4, 0.9), (12, 4, 0.9),
-            (13, 4, 0.9), (14, 4, 0.9), (15, 4, 0.9),
-            (16, 4, 0.8), (17, 4, 0.8),
-            (18, 4, 0.9), (19, 4, 0.9), (20, 4, 0.9),
-        ])
+        tags = _make_page_tags(
+            [
+                (10, 4, 0.9),
+                (11, 4, 0.9),
+                (12, 4, 0.9),
+                (13, 4, 0.9),
+                (14, 4, 0.9),
+                (15, 4, 0.9),
+                (16, 4, 0.8),
+                (17, 4, 0.8),
+                (18, 4, 0.9),
+                (19, 4, 0.9),
+                (20, 4, 0.9),
+            ]
+        )
         plan = plan_extraction(inventory, tags)
         assert plan.total_buildings == 3
         assert plan.buildings_to_extract == 3  # All have register pages
@@ -168,16 +181,27 @@ class TestExtractionPlan:
 
     def test_plan_with_skip(self):
         """Buildings with no register pages should be SKIP."""
-        inventory = _make_inventory([
-            _make_building("B00A", "Admin", 10, 15, BuildingComplexity.COMPLEX),
-            _make_building("B00B", "Appendix", 16, 20, BuildingComplexity.COMPLEX),
-        ])
-        tags = _make_page_tags([
-            (10, 4, 0.9), (11, 4, 0.9), (12, 4, 0.9),
-            (13, 4, 0.9), (14, 4, 0.9), (15, 4, 0.9),
-            (16, 7, 0.8), (17, 7, 0.8), (18, 7, 0.8),
-            (19, 7, 0.8), (20, 7, 0.8),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building("B00A", "Admin", 10, 15, BuildingComplexity.COMPLEX),
+                _make_building("B00B", "Appendix", 16, 20, BuildingComplexity.COMPLEX),
+            ]
+        )
+        tags = _make_page_tags(
+            [
+                (10, 4, 0.9),
+                (11, 4, 0.9),
+                (12, 4, 0.9),
+                (13, 4, 0.9),
+                (14, 4, 0.9),
+                (15, 4, 0.9),
+                (16, 7, 0.8),
+                (17, 7, 0.8),
+                (18, 7, 0.8),
+                (19, 7, 0.8),
+                (20, 7, 0.8),
+            ]
+        )
         plan = plan_extraction(inventory, tags)
         assert plan.buildings_to_extract == 1
         assert plan.buildings_skipped == 1
@@ -187,18 +211,22 @@ class TestExtractionPlan:
 
     def test_plan_regex_for_simple(self):
         """Simple buildings with register pages should use REGEX_ONLY."""
-        inventory = _make_inventory([
-            _make_building("B00A", "Simple", 10, 12, BuildingComplexity.SIMPLE),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building("B00A", "Simple", 10, 12, BuildingComplexity.SIMPLE),
+            ]
+        )
         tags = _make_page_tags([(10, 4, 0.9), (11, 4, 0.9), (12, 4, 0.9)])
         plan = plan_extraction(inventory, tags)
         assert plan.plans[0].strategy == ExtractionStrategy.REGEX_ONLY
 
     def test_plan_no_tags_defaults_to_full_llm(self):
         """Without page tags, all buildings default to FULL_LLM."""
-        inventory = _make_inventory([
-            _make_building("B00A", "Building", 10, 15, BuildingComplexity.SIMPLE),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building("B00A", "Building", 10, 15, BuildingComplexity.SIMPLE),
+            ]
+        )
         plan = plan_extraction(inventory, page_tags=None)
         assert plan.plans[0].strategy == ExtractionStrategy.FULL_LLM
         assert plan.estimated_llm_calls == 1
@@ -248,9 +276,13 @@ class TestShouldUseOrchestrator:
         assert should_use_orchestrator(state) is False
 
     def test_false_when_empty(self):
-        state = {"building_inventory": BuildingInventory(
-            buildings=[], processing_groups=[], total_buildings=0,
-        )}
+        state = {
+            "building_inventory": BuildingInventory(
+                buildings=[],
+                processing_groups=[],
+                total_buildings=0,
+            )
+        }
         assert should_use_orchestrator(state) is False
 
     def test_false_when_missing(self):
@@ -266,12 +298,21 @@ class TestShouldUseOrchestrator:
 class TestPlanExtraction:
     def test_correct_strategy_assignment(self):
         inventory = _make_inventory()
-        tags = _make_page_tags([
-            (10, 4, 0.9), (11, 4, 0.9), (12, 4, 0.9),
-            (13, 4, 0.9), (14, 4, 0.9), (15, 4, 0.9),
-            (16, 4, 0.8), (17, 4, 0.8),
-            (18, 4, 0.9), (19, 4, 0.9), (20, 4, 0.9),
-        ])
+        tags = _make_page_tags(
+            [
+                (10, 4, 0.9),
+                (11, 4, 0.9),
+                (12, 4, 0.9),
+                (13, 4, 0.9),
+                (14, 4, 0.9),
+                (15, 4, 0.9),
+                (16, 4, 0.8),
+                (17, 4, 0.8),
+                (18, 4, 0.9),
+                (19, 4, 0.9),
+                (20, 4, 0.9),
+            ]
+        )
         plan = plan_extraction(inventory, tags)
         by_id = {p.building_id: p for p in plan.plans}
         assert by_id["B00A"].strategy == ExtractionStrategy.FULL_LLM
@@ -279,26 +320,37 @@ class TestPlanExtraction:
         assert by_id["B00C"].strategy == ExtractionStrategy.FULL_LLM
 
     def test_skip_non_register_buildings(self):
-        inventory = _make_inventory([
-            _make_building("B00A", "Methodology", 5, 8, BuildingComplexity.COMPLEX),
-        ])
-        tags = _make_page_tags([
-            (5, 3, 0.9), (6, 3, 0.9), (7, 3, 0.9), (8, 3, 0.9),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building("B00A", "Methodology", 5, 8, BuildingComplexity.COMPLEX),
+            ]
+        )
+        tags = _make_page_tags(
+            [
+                (5, 3, 0.9),
+                (6, 3, 0.9),
+                (7, 3, 0.9),
+                (8, 3, 0.9),
+            ]
+        )
         plan = plan_extraction(inventory, tags)
         assert plan.plans[0].strategy == ExtractionStrategy.SKIP
 
     def test_missing_page_tags_defaults_full_llm(self):
-        inventory = _make_inventory([
-            _make_building("B00A", "Building", 10, 15, BuildingComplexity.COMPLEX),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building("B00A", "Building", 10, 15, BuildingComplexity.COMPLEX),
+            ]
+        )
         plan = plan_extraction(inventory, page_tags=None)
         assert plan.plans[0].strategy == ExtractionStrategy.FULL_LLM
 
     def test_context_summary_with_metadata(self):
-        inventory = _make_inventory([
-            _make_building("B00A", "Admin", 10, 15, BuildingComplexity.COMPLEX),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building("B00A", "Admin", 10, 15, BuildingComplexity.COMPLEX),
+            ]
+        )
         doc_meta = DocumentMeta(
             consultant_name="Greencap Pty Ltd",
             site_name="Test Primary School",
@@ -315,13 +367,15 @@ class TestPlanExtraction:
 
 class TestExtractBuildingContent:
     def test_correct_page_range(self):
-        content = _make_content_with_pages([
-            (1, "Page 1 intro"),
-            (2, "Page 2 methodology"),
-            (3, "Page 3 register B00A data"),
-            (4, "Page 4 more B00A data"),
-            (5, "Page 5 appendix"),
-        ])
+        content = _make_content_with_pages(
+            [
+                (1, "Page 1 intro"),
+                (2, "Page 2 methodology"),
+                (3, "Page 3 register B00A data"),
+                (4, "Page 4 more B00A data"),
+                (5, "Page 5 appendix"),
+            ]
+        )
         result = _extract_building_content(content, 3, 4)
         assert "register B00A data" in result
         assert "more B00A data" in result
@@ -333,11 +387,13 @@ class TestExtractBuildingContent:
         assert result == content
 
     def test_single_page_building(self):
-        content = _make_content_with_pages([
-            (1, "Page 1 content"),
-            (2, "Single page building data"),
-            (3, "Page 3 other"),
-        ])
+        content = _make_content_with_pages(
+            [
+                (1, "Page 1 content"),
+                (2, "Single page building data"),
+                (3, "Page 3 other"),
+            ]
+        )
         result = _extract_building_content(content, 2, 2)
         assert "Single page building data" in result
         assert "Page 3 other" not in result
@@ -399,9 +455,14 @@ class TestExtractBuilding:
 
     @pytest.mark.asyncio
     async def test_regex_only_path(self):
-        content = _make_content_with_pages([
-            (10, "## B00A - Storage Shed\nB00A-R0001 - External Movement\nNo Asbestos"),
-        ])
+        content = _make_content_with_pages(
+            [
+                (
+                    10,
+                    "## B00A - Storage Shed\nB00A-R0001 - External Movement\nNo Asbestos",
+                ),
+            ]
+        )
         plan = BuildingExtractionPlan(
             building_id="B00A",
             building_name="Storage Shed",
@@ -416,9 +477,11 @@ class TestExtractBuilding:
     @pytest.mark.asyncio
     async def test_full_llm_error_handling(self):
         """LLM failure should return empty records with error in stats."""
-        content = _make_content_with_pages([
-            (10, "Some building content"),
-        ])
+        content = _make_content_with_pages(
+            [
+                (10, "Some building content"),
+            ]
+        )
         plan = BuildingExtractionPlan(
             building_id="B00A",
             page_range=(10, 10),
@@ -438,9 +501,11 @@ class TestExtractBuilding:
     @pytest.mark.asyncio
     async def test_full_llm_success(self):
         """Successful LLM extraction returns records."""
-        content = _make_content_with_pages([
-            (10, "Building content with ACM data"),
-        ])
+        content = _make_content_with_pages(
+            [
+                (10, "Building content with ACM data"),
+            ]
+        )
         plan = BuildingExtractionPlan(
             building_id="B00A",
             page_range=(10, 10),
@@ -476,13 +541,22 @@ class TestOrchestrateExtraction:
         """Orchestrator node should produce records from building extraction."""
         source = MagicMock()
         source.id = "source:test"
-        source.full_text = _make_content_with_pages([
-            (10, "## B00A - Storage Shed\nB00A-R0001 - External Movement\nNo Asbestos"),
-        ])
+        source.full_text = _make_content_with_pages(
+            [
+                (
+                    10,
+                    "## B00A - Storage Shed\nB00A-R0001 - External Movement\nNo Asbestos",
+                ),
+            ]
+        )
 
-        inventory = _make_inventory([
-            _make_building("B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building(
+                    "B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE
+                ),
+            ]
+        )
         tags = _make_page_tags([(10, 4, 0.9)])
 
         state = {
@@ -509,13 +583,22 @@ class TestOrchestrateExtraction:
         source = MagicMock()
         source.id = "source:test"
         source.title = "Springfield Primary School"
-        source.full_text = _make_content_with_pages([
-            (10, "## B00A - Storage Shed\nB00A-R0001 - External Movement\nNo Asbestos"),
-        ])
+        source.full_text = _make_content_with_pages(
+            [
+                (
+                    10,
+                    "## B00A - Storage Shed\nB00A-R0001 - External Movement\nNo Asbestos",
+                ),
+            ]
+        )
 
-        inventory = _make_inventory([
-            _make_building("B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building(
+                    "B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE
+                ),
+            ]
+        )
         tags = _make_page_tags([(10, 4, 0.9)])
 
         state = {
@@ -557,15 +640,23 @@ class TestParallelExtraction:
         """Multiple buildings should all be extracted."""
         source = MagicMock()
         source.id = "source:test"
-        source.full_text = _make_content_with_pages([
-            (10, "## B00A - Storage Shed\nB00A-R0001 - Movement\nNo Asbestos"),
-            (11, "## B00B - Office Block\nB00B-R0001 - Hallway\nNo Asbestos"),
-        ])
+        source.full_text = _make_content_with_pages(
+            [
+                (10, "## B00A - Storage Shed\nB00A-R0001 - Movement\nNo Asbestos"),
+                (11, "## B00B - Office Block\nB00B-R0001 - Hallway\nNo Asbestos"),
+            ]
+        )
 
-        inventory = _make_inventory([
-            _make_building("B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE),
-            _make_building("B00B", "Office Block", 11, 11, BuildingComplexity.SIMPLE),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building(
+                    "B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE
+                ),
+                _make_building(
+                    "B00B", "Office Block", 11, 11, BuildingComplexity.SIMPLE
+                ),
+            ]
+        )
         tags = _make_page_tags([(10, 4, 0.9), (11, 4, 0.9)])
 
         state = {
@@ -585,15 +676,23 @@ class TestParallelExtraction:
     @pytest.mark.asyncio
     async def test_one_failure_doesnt_block_others(self):
         """If one building fails, others should still succeed."""
-        content = _make_content_with_pages([
-            (10, "Building A content"),
-            (11, "## B00B - Storage Shed\nB00B-R0001 - Movement\nNo Asbestos"),
-        ])
+        content = _make_content_with_pages(
+            [
+                (10, "Building A content"),
+                (11, "## B00B - Storage Shed\nB00B-R0001 - Movement\nNo Asbestos"),
+            ]
+        )
 
-        inventory = _make_inventory([
-            _make_building("B00A", "Failing Building", 10, 10, BuildingComplexity.COMPLEX),
-            _make_building("B00B", "Simple Building", 11, 11, BuildingComplexity.SIMPLE),
-        ])
+        inventory = _make_inventory(
+            [
+                _make_building(
+                    "B00A", "Failing Building", 10, 10, BuildingComplexity.COMPLEX
+                ),
+                _make_building(
+                    "B00B", "Simple Building", 11, 11, BuildingComplexity.SIMPLE
+                ),
+            ]
+        )
         tags = _make_page_tags([(10, 4, 0.9), (11, 4, 0.9)])
 
         source = MagicMock()
@@ -652,7 +751,8 @@ class TestParallelExtraction:
 
         plans = [
             BuildingExtractionPlan(
-                building_id=f"B{i:03d}", page_range=(i, i),
+                building_id=f"B{i:03d}",
+                page_range=(i, i),
                 strategy=ExtractionStrategy.FULL_LLM,
             )
             for i in range(6)  # 6 buildings, max_concurrent=2
@@ -662,7 +762,9 @@ class TestParallelExtraction:
             "open_notebook.extractors.orchestrator.extract_building",
             side_effect=tracked_extract,
         ):
-            results = await _extract_buildings_parallel(plans, "content", {}, max_concurrent=2)
+            results = await _extract_buildings_parallel(
+                plans, "content", {}, max_concurrent=2
+            )
 
         assert len(results) == 6
         assert max_concurrent_seen <= 2, (
@@ -680,24 +782,45 @@ class TestMergeBuildingResults:
         import time
 
         r1 = ACMExtractionRecord(
-            building_id="B00A", product="Floor", material_description="Vinyl", result="Detected",
+            building_id="B00A",
+            product="Floor",
+            material_description="Vinyl",
+            result="Detected",
         )
         r2 = ACMExtractionRecord(
-            building_id="B00B", product="Ceiling", material_description="Fibre Cement", result="Detected",
+            building_id="B00B",
+            product="Ceiling",
+            material_description="Fibre Cement",
+            result="Detected",
         )
         results = [
-            ([r1], BuildingExtractionStats(
-                building_id="B00A", records_extracted=1, pages_processed=5,
-                strategy_used="full_llm", time_ms=1000,
-            )),
-            ([r2], BuildingExtractionStats(
-                building_id="B00B", records_extracted=1, pages_processed=2,
-                strategy_used="regex_only", time_ms=50,
-            )),
+            (
+                [r1],
+                BuildingExtractionStats(
+                    building_id="B00A",
+                    records_extracted=1,
+                    pages_processed=5,
+                    strategy_used="full_llm",
+                    time_ms=1000,
+                ),
+            ),
+            (
+                [r2],
+                BuildingExtractionStats(
+                    building_id="B00B",
+                    records_extracted=1,
+                    pages_processed=2,
+                    strategy_used="regex_only",
+                    time_ms=50,
+                ),
+            ),
         ]
         plan = ExtractionPlan(
-            plans=[], total_buildings=2, buildings_to_extract=2,
-            buildings_skipped=0, estimated_llm_calls=1,
+            plans=[],
+            total_buildings=2,
+            buildings_to_extract=2,
+            buildings_skipped=0,
+            estimated_llm_calls=1,
         )
 
         records, stats = merge_building_results(results, plan, time.time())
@@ -766,9 +889,13 @@ class TestBackwardCompatibility:
         assert should_use_orchestrator(state) is False
 
     def test_empty_inventory_uses_legacy(self):
-        state = {"building_inventory": BuildingInventory(
-            buildings=[], processing_groups=[], total_buildings=0,
-        )}
+        state = {
+            "building_inventory": BuildingInventory(
+                buildings=[],
+                processing_groups=[],
+                total_buildings=0,
+            )
+        }
         assert should_use_orchestrator(state) is False
 
 
@@ -798,8 +925,11 @@ class TestACMExtractionOutputOrchestratorStats:
     def test_model_dump_serialization_roundtrip(self):
         """Verify OrchestratorStats.model_dump() produces valid dict for ACMExtractionOutput."""
         plan = ExtractionPlan(
-            plans=[], total_buildings=2, buildings_to_extract=2,
-            buildings_skipped=0, estimated_llm_calls=1,
+            plans=[],
+            total_buildings=2,
+            buildings_to_extract=2,
+            buildings_skipped=0,
+            estimated_llm_calls=1,
         )
         stats = OrchestratorStats(
             total_buildings=2,

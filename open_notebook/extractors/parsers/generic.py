@@ -52,6 +52,7 @@ class GenericParser(ConsultantParser):
         self.config = config
         if self.config is None:
             from open_notebook.extractors.parsers.config_loader import load_field_schema
+
             self.config = load_field_schema()
 
     @property

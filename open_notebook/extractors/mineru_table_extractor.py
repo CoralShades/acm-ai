@@ -17,6 +17,7 @@ from loguru import logger
 try:
     # Try importing from magic_pdf (version-agnostic approach)
     import magic_pdf
+
     # Try different possible import paths (API changed between versions)
     try:
         from magic_pdf.pipe.UNIPipe import UNIPipe
@@ -25,6 +26,7 @@ try:
         # Fallback for older versions or different API structure
         try:
             from magic_pdf.operators.pipes import PipeResult
+
             UNIPipe = None  # Will be handled in the extractor
             DiskReaderWriter = None
         except ImportError:
@@ -41,6 +43,7 @@ except ImportError:
 @dataclass
 class TableBoundingBox:
     """Bounding box coordinates for a table."""
+
     x: float
     y: float
     width: float
@@ -61,6 +64,7 @@ class TableBoundingBox:
 @dataclass
 class ExtractedTable:
     """Represents an extracted table with metadata."""
+
     html: str
     bbox: TableBoundingBox
     page_number: int
@@ -109,12 +113,12 @@ class MineruTableExtractor:
                 "Install with: pip install magic-pdf[full]"
             )
         self.parse_method = parse_method
-        logger.info(f"MineruTableExtractor initialized with parse_method={parse_method}")
+        logger.info(
+            f"MineruTableExtractor initialized with parse_method={parse_method}"
+        )
 
     def extract_tables_from_pdf(
-        self,
-        pdf_path: str,
-        stitch_multipage: bool = True
+        self, pdf_path: str, stitch_multipage: bool = True
     ) -> List[ExtractedTable]:
         """
         Extract all tables from a PDF document.
@@ -143,10 +147,7 @@ class MineruTableExtractor:
                 output_dir.mkdir(parents=True, exist_ok=True)
 
                 # Extract tables using MinerU
-                tables = self._run_mineru_extraction(
-                    str(pdf_path),
-                    str(output_dir)
-                )
+                tables = self._run_mineru_extraction(str(pdf_path), str(output_dir))
 
                 logger.info(f"Extracted {len(tables)} tables from {pdf_path}")
 
@@ -162,9 +163,7 @@ class MineruTableExtractor:
             raise
 
     def _run_mineru_extraction(
-        self,
-        pdf_path: str,
-        output_dir: str
+        self, pdf_path: str, output_dir: str
     ) -> List[ExtractedTable]:
         """
         Run MinerU extraction pipeline and parse results.
@@ -196,11 +195,7 @@ class MineruTableExtractor:
             md_content = pipe.pipe_mk_markdown(image_dir, drop_mode="none")
 
             # Parse tables from content
-            tables = self._parse_tables_from_content(
-                content_list,
-                md_content,
-                pdf_path
-            )
+            tables = self._parse_tables_from_content(content_list, md_content, pdf_path)
 
             return tables
 
@@ -209,10 +204,7 @@ class MineruTableExtractor:
             raise
 
     def _parse_tables_from_content(
-        self,
-        content_list: List[dict],
-        md_content: str,
-        pdf_path: str
+        self, content_list: List[dict], md_content: str, pdf_path: str
     ) -> List[ExtractedTable]:
         """
         Parse tables from MinerU content output.
@@ -249,9 +241,7 @@ class MineruTableExtractor:
         return tables
 
     def _extract_table_from_block(
-        self,
-        block: dict,
-        table_index: int
+        self, block: dict, table_index: int
     ) -> Optional[ExtractedTable]:
         """
         Extract a single table from a MinerU content block.
@@ -292,7 +282,9 @@ class MineruTableExtractor:
                 x, y, width, height = 0, 0, 0, 0
 
             # Extract page number
-            page_number = block.get("page", block.get("page_number", block.get("page_idx", 0)))
+            page_number = block.get(
+                "page", block.get("page_number", block.get("page_idx", 0))
+            )
             if isinstance(page_number, int):
                 page_number = page_number + 1  # Convert 0-indexed to 1-indexed
 
@@ -301,7 +293,7 @@ class MineruTableExtractor:
                 y=float(y),
                 width=float(width),
                 height=float(height),
-                page=page_number
+                page=page_number,
             )
 
             # Detect merged cells and count rows/cols
@@ -316,7 +308,7 @@ class MineruTableExtractor:
                 row_count=row_count,
                 col_count=col_count,
                 has_merged_cells=has_merged_cells,
-                table_index=table_index
+                table_index=table_index,
             )
 
         except Exception as e:
@@ -348,8 +340,7 @@ class MineruTableExtractor:
         return col_count
 
     def _stitch_multipage_tables(
-        self,
-        tables: List[ExtractedTable]
+        self, tables: List[ExtractedTable]
     ) -> List[ExtractedTable]:
         """
         Stitch tables that span multiple pages.
@@ -383,8 +374,7 @@ class MineruTableExtractor:
                 if is_adjacent_page and similar_cols:
                     # Stitch tables
                     stitched_html = self._merge_table_html(
-                        current.html,
-                        next_table.html
+                        current.html, next_table.html
                     )
 
                     # Create stitched table with updated metadata
@@ -394,8 +384,9 @@ class MineruTableExtractor:
                         page_number=current.page_number,
                         row_count=current.row_count + next_table.row_count,
                         col_count=current.col_count,
-                        has_merged_cells=current.has_merged_cells or next_table.has_merged_cells,
-                        table_index=current.table_index
+                        has_merged_cells=current.has_merged_cells
+                        or next_table.has_merged_cells,
+                        table_index=current.table_index,
                     )
 
                     stitched.append(stitched_table)
@@ -436,7 +427,7 @@ class MineruTableExtractor:
             # Find end of opening tag
             tag_end = html2_stripped.find(">", table_start)
             if tag_end != -1:
-                html2_stripped = html2_stripped[tag_end + 1:]
+                html2_stripped = html2_stripped[tag_end + 1 :]
 
         # Combine
         merged = html1_stripped + "\n" + html2_stripped
@@ -449,9 +440,7 @@ class MineruTableExtractor:
 
 
 def extract_tables_from_pdf(
-    pdf_path: str,
-    parse_method: str = "auto",
-    stitch_multipage: bool = True
+    pdf_path: str, parse_method: str = "auto", stitch_multipage: bool = True
 ) -> List[ExtractedTable]:
     """
     Convenience function to extract tables from a PDF.
@@ -471,6 +460,5 @@ def extract_tables_from_pdf(
     """
     extractor = MineruTableExtractor(parse_method=parse_method)
     return extractor.extract_tables_from_pdf(
-        pdf_path=pdf_path,
-        stitch_multipage=stitch_multipage
+        pdf_path=pdf_path, stitch_multipage=stitch_multipage
     )

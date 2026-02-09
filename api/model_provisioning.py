@@ -18,12 +18,15 @@ from open_notebook.domain.models import DefaultModels, Model
 @dataclass
 class ModelConfig:
     """Configuration for a model from environment variable."""
+
     provider: str
     name: str
     type: str = "language"
 
 
-def parse_model_env(env_value: str, model_type: str = "language") -> Optional[ModelConfig]:
+def parse_model_env(
+    env_value: str, model_type: str = "language"
+) -> Optional[ModelConfig]:
     """
     Parse model configuration from environment variable.
 
@@ -34,15 +37,21 @@ def parse_model_env(env_value: str, model_type: str = "language") -> Optional[Mo
 
     parts = env_value.split("/", 1)
     if len(parts) != 2:
-        logger.warning(f"Invalid model format: {env_value}. Expected 'provider/model_name'")
+        logger.warning(
+            f"Invalid model format: {env_value}. Expected 'provider/model_name'"
+        )
         return None
 
-    return ModelConfig(provider=parts[0].strip(), name=parts[1].strip(), type=model_type)
+    return ModelConfig(
+        provider=parts[0].strip(), name=parts[1].strip(), type=model_type
+    )
 
 
 def get_fallback_providers() -> list[str]:
     """Get ordered list of fallback providers from env."""
-    fallback_env = os.getenv("MODEL_FALLBACK_PROVIDERS", "ollama,anthropic,openai,openrouter")
+    fallback_env = os.getenv(
+        "MODEL_FALLBACK_PROVIDERS", "ollama,anthropic,openai,openrouter"
+    )
     return [p.strip() for p in fallback_env.split(",") if p.strip()]
 
 
@@ -53,7 +62,8 @@ def is_provider_available(provider: str) -> bool:
         "openai": lambda: os.getenv("OPENAI_API_KEY") is not None,
         "anthropic": lambda: os.getenv("ANTHROPIC_API_KEY") is not None,
         "openrouter": lambda: os.getenv("OPENROUTER_API_KEY") is not None,
-        "google": lambda: os.getenv("GOOGLE_API_KEY") is not None or os.getenv("GEMINI_API_KEY") is not None,
+        "google": lambda: os.getenv("GOOGLE_API_KEY") is not None
+        or os.getenv("GEMINI_API_KEY") is not None,
         "groq": lambda: os.getenv("GROQ_API_KEY") is not None,
         "mistral": lambda: os.getenv("MISTRAL_API_KEY") is not None,
         "deepseek": lambda: os.getenv("DEEPSEEK_API_KEY") is not None,
@@ -101,7 +111,9 @@ FALLBACK_MODELS = {
 }
 
 
-async def find_or_create_model(provider: str, name: str, model_type: str = "language") -> Optional[str]:
+async def find_or_create_model(
+    provider: str, name: str, model_type: str = "language"
+) -> Optional[str]:
     """
     Find existing model or create new one.
 
@@ -110,7 +122,7 @@ async def find_or_create_model(provider: str, name: str, model_type: str = "lang
     # Check if model already exists (case-insensitive)
     existing = await repo_query(
         "SELECT * FROM model WHERE string::lowercase(provider) = $provider AND string::lowercase(name) = $name LIMIT 1",
-        {"provider": provider.lower(), "name": name.lower()}
+        {"provider": provider.lower(), "name": name.lower()},
     )
 
     if existing:
@@ -130,9 +142,7 @@ async def find_or_create_model(provider: str, name: str, model_type: str = "lang
 
 
 async def get_model_with_fallback(
-    purpose: str,
-    primary_config: Optional[ModelConfig],
-    model_type: str = "language"
+    purpose: str, primary_config: Optional[ModelConfig], model_type: str = "language"
 ) -> Optional[str]:
     """
     Get or create a model with fallback chain support.
@@ -143,15 +153,15 @@ async def get_model_with_fallback(
     # Try primary config first
     if primary_config and is_provider_available(primary_config.provider):
         model_id = await find_or_create_model(
-            primary_config.provider,
-            primary_config.name,
-            model_type
+            primary_config.provider, primary_config.name, model_type
         )
         if model_id:
             return model_id
         logger.warning(f"Primary model failed for {purpose}, trying fallback chain")
     elif primary_config:
-        logger.info(f"Primary provider '{primary_config.provider}' not available for {purpose}, trying fallback chain")
+        logger.info(
+            f"Primary provider '{primary_config.provider}' not available for {purpose}, trying fallback chain"
+        )
 
     # Try fallback providers
     fallback_providers = get_fallback_providers()
@@ -194,11 +204,19 @@ async def provision_default_models() -> dict[str, Optional[str]]:
     # Parse environment configurations
     model_configs = {
         "chat": parse_model_env(os.getenv("DEFAULT_CHAT_MODEL", ""), "language"),
-        "transformation": parse_model_env(os.getenv("DEFAULT_TRANSFORMATION_MODEL", ""), "language"),
+        "transformation": parse_model_env(
+            os.getenv("DEFAULT_TRANSFORMATION_MODEL", ""), "language"
+        ),
         "tools": parse_model_env(os.getenv("DEFAULT_TOOLS_MODEL", ""), "language"),
-        "large_context": parse_model_env(os.getenv("DEFAULT_LARGE_CONTEXT_MODEL", ""), "language"),
-        "extraction": parse_model_env(os.getenv("DEFAULT_EXTRACTION_MODEL", ""), "language"),
-        "embedding": parse_model_env(os.getenv("DEFAULT_EMBEDDING_MODEL", ""), "embedding"),
+        "large_context": parse_model_env(
+            os.getenv("DEFAULT_LARGE_CONTEXT_MODEL", ""), "language"
+        ),
+        "extraction": parse_model_env(
+            os.getenv("DEFAULT_EXTRACTION_MODEL", ""), "language"
+        ),
+        "embedding": parse_model_env(
+            os.getenv("DEFAULT_EMBEDDING_MODEL", ""), "embedding"
+        ),
     }
 
     # Provision each model type
@@ -245,13 +263,14 @@ async def update_defaults_if_needed(provisioned: dict[str, Optional[str]]) -> No
         # Check if current value is valid
         if current_value:
             existing = await repo_query(
-                "SELECT id FROM model WHERE id = $id LIMIT 1",
-                {"id": current_value}
+                "SELECT id FROM model WHERE id = $id LIMIT 1", {"id": current_value}
             )
             if existing:
                 # Current value is valid, skip
                 continue
-            logger.warning(f"Current {field} points to non-existent model, updating to {model_id}")
+            logger.warning(
+                f"Current {field} points to non-existent model, updating to {model_id}"
+            )
 
         setattr(defaults, field, model_id)
         updated = True
@@ -284,7 +303,9 @@ async def run_model_provisioning() -> None:
 
         if not has_config:
             logger.info("No DEFAULT_*_MODEL env vars set, skipping model provisioning")
-            logger.info("Tip: Set DEFAULT_CHAT_MODEL=ollama/qwen3:14b in .env to auto-provision models")
+            logger.info(
+                "Tip: Set DEFAULT_CHAT_MODEL=ollama/qwen3:14b in .env to auto-provision models"
+            )
             return
 
         provisioned = await provision_default_models()
@@ -293,7 +314,9 @@ async def run_model_provisioning() -> None:
         # Log summary
         configured = {k: v for k, v in provisioned.items() if v}
         if configured:
-            logger.success(f"Model provisioning complete. Configured: {list(configured.keys())}")
+            logger.success(
+                f"Model provisioning complete. Configured: {list(configured.keys())}"
+            )
         else:
             logger.warning("Model provisioning complete but no models were configured")
 

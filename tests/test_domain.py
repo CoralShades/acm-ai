@@ -193,7 +193,9 @@ class TestPodcastDomain:
                 name="Test",
                 tts_provider="openai",
                 tts_model="tts-1",
-                speakers=[{"name": "Speaker 1"}],  # Missing voice_id, backstory, personality
+                speakers=[
+                    {"name": "Speaker 1"}
+                ],  # Missing voice_id, backstory, personality
             )
 
         # Test valid - single speaker with all fields
@@ -266,7 +268,9 @@ class TestEpisodeProfile:
     def test_episode_profile_segment_validation(self):
         """Test segment count validation (3-20)."""
         # Test invalid - too few segments
-        with pytest.raises(ValidationError, match="Number of segments must be between 3 and 20"):
+        with pytest.raises(
+            ValidationError, match="Number of segments must be between 3 and 20"
+        ):
             EpisodeProfile(
                 name="Test",
                 speaker_config="default",
@@ -279,7 +283,9 @@ class TestEpisodeProfile:
             )
 
         # Test invalid - too many segments
-        with pytest.raises(ValidationError, match="Number of segments must be between 3 and 20"):
+        with pytest.raises(
+            ValidationError, match="Number of segments must be between 3 and 20"
+        ):
             EpisodeProfile(
                 name="Test",
                 speaker_config="default",
@@ -419,6 +425,7 @@ class TestACMRecordDomain:
     def test_confidence_range_invalid(self):
         """Test extraction_confidence rejects invalid string values."""
         from open_notebook.exceptions import InvalidInputError
+
         with pytest.raises(InvalidInputError):
             ACMRecord(
                 source_id="source:123",

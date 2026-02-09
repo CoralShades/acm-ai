@@ -10,8 +10,9 @@ This will create:
 """
 
 import asyncio
-from open_notebook.domain.notebook import Source
+
 from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.notebook import Source
 
 
 async def create_test_data():
@@ -56,7 +57,7 @@ async def create_test_data():
             "material_condition": "Good",
             "risk_status": "Low",
             "result": "Detected",
-            "page_number": 1
+            "page_number": 1,
         },
         {
             "school_name": school_name,
@@ -72,7 +73,7 @@ async def create_test_data():
             "material_condition": "Fair",
             "risk_status": "Medium",
             "result": "Detected",
-            "page_number": 1
+            "page_number": 1,
         },
         {
             "school_name": school_name,
@@ -88,7 +89,7 @@ async def create_test_data():
             "material_condition": "Good",
             "risk_status": "Low",
             "result": "Not Detected",
-            "page_number": 1
+            "page_number": 1,
         },
         {
             "school_name": school_name,
@@ -105,7 +106,7 @@ async def create_test_data():
             "material_condition": "Fair",
             "risk_status": "Medium",
             "result": "Detected",
-            "page_number": 2
+            "page_number": 2,
         },
         {
             "school_name": school_name,
@@ -121,7 +122,7 @@ async def create_test_data():
             "material_condition": "Good",
             "risk_status": "Low",
             "result": "Presumed",
-            "page_number": 2
+            "page_number": 2,
         },
         {
             "school_name": school_name,
@@ -137,20 +138,19 @@ async def create_test_data():
             "material_condition": "Poor",
             "risk_status": "High",
             "result": "Detected",
-            "page_number": 2
-        }
+            "page_number": 2,
+        },
     ]
 
     print(f"Creating {len(test_records)} ACM records...")
 
     for i, record_data in enumerate(test_records, 1):
-        record = ACMRecord(
-            source_id=source_id,
-            **record_data
-        )
+        record = ACMRecord(source_id=source_id, **record_data)
         await record.save()
-        risk = record_data.get('risk_status', 'Unknown')
-        print(f"  [{i}/{len(test_records)}] {record_data['building_name']} - {record_data['room_name']}: {record_data['product']} ({risk} risk)")
+        risk = record_data.get("risk_status", "Unknown")
+        print(
+            f"  [{i}/{len(test_records)}] {record_data['building_name']} - {record_data['room_name']}: {record_data['product']} ({risk} risk)"
+        )
 
     print()
     print("=" * 60)

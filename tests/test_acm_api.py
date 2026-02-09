@@ -138,7 +138,9 @@ class TestGetACMRecord:
         mock_record.risk_status = "Low"
         mock_record.result = "Detected"
         mock_record.page_number = 5
-        mock_record.extraction_confidence = "high"  # Must be string: "high", "medium", or "low"
+        mock_record.extraction_confidence = (
+            "high"  # Must be string: "high", "medium", or "low"
+        )
         # Classification fields (E1-S9)
         mock_record.acm_product_group = None
         mock_record.acm_product_type = None
@@ -177,9 +179,7 @@ class TestTriggerACMExtraction:
         """Test triggering ACM extraction."""
         mock_submit.return_value = "command:12345"
 
-        response = client.post(
-            "/api/acm/extract", json={"source_id": "source:abc"}
-        )
+        response = client.post("/api/acm/extract", json={"source_id": "source:abc"})
 
         assert response.status_code == 200
         data = response.json()
@@ -327,8 +327,8 @@ class TestClassifyACMItem:
             json={
                 "item_description": "Vinyl floor tiles",
                 "friability": "Non-friable",
-                "use_llm_fallback": False
-            }
+                "use_llm_fallback": False,
+            },
         )
 
         assert response.status_code == 200
@@ -345,8 +345,8 @@ class TestClassifyACMItem:
             json={
                 "item_description": "Fibre cement sheeting",
                 "friability": "Non-friable",
-                "use_llm_fallback": True
-            }
+                "use_llm_fallback": True,
+            },
         )
 
         assert response.status_code == 200
@@ -361,8 +361,8 @@ class TestClassifyACMItem:
             "/api/acm/classify",
             json={
                 "item_description": "Unknown xyz material 12345",
-                "use_llm_fallback": False
-            }
+                "use_llm_fallback": False,
+            },
         )
 
         assert response.status_code == 200
@@ -373,10 +373,7 @@ class TestClassifyACMItem:
 
     def test_classify_missing_description(self, client):
         """Test validation error when item_description is missing."""
-        response = client.post(
-            "/api/acm/classify",
-            json={"friability": "Non-friable"}
-        )
+        response = client.post("/api/acm/classify", json={"friability": "Non-friable"})
 
         assert response.status_code == 422
 
@@ -388,8 +385,8 @@ class TestClassifyACMItem:
                 "item_description": "Wall cladding",
                 "product": "Fibro",
                 "friability": "Non-friable",
-                "use_llm_fallback": False
-            }
+                "use_llm_fallback": False,
+            },
         )
 
         assert response.status_code == 200
@@ -404,7 +401,7 @@ class TestNormalizeRecommendation:
         """Test normalization of maintain-in-situ wording."""
         response = client.post(
             "/api/acm/normalize",
-            json={"recommendation": "Maintain in current condition and label"}
+            json={"recommendation": "Maintain in current condition and label"},
         )
 
         assert response.status_code == 200
@@ -420,7 +417,7 @@ class TestNormalizeRecommendation:
             "/api/acm/normalize",
             json={
                 "recommendation": "Remove under controlled bonded asbestos removal conditions"
-            }
+            },
         )
 
         assert response.status_code == 200
@@ -430,8 +427,7 @@ class TestNormalizeRecommendation:
     def test_normalize_restrict_access(self, client):
         """Test normalization of restrict access recommendation."""
         response = client.post(
-            "/api/acm/normalize",
-            json={"recommendation": "Restrict access ASAP"}
+            "/api/acm/normalize", json={"recommendation": "Restrict access ASAP"}
         )
 
         assert response.status_code == 200
@@ -442,7 +438,7 @@ class TestNormalizeRecommendation:
         """Test that unknown text returns review_required."""
         response = client.post(
             "/api/acm/normalize",
-            json={"recommendation": "Something completely unknown xyz 12345"}
+            json={"recommendation": "Something completely unknown xyz 12345"},
         )
 
         assert response.status_code == 200
@@ -453,19 +449,13 @@ class TestNormalizeRecommendation:
 
     def test_normalize_missing_recommendation(self, client):
         """Test validation error when recommendation is missing."""
-        response = client.post(
-            "/api/acm/normalize",
-            json={}
-        )
+        response = client.post("/api/acm/normalize", json={})
 
         assert response.status_code == 422
 
     def test_normalize_empty_recommendation(self, client):
         """Test validation error for empty recommendation."""
-        response = client.post(
-            "/api/acm/normalize",
-            json={"recommendation": ""}
-        )
+        response = client.post("/api/acm/normalize", json={"recommendation": ""})
 
         assert response.status_code == 422
 
@@ -500,8 +490,8 @@ class TestBatchClassifyACM:
             json={
                 "source_id": "source:abc",
                 "use_llm_fallback": False,
-                "skip_classified": True
-            }
+                "skip_classified": True,
+            },
         )
 
         assert response.status_code == 200
@@ -517,8 +507,7 @@ class TestBatchClassifyACM:
         mock_get_records.return_value = []
 
         response = client.post(
-            "/api/acm/classify/batch",
-            json={"source_id": "source:empty"}
+            "/api/acm/classify/batch", json={"source_id": "source:empty"}
         )
 
         assert response.status_code == 200
@@ -541,10 +530,7 @@ class TestBatchClassifyACM:
 
         response = client.post(
             "/api/acm/classify/batch",
-            json={
-                "source_id": "source:abc",
-                "skip_classified": True
-            }
+            json={"source_id": "source:abc", "skip_classified": True},
         )
 
         assert response.status_code == 200
@@ -556,8 +542,7 @@ class TestBatchClassifyACM:
     def test_batch_classify_missing_source_id(self, client):
         """Test validation error when source_id is missing."""
         response = client.post(
-            "/api/acm/classify/batch",
-            json={"use_llm_fallback": True}
+            "/api/acm/classify/batch", json={"use_llm_fallback": True}
         )
 
         assert response.status_code == 422

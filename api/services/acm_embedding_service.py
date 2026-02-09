@@ -73,7 +73,9 @@ class ACMEmbeddingService:
             batch_num = (i // batch_size) + 1
             total_batches = (len(records) + batch_size - 1) // batch_size
 
-            logger.debug(f"Processing batch {batch_num}/{total_batches} ({len(batch)} records)")
+            logger.debug(
+                f"Processing batch {batch_num}/{total_batches} ({len(batch)} records)"
+            )
 
             # Generate enriched embedding text for each record (E1-S14)
             for r in batch:
@@ -102,16 +104,16 @@ class ACMEmbeddingService:
                     record.embedded_at = now
                     embedded_count += 1
 
-                logger.debug(
-                    f"Batch {batch_num}: Embedded {len(valid_texts)} records"
-                )
+                logger.debug(f"Batch {batch_num}: Embedded {len(valid_texts)} records")
 
             except Exception as e:
                 logger.error(f"Batch {batch_num} embedding failed: {e}")
                 # Continue with other batches even if one fails
                 continue
 
-        logger.info(f"ACM embedding complete: {embedded_count}/{len(records)} records embedded")
+        logger.info(
+            f"ACM embedding complete: {embedded_count}/{len(records)} records embedded"
+        )
         return records
 
     async def embed_single(self, record: ACMRecord) -> ACMRecord:

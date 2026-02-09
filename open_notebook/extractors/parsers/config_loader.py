@@ -21,7 +21,13 @@ from open_notebook.extractors.parsers.field_config import (
 )
 
 CONFIG_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "docs", "samplePDF", "instructions-sample"
+    os.path.dirname(__file__),
+    "..",
+    "..",
+    "..",
+    "docs",
+    "samplePDF",
+    "instructions-sample",
 )
 
 _FIELD_SCHEMA: Optional[FieldSchemaConfig] = None
@@ -175,7 +181,9 @@ def _derive_field_type(display_name: str, prop: dict) -> str:
     return "string"
 
 
-def _find_enum_name(display_name: str, prop: dict, enums: dict[str, list[str]]) -> Optional[str]:
+def _find_enum_name(
+    display_name: str, prop: dict, enums: dict[str, list[str]]
+) -> Optional[str]:
     """Find the enum name for a field if it has controlled values."""
     if "enum" not in prop:
         return None
@@ -215,7 +223,9 @@ def load_field_schema() -> FieldSchemaConfig:
         with open(enums_path) as f:
             enums = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
-        logger.warning(f"Could not load field schema JSON: {e}. Using hardcoded defaults.")
+        logger.warning(
+            f"Could not load field schema JSON: {e}. Using hardcoded defaults."
+        )
         _FIELD_SCHEMA = _build_default_config()
         return _FIELD_SCHEMA
 
@@ -231,7 +241,9 @@ def load_field_schema() -> FieldSchemaConfig:
         if not internal_name:
             # Fallback: auto-generate snake_case
             internal_name = re.sub(r"[^a-z0-9]+", "_", display_name.lower()).strip("_")
-            logger.debug(f"Auto-generated internal_name '{internal_name}' for '{display_name}'")
+            logger.debug(
+                f"Auto-generated internal_name '{internal_name}' for '{display_name}'"
+            )
 
         prop = properties.get(display_name, {})
         field_type = _derive_field_type(display_name, prop)
@@ -267,21 +279,104 @@ def load_field_schema() -> FieldSchemaConfig:
 def _build_default_config() -> FieldSchemaConfig:
     """Build a minimal default config when JSON files are unavailable."""
     default_fields = [
-        FieldDef(internal_name="product", display_name="Specific Item/ACM Name", excel_column="X", col_index=24, field_type="string", required=True, group="acm_details"),
-        FieldDef(internal_name="material_condition", display_name="Condition", excel_column="AG", col_index=33, field_type="enum", required=True, group="assessment"),
-        FieldDef(internal_name="sample_result", display_name="Sample Result", excel_column="AE", col_index=31, field_type="enum", required=True, group="assessment"),
-        FieldDef(internal_name="building_name", display_name="Building Name", excel_column="E", col_index=5, field_type="string", required=True, group="building"),
-        FieldDef(internal_name="room_name", display_name="Room or Area", excel_column="V", col_index=22, field_type="string", required=True, group="location"),
-        FieldDef(internal_name="location", display_name="Location in Room", excel_column="W", col_index=23, field_type="string", required=True, group="location"),
-        FieldDef(internal_name="friable", display_name="Friability of material", excel_column="Y", col_index=25, field_type="enum", required=True, group="acm_details"),
-        FieldDef(internal_name="disturbance_potential", display_name="Disturbance Potential", excel_column="AH", col_index=34, field_type="enum", required=True, group="assessment"),
+        FieldDef(
+            internal_name="product",
+            display_name="Specific Item/ACM Name",
+            excel_column="X",
+            col_index=24,
+            field_type="string",
+            required=True,
+            group="acm_details",
+        ),
+        FieldDef(
+            internal_name="material_condition",
+            display_name="Condition",
+            excel_column="AG",
+            col_index=33,
+            field_type="enum",
+            required=True,
+            group="assessment",
+        ),
+        FieldDef(
+            internal_name="sample_result",
+            display_name="Sample Result",
+            excel_column="AE",
+            col_index=31,
+            field_type="enum",
+            required=True,
+            group="assessment",
+        ),
+        FieldDef(
+            internal_name="building_name",
+            display_name="Building Name",
+            excel_column="E",
+            col_index=5,
+            field_type="string",
+            required=True,
+            group="building",
+        ),
+        FieldDef(
+            internal_name="room_name",
+            display_name="Room or Area",
+            excel_column="V",
+            col_index=22,
+            field_type="string",
+            required=True,
+            group="location",
+        ),
+        FieldDef(
+            internal_name="location",
+            display_name="Location in Room",
+            excel_column="W",
+            col_index=23,
+            field_type="string",
+            required=True,
+            group="location",
+        ),
+        FieldDef(
+            internal_name="friable",
+            display_name="Friability of material",
+            excel_column="Y",
+            col_index=25,
+            field_type="enum",
+            required=True,
+            group="acm_details",
+        ),
+        FieldDef(
+            internal_name="disturbance_potential",
+            display_name="Disturbance Potential",
+            excel_column="AH",
+            col_index=34,
+            field_type="enum",
+            required=True,
+            group="assessment",
+        ),
     ]
     return FieldSchemaConfig(
         fields=default_fields,
         enums={
-            "SampleResult": ["Positive", "Assumed Positive", "Negative", "Assumed Negative"],
-            "Condition": ["Poor", "Fair", "Good", "Unknown", "N/A (negative)", "N/A (assumed negative)"],
-            "DisturbancePotential": ["High", "Moderate", "Low", "Unknown", "N/A (negative)", "N/A (assumed negative)"],
+            "SampleResult": [
+                "Positive",
+                "Assumed Positive",
+                "Negative",
+                "Assumed Negative",
+            ],
+            "Condition": [
+                "Poor",
+                "Fair",
+                "Good",
+                "Unknown",
+                "N/A (negative)",
+                "N/A (assumed negative)",
+            ],
+            "DisturbancePotential": [
+                "High",
+                "Moderate",
+                "Low",
+                "Unknown",
+                "N/A (negative)",
+                "N/A (assumed negative)",
+            ],
             "Friability": ["Non-friable", "Friable"],
         },
         business_rules=list(DEFAULT_BUSINESS_RULES),

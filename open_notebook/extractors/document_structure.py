@@ -216,6 +216,8 @@ async def extract_document_structure(
         return structure
 
     except Exception as e:
-        logger.warning(f"LLM structure extraction failed: {e}. Using heuristic fallback.")
+        logger.warning(
+            f"LLM structure extraction failed: {e}. Using heuristic fallback."
+        )
         fallback = _heuristic_fallback(content)
         return fallback

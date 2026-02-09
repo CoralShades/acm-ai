@@ -20,29 +20,32 @@ class ACMDebugConfig:
     DEBUG_ENABLED: bool = True
 
     # Individual debug flags (only apply when DEBUG_ENABLED is True)
-    LOG_PROMPT_CONTENT: bool = True       # Log the full prompt sent to LLM
-    LOG_RAW_CONTENT: bool = True          # Log raw source content before processing
-    LOG_CHUNK_DETAILS: bool = True        # Log chunk boundaries and sizes
-    LOG_LLM_RESPONSE: bool = True         # Log raw LLM response before parsing
-    LOG_EXTRACTION_STATS: bool = True     # Log extraction statistics
-    LOG_VALIDATION_DETAILS: bool = True   # Log validation steps
+    LOG_PROMPT_CONTENT: bool = True  # Log the full prompt sent to LLM
+    LOG_RAW_CONTENT: bool = True  # Log raw source content before processing
+    LOG_CHUNK_DETAILS: bool = True  # Log chunk boundaries and sizes
+    LOG_LLM_RESPONSE: bool = True  # Log raw LLM response before parsing
+    LOG_EXTRACTION_STATS: bool = True  # Log extraction statistics
+    LOG_VALIDATION_DETAILS: bool = True  # Log validation steps
 
     # File output settings
-    DUMP_PROMPTS_TO_FILE: bool = True     # Dump prompts to files for inspection
+    DUMP_PROMPTS_TO_FILE: bool = True  # Dump prompts to files for inspection
     PROMPT_DUMP_DIR: str = "_debug/acm_prompts"
 
     # Content preview settings
-    MAX_CONTENT_PREVIEW: int = 2000       # Characters to show in previews
-    MAX_PROMPT_PREVIEW: int = 5000        # Characters to show for prompt previews
+    MAX_CONTENT_PREVIEW: int = 2000  # Characters to show in previews
+    MAX_PROMPT_PREVIEW: int = 5000  # Characters to show for prompt previews
 
     @classmethod
     def from_env(cls) -> "ACMDebugConfig":
         """Create config from environment variables."""
         return cls(
             DEBUG_ENABLED=os.getenv("ACM_DEBUG", "1").lower() in ("1", "true", "yes"),
-            LOG_PROMPT_CONTENT=os.getenv("ACM_DEBUG_PROMPT", "1").lower() in ("1", "true", "yes"),
-            LOG_RAW_CONTENT=os.getenv("ACM_DEBUG_RAW", "1").lower() in ("1", "true", "yes"),
-            DUMP_PROMPTS_TO_FILE=os.getenv("ACM_DEBUG_DUMP", "1").lower() in ("1", "true", "yes"),
+            LOG_PROMPT_CONTENT=os.getenv("ACM_DEBUG_PROMPT", "1").lower()
+            in ("1", "true", "yes"),
+            LOG_RAW_CONTENT=os.getenv("ACM_DEBUG_RAW", "1").lower()
+            in ("1", "true", "yes"),
+            DUMP_PROMPTS_TO_FILE=os.getenv("ACM_DEBUG_DUMP", "1").lower()
+            in ("1", "true", "yes"),
         )
 
 
@@ -59,7 +62,9 @@ def acm_debug(message: str, level: str = "debug") -> None:
     log_func(f"[ACM-DEBUG] {message}")
 
 
-def dump_prompt_to_file(prompt: str, source_id: str, chunk_index: int = 0) -> Optional[str]:
+def dump_prompt_to_file(
+    prompt: str, source_id: str, chunk_index: int = 0
+) -> Optional[str]:
     """Dump prompt content to file for inspection."""
     if not debug_config.DEBUG_ENABLED or not debug_config.DUMP_PROMPTS_TO_FILE:
         return None
@@ -91,7 +96,9 @@ def dump_prompt_to_file(prompt: str, source_id: str, chunk_index: int = 0) -> Op
         return None
 
 
-def dump_content_to_file(content: str, source_id: str, label: str = "content") -> Optional[str]:
+def dump_content_to_file(
+    content: str, source_id: str, label: str = "content"
+) -> Optional[str]:
     """Dump content to file for inspection."""
     if not debug_config.DEBUG_ENABLED or not debug_config.DUMP_PROMPTS_TO_FILE:
         return None

@@ -4,8 +4,9 @@ Tests for Site Configuration Domain Model and API Endpoints.
 Story: E1-S8 Site Configuration Data Entry
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from open_notebook.domain.site_config import SiteConfig
 
@@ -101,14 +102,18 @@ class TestSiteConfigGetBySource:
     @pytest.mark.asyncio
     async def test_get_by_source_found(self):
         """Test retrieving existing config by source ID."""
-        mock_result = [{
-            "id": "site_config:123",
-            "source_id": "source:test",
-            "department": "DJCS",
-            "agency": "Victoria Police",
-        }]
+        mock_result = [
+            {
+                "id": "site_config:123",
+                "source_id": "source:test",
+                "department": "DJCS",
+                "agency": "Victoria Police",
+            }
+        ]
 
-        with patch("open_notebook.domain.site_config.repo_query", new_callable=AsyncMock) as mock_query:
+        with patch(
+            "open_notebook.domain.site_config.repo_query", new_callable=AsyncMock
+        ) as mock_query:
             mock_query.return_value = mock_result
 
             config = await SiteConfig.get_by_source("source:test")
@@ -120,7 +125,9 @@ class TestSiteConfigGetBySource:
     @pytest.mark.asyncio
     async def test_get_by_source_not_found(self):
         """Test retrieving non-existent config returns None."""
-        with patch("open_notebook.domain.site_config.repo_query", new_callable=AsyncMock) as mock_query:
+        with patch(
+            "open_notebook.domain.site_config.repo_query", new_callable=AsyncMock
+        ) as mock_query:
             mock_query.return_value = []
 
             config = await SiteConfig.get_by_source("source:nonexistent")
@@ -134,7 +141,9 @@ class TestSiteConfigUpsert:
     @pytest.mark.asyncio
     async def test_upsert_creates_new_config(self):
         """Test upsert creates new config when none exists."""
-        with patch.object(SiteConfig, "get_by_source", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            SiteConfig, "get_by_source", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = None
 
             with patch.object(SiteConfig, "save", new_callable=AsyncMock) as mock_save:
@@ -157,7 +166,9 @@ class TestSiteConfigUpsert:
             department="DJCS",
         )
 
-        with patch.object(SiteConfig, "get_by_source", new_callable=AsyncMock) as mock_get:
+        with patch.object(
+            SiteConfig, "get_by_source", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = existing
 
             with patch.object(SiteConfig, "save", new_callable=AsyncMock) as mock_save:

@@ -510,8 +510,12 @@ async def semantic_search_acm(
     source_id: Optional[str] = Query(None, description="Filter to specific source"),
     building_id: Optional[str] = Query(None, description="Filter to specific building"),
     limit: int = Query(10, ge=1, le=100, description="Maximum results to return"),
-    threshold: float = Query(0.7, ge=0.0, le=1.0, description="Minimum similarity score"),
-    include_parent: bool = Query(False, description="Include parent table section context (E11-S1)"),
+    threshold: float = Query(
+        0.7, ge=0.0, le=1.0, description="Minimum similarity score"
+    ),
+    include_parent: bool = Query(
+        False, description="Include parent table section context (E11-S1)"
+    ),
 ):
     """
     Semantic search across ACM records.
@@ -536,7 +540,7 @@ async def semantic_search_acm(
         if not embedding_model:
             raise HTTPException(
                 status_code=400,
-                detail="No embedding model configured. Please configure one in Settings."
+                detail="No embedding model configured. Please configure one in Settings.",
             )
 
         # Embed the query
@@ -545,8 +549,7 @@ async def semantic_search_acm(
         except Exception as e:
             logger.error(f"Failed to embed query: {e}")
             raise HTTPException(
-                status_code=500,
-                detail=f"Failed to embed query: {str(e)}"
+                status_code=500, detail=f"Failed to embed query: {str(e)}"
             )
 
         # Build filter clause
@@ -1179,11 +1182,13 @@ async def classify_batch(request: BatchClassifyRequest):
                 # Skip if already classified and skip_classified is True
                 if request.skip_classified and record.acm_product_group:
                     skipped += 1
-                    results.append({
-                        "record_id": str(record.id),
-                        "status": "skipped",
-                        "reason": "already_classified",
-                    })
+                    results.append(
+                        {
+                            "record_id": str(record.id),
+                            "status": "skipped",
+                            "reason": "already_classified",
+                        }
+                    )
                     continue
 
                 # Combine product and material description for classification
@@ -1216,29 +1221,35 @@ async def classify_batch(request: BatchClassifyRequest):
                     await record.save()
 
                     classified += 1
-                    results.append({
-                        "record_id": str(record.id),
-                        "status": "classified",
-                        "product_group": result.product_group,
-                        "product_type": result.product_type,
-                        "confidence": result.confidence,
-                        "method": result.method,
-                    })
+                    results.append(
+                        {
+                            "record_id": str(record.id),
+                            "status": "classified",
+                            "product_group": result.product_group,
+                            "product_type": result.product_type,
+                            "confidence": result.confidence,
+                            "method": result.method,
+                        }
+                    )
                 else:
                     skipped += 1
-                    results.append({
-                        "record_id": str(record.id),
-                        "status": "skipped",
-                        "reason": "no_match",
-                    })
+                    results.append(
+                        {
+                            "record_id": str(record.id),
+                            "status": "skipped",
+                            "reason": "no_match",
+                        }
+                    )
 
             except Exception as e:
                 errors += 1
-                results.append({
-                    "record_id": str(record.id),
-                    "status": "error",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "record_id": str(record.id),
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
                 logger.warning(f"Error classifying record {record.id}: {e}")
 
         logger.info(
@@ -1296,6 +1307,7 @@ async def normalize_recommendation_text(request: NormalizeRequest):
 # Field Schema Configuration Endpoints (E1-S11 - Generic Configurable Parser)
 # =============================================================================
 
+
 async def _load_db_field_config() -> dict | None:
     """Load field config override from SurrealDB field_schema table."""
     try:
@@ -1304,6 +1316,7 @@ async def _load_db_field_config() -> dict | None:
         )
         if result and result[0].get("config_json"):
             import json
+
             return json.loads(result[0]["config_json"])
     except Exception as e:
         logger.debug(f"No DB field config found: {e}")
@@ -1313,6 +1326,7 @@ async def _load_db_field_config() -> dict | None:
 async def _save_db_field_config(config_dict: dict) -> None:
     """Save field config override to SurrealDB field_schema table."""
     import json
+
     config_json = json.dumps(config_dict)
     version = config_dict.get("version", "1.0.0")
     # Upsert using a fixed ID so there's only ever one config record
@@ -1450,7 +1464,11 @@ async def get_taxonomy(
         groups = get_product_groups(friability)
 
         # Determine friability label
-        if friability and "friable" in friability.lower() and "non" not in friability.lower():
+        if (
+            friability
+            and "friable" in friability.lower()
+            and "non" not in friability.lower()
+        ):
             friability_label = "Friable"
         else:
             friability_label = "Non-friable"

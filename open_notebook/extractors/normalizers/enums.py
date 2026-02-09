@@ -84,6 +84,7 @@ def normalize_enum_value(raw_value: Optional[str], field_name: str) -> Optional[
     # Friability: reuse existing taxonomy._normalize_friability()
     if field_name == "friability":
         from open_notebook.extractors.normalizers.taxonomy import _normalize_friability
+
         return _normalize_friability(stripped)
 
     # Look up synonym dictionary for the field

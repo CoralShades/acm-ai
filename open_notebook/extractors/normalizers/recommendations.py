@@ -34,6 +34,7 @@ CANONICAL_ACTIONS = (
 
 class NormalizationResult(NamedTuple):
     """Result of recommendation normalization."""
+
     raw_text: str
     normalized_action: Optional[str]  # canonical action or "review_required"
     confidence: float  # 1.0 for pattern match, 0.0 for no match
@@ -44,13 +45,25 @@ class NormalizationResult(NamedTuple):
 DEFAULT_PATTERNS: list[tuple[str, str]] = [
     (r"\bMaintain in current condition\b", "maintain_in_situ"),
     (r"\blabel( and incorporate)? into an AMP\b", "maintain_in_situ"),
-    (r"\bRemove (under|by) .*licensed asbestos removal contractor\b", "remove_prior_to_refurb_or_demolition"),
-    (r"\bprior to demolition or refurbishment\b", "remove_prior_to_refurb_or_demolition"),
-    (r"\bcontrolled bonded asbestos removal conditions\b", "remove_prior_to_refurb_or_demolition"),
+    (
+        r"\bRemove (under|by) .*licensed asbestos removal contractor\b",
+        "remove_prior_to_refurb_or_demolition",
+    ),
+    (
+        r"\bprior to demolition or refurbishment\b",
+        "remove_prior_to_refurb_or_demolition",
+    ),
+    (
+        r"\bcontrolled bonded asbestos removal conditions\b",
+        "remove_prior_to_refurb_or_demolition",
+    ),
     (r"\bRestrict access\b|\bASAP\b", "restrict_access_immediately"),
     (r"\bwithin\s*3\s*months\b|\bnext few months\b", "remedial_within_months"),
     (r"\bConfirm status\b|\bNot Sampled\b|\bPresumed\b", "confirm_status_sampling"),
-    (r"\bHeight restriction\b|\bRestricted Access\b|\bLive Electrical Hazard\b", "height_or_access_restriction"),
+    (
+        r"\bHeight restriction\b|\bRestricted Access\b|\bLive Electrical Hazard\b",
+        "height_or_access_restriction",
+    ),
 ]
 
 
@@ -65,7 +78,13 @@ def _load_wording_rules() -> dict:
         return _WORDING_RULES
 
     project_root = Path(__file__).parent.parent.parent.parent
-    rules_path = project_root / "docs" / "samplePDF" / "instructions-sample" / "consultant_wording_rules.json"
+    rules_path = (
+        project_root
+        / "docs"
+        / "samplePDF"
+        / "instructions-sample"
+        / "consultant_wording_rules.json"
+    )
 
     try:
         with open(rules_path, encoding="utf-8") as f:

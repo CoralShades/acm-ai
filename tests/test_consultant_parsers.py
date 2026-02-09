@@ -41,7 +41,14 @@ class TestConsultantParserABC:
         from open_notebook.extractors.parsers.base import ConsultantParser
 
         abstract_methods = ConsultantParser.__abstractmethods__
-        expected = {"name", "detect", "extract_metadata", "extract_items", "get_column_mapping", "get_register_headers"}
+        expected = {
+            "name",
+            "detect",
+            "extract_metadata",
+            "extract_items",
+            "get_column_mapping",
+            "get_register_headers",
+        }
         assert expected == abstract_methods
 
 
@@ -52,7 +59,9 @@ class TestRawACMItem:
         """RawACMItem can be created with required fields."""
         from open_notebook.extractors.parsers.base import RawACMItem
 
-        item = RawACMItem(product="Floor Tiles", material_description="Vinyl tiles", result="Detected")
+        item = RawACMItem(
+            product="Floor Tiles", material_description="Vinyl tiles", result="Detected"
+        )
         assert item.product == "Floor Tiles"
         assert item.material_description == "Vinyl tiles"
         assert item.result == "Detected"
@@ -61,7 +70,9 @@ class TestRawACMItem:
         """RawACMItem optional fields default to None."""
         from open_notebook.extractors.parsers.base import RawACMItem
 
-        item = RawACMItem(product="Tiles", material_description="Vinyl", result="Detected")
+        item = RawACMItem(
+            product="Tiles", material_description="Vinyl", result="Detected"
+        )
         assert item.extent is None
         assert item.location is None
         assert item.friable is None

@@ -24,6 +24,7 @@ from loguru import logger
 
 class ClassificationResult(NamedTuple):
     """Result of ACM product classification."""
+
     product_group: Optional[str]
     product_type: Optional[str]
     confidence: float
@@ -44,8 +45,20 @@ def _load_taxonomy_files() -> tuple[dict, dict]:
 
     # Find taxonomy files relative to project root
     project_root = Path(__file__).parent.parent.parent.parent
-    nonfriable_path = project_root / "docs" / "samplePDF" / "instructions-sample" / "register_taxonomy.nonfriable.json"
-    friable_path = project_root / "docs" / "samplePDF" / "instructions-sample" / "register_taxonomy.friable.json"
+    nonfriable_path = (
+        project_root
+        / "docs"
+        / "samplePDF"
+        / "instructions-sample"
+        / "register_taxonomy.nonfriable.json"
+    )
+    friable_path = (
+        project_root
+        / "docs"
+        / "samplePDF"
+        / "instructions-sample"
+        / "register_taxonomy.friable.json"
+    )
 
     try:
         with open(nonfriable_path, encoding="utf-8") as f:
@@ -77,12 +90,18 @@ def get_product_groups(friability: Optional[str] = None) -> list[dict]:
     """
     nonfriable, friable = _load_taxonomy_files()
 
-    if friability and "friable" in friability.lower() and "non" not in friability.lower():
+    if (
+        friability
+        and "friable" in friability.lower()
+        and "non" not in friability.lower()
+    ):
         return friable.get("groups", [])
     return nonfriable.get("groups", [])
 
 
-def get_product_types(product_group: str, friability: Optional[str] = None) -> list[str]:
+def get_product_types(
+    product_group: str, friability: Optional[str] = None
+) -> list[str]:
     """
     Get product types for a specific product group.
 
@@ -108,80 +127,393 @@ def get_product_types(product_group: str, friability: Optional[str] = None) -> l
 # If applies_to_friability is "any", the pattern works for both; group name differs by taxonomy
 CLASSIFICATION_PATTERNS: list[tuple[str, str, str, str, str, str]] = [
     # Pattern format: (regex, applies_to, nonfriable_group, nonfriable_type, friable_group, friable_type)
-
     # === Vinyl Products (Non-friable T3, Friable T2) ===
-    (r"vinyl\s*(sheet|flooring)", "any", "T3 Vinyl products", "Vinyl sheet", "T2 Vinyl products", "Vinyl sheet"),
-    (r"vinyl\s*.*tile", "any", "T3 Vinyl products", "Vinyl Tiles", "T2 Vinyl products", "Vinyl Tiles"),
-    (r"linoleum", "any", "T3 Vinyl products", "Vinyl sheet", "T2 Vinyl products", "Vinyl sheet"),
-    (r"hessian\s*backed\s*vinyl", "any", "T3 Vinyl products", "Hessian backed Vinyl sheet", "T2 Vinyl products", "Hessian backed Vinyl sheet"),
-    (r"vinyl.*adhesive", "any", "T3 Vinyl products", "Vinyl sheet and adhesive", "T2 Vinyl products", "Vinyl sheet and adhesive"),
-
+    (
+        r"vinyl\s*(sheet|flooring)",
+        "any",
+        "T3 Vinyl products",
+        "Vinyl sheet",
+        "T2 Vinyl products",
+        "Vinyl sheet",
+    ),
+    (
+        r"vinyl\s*.*tile",
+        "any",
+        "T3 Vinyl products",
+        "Vinyl Tiles",
+        "T2 Vinyl products",
+        "Vinyl Tiles",
+    ),
+    (
+        r"linoleum",
+        "any",
+        "T3 Vinyl products",
+        "Vinyl sheet",
+        "T2 Vinyl products",
+        "Vinyl sheet",
+    ),
+    (
+        r"hessian\s*backed\s*vinyl",
+        "any",
+        "T3 Vinyl products",
+        "Hessian backed Vinyl sheet",
+        "T2 Vinyl products",
+        "Hessian backed Vinyl sheet",
+    ),
+    (
+        r"vinyl.*adhesive",
+        "any",
+        "T3 Vinyl products",
+        "Vinyl sheet and adhesive",
+        "T2 Vinyl products",
+        "Vinyl sheet and adhesive",
+    ),
     # === Cement Products (Non-friable T1, Friable T1) ===
     # Note: Use \bfibro\b word boundary to avoid matching "fibrous"
-    (r"(fibre|fiber)\s*cement|fc\s*sheet|\bfibro\b", "any", "T1 Cement products", "Flat Sheeting", "T1 Cement products", "Flat Sheeting"),
-    (r"corrugated.*roof|roof.*corrugated", "any", "T1 Cement products", "Corrugated Roof Sheeting", "T1 Cement products", "Corrugated Roof Sheeting"),
-    (r"weatherboard", "any", "T1 Cement products", "Weatherboards", "T1 Cement products", "Weatherboards"),
-    (r"flat\s*sheet", "any", "T1 Cement products", "Flat Sheeting", "T1 Cement products", "Flat Sheeting"),
-    (r"compressed\s*sheet", "any", "T1 Cement products", "Compressed Flat Sheeting", "T1 Cement products", "Compressed Flat Sheeting"),
-    (r"cement\s*pipe|flue\s*pipe", "any", "T1 Cement products", "Cement Pipe", "T1 Cement products", "Cement Pipe"),
-    (r"cement\s*flue|flue", "any", "T1 Cement products", "Cement Flue", "T1 Cement products", "Cement Flue"),
-    (r"ceiling\s*tile", "any", "T1 Cement products", "Ceiling Tiles", "T1 Cement products", "Ceiling Tiles"),
-    (r"ridge\s*capping|capping", "any", "T1 Cement products", "Ridge Capping", "T1 Cement products", "Ridge capping"),
-    (r"roof\s*tile", "any", "T1 Cement products", "Roof Tiles", "T1 Cement products", "Roof Tiles"),
-    (r"eave|soffit|lining", "any", "T1 Cement products", "Internal Lining", "T1 Cement products", "Internal Lining"),
-    (r"gutter", "any", "T1 Cement products", "Rainwater Guttering", "T1 Cement products", "Rainwater Guttering"),
-    (r"tilux", "any", "T1 Cement products", "Flat Sheeting", "T1 Cement products", "Tilux sheeting"),
-    (r"water\s*tank", "any", "T1 Cement products", "Water Tanks", "T1 Cement products", "Water Tanks"),
+    (
+        r"(fibre|fiber)\s*cement|fc\s*sheet|\bfibro\b",
+        "any",
+        "T1 Cement products",
+        "Flat Sheeting",
+        "T1 Cement products",
+        "Flat Sheeting",
+    ),
+    (
+        r"corrugated.*roof|roof.*corrugated",
+        "any",
+        "T1 Cement products",
+        "Corrugated Roof Sheeting",
+        "T1 Cement products",
+        "Corrugated Roof Sheeting",
+    ),
+    (
+        r"weatherboard",
+        "any",
+        "T1 Cement products",
+        "Weatherboards",
+        "T1 Cement products",
+        "Weatherboards",
+    ),
+    (
+        r"flat\s*sheet",
+        "any",
+        "T1 Cement products",
+        "Flat Sheeting",
+        "T1 Cement products",
+        "Flat Sheeting",
+    ),
+    (
+        r"compressed\s*sheet",
+        "any",
+        "T1 Cement products",
+        "Compressed Flat Sheeting",
+        "T1 Cement products",
+        "Compressed Flat Sheeting",
+    ),
+    (
+        r"cement\s*pipe|flue\s*pipe",
+        "any",
+        "T1 Cement products",
+        "Cement Pipe",
+        "T1 Cement products",
+        "Cement Pipe",
+    ),
+    (
+        r"cement\s*flue|flue",
+        "any",
+        "T1 Cement products",
+        "Cement Flue",
+        "T1 Cement products",
+        "Cement Flue",
+    ),
+    (
+        r"ceiling\s*tile",
+        "any",
+        "T1 Cement products",
+        "Ceiling Tiles",
+        "T1 Cement products",
+        "Ceiling Tiles",
+    ),
+    (
+        r"ridge\s*capping|capping",
+        "any",
+        "T1 Cement products",
+        "Ridge Capping",
+        "T1 Cement products",
+        "Ridge capping",
+    ),
+    (
+        r"roof\s*tile",
+        "any",
+        "T1 Cement products",
+        "Roof Tiles",
+        "T1 Cement products",
+        "Roof Tiles",
+    ),
+    (
+        r"eave|soffit|lining",
+        "any",
+        "T1 Cement products",
+        "Internal Lining",
+        "T1 Cement products",
+        "Internal Lining",
+    ),
+    (
+        r"gutter",
+        "any",
+        "T1 Cement products",
+        "Rainwater Guttering",
+        "T1 Cement products",
+        "Rainwater Guttering",
+    ),
+    (
+        r"tilux",
+        "any",
+        "T1 Cement products",
+        "Flat Sheeting",
+        "T1 Cement products",
+        "Tilux sheeting",
+    ),
+    (
+        r"water\s*tank",
+        "any",
+        "T1 Cement products",
+        "Water Tanks",
+        "T1 Cement products",
+        "Water Tanks",
+    ),
     (r"vent", "any", "T1 Cement products", "Vents", "T1 Cement products", "Vents"),
-
     # === Bitumen Products (Non-friable T2 only) ===
-    (r"bitumen|bituminous", "Non-friable", "T2 Bitumen products", "Bituminous Membrane", "", ""),
+    (
+        r"bitumen|bituminous",
+        "Non-friable",
+        "T2 Bitumen products",
+        "Bituminous Membrane",
+        "",
+        "",
+    ),
     (r"malthoid", "Non-friable", "T2 Bitumen products", "Malthoid", "", ""),
     (r"asphalt", "Non-friable", "T2 Bitumen products", "Asphalt", "", ""),
     (r"galbestos", "Non-friable", "T2 Bitumen products", "Galbestos", "", ""),
-    (r"blackjack", "Non-friable", "T2 Bitumen products", "Blackjack (Bitumen Adhesive)", "", ""),
-
+    (
+        r"blackjack",
+        "Non-friable",
+        "T2 Bitumen products",
+        "Blackjack (Bitumen Adhesive)",
+        "",
+        "",
+    ),
     # === Gasket Products (Non-friable T4, Friable T4) ===
-    (r"mastic", "any", "T4 Gasket, friction products and adhesives", "Mastic", "T4 Gasket products", "Mastic"),
-    (r"gasket", "any", "T4 Gasket, friction products and adhesives", "Gasket(s)", "T4 Gasket products", "Gasket(s)"),
-    (r"caulk", "any", "T4 Gasket, friction products and adhesives", "Caulking", "T4 Gasket products", "Caulking"),
-    (r"putty", "any", "T4 Gasket, friction products and adhesives", "Putty", "T4 Gasket products", "Putty"),
-    (r"rope.*gasket|braided\s*gasket", "any", "T4 Gasket, friction products and adhesives", "Rope or Braided Gasket", "T4 Gasket products", "Rope or Braided Gasket"),
-    (r"brake\s*pad", "any", "T4 Gasket, friction products and adhesives", "Brake pads", "T4 Gasket products", "Brake pads"),
-    (r"clutch\s*plate", "any", "T4 Gasket, friction products and adhesives", "Clutch Plates", "T4 Gasket products", "Clutch Plates"),
-    (r"rubber\s*gasket", "any", "T4 Gasket, friction products and adhesives", "Rubber Gasket", "T4 Gasket products", "Rubber Gasket"),
-
+    (
+        r"mastic",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Mastic",
+        "T4 Gasket products",
+        "Mastic",
+    ),
+    (
+        r"gasket",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Gasket(s)",
+        "T4 Gasket products",
+        "Gasket(s)",
+    ),
+    (
+        r"caulk",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Caulking",
+        "T4 Gasket products",
+        "Caulking",
+    ),
+    (
+        r"putty",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Putty",
+        "T4 Gasket products",
+        "Putty",
+    ),
+    (
+        r"rope.*gasket|braided\s*gasket",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Rope or Braided Gasket",
+        "T4 Gasket products",
+        "Rope or Braided Gasket",
+    ),
+    (
+        r"brake\s*pad",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Brake pads",
+        "T4 Gasket products",
+        "Brake pads",
+    ),
+    (
+        r"clutch\s*plate",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Clutch Plates",
+        "T4 Gasket products",
+        "Clutch Plates",
+    ),
+    (
+        r"rubber\s*gasket",
+        "any",
+        "T4 Gasket, friction products and adhesives",
+        "Rubber Gasket",
+        "T4 Gasket products",
+        "Rubber Gasket",
+    ),
     # === Insulation Products (Non-friable T8, Friable T3) ===
-    (r"lagging|pipe\s*insulation", "any", "T8 Insulation", "Lagging", "T3 Insulation products", "Lagging"),
-    (r"millboard", "any", "T8 Insulation", "Millboard", "T3 Insulation products", "Millboard"),
-    (r"vermiculite", "any", "T8 Insulation", "Vermiculite", "T3 Insulation products", "Vermiculite"),
-    (r"loose\s*fill|ceiling\s*insulation", "any", "T8 Insulation", "Loose Fill Insulation", "T3 Insulation products", "Loose Fill Insulation"),
+    (
+        r"lagging|pipe\s*insulation",
+        "any",
+        "T8 Insulation",
+        "Lagging",
+        "T3 Insulation products",
+        "Lagging",
+    ),
+    (
+        r"millboard",
+        "any",
+        "T8 Insulation",
+        "Millboard",
+        "T3 Insulation products",
+        "Millboard",
+    ),
+    (
+        r"vermiculite",
+        "any",
+        "T8 Insulation",
+        "Vermiculite",
+        "T3 Insulation products",
+        "Vermiculite",
+    ),
+    (
+        r"loose\s*fill|ceiling\s*insulation",
+        "any",
+        "T8 Insulation",
+        "Loose Fill Insulation",
+        "T3 Insulation products",
+        "Loose Fill Insulation",
+    ),
     (r"limpet", "any", "T8 Insulation", "Limpet", "T3 Insulation products", "Limpet"),
-    (r"aib|insulation\s*board", "any", "T8 Insulation", "Low Density Asbestos Fibre Board (Asbestos Insulated Board)", "T3 Insulation products", "AIB (insulation board)"),
-    (r"fire\s*door\s*core", "any", "T8 Insulation", "Fire Door Core", "T3 Insulation products", "Fire Door Core"),
-    (r"fire\s*rating|fire\s*rated", "any", "T8 Insulation", "Fire Rating Material", "T3 Insulation products", "Fire Rating Material"),
-    (r"sprayed\s*insulation|spray.*insulation", "Friable", "", "", "T3 Insulation products", "Sprayed Insulation"),
-    (r"ceramic\s*fibre", "any", "T8 Insulation", "Ceramic Fibre", "T3 Insulation products", "Ceramic Fibre"),
-    (r"hessian", "any", "T8 Insulation", "Hessian", "T3 Insulation products", "Hessian"),
-    (r"gland\s*packing", "any", "T8 Insulation", "Gland Packing", "T3 Insulation products", "Gland Packing"),
-    (r"strawboard", "any", "T8 Insulation", "Strawboard", "T3 Insulation products", "Strawboard"),
+    (
+        r"aib|insulation\s*board",
+        "any",
+        "T8 Insulation",
+        "Low Density Asbestos Fibre Board (Asbestos Insulated Board)",
+        "T3 Insulation products",
+        "AIB (insulation board)",
+    ),
+    (
+        r"fire\s*door\s*core",
+        "any",
+        "T8 Insulation",
+        "Fire Door Core",
+        "T3 Insulation products",
+        "Fire Door Core",
+    ),
+    (
+        r"fire\s*rating|fire\s*rated",
+        "any",
+        "T8 Insulation",
+        "Fire Rating Material",
+        "T3 Insulation products",
+        "Fire Rating Material",
+    ),
+    (
+        r"sprayed\s*insulation|spray.*insulation",
+        "Friable",
+        "",
+        "",
+        "T3 Insulation products",
+        "Sprayed Insulation",
+    ),
+    (
+        r"ceramic\s*fibre",
+        "any",
+        "T8 Insulation",
+        "Ceramic Fibre",
+        "T3 Insulation products",
+        "Ceramic Fibre",
+    ),
+    (
+        r"hessian",
+        "any",
+        "T8 Insulation",
+        "Hessian",
+        "T3 Insulation products",
+        "Hessian",
+    ),
+    (
+        r"gland\s*packing",
+        "any",
+        "T8 Insulation",
+        "Gland Packing",
+        "T3 Insulation products",
+        "Gland Packing",
+    ),
+    (
+        r"strawboard",
+        "any",
+        "T8 Insulation",
+        "Strawboard",
+        "T3 Insulation products",
+        "Strawboard",
+    ),
     (r"tape", "any", "T8 Insulation", "Tape", "T3 Insulation products", "Tape"),
-
     # === Coatings (Non-friable T5 only) ===
-    (r"paint|coating|textured\s*coat", "Non-friable", "T5 Coatings", "Textured Coating", "", ""),
-
+    (
+        r"paint|coating|textured\s*coat",
+        "Non-friable",
+        "T5 Coatings",
+        "Textured Coating",
+        "",
+        "",
+    ),
     # === Reinforced Plastics (Non-friable T6 only) ===
-    (r"plastic|stair\s*nosing", "Non-friable", "T6 Reinforced plastics/resins (excluding bitumen products)", "Plastic", "", ""),
-    (r"toilet\s*seat", "Non-friable", "T6 Reinforced plastics/resins (excluding bitumen products)", "Toilet Seats", "", ""),
-    (r"electrical\s*meter", "Non-friable", "T6 Reinforced plastics/resins (excluding bitumen products)", "Electrical Meters", "", ""),
-    (r"electrical\s*component", "Non-friable", "T6 Reinforced plastics/resins (excluding bitumen products)", "Electrical Components", "", ""),
-
+    (
+        r"plastic|stair\s*nosing",
+        "Non-friable",
+        "T6 Reinforced plastics/resins (excluding bitumen products)",
+        "Plastic",
+        "",
+        "",
+    ),
+    (
+        r"toilet\s*seat",
+        "Non-friable",
+        "T6 Reinforced plastics/resins (excluding bitumen products)",
+        "Toilet Seats",
+        "",
+        "",
+    ),
+    (
+        r"electrical\s*meter",
+        "Non-friable",
+        "T6 Reinforced plastics/resins (excluding bitumen products)",
+        "Electrical Meters",
+        "",
+        "",
+    ),
+    (
+        r"electrical\s*component",
+        "Non-friable",
+        "T6 Reinforced plastics/resins (excluding bitumen products)",
+        "Electrical Components",
+        "",
+        "",
+    ),
     # === Textiles (Friable T5 only) ===
     (r"fire\s*blanket", "Friable", "", "", "T5 Textiles", "Fire blanket"),
     (r"cloth|textile", "Friable", "", "", "T5 Textiles", "Cloth"),
     (r"gloves", "Friable", "", "", "T5 Textiles", "Gloves"),
     (r"rope|string", "Friable", "", "", "T5 Textiles", "Rope and string"),
-
     # === Other (Non-friable T7, Friable T6) ===
     (r"mortar", "any", "T7 Other", "Mortar", "T6 Other", "Mortar"),
     (r"render", "any", "T7 Other", "Render", "T6 Other", "Render"),
@@ -189,13 +521,48 @@ CLASSIFICATION_PATTERNS: list[tuple[str, str, str, str, str, str]] = [
     (r"grout", "any", "T7 Other", "Grout", "T6 Other", "Grout"),
     (r"terrazzo", "any", "T7 Other", "Terrazzo", "T6 Other", "Terrazzo"),
     (r"masonry", "any", "T7 Other", "Masonry", "T6 Other", "Masonry"),
-    (r"concrete|levelling\s*compound", "any", "T7 Other", "Concrete/levelling compound", "T6 Other", "Concrete Levelling Compound"),
+    (
+        r"concrete|levelling\s*compound",
+        "any",
+        "T7 Other",
+        "Concrete/levelling compound",
+        "T6 Other",
+        "Concrete Levelling Compound",
+    ),
     (r"debris", "any", "T7 Other", "Debris", "T6 Other", "Debris"),
     (r"dust", "any", "T7 Other", "Dust", "T6 Other", "Dust"),
-    (r"contaminated\s*soil", "any", "T7 Other", "Contaminated Soil (Non-friable Debris)", "T6 Other", "Contaminated Soil (Friable Debris)"),
-    (r"contaminated\s*material", "any", "T7 Other", "Contaminated Materials", "T6 Other", "Contaminated Materials"),
-    (r"carpet\s*underlay", "any", "T7 Other", "Contaminated Carpet Underlay", "T6 Other", "Contaminated Carpet Underlay"),
-    (r"fire\s*brick", "any", "T7 Other", "Fire brick", "T3 Insulation products", "Fire Brick"),
+    (
+        r"contaminated\s*soil",
+        "any",
+        "T7 Other",
+        "Contaminated Soil (Non-friable Debris)",
+        "T6 Other",
+        "Contaminated Soil (Friable Debris)",
+    ),
+    (
+        r"contaminated\s*material",
+        "any",
+        "T7 Other",
+        "Contaminated Materials",
+        "T6 Other",
+        "Contaminated Materials",
+    ),
+    (
+        r"carpet\s*underlay",
+        "any",
+        "T7 Other",
+        "Contaminated Carpet Underlay",
+        "T6 Other",
+        "Contaminated Carpet Underlay",
+    ),
+    (
+        r"fire\s*brick",
+        "any",
+        "T7 Other",
+        "Fire brick",
+        "T3 Insulation products",
+        "Fire Brick",
+    ),
     (r"cardboard", "any", "T7 Other", "Cardboard", "T6 Other", "Cardboard"),
     (r"paper", "any", "T7 Other", "Paper", "T5 Textiles", "Paper"),
 ]
@@ -256,10 +623,7 @@ def classify_product(
     """
     if not item_description or not item_description.strip():
         return ClassificationResult(
-            product_group=None,
-            product_type=None,
-            confidence=0.0,
-            method="none"
+            product_group=None, product_type=None, confidence=0.0, method="none"
         )
 
     # Normalize friability
@@ -290,7 +654,7 @@ def classify_product(
                         product_group=f_group,
                         product_type=f_type,
                         confidence=0.9,
-                        method="pattern"
+                        method="pattern",
                     )
             else:
                 if nf_group:  # Pattern has non-friable-specific classification
@@ -298,16 +662,13 @@ def classify_product(
                         product_group=nf_group,
                         product_type=nf_type,
                         confidence=0.9,
-                        method="pattern"
+                        method="pattern",
                     )
 
     # No pattern match - return no classification (LLM fallback to be implemented)
     # For now, return with method="none" indicating classification needed
     return ClassificationResult(
-        product_group=None,
-        product_type=None,
-        confidence=0.0,
-        method="none"
+        product_group=None, product_type=None, confidence=0.0, method="none"
     )
 
 
@@ -338,18 +699,12 @@ async def classify_with_llm(
     except ImportError as e:
         logger.warning(f"LLM classification dependencies not available: {e}")
         return ClassificationResult(
-            product_group=None,
-            product_type=None,
-            confidence=0.0,
-            method="none"
+            product_group=None, product_type=None, confidence=0.0, method="none"
         )
 
     if not item_description or not item_description.strip():
         return ClassificationResult(
-            product_group=None,
-            product_type=None,
-            confidence=0.0,
-            method="none"
+            product_group=None, product_type=None, confidence=0.0, method="none"
         )
 
     # Normalize friability
@@ -374,17 +729,14 @@ async def classify_with_llm(
         if model is None:
             logger.warning("No LLM model available for classification")
             return ClassificationResult(
-                product_group=None,
-                product_type=None,
-                confidence=0.0,
-                method="none"
+                product_group=None, product_type=None, confidence=0.0, method="none"
             )
 
         # Convert to LangChain and invoke
         langchain_model = model.to_langchain()
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Classify this ACM item: {item_description}")
+            HumanMessage(content=f"Classify this ACM item: {item_description}"),
         ]
         response = await langchain_model.ainvoke(messages)
 
@@ -416,31 +768,22 @@ async def classify_with_llm(
                 product_group=product_group,
                 product_type=product_type,
                 confidence=confidence,
-                method="llm"
+                method="llm",
             )
         else:
             return ClassificationResult(
-                product_group=None,
-                product_type=None,
-                confidence=0.0,
-                method="none"
+                product_group=None, product_type=None, confidence=0.0, method="none"
             )
 
     except json.JSONDecodeError as e:
         logger.warning(f"Failed to parse LLM classification response: {e}")
         return ClassificationResult(
-            product_group=None,
-            product_type=None,
-            confidence=0.0,
-            method="none"
+            product_group=None, product_type=None, confidence=0.0, method="none"
         )
     except Exception as e:
         logger.error(f"LLM classification failed: {e}")
         return ClassificationResult(
-            product_group=None,
-            product_type=None,
-            confidence=0.0,
-            method="none"
+            product_group=None, product_type=None, confidence=0.0, method="none"
         )
 
 

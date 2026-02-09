@@ -14,7 +14,7 @@ import argparse
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 
 def detect_documentation(project_dir: Path) -> Dict[str, Any]:
@@ -27,7 +27,7 @@ def detect_documentation(project_dir: Path) -> Dict[str, Any]:
         "readme": (project_dir / "README.md").exists(),
         "existing_commands": [],
         "existing_rules": [],
-        "docs_structure": None
+        "docs_structure": None,
     }
 
     # Check for existing Claude commands
@@ -44,7 +44,9 @@ def detect_documentation(project_dir: Path) -> Dict[str, Any]:
     if result["docs_dir"]:
         docs = project_dir / "docs"
         if (docs / "architecture").exists():
-            result["docs_structure"] = "bmad" if (docs / "adr").exists() else "architecture"
+            result["docs_structure"] = (
+                "bmad" if (docs / "adr").exists() else "architecture"
+            )
         elif (docs / "adr").exists():
             result["docs_structure"] = "adr"
         elif (docs / "api").exists():
@@ -62,7 +64,7 @@ def detect_technology(project_dir: Path) -> Dict[str, Any]:
         "framework": None,
         "build_tool": None,
         "test_framework": None,
-        "package_manager": None
+        "package_manager": None,
     }
 
     # Language detection
@@ -104,12 +106,18 @@ def detect_technology(project_dir: Path) -> Dict[str, Any]:
         except:
             pass
 
-    elif (project_dir / "pyproject.toml").exists() or (project_dir / "requirements.txt").exists():
+    elif (project_dir / "pyproject.toml").exists() or (
+        project_dir / "requirements.txt"
+    ).exists():
         result["language"] = "python"
         result["package_manager"] = "pip"
 
         if (project_dir / "pyproject.toml").exists():
-            result["package_manager"] = "poetry" if "poetry" in (project_dir / "pyproject.toml").read_text() else "pip"
+            result["package_manager"] = (
+                "poetry"
+                if "poetry" in (project_dir / "pyproject.toml").read_text()
+                else "pip"
+            )
 
         # Framework detection
         if (project_dir / "manage.py").exists():
@@ -143,12 +151,14 @@ def detect_infrastructure(project_dir: Path) -> Dict[str, Any]:
         "docker_compose": False,
         "ci_cd": None,
         "database": None,
-        "deployment": None
+        "deployment": None,
     }
 
     # Docker detection
     result["docker"] = (project_dir / "Dockerfile").exists()
-    result["docker_compose"] = any(project_dir.glob("docker-compose*.yml")) or any(project_dir.glob("docker-compose*.yaml"))
+    result["docker_compose"] = any(project_dir.glob("docker-compose*.yml")) or any(
+        project_dir.glob("docker-compose*.yaml")
+    )
 
     # CI/CD detection
     if (project_dir / ".github" / "workflows").exists():
@@ -184,14 +194,14 @@ def detect_infrastructure(project_dir: Path) -> Dict[str, Any]:
 def generate_recommendations(
     documentation: Dict[str, Any],
     technology: Dict[str, Any],
-    infrastructure: Dict[str, Any]
+    infrastructure: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Generate setup recommendations based on detection."""
     recommendations = {
         "strategy": "standard",
         "commands": ["start", "stop", "status", "logs"],
         "rules": [],
-        "mcp_servers": ["filesystem", "memory"]
+        "mcp_servers": ["filesystem", "memory"],
     }
 
     # Determine strategy
@@ -230,18 +240,10 @@ def main():
         "project_dir",
         nargs="?",
         default=".",
-        help="Project directory (default: current directory)"
+        help="Project directory (default: current directory)",
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output as JSON"
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        help="Write output to file"
-    )
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument("--output", type=str, help="Write output to file")
 
     args = parser.parse_args()
 
@@ -251,20 +253,22 @@ def main():
     documentation = detect_documentation(project_dir)
     technology = detect_technology(project_dir)
     infrastructure = detect_infrastructure(project_dir)
-    recommendations = generate_recommendations(documentation, technology, infrastructure)
+    recommendations = generate_recommendations(
+        documentation, technology, infrastructure
+    )
 
     result = {
         "project_dir": str(project_dir),
         "documentation": documentation,
         "technology": technology,
         "infrastructure": infrastructure,
-        "recommendations": recommendations
+        "recommendations": recommendations,
     }
 
     if args.json or args.output:
         output = json.dumps(result, indent=2)
         if args.output:
-            with open(args.output, 'w') as f:
+            with open(args.output, "w") as f:
                 f.write(output)
             print(f"Output written to: {args.output}")
         else:
@@ -279,9 +283,11 @@ def main():
         print(f"  AGENTS.md: {'Yes' if documentation['agents_md'] else 'No'}")
         print(f"  .claude/: {'Yes' if documentation['claude_dir'] else 'No'}")
         print(f"  docs/: {documentation['docs_structure'] or 'No'}")
-        if documentation['existing_commands']:
-            print(f"  Existing commands: {', '.join(documentation['existing_commands'])}")
-        if documentation['existing_rules']:
+        if documentation["existing_commands"]:
+            print(
+                f"  Existing commands: {', '.join(documentation['existing_commands'])}"
+            )
+        if documentation["existing_rules"]:
             print(f"  Existing rules: {', '.join(documentation['existing_rules'])}")
 
         print("\nTechnology:")
@@ -293,7 +299,9 @@ def main():
 
         print("\nInfrastructure:")
         print(f"  Docker: {'Yes' if infrastructure['docker'] else 'No'}")
-        print(f"  Docker Compose: {'Yes' if infrastructure['docker_compose'] else 'No'}")
+        print(
+            f"  Docker Compose: {'Yes' if infrastructure['docker_compose'] else 'No'}"
+        )
         print(f"  CI/CD: {infrastructure['ci_cd'] or 'None'}")
         print(f"  Database: {infrastructure['database'] or 'Unknown'}")
         print(f"  Deployment: {infrastructure['deployment'] or 'Unknown'}")

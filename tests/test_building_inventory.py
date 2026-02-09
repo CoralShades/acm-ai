@@ -385,10 +385,30 @@ class TestProcessingGroups:
         )
 
         buildings = [
-            BuildingMeta(building_id="B00A", page_start=10, page_end=11, complexity=BuildingComplexity.COMPLEX),
-            BuildingMeta(building_id="B00B", page_start=12, page_end=12, complexity=BuildingComplexity.SIMPLE),
-            BuildingMeta(building_id="D01", page_start=13, page_end=13, complexity=BuildingComplexity.COMPLEX),
-            BuildingMeta(building_id="B009", page_start=14, page_end=15, complexity=BuildingComplexity.COMPLEX),
+            BuildingMeta(
+                building_id="B00A",
+                page_start=10,
+                page_end=11,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B00B",
+                page_start=12,
+                page_end=12,
+                complexity=BuildingComplexity.SIMPLE,
+            ),
+            BuildingMeta(
+                building_id="D01",
+                page_start=13,
+                page_end=13,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B009",
+                page_start=14,
+                page_end=15,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
         ]
         groups = _create_processing_groups(buildings)
         assert len(groups) > 0
@@ -404,10 +424,30 @@ class TestProcessingGroups:
         )
 
         buildings = [
-            BuildingMeta(building_id="B00A", page_start=10, page_end=12, complexity=BuildingComplexity.COMPLEX),
-            BuildingMeta(building_id="B00B", page_start=13, page_end=13, complexity=BuildingComplexity.SIMPLE),
-            BuildingMeta(building_id="D01", page_start=14, page_end=14, complexity=BuildingComplexity.COMPLEX),
-            BuildingMeta(building_id="B009", page_start=15, page_end=19, complexity=BuildingComplexity.COMPLEX),
+            BuildingMeta(
+                building_id="B00A",
+                page_start=10,
+                page_end=12,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B00B",
+                page_start=13,
+                page_end=13,
+                complexity=BuildingComplexity.SIMPLE,
+            ),
+            BuildingMeta(
+                building_id="D01",
+                page_start=14,
+                page_end=14,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B009",
+                page_start=15,
+                page_end=19,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
         ]
         groups = _create_processing_groups(buildings)
         assert len(groups) >= 2  # Should split into multiple groups
@@ -424,8 +464,18 @@ class TestProcessingGroups:
         )
 
         buildings = [
-            BuildingMeta(building_id="B00A", page_start=10, page_end=12, complexity=BuildingComplexity.COMPLEX),
-            BuildingMeta(building_id="B00B", page_start=15, page_end=20, complexity=BuildingComplexity.COMPLEX),
+            BuildingMeta(
+                building_id="B00A",
+                page_start=10,
+                page_end=12,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B00B",
+                page_start=15,
+                page_end=20,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
         ]
         groups = _create_processing_groups(buildings)
         for i, group in enumerate(groups):
@@ -445,7 +495,12 @@ class TestProcessingGroups:
         )
 
         buildings = [
-            BuildingMeta(building_id="B00A", page_start=10, page_end=12, complexity=BuildingComplexity.COMPLEX),
+            BuildingMeta(
+                building_id="B00A",
+                page_start=10,
+                page_end=12,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
         ]
         groups = _create_processing_groups(buildings)
         assert len(groups) == 1
@@ -631,5 +686,9 @@ class TestLangGraphIntegration:
         import inspect
 
         from open_notebook.graphs import acm_extraction
+
         source_code = inspect.getsource(acm_extraction.extract_acm_from_source)
-        assert '"building_inventory": None' in source_code or "'building_inventory': None" in source_code
+        assert (
+            '"building_inventory": None' in source_code
+            or "'building_inventory': None" in source_code
+        )

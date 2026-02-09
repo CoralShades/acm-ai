@@ -109,10 +109,15 @@ def _select_strategy(
 
     # Check if ANY of this building's pages are register pages (section_id=4)
     building_pages = [
-        tag for tag in page_tags.pages
-        if building.page_start <= tag.page_number <= (building.page_end or building.page_start)
+        tag
+        for tag in page_tags.pages
+        if building.page_start
+        <= tag.page_number
+        <= (building.page_end or building.page_start)
     ]
-    register_pages = [p for p in building_pages if p.section_id == SectionTaxonomy.ASBESTOS_REGISTER]
+    register_pages = [
+        p for p in building_pages if p.section_id == SectionTaxonomy.ASBESTOS_REGISTER
+    ]
 
     if not register_pages:
         return ExtractionStrategy.SKIP
@@ -154,18 +159,26 @@ def plan_extraction(
         strategy = _select_strategy(building, page_tags)
         page_end = building.page_end or building.page_start
 
-        plans.append(BuildingExtractionPlan(
-            building_id=building.building_id,
-            building_name=building.name,
-            page_range=(building.page_start, page_end),
-            strategy=strategy,
-            complexity=building.complexity.value if isinstance(building.complexity, BuildingComplexity) else str(building.complexity),
-            context_summary=_build_context_summary(building, document_meta),
-        ))
+        plans.append(
+            BuildingExtractionPlan(
+                building_id=building.building_id,
+                building_name=building.name,
+                page_range=(building.page_start, page_end),
+                strategy=strategy,
+                complexity=building.complexity.value
+                if isinstance(building.complexity, BuildingComplexity)
+                else str(building.complexity),
+                context_summary=_build_context_summary(building, document_meta),
+            )
+        )
 
-    buildings_to_extract = sum(1 for p in plans if p.strategy != ExtractionStrategy.SKIP)
+    buildings_to_extract = sum(
+        1 for p in plans if p.strategy != ExtractionStrategy.SKIP
+    )
     buildings_skipped = sum(1 for p in plans if p.strategy == ExtractionStrategy.SKIP)
-    estimated_llm_calls = sum(1 for p in plans if p.strategy == ExtractionStrategy.FULL_LLM)
+    estimated_llm_calls = sum(
+        1 for p in plans if p.strategy == ExtractionStrategy.FULL_LLM
+    )
 
     return ExtractionPlan(
         plans=plans,
@@ -191,8 +204,12 @@ def should_use_orchestrator(state: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 
-ROOM_ENTRY_PATTERN = re.compile(r"([A-Z]\d+[A-Z]?-R\d+)\s*(?:[-\u2013]|\t)\s*(.+?)(?:\n|$)")
-NO_ACM_PATTERN = re.compile(r"(?:No\s+Asbestos|Not\s+Detected|NAD|No\s+ACM)", re.IGNORECASE)
+ROOM_ENTRY_PATTERN = re.compile(
+    r"([A-Z]\d+[A-Z]?-R\d+)\s*(?:[-\u2013]|\t)\s*(.+?)(?:\n|$)"
+)
+NO_ACM_PATTERN = re.compile(
+    r"(?:No\s+Asbestos|Not\s+Detected|NAD|No\s+ACM)", re.IGNORECASE
+)
 
 
 def _extract_building_content(content: str, page_start: int, page_end: int) -> str:
@@ -261,16 +278,18 @@ def _regex_extract_simple_building(
         room_id = match.group(1)
         room_name = match.group(2).strip()
 
-        records.append(ACMExtractionRecord(
-            building_id=building_id,
-            building_name=building_name,
-            room_id=room_id,
-            room_name=room_name,
-            product="N/A",
-            material_description="No asbestos containing materials found",
-            result="Not Detected",
-            extraction_confidence="high",
-        ))
+        records.append(
+            ACMExtractionRecord(
+                building_id=building_id,
+                building_name=building_name,
+                room_id=room_id,
+                room_name=room_name,
+                product="N/A",
+                material_description="No asbestos containing materials found",
+                result="Not Detected",
+                extraction_confidence="high",
+            )
+        )
 
     return records
 
@@ -291,10 +310,12 @@ async def _llm_extract_building(
     prompt_ctx = _create_building_prompt_context(plan, doc_meta)
 
     prompter = Prompter(prompt_template="acm/building_extraction")
-    system_prompt = prompter.render(data={
-        "building_context": prompt_ctx,
-        "content": building_content,
-    })
+    system_prompt = prompter.render(
+        data={
+            "building_context": prompt_ctx,
+            "content": building_content,
+        }
+    )
 
     model = await provision_langchain_model(
         building_content,
@@ -323,7 +344,9 @@ async def extract_building(
 ) -> Tuple[List[ACMExtractionRecord], BuildingExtractionStats]:
     """Extract ACM records for a single building (Task 3.1)."""
     start = time.time()
-    building_content = _extract_building_content(content, plan.page_range[0], plan.page_range[1])
+    building_content = _extract_building_content(
+        content, plan.page_range[0], plan.page_range[1]
+    )
     pages_processed = plan.page_range[1] - plan.page_range[0] + 1
 
     if plan.strategy == ExtractionStrategy.SKIP:
@@ -339,7 +362,9 @@ async def extract_building(
     if plan.strategy == ExtractionStrategy.REGEX_ONLY:
         try:
             records = _regex_extract_simple_building(
-                building_content, plan.building_id, plan.building_name,
+                building_content,
+                plan.building_id,
+                plan.building_name,
             )
             elapsed = int((time.time() - start) * 1000)
             return records, BuildingExtractionStats(
@@ -402,7 +427,9 @@ def merge_building_results(
 
     for records, stats in results:
         all_records.extend(records)
-        strategy_dist[stats.strategy_used] = strategy_dist.get(stats.strategy_used, 0) + 1
+        strategy_dist[stats.strategy_used] = (
+            strategy_dist.get(stats.strategy_used, 0) + 1
+        )
         if stats.strategy_used != ExtractionStrategy.SKIP.value and not stats.errors:
             buildings_extracted += 1
 
@@ -447,14 +474,19 @@ async def _extract_buildings_parallel(
         if isinstance(result, BaseException):
             plan = non_skip[i]
             logger.error(f"Building {plan.building_id} extraction failed: {result}")
-            results.append(([], BuildingExtractionStats(
-                building_id=plan.building_id,
-                records_extracted=0,
-                pages_processed=0,
-                strategy_used=plan.strategy.value,
-                time_ms=0,
-                errors=[str(result)],
-            )))
+            results.append(
+                (
+                    [],
+                    BuildingExtractionStats(
+                        building_id=plan.building_id,
+                        records_extracted=0,
+                        pages_processed=0,
+                        strategy_used=plan.strategy.value,
+                        time_ms=0,
+                        errors=[str(result)],
+                    ),
+                )
+            )
         else:
             results.append(result)
 
@@ -494,23 +526,32 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
 
     # Execute per-building extractions in parallel
     results = await _extract_buildings_parallel(
-        extraction_plan.plans, content, state,
+        extraction_plan.plans,
+        content,
+        state,
     )
 
     # Add SKIP stats for skipped buildings
     for plan in extraction_plan.plans:
         if plan.strategy == ExtractionStrategy.SKIP:
-            results.append(([], BuildingExtractionStats(
-                building_id=plan.building_id,
-                records_extracted=0,
-                pages_processed=0,
-                strategy_used=ExtractionStrategy.SKIP.value,
-                time_ms=0,
-            )))
+            results.append(
+                (
+                    [],
+                    BuildingExtractionStats(
+                        building_id=plan.building_id,
+                        records_extracted=0,
+                        pages_processed=0,
+                        strategy_used=ExtractionStrategy.SKIP.value,
+                        time_ms=0,
+                    ),
+                )
+            )
 
     # Merge results
     all_records, orchestrator_stats = merge_building_results(
-        results, extraction_plan, total_start,
+        results,
+        extraction_plan,
+        total_start,
     )
 
     logger.info(

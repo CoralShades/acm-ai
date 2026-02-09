@@ -84,9 +84,27 @@ class TestGenericParserExtraction:
         parser = GenericParser()
         tables = [
             {
-                "headers": ["Product", "Material Description", "Extent", "Location", "Friable", "Condition", "Risk", "Result"],
+                "headers": [
+                    "Product",
+                    "Material Description",
+                    "Extent",
+                    "Location",
+                    "Friable",
+                    "Condition",
+                    "Risk",
+                    "Result",
+                ],
                 "rows": [
-                    ["Floor Tiles", "Vinyl asbestos tiles", "50m²", "Floor", "Non Friable", "Good", "Low", "Detected"],
+                    [
+                        "Floor Tiles",
+                        "Vinyl asbestos tiles",
+                        "50m²",
+                        "Floor",
+                        "Non Friable",
+                        "Good",
+                        "Low",
+                        "Detected",
+                    ],
                 ],
             }
         ]

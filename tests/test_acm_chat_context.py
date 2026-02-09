@@ -212,27 +212,37 @@ class TestACMContextIntegration:
 
         # Mock the context builder
         mock_builder_instance = MagicMock()
-        mock_builder_instance.build = AsyncMock(return_value={
-            "sources": [{"id": "source:123", "title": "Test"}],
-            "insights": [],
-            "metadata": {"source_count": 1, "insight_count": 0},
-        })
+        mock_builder_instance.build = AsyncMock(
+            return_value={
+                "sources": [{"id": "source:123", "title": "Test"}],
+                "insights": [],
+                "metadata": {"source_count": 1, "insight_count": 0},
+            }
+        )
         mock_context_builder.return_value = mock_builder_instance
 
         # Mock ACM context formatter
-        mock_format_acm.return_value = "## ACM Register Data\n| Building |\n|---|\n| B1 |"
+        mock_format_acm.return_value = (
+            "## ACM Register Data\n| Building |\n|---|\n| B1 |"
+        )
 
         # Import after mocking
         import asyncio
+
         from open_notebook.graphs.source_chat import format_acm_context
 
         # Call format_acm_context directly to verify it works
-        result = await format_acm_context.__wrapped__(
-            "source:123", max_records=50
-        ) if hasattr(format_acm_context, '__wrapped__') else "mocked"
+        result = (
+            await format_acm_context.__wrapped__("source:123", max_records=50)
+            if hasattr(format_acm_context, "__wrapped__")
+            else "mocked"
+        )
 
         # The mock should have been configured
-        assert mock_format_acm.return_value == "## ACM Register Data\n| Building |\n|---|\n| B1 |"
+        assert (
+            mock_format_acm.return_value
+            == "## ACM Register Data\n| Building |\n|---|\n| B1 |"
+        )
 
     def test_context_indicators_tracks_acm(self):
         """Test that context_indicators includes acm_records_included field."""
@@ -256,10 +266,7 @@ class TestSendMessageRequestWithACM:
         from api.routers.source_chat import SendMessageRequest
 
         # Create request with ACM context enabled
-        request = SendMessageRequest(
-            message="Test message",
-            include_acm_context=True
-        )
+        request = SendMessageRequest(message="Test message", include_acm_context=True)
 
         assert request.include_acm_context is True
 
@@ -481,7 +488,10 @@ class TestQuestionPatternDetection:
         assert detect_question_type("What is friable asbestos?") == "terminology_query"
         assert detect_question_type("What does ACM mean?") == "terminology_query"
         assert detect_question_type("Define non-friable") == "terminology_query"
-        assert detect_question_type("Explain the SAMP documentation") == "terminology_query"
+        assert (
+            detect_question_type("Explain the SAMP documentation")
+            == "terminology_query"
+        )
         assert detect_question_type("What are ACMs?") == "terminology_query"
 
     def test_detect_action_query(self):

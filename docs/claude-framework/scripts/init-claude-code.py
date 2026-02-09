@@ -52,15 +52,15 @@ def copy_settings(project_dir: Path, framework_dir: Path):
             "mcpServers": {
                 "filesystem": {
                     "command": "npx",
-                    "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+                    "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
                 },
                 "memory": {
                     "command": "npx",
-                    "args": ["-y", "@modelcontextprotocol/server-memory"]
-                }
+                    "args": ["-y", "@modelcontextprotocol/server-memory"],
+                },
             }
         }
-        with open(dst, 'w') as f:
+        with open(dst, "w") as f:
             json.dump(settings, f, indent=2)
         print(f"Created: {dst}")
 
@@ -174,7 +174,7 @@ MCP servers configured in `.claude/settings.json`:
 | `filesystem` | File operations | Enabled |
 | `memory` | Persistent context | Enabled |
 """
-        with open(dst, 'w') as f:
+        with open(dst, "w") as f:
             f.write(content)
         print(f"Created: {dst}")
 
@@ -187,13 +187,13 @@ def update_gitignore(project_dir: Path):
     if gitignore.exists():
         content = gitignore.read_text()
         if entry not in content:
-            with open(gitignore, 'a') as f:
+            with open(gitignore, "a") as f:
                 f.write(f"\n# Claude Code local settings\n{entry}\n")
             print(f"Updated: {gitignore}")
         else:
             print(f"Skipping: {entry} already in .gitignore")
     else:
-        with open(gitignore, 'w') as f:
+        with open(gitignore, "w") as f:
             f.write(f"# Claude Code local settings\n{entry}\n")
         print(f"Created: {gitignore}")
 
@@ -206,37 +206,31 @@ def main():
         "project_dir",
         nargs="?",
         default=".",
-        help="Project directory (default: current directory)"
+        help="Project directory (default: current directory)",
     )
     parser.add_argument(
         "--new",
         action="store_true",
-        help="Initialize as new project (create all files)"
+        help="Initialize as new project (create all files)",
     )
     parser.add_argument(
         "--existing",
         action="store_true",
-        help="Initialize in existing project (preserve existing files)"
+        help="Initialize in existing project (preserve existing files)",
     )
     parser.add_argument(
-        "--commands",
-        nargs="+",
-        help="Specific commands to copy (default: all)"
+        "--commands", nargs="+", help="Specific commands to copy (default: all)"
     )
     parser.add_argument(
-        "--rules",
-        nargs="+",
-        help="Specific rules to copy (default: all)"
+        "--rules", nargs="+", help="Specific rules to copy (default: all)"
     )
     parser.add_argument(
-        "--no-claude-md",
-        action="store_true",
-        help="Skip creating CLAUDE.md"
+        "--no-claude-md", action="store_true", help="Skip creating CLAUDE.md"
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes"
+        help="Show what would be done without making changes",
     )
 
     args = parser.parse_args()

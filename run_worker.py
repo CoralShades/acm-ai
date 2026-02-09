@@ -8,8 +8,8 @@ without Unicode encoding errors when logging emoji characters.
 Issue: https://github.com/CoralShades/acm-ai/issues/1
 """
 
-import sys
 import io
+import sys
 
 
 def main():

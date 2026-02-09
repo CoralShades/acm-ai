@@ -153,12 +153,14 @@ def _extract_rooms_from_section(
         abs_pos = content_start + match.start()
         page = _find_page_at_position(full_content, abs_pos)
 
-        rooms.append(RoomMeta(
-            room_id=room_id,
-            name=room_name,
-            area_m2=area_m2,
-            page=page,
-        ))
+        rooms.append(
+            RoomMeta(
+                room_id=room_id,
+                name=room_name,
+                area_m2=area_m2,
+                page=page,
+            )
+        )
     return rooms
 
 
@@ -181,9 +183,9 @@ def _find_page_end(section_text: str, page_start: int, rooms: List[RoomMeta]) ->
     for match in _PAGE_PATTERN.finditer(section_text):
         pg = int(match.group(1))
         # Check if there's substantial content after this marker before the next marker
-        after_marker = section_text[match.end():]
+        after_marker = section_text[match.end() :]
         next_page = _PAGE_PATTERN.search(after_marker)
-        content_after = after_marker[:next_page.start()] if next_page else after_marker
+        content_after = after_marker[: next_page.start()] if next_page else after_marker
         # Only count if there's real content (not just whitespace)
         if content_after.strip():
             pages_in_section.append(pg)
@@ -223,25 +225,29 @@ def _create_processing_groups(buildings: List[BuildingMeta]) -> List[ProcessingG
             current_end = max(current_end, b_end)
         else:
             # Finalize current group
-            groups.append(ProcessingGroup(
-                group_id=len(groups) + 1,
-                building_ids=current_ids,
-                page_start=current_start,
-                page_end=current_end,
-                estimated_pages=current_end - current_start + 1,
-            ))
+            groups.append(
+                ProcessingGroup(
+                    group_id=len(groups) + 1,
+                    building_ids=current_ids,
+                    page_start=current_start,
+                    page_end=current_end,
+                    estimated_pages=current_end - current_start + 1,
+                )
+            )
             current_ids = [building.building_id]
             current_start = building.page_start
             current_end = b_end
 
     # Finalize last group
-    groups.append(ProcessingGroup(
-        group_id=len(groups) + 1,
-        building_ids=current_ids,
-        page_start=current_start,
-        page_end=current_end,
-        estimated_pages=current_end - current_start + 1,
-    ))
+    groups.append(
+        ProcessingGroup(
+            group_id=len(groups) + 1,
+            building_ids=current_ids,
+            page_start=current_start,
+            page_end=current_end,
+            estimated_pages=current_end - current_start + 1,
+        )
+    )
 
     return groups
 
@@ -257,7 +263,9 @@ def _heuristic_fallback(
     """
     if not content:
         return BuildingInventory(
-            buildings=[], processing_groups=[], total_buildings=0,
+            buildings=[],
+            processing_groups=[],
+            total_buildings=0,
         )
 
     # Find all building headers (B-series and D-series)
@@ -292,17 +300,19 @@ def _heuristic_fallback(
         # Classify complexity and estimate ACM item count
         complexity, acm_estimate = _classify_complexity(section_text, len(rooms))
 
-        buildings.append(BuildingMeta(
-            building_id=building_id,
-            name=name,
-            year=year,
-            construction=construction,
-            page_start=page_start,
-            page_end=page_end,
-            complexity=complexity,
-            rooms=rooms,
-            acm_item_count_estimate=acm_estimate if acm_estimate > 0 else None,
-        ))
+        buildings.append(
+            BuildingMeta(
+                building_id=building_id,
+                name=name,
+                year=year,
+                construction=construction,
+                page_start=page_start,
+                page_end=page_end,
+                complexity=complexity,
+                rooms=rooms,
+                acm_item_count_estimate=acm_estimate if acm_estimate > 0 else None,
+            )
+        )
 
     # Create processing groups
     processing_groups = _create_processing_groups(buildings)
@@ -374,7 +384,7 @@ def _trim_to_register(
     )
     match = page_pattern.search(content)
     if match and match.start() > 500:
-        return content[match.start():]
+        return content[match.start() :]
     return content
 
 
@@ -399,7 +409,9 @@ async def compile_building_inventory(
     if not content:
         logger.warning("Empty content provided for building inventory compilation")
         return BuildingInventory(
-            buildings=[], processing_groups=[], total_buildings=0,
+            buildings=[],
+            processing_groups=[],
+            total_buildings=0,
         )
 
     # Trim to register section if DocumentStructure available
@@ -417,6 +429,8 @@ async def compile_building_inventory(
         return inventory
 
     except Exception as e:
-        logger.warning(f"LLM building inventory compilation failed: {e}. Using heuristic fallback.")
+        logger.warning(
+            f"LLM building inventory compilation failed: {e}. Using heuristic fallback."
+        )
         fallback = _heuristic_fallback(register_content, document_structure)
         return fallback

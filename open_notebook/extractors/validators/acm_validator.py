@@ -128,7 +128,11 @@ def validate_business_rules(record: dict) -> list[ValidationIssue]:
     # BAR-001/BAR-002: Negative results require N/A fields
     negative_values = {"Negative", "Assumed Negative"}
     if sample_result in negative_values:
-        na_value = "N/A (negative)" if sample_result == "Negative" else "N/A (assumed negative)"
+        na_value = (
+            "N/A (negative)"
+            if sample_result == "Negative"
+            else "N/A (assumed negative)"
+        )
 
         condition = record.get("material_condition")
         if condition and condition not in {"N/A (negative)", "N/A (assumed negative)"}:
@@ -143,7 +147,10 @@ def validate_business_rules(record: dict) -> list[ValidationIssue]:
             )
 
         disturbance = record.get("disturbance_potential")
-        if disturbance and disturbance not in {"N/A (negative)", "N/A (assumed negative)"}:
+        if disturbance and disturbance not in {
+            "N/A (negative)",
+            "N/A (assumed negative)",
+        }:
             issues.append(
                 ValidationIssue(
                     field_name="disturbance_potential",

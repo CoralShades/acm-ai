@@ -32,6 +32,8 @@ if __name__ == "__main__":
             str(current_dir / "open_notebook"),
             str(current_dir / "commands"),
             str(current_dir / "prompts"),
-        ] if reload else None,
+        ]
+        if reload
+        else None,
         reload_excludes=["*.pyc", "__pycache__"] if reload else None,
     )

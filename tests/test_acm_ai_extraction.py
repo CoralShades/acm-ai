@@ -358,7 +358,11 @@ class TestValidationLogic:
             # The normalization happens in validate_records node
             # Here we just test the mapping logic
             result_lower = input_val.lower()
-            if "no asbestos" in result_lower or "nad" in result_lower or "not detected" in result_lower:
+            if (
+                "no asbestos" in result_lower
+                or "nad" in result_lower
+                or "not detected" in result_lower
+            ):
                 normalized = "Not Detected"
             elif "detected" in result_lower or "positive" in result_lower:
                 normalized = "Detected"

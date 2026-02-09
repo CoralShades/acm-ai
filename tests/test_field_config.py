@@ -247,7 +247,9 @@ class TestConfigLoader:
 
         config = load_field_schema()
         for field in config.fields:
-            assert field.internal_name, f"Field {field.display_name} has no internal_name"
+            assert field.internal_name, (
+                f"Field {field.display_name} has no internal_name"
+            )
 
     def test_loaded_fields_have_column_letters(self):
         """Every field has a BAR column letter."""
@@ -255,7 +257,9 @@ class TestConfigLoader:
 
         config = load_field_schema()
         for field in config.fields:
-            assert field.excel_column, f"Field {field.internal_name} has no excel_column"
+            assert field.excel_column, (
+                f"Field {field.internal_name} has no excel_column"
+            )
 
     def test_loaded_enums_present(self):
         """Config contains enum picklists from register_enums.json."""

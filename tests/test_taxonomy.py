@@ -5,17 +5,18 @@ Tests pattern matching, friability-based taxonomy selection,
 and LLM fallback classification.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from open_notebook.extractors.normalizers.taxonomy import (
     ClassificationResult,
+    _normalize_friability,
     classify_product,
     classify_product_async,
     classify_with_llm,
     get_product_groups,
     get_product_types,
-    _normalize_friability,
 )
 
 
@@ -163,7 +164,10 @@ class TestClassifyProductCement:
         # Should NOT match fibro pattern (word boundary check)
         # May match another pattern or return no match
         if result.product_group:
-            assert "Cement" not in result.product_group or result.product_type != "Flat Sheeting"
+            assert (
+                "Cement" not in result.product_group
+                or result.product_type != "Flat Sheeting"
+            )
 
     def test_corrugated_roof(self):
         result = classify_product("Corrugated roof sheeting", "Non-friable")
@@ -359,10 +363,10 @@ class TestClassifyProductEdgeCases:
     def test_result_is_named_tuple(self):
         result = classify_product("Vinyl tiles", "Non-friable")
         assert isinstance(result, ClassificationResult)
-        assert hasattr(result, 'product_group')
-        assert hasattr(result, 'product_type')
-        assert hasattr(result, 'confidence')
-        assert hasattr(result, 'method')
+        assert hasattr(result, "product_group")
+        assert hasattr(result, "product_type")
+        assert hasattr(result, "confidence")
+        assert hasattr(result, "method")
 
 
 class TestClassifyWithLLM:
@@ -371,7 +375,7 @@ class TestClassifyWithLLM:
     @pytest.mark.asyncio
     async def test_llm_unavailable_returns_none(self):
         """When LLM dependencies unavailable, return no classification."""
-        with patch.dict('sys.modules', {'ai_prompter': None}):
+        with patch.dict("sys.modules", {"ai_prompter": None}):
             # Force reimport to trigger ImportError
             result = await classify_with_llm("Test material", "Non-friable")
             # Should gracefully handle missing dependencies
@@ -397,9 +401,9 @@ class TestClassifyWithLLM:
         mock_model_manager = MagicMock()
         mock_model_manager.get_default_model = AsyncMock(return_value=mock_model)
 
-        with patch.dict('sys.modules', {'ai_prompter': MagicMock()}):
-            with patch('open_notebook.domain.models.model_manager', mock_model_manager):
-                with patch('ai_prompter.Prompter') as mock_prompter:
+        with patch.dict("sys.modules", {"ai_prompter": MagicMock()}):
+            with patch("open_notebook.domain.models.model_manager", mock_model_manager):
+                with patch("ai_prompter.Prompter") as mock_prompter:
                     mock_prompter.return_value.render.return_value = "Test prompt"
                     result = await classify_with_llm("Vinyl floor tiles", "Non-friable")
 
@@ -423,14 +427,18 @@ class TestClassifyProductAsync:
     @pytest.mark.asyncio
     async def test_pattern_match_no_llm_call(self):
         """When pattern matches, LLM should not be called."""
-        result = await classify_product_async("Vinyl tiles", "Non-friable", use_llm_fallback=True)
+        result = await classify_product_async(
+            "Vinyl tiles", "Non-friable", use_llm_fallback=True
+        )
         assert result.product_group == "T3 Vinyl products"
         assert result.method == "pattern"
 
     @pytest.mark.asyncio
     async def test_no_match_no_fallback(self):
         """When no match and fallback disabled, return none."""
-        result = await classify_product_async("Unknown xyz material", "Non-friable", use_llm_fallback=False)
+        result = await classify_product_async(
+            "Unknown xyz material", "Non-friable", use_llm_fallback=False
+        )
         assert result.product_group is None
         assert result.method == "none"
 
@@ -442,6 +450,6 @@ class TestClassifyProductAsync:
             "floor tiles",
             friability="Non-friable",
             product="Vinyl",
-            use_llm_fallback=False
+            use_llm_fallback=False,
         )
         assert result.product_group == "T3 Vinyl products"

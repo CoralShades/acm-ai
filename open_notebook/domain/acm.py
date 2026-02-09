@@ -18,6 +18,7 @@ from pydantic import Field, field_validator
 
 class ExtractionConfidence(str, Enum):
     """Confidence level for extracted ACM records."""
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -30,22 +31,25 @@ class ACMEmbeddingConfig:
     Controls how ACM records are embedded for semantic search.
     Uses dataclass for lightweight configuration without Pydantic overhead.
     """
+
     enabled: bool = True
     model_id: Optional[str] = None  # Falls back to default embedding model if None
     batch_size: int = 50
-    include_fields: List[str] = dataclass_field(default_factory=lambda: [
-        "building_name",
-        "room_name",
-        "product",
-        "material_description",
-        "location",
-        "extent",
-        "material_condition",
-        "risk_status",
-        "friable",
-        "result",
-        "hygienist_recommendations",
-    ])
+    include_fields: List[str] = dataclass_field(
+        default_factory=lambda: [
+            "building_name",
+            "room_name",
+            "product",
+            "material_description",
+            "location",
+            "extent",
+            "material_condition",
+            "risk_status",
+            "friable",
+            "result",
+            "hygienist_recommendations",
+        ]
+    )
 
 
 from open_notebook.database.repository import ensure_record_id, repo_query
@@ -98,120 +102,106 @@ class ACMRecord(ObjectModel):
     # Bounding box for provenance linking (MinerU integration)
     table_bbox: Optional[dict] = Field(
         default=None,
-        description="Table bounding box coordinates: {x, y, width, height, page}"
+        description="Table bounding box coordinates: {x, y, width, height, page}",
     )
 
     # New fields for AI-powered extraction (Task 1: E1-S7)
     # All optional for backwards compatibility with existing records
     disturbance_potential: Optional[str] = Field(
         default=None,
-        description="Likelihood of material disturbance (e.g., 'Low', 'Medium', 'High')"
+        description="Likelihood of material disturbance (e.g., 'Low', 'Medium', 'High')",
     )
     sample_no: Optional[str] = Field(
-        default=None,
-        description="Sample identification number from lab testing"
+        default=None, description="Sample identification number from lab testing"
     )
     sample_result: Optional[str] = Field(
-        default=None,
-        description="Laboratory analysis result for the sample"
+        default=None, description="Laboratory analysis result for the sample"
     )
     identifying_company: Optional[str] = Field(
         default=None,
-        description="Hygiene consulting company that performed the inspection"
+        description="Hygiene consulting company that performed the inspection",
     )
     quantity: Optional[str] = Field(
         default=None,
-        description="Amount or extent of the material (e.g., '10 m²', '5 linear meters')"
+        description="Amount or extent of the material (e.g., '10 m²', '5 linear meters')",
     )
     acm_labelled: Optional[bool] = Field(
-        default=None,
-        description="Whether the ACM has been labeled on-site"
+        default=None, description="Whether the ACM has been labeled on-site"
     )
     acm_label_details: Optional[str] = Field(
         default=None,
-        description="Details about the ACM labeling (e.g., label type, date)"
+        description="Details about the ACM labeling (e.g., label type, date)",
     )
     hygienist_recommendations: Optional[str] = Field(
-        default=None,
-        description="Recommendations from the hygienist for this material"
+        default=None, description="Recommendations from the hygienist for this material"
     )
     psb_supplied_acm_id: Optional[str] = Field(
-        default=None,
-        description="Unique identifier supplied by PSB (if applicable)"
+        default=None, description="Unique identifier supplied by PSB (if applicable)"
     )
     removal_status: Optional[str] = Field(
         default=None,
-        description="Removal status (e.g., 'N/A', 'Pending', 'Complete', 'Encapsulated')"
+        description="Removal status (e.g., 'N/A', 'Pending', 'Complete', 'Encapsulated')",
     )
     date_of_removal: Optional[str] = Field(
-        default=None,
-        description="Date when the material was removed (if applicable)"
+        default=None, description="Date when the material was removed (if applicable)"
     )
 
     # Extraction metadata
     extraction_confidence: Optional[str] = Field(
         default=None,
-        description="Confidence level of the extraction: 'high', 'medium', or 'low'"
+        description="Confidence level of the extraction: 'high', 'medium', or 'low'",
     )
     data_issues: Optional[List[str]] = Field(
         default=None,
-        description="List of data quality issues identified during extraction"
+        description="List of data quality issues identified during extraction",
     )
 
     # Recommendation normalization (E1-S12: Consultant wording normalization)
     normalized_action: Optional[str] = Field(
         default=None,
-        description="Canonical action from recommendation normalization (e.g., 'maintain_in_situ')"
+        description="Canonical action from recommendation normalization (e.g., 'maintain_in_situ')",
     )
 
     # Product Classification fields (E1-S9: Victorian BAR taxonomy)
     acm_product_group: Optional[str] = Field(
         default=None,
-        description="BAR taxonomy product group (e.g., 'T3 Vinyl products')"
+        description="BAR taxonomy product group (e.g., 'T3 Vinyl products')",
     )
     acm_product_type: Optional[str] = Field(
-        default=None,
-        description="BAR taxonomy product type (e.g., 'Vinyl Tiles')"
+        default=None, description="BAR taxonomy product type (e.g., 'Vinyl Tiles')"
     )
     classification_confidence: Optional[float] = Field(
-        default=None,
-        description="Confidence score for the classification (0.0-1.0)"
+        default=None, description="Confidence score for the classification (0.0-1.0)"
     )
     classification_override: Optional[bool] = Field(
-        default=None,
-        description="Whether the classification was manually overridden"
+        default=None, description="Whether the classification was manually overridden"
     )
     classification_method: Optional[str] = Field(
-        default=None,
-        description="Classification method: 'pattern', 'llm', or 'manual'"
+        default=None, description="Classification method: 'pattern', 'llm', or 'manual'"
     )
 
     # Embedding fields for semantic search (E1-S6)
     embedding: Optional[List[float]] = Field(
-        default=None,
-        description="Vector embedding for semantic search"
+        default=None, description="Vector embedding for semantic search"
     )
     embedding_text: Optional[str] = Field(
-        default=None,
-        description="Combined text used to generate the embedding"
+        default=None, description="Combined text used to generate the embedding"
     )
     embedding_model: Optional[str] = Field(
-        default=None,
-        description="Model ID used to generate the embedding"
+        default=None, description="Model ID used to generate the embedding"
     )
     embedded_at: Optional[datetime] = Field(
-        default=None,
-        description="Timestamp when embedding was generated"
+        default=None, description="Timestamp when embedding was generated"
     )
     enriched_text: Optional[str] = Field(
         default=None,
-        description="Contextually enriched text with hierarchical metadata for embedding (E1-S14)"
+        description="Contextually enriched text with hierarchical metadata for embedding (E1-S14)",
     )
 
     # Parent document retrieval (E11-S1)
     parent_table_id: Optional[str] = Field(
         default=None,
-        description="Reference to parent ACMTableSection for table-level context"
+        description="Reference to parent ACMTableSection for table-level context",
     )
 
     # Validators for required fields
@@ -283,6 +273,7 @@ class ACMRecord(ObjectModel):
         from open_notebook.extractors.normalizers.recommendations import (
             CANONICAL_ACTIONS,
         )
+
         if v not in CANONICAL_ACTIONS:
             logger.warning(
                 f"normalized_action '{v}' is not a recognized canonical action"
@@ -501,7 +492,7 @@ class ACMTableSection(ObjectModel):
     building_name: Optional[str] = None
     table_type: Optional[str] = Field(
         default=None,
-        description="Type of table section: 'register', 'lab_report', or 'metadata'"
+        description="Type of table section: 'register', 'lab_report', or 'metadata'",
     )
 
     @field_validator("source_id", mode="before")

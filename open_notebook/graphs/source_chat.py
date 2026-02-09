@@ -54,7 +54,9 @@ def call_model_with_source_context(
     last_user_message = None
     messages = state.get("messages", [])
     for msg in reversed(messages):
-        if isinstance(msg, HumanMessage) or (hasattr(msg, "type") and msg.type == "human"):
+        if isinstance(msg, HumanMessage) or (
+            hasattr(msg, "type") and msg.type == "human"
+        ):
             last_user_message = msg.content if hasattr(msg, "content") else str(msg)
             break
 

@@ -92,13 +92,18 @@ def generate_typescript(schema_path: Path, output_path: Path, type_name: str) ->
             [
                 "npx",
                 "quicktype",
-                "--src-lang", "schema",
-                "--src", str(abs_schema),
-                "--out", str(abs_output),
-                "--lang", "typescript",
+                "--src-lang",
+                "schema",
+                "--src",
+                str(abs_schema),
+                "--out",
+                str(abs_output),
+                "--lang",
+                "typescript",
                 "--just-types",
                 "--prefer-types",
-                "--acronym-style", "original",
+                "--acronym-style",
+                "original",
             ],
             capture_output=True,
             text=True,
@@ -137,17 +142,21 @@ def generate_index_file(output_dir: Path, models: list, enums: list) -> None:
         # Use named export to avoid conflicts from quicktype's inline types
         exports.append(f"export type {{ {model.__name__} }} from './{model.__name__}';")
     for enum_cls in enums:
-        exports.append(f"export type {{ {enum_cls.__name__} }} from './{enum_cls.__name__}';")
+        exports.append(
+            f"export type {{ {enum_cls.__name__} }} from './{enum_cls.__name__}';"
+        )
 
-    index_content = "\n".join([
-        "/**",
-        " * Auto-generated TypeScript types from Pydantic models.",
-        " * DO NOT EDIT MANUALLY - regenerate with 'npm run generate:types'",
-        " */",
-        "",
-        *sorted(exports),
-        "",
-    ])
+    index_content = "\n".join(
+        [
+            "/**",
+            " * Auto-generated TypeScript types from Pydantic models.",
+            " * DO NOT EDIT MANUALLY - regenerate with 'npm run generate:types'",
+            " */",
+            "",
+            *sorted(exports),
+            "",
+        ]
+    )
 
     index_path = output_dir / "index.ts"
     index_path.write_text(index_content)
@@ -159,7 +168,9 @@ def main() -> int:
     logger.info("Starting Pydantic -> TypeScript type generation")
 
     if not check_quicktype_installed():
-        logger.error("quicktype is not installed. Run: cd frontend && npm install -D quicktype")
+        logger.error(
+            "quicktype is not installed. Run: cd frontend && npm install -D quicktype"
+        )
         return 1
 
     # Create output directories

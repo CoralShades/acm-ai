@@ -84,8 +84,12 @@ class TestSectionModel:
             page_start=13,
             page_end=45,
             subsections=[
-                SubSection(subsection_number="4.1", title="B001", page_start=13, page_end=25),
-                SubSection(subsection_number="4.2", title="B002", page_start=26, page_end=45),
+                SubSection(
+                    subsection_number="4.1", title="B001", page_start=13, page_end=25
+                ),
+                SubSection(
+                    subsection_number="4.2", title="B002", page_start=26, page_end=45
+                ),
             ],
         )
         assert len(section.subsections) == 2
@@ -132,8 +136,12 @@ class TestDocumentStructureModel:
             register_start_page=13,
             building_ids=["B00A", "B00B", "D01"],
             sections=[
-                Section(section_id=0, title="Executive Summary", page_start=1, page_end=3),
-                Section(section_id=4, title="Asbestos Register", page_start=13, page_end=50),
+                Section(
+                    section_id=0, title="Executive Summary", page_start=1, page_end=3
+                ),
+                Section(
+                    section_id=4, title="Asbestos Register", page_start=13, page_end=50
+                ),
             ],
             metadata={"consultant": "Prensa", "report_date": "2024-03-15"},
         )
@@ -220,7 +228,9 @@ Table of Contents
             building_ids=["B00A"],
             sections=[
                 Section(section_id=1, title="Introduction", page_start=2, page_end=3),
-                Section(section_id=4, title="Asbestos Register", page_start=13, page_end=44),
+                Section(
+                    section_id=4, title="Asbestos Register", page_start=13, page_end=44
+                ),
             ],
         )
 
@@ -365,7 +375,9 @@ Appendix B: Asbestos Register ...... 13
             building_ids=["B00A", "B00B"],
             sections=[
                 Section(section_id=1, title="Introduction", page_start=2, page_end=3),
-                Section(section_id=2, title="Site Description", page_start=4, page_end=6),
+                Section(
+                    section_id=2, title="Site Description", page_start=4, page_end=6
+                ),
                 Section(section_id=4, title="Asbestos Register", page_start=13),
             ],
         )
@@ -529,7 +541,9 @@ class TestLangGraphIntegration:
 
         mock_source = MagicMock()
         mock_source.id = "test:456"
-        mock_source.full_text = "--- Page 1 ---\nSome content\n--- Page 5 ---\nMore content"
+        mock_source.full_text = (
+            "--- Page 1 ---\nSome content\n--- Page 5 ---\nMore content"
+        )
 
         state = {"source": mock_source, "model_id": None}
         config = MagicMock()

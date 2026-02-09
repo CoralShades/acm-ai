@@ -303,9 +303,7 @@ class TestAccuracyMetrics:
         for expected in expected_records:
             # Find matching record
             for record in result:
-                match = all(
-                    record.get(k) == v for k, v in expected.items()
-                )
+                match = all(record.get(k) == v for k, v in expected.items())
                 if match:
                     correct += len(expected)
                     break
@@ -319,7 +317,13 @@ class TestAccuracyMetrics:
         markdown = TestSamplePDF1124.SAMPLE_MARKDOWN
         result = extract_acm_records(markdown, "source:1124")
 
-        required_fields = ["source_id", "school_name", "building_id", "product", "result"]
+        required_fields = [
+            "source_id",
+            "school_name",
+            "building_id",
+            "product",
+            "result",
+        ]
 
         for record in result:
             for field in required_fields:

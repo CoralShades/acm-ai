@@ -29,16 +29,18 @@ class Department(str, Enum):
     2. Users may need to enter custom values not in predefined list
     3. Frontend provides dropdown options from matching constants
     """
+
     DJCS = "DJCS"  # Department of Justice and Community Safety
     DHHS = "DHHS"  # Department of Health and Human Services
-    DET = "DET"    # Department of Education and Training
-    DOT = "DOT"    # Department of Transport
+    DET = "DET"  # Department of Education and Training
+    DOT = "DOT"  # Department of Transport
     DJPR = "DJPR"  # Department of Jobs, Precincts and Regions
     OTHER = "Other"
 
 
 class BuildingType(str, Enum):
     """Building type classifications."""
+
     POLICE_STATION = "Police Station"
     HOSPITAL = "Hospital"
     SCHOOL = "School"
@@ -50,12 +52,14 @@ class BuildingType(str, Enum):
 
 class Ownership(str, Enum):
     """Building ownership status."""
+
     OWNED = "Owned"
     LEASED = "Leased"
 
 
 class FrequencyOfUse(str, Enum):
     """How frequently the building is used (BAR exact wording)."""
+
     EVERY_DAY = "Every day"
     EVERY_DAY_INTERMITTENT = "Every day with intermittent breaks"
     EVERY_3_5_DAYS = "Once every 3-5 days"
@@ -66,6 +70,7 @@ class FrequencyOfUse(str, Enum):
 
 class PublicAccess(str, Enum):
     """Whether the building has public access."""
+
     YES = "YES"
     NO = "NO"
 
@@ -86,33 +91,29 @@ class SiteConfig(ObjectModel):
     # Victorian Government organizational fields
     department: Optional[str] = Field(
         default=None,
-        description="Victorian Government department (DJCS, DHHS, DET, DOT, DJPR, Other)"
+        description="Victorian Government department (DJCS, DHHS, DET, DOT, DJPR, Other)",
     )
     agency: Optional[str] = Field(
         default=None,
-        description="Agency within department (e.g., Victoria Police, District Health)"
+        description="Agency within department (e.g., Victoria Police, District Health)",
     )
 
     # Building classification fields
     building_type: Optional[str] = Field(
         default=None,
-        description="Type of building (Police Station, Hospital, School, etc.)"
+        description="Type of building (Police Station, Hospital, School, etc.)",
     )
     owned_or_leased: Optional[str] = Field(
-        default=None,
-        description="Ownership status (Owned or Leased)"
+        default=None, description="Ownership status (Owned or Leased)"
     )
     frequency_of_use: Optional[str] = Field(
-        default=None,
-        description="How frequently the building is used"
+        default=None, description="How frequently the building is used"
     )
     public_access: Optional[str] = Field(
-        default=None,
-        description="Whether public has access (YES or NO)"
+        default=None, description="Whether public has access (YES or NO)"
     )
     building_unique_id: Optional[str] = Field(
-        default=None,
-        description="Unique identifier for the building"
+        default=None, description="Unique identifier for the building"
     )
 
     @classmethod
@@ -127,7 +128,9 @@ class SiteConfig(ObjectModel):
             SiteConfig if found, None otherwise
         """
         try:
-            query = f"SELECT * FROM {cls.table_name} WHERE source_id = $source_id LIMIT 1;"
+            query = (
+                f"SELECT * FROM {cls.table_name} WHERE source_id = $source_id LIMIT 1;"
+            )
             result = await repo_query(query, {"source_id": source_id})
 
             if result and len(result) > 0:
