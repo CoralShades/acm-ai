@@ -1,7 +1,57 @@
 # Findings: Critical Bug Investigation + E2E Test Design
 
 ## Created: 2026-02-09
-## Last Updated: 2026-02-09
+## Last Updated: 2026-02-10
+
+---
+
+## NEW SESSION 2026-02-10: Service Status Check
+
+**Verification Results:**
+- SurrealDB: Command returned no output (container may be stopped)
+- API (5055): Not responding to `/health` endpoint
+- Frontend (8502): Returns HTTP 500 ✅ **Bug #1 confirmed**
+
+**Implication:** API not running explains why frontend may be failing (API proxy dependency).
+
+**API Startup Investigation:**
+- Port 5055 is free (no conflicts)
+- `run_api.py` starts uvicorn reloader successfully
+- Import of `api.main:app` **hangs indefinitely** (timeout after 5s and 10s tests)
+- Uvicorn logs: "Started reloader process" but worker process never starts
+
+**ROOT CAUSE IDENTIFIED:**
+- `open_notebook/database/async_migrate.py` line 96-127: `AsyncMigrationManager.__init__()`
+- **Hardcoded to load migrations 1-13 only**
+- **Actual migrations in repo: 1-18** (5 migrations missing!)
+- Missing migrations: 14, 15, 16, 17, 18
+- This causes import to fail/hang when initializing the migration manager
+
+**Frontend Turbopack Investigation:**
+- Frontend on port 8502 returns HTTP 500 - **RESOLVED: Stale frontend process**
+- Fresh frontend started on port 3003 - **WORKING CORRECTLY**
+- Root cause: Old crashed frontend on 8502, not a Turbopack bug
+- Solution: Restart frontend, auto-assigned port 3003
+
+---
+
+## Bug #2: API Upload Asyncio Error - RESOLVED
+
+**Root Cause:**
+- `api/routers/sources.py` line 508: `execute_command_sync()` called from within async function
+- `execute_command_sync` uses `asyncio.run()` internally
+- `asyncio.run()` cannot be called when event loop already running (async context)
+
+**Solution:**
+- Wrapped sync call with `asyncio.to_thread()` to run in thread pool
+- Prevents blocking the async event loop
+
+**Files Modified:**
+- `api/routers/sources.py` line 508-516: Added `await asyncio.to_thread()` wrapper
+
+**Verification:**
+- Upload test: `curl -X POST http://localhost:5055/api/sources` with PDF
+- Result: ✅ SUCCESS - Source created with ID `source:mkds0x80ukfwyaabsjwr`
 
 ---
 

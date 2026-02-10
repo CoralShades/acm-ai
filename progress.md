@@ -42,3 +42,21 @@
 - TestPipelineLegacyPath: 6 passed (full graph, legacy path)
 - TestPipelineOrchestratorPath: 1 passed (full graph, orchestrator path)
 - TestMineruToRecords: 2 passed (PDF fixture availability + regex from markdown)
+
+
+## 2026-02-10 Session - COMPLETE
+
+### Bugs Fixed:
+1. **API Import Hang** - open_notebook/database/async_migrate.py - Added missing migrations 14-18
+2. **API Upload Asyncio Error** - api/routers/sources.py:508 - Used asyncio.to_thread() wrapper  
+3. **Frontend 500 Error** - Stale process issue - Restarted frontend on port 3003
+
+### Verification:
+- API health endpoint: ✅ Responding
+- API upload test: ✅ Source created successfully (source:mkds0x80ukfwyaabsjwr)
+- Frontend: ✅ Working on port 3003
+
+### Files Modified:
+1. open_notebook/database/async_migrate.py (lines 96-127) - Added migrations 14-18
+2. api/routers/sources.py (line 508-516) - asyncio.to_thread() wrapper
+
