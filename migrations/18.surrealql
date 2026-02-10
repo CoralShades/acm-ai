@@ -13,6 +13,7 @@ DEFINE FIELD raw_text ON acm_table_section TYPE option<string>;
 DEFINE FIELD building_name ON acm_table_section TYPE option<string>;
 DEFINE FIELD table_type ON acm_table_section TYPE option<string>;
 DEFINE FIELD created ON acm_table_section TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated ON acm_table_section TYPE option<datetime>;
 
 -- Indexes for efficient lookups
 DEFINE INDEX section_source ON acm_table_section FIELDS source_id;

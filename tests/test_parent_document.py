@@ -261,13 +261,13 @@ class TestSearchWithParentContext:
         return TestClient(app)
 
     @patch("api.routers.acm.repo_query")
-    @patch("api.routers.acm.ACMTableSection.get_by_page_range", new_callable=AsyncMock)
+    @patch("api.routers.acm.ACMTableSection.get_by_source", new_callable=AsyncMock)
     @patch(
         "open_notebook.domain.models.model_manager.get_embedding_model",
         new_callable=AsyncMock,
     )
     def test_search_without_parent_default(
-        self, mock_embedding_model, mock_get_page_range, mock_repo_query, client
+        self, mock_embedding_model, mock_get_by_source, mock_repo_query, client
     ):
         """Test that search without include_parent doesn't include parent context."""
         # Mock embedding model
@@ -298,17 +298,17 @@ class TestSearchWithParentContext:
         # parent_context should be None when include_parent is not set
         result = data["results"][0]
         assert result["parent_context"] is None
-        # get_by_page_range should NOT have been called
-        mock_get_page_range.assert_not_called()
+        # get_by_source should NOT have been called (include_parent is false)
+        mock_get_by_source.assert_not_called()
 
     @patch("api.routers.acm.repo_query")
-    @patch("api.routers.acm.ACMTableSection.get_by_page_range", new_callable=AsyncMock)
+    @patch("api.routers.acm.ACMTableSection.get_by_source", new_callable=AsyncMock)
     @patch(
         "open_notebook.domain.models.model_manager.get_embedding_model",
         new_callable=AsyncMock,
     )
     def test_search_with_parent_true(
-        self, mock_embedding_model, mock_get_page_range, mock_repo_query, client
+        self, mock_embedding_model, mock_get_by_source, mock_repo_query, client
     ):
         """Test that search with include_parent=true includes parent context."""
         # Mock embedding model
@@ -333,9 +333,8 @@ class TestSearchWithParentContext:
             }
         ]
 
-        # Mock parent section lookup
+        # Mock batch parent section lookup
         mock_section = ACMTableSection(
-            id="acm_table_section:sec1",
             source_id="source:abc",
             page_start=14,
             page_end=16,
@@ -343,7 +342,8 @@ class TestSearchWithParentContext:
             table_type="register",
             raw_text="Full table text...",
         )
-        mock_get_page_range.return_value = mock_section
+        mock_section.id = "acm_table_section:sec1"
+        mock_get_by_source.return_value = [mock_section]
 
         response = client.get("/api/acm/search?query=ceiling+tiles&include_parent=true")
 
@@ -356,6 +356,91 @@ class TestSearchWithParentContext:
         assert result["parent_context"]["page_start"] == 14
         assert result["parent_context"]["page_end"] == 16
         assert result["parent_context"]["table_type"] == "register"
+
+
+class TestSaveRecordsParentCreation:
+    """Test that save_records creates parent table sections from BuildingInventory."""
+
+    @pytest.mark.asyncio
+    @patch("open_notebook.domain.acm.ACMTableSection.save", new_callable=AsyncMock)
+    async def test_save_records_creates_sections_from_inventory(self, mock_save):
+        """Test that save_records creates ACMTableSection for each building."""
+        from open_notebook.graphs.acm_extraction import save_records
+
+        # Make save() set an id on the instance
+        async def set_id(self_ref=None):
+            pass
+
+        mock_save.side_effect = lambda: None
+        # Patch save to assign an id
+        saved_sections = []
+        original_save = ACMTableSection.save
+
+        async def capture_save(self):
+            self.id = "acm_table_section:sec1"
+            saved_sections.append(self)
+
+        # Build a minimal source
+        mock_source = MagicMock()
+        mock_source.id = "source:test123"
+        mock_source.full_text = "--- Page 14 ---\nTable data here\n--- Page 15 ---\nMore data"
+
+        # Build inventory with one building
+        building = MagicMock()
+        building.building_id = "B001"
+        building.name = "Main Block"
+        building.page_start = 14
+        building.page_end = 15
+        inventory = MagicMock()
+        inventory.buildings = [building]
+
+        # Build a real extraction record (Pydantic model)
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        test_record = ACMExtractionRecord(
+            building_id="B001",
+            building_name="Main Block",
+            room_id="R01",
+            room_name="Corridor",
+            area_type="Interior",
+            product="Floor Tiles",
+            material_description="Vinyl tiles",
+            result="Detected",
+            page_number=14,
+        )
+
+        state = {
+            "records": [test_record],
+            "source": mock_source,
+            "context": MagicMock(school_name="Test School", school_code=None),
+            "building_inventory": inventory,
+            "start_time": 0,
+            "records_rejected": 0,
+        }
+
+        with (
+            patch.object(ACMTableSection, "save", capture_save),
+            patch("open_notebook.graphs.acm_extraction.ACMRecord") as MockACMRecord,
+            patch(
+                "open_notebook.graphs.acm_extraction.auto_populate_site_config",
+                new_callable=AsyncMock,
+            ),
+        ):
+            mock_acm = MagicMock()
+            mock_acm.save = AsyncMock()
+            mock_acm.get_enriched_embedding_text = MagicMock(return_value="enriched")
+            MockACMRecord.return_value = mock_acm
+
+            result = await save_records(state, MagicMock())
+
+        # Verify section was created with raw_text populated
+        assert len(saved_sections) == 1
+        section = saved_sections[0]
+        assert section.source_id == "source:test123"
+        assert section.page_start == 14
+        assert section.page_end == 15
+        assert section.building_name == "B001 Main Block"
+        assert section.raw_text is not None  # raw_text should be populated from source
 
 
 class TestBackfillEndpoint:

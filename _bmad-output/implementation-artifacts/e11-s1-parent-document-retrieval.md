@@ -1,6 +1,6 @@
 # Story 11.1: Parent Document Retrieval
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -288,7 +288,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
-- Test run: 22/22 passed in `tests/test_parent_document.py` (85s)
+- Test run: 23/23 passed in `tests/test_parent_document.py`
 - Regression: 800/805 passed (5 pre-existing failures in test_acm_ai_extraction.py and test_acm_extractor_integration.py — ConfidenceDistribution subscript issue + field accuracy assertions)
 
 ### Completion Notes List
@@ -314,7 +314,7 @@ Claude Opus 4.6 (claude-opus-4-6)
 | `open_notebook/graphs/source_chat.py` | Modified | format_acm_context adds parent table section summary, added logger import |
 | `api/models.py` | Modified | ParentContextResponse, BackfillParentsRequest/Response models |
 | `api/routers/acm.py` | Modified | search include_parent param, backfill-parents endpoint |
-| `tests/test_parent_document.py` | Created | 22 tests across 5 test classes |
+| `tests/test_parent_document.py` | Created | 23 tests across 6 test classes |
 
 ### Change Log
 
@@ -322,3 +322,10 @@ Claude Opus 4.6 (claude-opus-4-6)
 |------|--------|--------|
 | 2026-02-09 | Initial implementation of all 7 tasks | E11-S1 Parent Document Retrieval |
 | 2026-02-09 | Fixed missing logger import in source_chat.py | Bug found during review |
+| 2026-02-10 | Code review: 6 issues found, all fixed | Adversarial code review |
+| 2026-02-10 | Fix: Added `updated` field to migration 18 (SCHEMAFULL table requires explicit field) | Issue #2 HIGH |
+| 2026-02-10 | Fix: Replaced N+1 per-record parent query with batch fetch via `get_by_source` + direct ID lookup | Issues #1+#4 HIGH+MEDIUM |
+| 2026-02-10 | Fix: Added `_extract_page_range_text()` helper, sections now populate `raw_text` from source content | Issue #3 MEDIUM |
+| 2026-02-10 | Fix: Changed `logger.debug` to `logger.warning` in source_chat.py exception handler | Issue #6 LOW |
+| 2026-02-10 | Fix: Added integration test for `save_records` parent section creation (TestSaveRecordsParentCreation) | Issue #5 MEDIUM |
+| 2026-02-10 | Updated search test mocks from `get_by_page_range` to `get_by_source` to match batch fetch refactor | Test alignment |

@@ -249,7 +249,7 @@ async def format_acm_context(
                 name = s.building_name or "Unknown"
                 formatted += f"- {name} (pages {s.page_start}-{s.page_end}, type: {s.table_type or 'register'})\n"
     except Exception as e:
-        logger.debug(f"Could not fetch parent table sections: {e}")
+        logger.warning(f"Could not fetch parent table sections: {e}")
 
     # Add truncation notice if needed
     if truncated:

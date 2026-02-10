@@ -344,7 +344,11 @@ export function AddSourceDialog({
     // Trigger ACM extraction if enabled
     if (data.enable_acm_extraction && createdSource?.id) {
       try {
-        await acmApi.extract(createdSource.id)
+        const extractResponse = await acmApi.extract(createdSource.id)
+        // Store command_id so useExtractionStatus picks it up on the source page
+        if (extractResponse.command_id) {
+          sessionStorage.setItem(`acm-extraction-${createdSource.id}`, extractResponse.command_id)
+        }
         toast.success('ACM extraction started')
       } catch (error) {
         console.error('Failed to trigger ACM extraction:', error)
@@ -419,7 +423,11 @@ export function AddSourceDialog({
         // Trigger ACM extraction if enabled
         if (data.enable_acm_extraction && createdSource?.id) {
           try {
-            await acmApi.extract(createdSource.id)
+            const extractResponse = await acmApi.extract(createdSource.id)
+            // Store command_id so useExtractionStatus picks it up on the source page
+            if (extractResponse.command_id) {
+              sessionStorage.setItem(`acm-extraction-${createdSource.id}`, extractResponse.command_id)
+            }
           } catch (acmError) {
             console.error(`ACM extraction failed for ${itemLabel}:`, acmError)
           }

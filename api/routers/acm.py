@@ -581,53 +581,67 @@ async def semantic_search_acm(
 
         results = await repo_query(search_query, params)
 
-        # Filter by threshold and convert to response
-        search_results = []
-        for r in results:
-            score = r.get("score", 0)
-            if score >= threshold:
-                # Build parent context if requested
-                parent_ctx = None
-                if include_parent and r.get("parent_table_id"):
-                    try:
-                        page_num = r.get("page_number")
-                        source = str(r.get("source_id", ""))
-                        if page_num and source:
-                            section = await ACMTableSection.get_by_page_range(
-                                source, page_num
-                            )
-                            if section:
-                                parent_ctx = ParentContextResponse(
-                                    id=str(section.id) if section.id else "",
-                                    building_name=section.building_name,
-                                    page_start=section.page_start,
-                                    page_end=section.page_end,
-                                    table_type=section.table_type,
-                                    raw_text=section.raw_text,
-                                )
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch parent context: {e}")
+        # Filter by threshold
+        filtered_results = [r for r in results if r.get("score", 0) >= threshold]
 
-                search_results.append(
-                    ACMSearchResultResponse(
-                        id=str(r.get("id", "")),
-                        source_id=str(r.get("source_id", "")),
-                        school_name=r.get("school_name", ""),
-                        building_id=r.get("building_id", ""),
-                        building_name=r.get("building_name"),
-                        room_id=r.get("room_id"),
-                        room_name=r.get("room_name"),
-                        product=r.get("product", ""),
-                        material_description=r.get("material_description", ""),
-                        extent=r.get("extent"),
-                        location=r.get("location"),
-                        material_condition=r.get("material_condition"),
-                        risk_status=r.get("risk_status"),
-                        result=r.get("result", ""),
-                        score=round(score, 4),
-                        parent_context=parent_ctx,
+        # Batch-fetch parent sections if requested (avoids N+1 queries)
+        parent_section_map: dict[str, ACMTableSection] = {}
+        if include_parent and filtered_results:
+            # Collect unique source_ids that have parent_table_id set
+            source_ids_needing_parents = {
+                str(r.get("source_id", ""))
+                for r in filtered_results
+                if r.get("parent_table_id")
+            }
+            for sid in source_ids_needing_parents:
+                try:
+                    sections = await ACMTableSection.get_by_source(sid)
+                    for s in sections:
+                        if s.id:
+                            parent_section_map[str(s.id)] = s
+                except Exception as e:
+                    logger.warning(f"Failed to batch-fetch parent sections for {sid}: {e}")
+
+        # Convert to response objects
+        search_results = []
+        for r in filtered_results:
+            score = r.get("score", 0)
+
+            # Look up parent context by direct ID from the batch map
+            parent_ctx = None
+            if include_parent and r.get("parent_table_id"):
+                parent_id = str(r["parent_table_id"])
+                section = parent_section_map.get(parent_id)
+                if section:
+                    parent_ctx = ParentContextResponse(
+                        id=str(section.id) if section.id else "",
+                        building_name=section.building_name,
+                        page_start=section.page_start,
+                        page_end=section.page_end,
+                        table_type=section.table_type,
+                        raw_text=section.raw_text,
                     )
+
+            search_results.append(
+                ACMSearchResultResponse(
+                    id=str(r.get("id", "")),
+                    source_id=str(r.get("source_id", "")),
+                    school_name=r.get("school_name", ""),
+                    building_id=r.get("building_id", ""),
+                    building_name=r.get("building_name"),
+                    room_id=r.get("room_id"),
+                    room_name=r.get("room_name"),
+                    product=r.get("product", ""),
+                    material_description=r.get("material_description", ""),
+                    extent=r.get("extent"),
+                    location=r.get("location"),
+                    material_condition=r.get("material_condition"),
+                    risk_status=r.get("risk_status"),
+                    result=r.get("result", ""),
+                    score=round(score, 4),
+                    parent_context=parent_ctx,
                 )
+            )
 
         logger.info(
             f"Semantic search for '{query}': {len(search_results)} results "

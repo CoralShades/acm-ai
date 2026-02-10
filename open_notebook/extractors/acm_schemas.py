@@ -301,3 +301,7 @@ class ACMExtractionOutput(BaseModel):
         default=None,
         description="Orchestrator stats: per-building extraction plan, strategy distribution, timing",
     )
+    pipeline_run: Optional[dict] = Field(
+        default=None,
+        description="Pipeline run state: stage timings, metrics, models used (E1-S21)",
+    )

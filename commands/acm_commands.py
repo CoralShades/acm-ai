@@ -90,6 +90,12 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         if not source.full_text:
             raise ValueError(f"Source {source_id} has no text content")
 
+        # Enhanced start logging (E1-S21)
+        text_len = len(source.full_text) if source.full_text else 0
+        logger.info(
+            f"Source loaded: title='{source.title}', text_length={text_len} chars"
+        )
+
         # 2. Delete existing records if force=True (get actual count from operation)
         deleted_count = 0
         if force:
@@ -143,12 +149,13 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         # 5. Embed records for semantic search (E1-S6)
         embedded_count = 0
         if input_data.embed_records and result.total_records > 0:
+            embed_start = time.time()
             try:
                 from api.services.acm_embedding_service import ACMEmbeddingService
                 from open_notebook.domain.acm import ACMEmbeddingConfig
 
                 logger.info(
-                    f"Starting embedding for {result.total_records} ACM records"
+                    f"[PIPELINE] [EMBED] STARTED | Embedding {result.total_records} records..."
                 )
 
                 # Load the freshly created records
@@ -165,12 +172,18 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                             await record.save()
                             embedded_count += 1
 
-                    logger.info(f"Embedded {embedded_count}/{len(records)} ACM records")
+                    embed_time = time.time() - embed_start
+                    logger.info(
+                        f"[PIPELINE] [EMBED] COMPLETED in {embed_time:.1f}s | "
+                        f"{embedded_count}/{len(records)} records embedded"
+                    )
 
             except Exception as e:
+                embed_time = time.time() - embed_start
                 # Embedding failure should not fail the entire extraction
                 logger.warning(
-                    f"Embedding failed for source {source_id}, records saved without embeddings: {e}"
+                    f"[PIPELINE] [EMBED] FAILED in {embed_time:.1f}s | "
+                    f"records saved without embeddings: {e}"
                 )
 
         processing_time = time.time() - start_time

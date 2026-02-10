@@ -4,7 +4,7 @@
 ## Created: 2026-02-09
 ## Last Updated: 2026-02-09
 
-## User Answers (Clarification)
+---
 
 ## Objective
 Fix two critical regressions (Source Not Found, AG Grid RowGroupingModule error) introduced during E1-S11..S20, verify fixes with Playwright MCP, and create a true end-to-end PDF extraction test.

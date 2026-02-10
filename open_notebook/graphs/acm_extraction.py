@@ -61,6 +61,8 @@ from open_notebook.extractors.page_tagger import (
     tag_pages,
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
+from open_notebook.extractors.pipeline_events import StageId
+from open_notebook.extractors.pipeline_logger import PipelineLogger
 from open_notebook.extractors.validators.acm_validator import (
     CorrectionStats,
     validate_acm_record,
@@ -239,6 +241,13 @@ class ExtractionState(TypedDict):
     document_metadata: Optional[DocumentMeta]
     # Orchestrator stats (E1-S20)
     orchestrator_stats: Optional[OrchestratorStats]
+    # Pipeline observability (E1-S21)
+    pipeline_logger: Optional[PipelineLogger]
+
+
+def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
+    """Safely get PipelineLogger from state (may be None for backward compat)."""
+    return state.get("pipeline_logger")
 
 
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
@@ -279,6 +288,45 @@ def _merge_records(
     base.data_issues = all_issues
 
     return base
+
+
+def _extract_page_range_text(content: str, page_start: int, page_end: int) -> str:
+    """Extract text between page_start and page_end markers from source content.
+
+    Uses the same page marker patterns as _chunk_content to find page boundaries,
+    then returns the text spanning the requested page range.
+    """
+    if not content:
+        return ""
+
+    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$))"
+    matches = list(re.finditer(page_pattern, content, re.IGNORECASE))
+
+    if not matches:
+        return ""
+
+    # Build page_num -> (start_pos, end_pos) mapping
+    start_pos = None
+    end_pos = None
+    for i, match in enumerate(matches):
+        page_num = int(next(g for g in match.groups() if g is not None))
+        next_start = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+
+        if page_num == page_start and start_pos is None:
+            start_pos = match.start()
+        if page_num == page_end:
+            end_pos = next_start
+        # If we've passed end page, stop
+        if page_num > page_end and end_pos is not None:
+            break
+
+    if start_pos is not None and end_pos is not None:
+        return content[start_pos:end_pos].strip()
+    if start_pos is not None:
+        # page_end marker not found, take from start to end of content
+        return content[start_pos:].strip()
+
+    return ""
 
 
 def _chunk_content(
@@ -464,6 +512,10 @@ async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
     source: Source = state["source"]
     content = source.full_text or ""
     model_id = state.get("model_id")
+    pl = _get_pipeline_logger(state)
+
+    if pl:
+        pl.stage_enter(StageId.STRUCTURE, "Extracting document metadata...")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for metadata extraction")
@@ -472,11 +524,20 @@ async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
     try:
         metadata = await extract_document_metadata(content, model_id=model_id)
         if metadata:
+            fields_count = len(metadata.get_extracted_fields())
+            consultant = metadata.consultant_name or "unknown"
             logger.info(
                 f"Document metadata extracted for source {source.id}: "
-                f"consultant={metadata.consultant_name}, "
-                f"fields={len(metadata.get_extracted_fields())}"
+                f"consultant={consultant}, "
+                f"fields={fields_count}"
             )
+            if pl:
+                pl.stage_progress(
+                    StageId.STRUCTURE,
+                    f"Metadata extracted: consultant={consultant}",
+                    consultant=consultant,
+                    fields=fields_count,
+                )
         return {"document_metadata": metadata}
     except Exception as e:
         logger.warning(f"Metadata extraction failed for source {source.id}: {e}")
@@ -491,6 +552,10 @@ async def extract_structure(state: dict, config: RunnableConfig) -> dict:
     source: Source = state["source"]
     content = source.full_text or ""
     model_id = state.get("model_id")
+    pl = _get_pipeline_logger(state)
+
+    if pl:
+        pl.stage_progress(StageId.STRUCTURE, "Extracting document structure...")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for structure extraction")
@@ -503,6 +568,14 @@ async def extract_structure(state: dict, config: RunnableConfig) -> dict:
             f"type={structure.document_type}, register_start={structure.register_start_page}, "
             f"buildings={len(structure.building_ids)}"
         )
+        if pl:
+            pl.stage_progress(
+                StageId.STRUCTURE,
+                f"Structure: type={structure.document_type}, register_start={structure.register_start_page}",
+                document_type=structure.document_type,
+                register_start=structure.register_start_page,
+                buildings=len(structure.building_ids),
+            )
         return {"document_structure": structure}
     except Exception as e:
         logger.warning(f"Structure extraction failed for source {source.id}: {e}")
@@ -518,6 +591,10 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
     content = source.full_text or ""
     model_id = state.get("model_id")
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
+    pl = _get_pipeline_logger(state)
+
+    if pl:
+        pl.stage_progress(StageId.STRUCTURE, "Compiling building inventory...")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for building inventory")
@@ -534,6 +611,17 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
             f"{inventory.total_buildings} buildings, "
             f"{len(inventory.processing_groups)} groups"
         )
+        if pl:
+            # Build page range string
+            page_ranges = []
+            for b in inventory.buildings:
+                page_ranges.append(f"{b.page_start}-{b.page_end or b.page_start}")
+            pl.stage_progress(
+                StageId.STRUCTURE,
+                f"Inventory: {inventory.total_buildings} buildings",
+                buildings=inventory.total_buildings,
+                pages=", ".join(page_ranges) if page_ranges else "N/A",
+            )
         return {"building_inventory": inventory}
     except Exception as e:
         logger.warning(
@@ -552,6 +640,10 @@ async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
     model_id = state.get("model_id")
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
     inventory: Optional[BuildingInventory] = state.get("building_inventory")
+    pl = _get_pipeline_logger(state)
+
+    if pl:
+        pl.stage_progress(StageId.STRUCTURE, "Tagging page sections...")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for page tagging")
@@ -569,16 +661,62 @@ async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
             f"{len(result.pages)} pages tagged, "
             f"register_range={result.register_page_range}"
         )
+        if pl:
+            pl.stage_complete(
+                StageId.STRUCTURE,
+                f"{len(result.pages)} pages tagged, register={result.register_page_range}",
+                pages_tagged=len(result.pages),
+                register_range=str(result.register_page_range),
+            )
         return {"page_tags": result}
     except Exception as e:
         logger.warning(f"Page tagging failed for source {source.id}: {e}")
+        if pl:
+            pl.stage_complete(
+                StageId.STRUCTURE,
+                "Completed with warnings: page tagging failed (non-fatal)",
+                pages_tagged=0,
+                warnings=1,
+            )
         return {"page_tags": None}
+
+
+async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
+    """Wrapper around orchestrate_extraction that adds pipeline logging.
+
+    Story: E1-S21 — instruments the ORCHESTRATOR stage.
+    """
+    pl = _get_pipeline_logger(state)
+    if pl:
+        pl.stage_enter(StageId.ORCHESTRATOR, "Planning extraction strategy...")
+    try:
+        result = await orchestrate_extraction(state, config)
+        if pl:
+            orch_stats = result.get("orchestrator_stats")
+            summary = ""
+            if orch_stats:
+                n_plans = len(getattr(orch_stats, "building_plans", []))
+                summary = f"{n_plans} building plans"
+            pl.stage_complete(StageId.ORCHESTRATOR, summary)
+        return result
+    except Exception as e:
+        if pl:
+            pl.stage_fail(StageId.ORCHESTRATOR, str(e))
+        raise
 
 
 async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     """Prepare extraction context and chunk content if needed."""
     source: Source = state["source"]
     content = source.full_text or ""
+    pl = _get_pipeline_logger(state)
+
+    # Skip ORCHESTRATOR stage when taking the non-orchestrator path (E1-S21)
+    if pl:
+        pl.stage_skip(StageId.ORCHESTRATOR, "Below threshold for orchestration")
+
+    if pl:
+        pl.stage_enter(StageId.PREFLIGHT, "Preparing content and chunking...")
 
     if not content:
         logger.warning(f"Source {source.id} has no content")
@@ -631,6 +769,15 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
         f"{preprocess_meta['no_asbestos_found']} No Asbestos entries"
     )
 
+    if pl:
+        pl.stage_complete(
+            StageId.PREFLIGHT,
+            f"{len(chunks)} chunks prepared",
+            chunks=len(chunks),
+            content_chars=len(processed_content),
+            acm_indicators=preprocess_meta.get("acm_indicators_found", 0),
+        )
+
     return {
         "content": processed_content,
         "chunks": chunks,
@@ -649,6 +796,14 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     existing_records: List[ACMExtractionRecord] = state.get("records", [])
     model_id = state.get("model_id")
     retry_count = state.get("retry_count", 0)
+    pl = _get_pipeline_logger(state)
+
+    # Log stage entry on first chunk only
+    if pl and current_index == 0 and retry_count == 0:
+        pl.stage_enter(
+            StageId.EXTRACT,
+            f"Processing {len(chunks)} chunks" if chunks else "No chunks",
+        )
 
     if not chunks or current_index >= len(chunks):
         return {"error": "No chunks to process"}
@@ -692,6 +847,16 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
             max_tokens=8192,  # Ensure enough tokens for structured ACM output
         )
+        # Track model ID and prompt template for observability (E1-S21, AC #4)
+        if pl:
+            actual_model = (
+                getattr(model, "model_name", None)
+                or getattr(model, "model", None)
+                or model_id
+                or "default_extraction_model"
+            )
+            pl.log_model(str(actual_model), "extraction")
+            logger.info("[PIPELINE] Prompt template: acm/extraction")
     except Exception as e:
         logger.error(f"Failed to provision model: {e}")
         return {"error": f"Model provisioning failed: {e}"}
@@ -759,6 +924,19 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         logger.info(
             f"Extracted {len(new_records)} records from chunk {current_index + 1}/{len(chunks)}"
         )
+
+        # Per-chunk progress logging
+        if pl:
+            total_so_far = len(existing_records) + len(new_records)
+            progress = (current_index + 1) / len(chunks) if chunks else 1.0
+            pl.stage_progress(
+                StageId.EXTRACT,
+                f"Chunk {current_index + 1}/{len(chunks)} | pages {page_number}+ | "
+                f"{len(new_records)} records | {total_so_far} total",
+                progress=progress,
+                records_so_far=total_so_far,
+                chunk=f"{current_index + 1}/{len(chunks)}",
+            )
 
         return {
             "records": existing_records + new_records,
@@ -892,6 +1070,18 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
+    pl = _get_pipeline_logger(state)
+
+    # Log EXTRACT stage complete on first validation pass (marks end of extraction)
+    correction_attempt = state.get("correction_attempt", 0)
+    if pl and correction_attempt == 0:
+        pl.stage_complete(
+            StageId.EXTRACT,
+            f"{len(records)} raw records extracted",
+            record_count=len(records),
+        )
+        pl.stage_enter(StageId.VALIDATE, f"Validating {len(records)} records...")
+
     correction_stats = state.get(
         "correction_stats",
         {
@@ -983,6 +1173,22 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     if records_with_issues:
         logger.info(f"Found {len(records_with_issues)} records with validation issues")
 
+    if pl:
+        # Build rejection reason summary
+        rejection_reasons = []
+        if rejected_count > 0:
+            rejection_reasons.append(f"missing_fields={rejected_count}")
+        if records_with_issues:
+            rejection_reasons.append(f"issues={len(records_with_issues)}")
+
+        pl.stage_complete(
+            StageId.VALIDATE,
+            f"{len(validated_records)} accepted, {rejected_count} rejected",
+            accepted=len(validated_records),
+            rejected=rejected_count,
+            with_issues=len(records_with_issues),
+        )
+
     return {
         "records": validated_records,
         "records_rejected": rejected_count,
@@ -1001,6 +1207,13 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     correction_attempt = state.get("correction_attempt", 0)
+    pl = _get_pipeline_logger(state)
+
+    if pl:
+        pl.stage_enter(
+            StageId.CORRECT,
+            f"Correction attempt {correction_attempt + 1}...",
+        )
     correction_stats = state.get(
         "correction_stats",
         {
@@ -1071,17 +1284,32 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     # Layer 2: LLM correction for remaining issues
     if records_needing_llm:
         try:
+            if pl:
+                logger.info("[PIPELINE] Prompt template: acm/correction")
             await _llm_correct_records(
                 records,
                 records_needing_llm,
                 correction_stats,
                 model_id,
                 correction_attempt,
+                pl=pl,
             )
         except Exception as e:
             logger.warning(f"LLM correction failed: {e}")
             for idx in records_needing_llm:
                 correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+
+    if pl:
+        auto = correction_stats.get("auto_corrected", 0)
+        llm = correction_stats.get("llm_corrected", 0)
+        failed = correction_stats.get("failed", 0)
+        pl.stage_complete(
+            StageId.CORRECT,
+            f"auto={auto}, llm={llm}, failed={failed}",
+            auto_corrected=auto,
+            llm_corrected=llm,
+            failed=failed,
+        )
 
     return {
         "records": records,
@@ -1110,6 +1338,7 @@ async def _llm_correct_records(
     correction_stats: Dict[str, int],
     model_id: Optional[str],
     correction_attempt: int,
+    pl: Optional[PipelineLogger] = None,
 ) -> None:
     """Use LLM to correct records that failed Layer 1 normalization."""
     import json
@@ -1156,6 +1385,15 @@ async def _llm_correct_records(
                 temperature=0.1,
                 max_tokens=1024,
             )
+            # Track resolved model for observability (E1-S21, AC #4)
+            if pl:
+                actual_model = (
+                    getattr(model, "model_name", None)
+                    or getattr(model, "model", None)
+                    or model_id
+                    or "default_extraction_model"
+                )
+                pl.log_model(str(actual_model), "correction")
 
             messages = [
                 SystemMessage(content=correction_prompt),
@@ -1247,6 +1485,13 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
     """Deduplicate records using composite key."""
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
+    pl = _get_pipeline_logger(state)
+
+    # Enter STORE stage here (dedup + save are both part of Enrich & Store)
+    if pl:
+        pl.stage_enter(
+            StageId.STORE, f"Deduplicating and saving {len(records)} records..."
+        )
 
     if not records:
         return {"records": []}
@@ -1269,6 +1514,13 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
     if duplicates_merged > 0:
         logger.info(f"Merged {duplicates_merged} duplicate records")
 
+    if pl and duplicates_merged > 0:
+        pl.stage_progress(
+            StageId.STORE,
+            f"Deduplicated: {duplicates_merged} merged, {len(deduplicated)} unique",
+            duplicates_merged=duplicates_merged,
+        )
+
     return {"records": deduplicated}
 
 
@@ -1279,6 +1531,10 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
     start_time = state.get("start_time", time.time())
     records_rejected = state.get("records_rejected", 0)
+    pl = _get_pipeline_logger(state)
+
+    if pl:
+        pl.stage_progress(StageId.STORE, f"Saving {len(records)} records...")
 
     if not records:
         logger.info(f"No records to save for source {source.id}")
@@ -1298,9 +1554,16 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
 
     section_map: Dict[str, str] = {}  # building_id -> section_id
     inventory: Optional[BuildingInventory] = state.get("building_inventory")
+    full_text = source.full_text or ""
     if inventory and inventory.buildings:
         for building in inventory.buildings:
             try:
+                # Extract raw text for the page range from source content
+                raw_text = _extract_page_range_text(
+                    full_text,
+                    building.page_start,
+                    building.page_end or building.page_start,
+                )
                 section = ACMTableSection(
                     source_id=str(source.id),
                     page_start=building.page_start,
@@ -1309,6 +1572,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                     if building.name
                     else building.building_id,
                     table_type="register",
+                    raw_text=raw_text if raw_text else None,
                 )
                 await section.save()
                 if section.id:
@@ -1419,6 +1683,15 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
         f"in {extraction_time}ms"
     )
 
+    if pl:
+        pl.stage_complete(
+            StageId.STORE,
+            f"{saved_count} saved, {len(section_map)} parent sections",
+            record_count=saved_count,
+            parent_sections=len(section_map),
+            errors=len(errors),
+        )
+
     if errors:
         return {
             "extraction_result": result,
@@ -1469,8 +1742,8 @@ agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
 agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
 agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
 agent_state.add_node(
-    "orchestrate", orchestrate_extraction
-)  # E1-S20: Agentic orchestrator
+    "orchestrate", orchestrate_with_logging
+)  # E1-S20: Agentic orchestrator (wrapped with E1-S21 logging)
 agent_state.add_node("prepare", prepare_context)
 agent_state.add_node("extract", extract_records)
 agent_state.add_node("validate", validate_records_strict)
@@ -1531,6 +1804,18 @@ async def extract_acm_from_source(
     """
     start_time = time.time()
 
+    # Initialize pipeline logger (E1-S21)
+    total_pages = 0
+    if source.full_text:
+        # Count page markers to estimate total pages
+        page_markers = re.findall(
+            r"(?:[-—]+\s*Page\s+\d+|<!--\s*Page\s+\d+\s*-->)",
+            source.full_text,
+            re.IGNORECASE,
+        )
+        total_pages = len(page_markers) if page_markers else 0
+    pl = PipelineLogger(source_id=str(source.id), total_pages=total_pages)
+
     if force:
         # Delete existing table sections and records (E11-S1)
         from open_notebook.domain.acm import ACMTableSection
@@ -1584,6 +1869,8 @@ async def extract_acm_from_source(
         "document_metadata": None,
         # Orchestrator stats (E1-S20)
         "orchestrator_stats": None,
+        # Pipeline observability (E1-S21)
+        "pipeline_logger": pl,
     }
 
     try:
@@ -1608,6 +1895,8 @@ async def extract_acm_from_source(
         orch_stats_dict = orch_stats.model_dump() if orch_stats else None
 
         if error:
+            # Pipeline failed — emit summary
+            pipeline_run = pl.fail(error)
             return ACMExtractionOutput(
                 source_id=str(source.id),
                 status="failed",
@@ -1617,9 +1906,34 @@ async def extract_acm_from_source(
                 extraction_time_ms=extraction_time,
                 correction_stats=correction_stats if has_corrections else None,
                 orchestrator_stats=orch_stats_dict,
+                pipeline_run=pipeline_run.model_dump(mode="json"),
             )
 
         status = "success" if extraction_result.total_records > 0 else "no_data"
+
+        # Gather building and strategy info for summary
+        inventory = result.get("building_inventory")
+        total_buildings = inventory.total_buildings if inventory else 0
+        total_chunks = len(result.get("chunks", []))
+        conf_dist = extraction_result.confidence_distribution
+        conf_dict = {
+            "high": conf_dist.high,
+            "medium": conf_dist.medium,
+            "low": conf_dist.low,
+        }
+        strategy_dist = None
+        if orch_stats:
+            strategy_dist = getattr(orch_stats, "strategy_distribution", None)
+
+        # Pipeline complete — emit summary
+        pipeline_run = pl.complete(
+            total_records=extraction_result.total_records,
+            records_rejected=extraction_result.records_rejected,
+            confidence_distribution=conf_dict,
+            total_chunks=total_chunks,
+            total_buildings=total_buildings,
+            strategy_distribution=strategy_dist,
+        )
 
         return ACMExtractionOutput(
             source_id=str(source.id),
@@ -1630,11 +1944,13 @@ async def extract_acm_from_source(
             extraction_time_ms=extraction_time,
             correction_stats=correction_stats if has_corrections else None,
             orchestrator_stats=orch_stats_dict,
+            pipeline_run=pipeline_run.model_dump(mode="json"),
         )
 
     except Exception as e:
         logger.exception(f"ACM extraction failed for source {source.id}")
         extraction_time = int((time.time() - start_time) * 1000)
+        pipeline_run = pl.fail(str(e))
         return ACMExtractionOutput(
             source_id=str(source.id),
             status="failed",
@@ -1642,4 +1958,5 @@ async def extract_acm_from_source(
             records_failed=0,
             error=str(e),
             extraction_time_ms=extraction_time,
+            pipeline_run=pipeline_run.model_dump(mode="json"),
         )
