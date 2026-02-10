@@ -23,6 +23,7 @@ import { ACMGrid } from '@/components/acm/ACMGrid'
 import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
 import { ACMStatsCards } from '@/components/acm/ACMStatsCards'
 import { ACMToolbar } from '@/components/acm/ACMToolbar'
+import { ACMExtractionBanner } from '@/components/acm/ACMExtractionBanner'
 import {
   useACMRecords,
   useACMStats,
@@ -31,6 +32,7 @@ import {
   useExportACMCsv,
   useExportACMExcel,
 } from '@/lib/hooks/use-acm'
+import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
 import { useSources } from '@/lib/hooks/use-sources'
 import type { ACMRecord } from '@/lib/types/acm'
 
@@ -60,9 +62,12 @@ function ACMPageContent() {
 
   const { data: stats, isLoading: isLoadingStats } = useACMStats(selectedSourceId)
 
+  // Extraction status tracking
+  const extractionStatus = useExtractionStatus(selectedSourceId || '')
+
   // Mutations
   const deleteRecord = useDeleteACMRecord()
-  const extractACM = useExtractACM()
+  const extractACM = useExtractACM(extractionStatus.startTracking)
   const exportCsv = useExportACMCsv()
   const exportExcel = useExportACMExcel()
 
@@ -222,7 +227,7 @@ function ACMPageContent() {
                   onRefresh={handleRefresh}
                   riskFilter={riskFilter}
                   onRiskFilterChange={setRiskFilter}
-                  isExtracting={extractACM.isPending}
+                  isExtracting={extractACM.isPending || extractionStatus.phase === 'extracting'}
                   isExportingCsv={exportCsv.isPending}
                   isExportingExcel={exportExcel.isPending}
                   disabled={isLoadingRecords}
@@ -235,8 +240,16 @@ function ACMPageContent() {
                   </div>
                 )}
 
+                {/* Extraction Progress Banner */}
+                <ACMExtractionBanner
+                  phase={extractionStatus.phase}
+                  recordsCreated={extractionStatus.recordsCreated}
+                  errorMessage={extractionStatus.errorMessage}
+                  onDismiss={extractionStatus.dismiss}
+                />
+
                 {/* No Records Alert */}
-                {!isLoadingRecords && !hasRecords && (
+                {!isLoadingRecords && !hasRecords && extractionStatus.phase !== 'extracting' && (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>No ACM Records Found</AlertTitle>
