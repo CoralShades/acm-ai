@@ -1,0 +1,261 @@
+# Sprint Status - ACM-AI
+# generated: 2025-12-20
+# updated: 2026-02-09
+# project: acm-ai
+# project_key: acm-ai
+# tracking_system: file-system
+# story_location: docs/sprint-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic exists in epic file but not started
+#   - in-progress: Epic being actively worked on
+#   - done: All stories in epic completed
+#   - archived: Epic skipped/abandoned - not part of active development
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story tech-spec created in sprint-artifacts folder
+#   - ready-for-dev: Draft approved and ready for implementation
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+#   - archived: Story skipped/abandoned as part of archived epic
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Stories with tech-specs are marked 'drafted' or 'ready-for-dev'
+# - Dev moves story to 'in-progress', then 'review', then 'done'
+# - SM typically drafts next story ONLY after previous one is 'done'
+
+generated: 2025-12-20
+updated: 2026-02-09
+project: acm-ai
+project_key: acm-ai
+tracking_system: file-system
+story_location: docs/sprint-artifacts
+
+development_status:
+  # Epic 1: ACM Data Extraction Pipeline (P0)
+  # 11/20 stories complete, 9 remaining
+  epic-1: in-progress
+  e1-s1-create-acm-data-model: done
+  e1-s2-create-acm-record-domain-model: done
+  e1-s3-implement-acm-extraction-transformation: done
+  e1-s4-create-acm-api-endpoints: done
+  e1-s5-integrate-acm-extraction-into-source-processing: done
+  e1-s6-configure-local-embedding-pipeline: done
+  e1-s7-ai-powered-acm-extraction: done
+  e1-s8-site-configuration-data-entry: done
+  e1-s9-acm-product-classification: done
+  e1-s10-mineru-table-extraction: done
+  e1-s11-extensible-consultant-parser-framework: review
+  e1-s12-consultant-wording-normalization: ready-for-dev
+  e1-s13-agentic-extraction-orchestrator: done
+  e1-s14-contextual-embedding-enrichment: backlog
+  e1-s15-corrective-rag-validation-loop: backlog
+  e1-s16-document-structure-toc-extraction: backlog
+  e1-s17-building-inventory-compilation: backlog
+  e1-s18-page-level-section-tagging: backlog
+  e1-s19-document-metadata-extraction-enhancement: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: AG Grid Spreadsheet Integration (P0)
+  # 7/8 stories complete, 1 remaining (ready-for-dev, enhanced by course correction)
+  epic-2: in-progress
+  e2-s1-install-and-configure-ag-grid: done
+  e2-s2-create-acmspreadsheet-component: done
+  e2-s3-implement-column-sorting-and-filtering: done
+  e2-s4-implement-row-grouping: done
+  e2-s5-implement-risk-status-color-coding: done
+  e2-s6-add-search-bar-to-spreadsheet: done
+  e2-s7-implement-building-tab-navigation: done
+  # ENHANCED 2026-02-08 (Course Correction CP-3):
+  # Added: AG Grid columns generated from field schema config API
+  e2-s8-column-visibility-management: ready-for-dev
+  epic-2-retrospective: optional
+
+  # Epic 3: Cell Citations & PDF Viewer (P0)
+  epic-3: done
+  e3-s1-make-cells-clickable: done
+  e3-s2-create-pdf-viewer-modal: done
+  e3-s3-implement-acm-citation-reference-type: done
+  e3-s4-store-page-numbers-during-extraction: done
+  epic-3-retrospective: optional
+
+  # Epic 4: Chat with ACM Context (P0)
+  epic-4: done
+  e4-s1-add-acm-records-to-chat-context: done
+  e4-s2-create-acm-context-toggle: done
+  e4-s3-generate-acm-aware-chat-responses: done
+  e4-s4-support-acm-specific-questions: done
+  epic-4-retrospective: optional
+
+  # Epic 5: Export Functionality (P0 - promoted from P1)
+  # 2/4 stories complete, 2 ready-for-dev
+  epic-5: in-progress
+  e5-s1-implement-csv-export: done
+  e5-s2-implement-excel-export: done
+  e5-s3-bar-template-management: ready-for-dev
+  e5-s4-export-field-mapping-configuration: ready-for-dev
+  epic-5-retrospective: optional
+
+  # Epic 6: Rebranding to ACM-AI (P1)
+  epic-6: done
+  e6-s1-update-application-name-and-title: done
+  e6-s2-create-new-logo-and-favicon: done
+  e6-s3-update-color-theme: done
+  e6-s4-update-landing-home-page: done
+  epic-6-retrospective: optional
+
+  # Epic 7: Upload Wizard (P0)
+  epic-7: done
+  e7-s1-create-wizard-framework-component: done
+  e7-s2-file-upload-step-with-drag-drop: done
+  e7-s3-document-type-detection-step: done
+  e7-s4-processing-options-step: done
+  e7-s5-review-confirm-step: done
+  e7-s6-upload-progress-results-step: done
+  e7-s7-site-configuration-during-upload: done
+  epic-7-retrospective: optional
+
+  # Epic 8: UI Refresh - Bento Grid Design (P1) - ARCHIVED 2026-02-08
+  # Reason: Skipped by decision - moved to archive
+  epic-8: archived
+  e8-s1-install-ui-ux-pro-max-skill: archived
+  e8-s2-define-acm-ai-design-tokens: archived
+  e8-s3-create-bento-card-component: archived
+  e8-s4-create-bento-grid-layout-component: archived
+  e8-s5-redesign-dashboard-home-page: archived
+  e8-s6-redesign-sources-list-page: archived
+  e8-s7-redesign-source-detail-page: archived
+  e8-s8-update-navigation-sidebar: archived
+  e8-s9-typography-font-updates: archived
+  e8-s10-dark-mode-refinement: archived
+  epic-8-retrospective: archived
+
+  # Epic 9: Document Library Management (P0)
+  # 2/3 stories complete, 1 remaining (drafted)
+  epic-9: in-progress
+  e9-s1-create-document-library-view: done
+  e9-s2-document-processing-status-dashboard: done
+  e9-s3-document-actions-and-bulk-operations: drafted
+  epic-9-retrospective: optional
+
+  # Epic 10: ACM-AI UI Simplification (P0)
+  # 0/1 stories complete, 1 remaining (drafted)
+  epic-10: backlog
+  e10-s1-simplify-navigation: drafted
+  epic-10-retrospective: optional
+
+  # Epic 11: Search & Retrieval Enhancement (P0/P1) - RAG Strategy
+  # 0/2 stories complete, 1 ready-for-dev
+  epic-11: in-progress
+  e11-s1-parent-document-retrieval: review
+  e11-s2-hybrid-search-service: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: Extraction Settings & Configuration UI (P1) - NEW 2026-02-07
+  # 0/4 stories complete
+  epic-12: backlog
+  e12-s1-extraction-method-settings: backlog
+  e12-s2-ai-model-configuration-ui: backlog
+  e12-s3-processing-options-configuration: backlog
+  # REDEFINED 2026-02-08 (Course Correction CP-2):
+  # WAS: "Parser Configuration Management" - key: e12-s4-parser-configuration-management
+  # NOW: "BAR Field Schema Configuration UI"
+  # See: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
+  e12-s4-bar-field-schema-config-ui: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Knowledge Graph Visualization (P1) - NEW 2026-02-07
+  # 0/3 stories complete
+  epic-13: backlog
+  e13-s1-surrealdb-graph-entity-schema: backlog
+  e13-s2-knowledge-graph-api-data-service: backlog
+  e13-s3-react-flow-knowledge-graph-visualization: backlog
+  epic-13-retrospective: optional
+
+  # Epic 14: UX & Enterprise Readiness (P0/P1) - NEW 2026-02-08
+  # 11/11 stories complete
+  epic-14: done
+  e14-s1-vaea-branding-design-tokens: done
+  e14-s2-sidebar-navigation-redesign: done
+  e14-s3-hide-brownfield-features: done
+  e14-s4-skeleton-loading-screens: done
+  e14-s5-toast-system-enhancement: done
+  e14-s6-wcag-accessibility-compliance: done
+  e14-s7-unified-documents-view: done
+  e14-s8-error-recovery-disconnect-handling: done
+  e14-s9-keyboard-navigation-shortcuts: done
+  e14-s10-breadcrumb-navigation: done
+  e14-s11-pydantic-typescript-type-generation: done
+  epic-14-retrospective: optional
+
+# SUMMARY:
+# ========
+# Total Epics: 14 (6 done, 4 in-progress, 4 backlog)
+# Total Stories: 85
+# Stories Done: 62 (73%)
+# Stories Review: 1 (E1-S11)
+# Stories Ready-for-dev: 4 (E1-S12, E2-S8, E5-S3, E5-S4)
+# Stories Drafted: 2 (E9-S3, E10-S1)
+# Stories Backlog: 14 (E1-S14..S19, E11-S2, E12-S1..S4, E13-S1..S3)
+#
+# Last Updated: 2026-02-09
+#
+# COMPLETED EPICS: E3, E4, E6, E7, E8, E14
+# IN-PROGRESS EPICS: E1 (11/20), E2 (7/8), E5 (2/4), E9 (2/3)
+# BACKLOG EPICS: E10 (0/1), E11 (0/2), E12 (0/4), E13 (0/3)
+#
+# KEY CHANGES (2026-02-10 - Config Fix + Tech Spec Cleanup):
+# ===========================================================
+# - BMAD config updated: implementation_artifacts now points to docs/sprint-artifacts/
+# - E1-S13 marked as done (orchestrator implemented as E1-S20)
+# - Tech spec cleanup protocol established:
+#   - Done tech specs: Already reviewed during course corrections (keep as-is)
+#   - Drafted/ready-for-dev: Current and validated (keep as-is)
+#   - Backlog tech specs: Outdated, will be removed and recreated when needed
+# - Epic 8: Already archived (replaced by Epic 14)
+#
+# KEY CHANGES (2026-02-08 - Epic 14 Complete + YAML Reconciliation):
+# ===================================================================
+# - NEW Epic 14: UX & Enterprise Readiness (11 stories, ALL DONE)
+#   - E14-S1: VAEA Branding & Design Tokens (OKLch palette, system fonts, coral focus rings)
+#   - E14-S2: Sidebar Navigation Redesign (WORKSPACE/CONFIGURE sections)
+#   - E14-S3: Hide Brownfield Features (remove Notebooks, Podcasts, Transformations)
+#   - E14-S4: Skeleton Loading Screens (shimmer animation, zero CLS)
+#   - E14-S5: Toast System Enhancement (promise-based, risk-aware toasts)
+#   - E14-S6: WCAG 2.1 AA Accessibility Compliance (focus rings, skip-to-content, ARIA)
+#   - E14-S7: Unified Documents View (3-way toggle: grid/list/table, infinite scroll)
+#   - E14-S8: Error Recovery & Disconnect Handling (exponential backoff, OfflineBanner)
+#   - E14-S9: Keyboard Navigation & Shortcuts (Cmd+K actions, G+key nav, ? cheat sheet)
+#   - E14-S10: Breadcrumb Navigation (responsive, semantic HTML, ARIA)
+#   - E14-S11: Pydantic-TypeScript Type Generation (quicktype pipeline, CI drift detection)
+# - E1-S13 identity resolved: YAML key "fix-page-reference-tracking" kept as-is
+# - E1-S20 added: Agentic Extraction Orchestrator (was previously conflated with E1-S13)
+# - Added 7 missing YAML entries: E1-S14..S20 (all backlog)
+# - Fixed summary counts (total stories: 74→85, done: 62/85=73%)
+# - E2-S8 corrected to ready-for-dev (has tech-spec drafted)
+#
+# KEY CHANGES (2026-02-07 - Document Intelligence + Settings + Knowledge Graph):
+# ================================================================================
+# - E1 expanded: +4 Document Intelligence stories (E1-S16..S19)
+# - E1 expanded: +3 RAG Strategy stories (E1-S13..S15) - from RAG alignment proposal
+# - NEW Epic 11: Search & Retrieval Enhancement (2 stories)
+# - NEW Epic 12: Extraction Settings & Configuration UI (4 stories)
+# - NEW Epic 13: Knowledge Graph Visualization (3 stories)
+#
+# NEXT RECOMMENDED ACTIONS:
+# =========================
+# 1. Review/merge E1-S11 (in review) - unblocks E1-S12 and E12-S4
+# 2. Run Epic 14 retrospective (optional but recommended - first fully completed UX epic)
+# 3. Lane A: E1-S12 → E1-S13 → E1-S14 → E1-S16..S19 chain
+# 4. Lane B: E2-S8 → E9-S3 → E10-S1 → E5-S3
+# 5. Draft tech-specs for E1-S14..S20 as needed before implementation
+# 6. Cross-lane handoffs: E1-S11 merge → E12-S4, E1-S16..S19 → E12-S1..S3, E13-S1 → E13-S2..S3
