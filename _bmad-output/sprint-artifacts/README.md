@@ -1,8 +1,9 @@
 # Sprint Artifacts Directory
 
 **Updated:** 2026-02-10
+**Location:** `_bmad-output/sprint-artifacts/`
 
-This directory contains **current** sprint artifacts for the ACM-AI project.
+This directory contains **current** sprint artifacts for the ACM-AI project. All sprint-related specifications and documentation are centralized here under `_bmad-output/`.
 
 ---
 
@@ -61,7 +62,7 @@ For **current** sprint artifacts, use these locations:
 
 | Artifact Type | Location |
 |--------------|----------|
-| **Current Tech Specs (E14)** | `docs/sprint-artifacts/tech-spec-e14-*.md` |
+| **Current Tech Specs (E14)** | `_bmad-output/sprint-artifacts/tech-spec-e14-*.md` |
 | **Implementation Stories** | `_bmad-output/implementation-artifacts/e*-s*.md` |
 | **Sprint Status** | `_bmad-output/implementation-artifacts/sprint-status.yaml` |
 | **BMM Workflow Status** | `_bmad-output/bmm-workflow-status.yaml` |
@@ -84,7 +85,7 @@ All BMAD-generated artifacts (stories, specs, status tracking) are written to `_
 ## Future Tech Specs
 
 New tech specs created after 2026-02-08 should be placed in:
-- `docs/sprint-artifacts/` for specifications
+- `_bmad-output/sprint-artifacts/` for specifications
 - `_bmad-output/implementation-artifacts/` for implementation stories
 
 Follow the existing naming conventions:

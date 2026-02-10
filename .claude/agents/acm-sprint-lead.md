@@ -42,7 +42,7 @@ For pipeline-heavy sprints, add:
 ## Sprint Coordination Protocol
 
 ### Starting a Sprint
-1. Read `docs/sprint-artifacts/sprint-status.yaml` for current state
+1. Read `_bmad-output/sprint-artifacts/sprint-status.yaml` for current state
 2. Identify stories ready for development (status: `ready-for-dev`)
 3. Check dependency graph - only assign unblocked stories
 4. Create tasks in shared task list

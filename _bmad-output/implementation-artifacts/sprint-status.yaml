@@ -4,7 +4,7 @@
 # project: acm-ai
 # project_key: acm-ai
 # tracking_system: file-system
-# story_location: docs/sprint-artifacts
+# story_location: _bmad-output/sprint-artifacts
 
 # STATUS DEFINITIONS:
 # ==================
@@ -38,7 +38,7 @@ updated: 2026-02-09
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
-story_location: docs/sprint-artifacts
+story_location: _bmad-output/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)

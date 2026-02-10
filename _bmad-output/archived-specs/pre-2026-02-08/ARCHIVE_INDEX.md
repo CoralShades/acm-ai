@@ -146,7 +146,7 @@ Created 2025-12-20:
 
 ## Current Specs (NOT Archived)
 
-These specs remain in `docs/sprint-artifacts/` as they reflect current requirements:
+These specs remain in `_bmad-output/sprint-artifacts/` as they reflect current requirements:
 
 ### Epic 14: UX & Enterprise Readiness (11 files - Created 2026-02-08)
 - E14-S1 through E14-S11 (all "Ready for Dev")

@@ -434,10 +434,10 @@ traceability_and_gate:
 
 ## Related Artifacts
 
-- **Story File:** docs/sprint-artifacts/tech-spec-e1-s2-acm-domain-model.md
+- **Story File:** _bmad-output/sprint-artifacts/tech-spec-e1-s2-acm-domain-model.md
 - **Implementation:** open_notebook/domain/acm.py
 - **Test File:** tests/test_domain.py
-- **Sprint Status:** docs/sprint-artifacts/sprint-status.yaml
+- **Sprint Status:** _bmad-output/sprint-artifacts/sprint-status.yaml
 
 ---
 

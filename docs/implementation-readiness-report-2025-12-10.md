@@ -72,8 +72,8 @@ The ACM-AI project demonstrates strong planning foundations with comprehensive P
 | **System Analysis** | ✅ Complete | docs/acm-ai/01-system-analysis.md | - | Good |
 | **Extended Plan** | ✅ Complete | docs/acm-ai/06-extended-plan.md | - | Good |
 | **Brownfield Docs** | ✅ Complete | docs/bmm-index.md | 200+ lines | Good |
-| **Sprint Status** | ✅ Active | docs/sprint-artifacts/sprint-status.yaml | - | Excellent |
-| **Tech Specs** | ✅ Extensive | docs/sprint-artifacts/tech-spec-*.md | 37 files | Good |
+| **Sprint Status** | ✅ Active | _bmad-output/sprint-artifacts/sprint-status.yaml | - | Excellent |
+| **Tech Specs** | ✅ Extensive | _bmad-output/sprint-artifacts/tech-spec-*.md | 37 files | Good |
 | **UX Design** | ❌ Not Found | - | - | N/A |
 | **Test Design** | ❌ Not Found | - | - | N/A |
 
