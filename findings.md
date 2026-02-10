@@ -1,109 +1,121 @@
-# Findings: Critical Bug Investigation + E2E Test Design
+# Findings: Epic 14 Story Completion Analysis
 
-## Created: 2026-02-09
-## Last Updated: 2026-02-10
-
----
-
-## NEW SESSION 2026-02-10: Service Status Check
-
-**Verification Results:**
-- SurrealDB: Command returned no output (container may be stopped)
-- API (5055): Not responding to `/health` endpoint
-- Frontend (8502): Returns HTTP 500 ✅ **Bug #1 confirmed**
-
-**Implication:** API not running explains why frontend may be failing (API proxy dependency).
-
-**API Startup Investigation:**
-- Port 5055 is free (no conflicts)
-- `run_api.py` starts uvicorn reloader successfully
-- Import of `api.main:app` **hangs indefinitely** (timeout after 5s and 10s tests)
-- Uvicorn logs: "Started reloader process" but worker process never starts
-
-**ROOT CAUSE IDENTIFIED:**
-- `open_notebook/database/async_migrate.py` line 96-127: `AsyncMigrationManager.__init__()`
-- **Hardcoded to load migrations 1-13 only**
-- **Actual migrations in repo: 1-18** (5 migrations missing!)
-- Missing migrations: 14, 15, 16, 17, 18
-- This causes import to fail/hang when initializing the migration manager
-
-**Frontend Turbopack Investigation:**
-- Frontend on port 8502 returns HTTP 500 - **RESOLVED: Stale frontend process**
-- Fresh frontend started on port 3003 - **WORKING CORRECTLY**
-- Root cause: Old crashed frontend on 8502, not a Turbopack bug
-- Solution: Restart frontend, auto-assigned port 3003
+**Session:** 2026-02-10
+**Task:** Analyze commits to determine Epic 14 story completion status
 
 ---
 
-## Bug #2: API Upload Asyncio Error - RESOLVED
+## Discovery 1: Commit Range
 
-**Root Cause:**
-- `api/routers/sources.py` line 508: `execute_command_sync()` called from within async function
-- `execute_command_sync` uses `asyncio.run()` internally
-- `asyncio.run()` cannot be called when event loop already running (async context)
+**Commit Range:** b7c29f35664ecfd6d7a6909c66191cdd3253b4e0 to 0d2c84a0725587d194c9b53af1c36bc6168a603c
 
-**Solution:**
-- Wrapped sync call with `asyncio.to_thread()` to run in thread pool
-- Prevents blocking the async event loop
-
-**Files Modified:**
-- `api/routers/sources.py` line 508-516: Added `await asyncio.to_thread()` wrapper
-
-**Verification:**
-- Upload test: `curl -X POST http://localhost:5055/api/sources` with PDF
-- Result: ✅ SUCCESS - Source created with ID `source:mkds0x80ukfwyaabsjwr`
+**To be populated:**
+- Number of commits in range
+- Date range of commits
+- Authors involved
 
 ---
 
-## Bug 1: Source Not Found - RESOLVED
+## Discovery 2: Epic 14 Stories Overview
 
-**Symptom:** When opening or uploading a source, getting "Source Not Found" 500 error with `[Errno 2] No such file or directory`.
+**Epic 14: UX & Enterprise Readiness**
 
-### Root Cause
-The running API process had stale code and wasn't auto-reloading. Uvicorn's StatReload doesn't detect WSL file changes because `watchfiles` package isn't installed. The actual code in `api/routers/sources.py` was correct.
-
-### Resolution
-Killed all stale API processes and restarted. All source endpoints now return HTTP 200.
-
-### Verification
-- curl: All 3 test sources return HTTP 200
-- Playwright: Source detail page loads with full content, ACM tabs, and chat panel
-
-### Files Involved
-- `api/routers/sources.py` (lines 649-706) - get_source endpoint (no changes needed)
-- `run_api.py` - API startup with uvicorn reload
-
----
-
-## Bug 2: AG Grid RowGroupingModule Error #200 - RESOLVED
-
-**Symptom:** Console error #200: "Unable to use rowGroup as RowGroupingModule is not registered" when viewing ACM records.
-
-### Root Cause
-`ACMGrid.tsx` had `enableGrouping = true` as default prop, which activated enterprise-only `rowGroup` feature. Only `ag-grid-community` is installed (no enterprise module).
-
-### Resolution
-Changed default `enableGrouping` from `true` to `false` in ACMGrid.tsx. The column definitions already used the correct spread pattern `...(enableGrouping && { rowGroup: true })` to conditionally include the property, so with `enableGrouping = false`, the `rowGroup` property is completely omitted from column defs.
-
-### Verification
-- Playwright: ACM tab loads with 2 records, no AG Grid error #200
-- Only remaining console items: 4 AG Grid deprecation warnings (non-critical) + 1 React Query warning (unrelated)
-
-### Files Modified
-- `frontend/src/components/acm/ACMGrid.tsx` line 114: `enableGrouping = true` -> `enableGrouping = false`
-- Same change applied to lane-b worktree at `/mnt/d/ailocal/acm-ai-frontend/frontend/src/components/acm/ACMGrid.tsx`
+Stories (11 total):
+- E14-S1: VAEA Branding and Design Tokens
+- E14-S2: Sidebar Navigation
+- E14-S3: Hide Brownfield Features
+- E14-S4: Skeleton Loading Screens
+- E14-S5: Toast System
+- E14-S6: WCAG Accessibility
+- E14-S7: Unified Documents View
+- E14-S8: Error Recovery Disconnect
+- E14-S9: Keyboard Navigation
+- E14-S10: Breadcrumb Navigation
+- E14-S11: Pydantic TypeScript Types
 
 ---
 
-## Bug 3: E2E PDF Extraction Test - PENDING
+## Discovery 3: Current Sprint Status
 
-**Requirement:** True end-to-end PDF extraction test.
+**To be populated:**
+- Current status of each E14 story in sprint-status.yaml
+- Epic 14 completion percentage
+- Last update date
 
-### Test Flow
-1. Load real PDF from tests/fixtures/
-2. Run MinerU extraction -> markdown
-3. Run full LangGraph pipeline (metadata -> structure -> inventory -> tagging -> extraction -> validation)
-4. Assert on actual extracted ACM records
+---
 
-### Status
-Research completed, implementation not yet started.
+## Discovery 4: Commit Analysis Results
+
+**To be populated:**
+- Mapping of commits to stories
+- Files changed per story
+- Completion evidence per story
+
+---
+
+## Discovery 5: Incomplete Stories
+
+**To be populated:**
+- List of stories started but not completed
+- Missing acceptance criteria
+- Blockers or issues
+
+---
+
+## Raw Data / Evidence
+
+### Commit Log (b7c29f3..0d2c84a)
+
+```
+(To be populated)
+```
+
+### File Changes Summary
+
+```
+(To be populated)
+```
+
+### Story Completion Evidence
+
+**E14-S1: VAEA Branding and Design Tokens**
+- Status: (to be determined)
+- Evidence: (commits, files)
+
+**E14-S2: Sidebar Navigation**
+- Status: (to be determined)
+- Evidence: (commits, files)
+
+(... continue for all 11 stories)
+
+---
+
+## Important Notes
+
+### Note 1: Tech Specs as Source of Truth
+- All Epic 14 tech specs are in _bmad-output/sprint-artifacts/
+- Each spec has acceptance criteria that must be met
+- Use acceptance criteria as verification checklist
+
+### Note 2: Frontend vs Backend Changes
+- Epic 14 is primarily frontend (UX & Enterprise Readiness)
+- Most changes expected in frontend/ directory
+- May also have backend changes (API, types, etc.)
+
+### Note 3: Lane B Development
+- Epic 14 work may have been done in lane-b worktree
+- Check if commits reference lane-b branch
+- Verify changes merged to main
+
+---
+
+## Questions to Resolve
+
+**Q: Are all commits in this range related to Epic 14?**
+**A:** (to be determined)
+
+**Q: Were any stories completed outside this commit range?**
+**A:** (to be determined)
+
+**Q: Are there dependencies between stories that affect completion order?**
+**A:** (to be determined)

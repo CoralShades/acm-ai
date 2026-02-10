@@ -1329,15 +1329,34 @@ async def _save_db_field_config(config_dict: dict) -> None:
 
     config_json = json.dumps(config_dict)
     version = config_dict.get("version", "1.0.0")
+
+    # Extract structured fields for efficient querying (Migration 19)
+    active_field_names = [
+        f["internal_name"]
+        for f in config_dict.get("fields", [])
+        if f.get("active", True)
+    ]
+    field_count = len(config_dict.get("fields", []))
+    source_template = config_dict.get("source_template")
+
     # Upsert using a fixed ID so there's only ever one config record
     await repo_query(
         """
         UPSERT field_schema:default SET
             config_json = $config_json,
             version = $version,
+            active_field_names = $active_field_names,
+            field_count = $field_count,
+            source_template = $source_template,
             updated = time::now()
         """,
-        {"config_json": config_json, "version": version},
+        {
+            "config_json": config_json,
+            "version": version,
+            "active_field_names": active_field_names,
+            "field_count": field_count,
+            "source_template": source_template,
+        },
     )
 
 

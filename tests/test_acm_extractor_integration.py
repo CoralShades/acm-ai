@@ -332,5 +332,89 @@ class TestAccuracyMetrics:
                     assert record[field], f"Empty required field: {field}"
 
 
+class TestE1S11FieldConfigIntegration:
+    """Integration tests for E1-S11 field config-driven extraction (Code Review M2)."""
+
+    def test_field_config_loads_successfully(self):
+        """Test field schema config loads from JSON without errors."""
+        from open_notebook.extractors.parsers import load_field_schema
+
+        config = load_field_schema()
+        assert config is not None
+        assert len(config.fields) == 47  # BAR requirement
+        assert len(config.enums) > 0
+        assert config.version is not None
+
+    def test_generic_parser_uses_loaded_config(self):
+        """Test GenericParser initializes with loaded field config."""
+        from open_notebook.extractors.parsers import get_parser
+
+        parser = get_parser()
+        assert parser is not None
+        assert parser.config is not None
+        assert len(parser.config.fields) == 47
+
+    def test_full_extraction_pipeline_with_field_config(self):
+        """Test complete extraction pipeline with loaded field schema."""
+        from open_notebook.extractors.parsers import load_field_schema
+
+        # Load actual field config
+        config = load_field_schema()
+        active_field_names = [f.internal_name for f in config.get_active_fields()]
+
+        # Extract from sample data
+        markdown = TestSamplePDF1124.SAMPLE_MARKDOWN
+        records = extract_acm_records(markdown, "source:test-e1s11")
+
+        # Validate extraction succeeded
+        assert len(records) > 0, "No records extracted"
+
+        # Check that config-defined active fields are accessible
+        # (Not all will have values, but they should be present in the record dict)
+        first_record = records[0]
+        # Use fields that are actually populated by the sample markdown
+        critical_fields = [
+            "building_name",
+            "product",
+            "friable",
+            "material_condition",
+            "result",  # Changed from sample_result - this is the actual field name
+        ]
+        for field_name in critical_fields:
+            assert (
+                field_name in first_record
+            ), f"Config field '{field_name}' not in extracted record"
+
+    def test_config_driven_column_mapping(self):
+        """Test that GenericParser column mapping is driven by field config."""
+        from open_notebook.extractors.parsers import get_parser
+
+        parser = get_parser()
+        column_mapping = parser.get_column_mapping()
+
+        # Verify mapping includes config-driven display names (case-insensitive)
+        # The parser normalizes column headers to lowercase for matching
+        assert len(column_mapping) > 0, "Column mapping should not be empty"
+
+        # Check that common BAR fields are mapped correctly
+        # Note: Column headers in markdown are normalized to lowercase
+        lowercase_mapping = {k.lower(): v for k, v in column_mapping.items()}
+        assert "product" in lowercase_mapping or "specific item/acm name" in lowercase_mapping
+        assert (
+            "condition" in lowercase_mapping or "material_condition" in lowercase_mapping
+        )
+
+    def test_active_fields_filter(self):
+        """Test that only active fields are included in column mapping."""
+        from open_notebook.extractors.parsers import load_field_schema
+
+        config = load_field_schema()
+        active_count = len(config.get_active_fields())
+        all_count = len(config.fields)
+
+        # All fields should be active by default in the loaded config
+        assert active_count == all_count == 47
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

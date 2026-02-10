@@ -1,111 +1,145 @@
-# Task Plan: Fix Critical Regressions + E2E Validation
+# Task Plan: Epic 14 Story Completion Analysis
 
-## Status: NEW SESSION - RESEARCHING
-## Created: 2026-02-09
-## Last Updated: 2026-02-10
+**Goal:** Analyze commits b7c29f3 to 0d2c84a to determine which Epic 14 stories were completed, then update sprint-status.yaml, bmm-workflow-status.yaml, and other tracking files accordingly.
 
-## User Answers (Clarification)
-
-## Objective (2026-02-09 - COMPLETED)
-~~Fix two critical regressions (Source Not Found, AG Grid RowGroupingModule error) introduced during E1-S11..S20, verify fixes with Playwright MCP, and create a true end-to-end PDF extraction test.~~
-
-## NEW Objective (2026-02-10)
-Fix two NEW critical bugs discovered during post-git-cleanup E2E testing:
-1. **Frontend Turbopack 500 Error** (BLOCKER) - No pages load, complete UI failure
-2. **API Upload Asyncio Loop Error** (HIGH) - PDF uploads fail with `asyncio.run() cannot be called from a running event loop`
-
-Then create GitHub issues and implement fixes in a bug-fix branch.
+**Context:**
+- User reports Epic 14 stories were completed in commit range b7c29f3..0d2c84a
+- Epic 14 has 11 stories (E14-S1 through E14-S11)
+- Need to verify completion by analyzing code changes
+- Must update all sprint tracking and workflow files
 
 ---
 
-## Phases
+## Phase 1: Commit Range Analysis
+**Status:** pending
+**Owner:** Claude
 
-### Phase 1: Research & Diagnosis
-- [ ] 1.1 Verify services are running (SurrealDB, API, Frontend)
-- [ ] 1.2 Use Playwright MCP to reproduce "Source Not Found" bug
-- [ ] 1.3 Use Playwright MCP to reproduce AG Grid RowGroupingModule error
-- [ ] 1.4 Investigate backend source routes/services for regression
-- [ ] 1.5 Investigate frontend AG Grid configuration
-- [ ] 1.6 Check git diff for E1-S11..S20 changes that could cause regressions
+**Tasks:**
+- [ ] Get commit log from b7c29f3 to 0d2c84a
+- [ ] Analyze commit messages for story references
+- [ ] Document what was changed in each commit
+- [ ] Create timeline of changes
 
-### Phase 2: Fix Source Not Found
-- [ ] 2.1 Identify root cause
-- [ ] 2.2 Implement fix
-- [ ] 2.3 Verify fix with Playwright MCP
-
-### Phase 3: Fix AG Grid RowGroupingModule Error
-- [ ] 3.1 Find AG Grid configuration in frontend
-- [ ] 3.2 Register RowGroupingModule from ag-grid-enterprise
-- [ ] 3.3 Verify fix with Playwright MCP
-
-### Phase 4: E2E PDF Extraction Test
-- [ ] 4.1 Identify test fixtures and existing patterns
-- [ ] 4.2 Design E2E test: PDF → MinerU → LangGraph pipeline → assertions
-- [ ] 4.3 Implement and run E2E test
-
-### Phase 5: Final Verification
-- [ ] 5.1 Full Playwright verification of both fixes
-- [ ] 5.2 Run test suite for regression check
-- [ ] 5.3 Update sprint status if needed
+**Expected Outputs:**
+- List of commits with messages
+- Map of commits to potential story work
 
 ---
 
-## NEW PHASES (2026-02-10)
+## Phase 2: Epic 14 Story Requirements Review
+**Status:** pending
+**Owner:** Claude
 
-### Phase 6: Playwright Verification & Diagnosis
-- [ ] 6.1 Load Playwright MCP tools for browser automation
-- [ ] 6.2 Verify services status (SurrealDB, API, Frontend)
-- [ ] 6.3 Reproduce Bug #1: Frontend Turbopack 500 error
-- [ ] 6.4 Reproduce Bug #2: API upload asyncio error via curl
-- [ ] 6.5 Capture frontend `next dev` terminal output for detailed stack trace
-- [ ] 6.6 Investigate frontend routing, SSR/RSC errors, API proxy config
-- [ ] 6.7 Investigate `api/routers/sources.py` upload flow (lines 335-400)
-- [ ] 6.8 Document findings with screenshots/logs
+**Tasks:**
+- [ ] Read all 11 Epic 14 tech specs from _bmad-output/sprint-artifacts/
+- [ ] Document acceptance criteria for each story
+- [ ] Create checklist of deliverables per story
+- [ ] Note file paths expected for each story
 
-### Phase 7: Create GitHub Issues
-- [ ] 7.1 Create Issue #1: Frontend Turbopack 500 Runtime Error
-- [ ] 7.2 Create Issue #2: API Upload Asyncio Event Loop Conflict
-- [ ] 7.3 Capture issue URLs for reference
-
-### Phase 8: Branch & Fix Bug #1 (Turbopack)
-- [ ] 8.1 Create branch `fix/turbopack-runtime-error`
-- [ ] 8.2 Identify root cause from stack trace
-- [ ] 8.3 Implement fix (potential: SSR config, routing, API proxy)
-- [ ] 8.4 Test with `npm run dev`
-- [ ] 8.5 Verify with Playwright: pages load without 500 errors
-
-### Phase 9: Fix Bug #2 (Asyncio Upload)
-- [ ] 9.1 Identify `asyncio.run()` call in `api/routers/sources.py`
-- [ ] 9.2 Replace with proper `await` usage within async context
-- [ ] 9.3 Test upload via curl: `POST /api/sources` with PDF
-- [ ] 9.4 Verify via Playwright: UI upload completes successfully
-
-### Phase 10: Full E2E Verification
-- [ ] 10.1 Frontend loads without Turbopack errors
-- [ ] 10.2 PDF upload via UI succeeds
-- [ ] 10.3 ACM extraction completes and displays in grid
-- [ ] 10.4 Run full test suite for regressions
-- [ ] 10.5 Take screenshots as evidence
-
-### Phase 11: Commit & PR
-- [ ] 11.1 Commit fixes with semantic commit messages
-- [ ] 11.2 Update GitHub issues with fix commits
-- [ ] 11.3 Create PR linking to issues
-- [ ] 11.4 Merge to main after verification
+**Tech Specs to Read:**
+- tech-spec-e14-s1-vaea-branding-design-tokens.md through tech-spec-e14-s11-pydantic-typescript-types.md
 
 ---
 
-## Decisions Log
-| # | Decision | Rationale | Date |
-|---|----------|-----------|------|
-| - | - | - | - |
+## Phase 3: Code Analysis - Match Commits to Stories
+**Status:** pending
+**Owner:** Claude
 
-## Blockers
-| # | Blocker | Status | Resolution |
-|---|---------|--------|------------|
-| - | - | - | - |
+**Tasks:**
+- [ ] For each commit, identify which files were changed
+- [ ] Compare changes against story acceptance criteria
+- [ ] Map commits to specific stories
+- [ ] Verify each story's implementation is complete
+
+**Analysis Approach:**
+- Use `git diff` to see code changes
+- Check file existence and content against tech spec requirements
+- Verify tests exist where required
+- Check for documentation updates
+
+---
+
+## Phase 4: Completion Verification
+**Status:** pending
+**Owner:** Claude
+
+**Tasks:**
+- [ ] For each story, determine status: done / in-progress / backlog
+- [ ] Document evidence of completion (files, tests, commits)
+- [ ] Identify any incomplete stories
+- [ ] Create completion report
+
+**Verification Criteria:**
+- All acceptance criteria met
+- Required files exist and implemented
+- Tests passing (if applicable)
+- Documentation updated (if required)
+
+---
+
+## Phase 5: Update Sprint Status
+**Status:** pending
+**Owner:** Claude
+
+**Tasks:**
+- [ ] Read current _bmad-output/implementation-artifacts/sprint-status.yaml
+- [ ] Update Epic 14 story statuses based on analysis
+- [ ] Update epic completion percentage
+- [ ] Add completion dates/commits where appropriate
+
+---
+
+## Phase 6: Update Workflow Status
+**Status:** pending
+**Owner:** Claude
+
+**Tasks:**
+- [ ] Read _bmad-output/bmm-workflow-status.yaml
+- [ ] Add Epic 14 completion entry to change log
+- [ ] Update workflow completion artifacts
+- [ ] Document story completion timeline
+
+---
+
+## Phase 7: Verification & Documentation
+**Status:** pending
+**Owner:** Claude
+
+**Tasks:**
+- [ ] Verify all status updates are consistent
+- [ ] Check for any missed stories or updates
+- [ ] Create summary report of Epic 14 progress
+- [ ] Document findings in findings.md
+
+---
+
+## Phase 8: Git Commit
+**Status:** pending
+**Owner:** Claude
+
+**Tasks:**
+- [ ] Stage sprint-status.yaml and bmm-workflow-status.yaml
+- [ ] Create commit message documenting Epic 14 progress
+- [ ] Include Co-Authored-By line
+
+---
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| (none yet) | | |
+| | | |
+
+---
+
+## Key Decisions
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| Analyze commits b7c29f3..0d2c84a | User-specified range for Epic 14 work | 2026-02-10 |
+| Verify completion via code + tests | Ensure accuracy before marking done | 2026-02-10 |
+
+---
+
+## Notes
+- Epic 14: UX & Enterprise Readiness (11 stories)
+- All tech specs in _bmad-output/sprint-artifacts/
+- Sprint tracking in _bmad-output/implementation-artifacts/sprint-status.yaml

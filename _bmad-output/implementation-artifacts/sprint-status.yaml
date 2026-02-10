@@ -42,8 +42,8 @@ story_location: _bmad-output/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  # 11/20 stories complete, 9 remaining
-  epic-1: in-progress
+  # 20/20 stories complete - EPIC COMPLETE
+  epic-1: done
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
@@ -54,15 +54,16 @@ development_status:
   e1-s8-site-configuration-data-entry: done
   e1-s9-acm-product-classification: done
   e1-s10-mineru-table-extraction: done
-  e1-s11-extensible-consultant-parser-framework: review
-  e1-s12-consultant-wording-normalization: ready-for-dev
-  e1-s13-agentic-extraction-orchestrator: done
-  e1-s14-contextual-embedding-enrichment: backlog
-  e1-s15-corrective-rag-validation-loop: backlog
-  e1-s16-document-structure-toc-extraction: backlog
-  e1-s17-building-inventory-compilation: backlog
-  e1-s18-page-level-section-tagging: backlog
-  e1-s19-document-metadata-extraction-enhancement: backlog
+  e1-s11-generic-configurable-parser: done
+  e1-s12-consultant-wording-normalization: done
+  e1-s13-fix-page-reference-tracking: done
+  e1-s14-contextual-embedding-enrichment: done
+  e1-s15-corrective-rag-validation-loop: done
+  e1-s16-document-structure-toc-extraction: done
+  e1-s17-building-inventory-compilation: done
+  e1-s18-page-level-section-tagging: done
+  e1-s19-document-metadata-extraction-enhancement: done
+  e1-s20-agentic-orchestrator: done
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -154,9 +155,9 @@ development_status:
   epic-10-retrospective: optional
 
   # Epic 11: Search & Retrieval Enhancement (P0/P1) - RAG Strategy
-  # 0/2 stories complete, 1 ready-for-dev
+  # 1/2 stories complete, 1 backlog
   epic-11: in-progress
-  e11-s1-parent-document-retrieval: review
+  e11-s1-parent-document-retrieval: done
   e11-s2-hybrid-search-service: backlog
   epic-11-retrospective: optional
 
@@ -199,19 +200,21 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 14 (6 done, 4 in-progress, 4 backlog)
+# Total Epics: 14 (6 done, 4 in-progress, 3 backlog, 1 archived)
 # Total Stories: 85
 # Stories Done: 62 (73%)
-# Stories Review: 1 (E1-S11)
-# Stories Ready-for-dev: 4 (E1-S12, E2-S8, E5-S3, E5-S4)
+# Stories Review: 0
+# Stories Ready-for-dev: 3 (E2-S8, E5-S3, E5-S4)
 # Stories Drafted: 2 (E9-S3, E10-S1)
-# Stories Backlog: 14 (E1-S14..S19, E11-S2, E12-S1..S4, E13-S1..S3)
+# Stories Backlog: 8 (E11-S2, E12-S1..S4, E13-S1..S3)
+# Stories Archived: 10 (E8-S1..S10)
 #
-# Last Updated: 2026-02-09
+# Last Updated: 2026-02-10
 #
-# COMPLETED EPICS: E3, E4, E6, E7, E8, E14
-# IN-PROGRESS EPICS: E1 (11/20), E2 (7/8), E5 (2/4), E9 (2/3)
-# BACKLOG EPICS: E10 (0/1), E11 (0/2), E12 (0/4), E13 (0/3)
+# COMPLETED EPICS: E1, E3, E4, E6, E7, E14
+# IN-PROGRESS EPICS: E2 (7/8), E5 (2/4), E9 (2/3), E11 (1/2)
+# BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3)
+# ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # KEY CHANGES (2026-02-08 - Epic 14 Complete + YAML Reconciliation):
 # ===================================================================
