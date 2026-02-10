@@ -343,6 +343,31 @@
   background-color: transparent;
 }
 
+/* Header hover text color - ensure readable in both themes */
+.ag-theme-alpine .ag-header-cell:hover {
+  color: hsl(var(--foreground));
+}
+
+/* AG Grid tooltip styling */
+.ag-theme-alpine .ag-tooltip,
+.ag-theme-custom .ag-tooltip {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark .ag-theme-alpine .ag-tooltip,
+.dark .ag-theme-custom .ag-tooltip {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border-color: hsl(var(--border));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
 /* ========================================
    DARK MODE REFINEMENTS
    ======================================== */

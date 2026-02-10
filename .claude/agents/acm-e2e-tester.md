@@ -88,7 +88,7 @@ Use these MCP tools for browser interaction:
 
 After each test workflow:
 1. Take screenshot as evidence
-2. Save to `_bmad-output/sprint-artifacts/` or scratchpad
+2. Save to `docs/sprint-artifacts/` or scratchpad
 3. Log pass/fail with specific assertions
 4. Report API response codes and timing
 

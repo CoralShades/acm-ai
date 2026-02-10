@@ -1,121 +1,59 @@
-# Findings: Epic 14 Story Completion Analysis
+# Findings: Critical Bug Investigation + E2E Test Design
 
-**Session:** 2026-02-10
-**Task:** Analyze commits to determine Epic 14 story completion status
-
----
-
-## Discovery 1: Commit Range
-
-**Commit Range:** b7c29f35664ecfd6d7a6909c66191cdd3253b4e0 to 0d2c84a0725587d194c9b53af1c36bc6168a603c
-
-**To be populated:**
-- Number of commits in range
-- Date range of commits
-- Authors involved
+## Created: 2026-02-09
+## Last Updated: 2026-02-09
 
 ---
 
-## Discovery 2: Epic 14 Stories Overview
+## Bug 1: Source Not Found - RESOLVED
 
-**Epic 14: UX & Enterprise Readiness**
+**Symptom:** When opening or uploading a source, getting "Source Not Found" 500 error with `[Errno 2] No such file or directory`.
 
-Stories (11 total):
-- E14-S1: VAEA Branding and Design Tokens
-- E14-S2: Sidebar Navigation
-- E14-S3: Hide Brownfield Features
-- E14-S4: Skeleton Loading Screens
-- E14-S5: Toast System
-- E14-S6: WCAG Accessibility
-- E14-S7: Unified Documents View
-- E14-S8: Error Recovery Disconnect
-- E14-S9: Keyboard Navigation
-- E14-S10: Breadcrumb Navigation
-- E14-S11: Pydantic TypeScript Types
+### Root Cause
+The running API process had stale code and wasn't auto-reloading. Uvicorn's StatReload doesn't detect WSL file changes because `watchfiles` package isn't installed. The actual code in `api/routers/sources.py` was correct.
 
----
+### Resolution
+Killed all stale API processes and restarted. All source endpoints now return HTTP 200.
 
-## Discovery 3: Current Sprint Status
+### Verification
+- curl: All 3 test sources return HTTP 200
+- Playwright: Source detail page loads with full content, ACM tabs, and chat panel
 
-**To be populated:**
-- Current status of each E14 story in sprint-status.yaml
-- Epic 14 completion percentage
-- Last update date
+### Files Involved
+- `api/routers/sources.py` (lines 649-706) - get_source endpoint (no changes needed)
+- `run_api.py` - API startup with uvicorn reload
 
 ---
 
-## Discovery 4: Commit Analysis Results
+## Bug 2: AG Grid RowGroupingModule Error #200 - RESOLVED
 
-**To be populated:**
-- Mapping of commits to stories
-- Files changed per story
-- Completion evidence per story
+**Symptom:** Console error #200: "Unable to use rowGroup as RowGroupingModule is not registered" when viewing ACM records.
 
----
+### Root Cause
+`ACMGrid.tsx` had `enableGrouping = true` as default prop, which activated enterprise-only `rowGroup` feature. Only `ag-grid-community` is installed (no enterprise module).
 
-## Discovery 5: Incomplete Stories
+### Resolution
+Changed default `enableGrouping` from `true` to `false` in ACMGrid.tsx. The column definitions already used the correct spread pattern `...(enableGrouping && { rowGroup: true })` to conditionally include the property, so with `enableGrouping = false`, the `rowGroup` property is completely omitted from column defs.
 
-**To be populated:**
-- List of stories started but not completed
-- Missing acceptance criteria
-- Blockers or issues
+### Verification
+- Playwright: ACM tab loads with 2 records, no AG Grid error #200
+- Only remaining console items: 4 AG Grid deprecation warnings (non-critical) + 1 React Query warning (unrelated)
 
----
-
-## Raw Data / Evidence
-
-### Commit Log (b7c29f3..0d2c84a)
-
-```
-(To be populated)
-```
-
-### File Changes Summary
-
-```
-(To be populated)
-```
-
-### Story Completion Evidence
-
-**E14-S1: VAEA Branding and Design Tokens**
-- Status: (to be determined)
-- Evidence: (commits, files)
-
-**E14-S2: Sidebar Navigation**
-- Status: (to be determined)
-- Evidence: (commits, files)
-
-(... continue for all 11 stories)
+### Files Modified
+- `frontend/src/components/acm/ACMGrid.tsx` line 114: `enableGrouping = true` -> `enableGrouping = false`
+- Same change applied to lane-b worktree at `/mnt/d/ailocal/acm-ai-frontend/frontend/src/components/acm/ACMGrid.tsx`
 
 ---
 
-## Important Notes
+## Bug 3: E2E PDF Extraction Test - PENDING
 
-### Note 1: Tech Specs as Source of Truth
-- All Epic 14 tech specs are in _bmad-output/sprint-artifacts/
-- Each spec has acceptance criteria that must be met
-- Use acceptance criteria as verification checklist
+**Requirement:** True end-to-end PDF extraction test.
 
-### Note 2: Frontend vs Backend Changes
-- Epic 14 is primarily frontend (UX & Enterprise Readiness)
-- Most changes expected in frontend/ directory
-- May also have backend changes (API, types, etc.)
+### Test Flow
+1. Load real PDF from tests/fixtures/
+2. Run MinerU extraction -> markdown
+3. Run full LangGraph pipeline (metadata -> structure -> inventory -> tagging -> extraction -> validation)
+4. Assert on actual extracted ACM records
 
-### Note 3: Lane B Development
-- Epic 14 work may have been done in lane-b worktree
-- Check if commits reference lane-b branch
-- Verify changes merged to main
-
----
-
-## Questions to Resolve
-
-**Q: Are all commits in this range related to Epic 14?**
-**A:** (to be determined)
-
-**Q: Were any stories completed outside this commit range?**
-**A:** (to be determined)
-
-**Q: Are there dependencies between stories that affect completion order?**
-**A:** (to be determined)
+### Status
+Research completed, implementation not yet started.

@@ -68,7 +68,7 @@ For EACH story in the queue, execute this loop:
 
 ### Phase 1: PLAN (use haiku model for reading)
 
-1. Read the story's tech spec from `_bmad-output/sprint-artifacts/`
+1. Read the story's tech spec from `docs/sprint-artifacts/`
 2. Read the referenced spec documents (listed in tech spec header)
 3. Read ALL files listed in the "File Changes" table
 4. Update `progress.md` with story start timestamp and planned changes
@@ -79,7 +79,7 @@ For EACH story in the queue, execute this loop:
 1. Spawn a **dev agent** (subagent_type: `general-purpose`) with this prompt pattern:
 
 ```
-Implement story [E14-SX] per the tech spec at _bmad-output/sprint-artifacts/tech-spec-e14-sX-[slug].md.
+Implement story [E14-SX] per the tech spec at docs/sprint-artifacts/tech-spec-e14-sX-[slug].md.
 
 RULES:
 - Read the tech spec FIRST, then read every file in the File Changes table
@@ -129,7 +129,7 @@ Spawn a **UX audit agent** (subagent_type: `general-purpose`) with:
 ```
 You are a UX auditor reviewing story [E14-SX] implementation.
 
-1. Read the tech spec: _bmad-output/sprint-artifacts/tech-spec-e14-sX-[slug].md
+1. Read the tech spec: docs/sprint-artifacts/tech-spec-e14-sX-[slug].md
 2. Read the ACCEPTANCE CRITERIA section carefully
 3. For each criterion, verify it was implemented by reading the relevant source files
 4. Check for:
@@ -161,7 +161,7 @@ If the UX audit reports FAIL:
    - [Key change 2]
    - [Key change 3]
 
-   Tech spec: _bmad-output/sprint-artifacts/tech-spec-e14-sX-[slug].md
+   Tech spec: docs/sprint-artifacts/tech-spec-e14-sX-[slug].md
 
    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
    ```
@@ -271,7 +271,7 @@ After all stories are implemented:
 4. **Update BMAD tracking:**
    - Update `progress.md` with final summary
    - Note: Do NOT modify `sprint-status.yaml` (Lane A owned)
-   - The change proposal at `_bmad-output/sprint-artifacts/change-proposal-epic-14.md`
+   - The change proposal at `docs/sprint-artifacts/change-proposal-epic-14.md`
      should be updated to reflect completed stories
 
 5. **Final commit:**
@@ -304,14 +304,14 @@ If a story is blocked:
 
 | Category | Path |
 |----------|------|
-| Tech Specs | `_bmad-output/sprint-artifacts/tech-spec-e14-s*.md` |
+| Tech Specs | `docs/sprint-artifacts/tech-spec-e14-s*.md` |
 | Design System | `docs/design-system.md` |
 | Navigation Spec | `docs/navigation-cleanup-spec.md` |
 | Loading/State Spec | `docs/state-loading-spec.md` |
 | UX Audit | `docs/ux-audit.md` |
 | UI/UX Spec | `docs/ui-ux-spec.md` |
 | Pipeline Spec | `docs/ag-ui-pipeline-spec.md` |
-| Change Proposal | `_bmad-output/sprint-artifacts/change-proposal-epic-14.md` |
+| Change Proposal | `docs/sprint-artifacts/change-proposal-epic-14.md` |
 | Current Tokens | `frontend/src/app/globals.css` |
 | Current Sidebar | `frontend/src/components/layout/AppSidebar.tsx` |
 | Tailwind Config | `frontend/tailwind.config.ts` |

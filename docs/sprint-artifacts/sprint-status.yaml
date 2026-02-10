@@ -4,7 +4,7 @@
 # project: acm-ai
 # project_key: acm-ai
 # tracking_system: file-system
-# story_location: _bmad-output/sprint-artifacts
+# story_location: docs/sprint-artifacts
 
 # STATUS DEFINITIONS:
 # ==================
@@ -38,12 +38,12 @@ updated: 2026-02-09
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
-story_location: _bmad-output/sprint-artifacts
+story_location: docs/sprint-artifacts
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  # 20/20 stories complete - EPIC COMPLETE
-  epic-1: done
+  # 20/21 stories complete, 1 ready-for-dev (E1-S21 observability)
+  epic-1: in-progress
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
@@ -54,6 +54,10 @@ development_status:
   e1-s8-site-configuration-data-entry: done
   e1-s9-acm-product-classification: done
   e1-s10-mineru-table-extraction: done
+  # REDEFINED 2026-02-08 (Course Correction CP-1):
+  # WAS: "Extensible Consultant Parser Framework" (done) - key: e1-s11-extensible-consultant-parser-framework
+  # NOW: "Generic Configurable Parser with BAR Field Schema" (backlog) - requires reimplementation
+  # See: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
   e1-s11-generic-configurable-parser: done
   e1-s12-consultant-wording-normalization: done
   e1-s13-fix-page-reference-tracking: done
@@ -63,7 +67,8 @@ development_status:
   e1-s17-building-inventory-compilation: done
   e1-s18-page-level-section-tagging: done
   e1-s19-document-metadata-extraction-enhancement: done
-  e1-s20-agentic-orchestrator: done
+  e1-s20-agentic-extraction-orchestrator: done
+  e1-s21-extraction-pipeline-observability: done  # Structured logging, pipeline event models, terminal progress
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -138,6 +143,7 @@ development_status:
   e8-s8-update-navigation-sidebar: archived
   e8-s9-typography-font-updates: archived
   e8-s10-dark-mode-refinement: archived
+  e8-s11-acm-register-grid-ui-polish: review  # Grid height, horizontal scroll, Building Code rename, header hover fix
   epic-8-retrospective: archived
 
   # Epic 9: Document Library Management (P0)
@@ -155,7 +161,7 @@ development_status:
   epic-10-retrospective: optional
 
   # Epic 11: Search & Retrieval Enhancement (P0/P1) - RAG Strategy
-  # 1/2 stories complete, 1 backlog
+  # 1/2 stories complete
   epic-11: in-progress
   e11-s1-parent-document-retrieval: done
   e11-s2-hybrid-search-service: backlog
@@ -198,26 +204,50 @@ development_status:
   e14-s11-pydantic-typescript-type-generation: done
   epic-14-retrospective: optional
 
+  # Bug Fixes (standalone)
+  bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
+
 # SUMMARY:
 # ========
 # Total Epics: 14 (6 done, 4 in-progress, 3 backlog, 1 archived)
-# Total Stories: 85
-# Stories Done: 62 (73%)
-# Stories Review: 0
+# Total Stories: 85 (in sprint-status tracking)
+# Stories Done: 59 (69%) - E1-S20 done after code review
+# Stories Archived: 10 (E8-S1..S10)
 # Stories Ready-for-dev: 3 (E2-S8, E5-S3, E5-S4)
 # Stories Drafted: 2 (E9-S3, E10-S1)
-# Stories Backlog: 8 (E11-S2, E12-S1..S4, E13-S1..S3)
-# Stories Archived: 10 (E8-S1..S10)
+# Stories In-Progress: 0
+# Stories In-Review: 1 (E11-S1)
+# Stories Backlog: 10 (E11-S2, E12-S1..S4, E13-S1..S3)
 #
-# Last Updated: 2026-02-10
+# Last Updated: 2026-02-09
 #
 # COMPLETED EPICS: E1, E3, E4, E6, E7, E14
-# IN-PROGRESS EPICS: E2 (7/8), E5 (2/4), E9 (2/3), E11 (1/2)
+# ARCHIVED EPICS: E8 (UI Refresh - skipped 2026-02-08)
+# IN-PROGRESS EPICS: E2 (7/8), E5 (2/4), E9 (2/3), E11 (0/2)
 # BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3)
-# ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# KEY CHANGES (2026-02-08 - Epic 14 Complete + YAML Reconciliation):
-# ===================================================================
+# KEY CHANGES (2026-02-08 - Course Correction: Generic Configurable Parser):
+# ===========================================================================
+# Applied: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
+# Scope: Moderate | Risk: Low | Path: Direct Adjustment
+#
+# - E1-S11 REDEFINED: "Extensible Consultant Parser Framework" -> "Generic Configurable Parser"
+#   - 3 consultant parsers (Prensa, Greencap, Generic) -> 1 configurable parser
+#   - BAR Excel template as single source of truth for fields, enums, rules
+#   - Key renamed: e1-s11-extensible-consultant-parser-framework -> e1-s11-generic-configurable-parser
+#   - Status reset: done -> backlog (requires reimplementation)
+# - E12-S4 REDEFINED: "Parser Configuration Management" -> "BAR Field Schema Configuration UI"
+#   - Key renamed: e12-s4-parser-configuration-management -> e12-s4-bar-field-schema-config-ui
+#   - Status unchanged: backlog
+# - E2-S8 ENHANCED: Added AG Grid columns from field schema config API (CP-3)
+#   - Status unchanged: ready-for-dev
+# - E1-S3 MINOR: Stage 1 uses generic parser with field config
+# - E1-S12 MINOR: Normalization rules become part of field config
+# - E5-S4 MINOR: Field mapping config already aligns with this change
+# - Summary counts updated: done 54->53, backlog 15->16
+#
+# KEY CHANGES (2026-02-08 - Epic 14 Complete + E1-S11..S13 Done):
+# ================================================================
 # - NEW Epic 14: UX & Enterprise Readiness (11 stories, ALL DONE)
 #   - E14-S1: VAEA Branding & Design Tokens (OKLch palette, system fonts, coral focus rings)
 #   - E14-S2: Sidebar Navigation Redesign (WORKSPACE/CONFIGURE sections)
@@ -230,11 +260,11 @@ development_status:
 #   - E14-S9: Keyboard Navigation & Shortcuts (Cmd+K actions, G+key nav, ? cheat sheet)
 #   - E14-S10: Breadcrumb Navigation (responsive, semantic HTML, ARIA)
 #   - E14-S11: Pydantic-TypeScript Type Generation (quicktype pipeline, CI drift detection)
-# - E1-S13 identity resolved: YAML key "fix-page-reference-tracking" kept as-is
-# - E1-S20 added: Agentic Extraction Orchestrator (was previously conflated with E1-S13)
-# - Added 7 missing YAML entries: E1-S14..S20 (all backlog)
-# - Fixed summary counts (total stories: 74→85, done: 61/85=72%)
-# - E2-S8 corrected to ready-for-dev (has tech-spec drafted)
+# - E1-S11 done: Extensible Consultant Parser Framework (later redefined, see above)
+# - E1-S12 done: Consultant Wording Normalization
+# - E1-S13 done: Fix Page Reference Tracking
+# - E1-S14 created: Contextual Embedding Enrichment (ready-for-dev)
+# - E1-S20 added: Agentic Extraction Orchestrator
 #
 # KEY CHANGES (2026-02-07 - Document Intelligence + Settings + Knowledge Graph):
 # ================================================================================
@@ -246,9 +276,13 @@ development_status:
 #
 # NEXT RECOMMENDED ACTIONS:
 # =========================
-# 1. Review/merge E1-S11 (in review) - unblocks E1-S12 and E12-S4
-# 2. Run Epic 14 retrospective (optional but recommended - first fully completed UX epic)
-# 3. Lane A: E1-S12 → E1-S13 → E1-S14 → E1-S16..S19 chain
-# 4. Lane B: E2-S8 → E9-S3 → E10-S1 → E5-S3
-# 5. Draft tech-specs for E1-S14..S20 as needed before implementation
-# 6. Cross-lane handoffs: E1-S11 merge → E12-S4, E1-S16..S19 → E12-S1..S3, E13-S1 → E13-S2..S3
+# 1. [P0] E1-S11: Implement Generic Configurable Parser (course correction priority)
+#    - Delete prensa.py, greencap.py; rewrite generic.py with FieldSchemaConfig
+#    - Add field-config API endpoints
+#    - See sprint-change-proposal-2026-02-08.md for full acceptance criteria
+# 2. [P0] E1-S14: Contextual Embedding Enrichment (ready-for-dev)
+# 3. [P1] E2-S8: Column Visibility + field config integration (ready-for-dev)
+# 4. [P1] E5-S3 -> E5-S4: BAR Template + Export Field Mapping (ready-for-dev)
+# 5. [P2] E12-S4: BAR Field Schema Configuration UI (after E1-S11)
+# 6. Draft tech-specs for E1-S15..S20 as needed before implementation
+# 7. Run Epic 14 retrospective (optional but recommended)

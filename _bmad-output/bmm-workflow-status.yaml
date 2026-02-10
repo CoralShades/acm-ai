@@ -45,7 +45,7 @@ workflow_status:
   implementation-readiness: "docs/implementation-readiness-report-2025-12-10.md"
 
   # PHASE 3: Implementation
-  sprint-planning: "_bmad-output/sprint-artifacts/sprint-status.yaml"
+  sprint-planning: "docs/sprint-artifacts/sprint-status.yaml"
 
   # PHASE 4: Course Corrections
   correct-course-bar: "_bmad-output/sprint-change-proposal-20260204.md"
@@ -70,7 +70,7 @@ workflow_status:
 #   - E1-S11, E1-S12 added to backlog: Extensible parser framework, wording normalization
 #   - E1-S3 updated: Two-stage extraction pipeline (EXTRACT → INTERPRET)
 #   - Documentation: extraction-pipeline.md, product-taxonomy.md, bar-schema.md added
-#   - Tech-spec created: _bmad-output/sprint-artifacts/e1-s10-mineru-table-extraction.md
+#   - Tech-spec created: docs/sprint-artifacts/e1-s10-mineru-table-extraction.md
 #   - Sprint change proposal updated with research integration section
 #   - References: _bmad-output/research-integration/, auto-claude spec 001
 # 2026-02-07: Document Intelligence Pipeline + Settings UI + Knowledge Graph

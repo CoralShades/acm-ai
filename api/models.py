@@ -840,22 +840,10 @@ class FieldSchemaConfigUpdateRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_field_config(self):
-        # Check BAR requirement: exactly 47 fields
-        if len(self.fields) != 47:
-            raise ValueError(
-                f"BAR schema requires exactly 47 fields, got {len(self.fields)}"
-            )
-
         # Check internal_name uniqueness
         names = [f.internal_name for f in self.fields]
         if len(names) != len(set(names)):
             raise ValueError("Field internal_name values must be unique")
-
-        # Check excel_column uniqueness
-        columns = [f.excel_column for f in self.fields]
-        if len(columns) != len(set(columns)):
-            raise ValueError("Field excel_column values must be unique")
-
         # Check field_type values
         allowed_types = {"string", "number", "date", "enum"}
         for f in self.fields:
@@ -863,14 +851,6 @@ class FieldSchemaConfigUpdateRequest(BaseModel):
                 raise ValueError(
                     f"Invalid field_type '{f.field_type}' for field '{f.internal_name}'"
                 )
-
-        # Check enum references are valid
-        for f in self.fields:
-            if f.enum_name and f.enum_name not in self.enums:
-                raise ValueError(
-                    f"Field '{f.internal_name}' references undefined enum '{f.enum_name}'"
-                )
-
         return self
 
 

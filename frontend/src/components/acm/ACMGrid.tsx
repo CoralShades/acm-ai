@@ -158,8 +158,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     () => [
       {
         field: 'building_id',
-        headerName: 'Building ID',
-        headerTooltip: 'Building identifier and name',
+        headerName: 'Building Code',
+        headerTooltip: 'Building code and name',
         width: 110,
         sortable: true,
         filter: true,
@@ -370,7 +370,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
 
   return (
     <div
-      className="ag-theme-alpine h-[500px] w-full"
+      className="ag-theme-alpine h-[calc(100vh-280px)] min-h-[400px] w-full"
       role="region"
       aria-label="ACM Records Data Grid - Use arrow keys to navigate, Enter to view details"
     >
@@ -422,6 +422,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         paginationPageSize={50}
         paginationPageSizeSelector={[20, 50, 100]}
         domLayout="normal"
+        alwaysShowHorizontalScroll={true}
+        tooltipShowDelay={300}
         // Row grouping configuration (enterprise-only, conditionally applied)
         {...(enableGrouping ? {
           groupDisplayType: 'groupRows' as const,
