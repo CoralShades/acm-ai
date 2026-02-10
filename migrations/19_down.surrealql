@@ -1,6 +1,0 @@
--- Down Migration 19: Remove structured fields from field_schema (E1-S11 code review rollback)
-
-REMOVE INDEX idx_field_schema_active ON TABLE field_schema;
-REMOVE FIELD active_field_names ON TABLE field_schema;
-REMOVE FIELD field_count ON TABLE field_schema;
-REMOVE FIELD source_template ON TABLE field_schema;

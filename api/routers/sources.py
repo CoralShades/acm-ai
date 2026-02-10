@@ -505,11 +505,7 @@ async def create_source(
                     embed=source_data.embed,
                 )
 
-                # Run sync command in thread pool to avoid blocking event loop
-                import asyncio
-
-                result = await asyncio.to_thread(
-                    execute_command_sync,
+                result = execute_command_sync(
                     "open_notebook",  # app name
                     "process_source",  # command name
                     command_input.model_dump(),

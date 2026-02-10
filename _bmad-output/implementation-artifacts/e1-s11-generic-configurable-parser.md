@@ -320,15 +320,13 @@ Claude Opus 4.6
 - Backward compatibility maintained: `_COMPAT_COLUMN_MAP` preserves short header names for existing markdown tables
 - `get_parser()` API unchanged (accepts optional pdf_text for compat, but no longer uses it for selection)
 - 47 BAR field definitions loaded from existing `register_row.schema.json`
-- Code review fixes (2026-02-10): Corrected sprint status key/status, added migration 19 for structured field_schema fields, enhanced API validation (47-field requirement, unique columns, enum references), added 5 integration tests
-- 497 tests pass (72 E1-S11 tests), 5 pre-existing failures (not introduced by this story)
+- 492 tests pass, 5 pre-existing failures (not introduced by this story)
 - Lint clean (ruff check passes)
 
 ### Build Verification
 
-- `uv run pytest tests/` — 497 passed, 5 pre-existing failures (72 E1-S11 tests total: 19 config, 13 parser, 24 consultant, 11 API, 5 integration)
+- `uv run pytest tests/` — 492 passed, 5 pre-existing failures
 - `uv tool run ruff check` — All checks passed
-- Code Review (2026-02-10) — 4 HIGH + 2 MEDIUM issues fixed, all tests pass
 
 ### File List
 
@@ -342,17 +340,14 @@ Claude Opus 4.6
 | `open_notebook/extractors/parsers/greencap.py` | DELETE | Absorbed into generic config-driven parser |
 | `open_notebook/extractors/parsers/base.py` | MODIFY | Updated docstring from old 3-parser instructions to single-parser architecture |
 | `open_notebook/extractors/acm_extractor.py` | MODIFY | Removed parser auto-detection, dead code guards, unused _create_header_map_from_parser |
-| `api/models.py` | ADD | FieldDefResponse, BusinessRuleResponse, FieldSchemaConfigResponse, FieldSchemaConfigUpdateRequest (enhanced validation in code review M1) |
-| `api/routers/acm.py` | ADD | GET/PUT /api/acm/field-config, POST /api/acm/field-config/reset (updated _save_db_field_config in code review H4) |
+| `api/models.py` | ADD | FieldDefResponse, BusinessRuleResponse, FieldSchemaConfigResponse, FieldSchemaConfigUpdateRequest |
+| `api/routers/acm.py` | ADD | GET/PUT /api/acm/field-config, POST /api/acm/field-config/reset |
 | `migrations/17.surrealql` | NEW | field_schema table for runtime config |
 | `migrations/17_down.surrealql` | NEW | Rollback migration |
-| `migrations/19.surrealql` | NEW | Add structured fields to field_schema (code review fix H4) |
-| `migrations/19_down.surrealql` | NEW | Rollback migration 19 |
 | `tests/test_field_config.py` | NEW | 19 tests for config models and loader |
 | `tests/test_generic_parser.py` | NEW | 13 tests for GenericParser behavior |
 | `tests/test_consultant_parsers.py` | REWRITE | 24 tests updated for single-parser architecture |
 | `tests/test_field_config_api.py` | NEW | 11 tests for field-config API endpoints |
-| `tests/test_acm_extractor_integration.py` | ADD | 5 integration tests for E1-S11 field config pipeline (code review fix M2) |
 
 ### Change Log
 
@@ -360,4 +355,3 @@ Claude Opus 4.6
 |------|--------|--------|
 | 2026-02-09 | Tasks 1-8 implemented | Full story implementation via TDD |
 | 2026-02-09 | Code review fixes (7 issues) | H1: Updated base.py stale docstring. H2: Removed dead code paths (parser.name != "generic" guards, unused _create_header_map_from_parser). H3: Wired PUT/reset endpoints to SurrealDB field_schema table for persistence. M1/M2: Made GenericParser config-driven extraction with BAR display name detection. M3: Improved enum matching with subset fallback. M4: Added validation to FieldSchemaConfigUpdateRequest. L1: Removed unused imports in test_field_config_api.py. |
-| 2026-02-10 | Adversarial code review fixes (6 issues) | **H2**: Updated sprint-status.yaml status from review→done. **H3**: Fixed story key mismatch (old: e1-s11-extensible-consultant-parser-framework, new: e1-s11-generic-configurable-parser). **H4**: Created migration 19 with structured fields (active_field_names, field_count, source_template) for efficient querying. Updated _save_db_field_config() to populate structured fields. **M1**: Enhanced API validation - added checks for: exactly 47 fields (BAR requirement), unique excel_column values, valid enum references. **M2**: Added 5 integration tests in TestE1S11FieldConfigIntegration class validating full extraction pipeline with field config. All tests pass (72 total for E1-S11). |
