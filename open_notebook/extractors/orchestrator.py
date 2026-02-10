@@ -322,7 +322,7 @@ async def _llm_extract_building(
         model_id,
         "extraction",
         temperature=0.1,
-        max_tokens=8192,
+        max_tokens=32768,
     )
 
     from langchain_core.messages import HumanMessage, SystemMessage
