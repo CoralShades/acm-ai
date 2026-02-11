@@ -120,7 +120,7 @@ def _select_strategy(
     ]
 
     if not register_pages:
-        return ExtractionStrategy.SKIP
+        return ExtractionStrategy.REGEX_ONLY  # Still extract with regex fallback
 
     if building.complexity == BuildingComplexity.SIMPLE:
         return ExtractionStrategy.REGEX_ONLY
@@ -266,6 +266,7 @@ def _regex_extract_simple_building(
     content: str,
     building_id: str,
     building_name: Optional[str] = None,
+    page_start: Optional[int] = None,
 ) -> List[ACMExtractionRecord]:
     """Extract records from a simple building using regex (Task 3.4).
 
@@ -286,8 +287,9 @@ def _regex_extract_simple_building(
                 room_name=room_name,
                 product="N/A",
                 material_description="No asbestos containing materials found",
-                result="Not Detected",
+                result="Negative",
                 extraction_confidence="high",
+                page_number=page_start,
             )
         )
 
@@ -365,6 +367,7 @@ async def extract_building(
                 building_content,
                 plan.building_id,
                 plan.building_name,
+                page_start=plan.page_range[0],
             )
             elapsed = int((time.time() - start) * 1000)
             return records, BuildingExtractionStats(
@@ -389,6 +392,12 @@ async def extract_building(
     # FULL_LLM path
     try:
         records = await _llm_extract_building(building_content, plan, state)
+        # Ensure building context propagates to all records
+        for rec in records:
+            if not rec.building_name and plan.building_name:
+                rec.building_name = plan.building_name
+            if not rec.page_number:
+                rec.page_number = plan.page_range[0]
         elapsed = int((time.time() - start) * 1000)
         return records, BuildingExtractionStats(
             building_id=plan.building_id,
