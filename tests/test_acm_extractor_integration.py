@@ -101,12 +101,12 @@ class TestSamplePDF1124:
         assert all(r["page_number"] == 2 for r in page2_records)
 
     def test_no_asbestos_detected_normalization(self):
-        """Test 'No Asbestos Detected' is normalized to 'Not Detected'."""
+        """Test 'No Asbestos Detected' is normalized to 'Negative'."""
         result = extract_acm_records(self.SAMPLE_MARKDOWN, "source:1124")
 
-        not_detected = [r for r in result if r["result"] == "Not Detected"]
-        assert len(not_detected) == 1
-        assert not_detected[0]["product"] == "Floor Covering"
+        negative = [r for r in result if r["result"] == "Negative"]
+        assert len(negative) == 1
+        assert negative[0]["product"] == "Floor Covering"
 
     def test_risk_status_extraction(self):
         """Test risk status is extracted correctly."""
@@ -246,12 +246,12 @@ class TestSamplePDF4601:
         assert all(r["building_name"] == "Technology Wing" for r in c10_records)
         assert all(r["building_year"] == 1985 for r in c10_records)
 
-    def test_multiple_not_detected(self):
+    def test_multiple_negative(self):
         """Test extraction handles multiple tables correctly."""
         result = extract_acm_records(self.SAMPLE_MARKDOWN, "source:4601")
 
-        not_detected = [r for r in result if r["result"] == "Not Detected"]
-        assert len(not_detected) == 1
+        negative = [r for r in result if r["result"] == "Negative"]
+        assert len(negative) == 1
 
 
 class TestAccuracyMetrics:
@@ -274,7 +274,7 @@ class TestAccuracyMetrics:
                 "room_area": 42.5,
                 "product": "Floor Tiles",
                 "material_description": "Vinyl asbestos floor tiles, 9x9 inch",
-                "result": "Detected",
+                "result": "Positive",
             },
             {
                 "school_name": "Westview Primary School",
@@ -285,7 +285,7 @@ class TestAccuracyMetrics:
                 "friable": "Friable",
                 "material_condition": "Fair",
                 "risk_status": "Medium",
-                "result": "Detected",
+                "result": "Positive",
             },
             {
                 "building_id": "B02A",
