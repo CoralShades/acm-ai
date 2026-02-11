@@ -24,12 +24,30 @@ export interface ACMRecord {
   material_description: string
   extent?: string | null
   location?: string | null
-  friable?: string | null // 'Friable' | 'Non Friable'
+  friable?: string | null // 'Friable' | 'Non-friable'
   material_condition?: string | null
   risk_status?: string | null // 'Low' | 'Medium' | 'High'
   result: string
   page_number?: number | null
   extraction_confidence?: number | null
+  // Classification fields
+  acm_product_group?: string | null
+  acm_product_type?: string | null
+  classification_confidence?: number | null
+  classification_method?: string | null
+  classification_override?: boolean | null
+  // BAR compliance fields
+  sample_no?: string | null
+  sample_result?: string | null
+  quantity?: string | null
+  acm_labelled?: boolean | null
+  acm_label_details?: string | null
+  identifying_company?: string | null
+  disturbance_potential?: string | null
+  hygienist_recommendations?: string | null
+  normalized_action?: string | null
+  data_issues?: string[] | null
+  floor_level?: string | null
   created?: string | null
   updated?: string | null
 }
@@ -123,7 +141,7 @@ export type RiskStatus = 'Low' | 'Medium' | 'High'
 export type AreaType = 'Interior' | 'Exterior' | 'Grounds'
 
 // Friable type
-export type FriableType = 'Friable' | 'Non Friable'
+export type FriableType = 'Friable' | 'Non-friable'
 
 // Site Configuration Types for Victorian BAR Compliance
 export interface SiteConfig {

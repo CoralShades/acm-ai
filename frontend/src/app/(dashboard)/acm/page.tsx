@@ -40,6 +40,7 @@ function ACMPageContent() {
   // State
   const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(undefined)
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
+  const [searchText, setSearchText] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
   const [selectedRecord, setSelectedRecord] = useState<ACMRecord | null>(null)
@@ -231,6 +232,8 @@ function ACMPageContent() {
                   isExportingCsv={exportCsv.isPending}
                   isExportingExcel={exportExcel.isPending}
                   disabled={isLoadingRecords}
+                  searchText={searchText}
+                  onSearchChange={setSearchText}
                 />
 
                 {/* Loading State */}
@@ -268,6 +271,7 @@ function ACMPageContent() {
                     isLoading={isLoadingRecords}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    quickFilterText={searchText}
                   />
                 )}
               </CardContent>
