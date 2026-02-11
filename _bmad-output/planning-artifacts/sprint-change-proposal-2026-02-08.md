@@ -2,9 +2,11 @@
 
 > **Date:** 2026-02-08
 > **Author:** San (facilitated by Correct Course workflow)
-> **Status:** Proposed
+> **Status:** ✅ APPROVED (2026-02-10)
+> **Approved by:** Demi
 > **Change Scope:** Moderate
 > **Branch:** Epic8
+> **Reference Commits:** 3c3c63e, d7097f2 (ACM schema & extraction pipeline)
 
 ---
 
