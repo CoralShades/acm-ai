@@ -118,6 +118,7 @@ desktop.ini
 
 # Log files
 *.log
+logs/
 
 # Database files
 *.db

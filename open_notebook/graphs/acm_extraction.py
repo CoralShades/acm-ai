@@ -1797,6 +1797,7 @@ async def extract_acm_from_source(
     source: Source,
     model_id: Optional[str] = None,
     force: bool = False,
+    command_id: Optional[str] = None,
 ) -> ACMExtractionOutput:
     """
     Main entry point for ACM extraction.
@@ -1821,7 +1822,11 @@ async def extract_acm_from_source(
             re.IGNORECASE,
         )
         total_pages = len(page_markers) if page_markers else 0
-    pl = PipelineLogger(source_id=str(source.id), total_pages=total_pages)
+    pl = PipelineLogger(
+        source_id=str(source.id),
+        total_pages=total_pages,
+        command_id=command_id,
+    )
 
     if force:
         # Delete existing table sections and records (E11-S1)
