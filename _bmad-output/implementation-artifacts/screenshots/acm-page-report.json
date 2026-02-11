@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-02-10T09:21:52.635Z",
+  "page": "ACM Register",
+  "url": "http://localhost:8502/acm",
+  "screenshots": [
+    "acm-page-desktop-1920.png",
+    "acm-page-mobile-768.png",
+    "acm-page-sorted.png",
+    "acm-page-filtered.png"
+  ],
+  "elements": {
+    "statsCards": 0,
+    "agGridRoot": 0,
+    "agGridRows": 0,
+    "extractBtn": 0,
+    "exportBtn": 0,
+    "refreshBtn": 0,
+    "sourceSelector": 0,
+    "quickFilter": 1
+  },
+  "errors": [],
+  "consoleMessages": [],
+  "bugs": [
+    {
+      "severity": "Critical",
+      "component": "AG Grid",
+      "description": "AG Grid not found on page",
+      "expected": "AG Grid should be present to display ACM records",
+      "actual": "No AG Grid root element found"
+    },
+    {
+      "severity": "Critical",
+      "component": "Data Display",
+      "description": "No records displayed in grid",
+      "expected": "8 ACM records should be displayed for Clutch_Broadmeadows.pdf",
+      "actual": "Zero rows in grid"
+    }
+  ]
+}
