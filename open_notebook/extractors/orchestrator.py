@@ -296,12 +296,47 @@ def _regex_extract_simple_building(
     return records
 
 
+ROOM_HEADER_PATTERN = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
+SUB_CHUNK_ROOM_THRESHOLD = 12  # ~250 tokens/record; 8192 tokens fits ~15-20 safely
+
+
+def _split_building_by_rooms(
+    content: str, max_rooms: int = SUB_CHUNK_ROOM_THRESHOLD
+) -> List[str]:
+    """Split building content into sub-chunks by room groups.
+
+    Finds room header boundaries and groups them into sub-chunks of
+    max_rooms each to avoid output token truncation.
+    """
+    room_matches = list(ROOM_HEADER_PATTERN.finditer(content))
+    if len(room_matches) <= max_rooms:
+        return [content]
+
+    chunks: List[str] = []
+    for i in range(0, len(room_matches), max_rooms):
+        start = room_matches[i].start()
+        # End at the start of the next group (or end of content)
+        end_idx = i + max_rooms
+        end = room_matches[end_idx].start() if end_idx < len(room_matches) else len(content)
+        chunks.append(content[start:end])
+
+    logger.info(
+        f"Split building content into {len(chunks)} sub-chunks "
+        f"({len(room_matches)} rooms, threshold={max_rooms})"
+    )
+    return chunks
+
+
 async def _llm_extract_building(
     building_content: str,
     plan: BuildingExtractionPlan,
     state: dict,
 ) -> List[ACMExtractionRecord]:
-    """Run LLM extraction on building content using existing extraction logic."""
+    """Run LLM extraction on building content using existing extraction logic.
+
+    For buildings with many rooms, splits content into sub-chunks to avoid
+    output token truncation (8192 max_tokens ≈ 15-20 records).
+    """
     from ai_prompter import Prompter
 
     from open_notebook.graphs.utils import provision_langchain_model
@@ -309,34 +344,49 @@ async def _llm_extract_building(
     model_id = state.get("model_id")
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
 
-    prompt_ctx = _create_building_prompt_context(plan, doc_meta)
+    # Check room count and sub-chunk if needed
+    sub_chunks = _split_building_by_rooms(building_content)
 
-    prompter = Prompter(prompt_template="acm/building_extraction")
-    system_prompt = prompter.render(
-        data={
-            "building_context": prompt_ctx,
-            "content": building_content,
-        }
-    )
+    all_records: List[ACMExtractionRecord] = []
 
-    model = await provision_langchain_model(
-        building_content,
-        model_id,
-        "extraction",
-        temperature=0.1,
-        max_tokens=8192,  # Haiku max output
-    )
+    for chunk_idx, chunk_content in enumerate(sub_chunks):
+        prompt_ctx = _create_building_prompt_context(plan, doc_meta)
 
-    from langchain_core.messages import HumanMessage, SystemMessage
+        prompter = Prompter(prompt_template="acm/building_extraction")
+        system_prompt = prompter.render(
+            data={
+                "building_context": prompt_ctx,
+                "content": chunk_content,
+            }
+        )
 
-    chain = model.with_structured_output(ACMExtractionResult)
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content="Extract ACM records from the building content provided."),
-    ]
+        model = await provision_langchain_model(
+            chunk_content,
+            model_id,
+            "extraction",
+            temperature=0.1,
+            max_tokens=8192,
+        )
 
-    result: ACMExtractionResult = await chain.ainvoke(messages)
-    return result.records
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        chain = model.with_structured_output(ACMExtractionResult)
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content="Extract ACM records from the building content provided."),
+        ]
+
+        result: ACMExtractionResult = await chain.ainvoke(messages)
+
+        if len(sub_chunks) > 1:
+            logger.info(
+                f"Building {plan.building_id} sub-chunk {chunk_idx + 1}/{len(sub_chunks)}: "
+                f"{len(result.records)} records"
+            )
+
+        all_records.extend(result.records)
+
+    return all_records
 
 
 async def extract_building(

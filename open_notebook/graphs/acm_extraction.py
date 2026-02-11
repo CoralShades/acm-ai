@@ -206,6 +206,31 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
             acm_marker,
         )
 
+    # Mark negative result patterns (visual parity with ACM DETECTED markers)
+    no_acm_marker = ">>> NO ASBESTOS: Negative result <<<"
+
+    # Replace newline-split versions first (common in PDF extraction)
+    processed = processed.replace("No Asbestos\nDetected", no_acm_marker)
+    processed = processed.replace("No asbestos\ndetected", no_acm_marker)
+    processed = processed.replace("Not\nDetected", no_acm_marker)
+
+    # Replace single-line versions (longer phrases first to avoid partial matches)
+    for neg_phrase in [
+        "No Asbestos Detected",
+        "No asbestos detected",
+        "Not Detected",
+        "Not detected",
+    ]:
+        processed = processed.replace(neg_phrase, no_acm_marker)
+
+    # Standalone "No Asbestos" — safe because "No Asbestos Detected" already replaced
+    processed = processed.replace("No Asbestos", no_acm_marker)
+
+    # Clean up any accidental double negative markers
+    double_neg = f"{no_acm_marker} {no_acm_marker}"
+    while double_neg in processed:
+        processed = processed.replace(double_neg, no_acm_marker)
+
     metadata["processed_length"] = len(processed)
 
     return processed, metadata
@@ -1098,6 +1123,34 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             "total_validated": 0,
         },
     )
+
+    # Extraction completeness check: count room headers vs extracted records
+    content = state.get("content", "")
+    if content and correction_attempt == 0:
+        room_pattern = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
+        expected_rooms = len(set(room_pattern.findall(content)))
+        extracted_count = len(records)
+        if expected_rooms > 0:
+            completeness_pct = (extracted_count / expected_rooms) * 100
+            if extracted_count < expected_rooms:
+                logger.warning(
+                    f"COMPLETENESS GAP: Extracted {extracted_count}/{expected_rooms} "
+                    f"room records ({completeness_pct:.0f}%) — "
+                    f"{expected_rooms - extracted_count} records may be missing"
+                )
+            else:
+                logger.info(
+                    f"Completeness check: {extracted_count}/{expected_rooms} "
+                    f"room records ({completeness_pct:.0f}%)"
+                )
+            if pl:
+                pl.stage_progress(
+                    StageId.VALIDATE,
+                    f"Completeness: {extracted_count}/{expected_rooms} ({completeness_pct:.0f}%)",
+                    expected_rooms=expected_rooms,
+                    extracted_count=extracted_count,
+                    completeness_pct=round(completeness_pct, 1),
+                )
 
     if not records:
         logger.info("No records to validate")

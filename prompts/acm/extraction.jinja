@@ -29,6 +29,7 @@ The content has been pre-processed to add helpful markers:
 - `=== BUILDING: ... ===` marks building section headers
 - `--- ROOM: ... ---` marks room section headers
 - `>>> ACM DETECTED: Asbestos-containing material <<<` marks ACM-positive entries
+- `>>> NO ASBESTOS: Negative result <<<` marks negative (no ACM) entries
 
 ### How to Read the Vertical Format
 
@@ -62,6 +63,34 @@ Low
 - risk_status: "Low"
 - result: "Positive"
 
+**EXAMPLE: This is ONE complete NEGATIVE record (No Asbestos found):**
+
+```
+--- ROOM: B009 - R0012 - Male Locker Room - 12.30 m2 ---
+B009 - R0012 - Male Locker Room - 12.30 m2
+Floor Coverings
+Res/Textile
+Vinyl Tiles
+10m2
+Throughout
+>>> NO ASBESTOS: Negative result <<<
+```
+
+**This should be extracted as:**
+- building_id: "B009"
+- room_id: "R0012"
+- room_name: "Male Locker Room"
+- room_area: "12.30 m2"
+- product: "Floor Coverings"
+- material_description: "Vinyl Tiles"
+- extent: "10m2"
+- location: "Throughout"
+- friable: "N/A (negative)"
+- material_condition: "N/A (negative)"
+- disturbance_potential: "N/A (negative)"
+- risk_status: null
+- result: "Negative"
+
 ### Key Patterns to Recognize
 
 1. **Room Headers** (format: BuildingID - RoomID - RoomName - Area):
@@ -77,9 +106,11 @@ Low
    - `Asbestos-containing material` (if marker not present)
    - `Detected`
 
-4. **No Asbestos / Negative Entries** - ALSO extract these:
-   - Lines containing `No Asbestos` indicate rooms where no ACM was found
-   - Extract these with result set to "Negative" and condition/disturbance fields to "N/A (negative)"
+4. **Negative Result Markers** - These indicate NO asbestos was found:
+   - `>>> NO ASBESTOS: Negative result <<<`
+   - `No Asbestos` (if marker not present)
+   - `Not Detected`, `NAD`
+   - Extract these with result "Negative", friable "N/A (negative)", material_condition "N/A (negative)", disturbance_potential "N/A (negative)"
 
 5. **Vertical Field Sequence** (fields appear in this order, one per line):
    - Product (e.g., "Floor Coverings", "Ceiling Linings", "Wall Linings")
@@ -94,14 +125,20 @@ Low
 
 ## Your Extraction Task
 
-### IMPORTANT: Extract ALL Records Regardless of Result
+### CRITICAL: Extract EVERY Room Entry — Both Positive AND Negative
 
-Extract ALL records from the ACM register regardless of result type. This includes Positive, Assumed Positive, Negative, and Assumed Negative results. **Negative results are compliance-critical and MUST be included.**
+A complete BAR (Building Asbestos Register) requires BOTH positive AND negative results. Missing negatives = non-compliant register. You MUST extract every room entry you find.
 
-1. **SCAN** the content for room entries (B### - R#### pattern)
-2. **EXTRACT** the vertical sequence of fields for each room entry
-3. For ACM-positive rooms (with `>>> ACM DETECTED:` or `Asbestos-containing material`), set `sample_result` to "Positive" or "Assumed Positive"
-4. For rooms with "No Asbestos" result, set `sample_result` to "Negative" and `material_condition` to "N/A (negative)"
+1. **SCAN** the content for ALL room entries (B### - R#### pattern) — do NOT skip any
+2. **EXTRACT** the vertical sequence of fields for EVERY room entry found
+3. **CLASSIFY** each record's result:
+   - `>>> ACM DETECTED:` or `Asbestos-containing material` → result: "Positive"
+   - Assumed/Presumed ACM → result: "Assumed Positive"
+   - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` → result: "Negative"
+   - Assumed/Presumed no asbestos → result: "Assumed Negative"
+4. **For Negative/Assumed Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
+
+**WARNING:** If you extract fewer records than room entries visible in the content, you are missing records. Go back and extract them ALL.
 
 ### Data Completeness Rules
 
