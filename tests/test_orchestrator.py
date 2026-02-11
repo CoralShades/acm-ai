@@ -207,7 +207,7 @@ class TestExtractionPlan:
         assert plan.buildings_skipped == 0
         b_plan = {p.building_id: p for p in plan.plans}
         assert b_plan["B00A"].strategy == ExtractionStrategy.FULL_LLM
-        assert b_plan["B00B"].strategy == ExtractionStrategy.REGEX_ONLY
+        assert b_plan["B00B"].strategy == ExtractionStrategy.FULL_LLM
 
     def test_plan_regex_for_simple(self):
         """Simple buildings with register pages should use REGEX_ONLY."""
@@ -319,7 +319,8 @@ class TestPlanExtraction:
         assert by_id["B00B"].strategy == ExtractionStrategy.REGEX_ONLY
         assert by_id["B00C"].strategy == ExtractionStrategy.FULL_LLM
 
-    def test_non_register_buildings_use_regex_fallback(self):
+    def test_non_register_buildings_use_full_llm(self):
+        """Non-register buildings use FULL_LLM fallback (4175aeb changed from REGEX_ONLY)."""
         inventory = _make_inventory(
             [
                 _make_building("B00A", "Methodology", 5, 8, BuildingComplexity.COMPLEX),
@@ -334,7 +335,7 @@ class TestPlanExtraction:
             ]
         )
         plan = plan_extraction(inventory, tags)
-        assert plan.plans[0].strategy == ExtractionStrategy.REGEX_ONLY
+        assert plan.plans[0].strategy == ExtractionStrategy.FULL_LLM
 
     def test_missing_page_tags_defaults_full_llm(self):
         inventory = _make_inventory(
