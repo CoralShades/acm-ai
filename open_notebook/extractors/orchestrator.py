@@ -120,7 +120,7 @@ def _select_strategy(
     ]
 
     if not register_pages:
-        return ExtractionStrategy.REGEX_ONLY  # Still extract with regex fallback
+        return ExtractionStrategy.FULL_LLM  # Use LLM when page tagging can't confirm register location
 
     if building.complexity == BuildingComplexity.SIMPLE:
         return ExtractionStrategy.REGEX_ONLY
@@ -324,7 +324,7 @@ async def _llm_extract_building(
         model_id,
         "extraction",
         temperature=0.1,
-        max_tokens=32768,
+        max_tokens=8192,  # Haiku max output
     )
 
     from langchain_core.messages import HumanMessage, SystemMessage
