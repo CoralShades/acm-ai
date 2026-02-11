@@ -48,20 +48,20 @@ Asbestos-containing material
 - friable: "Non Friable"
 - material_condition: "Minimal Damage"
 - risk_status: "Low"
-- result: "Detected"
+- result: "Positive"
 
 ### Key Patterns to Recognize
 
 1. **Room Headers** (format: BuildingID - RoomID - RoomName - Area):
    - `B009 - R0005 - General Storeroom - 1.45 m2`
 
-2. **ACM-Positive Markers** - THESE are the records to extract:
+2. **ACM-Positive Markers** - These indicate asbestos was found:
    - `Asbestos-containing material`
    - `Detected`
 
-3. **No Asbestos Entries** - DO NOT extract these:
-   - Lines containing just `No Asbestos`
-   - These indicate rooms where no ACM was found
+3. **No Asbestos / Negative Entries** - ALSO extract these:
+   - Lines containing `No Asbestos` indicate rooms where no ACM was found
+   - Extract these with `sample_result` set to "Negative" and condition/disturbance fields to "N/A (negative)"
 
 ### Controlled Vocabulary (BAR Enum Values)
 
@@ -90,7 +90,7 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 ## Output Format
 
 Return your extraction as a JSON object matching the ACMExtractionResult schema with:
-- `records`: Array of extracted ACM records (ONLY ACM-positive entries)
+- `records`: Array of ALL extracted ACM records (both positive and negative results)
 - `status`: "valid" if extraction succeeded, "no_acm_data" if content has no ACM records
 - `extraction_notes`: Any important observations about the extraction
 
@@ -99,5 +99,5 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `building_id`: Building identifier (e.g., "{{ building_context.building_id }}")
 - `product`: Product type (e.g., "Floor Coverings")
 - `material_description`: Material description (e.g., "Vinyl Tiles")
-- `result`: Test result - should be "Detected" for ACM-positive entries
+- `result`: Test result using BAR vocabulary: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
 - `extraction_confidence`: Confidence level ("high", "medium", or "low")

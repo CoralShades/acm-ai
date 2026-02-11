@@ -60,7 +60,7 @@ Low
 - friable: "Non Friable"
 - material_condition: "Minimal Damage"
 - risk_status: "Low"
-- result: "Detected"
+- result: "Positive"
 
 ### Key Patterns to Recognize
 
@@ -72,12 +72,16 @@ Low
    - `B009 - Special Purpose - 1950 - Steel`
    - `B010 - Storage - 2022 - Metal Shed`
 
-3. **ACM-Positive Markers** - THESE are the records to extract:
+3. **ACM-Positive Markers** - These indicate asbestos was found:
    - `>>> ACM DETECTED: Asbestos-containing material <<<`
    - `Asbestos-containing material` (if marker not present)
    - `Detected`
 
-4. **Vertical Field Sequence** (fields appear in this order, one per line):
+4. **No Asbestos / Negative Entries** - ALSO extract these:
+   - Lines containing `No Asbestos` indicate rooms where no ACM was found
+   - Extract these with result set to "Negative" and condition/disturbance fields to "N/A (negative)"
+
+5. **Vertical Field Sequence** (fields appear in this order, one per line):
    - Product (e.g., "Floor Coverings", "Ceiling Linings", "Wall Linings")
    - Material Category (e.g., "Res/Textile", "Flat/Profiled Sheeting")
    - Material Description (e.g., "Vinyl Tiles", "Fibre Cement")
@@ -88,18 +92,16 @@ Low
    - Risk Level (e.g., "Low", "Medium", "High")
    - Result (e.g., "Asbestos-containing material", "No Asbestos")
 
-5. **No Asbestos Entries** - DO NOT extract these:
-   - Lines containing just `No Asbestos`
-   - These indicate rooms where no ACM was found
-
 ## Your Extraction Task
 
-### IMPORTANT: Only Extract ACM-Positive Records
+### IMPORTANT: Extract ALL Records Regardless of Result
 
-1. **SCAN** the content for `>>> ACM DETECTED:` markers or `Asbestos-containing material` text
-2. **LOOK BACKWARDS** from each marker to find the room header (B### - R#### pattern)
-3. **EXTRACT** the vertical sequence of fields between the room header and the ACM marker
-4. **SKIP** any rooms that only have "No Asbestos" result
+Extract ALL records from the ACM register regardless of result type. This includes Positive, Assumed Positive, Negative, and Assumed Negative results. **Negative results are compliance-critical and MUST be included.**
+
+1. **SCAN** the content for room entries (B### - R#### pattern)
+2. **EXTRACT** the vertical sequence of fields for each room entry
+3. For ACM-positive rooms (with `>>> ACM DETECTED:` or `Asbestos-containing material`), set `sample_result` to "Positive" or "Assumed Positive"
+4. For rooms with "No Asbestos" result, set `sample_result` to "Negative" and `material_condition` to "N/A (negative)"
 
 ### Data Completeness Rules
 
@@ -120,7 +122,7 @@ The following fields MUST use values from the Victorian BAR (Building Asbestos R
 
 ### Data Mapping Rules
 
-- `result` should be "Detected" for ACM-positive entries
+- `result` should map to BAR vocabulary: "Positive" for ACM-containing, "Assumed Positive" for presumed ACM, "Negative" for no asbestos, "Assumed Negative" for presumed no asbestos
 - Building IDs follow format: B### (e.g., B009, B010)
 - Room IDs follow format: R#### (e.g., R0005, R0007)
 - Room area is typically at the end of the room header line (e.g., "1.45 m2")
@@ -134,7 +136,7 @@ The following fields MUST use values from the Victorian BAR (Building Asbestos R
 ## Output Format
 
 Return your extraction as a JSON object matching the ACMExtractionResult schema with:
-- `records`: Array of extracted ACM records (ONLY ACM-positive entries with "Asbestos-containing material")
+- `records`: Array of ALL extracted ACM records (both positive and negative results)
 - `status`: "valid" if extraction succeeded, "no_acm_data" if content has no ACM records
 - `extraction_notes`: Any important observations about the extraction
 
@@ -143,7 +145,7 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `building_id`: Building identifier (e.g., "B009")
 - `product`: Product type (e.g., "Floor Coverings")
 - `material_description`: Material description (e.g., "Vinyl Tiles")
-- `result`: Test result - should be "Detected" for ACM-positive entries
+- `result`: Test result using BAR vocabulary: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
 - `extraction_confidence`: Confidence level ("high", "medium", or "low")
 
 ### Optional Fields (use null if not available)
