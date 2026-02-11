@@ -218,6 +218,9 @@ export interface CommandJobStatusResponse {
   status: 'new' | 'running' | 'completed' | 'failed' | 'canceled'
   result?: { success?: boolean; records_created?: number; error_message?: string }
   error_message?: string | null
+  progress?: {
+    state?: import('./pipeline').PipelineRunState
+  }
 }
 
 // Re-export generated types that complement the manual types above.
