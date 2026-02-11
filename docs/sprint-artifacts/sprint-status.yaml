@@ -65,6 +65,7 @@ development_status:
   e1-s19-document-metadata-extraction-enhancement: done
   e1-s20-agentic-orchestrator: done
   e1-s21-extraction-pipeline-observability: done  # Structured logging, pipeline event models, terminal progress
+  e1-s22-extraction-output-token-limit-fix: done  # Fix max_tokens 8192->32768 for large document extraction
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)

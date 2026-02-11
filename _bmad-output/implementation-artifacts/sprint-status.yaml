@@ -63,6 +63,7 @@ development_status:
   e1-s17-building-inventory-compilation: backlog
   e1-s18-page-level-section-tagging: backlog
   e1-s19-document-metadata-extraction-enhancement: backlog
+  e1-s22-extraction-output-token-limit-fix: done
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
