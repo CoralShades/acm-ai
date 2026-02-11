@@ -1015,19 +1015,26 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
             record.building_id = context.building_id
             issues.append("Building ID inferred from context")
 
-        # Normalize result field
+        # Normalize result field to BAR vocabulary
+        # Order matters: check negative compound terms before simple "detected"
         if record.result:
             result_lower = record.result.lower()
-            if (
-                "no asbestos" in result_lower
-                or "nad" in result_lower
-                or "not detected" in result_lower
+            if "assumed positive" in result_lower or "presumed positive" in result_lower:
+                record.result = "Assumed Positive"
+            elif "assumed negative" in result_lower or "presumed negative" in result_lower:
+                record.result = "Assumed Negative"
+            elif any(
+                x in result_lower
+                for x in ["no asbestos", "nad", "not detected", "negative"]
             ):
-                record.result = "Not Detected"
-            elif "detected" in result_lower or "positive" in result_lower:
-                record.result = "Detected"
-            elif "presumed" in result_lower:
-                record.result = "Presumed"
+                record.result = "Negative"
+            elif any(
+                x in result_lower
+                for x in ["positive", "detected", "asbestos-containing"]
+            ):
+                record.result = "Positive"
+            else:
+                record.result = "Unknown"
         else:
             record.result = "Unknown"
             issues.append("Result field was empty, set to Unknown")
