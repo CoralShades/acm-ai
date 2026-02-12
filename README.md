@@ -107,29 +107,54 @@ stop-ollama.bat       # Stop Ollama container
 
 #### macOS / Linux / WSL
 ```bash
-# Option 1: Start all 4 services in background (logs to /tmp/)
-./start-all.sh                # Start all services
-./stop-all.sh                 # Stop all services
+# Option 1: Smart start with port conflict detection + auto-fix (recommended)
+make smart-start              # Pre-flight checks, auto-fix conflicts, start all, verify health
+make smart-stop               # Stop all with verification
 
-# Option 2: Start with make (same as Option 1)
+# Option 2: Start all 4 services in background (logs to /tmp/)
+./start-all.sh                # Start all services (with pre-flight checks)
+./stop-all.sh                 # Stop all services (with verification)
+
+# Option 3: Start with make (same as Option 2)
 make start-all
 make stop-all
 
-# Option 3: Start in tmux with 4 visible terminal panes (recommended for development)
-./start-all-tmux.sh           # Starts in tmux session
+# Option 4: Start in tmux with 5 panes (4 services + live health dashboard)
+make tmux                     # Or: ./start-all-tmux.sh
 # Use Ctrl+B then D to detach, Ctrl+B then arrow keys to switch panes
 
-# View logs (for Option 1 & 2):
+# Service management utilities:
+make health                   # Live-updating health dashboard (Ctrl+C to exit)
+make preflight                # Pre-flight check (Docker, ports, dependencies)
+make fix                      # Auto-fix port conflicts and stale processes
+
+# View logs (for Option 2 & 3):
 tail -f /tmp/acm-ai-api.log
 tail -f /tmp/acm-ai-worker.log
 ```
 
+#### Service Manager CLI
+
+A unified Python CLI manages all services with pre-flight checks, port conflict detection, and a rich TUI:
+
+```bash
+uv run python scripts/service_manager.py check     # Pre-flight: Docker, ports, dependencies
+uv run python scripts/service_manager.py start      # Start all services with health verification
+uv run python scripts/service_manager.py stop       # Stop all with verification
+uv run python scripts/service_manager.py status     # Show colored service status table
+uv run python scripts/service_manager.py health     # Live-updating health dashboard
+uv run python scripts/service_manager.py fix        # Fix port conflicts and stale PID files
+uv run python scripts/service_manager.py start --auto-fix  # Auto-resolve port conflicts
+```
+
 **The 4 services are:**
 
-1. **SurrealDB** (Database) - Port 8000
-2. **FastAPI Backend** (API) - Port 5055
-3. **Background Worker** (Async job processor)
-4. **Next.js Frontend** (UI) - Port 8502
+| Service | Port | Description |
+|---------|------|-------------|
+| **SurrealDB** | 8000 | Multi-model database |
+| **FastAPI Backend** | 5055 | REST API server |
+| **Background Worker** | - | Async job processor |
+| **Next.js Frontend** | 8502 | Web UI |
 
 #### Manual Setup (All Platforms)
 ```bash
