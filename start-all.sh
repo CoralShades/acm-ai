@@ -66,7 +66,8 @@ echo ""
 # [3/5] Start API Server
 echo "[3/5] Starting API Server (port 5055)..."
 cd "$SCRIPT_DIR"
-nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 &
+# API_RELOAD=false: Uvicorn's StatReload blocks the event loop on WSL2's slow /mnt/* filesystem
+API_RELOAD=false nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 &
 echo $! > /tmp/acm-ai-api.pid
 echo "API launched (PID: $(cat /tmp/acm-ai-api.pid))"
 wait_health "http://localhost:5055/health" "API Server"

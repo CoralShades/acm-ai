@@ -142,6 +142,10 @@ def start_service_background(service: ServiceDef) -> bool:
     env = os.environ.copy()
     if service.name == "frontend":
         env["PORT"] = str(service.port)
+    if service.name == "api":
+        # Disable Uvicorn reload in background mode - StatReload blocks the event
+        # loop on slow filesystems (WSL2 /mnt/* uses 9P protocol).
+        env["API_RELOAD"] = "false"
 
     try:
         proc = subprocess.Popen(

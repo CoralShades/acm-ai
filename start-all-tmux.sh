@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ACM-AI - Start All Services with tmux (WSL/Linux)
-# Creates a tmux session with 4 service panes + optional health dashboard
+# Creates a tmux session with 4 service panes + health dashboard
 # Usage: ./start-all-tmux.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,8 +40,8 @@ echo ""
 # Also stop any leftover docker services
 docker compose down 2>/dev/null || true
 
-# Create new tmux session - start with full-width bottom pane for health
-# Layout strategy: split bottom first (full-width), then split top into 2x2
+# Create new tmux session
+# Layout strategy: split bottom first (full-width health strip), then split top into 2x2
 tmux new-session -d -s $SESSION_NAME -n "ACM-AI" -c "$SCRIPT_DIR"
 
 # Split: top 80% / bottom 20% (health strip spans full width)
@@ -53,36 +53,33 @@ tmux split-window -h -t $SESSION_NAME:0.0
 # Split top-left (0) vertically: SurrealDB (top) / Worker (bottom)
 tmux split-window -v -t $SESSION_NAME:0.0
 
-# Split top-right (1) vertically: API (top) / Frontend (bottom)
+# Split top-right (2) vertically: API (top) / Frontend (bottom)
 tmux split-window -v -t $SESSION_NAME:0.2
 
 # After all splits, pane indices are:
-#   0 = top-left-top (SurrealDB)
-#   1 = bottom (health dashboard, full width)
-#   2 = top-right-top (API)
-#   3 = top-left-bottom (Worker)
+#   0 = top-left-top     (SurrealDB)
+#   1 = bottom full-width (Health Dashboard)
+#   2 = top-right-top    (API Server)
+#   3 = top-left-bottom  (Worker)
 #   4 = top-right-bottom (Frontend)
 
-# Helper: inline wait-for-port function (used by pane commands)
-WAIT_PORT='wait_port() { local p=$1 n=$2 i=0; echo "Waiting for $n on port $p..."; while ! python3 -c "import socket; s=socket.socket(); s.settimeout(1); exit(0) if s.connect_ex((\"127.0.0.1\",$p))==0 else exit(1)" 2>/dev/null; do sleep 2; i=$((i+1)); if [ $i -ge 30 ]; then echo "Timeout waiting for $n"; break; fi; done; echo "$n is ready!"; }'
+SD="$SCRIPT_DIR"
 
-# Helper: inline wait-for-health function (HTTP check)
-WAIT_HEALTH='wait_health() { local url=$1 n=$2 i=0; echo "Waiting for $n health..."; while ! curl -sf "$url" >/dev/null 2>&1; do sleep 2; i=$((i+1)); if [ $i -ge 45 ]; then echo "Timeout waiting for $n health"; break; fi; done; echo "$n health check passed!"; }'
+# Pane 0: SurrealDB (starts immediately)
+tmux send-keys -t $SESSION_NAME:0.0 "echo '=== SurrealDB (Database) ==='; cd $SD && docker compose up surrealdb" C-m
 
-# Pane 0 (top-left-top): SurrealDB
-tmux send-keys -t $SESSION_NAME:0.0 "echo '=== SurrealDB (Database) ==='; cd $SCRIPT_DIR && docker compose up surrealdb" C-m
+# Pane 2: API Server (waits for SurrealDB port 8000)
+# API_RELOAD=false: Uvicorn's StatReload blocks the event loop on WSL2's slow /mnt/* filesystem
+tmux send-keys -t $SESSION_NAME:0.2 "cd $SD && $SD/scripts/_wait_for_port.sh 8000 SurrealDB 60 && echo '=== API Server (port 5055) ===' && API_RELOAD=false uv run python run_api.py" C-m
 
-# Pane 2 (top-right-top): API Server - waits for SurrealDB port
-tmux send-keys -t $SESSION_NAME:0.2 "cd $SCRIPT_DIR && $WAIT_PORT && wait_port 8000 SurrealDB && echo '=== API Server (port 5055) ===' && uv run python run_api.py" C-m
+# Pane 3: Worker (waits for SurrealDB port 8000)
+tmux send-keys -t $SESSION_NAME:0.3 "cd $SD && $SD/scripts/_wait_for_port.sh 8000 SurrealDB 60 && echo '=== Background Worker ===' && uv run surreal-commands-worker --import-modules commands" C-m
 
-# Pane 3 (top-left-bottom): Worker - waits for SurrealDB port
-tmux send-keys -t $SESSION_NAME:0.3 "cd $SCRIPT_DIR && $WAIT_PORT && wait_port 8000 SurrealDB && echo '=== Background Worker ===' && uv run surreal-commands-worker --import-modules commands" C-m
+# Pane 4: Frontend (waits for API health - ensures API is fully initialized)
+tmux send-keys -t $SESSION_NAME:0.4 "cd $SD && $SD/scripts/_wait_for.sh http://localhost:5055/health 'API Server' 120 && echo '=== Frontend (port 8502) ===' && cd $SD/frontend && PORT=8502 npm run dev -- -p 8502" C-m
 
-# Pane 4 (top-right-bottom): Frontend - waits for API health
-tmux send-keys -t $SESSION_NAME:0.4 "cd $SCRIPT_DIR/frontend && $WAIT_HEALTH && wait_health http://localhost:5055/health 'API Server' && echo '=== Frontend (port 8502) ===' && PORT=8502 npm run dev -- -p 8502" C-m
-
-# Pane 1 (bottom full-width): Health Dashboard - waits for API
-tmux send-keys -t $SESSION_NAME:0.1 "cd $SCRIPT_DIR && $WAIT_HEALTH && wait_health http://localhost:5055/health 'API Server' && uv run python scripts/service_manager.py health" C-m
+# Pane 1: Health Dashboard (waits for API, then shows live status)
+tmux send-keys -t $SESSION_NAME:0.1 "cd $SD && $SD/scripts/_wait_for.sh http://localhost:5055/health 'API Server' 120 && uv run python scripts/service_manager.py health" C-m
 
 echo "All services starting in tmux session!"
 echo ""

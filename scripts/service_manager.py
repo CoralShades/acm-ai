@@ -217,7 +217,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         # Wait for service to be healthy (not just started)
         if svc.health_url or svc.port:
             _print(f"  Waiting for {svc.display_name} to be ready...", end="")
-            healthy = _wait_for_service(svc, timeout=60)
+            healthy = _wait_for_service(svc, timeout=120)
             if healthy:
                 _print(f" [green]ready[/green]")
             else:

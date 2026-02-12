@@ -29,7 +29,7 @@ if %errorlevel% neq 0 (
 echo.
 
 echo [3/5] Starting API Server (port 5055)...
-start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && uv run python run_api.py"
+start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && set API_RELOAD=false && uv run python run_api.py"
 echo Waiting for API to be ready...
 :wait_api
 timeout /t 2 /nobreak >nul
