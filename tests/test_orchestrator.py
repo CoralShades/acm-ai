@@ -179,8 +179,8 @@ class TestExtractionPlan:
         assert plan.buildings_to_extract == 3  # All have register pages
         assert plan.buildings_skipped == 0
 
-    def test_plan_with_skip(self):
-        """Buildings with no register pages should be SKIP."""
+    def test_plan_with_no_register_pages(self):
+        """Buildings with no register pages should use REGEX_ONLY fallback."""
         inventory = _make_inventory(
             [
                 _make_building("B00A", "Admin", 10, 15, BuildingComplexity.COMPLEX),
@@ -203,11 +203,11 @@ class TestExtractionPlan:
             ]
         )
         plan = plan_extraction(inventory, tags)
-        assert plan.buildings_to_extract == 1
-        assert plan.buildings_skipped == 1
+        assert plan.buildings_to_extract == 2
+        assert plan.buildings_skipped == 0
         b_plan = {p.building_id: p for p in plan.plans}
         assert b_plan["B00A"].strategy == ExtractionStrategy.FULL_LLM
-        assert b_plan["B00B"].strategy == ExtractionStrategy.SKIP
+        assert b_plan["B00B"].strategy == ExtractionStrategy.FULL_LLM
 
     def test_plan_regex_for_simple(self):
         """Simple buildings with register pages should use REGEX_ONLY."""
@@ -319,7 +319,8 @@ class TestPlanExtraction:
         assert by_id["B00B"].strategy == ExtractionStrategy.REGEX_ONLY
         assert by_id["B00C"].strategy == ExtractionStrategy.FULL_LLM
 
-    def test_skip_non_register_buildings(self):
+    def test_non_register_buildings_use_full_llm(self):
+        """Non-register buildings use FULL_LLM fallback (4175aeb changed from REGEX_ONLY)."""
         inventory = _make_inventory(
             [
                 _make_building("B00A", "Methodology", 5, 8, BuildingComplexity.COMPLEX),
@@ -334,7 +335,7 @@ class TestPlanExtraction:
             ]
         )
         plan = plan_extraction(inventory, tags)
-        assert plan.plans[0].strategy == ExtractionStrategy.SKIP
+        assert plan.plans[0].strategy == ExtractionStrategy.FULL_LLM
 
     def test_missing_page_tags_defaults_full_llm(self):
         inventory = _make_inventory(
@@ -405,7 +406,7 @@ class TestExtractBuildingContent:
 
 
 class TestRegexExtractSimpleBuilding:
-    def test_creates_not_detected_records(self):
+    def test_creates_negative_records(self):
         content = """## B00A - Storage Shed
 No Asbestos
 B00A-R0001 - External Movement
@@ -414,7 +415,7 @@ B00A-R0002 - Storeroom
 No Asbestos"""
         records = _regex_extract_simple_building(content, "B00A", "Storage Shed")
         assert len(records) == 2
-        assert all(r.result == "Not Detected" for r in records)
+        assert all(r.result == "Negative" for r in records)
         assert all(r.building_id == "B00A" for r in records)
         assert records[0].room_id == "B00A-R0001"
         assert records[1].room_id == "B00A-R0002"
@@ -472,7 +473,7 @@ class TestExtractBuilding:
         records, stats = await extract_building(plan, content, {})
         assert len(records) == 1
         assert stats.strategy_used == "regex_only"
-        assert records[0].result == "Not Detected"
+        assert records[0].result == "Negative"
 
     @pytest.mark.asyncio
     async def test_full_llm_error_handling(self):

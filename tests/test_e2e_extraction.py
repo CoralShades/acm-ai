@@ -255,8 +255,7 @@ class TestRegexExtraction:
         match = [
             r
             for r in records
-            if r["building_id"] == exp["building_id"]
-            and r["product"] == exp["product"]
+            if r["building_id"] == exp["building_id"] and r["product"] == exp["product"]
         ]
         assert match
         rec = match[0]
@@ -743,7 +742,12 @@ class TestMineruToRecords:
     SAMPLE_PDF_DIR = Path(__file__).parent.parent / "docs" / "samplePDF"
 
     @pytest.mark.skipif(
-        not (Path(__file__).parent.parent / "docs" / "samplePDF" / "1124_AsbestosRegister.pdf").exists(),
+        not (
+            Path(__file__).parent.parent
+            / "docs"
+            / "samplePDF"
+            / "1124_AsbestosRegister.pdf"
+        ).exists(),
         reason="Sample PDF not available",
     )
     def test_pdf_exists_and_is_readable(self):
@@ -753,7 +757,12 @@ class TestMineruToRecords:
         assert pdf_path.stat().st_size > 0
 
     @pytest.mark.skipif(
-        not (Path(__file__).parent.parent / "docs" / "samplePDF" / "1124_AsbestosRegister.pdf").exists(),
+        not (
+            Path(__file__).parent.parent
+            / "docs"
+            / "samplePDF"
+            / "1124_AsbestosRegister.pdf"
+        ).exists(),
         reason="Sample PDF not available",
     )
     def test_regex_extraction_from_real_pdf_markdown(self):
