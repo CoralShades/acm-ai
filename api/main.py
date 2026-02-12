@@ -20,6 +20,7 @@ from api.routers import (
     embedding,
     embedding_rebuild,
     episode_profiles,
+    extraction_events,
     insights,
     models,
     notebooks,
@@ -108,6 +109,7 @@ app.add_middleware(
         "/redoc",
         "/api/auth/status",
         "/api/config",
+        "/api/agui/chat",
     ],
 )
 
@@ -143,6 +145,15 @@ app.include_router(speaker_profiles.router, prefix="/api", tags=["speaker-profil
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(source_chat.router, prefix="/api", tags=["source-chat"])
 app.include_router(acm.router, prefix="/api/acm", tags=["acm"])
+app.include_router(extraction_events.router, prefix="/api", tags=["extraction-events"])
+
+# Register AG-UI endpoint for CopilotKit integration
+try:
+    from api.routers.agui_chat import register_agui_endpoints
+
+    register_agui_endpoints(app)
+except Exception as e:
+    logger.warning(f"AG-UI endpoint registration failed (non-fatal): {e}")
 
 
 @app.get("/")
