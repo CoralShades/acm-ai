@@ -78,6 +78,11 @@ class DocumentMeta(BaseModel):
     # Confidence scoring per field (E1-S19)
     field_confidence: Dict[str, str] = Field(default_factory=dict)
 
+    @classmethod
+    def from_llm(cls, llm_result: "DocumentMetaLLM") -> "DocumentMeta":
+        """Convert LLM-friendly model to full model."""
+        return cls(**llm_result.model_dump())
+
     def get_extracted_fields(self) -> Dict[str, Any]:
         """Return only non-None data fields (excludes meta fields)."""
         exclude_fields = {"field_confidence", "additional"}
@@ -99,6 +104,33 @@ class DocumentMeta(BaseModel):
         if self.organization:
             mappings["agency"] = self.organization
         return mappings
+
+
+class DocumentMetaLLM(BaseModel):
+    """LLM-friendly version of DocumentMeta without Dict fields.
+
+    Azure OpenAI strict mode rejects Dict[str, str] fields because they
+    produce open schemas (additionalProperties: true). This slim model
+    excludes `additional` and `field_confidence` for LLM structured output.
+    Convert to full DocumentMeta via DocumentMeta.from_llm().
+    """
+
+    consultant_name: str
+    site_name: Optional[str] = None
+    site_address: Optional[str] = None
+    report_date: Optional[str] = None
+    report_reference: Optional[str] = None
+    building_size: Optional[str] = None
+    building_age: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    organization: Optional[str] = None
+    inspection_dates: Optional[List[str]] = None
+    inspector_names: Optional[List[str]] = None
+    document_scope: Optional[str] = None
+    methodology: Optional[str] = None
+    revision_date: Optional[str] = None
+    regional_classification: Optional[str] = None
 
 
 @dataclass

@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional, Set
 from loguru import logger
 
 from open_notebook.extractors.document_structure import _PAGE_PATTERN
-from open_notebook.extractors.parsers.base import DocumentMeta
+from open_notebook.extractors.parsers.base import DocumentMeta, DocumentMetaLLM
 from open_notebook.graphs.utils import provision_langchain_model
 
 # Number of pages to extract for cover page analysis
@@ -226,15 +226,15 @@ async def _llm_extract_metadata(
         max_tokens=2048,
     )
 
-    chain = model.with_structured_output(DocumentMeta)
+    chain = model.with_structured_output(DocumentMetaLLM)
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
             content="Extract the document metadata from the cover pages provided."
         ),
     ]
-    result: DocumentMeta = await chain.ainvoke(messages)
-    return result
+    llm_result: DocumentMetaLLM = await chain.ainvoke(messages)
+    return DocumentMeta.from_llm(llm_result)
 
 
 # ============================================================================
