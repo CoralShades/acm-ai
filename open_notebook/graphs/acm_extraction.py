@@ -83,40 +83,46 @@ CHUNK_OVERLAP_CHARS = 500  # Overlap between chunks to preserve context
 
 def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
     """
-    Extract just the ACM Register section from a SAMP document.
+    Extract just the ACM Register section from a document.
 
-    SAMP documents have lots of boilerplate text before the actual ACM Register.
+    SAMP and ARA documents have boilerplate text before the actual ACM Register.
     This function finds and extracts just the relevant section.
 
     Returns:
         Tuple of (extracted_content, was_extracted)
     """
     # Look for common markers that indicate start of ACM Register section
-    start_markers = [
-        "Appendix B: Asbestos Register",
-        "Appendix B - Asbestos Register",
-        "Asbestos Register",
-        "Interior",  # Often the first area type in the register
+    # Use case-insensitive search to handle "ASBESTOS REGISTER" (ARA) and
+    # "Asbestos Register" (SAMP) formats
+    start_marker_patterns = [
+        re.compile(r"Appendix\s+B[:\s-]+Asbestos\s+Register", re.IGNORECASE),
+        re.compile(r"Asbestos\s+Register", re.IGNORECASE),
     ]
 
     # Look for building pattern which indicates start of actual data
-    building_pattern = r"(B\d{3}\s*-\s*[A-Za-z])"
+    # Supports both SAMP (B###) and ARA (named buildings via "Building Name:")
+    building_patterns = [
+        re.compile(r"B\d{3}\s*-\s*[A-Za-z]"),
+        re.compile(r"Building\s+Name:\s*\S", re.IGNORECASE),
+    ]
 
     start_idx = -1
 
-    # Try to find a good starting point
-    for marker in start_markers:
-        idx = content.find(marker)
-        if idx != -1:
-            start_idx = idx
+    # Try to find a good starting point using register markers
+    for pattern in start_marker_patterns:
+        match = pattern.search(content)
+        if match:
+            start_idx = match.start()
             break
 
-    # If no marker found, try to find the first building ID pattern
+    # If no marker found, try to find the first building pattern
     if start_idx == -1:
-        match = re.search(building_pattern, content)
-        if match:
-            # Go back a bit to include potential headers
-            start_idx = max(0, match.start() - 200)
+        for pattern in building_patterns:
+            match = pattern.search(content)
+            if match:
+                # Go back a bit to include potential headers
+                start_idx = max(0, match.start() - 200)
+                break
 
     if (
         start_idx != -1 and start_idx > 500
@@ -130,6 +136,44 @@ def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
     return content, False
 
 
+def _detect_document_format(content: str) -> str:
+    """Detect whether content is SAMP or ARA format.
+
+    Returns:
+        "samp" for B###-style IDs, "ara" for named buildings,
+        "unknown" otherwise.
+    """
+    # Check for SAMP format indicators
+    samp_building = re.search(r"B\d{3}\s*-\s*R\d{4}", content)
+    if samp_building:
+        return "samp"
+
+    # Check for ARA format indicators
+    ara_indicators = 0
+    if re.search(r"Building Name:\s*\S", content):
+        ara_indicators += 1
+    if re.search(
+        r"(?:Presumed\s+)?(?:Positive|Negative)\b", content, re.IGNORECASE
+    ):
+        ara_indicators += 1
+    if re.search(
+        r"\b(?:Dist\.\s*Potential|Risk Rating|Friability)\b", content, re.IGNORECASE
+    ):
+        ara_indicators += 1
+    # ARA section dividers: "BuildingName - Interior/Exterior - Level"
+    if re.search(
+        r".+\s*-\s*(?:Interior|Exterior)\s*-\s*(?:Ground|First|Second|Basement)\s+Level",
+        content,
+        re.IGNORECASE,
+    ):
+        ara_indicators += 1
+
+    if ara_indicators >= 2:
+        return "ara"
+
+    return "unknown"
+
+
 def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     """
     Pre-process ACM document content to help LLM understand the structure.
@@ -137,19 +181,21 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     The content from PyMuPDF/content-core often comes in vertical format where
     table columns are stacked vertically. This function:
     1. Extracts the ACM Register section (removes boilerplate)
-    2. Identifies room/building headers
-    3. Groups related content together
-    4. Adds structural markers to help LLM parsing
+    2. Detects document format (SAMP vs ARA)
+    3. Identifies room/building headers
+    4. Groups related content together
+    5. Adds structural markers to help LLM parsing
 
     Returns:
         Tuple of (processed_content, metadata_dict)
     """
-    metadata = {
+    metadata: Dict[str, Any] = {
         "original_length": len(content),
         "rooms_found": 0,
         "acm_indicators_found": 0,
         "no_asbestos_found": 0,
         "section_extracted": False,
+        "document_format": "unknown",
     }
 
     # First, try to extract just the ACM Register section
@@ -157,10 +203,33 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     metadata["section_extracted"] = was_extracted
     metadata["extracted_length"] = len(content)
 
+    # Detect document format
+    doc_format = _detect_document_format(content)
+    metadata["document_format"] = doc_format
+
     # Count key patterns for metadata
     metadata["acm_indicators_found"] = content.count("Asbestos-containing")
     metadata["no_asbestos_found"] = content.count("No Asbestos")
 
+    # Add section markers to help LLM understand structure
+    processed = content
+
+    if doc_format == "ara":
+        # ARA format: Named buildings, sequential items, section dividers
+        processed, metadata = _preprocess_ara_format(processed, metadata)
+    else:
+        # SAMP format or unknown: B###/R#### IDs
+        processed, metadata = _preprocess_samp_format(processed, metadata)
+
+    metadata["processed_length"] = len(processed)
+
+    return processed, metadata
+
+
+def _preprocess_samp_format(
+    content: str, metadata: Dict[str, Any]
+) -> Tuple[str, Dict[str, Any]]:
+    """Pre-process SAMP format content (B###/R#### building/room IDs)."""
     # Room header pattern: B009 - R0005 - General Storeroom - 6.61 m2
     room_pattern = r"(B\d{3}\s*-\s*R\d{4,5}\s*-\s*[^-\n]+\s*-\s*[\d.]+\s*m2)"
     rooms = re.findall(room_pattern, content)
@@ -171,12 +240,12 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     buildings = re.findall(building_pattern, content)
 
     if debug_config.DEBUG_ENABLED:
-        acm_debug(f"Pre-process found: {len(rooms)} rooms, {len(buildings)} buildings")
+        acm_debug(f"Pre-process (SAMP): {len(rooms)} rooms, {len(buildings)} buildings")
         acm_debug(
-            f"ACM indicators: {metadata['acm_indicators_found']}, No Asbestos: {metadata['no_asbestos_found']}"
+            f"ACM indicators: {metadata['acm_indicators_found']}, "
+            f"No Asbestos: {metadata['no_asbestos_found']}"
         )
 
-    # Add section markers to help LLM understand structure
     processed = content
 
     # Mark building headers clearly
@@ -189,14 +258,9 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
         marker = f"\n--- ROOM: {room} ---\n"
         processed = processed.replace(room, marker + room)
 
-    # Mark ACM result patterns (replace newline-split version first, then check for already-marked)
+    # Mark ACM result patterns (replace newline-split version first)
     acm_marker = ">>> ACM DETECTED: Asbestos-containing material <<<"
-
-    # Replace newline-split version (most common in PDF extraction)
     processed = processed.replace("Asbestos-containing\nmaterial", acm_marker)
-
-    # Replace single-line version only if not already marked
-    # This prevents double-marking
     processed = processed.replace("Asbestos-containing material", acm_marker)
 
     # Clean up any accidental double markers
@@ -206,7 +270,82 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
             acm_marker,
         )
 
-    metadata["processed_length"] = len(processed)
+    return processed, metadata
+
+
+def _preprocess_ara_format(
+    content: str, metadata: Dict[str, Any]
+) -> Tuple[str, Dict[str, Any]]:
+    """Pre-process ARA format content (named buildings, sequential items).
+
+    ARA (Asbestos Risk Assessment) documents use:
+    - Named buildings in page headers ("Building Name: Myrtle Street Clinic")
+    - Section dividers ("Building - Interior/Exterior - Level")
+    - Sequential item numbers
+    - "Asbestos"/"None" as Hazard Type
+    - "Positive"/"Negative"/"Presumed Positive" as Item Status
+    """
+    # Count ARA-specific patterns for metadata
+    # Section dividers: "BuildingName - Interior/Exterior - Ground Level"
+    section_divider_pattern = re.compile(
+        r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(?:Ground|First|Second|Basement)\s+Level",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    section_dividers = section_divider_pattern.findall(content)
+    metadata["ara_section_dividers"] = len(section_dividers)
+
+    # Building Name from page headers
+    building_name_pattern = re.compile(
+        r"Building\s+Name:\s*(.+?)(?:\n|$)", re.IGNORECASE
+    )
+    building_names = list(
+        set(m.strip() for m in building_name_pattern.findall(content))
+    )
+    metadata["ara_buildings_found"] = len(building_names)
+
+    # Count items with "Asbestos" hazard type (ACM items to extract)
+    hazard_asbestos = len(
+        re.findall(r"^Asbestos$", content, re.MULTILINE | re.IGNORECASE)
+    )
+    # Count items with "None" hazard type (to skip)
+    hazard_none = len(re.findall(r"^None$", content, re.MULTILINE))
+    metadata["acm_indicators_found"] = hazard_asbestos
+    metadata["ara_none_hazard_count"] = hazard_none
+
+    # Count positive/negative results
+    positive_count = len(
+        re.findall(
+            r"(?:^|\n)(?:Presumed\s+)?Positive\b", content, re.IGNORECASE
+        )
+    )
+    negative_count = len(
+        re.findall(
+            r"(?:^|\n)(?:Presumed\s+)?Negative\b", content, re.IGNORECASE
+        )
+    )
+    metadata["ara_positive_count"] = positive_count
+    metadata["ara_negative_count"] = negative_count
+
+    if debug_config.DEBUG_ENABLED:
+        acm_debug(
+            f"Pre-process (ARA): {len(building_names)} buildings, "
+            f"{len(section_dividers)} section dividers"
+        )
+        acm_debug(
+            f"ARA items: {hazard_asbestos} Asbestos, {hazard_none} None hazard, "
+            f"{positive_count} positive, {negative_count} negative"
+        )
+
+    processed = content
+
+    # Mark section dividers clearly (these split Interior/Exterior areas)
+    for match in section_divider_pattern.finditer(processed):
+        original = match.group(0)
+        building = match.group(1).strip()
+        area_type = match.group(2).strip()
+        marker = f"\n\n=== SECTION: {building} - {area_type} ===\n"
+        # Only replace exact matches to avoid partial replacement issues
+        processed = processed.replace(original, marker + original, 1)
 
     return processed, metadata
 
@@ -1026,8 +1165,15 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
                 record.result = "Not Detected"
             elif "detected" in result_lower or "positive" in result_lower:
                 record.result = "Detected"
+            elif "negative" in result_lower:
+                record.result = "Not Detected"
             elif "presumed" in result_lower:
-                record.result = "Presumed"
+                # Use sample_result to determine if positive or negative
+                sr = (record.sample_result or "").lower()
+                if "negative" in sr:
+                    record.result = "Not Detected"
+                else:
+                    record.result = "Detected"
         else:
             record.result = "Unknown"
             issues.append("Result field was empty, set to Unknown")

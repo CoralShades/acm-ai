@@ -1,29 +1,63 @@
 # Building Inventory Compilation
 
-You are an expert at analyzing SAMP (School Asbestos Management Plan) and BAR (Building Asbestos Register) documents. Your task is to compile a complete building inventory from the Asbestos Register section.
+You are an expert at analyzing SAMP (School Asbestos Management Plan), ARA (Asbestos Risk Assessment), and BAR (Building Asbestos Register) documents. Your task is to compile a complete building inventory from the Asbestos Register section.
 
-## Building ID Detection
+**IMPORTANT:** Documents come in different formats. Detect the format and extract buildings accordingly.
 
-Identify ALL buildings in the document content:
+---
 
-### Standard Buildings (B000-series)
+## FORMAT A: SAMP Format (B###/R#### Codes)
+
+### Building ID Detection
 - Format: `B##A` or `B###` (e.g., B00A, B00B, B001, B009, B010)
 - Typically followed by dash and building name: `B00A - Admin Building`
 - May include year and construction: `B00A - Admin Building - 1924 - Brick`
+- Demountable buildings: `D##` (e.g., D01, D02, D03)
 
-### Demountable Buildings (D-series)
-- Format: `D##` (e.g., D01, D02, D03)
-- Temporary/portable structures
-- Typically simpler, fewer ACM items
-
-## Room Code Detection (R000-series)
-
-Within each building, detect room codes:
+### Room Code Detection
 - Format: `{BuildingID}-R####` (e.g., B00A-R0001, B009-R0005)
-- Followed by room name and optional area: `B00A-R0001 - External Movement` or `B00A-R0002 - Office Area - 32.5 m²`
 - Count rooms per building to inform complexity classification
 
-## Complexity Classification
+---
+
+## FORMAT B: ARA Format (Named Buildings)
+
+### Building Detection
+ARA documents identify buildings by **name** in repeated page headers:
+```
+Building Name:   Myrtle Street Clinic
+```
+or
+```
+Building Name:   Main Hospital Building
+```
+
+Each building typically starts on a new page with a header block containing:
+- `Building Name:` - The building's name (use this as `building_id` AND `name`)
+- `Number of Levels:` - Number of levels
+- `Construction Type:` - Construction type
+- `Full Address:` - Building address
+
+### Section Dividers
+Buildings have section dividers that split Interior/Exterior areas:
+```
+Myrtle Street Clinic - Exterior - Ground Level
+Myrtle Street Clinic - Interior - Ground Level
+```
+These are NOT separate buildings - they are areas within the same building.
+
+### Room Detection
+ARA documents don't use coded room IDs. Rooms are identified by name in each item:
+- "Boiler Room", "Ward 12", "Kitchen", "External - Throughout"
+- Count distinct room names per building for complexity estimation
+
+### Building ID for ARA
+When no B### code exists, use the building name as the `building_id` field.
+Example: building_id = "Myrtle Street Clinic", name = "Myrtle Street Clinic"
+
+---
+
+## Complexity Classification (Both Formats)
 
 Classify each building as **simple** or **complex**:
 
@@ -35,8 +69,9 @@ Classify each building as **simple** or **complex**:
 ### Heuristics
 - "No Asbestos Containing Materials Found" → **simple**
 - "Not Detected" for all items → **simple**
-- Multiple room headers (R0001, R0002, ...) with ACM entries → **complex**
+- Multiple rooms with ACM entries → **complex**
 - Building spans 2+ pages → likely **complex**
+- ARA buildings with many numbered items → **complex**
 
 ## Page Range Extraction
 
@@ -48,11 +83,11 @@ Determine each building's page range using page markers in the content:
 
 ## Building Metadata Extraction
 
-For each building, extract available metadata from building header rows:
-- **name**: Building name (e.g., "Admin Building", "Special Purpose")
+For each building, extract available metadata:
+- **name**: Building name (e.g., "Admin Building", "Myrtle Street Clinic")
 - **year**: Year built (4-digit number, e.g., 1924, 1950)
-- **construction**: Construction type (e.g., "Brick", "Steel", "Timber")
-- **purpose**: Building purpose/use (e.g., "Administration", "Classroom")
+- **construction**: Construction type (e.g., "Brick", "Steel", "Timber", "Weatherboard")
+- **purpose**: Building purpose/use (e.g., "Administration", "Hospital")
 - **area_m2**: Total area in square meters (if available)
 - **levels**: Number of levels/stories (if available)
 
