@@ -115,9 +115,9 @@ class TestACMExtractionSchemas:
         result.update_stats()
 
         assert result.total_records == 3
-        assert result.confidence_distribution["high"] == 1
-        assert result.confidence_distribution["medium"] == 1
-        assert result.confidence_distribution["low"] == 1
+        assert result.confidence_distribution.high == 1
+        assert result.confidence_distribution.medium == 1
+        assert result.confidence_distribution.low == 1
 
     def test_extraction_status_enum(self):
         """Test ExtractionStatus enum values."""
@@ -406,7 +406,7 @@ class TestExtractionInputOutput:
         assert output.source_id == "source:123"
         assert output.status == "success"
         assert output.total_records == 5
-        assert output.confidence_distribution["high"] == 2
+        assert output.confidence_distribution.high == 2
 
 
 class TestExtractionConfidenceEnum:

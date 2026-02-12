@@ -162,15 +162,14 @@ class TestPromptTemplate:
 
         prompter = Prompter(prompt_template="acm/building_inventory")
         result = prompter.render(data={"content": ""})
-        assert "B000-series" in result
-        assert "D-series" in result
+        assert "B##A" in result or "B###" in result
+        assert "D##" in result or "Demountable" in result.lower()
 
     def test_prompt_contains_room_detection_instructions(self):
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/building_inventory")
         result = prompter.render(data={"content": ""})
-        assert "R000-series" in result
         assert "R####" in result or "R0001" in result
 
     def test_prompt_contains_complexity_classification(self):

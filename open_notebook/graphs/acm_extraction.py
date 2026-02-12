@@ -226,6 +226,60 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     return processed, metadata
 
 
+def _preprocess_ara_format(
+    content: str, metadata: Dict[str, Any]
+) -> Tuple[str, Dict[str, Any]]:
+    """Pre-process ARA format content (named buildings, numbered items, section dividers)."""
+    processed = content
+
+    # Find building names from header blocks
+    building_name_pattern = r"Building Name:\s*(.+?)(?:\n|$)"
+    building_names = re.findall(building_name_pattern, content)
+    unique_buildings = list(dict.fromkeys(name.strip() for name in building_names))
+    metadata["ara_buildings_found"] = len(unique_buildings)
+
+    # Find section dividers: "BuildingName - Interior/Exterior - Level"
+    section_pattern = r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(.+?)$"
+    section_dividers = re.findall(section_pattern, content, re.MULTILINE)
+    metadata["ara_section_dividers"] = len(section_dividers)
+
+    # Add section markers for dividers
+    for building, area_type, level in section_dividers:
+        original = f"{building.strip()} - {area_type} - {level.strip()}"
+        marker = f"\n=== SECTION: {original} ===\n"
+        processed = processed.replace(original, marker + original)
+
+    # Count hazard types
+    asbestos_count = len(re.findall(r"^Asbestos$", content, re.MULTILINE))
+    none_count = len(re.findall(r"^None$", content, re.MULTILINE))
+    metadata["acm_indicators_found"] = asbestos_count
+    metadata["ara_none_hazard_count"] = none_count
+
+    # Count positive/negative results
+    positive_patterns = [
+        r"\bPositive\b",
+        r"\bPresumed Positive\b",
+    ]
+    negative_patterns = [
+        r"\bNegative\b",
+        r"\bPresumed Negative\b",
+    ]
+
+    pos_count = sum(len(re.findall(p, content)) for p in positive_patterns)
+    neg_count = sum(len(re.findall(p, content)) for p in negative_patterns)
+    metadata["ara_positive_count"] = pos_count
+    metadata["ara_negative_count"] = neg_count
+
+    if debug_config.DEBUG_ENABLED:
+        acm_debug(
+            f"Pre-process (ARA): {len(unique_buildings)} buildings, "
+            f"{len(section_dividers)} section dividers, "
+            f"{asbestos_count} asbestos items, {none_count} none items"
+        )
+
+    return processed, metadata
+
+
 def _preprocess_samp_format(
     content: str, metadata: Dict[str, Any]
 ) -> Tuple[str, Dict[str, Any]]:
@@ -270,82 +324,30 @@ def _preprocess_samp_format(
             acm_marker,
         )
 
-    return processed, metadata
+    # Mark negative result patterns (visual parity with ACM DETECTED markers)
+    no_acm_marker = ">>> NO ASBESTOS: Negative result <<<"
 
+    # Replace newline-split versions first (common in PDF extraction)
+    processed = processed.replace("No Asbestos\nDetected", no_acm_marker)
+    processed = processed.replace("No asbestos\ndetected", no_acm_marker)
+    processed = processed.replace("Not\nDetected", no_acm_marker)
 
-def _preprocess_ara_format(
-    content: str, metadata: Dict[str, Any]
-) -> Tuple[str, Dict[str, Any]]:
-    """Pre-process ARA format content (named buildings, sequential items).
+    # Replace single-line versions (longer phrases first to avoid partial matches)
+    for neg_phrase in [
+        "No Asbestos Detected",
+        "No asbestos detected",
+        "Not Detected",
+        "Not detected",
+    ]:
+        processed = processed.replace(neg_phrase, no_acm_marker)
 
-    ARA (Asbestos Risk Assessment) documents use:
-    - Named buildings in page headers ("Building Name: Myrtle Street Clinic")
-    - Section dividers ("Building - Interior/Exterior - Level")
-    - Sequential item numbers
-    - "Asbestos"/"None" as Hazard Type
-    - "Positive"/"Negative"/"Presumed Positive" as Item Status
-    """
-    # Count ARA-specific patterns for metadata
-    # Section dividers: "BuildingName - Interior/Exterior - Ground Level"
-    section_divider_pattern = re.compile(
-        r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(?:Ground|First|Second|Basement)\s+Level",
-        re.IGNORECASE | re.MULTILINE,
-    )
-    section_dividers = section_divider_pattern.findall(content)
-    metadata["ara_section_dividers"] = len(section_dividers)
+    # Standalone "No Asbestos" — safe because "No Asbestos Detected" already replaced
+    processed = processed.replace("No Asbestos", no_acm_marker)
 
-    # Building Name from page headers
-    building_name_pattern = re.compile(
-        r"Building\s+Name:\s*(.+?)(?:\n|$)", re.IGNORECASE
-    )
-    building_names = list(
-        set(m.strip() for m in building_name_pattern.findall(content))
-    )
-    metadata["ara_buildings_found"] = len(building_names)
-
-    # Count items with "Asbestos" hazard type (ACM items to extract)
-    hazard_asbestos = len(
-        re.findall(r"^Asbestos$", content, re.MULTILINE | re.IGNORECASE)
-    )
-    # Count items with "None" hazard type (to skip)
-    hazard_none = len(re.findall(r"^None$", content, re.MULTILINE))
-    metadata["acm_indicators_found"] = hazard_asbestos
-    metadata["ara_none_hazard_count"] = hazard_none
-
-    # Count positive/negative results
-    positive_count = len(
-        re.findall(
-            r"(?:^|\n)(?:Presumed\s+)?Positive\b", content, re.IGNORECASE
-        )
-    )
-    negative_count = len(
-        re.findall(
-            r"(?:^|\n)(?:Presumed\s+)?Negative\b", content, re.IGNORECASE
-        )
-    )
-    metadata["ara_positive_count"] = positive_count
-    metadata["ara_negative_count"] = negative_count
-
-    if debug_config.DEBUG_ENABLED:
-        acm_debug(
-            f"Pre-process (ARA): {len(building_names)} buildings, "
-            f"{len(section_dividers)} section dividers"
-        )
-        acm_debug(
-            f"ARA items: {hazard_asbestos} Asbestos, {hazard_none} None hazard, "
-            f"{positive_count} positive, {negative_count} negative"
-        )
-
-    processed = content
-
-    # Mark section dividers clearly (these split Interior/Exterior areas)
-    for match in section_divider_pattern.finditer(processed):
-        original = match.group(0)
-        building = match.group(1).strip()
-        area_type = match.group(2).strip()
-        marker = f"\n\n=== SECTION: {building} - {area_type} ===\n"
-        # Only replace exact matches to avoid partial replacement issues
-        processed = processed.replace(original, marker + original, 1)
+    # Clean up any accidental double negative markers
+    double_neg = f"{no_acm_marker} {no_acm_marker}"
+    while double_neg in processed:
+        processed = processed.replace(double_neg, no_acm_marker)
 
     return processed, metadata
 
@@ -984,7 +986,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             model_id,
             "extraction",  # Uses default_extraction_model or falls back to chat
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
-            max_tokens=32768,  # Enough tokens for large ACM tables (64+ records)
+            max_tokens=8192,  # Haiku max output; use chunked extraction for larger docs
         )
         # Track model ID and prompt template for observability (E1-S21, AC #4)
         if pl:
@@ -1154,26 +1156,33 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
             record.building_id = context.building_id
             issues.append("Building ID inferred from context")
 
-        # Normalize result field
+        # Normalize result field to BAR vocabulary
+        # Order matters: check negative compound terms before simple "detected"
         if record.result:
             result_lower = record.result.lower()
-            if (
-                "no asbestos" in result_lower
-                or "nad" in result_lower
-                or "not detected" in result_lower
+            if "assumed positive" in result_lower or "presumed positive" in result_lower:
+                record.result = "Assumed Positive"
+            elif "assumed negative" in result_lower or "presumed negative" in result_lower:
+                record.result = "Assumed Negative"
+            elif any(
+                x in result_lower
+                for x in ["no asbestos", "nad", "not detected", "negative"]
             ):
-                record.result = "Not Detected"
-            elif "detected" in result_lower or "positive" in result_lower:
-                record.result = "Detected"
-            elif "negative" in result_lower:
-                record.result = "Not Detected"
+                record.result = "Negative"
+            elif any(
+                x in result_lower
+                for x in ["positive", "detected", "asbestos-containing"]
+            ):
+                record.result = "Positive"
             elif "presumed" in result_lower:
-                # Use sample_result to determine if positive or negative
+                # Use sample_result to disambiguate presumed results
                 sr = (record.sample_result or "").lower()
                 if "negative" in sr:
-                    record.result = "Not Detected"
+                    record.result = "Assumed Negative"
                 else:
-                    record.result = "Detected"
+                    record.result = "Assumed Positive"
+            else:
+                record.result = "Unknown"
         else:
             record.result = "Unknown"
             issues.append("Result field was empty, set to Unknown")
@@ -1237,6 +1246,34 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             "total_validated": 0,
         },
     )
+
+    # Extraction completeness check: count room headers vs extracted records
+    content = state.get("content", "")
+    if content and correction_attempt == 0:
+        room_pattern = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
+        expected_rooms = len(set(room_pattern.findall(content)))
+        extracted_count = len(records)
+        if expected_rooms > 0:
+            completeness_pct = (extracted_count / expected_rooms) * 100
+            if extracted_count < expected_rooms:
+                logger.warning(
+                    f"COMPLETENESS GAP: Extracted {extracted_count}/{expected_rooms} "
+                    f"room records ({completeness_pct:.0f}%) — "
+                    f"{expected_rooms - extracted_count} records may be missing"
+                )
+            else:
+                logger.info(
+                    f"Completeness check: {extracted_count}/{expected_rooms} "
+                    f"room records ({completeness_pct:.0f}%)"
+                )
+            if pl:
+                pl.stage_progress(
+                    StageId.VALIDATE,
+                    f"Completeness: {extracted_count}/{expected_rooms} ({completeness_pct:.0f}%)",
+                    expected_rooms=expected_rooms,
+                    extracted_count=extracted_count,
+                    completeness_pct=round(completeness_pct, 1),
+                )
 
     if not records:
         logger.info("No records to validate")
@@ -1936,6 +1973,7 @@ async def extract_acm_from_source(
     source: Source,
     model_id: Optional[str] = None,
     force: bool = False,
+    command_id: Optional[str] = None,
 ) -> ACMExtractionOutput:
     """
     Main entry point for ACM extraction.
@@ -1960,7 +1998,11 @@ async def extract_acm_from_source(
             re.IGNORECASE,
         )
         total_pages = len(page_markers) if page_markers else 0
-    pl = PipelineLogger(source_id=str(source.id), total_pages=total_pages)
+    pl = PipelineLogger(
+        source_id=str(source.id),
+        total_pages=total_pages,
+        command_id=command_id,
+    )
 
     if force:
         # Delete existing table sections and records (E11-S1)

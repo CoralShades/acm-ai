@@ -53,13 +53,40 @@ Asbestos-containing material
 - friable: "Non Friable"
 - material_condition: "Minimal Damage"
 - risk_status: "Low"
-- result: "Detected"
+- result: "Positive"
 - sample_result: "Positive"
+
+**EXAMPLE: This is ONE complete NEGATIVE record (No Asbestos found):**
+
+```
+B009 - R0012 - Male Locker Room - 12.30 m2
+Floor Coverings
+Res/Textile
+Vinyl Tiles
+10m2
+Throughout
+>>> NO ASBESTOS: Negative result <<<
+```
+
+**This should be extracted as:**
+- building_id: "B009"
+- room_id: "R0012"
+- room_name: "Male Locker Room"
+- room_area: "12.30 m2"
+- product: "Floor Coverings"
+- material_description: "Vinyl Tiles"
+- extent: "10m2"
+- location: "Throughout"
+- friable: "N/A (negative)"
+- material_condition: "N/A (negative)"
+- disturbance_potential: "N/A (negative)"
+- risk_status: null
+- result: "Negative"
 
 **Key patterns:**
 - Room headers: `B009 - R0005 - General Storeroom - 1.45 m2`
-- ACM markers: `Asbestos-containing material`, `Detected`
-- Negative markers: `No Asbestos`, `Not Detected`, `NAD`
+- ACM markers: `>>> ACM DETECTED:`, `Asbestos-containing material`, `Detected`
+- Negative markers: `>>> NO ASBESTOS:`, `No Asbestos`, `Not Detected`, `NAD`
 
 ---
 
@@ -117,7 +144,7 @@ Current Label: None
 - material_condition: "Good"
 - disturbance_potential: "Low"
 - risk_status: "Low"
-- result: "Detected"
+- result: "Assumed Positive"
 - sample_result: "Assumed Positive"
 - extent: "20m2"
 - extraction_confidence: "high"
@@ -141,7 +168,7 @@ Negative
 - location: "Throughout"
 - product: "Wall"
 - material_description: "Flat Cement Sheeting - Textured painted white"
-- result: "Not Detected"
+- result: "Negative"
 - sample_result: "Negative"
 - sample_no: "J169642-001-003"
 - material_condition: "N/A (negative)"
@@ -156,10 +183,10 @@ Negative
 3. **Hazard Type line** - "Asbestos" means it's an ACM item to extract. **SKIP items where Hazard Type is "None"** (these are general room descriptions, not ACM items)
 4. **Sample info** - Can be a sample number (e.g., "J169642-001-001"), "Not Sampled", "Previously Sampled", or "Similar To: [item]"
 5. **Item Status** - Appears after sample info. Map as follows:
-   - "Positive" → sample_result: "Positive", result: "Detected"
-   - "Negative" → sample_result: "Negative", result: "Not Detected"
-   - "Presumed Positive" → sample_result: "Assumed Positive", result: "Detected"
-   - "Presumed Negative" → sample_result: "Assumed Negative", result: "Not Detected"
+   - "Positive" → sample_result: "Positive", result: "Positive"
+   - "Negative" → sample_result: "Negative", result: "Negative"
+   - "Presumed Positive" → sample_result: "Assumed Positive", result: "Assumed Positive"
+   - "Presumed Negative" → sample_result: "Assumed Negative", result: "Assumed Negative"
    - "Previously Sampled" followed by status → use that status
 6. **Risk assessment fields** (only for positive/presumed positive items):
    - `Condition:` → material_condition (map: "Good Condition"→"Good", "Fair Condition"→"Fair", "Poor Condition"→"Poor")
@@ -182,6 +209,23 @@ Negative
 
 ## Extraction Rules (Apply to BOTH Formats)
 
+### CRITICAL: Extract EVERY Entry — Both Positive AND Negative
+
+A complete BAR (Building Asbestos Register) requires BOTH positive AND negative results. Missing negatives = non-compliant register. You MUST extract every entry in this building section.
+
+1. **SCAN** the content for ALL entries — room entries (B### - R#### pattern) for SAMP, or numbered items for ARA — do NOT skip any
+2. **EXTRACT** all items with Hazard Type "Asbestos" (or equivalent ACM markers). **SKIP** items with Hazard Type "None"
+3. **CLASSIFY** each record's result using BAR vocabulary:
+   - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"
+   - Assumed/Presumed ACM → result: "Assumed Positive"
+   - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` or `Negative` → result: "Negative"
+   - Assumed/Presumed no asbestos → result: "Assumed Negative"
+4. **For Negative/Assumed Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
+5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
+6. **SKIP** page headers, footers, legends, and methodology text
+
+**WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL.
+
 ### Controlled Vocabulary (BAR Enum Values)
 
 The following fields MUST use values from the Victorian BAR controlled vocabulary:
@@ -192,15 +236,6 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 - **disturbance_potential**: `High`, `Moderate`, `Low`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)`
 
 **Important:** BAR uses "Moderate" not "Medium" for disturbance potential. Map "Medium" -> "Moderate".
-
-### What to Extract and What to Skip
-
-- **EXTRACT** all items with Hazard Type "Asbestos" (or equivalent ACM markers)
-- **EXTRACT** both positive AND negative results (the BAR requires both)
-- **SKIP** items with Hazard Type "None" (general room descriptions, not ACM items)
-- **SKIP** page headers, footers, legends, and methodology text
-- For negative results, set `material_condition: "N/A (negative)"` and `disturbance_potential: "N/A (negative)"`
-- For assumed negative results, set `material_condition: "N/A (assumed negative)"` and `disturbance_potential: "N/A (assumed negative)"`
 
 ### Data Completeness Rules
 
@@ -233,7 +268,7 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `building_id`: Building identifier - use "{{ building_context.building_id }}" for all records
 - `product`: Product/element type (e.g., "Eaves", "Wall", "Floor Coverings")
 - `material_description`: Material description (e.g., "Flat Cement Sheeting", "Vinyl Tiles")
-- `result`: Test result - "Detected" for positive/assumed positive, "Not Detected" for negative/assumed negative
+- `result`: Test result using BAR vocabulary: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
 - `extraction_confidence`: Confidence level ("high", "medium", or "low")
 
 ### Highly Recommended Fields (extract if available)

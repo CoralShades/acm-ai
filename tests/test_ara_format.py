@@ -288,13 +288,13 @@ class TestValidation:
             building_id="Mortuary Buildings",
             product="Eaves",
             material_description="Flat Cement Sheeting",
-            result="Detected",
+            result="Positive",
             sample_result="Positive",
             extraction_confidence="high",
         )
         result = await validate_records(_make_state([record]), _config)
         assert len(result["records"]) == 1
-        assert result["records"][0].result == "Detected"
+        assert result["records"][0].result == "Positive"
 
     @pytest.mark.asyncio
     async def test_validate_ara_presumed_positive(self, _make_state, _config):
@@ -305,13 +305,13 @@ class TestValidation:
             building_id="Mortuary Buildings",
             product="Eaves",
             material_description="Flat Cement Sheeting",
-            result="Presumed",
+            result="Assumed Positive",
             sample_result="Assumed Positive",
             extraction_confidence="high",
         )
         result = await validate_records(_make_state([record]), _config)
         assert len(result["records"]) == 1
-        assert result["records"][0].result == "Detected"
+        assert result["records"][0].result == "Assumed Positive"
 
     @pytest.mark.asyncio
     async def test_validate_ara_negative_result(self, _make_state, _config):
@@ -322,13 +322,13 @@ class TestValidation:
             building_id="Mortuary Buildings",
             product="Wall",
             material_description="Flat Cement Sheeting",
-            result="Not Detected",
+            result="Negative",
             sample_result="Negative",
             extraction_confidence="high",
         )
         result = await validate_records(_make_state([record]), _config)
         assert len(result["records"]) == 1
-        assert result["records"][0].result == "Not Detected"
+        assert result["records"][0].result == "Negative"
 
     @pytest.mark.asyncio
     async def test_validate_ara_presumed_negative(self, _make_state, _config):
@@ -339,13 +339,13 @@ class TestValidation:
             building_id="Mortuary Buildings",
             product="Roof",
             material_description="Metal Sheeting",
-            result="Presumed",
+            result="Assumed Negative",
             sample_result="Assumed Negative",
             extraction_confidence="high",
         )
         result = await validate_records(_make_state([record]), _config)
         assert len(result["records"]) == 1
-        assert result["records"][0].result == "Not Detected"
+        assert result["records"][0].result == "Assumed Negative"
 
     @pytest.mark.asyncio
     async def test_validate_negative_sets_na_fields(self, _make_state, _config):
@@ -362,7 +362,7 @@ class TestValidation:
         )
         result = await validate_records(_make_state([record]), _config)
         assert len(result["records"]) == 1
-        assert result["records"][0].result == "Not Detected"
+        assert result["records"][0].result == "Negative"
 
     @pytest.mark.asyncio
     async def test_validate_medium_to_moderate_mapping(self, _make_state, _config):
@@ -374,7 +374,7 @@ class TestValidation:
             building_id="Mortuary Buildings",
             product="Wall",
             material_description="Sheeting",
-            result="Detected",
+            result="Positive",
             sample_result="Positive",
             disturbance_potential="Medium",
             extraction_confidence="high",

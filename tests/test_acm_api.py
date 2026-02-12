@@ -147,6 +147,18 @@ class TestGetACMRecord:
         mock_record.classification_confidence = None
         mock_record.classification_method = None
         mock_record.classification_override = None
+        # BAR compliance fields
+        mock_record.sample_no = None
+        mock_record.sample_result = None
+        mock_record.quantity = None
+        mock_record.acm_labelled = None
+        mock_record.acm_label_details = None
+        mock_record.identifying_company = None
+        mock_record.disturbance_potential = None
+        mock_record.hygienist_recommendations = None
+        mock_record.normalized_action = None
+        mock_record.data_issues = None
+        mock_record.floor_level = None
         mock_record.created = "2024-01-01T00:00:00Z"
         mock_record.updated = "2024-01-01T00:00:00Z"
 
@@ -221,6 +233,14 @@ class TestExportACMRecords:
         mock_record.risk_status = "Low"
         mock_record.result = "Detected"
         mock_record.page_number = 5
+        mock_record.floor_level = None
+        mock_record.sample_no = None
+        mock_record.sample_result = None
+        mock_record.quantity = None
+        mock_record.acm_labelled = None
+        mock_record.disturbance_potential = None
+        mock_record.identifying_company = None
+        mock_record.hygienist_recommendations = None
 
         mock_get_records.return_value = [mock_record]
 
@@ -618,6 +638,18 @@ class TestACMRecordResponseClassificationFields:
         mock_record.classification_confidence = 0.9
         mock_record.classification_method = "pattern"
         mock_record.classification_override = False
+        # BAR compliance fields
+        mock_record.sample_no = None
+        mock_record.sample_result = None
+        mock_record.quantity = None
+        mock_record.acm_labelled = None
+        mock_record.acm_label_details = None
+        mock_record.identifying_company = None
+        mock_record.disturbance_potential = None
+        mock_record.hygienist_recommendations = None
+        mock_record.normalized_action = None
+        mock_record.data_issues = None
+        mock_record.floor_level = None
         mock_record.created = "2024-01-01T00:00:00Z"
         mock_record.updated = "2024-01-01T00:00:00Z"
 

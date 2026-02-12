@@ -1,0 +1,16 @@
+-- Migration 19: extraction_progress table for real-time pipeline progress tracking
+-- Stores pipeline state per extraction run, enabling SSE streaming and enhanced polling
+
+DEFINE TABLE extraction_progress SCHEMAFULL;
+
+DEFINE FIELD command_id ON extraction_progress TYPE string;
+DEFINE FIELD run_id ON extraction_progress TYPE string;
+DEFINE FIELD source_id ON extraction_progress TYPE string;
+DEFINE FIELD status ON extraction_progress TYPE string;
+DEFINE FIELD state_json ON extraction_progress TYPE string;
+DEFINE FIELD log_entries ON extraction_progress TYPE array DEFAULT [];
+DEFINE FIELD log_entries.* ON extraction_progress TYPE string;
+DEFINE FIELD updated_at ON extraction_progress TYPE datetime DEFAULT time::now();
+DEFINE FIELD created_at ON extraction_progress TYPE datetime DEFAULT time::now();
+
+DEFINE INDEX idx_extraction_progress_command ON extraction_progress FIELDS command_id UNIQUE;

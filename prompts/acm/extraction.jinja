@@ -31,6 +31,7 @@ The content may have been pre-processed to add helpful markers:
 - `=== BUILDING: ... ===` marks building section headers
 - `--- ROOM: ... ---` marks room section headers
 - `>>> ACM DETECTED: Asbestos-containing material <<<` marks ACM-positive entries
+- `>>> NO ASBESTOS: Negative result <<<` marks negative (no ACM) entries
 
 If these markers are absent, the document may use the ARA format (see Format B below).
 
@@ -68,14 +69,43 @@ Low
 - friable: "Non Friable"
 - material_condition: "Minimal Damage"
 - risk_status: "Low"
-- result: "Detected"
+- result: "Positive"
 - sample_result: "Positive"
+
+**EXAMPLE: This is ONE complete NEGATIVE record (No Asbestos found):**
+
+```
+--- ROOM: B009 - R0012 - Male Locker Room - 12.30 m2 ---
+B009 - R0012 - Male Locker Room - 12.30 m2
+Floor Coverings
+Res/Textile
+Vinyl Tiles
+10m2
+Throughout
+>>> NO ASBESTOS: Negative result <<<
+```
+
+**This should be extracted as:**
+- building_id: "B009"
+- room_id: "R0012"
+- room_name: "Male Locker Room"
+- room_area: "12.30 m2"
+- product: "Floor Coverings"
+- material_description: "Vinyl Tiles"
+- extent: "10m2"
+- location: "Throughout"
+- friable: "N/A (negative)"
+- material_condition: "N/A (negative)"
+- disturbance_potential: "N/A (negative)"
+- risk_status: null
+- result: "Negative"
 
 **Key SAMP patterns:**
 1. **Room Headers**: `B009 - R0005 - General Storeroom - 1.45 m2`
 2. **Building Headers**: `B009 - Special Purpose - 1950 - Steel`
 3. **ACM Markers**: `>>> ACM DETECTED:`, `Asbestos-containing material`, `Detected`
-4. **Vertical Field Sequence**: Product → Material Category → Material Description → Extent → Location → Friable → Condition → Risk → Result
+4. **Negative Markers**: `>>> NO ASBESTOS:`, `No Asbestos`, `Not Detected`, `NAD`
+5. **Vertical Field Sequence**: Product → Material Category → Material Description → Extent → Location → Friable → Condition → Risk → Result
 
 ---
 
@@ -124,7 +154,7 @@ Risk Rating: Low Risk
 - material_condition: "Good"
 - disturbance_potential: "Low"
 - risk_status: "Low"
-- result: "Detected"
+- result: "Assumed Positive"
 - sample_result: "Assumed Positive"
 - extent: "20m2"
 
@@ -145,7 +175,7 @@ Negative
 - location: "Throughout"
 - product: "Wall"
 - material_description: "Flat Cement Sheeting - Textured painted white"
-- result: "Not Detected"
+- result: "Negative"
 - sample_result: "Negative"
 - sample_no: "J169642-001-003"
 - material_condition: "N/A (negative)"
@@ -157,10 +187,10 @@ Negative
 3. **Hazard Type** - "Asbestos" = extract as ACM item. **"None" = SKIP** (general room description, not ACM)
 4. **Sample info** - Sample number, "Not Sampled", "Previously Sampled", or "Similar To: [item]"
 5. **Item Status mapping:**
-   - "Positive" → sample_result: "Positive", result: "Detected"
-   - "Negative" → sample_result: "Negative", result: "Not Detected"
-   - "Presumed Positive" → sample_result: "Assumed Positive", result: "Detected"
-   - "Presumed Negative" → sample_result: "Assumed Negative", result: "Not Detected"
+   - "Positive" → sample_result: "Positive", result: "Positive"
+   - "Negative" → sample_result: "Negative", result: "Negative"
+   - "Presumed Positive" → sample_result: "Assumed Positive", result: "Assumed Positive"
+   - "Presumed Negative" → sample_result: "Assumed Negative", result: "Assumed Negative"
 6. **Risk fields** (positive items only): Condition, Friability, Dist. Potential, Risk Rating, Est. Extent
 7. **Page headers repeat** on every page - ignore repeated header blocks
 
@@ -176,14 +206,22 @@ Negative
 
 ## Your Extraction Task
 
-### IMPORTANT: Extract ALL Records (Both Positive AND Negative)
+### CRITICAL: Extract ALL Records — Both Positive AND Negative
 
-1. **SCAN** the content for ALL ACM entries, whether positive or negative
-2. **EXTRACT** every item where Hazard Type is "Asbestos" (or equivalent ACM markers)
-3. **SKIP** items with Hazard Type "None" (general room descriptions)
-4. **DO NOT SKIP** negative results - the BAR requires both positive and negative entries
-5. For negative results, set `material_condition: "N/A (negative)"` and `disturbance_potential: "N/A (negative)"`
-6. For assumed negative results, set `material_condition: "N/A (assumed negative)"` and `disturbance_potential: "N/A (assumed negative)"`
+A complete BAR (Building Asbestos Register) requires BOTH positive AND negative results. Missing negatives = non-compliant register. You MUST extract every entry you find.
+
+1. **SCAN** the content for ALL entries — room entries (B### - R#### pattern) for SAMP, or numbered items for ARA — do NOT skip any
+2. **EXTRACT** every item where Hazard Type is "Asbestos" (or equivalent ACM markers). **SKIP** items with Hazard Type "None"
+3. **CLASSIFY** each record's result using BAR vocabulary:
+   - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"
+   - Assumed/Presumed ACM → result: "Assumed Positive"
+   - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` or `Negative` → result: "Negative"
+   - Assumed/Presumed no asbestos → result: "Assumed Negative"
+4. **For Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
+5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
+6. **DO NOT SKIP** negative results - the BAR requires both positive and negative entries
+
+**WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL.
 
 ### Data Completeness Rules
 
@@ -207,6 +245,9 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 - **product**: The building element type (e.g., "Eaves", "Wall", "Floor Coverings", "Ceiling Linings", "Fire Door")
 - **material_description**: The specific material (e.g., "Flat Cement Sheeting", "Vinyl Tiles", "Chrysotile rope gasket")
 - For ARA format: split "Eaves - Flat Cement Sheeting - Painted White" into product="Eaves", material_description="Flat Cement Sheeting - Painted White"
+- Building IDs follow format: B### (e.g., B009, B010) for SAMP, or building name for ARA
+- Room IDs follow format: R#### (e.g., R0005, R0007) for SAMP, or null for ARA
+- Room area is typically at the end of the room header line (e.g., "1.45 m2")
 
 ## Content to Extract
 
@@ -226,7 +267,7 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `building_id`: Building identifier (e.g., "B009" for SAMP, or building name for ARA)
 - `product`: Product/element type (e.g., "Floor Coverings", "Eaves", "Wall")
 - `material_description`: Material description (e.g., "Vinyl Tiles", "Flat Cement Sheeting")
-- `result`: Test result - "Detected" for positive/assumed positive, "Not Detected" for negative/assumed negative
+- `result`: Test result using BAR vocabulary: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
 - `extraction_confidence`: Confidence level ("high", "medium", or "low")
 
 ### Highly Recommended Fields (extract if available)
