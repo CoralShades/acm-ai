@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* CopilotKit Styles */
+@import "@copilotkit/react-ui/styles.css";
+
 /* AG Grid Styles */
 @import "ag-grid-community/styles/ag-grid.css";
 @import "ag-grid-community/styles/ag-theme-alpine.css";

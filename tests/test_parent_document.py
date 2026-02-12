@@ -383,7 +383,9 @@ class TestSaveRecordsParentCreation:
         # Build a minimal source
         mock_source = MagicMock()
         mock_source.id = "source:test123"
-        mock_source.full_text = "--- Page 14 ---\nTable data here\n--- Page 15 ---\nMore data"
+        mock_source.full_text = (
+            "--- Page 14 ---\nTable data here\n--- Page 15 ---\nMore data"
+        )
 
         # Build inventory with one building
         building = MagicMock()

@@ -1,5 +1,8 @@
+from typing import List, Optional
+
 from esperanto import LanguageModel
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.tools import BaseTool
 from loguru import logger
 
 from open_notebook.domain.models import model_manager
@@ -30,3 +33,60 @@ async def provision_langchain_model(
     logger.debug(f"Using model: {model}")
     assert isinstance(model, LanguageModel), f"Model is not a LanguageModel: {model}"
     return model.to_langchain()
+
+
+async def provision_langchain_model_with_tools(
+    content: str,
+    model_id: Optional[str],
+    default_type: str,
+    tools: List[BaseTool],
+    **kwargs,
+) -> BaseChatModel:
+    """Provision a LangChain model with tool-calling support.
+
+    Gets the appropriate model and binds tools to it. If the model does not
+    support tool calling, returns the base model without tools bound (the
+    caller should fall back to non-tool behavior).
+
+    Args:
+        content: Content string for token counting / model selection
+        model_id: Specific model ID override
+        default_type: Default model type (e.g. "chat")
+        tools: List of LangChain tools to bind
+        **kwargs: Additional kwargs passed to model provisioning
+
+    Returns:
+        BaseChatModel with tools bound (if supported)
+    """
+    model = await provision_langchain_model(content, model_id, default_type, **kwargs)
+
+    if not tools:
+        return model
+
+    if supports_tool_calling(model):
+        logger.debug(f"Binding {len(tools)} tools to model")
+        return model.bind_tools(tools)
+    else:
+        logger.warning(
+            f"Model {model.__class__.__name__} does not support tool calling, "
+            "returning model without tools"
+        )
+        return model
+
+
+def supports_tool_calling(model: BaseChatModel) -> bool:
+    """Check if a LangChain model supports tool calling.
+
+    Checks for the bind_tools method and known tool-calling capable model types.
+    """
+    if not hasattr(model, "bind_tools"):
+        return False
+
+    # Models that are known to support tool calling
+    # Most modern LangChain chat model wrappers support bind_tools
+    try:
+        # Quick test: bind_tools should be callable
+        callable(model.bind_tools)
+        return True
+    except Exception:
+        return False

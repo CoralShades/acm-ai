@@ -206,6 +206,31 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
             acm_marker,
         )
 
+    # Mark negative result patterns (visual parity with ACM DETECTED markers)
+    no_acm_marker = ">>> NO ASBESTOS: Negative result <<<"
+
+    # Replace newline-split versions first (common in PDF extraction)
+    processed = processed.replace("No Asbestos\nDetected", no_acm_marker)
+    processed = processed.replace("No asbestos\ndetected", no_acm_marker)
+    processed = processed.replace("Not\nDetected", no_acm_marker)
+
+    # Replace single-line versions (longer phrases first to avoid partial matches)
+    for neg_phrase in [
+        "No Asbestos Detected",
+        "No asbestos detected",
+        "Not Detected",
+        "Not detected",
+    ]:
+        processed = processed.replace(neg_phrase, no_acm_marker)
+
+    # Standalone "No Asbestos" — safe because "No Asbestos Detected" already replaced
+    processed = processed.replace("No Asbestos", no_acm_marker)
+
+    # Clean up any accidental double negative markers
+    double_neg = f"{no_acm_marker} {no_acm_marker}"
+    while double_neg in processed:
+        processed = processed.replace(double_neg, no_acm_marker)
+
     metadata["processed_length"] = len(processed)
 
     return processed, metadata
@@ -845,7 +870,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             model_id,
             "extraction",  # Uses default_extraction_model or falls back to chat
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
-            max_tokens=32768,  # Enough tokens for large ACM tables (64+ records)
+            max_tokens=8192,  # Haiku max output; use chunked extraction for larger docs
         )
         # Track model ID and prompt template for observability (E1-S21, AC #4)
         if pl:
@@ -1015,19 +1040,32 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
             record.building_id = context.building_id
             issues.append("Building ID inferred from context")
 
-        # Normalize result field
+        # Normalize result field to BAR vocabulary
+        # Order matters: check negative compound terms before simple "detected"
         if record.result:
             result_lower = record.result.lower()
             if (
-                "no asbestos" in result_lower
-                or "nad" in result_lower
-                or "not detected" in result_lower
+                "assumed positive" in result_lower
+                or "presumed positive" in result_lower
             ):
-                record.result = "Not Detected"
-            elif "detected" in result_lower or "positive" in result_lower:
-                record.result = "Detected"
-            elif "presumed" in result_lower:
-                record.result = "Presumed"
+                record.result = "Assumed Positive"
+            elif (
+                "assumed negative" in result_lower
+                or "presumed negative" in result_lower
+            ):
+                record.result = "Assumed Negative"
+            elif any(
+                x in result_lower
+                for x in ["no asbestos", "nad", "not detected", "negative"]
+            ):
+                record.result = "Negative"
+            elif any(
+                x in result_lower
+                for x in ["positive", "detected", "asbestos-containing"]
+            ):
+                record.result = "Positive"
+            else:
+                record.result = "Unknown"
         else:
             record.result = "Unknown"
             issues.append("Result field was empty, set to Unknown")
@@ -1091,6 +1129,34 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             "total_validated": 0,
         },
     )
+
+    # Extraction completeness check: count room headers vs extracted records
+    content = state.get("content", "")
+    if content and correction_attempt == 0:
+        room_pattern = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
+        expected_rooms = len(set(room_pattern.findall(content)))
+        extracted_count = len(records)
+        if expected_rooms > 0:
+            completeness_pct = (extracted_count / expected_rooms) * 100
+            if extracted_count < expected_rooms:
+                logger.warning(
+                    f"COMPLETENESS GAP: Extracted {extracted_count}/{expected_rooms} "
+                    f"room records ({completeness_pct:.0f}%) — "
+                    f"{expected_rooms - extracted_count} records may be missing"
+                )
+            else:
+                logger.info(
+                    f"Completeness check: {extracted_count}/{expected_rooms} "
+                    f"room records ({completeness_pct:.0f}%)"
+                )
+            if pl:
+                pl.stage_progress(
+                    StageId.VALIDATE,
+                    f"Completeness: {extracted_count}/{expected_rooms} ({completeness_pct:.0f}%)",
+                    expected_rooms=expected_rooms,
+                    extracted_count=extracted_count,
+                    completeness_pct=round(completeness_pct, 1),
+                )
 
     if not records:
         logger.info("No records to validate")
@@ -1790,6 +1856,7 @@ async def extract_acm_from_source(
     source: Source,
     model_id: Optional[str] = None,
     force: bool = False,
+    command_id: Optional[str] = None,
 ) -> ACMExtractionOutput:
     """
     Main entry point for ACM extraction.
@@ -1814,7 +1881,11 @@ async def extract_acm_from_source(
             re.IGNORECASE,
         )
         total_pages = len(page_markers) if page_markers else 0
-    pl = PipelineLogger(source_id=str(source.id), total_pages=total_pages)
+    pl = PipelineLogger(
+        source_id=str(source.id),
+        total_pages=total_pages,
+        command_id=command_id,
+    )
 
     if force:
         # Delete existing table sections and records (E11-S1)

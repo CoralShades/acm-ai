@@ -105,11 +105,17 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                     f"Deleted {deleted_count} existing ACM records for source {source_id}"
                 )
 
+        # Extract command_id from execution context for progress tracking
+        command_id = None
+        if input_data.execution_context:
+            command_id = input_data.execution_context.command_id
+
         # 3. Run AI extraction (deletion already handled above, so pass force=False)
         result = await extract_acm_from_source(
             source=source,
             model_id=model_id,
             force=False,  # Don't delete again, we already handled it
+            command_id=command_id,
         )
 
         processing_time = time.time() - start_time

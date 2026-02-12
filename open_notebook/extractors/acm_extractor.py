@@ -607,11 +607,23 @@ def _create_row_from_cells(
     if not product or not material_desc:
         return None
 
-    # Handle "No Asbestos" cases
-    if result and "no asbestos" in result.lower():
-        result = "Not Detected"
-    elif result and "detected" in result.lower():
-        result = "Detected"
+    # Normalize result to BAR vocabulary
+    # Order matters: check compound terms before simple ones
+    if result:
+        result_lower = result.lower()
+        if "assumed positive" in result_lower or "presumed positive" in result_lower:
+            result = "Assumed Positive"
+        elif "assumed negative" in result_lower or "presumed negative" in result_lower:
+            result = "Assumed Negative"
+        elif any(
+            x in result_lower
+            for x in ["no asbestos", "nad", "not detected", "negative"]
+        ):
+            result = "Negative"
+        elif any(
+            x in result_lower for x in ["positive", "detected", "asbestos-containing"]
+        ):
+            result = "Positive"
 
     return ExtractedACMRow(
         school_name=context.school_name or "Unknown School",
