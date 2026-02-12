@@ -4,6 +4,13 @@ import path from "path";
 const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
+  // Externalize CopilotKit runtime dependencies to avoid webpack bundling issues
+  serverExternalPackages: [
+    "@copilotkit/runtime",
+    "graphql",
+    "graphql-scalars",
+  ],
+
   // Enable standalone output for Docker deployment (skip for Vercel and dev)
   ...(!isDev && !process.env.VERCEL ? { output: "standalone" } : {}),
 
