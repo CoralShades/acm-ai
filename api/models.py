@@ -457,6 +457,18 @@ class ACMRecordResponse(BaseModel):
     classification_confidence: Optional[float] = None
     classification_method: Optional[str] = None
     classification_override: Optional[bool] = None
+    # BAR compliance fields
+    sample_no: Optional[str] = None
+    sample_result: Optional[str] = None
+    quantity: Optional[str] = None
+    acm_labelled: Optional[bool] = None
+    acm_label_details: Optional[str] = None
+    identifying_company: Optional[str] = None
+    disturbance_potential: Optional[str] = None
+    hygienist_recommendations: Optional[str] = None
+    normalized_action: Optional[str] = None
+    data_issues: Optional[List[str]] = None
+    floor_level: Optional[str] = None
     created: Optional[str] = None
     updated: Optional[str] = None
 
