@@ -7,53 +7,69 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Helper: wait for a port to be listening
+wait_port() {
+    local port=$1 name=$2 i=0
+    echo "  Waiting for $name on port $port..."
+    while ! python3 -c "import socket; s=socket.socket(); s.settimeout(1); exit(0) if s.connect_ex(('127.0.0.1',$port))==0 else exit(1)" 2>/dev/null; do
+        sleep 2
+        i=$((i+1))
+        if [ $i -ge 30 ]; then
+            echo "  Timeout waiting for $name (port $port)"
+            return 1
+        fi
+    done
+    echo "  $name is ready!"
+}
+
+# Helper: wait for an HTTP health endpoint
+wait_health() {
+    local url=$1 name=$2 i=0
+    echo "  Waiting for $name health ($url)..."
+    while ! curl -sf "$url" >/dev/null 2>&1; do
+        sleep 2
+        i=$((i+1))
+        if [ $i -ge 45 ]; then
+            echo "  Timeout waiting for $name health"
+            return 1
+        fi
+    done
+    echo "  $name health check passed!"
+}
+
 echo "========================================"
 echo "  ACM-AI - Starting All Services"
 echo "========================================"
 echo ""
 
-# [0/5] Pre-flight check
-echo "[0/5] Running pre-flight checks..."
-if uv run python scripts/service_manager.py check 2>/dev/null; then
-    echo "Pre-flight checks passed."
-else
-    echo ""
-    echo "WARNING: Some pre-flight checks failed."
-    echo "Continuing anyway... (use Ctrl+C to abort)"
-    sleep 2
-fi
-echo ""
-
-# [1/5] Sync Python dependencies (must happen BEFORE launching services)
-echo "[1/5] Syncing Python dependencies..."
-cd "$SCRIPT_DIR"
+# [0/5] Sync Python dependencies (must happen BEFORE service manager)
+echo "[0/5] Syncing Python dependencies..."
 UV_LINK_MODE=copy uv sync --quiet
 echo "Dependencies synced."
 echo ""
 
+# [1/5] Clear ports - kill any processes on our ports
+echo "[1/5] Clearing ports and fixing conflicts..."
+uv run python scripts/service_manager.py fix --auto-fix 2>/dev/null || true
+echo ""
+
 # [2/5] Start SurrealDB
-echo "[2/5] Checking SurrealDB..."
+echo "[2/5] Starting SurrealDB..."
 if docker compose ps surrealdb 2>/dev/null | grep -q "running"; then
     echo "SurrealDB is already running."
 else
-    echo "Starting SurrealDB via Docker Compose..."
     docker compose up -d surrealdb
-    sleep 5
+    wait_port 8000 "SurrealDB"
 fi
 echo ""
 
 # [3/5] Start API Server
 echo "[3/5] Starting API Server (port 5055)..."
-# Check for port conflict
-if python3 -c "import socket; s=socket.socket(); s.settimeout(1); exit(0 if s.connect_ex(('127.0.0.1',5055)) else 1)" 2>/dev/null; then
-    cd "$SCRIPT_DIR"
-    nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 &
-    echo $! > /tmp/acm-ai-api.pid
-    echo "API started (PID: $(cat /tmp/acm-ai-api.pid))"
-else
-    echo "WARNING: Port 5055 is already in use. Skipping API start."
-fi
-sleep 3
+cd "$SCRIPT_DIR"
+nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 &
+echo $! > /tmp/acm-ai-api.pid
+echo "API launched (PID: $(cat /tmp/acm-ai-api.pid))"
+wait_health "http://localhost:5055/health" "API Server"
 echo ""
 
 # [4/5] Start Background Worker
@@ -65,17 +81,12 @@ echo "Worker started (PID: $(cat /tmp/acm-ai-worker.pid))"
 sleep 2
 echo ""
 
-# [5/5] Start Frontend
+# [5/5] Start Frontend (API is confirmed healthy before this point)
 echo "[5/5] Starting Frontend (port 8502)..."
-# Check for port conflict
-if python3 -c "import socket; s=socket.socket(); s.settimeout(1); exit(0 if s.connect_ex(('127.0.0.1',8502)) else 1)" 2>/dev/null; then
-    cd "$SCRIPT_DIR/frontend"
-    PORT=8502 nohup npm run dev -- -p 8502 > /tmp/acm-ai-frontend.log 2>&1 &
-    echo $! > /tmp/acm-ai-frontend.pid
-    echo "Frontend started (PID: $(cat /tmp/acm-ai-frontend.pid))"
-else
-    echo "WARNING: Port 8502 is already in use. Skipping Frontend start."
-fi
+cd "$SCRIPT_DIR/frontend"
+PORT=8502 nohup npm run dev -- -p 8502 > /tmp/acm-ai-frontend.log 2>&1 &
+echo $! > /tmp/acm-ai-frontend.pid
+echo "Frontend started (PID: $(cat /tmp/acm-ai-frontend.pid))"
 echo ""
 
 echo "========================================"

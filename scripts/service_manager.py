@@ -58,6 +58,32 @@ except ImportError:
         print(clean)
 
 
+def _wait_for_service(svc: object, timeout: int = 60) -> bool:
+    """Wait for a service to become healthy. Returns True if healthy within timeout."""
+    import urllib.request
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        # Try HTTP health check first
+        if svc.health_url:
+            try:
+                req = urllib.request.Request(svc.health_url, method="GET")
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    if resp.status < 400:
+                        return True
+            except Exception:
+                pass
+        # Fall back to port check
+        elif svc.port:
+            if is_port_in_use(svc.port):
+                return True
+        else:
+            time.sleep(svc.startup_delay or 2)
+            return True
+        time.sleep(2)
+    return False
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     """Pre-flight check: verify all dependencies are available."""
     services = get_services()
@@ -173,7 +199,7 @@ def cmd_start(args: argparse.Namespace) -> int:
     if cleaned:
         _print(f"[dim]Cleaned {len(cleaned)} stale PID file(s)[/dim]")
 
-    # Start services in order
+    # Start services in order, waiting for each to be healthy before next
     for name in STARTUP_ORDER:
         svc = services[name]
         target_name = args.service if hasattr(args, "service") and args.service else None
@@ -183,13 +209,20 @@ def cmd_start(args: argparse.Namespace) -> int:
         _print(f"  Starting {svc.display_name}...", end="")
 
         if start_service_background(svc):
-            _print(f" [green]started[/green]")
+            _print(f" [green]launched[/green]")
         else:
             _print(f" [red]failed[/red]")
             return 1
 
-        # Wait for service to initialize
-        if svc.startup_delay:
+        # Wait for service to be healthy (not just started)
+        if svc.health_url or svc.port:
+            _print(f"  Waiting for {svc.display_name} to be ready...", end="")
+            healthy = _wait_for_service(svc, timeout=60)
+            if healthy:
+                _print(f" [green]ready[/green]")
+            else:
+                _print(f" [yellow]timeout (continuing)[/yellow]")
+        elif svc.startup_delay:
             time.sleep(svc.startup_delay)
 
     # Post-startup health check

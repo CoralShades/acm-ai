@@ -7,19 +7,14 @@ echo.
 
 cd /d "D:\ailocal\acm-ai"
 
-echo [0/5] Running pre-flight checks...
-uv run python scripts/service_manager.py check 2>nul
-if %errorlevel% neq 0 (
-    echo.
-    echo WARNING: Some pre-flight checks failed. Continuing anyway...
-    timeout /t 2 /nobreak >nul
-)
-echo.
-
-echo [1/5] Syncing Python dependencies...
+echo [0/5] Syncing Python dependencies...
 set UV_LINK_MODE=copy
 uv sync --quiet
 echo Dependencies synced.
+echo.
+
+echo [1/5] Clearing ports and fixing conflicts...
+uv run python scripts/service_manager.py fix --auto-fix 2>nul
 echo.
 
 echo [2/5] Checking SurrealDB...
@@ -35,7 +30,12 @@ echo.
 
 echo [3/5] Starting API Server (port 5055)...
 start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && uv run python run_api.py"
-timeout /t 3 /nobreak >nul
+echo Waiting for API to be ready...
+:wait_api
+timeout /t 2 /nobreak >nul
+curl -sf http://localhost:5055/health >nul 2>&1
+if %errorlevel% neq 0 goto wait_api
+echo API Server is ready!
 echo.
 
 echo [4/5] Starting Background Worker...
