@@ -251,7 +251,9 @@ async def trigger_acm_extraction(request: ACMExtractRequest):
 
         # Submit extraction command
         command_id = await CommandService.submit_command_job(
-            "open_notebook", "acm_extract", {"source_id": request.source_id}
+            "open_notebook",
+            "acm_extract",
+            {"source_id": request.source_id, "force": request.force},
         )
 
         return ACMExtractResponse(

@@ -487,6 +487,7 @@ class ACMExtractRequest(BaseModel):
     """Request to trigger ACM extraction."""
 
     source_id: str = Field(..., description="Source ID to extract ACM data from")
+    force: bool = Field(default=False, description="Delete existing records before re-extraction")
 
 
 class ACMExtractResponse(BaseModel):

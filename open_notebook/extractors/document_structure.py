@@ -71,6 +71,21 @@ class DocumentStructure(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+class DocumentStructureLLM(BaseModel):
+    """LLM-friendly version of DocumentStructure without Dict fields.
+
+    Azure OpenAI strict mode rejects Dict[str, Any] fields. This slim model
+    excludes `metadata` for LLM structured output.
+    """
+
+    document_type: DocumentType = DocumentType.UNKNOWN
+    toc_present: bool = False
+    total_pages: int = 0
+    register_start_page: Optional[int] = None
+    building_ids: List[str] = Field(default_factory=list)
+    sections: List[Section] = Field(default_factory=list)
+
+
 # Page marker pattern (same as acm_extraction.py)
 _PAGE_PATTERN = re.compile(
     r"(?:[-—]+|<!--)\s*Page\s+(\d+)\s*(?:[-—]+|-->)",
@@ -117,15 +132,15 @@ async def _llm_extract_structure(
         max_tokens=4096,
     )
 
-    chain = model.with_structured_output(DocumentStructure)
+    chain = model.with_structured_output(DocumentStructureLLM)
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
             content="Extract the document structure, table of contents, and section hierarchy."
         ),
     ]
-    result: DocumentStructure = await chain.ainvoke(messages)
-    return result
+    llm_result: DocumentStructureLLM = await chain.ainvoke(messages)
+    return DocumentStructure(**llm_result.model_dump())
 
 
 def _heuristic_fallback(content: str) -> DocumentStructure:
