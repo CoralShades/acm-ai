@@ -196,8 +196,14 @@ SCHOOL_PATTERN = re.compile(
 )
 
 PAGE_PATTERN = re.compile(
-    r"(?:[-—]+|<!--)\s*Page\s+(\d+)\s*(?:[-—]+|-->)", re.IGNORECASE
+    r"(?:[-—]+|<!--)\s*Page\s+(\d+)\s*(?:[-—]+|-->)|PAGE\s+(\d+)\s+OF\s+\d+",
+    re.IGNORECASE,
 )
+
+
+def _page_num(match: re.Match) -> int:
+    """Extract page number from a PAGE_PATTERN match (handles multiple groups)."""
+    return int(next(g for g in match.groups() if g is not None))
 
 
 def extract_acm_records(
@@ -307,7 +313,7 @@ def _extract_from_markdown(
         # Check for page markers
         page_match = PAGE_PATTERN.search(line)
         if page_match:
-            context.current_page = int(page_match.group(1))
+            context.current_page = _page_num(page_match)
             logger.debug(f"Page marker found: {context.current_page}")
 
         # Check for area type header
@@ -534,7 +540,7 @@ def _parse_acm_table(
         # Check for page markers FIRST (before "---" check since page markers contain ---)
         page_match = PAGE_PATTERN.search(line)
         if page_match:
-            context.current_page = int(page_match.group(1))
+            context.current_page = _page_num(page_match)
             continue
 
         if "---" in line:

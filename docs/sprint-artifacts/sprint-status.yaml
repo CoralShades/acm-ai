@@ -1,6 +1,6 @@
 # Sprint Status - ACM-AI
 # generated: 2025-12-20
-# updated: 2026-02-09
+# updated: 2026-02-12
 # project: acm-ai
 # project_key: acm-ai
 # tracking_system: file-system
@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-09
+updated: 2026-02-12
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -69,7 +69,7 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
-  # 7/8 stories complete, 1 remaining (ready-for-dev, enhanced by course correction)
+  # 8/9 stories complete, 1 remaining (ready-for-dev, enhanced by course correction)
   epic-2: in-progress
   e2-s1-install-and-configure-ag-grid: done
   e2-s2-create-acmspreadsheet-component: done
@@ -81,6 +81,7 @@ development_status:
   # ENHANCED 2026-02-08 (Course Correction CP-3):
   # Added: AG Grid columns generated from field schema config API
   e2-s8-column-visibility-management: ready-for-dev
+  e2-s9-acm-grid-ux-improvements: done
   epic-2-retrospective: optional
 
   # Epic 3: Cell Citations & PDF Viewer (P0)
@@ -208,17 +209,17 @@ development_status:
 # ========
 # Total Epics: 14 (6 done, 4 in-progress, 3 backlog, 1 archived)
 # Total Stories: 86 (85 regular stories + 1 bug fix)
-# Stories Done: 64 (74%)  # Includes E1-S21, E8-S11, bug fix
+# Stories Done: 65 (76%)  # Includes E1-S21, E2-S9, E8-S11, bug fix
 # Stories Review: 0
 # Stories Ready-for-dev: 3 (E2-S8, E5-S3, E5-S4)
 # Stories Drafted: 2 (E9-S3, E10-S1)
 # Stories Backlog: 8 (E11-S2, E12-S1..S4, E13-S1..S3)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-10
+# Last Updated: 2026-02-12
 #
 # COMPLETED EPICS: E1, E3, E4, E6, E7, E14
-# IN-PROGRESS EPICS: E2 (7/8), E5 (2/4), E9 (2/3), E11 (1/2)
+# IN-PROGRESS EPICS: E2 (8/9), E5 (2/4), E9 (2/3), E11 (1/2)
 # BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #

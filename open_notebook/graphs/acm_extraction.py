@@ -440,7 +440,7 @@ def _extract_page_range_text(content: str, page_start: int, page_end: int) -> st
     if not content:
         return ""
 
-    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$))"
+    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$)|PAGE\s+(\d+)\s+OF\s+\d+)"
     matches = list(re.finditer(page_pattern, content, re.IGNORECASE))
 
     if not matches:
@@ -484,7 +484,8 @@ def _chunk_content(
     # 1. Dashes format: "--- Page 5 ---" or "——— Page 5 ———"
     # 2. HTML comment format: "<!-- Page 5 -->"
     # 3. Simple format: "Page 5" at line start
-    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$))"
+    # 4. ARA footer format: "PAGE 8 OF 34"
+    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$)|PAGE\s+(\d+)\s+OF\s+\d+)"
 
     if tokens <= threshold:
         # No chunking needed, but still extract first page number if available
@@ -877,7 +878,7 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     if doc_structure and doc_structure.register_start_page:
         # Find the page marker for register_start_page and trim content
         page_pattern = re.compile(
-            rf"(?:[-—]+|<!--)\s*Page\s+{doc_structure.register_start_page}\s*(?:[-—]+|-->)",
+            rf"(?:[-—]+|<!--)\s*Page\s+{doc_structure.register_start_page}\s*(?:[-—]+|-->)|PAGE\s+{doc_structure.register_start_page}\s+OF\s+\d+",
             re.IGNORECASE,
         )
         match = page_pattern.search(content)
@@ -986,7 +987,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             model_id,
             "extraction",  # Uses default_extraction_model or falls back to chat
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
-            max_tokens=8192,  # Haiku max output; use chunked extraction for larger docs
+            max_tokens=32768,  # Increased from 8192 to handle larger extraction outputs
         )
         # Track model ID and prompt template for observability (E1-S21, AC #4)
         if pl:

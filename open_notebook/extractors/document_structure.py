@@ -86,18 +86,26 @@ class DocumentStructureLLM(BaseModel):
     sections: List[Section] = Field(default_factory=list)
 
 
-# Page marker pattern (same as acm_extraction.py)
+# Page marker pattern — matches multiple PDF-to-text formats:
+# 1. Dash format: "--- Page 5 ---" or "——— Page 5 ———"
+# 2. HTML comment format: "<!-- Page 5 -->"
+# 3. ARA footer format: "PAGE 8 OF 34" (Greencap, Prensa, etc.)
 _PAGE_PATTERN = re.compile(
-    r"(?:[-—]+|<!--)\s*Page\s+(\d+)\s*(?:[-—]+|-->)",
+    r"(?:[-—]+|<!--)\s*Page\s+(\d+)\s*(?:[-—]+|-->)|PAGE\s+(\d+)\s+OF\s+\d+",
     re.IGNORECASE,
 )
+
+
+def _page_num_from_match(match: re.Match) -> int:
+    """Extract the page number from a _PAGE_PATTERN match (handles multiple groups)."""
+    return int(next(g for g in match.groups() if g is not None))
 
 
 def _extract_total_pages(content: str) -> int:
     """Extract total page count from page markers in content."""
     max_page = 0
     for match in _PAGE_PATTERN.finditer(content):
-        page_num = int(match.group(1))
+        page_num = _page_num_from_match(match)
         if page_num > max_page:
             max_page = page_num
     return max_page
@@ -164,7 +172,7 @@ def _heuristic_fallback(content: str) -> DocumentStructure:
             preceding = content[:idx]
             page_matches = list(_PAGE_PATTERN.finditer(preceding))
             if page_matches:
-                register_start = int(page_matches[-1].group(1))
+                register_start = _page_num_from_match(page_matches[-1])
             break
 
     # Detect building IDs (use set for O(1) dedup, preserve insertion order)

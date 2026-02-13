@@ -20,6 +20,7 @@ from open_notebook.extractors.document_structure import (
     _PAGE_PATTERN,
     DocumentStructure,
     _extract_total_pages,
+    _page_num_from_match,
 )
 
 # Building header pattern: matches "## B00A - Admin Building - 1924 - Brick"
@@ -102,7 +103,7 @@ def _find_page_at_position(content: str, position: int) -> int:
     page = 1
     for match in _PAGE_PATTERN.finditer(content):
         if match.start() <= position:
-            page = int(match.group(1))
+            page = _page_num_from_match(match)
         else:
             break
     return page
@@ -181,7 +182,7 @@ def _find_page_end(section_text: str, page_start: int, rooms: List[RoomMeta]) ->
     # with no building content after them
     pages_in_section = []
     for match in _PAGE_PATTERN.finditer(section_text):
-        pg = int(match.group(1))
+        pg = _page_num_from_match(match)
         # Check if there's substantial content after this marker before the next marker
         after_marker = section_text[match.end() :]
         next_page = _PAGE_PATTERN.search(after_marker)
@@ -252,6 +253,56 @@ def _create_processing_groups(buildings: List[BuildingMeta]) -> List[ProcessingG
     return groups
 
 
+def _detect_ara_buildings(content: str) -> List[Tuple[str, int]]:
+    """Detect ARA-format buildings from 'Building Name:\\n<name>' header blocks.
+
+    ARA documents (Greencap, Prensa, etc.) use repeated header blocks with
+    'Building Name:' followed by the building name on the next line.
+    Returns list of (building_name, first_occurrence_position) tuples,
+    deduplicated by building name.
+    """
+    ara_building_pattern = re.compile(
+        r"Building Name:\s*\n\s*(.+?)(?:\n|$)", re.IGNORECASE
+    )
+    seen_names: set = set()
+    results: List[Tuple[str, int]] = []
+
+    for match in ara_building_pattern.finditer(content):
+        name = match.group(1).strip()
+        if name and name not in seen_names:
+            seen_names.add(name)
+            results.append((name, match.start()))
+
+    return results
+
+
+def _find_ara_building_section_end(
+    content: str,
+    building_name: str,
+    start_pos: int,
+    next_building_start: Optional[int],
+) -> int:
+    """Find the end of an ARA building's content section.
+
+    ARA buildings span from first occurrence of their header block to
+    either the start of the next building's first header block, or EOF.
+    Header blocks repeat on each page for the same building, so we look
+    for all 'Building Name:\\n<name>' occurrences to find the last page.
+    """
+    end_pos = next_building_start if next_building_start is not None else len(content)
+
+    # Find all occurrences of this building's header to determine last page
+    pattern = re.compile(
+        rf"Building Name:\s*\n\s*{re.escape(building_name)}", re.IGNORECASE
+    )
+    last_match_end = start_pos
+    for match in pattern.finditer(content):
+        if match.start() < end_pos:
+            last_match_end = match.end()
+
+    return end_pos
+
+
 def _heuristic_fallback(
     content: str,
     document_structure: Optional[DocumentStructure] = None,
@@ -260,6 +311,7 @@ def _heuristic_fallback(
 
     Uses custom regex patterns (_BUILDING_HEADER, _ROOM_HEADER) to detect
     buildings, rooms, page ranges, and complexity without LLM.
+    Falls back to ARA building detection if no SAMP headers found.
     """
     if not content:
         return BuildingInventory(
@@ -268,7 +320,7 @@ def _heuristic_fallback(
             total_buildings=0,
         )
 
-    # Find all building headers (B-series and D-series)
+    # Find all building headers (B-series and D-series) — SAMP format
     building_matches: List[Tuple[int, re.Match]] = []
     seen_ids: set = set()
     for match in _BUILDING_HEADER.finditer(content):
@@ -278,41 +330,75 @@ def _heuristic_fallback(
             seen_ids.add(bid)
 
     buildings: List[BuildingMeta] = []
-    for i, (pos, match) in enumerate(building_matches):
-        building_id = match.group(1)
-        name = match.group(2).strip() if match.group(2) else None
-        year_str = match.group(3)
-        year = int(year_str) if year_str else None
-        construction = match.group(4).strip() if match.group(4) else None
 
-        page_start = _find_page_at_position(content, pos)
+    if building_matches:
+        # SAMP format: B###/D## style building IDs
+        for i, (pos, match) in enumerate(building_matches):
+            building_id = match.group(1)
+            name = match.group(2).strip() if match.group(2) else None
+            year_str = match.group(3)
+            year = int(year_str) if year_str else None
+            construction = match.group(4).strip() if match.group(4) else None
 
-        # Get section text (up to next building)
-        next_pos = building_matches[i + 1][0] if i + 1 < len(building_matches) else None
-        section_text = _get_building_section(content, pos, next_pos)
+            page_start = _find_page_at_position(content, pos)
 
-        # Extract rooms
-        rooms = _extract_rooms_from_section(section_text, pos, content)
+            # Get section text (up to next building)
+            next_pos = building_matches[i + 1][0] if i + 1 < len(building_matches) else None
+            section_text = _get_building_section(content, pos, next_pos)
 
-        # Find page end (using room pages for accuracy)
-        page_end = _find_page_end(section_text, page_start, rooms)
+            # Extract rooms
+            rooms = _extract_rooms_from_section(section_text, pos, content)
 
-        # Classify complexity and estimate ACM item count
-        complexity, acm_estimate = _classify_complexity(section_text, len(rooms))
+            # Find page end (using room pages for accuracy)
+            page_end = _find_page_end(section_text, page_start, rooms)
 
-        buildings.append(
-            BuildingMeta(
-                building_id=building_id,
-                name=name,
-                year=year,
-                construction=construction,
-                page_start=page_start,
-                page_end=page_end,
-                complexity=complexity,
-                rooms=rooms,
-                acm_item_count_estimate=acm_estimate if acm_estimate > 0 else None,
+            # Classify complexity and estimate ACM item count
+            complexity, acm_estimate = _classify_complexity(section_text, len(rooms))
+
+            buildings.append(
+                BuildingMeta(
+                    building_id=building_id,
+                    name=name,
+                    year=year,
+                    construction=construction,
+                    page_start=page_start,
+                    page_end=page_end,
+                    complexity=complexity,
+                    rooms=rooms,
+                    acm_item_count_estimate=acm_estimate if acm_estimate > 0 else None,
+                )
             )
-        )
+    else:
+        # No SAMP headers found — try ARA format detection
+        ara_buildings = _detect_ara_buildings(content)
+        if ara_buildings:
+            logger.info(
+                f"ARA format detected: {len(ara_buildings)} buildings found via "
+                "'Building Name:' headers"
+            )
+            for i, (name, pos) in enumerate(ara_buildings):
+                # Use building name as ID (ARA doesn't use coded IDs)
+                next_pos = ara_buildings[i + 1][1] if i + 1 < len(ara_buildings) else None
+                section_end = _find_ara_building_section_end(content, name, pos, next_pos)
+                section_text = content[pos:section_end]
+
+                page_start = _find_page_at_position(content, pos)
+                page_end = _find_page_end(section_text, page_start, [])
+
+                # ARA buildings are always complex (numbered items, multi-area)
+                complexity = BuildingComplexity.COMPLEX
+                acm_count = section_text.lower().count("\nasbestos\n")
+
+                buildings.append(
+                    BuildingMeta(
+                        building_id=name,
+                        name=name,
+                        page_start=page_start,
+                        page_end=page_end,
+                        complexity=complexity,
+                        acm_item_count_estimate=acm_count if acm_count > 0 else None,
+                    )
+                )
 
     # Create processing groups
     processing_groups = _create_processing_groups(buildings)
@@ -379,7 +465,7 @@ def _trim_to_register(
         return content
 
     page_pattern = re.compile(
-        rf"(?:[-—]+|<!--)\s*Page\s+{document_structure.register_start_page}\s*(?:[-—]+|-->)",
+        rf"(?:[-—]+|<!--)\s*Page\s+{document_structure.register_start_page}\s*(?:[-—]+|-->)|PAGE\s+{document_structure.register_start_page}\s+OF\s+\d+",
         re.IGNORECASE,
     )
     match = page_pattern.search(content)
@@ -422,6 +508,30 @@ async def compile_building_inventory(
         # Ensure processing groups are generated
         if not inventory.processing_groups and inventory.buildings:
             inventory.processing_groups = _create_processing_groups(inventory.buildings)
+
+        # Cross-validate: run heuristic on FULL content (not trimmed) to catch
+        # buildings whose register data precedes the detected register_start_page
+        heuristic = _heuristic_fallback(content, document_structure)
+        if heuristic.buildings:
+            llm_ids = {b.building_id.lower() for b in inventory.buildings}
+            llm_names = {(b.name or "").lower() for b in inventory.buildings}
+            added = 0
+            for h_building in heuristic.buildings:
+                h_id_lower = h_building.building_id.lower()
+                h_name_lower = (h_building.name or "").lower()
+                if h_id_lower not in llm_ids and h_name_lower not in llm_names:
+                    inventory.buildings.append(h_building)
+                    added += 1
+            if added:
+                inventory.total_buildings = len(inventory.buildings)
+                inventory.processing_groups = _create_processing_groups(
+                    inventory.buildings
+                )
+                logger.info(
+                    f"Merged {added} heuristic buildings into LLM inventory "
+                    f"(total: {inventory.total_buildings})"
+                )
+
         logger.info(
             f"Building inventory compiled: {inventory.total_buildings} buildings, "
             f"{len(inventory.processing_groups)} processing groups"
@@ -432,5 +542,6 @@ async def compile_building_inventory(
         logger.warning(
             f"LLM building inventory compilation failed: {e}. Using heuristic fallback."
         )
-        fallback = _heuristic_fallback(register_content, document_structure)
+        # Use FULL content for heuristic to catch buildings before register_start_page
+        fallback = _heuristic_fallback(content, document_structure)
         return fallback
