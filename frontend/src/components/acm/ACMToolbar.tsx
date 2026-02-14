@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ChevronDown, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Search, Sparkles, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Columns3, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Search, Sparkles, X } from 'lucide-react'
 
 interface ACMToolbarProps {
   onAddNew: () => void
@@ -26,6 +26,7 @@ interface ACMToolbarProps {
   onRefresh: () => void
   onExpandAll?: () => void
   onCollapseAll?: () => void
+  onResetColumns?: () => void
   riskFilter?: string
   onRiskFilterChange: (value: string | undefined) => void
   isExtracting?: boolean
@@ -49,6 +50,7 @@ export function ACMToolbar({
   onRefresh,
   onExpandAll,
   onCollapseAll,
+  onResetColumns,
   riskFilter,
   onRiskFilterChange,
   isExtracting = false,
@@ -173,6 +175,20 @@ export function ACMToolbar({
                 Collapse All
               </Button>
             </>
+          )}
+
+          {/* Reset Columns Button */}
+          {onResetColumns && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onResetColumns}
+              disabled={disabled}
+              title="Reset column widths to defaults"
+            >
+              <Columns3 className="mr-1 h-4 w-4" />
+              Reset Columns
+            </Button>
           )}
 
           {/* Refresh Button */}

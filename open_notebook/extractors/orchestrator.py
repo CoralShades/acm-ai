@@ -30,7 +30,10 @@ from open_notebook.extractors.building_inventory import (
     BuildingInventory,
     BuildingMeta,
 )
-from open_notebook.extractors.document_structure import _PAGE_PATTERN
+from open_notebook.extractors.document_structure import (
+    _PAGE_PATTERN,
+    _page_num_from_match,
+)
 from open_notebook.extractors.page_tagger import (
     PageTaggingResult,
     SectionTaxonomy,
@@ -99,11 +102,19 @@ class OrchestratorStats(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+_SAMP_BUILDING_ID = re.compile(r"^[A-Z]\d+[A-Z]?$|^D\d{2,3}$")
+
+
 def _select_strategy(
     building: BuildingMeta,
     page_tags: Optional[PageTaggingResult],
 ) -> ExtractionStrategy:
     """Select extraction strategy for a building based on complexity and page tags."""
+    # ARA-style buildings (name-based IDs) always need LLM extraction
+    # because regex_only only handles SAMP B###-R#### room patterns
+    if not _SAMP_BUILDING_ID.match(building.building_id):
+        return ExtractionStrategy.FULL_LLM
+
     if not page_tags:
         return ExtractionStrategy.FULL_LLM
 
@@ -120,9 +131,7 @@ def _select_strategy(
     ]
 
     if not register_pages:
-        return (
-            ExtractionStrategy.FULL_LLM
-        )  # Use LLM when page tagging can't confirm register location
+        return ExtractionStrategy.FULL_LLM  # Use LLM when page tagging can't confirm register location
 
     if building.complexity == BuildingComplexity.SIMPLE:
         return ExtractionStrategy.REGEX_ONLY
@@ -224,7 +233,7 @@ def _extract_building_content(content: str, page_start: int, page_end: int) -> s
     end_pos = len(content)
 
     for match in matches:
-        page_num = int(match.group(1))
+        page_num = _page_num_from_match(match)
         if page_num == page_start and start_pos is None:
             start_pos = match.start()
         if page_num > page_end:
@@ -234,7 +243,7 @@ def _extract_building_content(content: str, page_start: int, page_end: int) -> s
     if start_pos is None:
         # Page marker not found; try to find the closest preceding marker
         for match in matches:
-            page_num = int(match.group(1))
+            page_num = _page_num_from_match(match)
             if page_num <= page_start:
                 start_pos = match.start()
             else:
@@ -319,11 +328,7 @@ def _split_building_by_rooms(
         start = room_matches[i].start()
         # End at the start of the next group (or end of content)
         end_idx = i + max_rooms
-        end = (
-            room_matches[end_idx].start()
-            if end_idx < len(room_matches)
-            else len(content)
-        )
+        end = room_matches[end_idx].start() if end_idx < len(room_matches) else len(content)
         chunks.append(content[start:end])
 
     logger.info(
@@ -341,7 +346,7 @@ async def _llm_extract_building(
     """Run LLM extraction on building content using existing extraction logic.
 
     For buildings with many rooms, splits content into sub-chunks to avoid
-    output token truncation (8192 max_tokens ≈ 15-20 records).
+    output token truncation (32768 max_tokens).
     """
     from ai_prompter import Prompter
 
@@ -371,7 +376,7 @@ async def _llm_extract_building(
             model_id,
             "extraction",
             temperature=0.1,
-            max_tokens=8192,
+            max_tokens=32768,
         )
 
         from langchain_core.messages import HumanMessage, SystemMessage
@@ -379,9 +384,7 @@ async def _llm_extract_building(
         chain = model.with_structured_output(ACMExtractionResult)
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(
-                content="Extract ACM records from the building content provided."
-            ),
+            HumanMessage(content="Extract ACM records from the building content provided."),
         ]
 
         result: ACMExtractionResult = await chain.ainvoke(messages)

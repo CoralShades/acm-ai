@@ -20,6 +20,7 @@ from open_notebook.extractors.document_structure import (
     _PAGE_PATTERN,
     DocumentStructure,
     _extract_total_pages,
+    _page_num_from_match,
 )
 
 
@@ -107,7 +108,7 @@ def _split_into_pages(content: str) -> List[Tuple[int, str]]:
 
     pages = []
     for i, match in enumerate(matches):
-        page_num = int(match.group(1))
+        page_num = _page_num_from_match(match)
         start = match.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
         page_text = content[start:end].strip()

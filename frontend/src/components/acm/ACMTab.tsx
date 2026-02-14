@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ACMGrid, type ACMGridRef, type CellSelectionDetails } from './ACMGrid'
 import { ACMCellViewer } from './ACMCellViewer'
 import { ACMRecordDialog } from './ACMRecordDialog'
+import { ACMRecordDetailDialog } from './ACMRecordDetailDialog'
 import { ACMExtractionBanner } from './ACMExtractionBanner'
 import { ACMStatsCards } from './ACMStatsCards'
 import { ACMToolbar } from './ACMToolbar'
@@ -50,6 +51,9 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const [recordToDelete, setRecordToDelete] = useState<ACMRecord | null>(null)
   // Cell citation viewer state
   const [selectedCell, setSelectedCell] = useState<CellSelectionDetails | null>(null)
+  // Detail dialog state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [detailRecord, setDetailRecord] = useState<ACMRecord | null>(null)
 
   // Building tab state - persisted per source in session storage
   const [selectedBuilding, setSelectedBuilding] = useSessionStorage<string | null>(
@@ -165,6 +169,10 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     setVisibleCount(count)
   }, [])
 
+  const handleResetColumns = useCallback(() => {
+    gridRef.current?.resetColumns()
+  }, [])
+
   // Listen for acm-command custom events from Command Palette
   useEffect(() => {
     const handleACMCommand = (e: Event) => {
@@ -194,6 +202,19 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     window.addEventListener('acm-command', handleACMCommand)
     return () => window.removeEventListener('acm-command', handleACMCommand)
   }, [handleExtract, handleExportCsv, handleExportExcel, handleAddNew, router])
+
+  // Row click handler — opens read-only detail dialog
+  const handleRowClick = useCallback((record: ACMRecord) => {
+    setDetailRecord(record)
+    setDetailDialogOpen(true)
+  }, [])
+
+  // Edit from detail dialog — close detail and open edit dialog
+  const handleEditFromDetail = useCallback((record: ACMRecord) => {
+    setDetailDialogOpen(false)
+    setDetailRecord(null)
+    handleEdit(record)
+  }, [handleEdit])
 
   // Cell citation viewer handler
   const handleCellSelect = useCallback((details: CellSelectionDetails) => {
@@ -272,6 +293,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             onRefresh={handleRefresh}
             onExpandAll={handleExpandAll}
             onCollapseAll={handleCollapseAll}
+            onResetColumns={handleResetColumns}
             riskFilter={riskFilter}
             onRiskFilterChange={setRiskFilter}
             isExtracting={extractACM.isPending || extractionStatus.phase === 'extracting'}
@@ -317,10 +339,19 @@ export function ACMTab({ sourceId }: ACMTabProps) {
               quickFilterText={debouncedSearchText}
               onVisibleCountChange={handleVisibleCountChange}
               onCellSelect={handleCellSelect}
+              onRowClick={handleRowClick}
             />
           )}
         </CardContent>
       </Card>
+
+      {/* Record Detail Dialog (read-only) */}
+      <ACMRecordDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        record={detailRecord}
+        onEdit={handleEditFromDetail}
+      />
 
       {/* Create/Edit Dialog */}
       <ACMRecordDialog
