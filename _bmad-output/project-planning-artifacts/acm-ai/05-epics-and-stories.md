@@ -60,6 +60,22 @@
 
 ## Epic 1: ACM Data Extraction Pipeline
 
+> **Implementation Evolution (2026-02-05 to 2026-02-08):**
+> The pipeline evolved from the original 2-stage architecture (Stage 1: Extract, Stage 2: Interpret)
+> to a comprehensive 7-stage document intelligence pipeline:
+> - **Stage -1: Document Structure Analysis** (E1-S16) - TOC extraction, section hierarchy
+> - **Stage -1.5: Building Inventory** (E1-S17) - Building metadata compilation, page ranges
+> - **Stage 0: Preflight Validation** (Original design)
+> - **Stage 0.5: Agentic Orchestrator** (E1-S20) - Planned for intelligent routing/correction
+> - **Stage 1: Extraction** (E1-S3, E1-S10, E1-S11) - Verbatim extraction with MinerU, Generic Configurable Parser
+> - **Stage 2: Interpretation** (E1-S3, E1-S9, E1-S12) - Normalization, taxonomy classification
+> - **Stage 2.5: Corrective RAG Validation** (E1-S14, E1-S15) - Hybrid retrieval, contextual embeddings
+> - **Stage 3: Post-Processing** (Original design)
+>
+> Additional enhancements include page-level section tagging (E1-S18), enhanced metadata extraction (E1-S19),
+> and the shift from 3 specialized parsers to a single configurable parser driven by BAR field schema (E1-S11).
+> Status: **20/20 stories complete** as of 2026-02-08.
+
 ### E1-S1: Create ACM Data Model
 **As a** developer
 **I want** a SurrealDB schema for ACM records
@@ -649,6 +665,20 @@
 ---
 
 ## Epic 4: Chat with ACM Context
+
+> **Implementation Scope Expansion (2026-02-10):**
+> Originally scoped as 4 basic stories for ACM-aware chat, the implementation expanded significantly
+> to deliver a production-ready conversational AI interface:
+> - **CopilotKit Integration** - Full CopilotKit provider setup with React hooks ecosystem
+> - **AG-UI Protocol** - Server-sent events (SSE) streaming protocol for supervisor agent communication
+> - **Supervisor Agent Backend** - FastAPI `/api/supervisor/stream` endpoint exposing LangGraph workflows
+> - **Custom Tool Result Renderers** - ACM-specific renderers for extraction results, citations, tables
+> - **Real-time Streaming** - SSE-based streaming responses with token-by-token rendering
+> - **Dynamic Context Toggle** - User-controlled ACM context inclusion with visual indicators
+>
+> Implementation delivered across **15 files** (~1200 lines frontend, ~350 lines backend).
+> Completed: **2026-02-10** via PR #16.
+> Status: **All 4 original stories complete**, with significant value-add features included.
 
 ### E4-S1: Add ACM Records to Chat Context
 **As a** user

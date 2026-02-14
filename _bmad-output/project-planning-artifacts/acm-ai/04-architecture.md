@@ -733,9 +733,221 @@ ROOM_PATTERN = r"^([A-Z]\d+[A-Z]?-R\d+)\s*[-\u2013]\s*(.+?)(?:\s*[-\u2013]\s*([\
 # Example: "B00A-R0001 - External Movement"
 ```
 
+### 5.4 Pipeline Observability
+
+The extraction pipeline emits real-time events via Server-Sent Events (SSE) to provide full visibility into the 7-stage extraction process.
+
+#### Event Emitter Architecture
+
+```python
+# api/extraction_events.py
+class PipelineEventEmitter:
+    """Manages SSE event broadcasting for a single extraction run."""
+
+    def __init__(self, run_id: str, source_id: str):
+        self.run_id = run_id
+        self.source_id = source_id
+        self._subscribers: list[asyncio.Queue] = []
+
+    async def emit_stage_entered(self, stage_id: str, stage_name: str):
+        """Broadcast stage transition event."""
+
+    async def emit_stage_progress(self, stage_id: str, progress: float, message: str):
+        """Broadcast progress update within a stage."""
+
+    async def emit_stage_thinking(self, stage_id: str, thought: str, tool_selected: str):
+        """Broadcast agent reasoning/decision event."""
+```
+
+#### Event Schemas
+
+| Event Type | Payload Fields | When Emitted |
+|------------|----------------|--------------|
+| `pipeline:started` | run_id, source_id, stages[], total_stages | Pipeline run begins |
+| `stage:entered` | run_id, stage_id, stage_name, entered_at, sub_step | Stage begins execution |
+| `stage:progress` | run_id, stage_id, progress, message, records_so_far | Progress update within stage |
+| `stage:thinking` | run_id, stage_id, thought, tool_selected, confidence | Agent reasoning/decision |
+| `stage:completed` | run_id, stage_id, completed_at, duration_ms, records_extracted, summary | Stage finishes successfully |
+| `stage:failed` | run_id, stage_id, failed_at, error, error_code, retry_available | Stage fails |
+| `stage:skipped` | run_id, stage_id, reason | Stage intentionally skipped |
+| `pipeline:completed` | run_id, source_id, total_duration_ms, total_records, confidence_distribution | All stages done |
+| `pipeline:failed` | run_id, source_id, failed_at, error, last_successful_stage | Pipeline halted on error |
+
+**SSE Endpoint:**
+```
+GET /api/extraction/{source_id}/events
+Accept: text/event-stream
+```
+
+#### Frontend Integration
+
+**Hook:** `usePipelineStatus(sourceId)`
+- Opens SSE connection to event stream
+- Reduces events into `PipelineRunState`
+- Exposes current stage, progress, and full stage history
+- Fallback to polling if SSE unavailable
+
+**Components:**
+- `PipelineVisualization` - Main container with 7-stage stepper
+- `PipelineStage` - Individual stage row with status, progress, duration
+- `StageDetail` - Expandable panel showing sub-steps and thinking steps
+- `ThinkingSteps` - Agent reasoning log with timestamps
+
+See `docs/ag-ui-pipeline-spec.md` for complete specification.
+
 ---
 
-## 6. Frontend Integration
+## 6. Chat Architecture
+
+### 6.1 Overview
+
+ACM-AI implements a supervisor agent pattern where a single orchestrating agent has direct access to all tools (both ACM and document search), rather than delegating through sub-agents. This architecture:
+
+- Eliminates agent-to-agent communication overhead for same-process tools
+- Provides real-time streaming via AG-UI protocol / CopilotKit
+- Supports dynamic ACM context toggle for domain-specific queries
+- Integrates with the frontend via SSE and custom tool result renderers
+
+### 6.2 Supervisor Agent Pattern
+
+The supervisor agent (`open_notebook/graphs/supervisor_agent.py`) uses a **ReAct loop** where it:
+
+1. Receives user message
+2. Decides which tools to invoke (ACM tools, search tools, or both)
+3. Executes tools directly (no sub-agent delegation)
+4. Synthesizes results into coherent response
+
+**Direct Tool Access:**
+```python
+def _get_supervisor_tools(include_acm: bool = True):
+    """Get the tools available to the supervisor."""
+    tools = get_search_tools()  # Document search, note retrieval
+    if include_acm:
+        tools = get_acm_tools() + tools  # ACM record queries, building search
+    return tools
+```
+
+**ReAct Loop Implementation:**
+```python
+def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
+    # Set tool context for scoping (source_id, notebook_id)
+    set_tool_context(source_id=source_id, notebook_id=notebook_id)
+
+    # Get tools based on ACM context toggle
+    tools = _get_supervisor_tools(include_acm=include_acm)
+
+    # Build system prompt with context
+    system_prompt = Prompter(prompt_template="supervisor").render(data=prompt_data)
+
+    # Provision model with tools
+    model = await provision_langchain_model_with_tools(payload, model_id, "chat", tools=tools)
+
+    # Invoke and return AI message (may contain tool calls)
+    return {"messages": [ai_message]}
+```
+
+The supervisor graph uses LangGraph's conditional edges to loop back after tool execution:
+```
+START → supervisor → (has tool calls?) → tools → supervisor → END
+```
+
+### 6.3 AG-UI Protocol Integration
+
+AG-UI (Agent-User Interaction) protocol provides a standard for agents to communicate state, actions, and reasoning to frontend UIs. ACM-AI uses the `ag-ui-langgraph` adapter to expose the supervisor graph as an AG-UI compatible endpoint.
+
+**Adapter Implementation:**
+```python
+# api/routers/agui_chat.py
+from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
+
+def register_agui_endpoints(app):
+    agent = LangGraphAgent(
+        name="supervisor",
+        graph=supervisor_graph,
+        description="ACM-AI supervisor agent for asbestos compliance queries"
+    )
+    add_langgraph_fastapi_endpoint(app, agent, "/api/agui/chat")
+```
+
+**SSE Endpoint:** `/api/agui/chat`
+- Accepts `RunAgentInput` via POST
+- Returns AG-UI SSE event stream
+- Automatic LangGraph → AG-UI event mapping:
+  - `ToolCallStart`, `ToolCallArgs`, `ToolCallEnd`, `ToolCallResult`
+  - `TextMessageStart`, `TextMessageContent`, `TextMessageEnd`
+  - State snapshots and deltas
+
+**Event Mapping:**
+LangGraph emits low-level node/edge events; the AG-UI adapter transforms these into standardized AG-UI events that CopilotKit can consume without custom parsing.
+
+### 6.4 CopilotKit Frontend
+
+CopilotKit is a React framework that implements the AG-UI protocol client-side, providing hooks and components for agent interaction.
+
+**Provider Setup:**
+```tsx
+// SmartChatProvider wraps the chat component
+<SmartChatProvider sourceId={sourceId} notebookId={notebookId} hasAcmData={hasAcmData}>
+  <CopilotChat
+    labels={{ title: 'Smart Chat' }}
+    AssistantMessage={ACMAssistantMessage}
+    Input={SmartChatInput}
+    makeSystemMessage={(contextString) => /* build prompt with ACM context */ }
+  />
+</SmartChatProvider>
+```
+
+**Custom Hooks:**
+- `useSmartChat({ sourceId, notebookId, hasAcmData })` - Manages ACM context toggle state
+- `useSmartChatScope()` - Accesses current source/notebook scope from context
+
+**Custom Renderers:**
+- `ACMAssistantMessage` - Custom message renderer for ACM-specific formatting
+- `ToolResultRenderers` - Renders tool invocation results (e.g., ACM record tables)
+- `SmartChatInput` - Input component with ACM context toggle badge
+
+**Streaming Support:**
+CopilotKit automatically handles SSE streaming from the `/api/agui/chat` endpoint, updating the UI in real-time as the agent:
+- Invokes tools
+- Receives results
+- Generates response text
+
+### 6.5 ACM Context Management
+
+ACM context is a **dynamic toggle** that controls whether the supervisor agent has access to ACM-specific tools (record queries, building search, compliance checks).
+
+**Toggle Implementation:**
+```tsx
+// SmartChatPanel.tsx
+const { includeAcmContext, setIncludeAcmContext } = useSmartChat({ sourceId, hasAcmData });
+
+// Badge UI
+<Badge onClick={() => setIncludeAcmContext(!includeAcmContext)}>
+  <TableProperties /> ACM Data {includeAcmContext ? 'ON' : 'OFF'}
+</Badge>
+```
+
+**Context Injection:**
+When ACM context is enabled:
+1. **Tool Availability:** `get_acm_tools()` are included in the supervisor's tool list
+2. **System Prompt:** Modified to indicate ACM context is active:
+   ```
+   "ACM context is enabled - use ACM tools for structured data queries."
+   ```
+3. **Tool Scoping:** `set_tool_context(source_id, notebook_id)` ensures ACM tools only query relevant records
+
+When disabled:
+- Only document search and note retrieval tools available
+- System prompt focuses on general document content
+- ACM-specific queries return "ACM context is disabled" message
+
+**Use Cases:**
+- **ACM ON:** "Show all asbestos in Building B003", "What's the risk status of ceiling tiles?"
+- **ACM OFF:** "Summarize the methodology section", "What does page 5 say about surveys?"
+
+---
+
+## 7. Frontend Integration
 
 ### 6.1 AG Grid Configuration (Victorian BAR Format - 47+ Columns)
 
@@ -1168,7 +1380,7 @@ CSS Custom Properties (:root / .dark)
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 13.2 Pipeline Visualization Architecture
+### 13.2 AG-UI Protocol & CopilotKit Integration
 
 ```
 Browser ──SSE──▶ FastAPI ──Events──▶ LangGraph Nodes
@@ -1176,9 +1388,13 @@ Browser ──SSE──▶ FastAPI ──Events──▶ LangGraph Nodes
     PipelineEventEmitter (asyncio.Queue per subscriber)
 ```
 
+**Status:** ✅ **Phase 1 (implemented)**
+- **Live Endpoint:** `/api/agui/chat` (AG-UI protocol via `ag-ui-langgraph` adapter)
+- **Frontend:** `CopilotProvider`, `SmartChatPanel`, custom tool result renderers
+- **Backend:** `supervisor_agent.py` exposed via `LangGraphAgent` adapter
+
 **Transport Strategy:**
-- **Phase 1:** SSE (Server-Sent Events) for real-time extraction progress
-- **Phase 2:** AG-UI protocol / CopilotKit integration (future)
+- **Phase 1:** SSE (Server-Sent Events) for real-time extraction progress and chat streaming
 - **Fallback:** 3-second polling via existing `useExtractionStatus` hook
 
 **State Management:**
@@ -1269,6 +1485,95 @@ Three new Zustand stores extend the existing state management architecture:
 - Notebooks (`/notebooks`) - accessible via direct URL only
 
 **Reference:** `docs/navigation-cleanup-spec.md`
+
+### 13.5 Smart Chat Components
+
+Smart Chat provides an AI-powered interface for querying ACM data and document content using the supervisor agent architecture (Section 6).
+
+**Component Hierarchy:**
+```
+<SmartChatProvider>                     // Context provider
+  <SmartChatPanel>                      // Main container
+    <CopilotChat>                       // CopilotKit chat component
+      <ACMAssistantMessage />           // Custom message renderer
+      <SmartChatInput />                // Input with ACM toggle
+      <ToolResultRenderers />           // Tool invocation renderers
+```
+
+**Key Components:**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `SmartChatProvider` | `frontend/src/components/chat/SmartChatProvider.tsx` | Provides source/notebook scope context |
+| `SmartChatPanel` | `frontend/src/components/chat/SmartChatPanel.tsx` | Main container with CopilotKit integration |
+| `ACMAssistantMessage` | `frontend/src/components/chat/ACMAssistantMessage.tsx` | Custom renderer for ACM-formatted responses |
+| `SmartChatInput` | `frontend/src/components/chat/SmartChatInput.tsx` | Input with ACM context toggle badge |
+| `ToolResultRenderers` | `frontend/src/components/chat/ToolResultRenderers.tsx` | Renders ACM tool invocation results (tables, charts) |
+| `ACMContextToggle` | `frontend/src/components/acm/ACMContextToggle.tsx` | Standalone ACM context toggle component |
+
+**Hooks:**
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useSmartChat` | `frontend/src/lib/hooks/useSmartChat.ts` | Manages ACM context toggle state |
+| `useSmartChatScope` | `frontend/src/components/chat/SmartChatProvider.tsx` | Accesses current source/notebook scope |
+
+**Features:**
+- Real-time streaming via SSE from `/api/agui/chat`
+- Dynamic ACM context toggle (enables/disables ACM-specific tools)
+- Custom tool result renderers for ACM record tables
+- System prompt injection with source/notebook context
+- Indicator badge when ACM data is included in context
+
+### 13.6 Pipeline Visualization Components
+
+Pipeline visualization provides real-time feedback during the 7-stage ACM extraction process.
+
+**Component Hierarchy:**
+```
+<PipelineVisualization>                 // Main container
+  <ProgressIndicator />                 // Overall progress bar
+  <PipelineStage stage="-1">           // Document Structure
+    <StageHeader />                     // Icon, status, duration
+    <StageDetail>                       // Expandable panel
+      <ThinkingSteps />                // Agent reasoning log
+      <SubStepList />                  // Sub-step progress
+      <StageMetrics />                 // Record counts, timings
+  <PipelineStage stage="0" />          // Preflight
+  <PipelineStage stage="0.5" />        // Orchestrator
+  <PipelineStage stage="1" />          // Extract
+  <PipelineStage stage="2" />          // Interpret
+  <PipelineStage stage="2.5" />        // Validate
+  <PipelineStage stage="3" />          // Enrich & Store
+  <PipelineSummary />                  // Final stats
+  <ErrorRecoveryPanel />               // Retry/override actions
+```
+
+**Key Components:**
+
+| Component | Purpose | File Location |
+|-----------|---------|---------------|
+| `PipelineVisualization` | Main container, manages SSE connection | `frontend/src/components/acm/PipelineVisualization.tsx` |
+| `PipelineStage` | Individual stage row (icon, status, timer) | `frontend/src/components/acm/PipelineStage.tsx` |
+| `StageDetail` | Expandable detail panel | `frontend/src/components/acm/StageDetail.tsx` |
+| `ThinkingSteps` | Agent reasoning/decision log | `frontend/src/components/acm/ThinkingSteps.tsx` |
+
+**Hook:**
+
+| Hook | Purpose | File Location |
+|------|---------|---------------|
+| `usePipelineStatus` | SSE connection to `/api/extraction/{source_id}/events`, reduces events into `PipelineRunState` | `frontend/src/lib/hooks/use-pipeline-status.ts` |
+
+**Features:**
+- 7-stage vertical stepper with real-time status updates
+- Stage-level progress bars and duration timers
+- Expandable detail panels with sub-step breakdowns
+- Agent "thinking steps" showing tool selection reasoning
+- Error recovery UI with retry/override options
+- Final summary with confidence distribution
+- Fallback to polling if SSE connection fails
+
+**Reference:** See `docs/ag-ui-pipeline-spec.md` for complete specification.
 
 ---
 

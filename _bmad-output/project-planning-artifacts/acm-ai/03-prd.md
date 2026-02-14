@@ -41,6 +41,10 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-104 | System shall parse hierarchical structure (Dept → Agency → Site → Building → Room → ACM Item) | P0 | Hierarchy correctly represented in data model |
 | FR-107 | System shall use configurable field definitions to parse any ACM PDF format via a single generic parser | P0 | Field schema config (register_row.schema.json, register_enums.json) drives parsing; single parser handles all consultant formats |
 | FR-108 | System shall allow configuration of non-extractable fields | P0 | User can set Department, Building Type, etc. |
+| FR-109 | System shall analyze document structure before extraction | P0 | TOC/inventory in Stage -1 |
+| FR-110 | System shall detect format and select parser dynamically | P0 | Preflight identifies consultant |
+| FR-111 | System shall route sections to optimal tool via orchestrator | P0 | MinerU/Docling per content type |
+| FR-112 | System shall perform corrective re-extraction on failure | P1 | Max 3 LLM refinement attempts |
 | FR-105 | System shall store page numbers for each extracted data row | P0 | Every ACM record has associated page_number |
 | FR-106 | System shall handle multi-page tables | P1 | Tables spanning pages are merged correctly |
 
@@ -93,6 +97,11 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-503 | Chat shall understand ACM domain terminology | P1 | Correctly interprets "friable", "ACM", etc. |
 | FR-504 | Chat shall answer questions about policy sections | P0 | Can explain SAMP procedures |
 | FR-505 | Chat context selector shall include "ACM Data" option | P0 | User can toggle ACM context on/off |
+| FR-506 | Chat shall use CopilotKit framework for AG-UI protocol | P0 | CopilotKit provider wraps application |
+| FR-507 | Chat shall expose supervisor agent via AG-UI SSE endpoint | P0 | /api/agui/chat returns event stream |
+| FR-508 | Chat shall render tool calls with custom result components | P0 | ACM queries shown in rich UI (tables, stats) |
+| FR-509 | Chat shall support real-time streaming responses | P0 | Partial responses visible during generation |
+| FR-510 | Chat shall handle ACM context toggle dynamically | P0 | Agent receives include_acm_context flag |
 
 ### 2.6 Rebranding (FR-600 Series)
 
@@ -450,31 +459,46 @@ The system shall export Excel files compliant with Victorian Government BAR form
 41. Quantity Removed → 42. Asbestos Removal Notification No
 43. EPA Waste Transport Certificate No → 44. Removal Comments → 45. Photo Reference Number
 
-### 5.4 Extraction Pipeline Architecture (NEW - 2026-02-05)
+### 5.4 Extraction Pipeline Architecture
 
-> See `docs/reference/extraction-pipeline.md` for complete technical specification.
+Seven-stage pipeline with real-time observability:
 
-The ACM extraction follows a **two-stage pipeline** design:
+**Stage -1: Document Structure Analysis**
+- Extract TOC, building inventory, metadata
+- Tag page-level sections
+- Output: Document structure map
 
-**Stage 1: EXTRACT (Verbatim with Provenance)**
-- Extract raw values exactly as written in PDF (no normalization)
-- Track full provenance: page number, table ID, row/column, bounding box
-- Output: `RawExtraction` JSON with `DocumentMeta` and `RawACMItem[]`
-- Parser selection: Docling (text/layout) + MinerU (tables)
+**Stage 0: Preflight**
+- Detect format (Prensa, Greencap, NSW, etc.)
+- Select parser configuration
+- Output: Parser selection
 
-**Stage 2: INTERPRET (Normalize to BAR Schema)**
-- Field mapping: Consultant columns → BAR columns
-- Value normalization: Synonyms → Controlled enums
-- Taxonomy classification: Item description → Product Group/Type
-- Business rule application (e.g., Negative → N/A for Condition)
-- Validation against BAR schema
-- Output: Validated `ACMRecord` objects
+**Stage 0.5: Agentic Orchestrator**
+- Analyze content per page range
+- Route to optimal tool (MinerU/Docling)
+- Output: Per-section extraction plan
 
-**Rationale:**
-- Separation improves debugging and traceability
-- Raw extraction preserved for audit/review
-- Normalization rules can be updated without re-extraction
-- Supports multiple consultant formats via pluggable parsers
+**Stage 1: Extract (Verbatim with Provenance)**
+- Extract raw data with bounding boxes
+- Preserve consultant wording
+- Output: Raw records + citations
+
+**Stage 2: Interpret (Normalization)**
+- Map to BAR field schema
+- Normalize terminology
+- Output: Normalized records
+
+**Stage 2.5: Corrective Validation**
+- Validate against schema
+- LLM re-extraction on failure (max 3)
+- Output: Validated records
+
+**Stage 3: Enrich & Store**
+- Generate embeddings
+- Store in SurrealDB with citations
+- Output: Queryable ACM records
+
+**Observability**: SSE events (pipeline:started, stage:entered, stage:progress, stage:completed) for real-time UI.
 
 ### 5.5 Enum Definitions (NEW - 2026-02-05)
 

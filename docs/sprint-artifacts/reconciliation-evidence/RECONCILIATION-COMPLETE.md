@@ -68,3 +68,27 @@ git branch -d Sanju
 - [x] Comprehensive reconciliation report created
 
 See full report: `reconciliation-report-2026-02-15.md`
+
+---
+
+## Documentation Sync (Feb 15, 2026)
+
+**Status**: ✅ Complete
+
+**Trigger**: Discovery of documentation drift during Sanju reconciliation investigation
+
+**Scope**:
+- PRD: +9 new requirements (FR-506..510, FR-109..112)
+- Architecture: +2 new sections (Chat Architecture, Pipeline Observability)
+- Epics: Implementation notes added to E1, E4
+- Sprint Status: Reconciliation metadata + Epic 4 notes
+
+**Outcome**: Documentation now accurately reflects Smart Chat (CopilotKit, AG-UI, supervisor) and 7-stage extraction pipeline
+
+**Files Updated**:
+- _bmad-output/project-planning-artifacts/acm-ai/03-prd.md
+- _bmad-output/project-planning-artifacts/acm-ai/04-architecture.md
+- _bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md
+- docs/sprint-artifacts/sprint-status.yaml
+
+**Evidence**: `documentation-sync-2026-02-15.md`
