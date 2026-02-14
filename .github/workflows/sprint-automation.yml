@@ -1,0 +1,86 @@
+name: Sprint Automation
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, lane-b]
+
+jobs:
+  update-sprint-status:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Update sprint status with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: "claude-4-0-sonnet-20250805"
+          track_progress: true
+          prompt: |
+            A PR titled "${{ github.event.pull_request.title }}" has been merged (PR #${{ github.event.pull_request.number }}).
+
+            **Task:**
+            1. Extract story ID from PR title (format: [E#-S#] like [E1-S3] or [e14-s11])
+            2. If story ID found, update docs/sprint-artifacts/sprint-status.yaml:
+               - Set story status to 'done'
+               - Update 'updated' timestamp to today's date (2026-02-15)
+               - Add comment referencing PR #${{ github.event.pull_request.number }}
+
+            3. Check if the epic is now complete:
+               - Count total stories in epic (exclude archived)
+               - Count done stories
+               - If all stories are done, set epic status to 'done'
+
+            4. Update summary section:
+               - Recalculate total done/in-progress/backlog counts
+               - Update percentages
+
+            5. If epic is complete, create retrospective issue:
+               - Title: "[Retrospective] Epic {epic-id} Complete"
+               - Body: Template with sections:
+                 ## Epic Summary
+                 [Epic details and completion stats]
+
+                 ## What Went Well
+                 -
+
+                 ## What Could Be Improved
+                 -
+
+                 ## Action Items
+                 - [ ] Run BMAD /retrospective workflow
+                 - [ ] Document lessons learned
+
+                 ## Next Steps
+                 [Recommendations for next epic]
+               - Labels: retrospective, epic-complete
+
+            6. Commit changes:
+               - Message: "chore: mark {story-id} as done (PR #${{ github.event.pull_request.number }})"
+               - Include Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+
+          allowed_tools: |
+            Read,
+            Edit,
+            Write,
+            Bash(git add *),
+            Bash(git commit *),
+            Bash(git push),
+            Bash(gh issue create *)
