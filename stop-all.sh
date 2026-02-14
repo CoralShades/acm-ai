@@ -11,6 +11,11 @@ echo "  ACM-AI - Stopping All Services"
 echo "========================================"
 echo ""
 
+# Show current status before stopping
+echo "Current status:"
+uv run python scripts/service_manager.py status 2>/dev/null || true
+echo ""
+
 # Stop Frontend
 echo "Stopping Frontend..."
 if [ -f /tmp/acm-ai-frontend.pid ]; then
@@ -42,7 +47,18 @@ ps -ef | grep "run_api.py" | grep -v grep | awk '{print $2}' | xargs -r kill 2>/
 echo "Stopping SurrealDB..."
 docker compose down 2>/dev/null || true
 
+# Kill tmux session if exists
+tmux kill-session -t acm-ai 2>/dev/null || true
+
+# Clean up all PID files
+rm -f /tmp/acm-ai-*.pid 2>/dev/null || true
+
 echo ""
 echo "========================================"
 echo "  All services stopped!"
 echo "========================================"
+echo ""
+
+# Post-stop verification
+echo "Verification:"
+uv run python scripts/service_manager.py status 2>/dev/null || true

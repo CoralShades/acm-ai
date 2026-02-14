@@ -7,13 +7,17 @@ echo.
 
 cd /d "D:\ailocal\acm-ai"
 
-echo [0/4] Syncing Python dependencies...
+echo [0/5] Syncing Python dependencies...
 set UV_LINK_MODE=copy
 uv sync --quiet
 echo Dependencies synced.
 echo.
 
-echo [1/4] Checking SurrealDB...
+echo [1/5] Clearing ports and fixing conflicts...
+uv run python scripts/service_manager.py fix --auto-fix 2>nul
+echo.
+
+echo [2/5] Checking SurrealDB...
 docker compose ps surrealdb 2>nul | findstr /i "running" >nul
 if %errorlevel% neq 0 (
     echo Starting SurrealDB via Docker Compose...
@@ -24,17 +28,22 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-echo [2/4] Starting API Server (port 5055)...
-start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && uv run python run_api.py"
-timeout /t 3 /nobreak >nul
+echo [3/5] Starting API Server (port 5055)...
+start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && set API_RELOAD=false && uv run python run_api.py"
+echo Waiting for API to be ready...
+:wait_api
+timeout /t 2 /nobreak >nul
+curl -sf http://localhost:5055/health >nul 2>&1
+if %errorlevel% neq 0 goto wait_api
+echo API Server is ready!
 echo.
 
-echo [3/4] Starting Background Worker...
+echo [4/5] Starting Background Worker...
 start "ACM-AI - Worker" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && set PYTHONIOENCODING=utf-8 && uv run surreal-commands-worker --import-modules commands"
 timeout /t 2 /nobreak >nul
 echo.
 
-echo [4/4] Starting Frontend (port 8502)...
+echo [5/5] Starting Frontend (port 8502)...
 start "ACM-AI - Frontend" cmd /k "cd /d D:\ailocal\acm-ai\frontend && set PORT=8502 && npm run dev -- -p 8502"
 echo.
 
@@ -49,3 +58,8 @@ echo.
 echo   Each service runs in its own window.
 echo   Close the windows to stop services.
 echo ========================================
+echo.
+
+echo Verifying service health...
+timeout /t 5 /nobreak >nul
+uv run python scripts/service_manager.py status 2>nul

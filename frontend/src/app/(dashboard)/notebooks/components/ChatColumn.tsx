@@ -1,10 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { useNotebookChat } from '@/lib/hooks/useNotebookChat'
 import { useSources } from '@/lib/hooks/use-sources'
 import { useNotes } from '@/lib/hooks/use-notes'
 import { ChatPanel } from '@/components/source/ChatPanel'
+import { SmartChatPanel, ChatModeSwitch } from '@/components/chat'
+import type { ChatMode } from '@/lib/types/smart-chat'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Card, CardContent } from '@/components/ui/card'
 import { AlertCircle } from 'lucide-react'
@@ -16,6 +18,9 @@ interface ChatColumnProps {
 }
 
 export function ChatColumn({ notebookId, contextSelections }: ChatColumnProps) {
+  const [chatMode, setChatMode] = useState<ChatMode>('classic')
+  const handleModeChange = useCallback((mode: ChatMode) => setChatMode(mode), [])
+
   // Fetch sources and notes for this notebook
   const { data: sources = [], isLoading: sourcesLoading } = useSources(notebookId)
   const { data: notes = [], isLoading: notesLoading } = useNotes(notebookId)
@@ -88,28 +93,42 @@ export function ChatColumn({ notebookId, contextSelections }: ChatColumnProps) {
   }
 
   return (
-    <ChatPanel
-      title="Chat with Notebook"
-      contextType="notebook"
-      messages={chat.messages}
-      isStreaming={chat.isSending}
-      contextIndicators={null}
-      onSendMessage={(message, modelOverride) => chat.sendMessage(message, modelOverride)}
-      modelOverride={chat.currentSession?.model_override ?? undefined}
-      onModelChange={(model) => {
-        if (chat.currentSessionId) {
-          chat.updateSession(chat.currentSessionId, { model_override: model ?? null })
-        }
-      }}
-      sessions={chat.sessions}
-      currentSessionId={chat.currentSessionId}
-      onCreateSession={(title) => chat.createSession(title)}
-      onSelectSession={chat.switchSession}
-      onUpdateSession={(sessionId, title) => chat.updateSession(sessionId, { title })}
-      onDeleteSession={chat.deleteSession}
-      loadingSessions={chat.loadingSessions}
-      notebookContextStats={contextStats}
-      notebookId={notebookId}
-    />
+    <div className="flex flex-col h-full">
+      <div className="px-4 py-2 border-b flex items-center">
+        <ChatModeSwitch
+          onChange={handleModeChange}
+          storageKey={`chat-mode-notebook-${notebookId}`}
+        />
+      </div>
+      <div className="flex-1 min-h-0">
+        {chatMode === 'smart' ? (
+          <SmartChatPanel notebookId={notebookId} />
+        ) : (
+          <ChatPanel
+            title="Chat with Notebook"
+            contextType="notebook"
+            messages={chat.messages}
+            isStreaming={chat.isSending}
+            contextIndicators={null}
+            onSendMessage={(message, modelOverride) => chat.sendMessage(message, modelOverride)}
+            modelOverride={chat.currentSession?.model_override ?? undefined}
+            onModelChange={(model) => {
+              if (chat.currentSessionId) {
+                chat.updateSession(chat.currentSessionId, { model_override: model ?? null })
+              }
+            }}
+            sessions={chat.sessions}
+            currentSessionId={chat.currentSessionId}
+            onCreateSession={(title) => chat.createSession(title)}
+            onSelectSession={chat.switchSession}
+            onUpdateSession={(sessionId, title) => chat.updateSession(sessionId, { title })}
+            onDeleteSession={chat.deleteSession}
+            loadingSessions={chat.loadingSessions}
+            notebookContextStats={contextStats}
+            notebookId={notebookId}
+          />
+        )}
+      </div>
+    </div>
   )
 }

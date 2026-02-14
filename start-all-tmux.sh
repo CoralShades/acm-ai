@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ACM-AI - Start All Services with tmux (WSL/Linux)
-# This creates a tmux session with 4 panes (one per service)
+# Creates a tmux session with 4 service panes + health dashboard
 # Usage: ./start-all-tmux.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,7 +9,7 @@ SESSION_NAME="acm-ai"
 
 # Check if tmux is installed
 if ! command -v tmux &> /dev/null; then
-    echo "❌ tmux is not installed. Installing..."
+    echo "tmux is not installed."
     echo "Run: sudo apt-get update && sudo apt-get install -y tmux"
     echo ""
     echo "Or use ./start-all.sh for background processes with log files."
@@ -25,33 +25,63 @@ echo "  (tmux session: $SESSION_NAME)"
 echo "========================================"
 echo ""
 
-# Create new tmux session with first pane for SurrealDB
+# Sync dependencies before tmux (so output is visible)
+echo "Syncing Python dependencies..."
+cd "$SCRIPT_DIR"
+UV_LINK_MODE=copy uv sync --quiet
+echo "Dependencies synced."
+echo ""
+
+# Kill any processes occupying our ports before starting
+echo "Clearing ports..."
+uv run python scripts/service_manager.py fix --auto-fix 2>/dev/null || true
+echo ""
+
+# Also stop any leftover docker services
+docker compose down 2>/dev/null || true
+
+# Create new tmux session
+# Layout strategy: split bottom first (full-width health strip), then split top into 2x2
 tmux new-session -d -s $SESSION_NAME -n "ACM-AI" -c "$SCRIPT_DIR"
 
-# Set up pane layout: 4 panes in a grid (2x2)
-tmux split-window -h -t $SESSION_NAME:0
+# Split: top 80% / bottom 20% (health strip spans full width)
+tmux split-window -v -l 20% -t $SESSION_NAME:0.0
+
+# Split the top pane (0) horizontally: left | right
+tmux split-window -h -t $SESSION_NAME:0.0
+
+# Split top-left (0) vertically: SurrealDB (top) / Worker (bottom)
 tmux split-window -v -t $SESSION_NAME:0.0
-tmux split-window -v -t $SESSION_NAME:0.1
 
-# Pane 0 (top-left): SurrealDB
-tmux send-keys -t $SESSION_NAME:0.0 "echo '=== SurrealDB (Database) ==='; docker compose up surrealdb" C-m
+# Split top-right (2) vertically: API (top) / Frontend (bottom)
+tmux split-window -v -t $SESSION_NAME:0.2
 
-# Wait for SurrealDB to start
-sleep 3
+# After all splits, pane indices are:
+#   0 = top-left-top     (SurrealDB)
+#   1 = bottom full-width (Health Dashboard)
+#   2 = top-right-top    (API Server)
+#   3 = top-left-bottom  (Worker)
+#   4 = top-right-bottom (Frontend)
 
-# Pane 1 (top-right): API Server
-tmux send-keys -t $SESSION_NAME:0.1 "echo '=== API Server (port 5055) ==='; sleep 2; cd $SCRIPT_DIR && uv run python run_api.py" C-m
+SD="$SCRIPT_DIR"
 
-# Wait for API to initialize
-sleep 2
+# Pane 0: SurrealDB (starts immediately)
+tmux send-keys -t $SESSION_NAME:0.0 "echo '=== SurrealDB (Database) ==='; cd $SD && docker compose up surrealdb" C-m
 
-# Pane 2 (bottom-left): Background Worker
-tmux send-keys -t $SESSION_NAME:0.2 "echo '=== Background Worker ==='; sleep 3; cd $SCRIPT_DIR && uv run surreal-commands-worker --import-modules commands" C-m
+# Pane 2: API Server (waits for SurrealDB port 8000)
+# API_RELOAD=false: Uvicorn's StatReload blocks the event loop on WSL2's slow /mnt/* filesystem
+tmux send-keys -t $SESSION_NAME:0.2 "cd $SD && $SD/scripts/_wait_for_port.sh 8000 SurrealDB 60 && echo '=== API Server (port 5055) ===' && API_RELOAD=false uv run python run_api.py" C-m
 
-# Pane 3 (bottom-right): Frontend
-tmux send-keys -t $SESSION_NAME:0.3 "echo '=== Frontend (port 8502) ==='; sleep 4; cd $SCRIPT_DIR/frontend && PORT=8502 npm run dev -- -p 8502" C-m
+# Pane 3: Worker (waits for SurrealDB port 8000)
+tmux send-keys -t $SESSION_NAME:0.3 "cd $SD && $SD/scripts/_wait_for_port.sh 8000 SurrealDB 60 && echo '=== Background Worker ===' && uv run surreal-commands-worker --import-modules commands" C-m
 
-echo "✅ All services starting in tmux session!"
+# Pane 4: Frontend (waits for API health - ensures API is fully initialized)
+tmux send-keys -t $SESSION_NAME:0.4 "cd $SD && $SD/scripts/_wait_for.sh http://localhost:5055/health 'API Server' 120 && echo '=== Frontend (port 8502) ===' && cd $SD/frontend && PORT=8502 npm run dev -- -p 8502" C-m
+
+# Pane 1: Health Dashboard (waits for API, then shows live status)
+tmux send-keys -t $SESSION_NAME:0.1 "cd $SD && $SD/scripts/_wait_for.sh http://localhost:5055/health 'API Server' 120 && uv run python scripts/service_manager.py health" C-m
+
+echo "All services starting in tmux session!"
 echo ""
 echo "========================================"
 echo "  Access your application:"
@@ -70,11 +100,13 @@ echo "  Kill session:         tmux kill-session -t $SESSION_NAME"
 echo "  Stop all services:    ./stop-all.sh"
 echo ""
 echo "  Pane layout:"
-echo "    ┌─────────────┬─────────────┐"
-echo "    │ SurrealDB   │ API Server  │"
-echo "    ├─────────────┼─────────────┤"
-echo "    │ Worker      │ Frontend    │"
-echo "    └─────────────┴─────────────┘"
+echo "    +-------------+-------------+"
+echo "    | SurrealDB   | API Server  |"
+echo "    +-------------+-------------+"
+echo "    | Worker      | Frontend    |"
+echo "    +-------------+-------------+"
+echo "    |    Health Dashboard (live) |"
+echo "    +---------------------------+"
 echo "========================================"
 echo ""
 

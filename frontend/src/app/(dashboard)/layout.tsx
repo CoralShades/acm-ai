@@ -7,6 +7,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { ModalProvider } from '@/components/providers/ModalProvider'
 import { CreateDialogsProvider } from '@/lib/hooks/use-create-dialogs'
+import { CopilotProvider } from '@/components/providers/CopilotProvider'
 import { CommandPalette } from '@/components/common/CommandPalette'
 import { KeyboardShortcutSheet } from '@/components/common/KeyboardShortcutSheet'
 import { NavigationShortcuts } from '@/components/common/NavigationShortcuts'
@@ -112,6 +113,7 @@ export default function DashboardLayout({
   return (
     <ErrorBoundary>
       <OfflineBanner />
+      <CopilotProvider>
       <CreateDialogsProvider>
         <main id="main-content">
           {children}
@@ -121,6 +123,7 @@ export default function DashboardLayout({
         <KeyboardShortcutSheet />
         <NavigationShortcuts />
       </CreateDialogsProvider>
+      </CopilotProvider>
     </ErrorBoundary>
   )
 }

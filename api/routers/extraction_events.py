@@ -113,7 +113,9 @@ async def get_extraction_progress(command_id: str):
     """
     progress = await _get_progress(command_id)
     if not progress:
-        raise HTTPException(status_code=404, detail="No progress found for this command")
+        raise HTTPException(
+            status_code=404, detail="No progress found for this command"
+        )
 
     state = None
     if progress.get("state_json"):

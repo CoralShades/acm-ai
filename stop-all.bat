@@ -7,6 +7,10 @@ echo.
 
 cd /d "D:\ailocal\acm-ai"
 
+echo Current status:
+uv run python scripts/service_manager.py status 2>nul
+echo.
+
 echo Stopping Frontend...
 taskkill /FI "WINDOWTITLE eq ACM-AI - Frontend*" /F >nul 2>&1
 
@@ -23,3 +27,7 @@ echo.
 echo ========================================
 echo   All services stopped!
 echo ========================================
+echo.
+
+echo Verification:
+uv run python scripts/service_manager.py status 2>nul

@@ -180,9 +180,7 @@ class TestExtractionProgressEndpoint:
         mock_db = AsyncMock()
         mock_db.query = AsyncMock(return_value=[[]])
 
-        with patch(
-            "api.routers.extraction_events.db_connection"
-        ) as mock_conn:
+        with patch("api.routers.extraction_events.db_connection") as mock_conn:
             mock_conn.return_value.__aenter__ = AsyncMock(return_value=mock_db)
             mock_conn.return_value.__aexit__ = AsyncMock(return_value=None)
             result = await _get_progress("command:nonexistent")
@@ -213,9 +211,7 @@ class TestExtractionProgressEndpoint:
         mock_db = AsyncMock()
         mock_db.query = AsyncMock(return_value=[[mock_row]])
 
-        with patch(
-            "api.routers.extraction_events.db_connection"
-        ) as mock_conn:
+        with patch("api.routers.extraction_events.db_connection") as mock_conn:
             mock_conn.return_value.__aenter__ = AsyncMock(return_value=mock_db)
             mock_conn.return_value.__aexit__ = AsyncMock(return_value=None)
             result = await _get_progress("command:test")

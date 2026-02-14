@@ -131,7 +131,9 @@ def _select_strategy(
     ]
 
     if not register_pages:
-        return ExtractionStrategy.FULL_LLM  # Use LLM when page tagging can't confirm register location
+        return (
+            ExtractionStrategy.FULL_LLM
+        )  # Use LLM when page tagging can't confirm register location
 
     if building.complexity == BuildingComplexity.SIMPLE:
         return ExtractionStrategy.REGEX_ONLY
@@ -328,7 +330,11 @@ def _split_building_by_rooms(
         start = room_matches[i].start()
         # End at the start of the next group (or end of content)
         end_idx = i + max_rooms
-        end = room_matches[end_idx].start() if end_idx < len(room_matches) else len(content)
+        end = (
+            room_matches[end_idx].start()
+            if end_idx < len(room_matches)
+            else len(content)
+        )
         chunks.append(content[start:end])
 
     logger.info(
@@ -384,7 +390,9 @@ async def _llm_extract_building(
         chain = model.with_structured_output(ACMExtractionResult)
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content="Extract ACM records from the building content provided."),
+            HumanMessage(
+                content="Extract ACM records from the building content provided."
+            ),
         ]
 
         result: ACMExtractionResult = await chain.ainvoke(messages)

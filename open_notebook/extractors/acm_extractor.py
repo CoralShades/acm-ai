@@ -621,9 +621,14 @@ def _create_row_from_cells(
             result = "Assumed Positive"
         elif "assumed negative" in result_lower or "presumed negative" in result_lower:
             result = "Assumed Negative"
-        elif any(x in result_lower for x in ["no asbestos", "nad", "not detected", "negative"]):
+        elif any(
+            x in result_lower
+            for x in ["no asbestos", "nad", "not detected", "negative"]
+        ):
             result = "Negative"
-        elif any(x in result_lower for x in ["positive", "detected", "asbestos-containing"]):
+        elif any(
+            x in result_lower for x in ["positive", "detected", "asbestos-containing"]
+        ):
             result = "Positive"
 
     return ExtractedACMRow(

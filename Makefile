@@ -1,6 +1,7 @@
 .PHONY: run frontend check ruff database lint api start-all stop-all status clean-cache worker worker-start worker-stop worker-restart
 .PHONY: docker-buildx-prepare docker-buildx-clean docker-buildx-reset
 .PHONY: docker-push docker-push-latest docker-release tag export-docs
+.PHONY: smart-start smart-stop health fix preflight tmux
 
 # Get version from pyproject.toml
 VERSION := $(shell grep -m1 version pyproject.toml | cut -d'"' -f2)
@@ -196,6 +197,25 @@ status:
 	@echo "Frontend (port 8502):"
 	@curl -s http://localhost:8502 >/dev/null 2>&1 && echo "  ✅ Running" || echo "  ❌ Not running"
 	@echo ""
+
+# === Smart Service Management ===
+smart-start:
+	@uv run python scripts/service_manager.py start --auto-fix
+
+smart-stop:
+	@uv run python scripts/service_manager.py stop
+
+health:
+	@uv run python scripts/service_manager.py health
+
+fix:
+	@uv run python scripts/service_manager.py fix --auto-fix
+
+preflight:
+	@uv run python scripts/service_manager.py check
+
+tmux:
+	./start-all-tmux.sh
 
 # === Documentation Export ===
 export-docs:

@@ -349,6 +349,8 @@ def _preprocess_samp_format(
     while double_neg in processed:
         processed = processed.replace(double_neg, no_acm_marker)
 
+    metadata["processed_length"] = len(processed)
+
     return processed, metadata
 
 
@@ -1161,9 +1163,15 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
         # Order matters: check negative compound terms before simple "detected"
         if record.result:
             result_lower = record.result.lower()
-            if "assumed positive" in result_lower or "presumed positive" in result_lower:
+            if (
+                "assumed positive" in result_lower
+                or "presumed positive" in result_lower
+            ):
                 record.result = "Assumed Positive"
-            elif "assumed negative" in result_lower or "presumed negative" in result_lower:
+            elif (
+                "assumed negative" in result_lower
+                or "presumed negative" in result_lower
+            ):
                 record.result = "Assumed Negative"
             elif any(
                 x in result_lower
