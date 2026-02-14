@@ -20,9 +20,15 @@ You are an expert at extracting Asbestos Containing Material (ACM) records from 
 
 You are extracting from pages {{ building_context.page_start }} to {{ building_context.page_end }} of the document, which contain data for building {{ building_context.building_id }}.
 
-### How to Read the Vertical Format
+**IMPORTANT:** Documents come in different formats depending on the consultant. You MUST detect which format this content uses and parse it accordingly. The two main formats are described below.
 
-**EXAMPLE: This is ONE complete ACM record spread across multiple lines:**
+---
+
+### FORMAT A: SAMP Format (School Asbestos Management Plans)
+
+Used by DET consultants. Building/room IDs follow coded format.
+
+**EXAMPLE: ONE complete ACM record:**
 
 ```
 B009 - R0005 - General Storeroom - 1.45 m2
@@ -36,11 +42,10 @@ Low
 Asbestos-containing material
 ```
 
-**This should be extracted as:**
+**Extracted as:**
 - building_id: "B009"
 - room_id: "R0005"
 - room_name: "General Storeroom"
-- room_area: "1.45 m2"
 - product: "Floor Coverings"
 - material_description: "Vinyl Tiles"
 - extent: "2m2"
@@ -49,6 +54,7 @@ Asbestos-containing material
 - material_condition: "Minimal Damage"
 - risk_status: "Low"
 - result: "Positive"
+- sample_result: "Positive"
 
 **EXAMPLE: This is ONE complete NEGATIVE record (No Asbestos found):**
 
@@ -77,21 +83,148 @@ Throughout
 - risk_status: null
 - result: "Negative"
 
-### Key Patterns to Recognize
+**Key patterns:**
+- Room headers: `B009 - R0005 - General Storeroom - 1.45 m2`
+- ACM markers: `>>> ACM DETECTED:`, `Asbestos-containing material`, `Detected`
+- Negative markers: `>>> NO ASBESTOS:`, `No Asbestos`, `Not Detected`, `NAD`
 
-1. **Room Headers** (format: BuildingID - RoomID - RoomName - Area):
-   - `B009 - R0005 - General Storeroom - 1.45 m2`
+---
 
-2. **ACM-Positive Markers** - These indicate asbestos was found:
-   - `>>> ACM DETECTED: Asbestos-containing material <<<`
-   - `Asbestos-containing material` (if marker not present)
-   - `Detected`
+### FORMAT B: ARA Format (Asbestos Risk Assessment Reports)
 
-3. **Negative Result Markers** - These indicate NO asbestos was found:
-   - `>>> NO ASBESTOS: Negative result <<<`
-   - `No Asbestos` (if marker not present)
-   - `Not Detected`, `NAD`
-   - Extract these with result "Negative", friable "N/A (negative)", material_condition "N/A (negative)", disturbance_potential "N/A (negative)"
+Used by consultants like Greencap, Prensa, Safety Connect, etc. Items are numbered sequentially, buildings identified by name, rooms by description.
+
+**EXAMPLE: Page structure with repeated header block:**
+
+```
+ASBESTOS REGISTER
+Site Details     Building Details     Audit Details
+Full Address:    24 Cooper Street, Alexandra VIC 3714
+Building Name:   Mortuary Buildings
+Number of Levels: 1
+Construction Type: Weatherboard/brick
+...
+```
+
+**Section dividers split by area type:**
+```
+Mortuary Buildings - Exterior - Ground Level
+```
+```
+Mortuary Buildings - Interior - Ground Level
+```
+
+**EXAMPLE: ONE complete positive ACM record (numbered item):**
+
+```
+4
+External - Throughout
+Eaves - Flat Cement
+Sheeting - Painted White
+Asbestos
+Previously Sampled
+Presumed Positive
+Photo: 1
+Est. Extent: 20m2
+Condition: Good Condition
+Friability: Non-Friable
+Dist. Potential: Low
+Risk Rating: Low Risk
+Current Label: None
+```
+
+**Extracted as:**
+- building_id: "{{ building_context.building_id }}"
+- building_name: "Mortuary Buildings"
+- room_name: "External"
+- location: "Throughout"
+- product: "Eaves"
+- material_description: "Flat Cement Sheeting - Painted White"
+- friable: "Non-friable"
+- material_condition: "Good"
+- disturbance_potential: "Low"
+- risk_status: "Low"
+- result: "Assumed Positive"
+- sample_result: "Assumed Positive"
+- extent: "20m2"
+- extraction_confidence: "high"
+
+**EXAMPLE: ONE complete negative ACM record:**
+
+```
+5
+External - Throughout
+Wall - Flat Cement Sheeting -
+Textured painted white
+Asbestos
+J169642-001-003
+Negative
+```
+
+**Extracted as:**
+- building_id: "{{ building_context.building_id }}"
+- building_name: "Mortuary Buildings"
+- room_name: "External"
+- location: "Throughout"
+- product: "Wall"
+- material_description: "Flat Cement Sheeting - Textured painted white"
+- result: "Negative"
+- sample_result: "Negative"
+- sample_no: "J169642-001-003"
+- material_condition: "N/A (negative)"
+- disturbance_potential: "N/A (negative)"
+- extraction_confidence: "high"
+
+**Key ARA format patterns:**
+1. **Item numbers** - Sequential integers (1, 2, 3...) at the start of each record
+2. **Section dividers** - `BuildingName - Interior/Exterior - Level` (e.g., "Mortuary Buildings - Interior - Ground Level")
+   - Use "Interior"/"Exterior" to set `area_type`
+   - Use the room/area from the item's first line as `room_name`
+3. **Hazard Type line** - "Asbestos" means it's an ACM item to extract. **SKIP items where Hazard Type is "None"** (these are general room descriptions, not ACM items)
+4. **Sample info** - Can be a sample number (e.g., "J169642-001-001"), "Not Sampled", "Previously Sampled", or "Similar To: [item]"
+5. **Item Status** - Appears after sample info. Map as follows:
+   - "Positive" → sample_result: "Positive", result: "Positive"
+   - "Negative" → sample_result: "Negative", result: "Negative"
+   - "Presumed Positive" → sample_result: "Assumed Positive", result: "Assumed Positive"
+   - "Presumed Negative" → sample_result: "Assumed Negative", result: "Assumed Negative"
+   - "Previously Sampled" followed by status → use that status
+6. **Risk assessment fields** (only for positive/presumed positive items):
+   - `Condition:` → material_condition (map: "Good Condition"→"Good", "Fair Condition"→"Fair", "Poor Condition"→"Poor")
+   - `Friability:` → friable (map: "Non-Friable"→"Non-friable", "Friable"→"Friable")
+   - `Dist. Potential:` → disturbance_potential (map: "Low"→"Low", "Medium"→"Moderate", "High"→"High")
+   - `Risk Rating:` → risk_status (extract Low/Medium/High from the value)
+   - `Est. Extent:` → extent
+   - `Control Priority:` → hygienist_recommendations (capture the recommendation text)
+7. **Page headers repeat** on every page with the same building - do NOT treat repeated headers as new buildings
+
+---
+
+### How to Determine the Format
+
+- If you see **B### - R#### room headers** (e.g., "B009 - R0005 - Classroom") → **FORMAT A**
+- If you see **numbered items**, **"Building Name:" in headers**, or **"Hazard Type" fields** like "Asbestos"/"None" → **FORMAT B**
+- When in doubt, look at the content structure and extract ALL items regardless of format
+
+---
+
+## Extraction Rules (Apply to BOTH Formats)
+
+### CRITICAL: Extract EVERY Entry — Both Positive AND Negative
+
+A complete BAR (Building Asbestos Register) requires BOTH positive AND negative results. Missing negatives = non-compliant register. You MUST extract every entry in this building section.
+
+1. **SCAN** the content for ALL entries — room entries (B### - R#### pattern) for SAMP, or numbered items for ARA — do NOT skip any
+2. **EXTRACT** all items with Hazard Type "Asbestos" (or equivalent ACM markers). **SKIP** items with Hazard Type "None"
+3. **CLASSIFY** each record's result using BAR vocabulary:
+   - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"
+   - Assumed/Presumed ACM → result: "Assumed Positive"
+   - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` or `Negative` → result: "Negative"
+   - Assumed/Presumed no asbestos → result: "Assumed Negative"
+4. **For Negative/Assumed Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
+5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
+6. **SKIP** page headers, footers, legends, and methodology text
+
+**WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL.
 
 ### Controlled Vocabulary (BAR Enum Values)
 
@@ -126,6 +259,12 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 - If a value is unclear, set `extraction_confidence` to "low" and add a note to `data_issues`
 - Use building_id "{{ building_context.building_id }}" for all records from this section
 
+### Product and Material Description Mapping
+
+- **product**: The type of building element (e.g., "Eaves", "Wall", "Floor Coverings", "Ceiling Linings", "Pipe Insulation", "Fire Door")
+- **material_description**: The specific material (e.g., "Flat Cement Sheeting", "Vinyl Tiles", "Fibre Cement", "Chrysotile rope gasket")
+- If the item description combines both (e.g., "Eaves - Flat Cement Sheeting - Painted White"), split into product="Eaves" and material_description="Flat Cement Sheeting - Painted White"
+
 ## Content to Extract
 
 ```
@@ -135,14 +274,28 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 ## Output Format
 
 Return your extraction as a JSON object matching the ACMExtractionResult schema with:
-- `records`: Array of ALL extracted ACM records (both positive and negative results)
-- `status`: "valid" if extraction succeeded, "no_acm_data" if content has no ACM records
+- `records`: Array of ALL extracted ACM records (both positive AND negative results, but NOT "None" hazard type items)
+- `status`: "valid" if extraction succeeded, "no_acm_data" if content has no register data at all
 - `extraction_notes`: Any important observations about the extraction
 
 ### Required Fields for Each Record
 
-- `building_id`: Building identifier (e.g., "{{ building_context.building_id }}")
-- `product`: Product type (e.g., "Floor Coverings")
-- `material_description`: Material description (e.g., "Vinyl Tiles")
+- `building_id`: Building identifier - use "{{ building_context.building_id }}" for all records
+- `product`: Product/element type (e.g., "Eaves", "Wall", "Floor Coverings")
+- `material_description`: Material description (e.g., "Flat Cement Sheeting", "Vinyl Tiles")
 - `result`: Test result using BAR vocabulary: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
 - `extraction_confidence`: Confidence level ("high", "medium", or "low")
+
+### Highly Recommended Fields (extract if available)
+
+- `sample_result`: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
+- `sample_no`: Sample identification number (e.g., "J169642-001-001")
+- `room_name`: Room or area name (e.g., "Boiler Room", "External", "Ward 12")
+- `area_type`: "Interior" or "Exterior"
+- `location`: Location within room (e.g., "Throughout", "Under sink", "Above ceiling")
+- `friable`: "Non-friable" or "Friable"
+- `material_condition`: Condition of material
+- `disturbance_potential`: Likelihood of disturbance
+- `risk_status`: Risk level (Low/Moderate/High)
+- `extent`: Extent of material (e.g., "20m2", "50%")
+- `hygienist_recommendations`: Control/management recommendations

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent } from 'ag-grid-community'
+import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,10 +12,13 @@ import type { ACMRecord } from '@/lib/types/acm'
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
 
+const COLUMN_STATE_KEY = 'acm-grid-column-state'
+
 // Expose grid control methods via ref
 export interface ACMGridRef {
   expandAll: () => void
   collapseAll: () => void
+  resetColumns: () => void
 }
 
 // Cell selection details for citation viewer
@@ -39,6 +42,8 @@ interface ACMGridProps {
   onVisibleCountChange?: (count: number) => void
   // Callback when a cell is selected for citation viewing
   onCellSelect?: (details: CellSelectionDetails) => void
+  // Callback when a row is clicked to show record details
+  onRowClick?: (record: ACMRecord) => void
 }
 
 // Custom cell renderer for risk status with theme-aware colors
@@ -111,19 +116,25 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect },
+  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
   const [gridApi, setGridApi] = useState<GridApi<ACMRecord> | null>(null)
 
-  // Expose expand/collapse methods to parent via ref
+  // Expose expand/collapse/resetColumns methods to parent via ref
   useImperativeHandle(ref, () => ({
     expandAll: () => {
       gridApi?.expandAll()
     },
     collapseAll: () => {
       gridApi?.collapseAll()
+    },
+    resetColumns: () => {
+      if (gridApi) {
+        localStorage.removeItem(COLUMN_STATE_KEY)
+        gridApi.resetColumnState()
+      }
     },
   }), [gridApi])
 
@@ -134,9 +145,25 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     }
   }, [gridApi, quickFilterText])
 
+  // Restore saved column state from localStorage on grid ready
   const onGridReady = useCallback((params: GridReadyEvent<ACMRecord>) => {
     setGridApi(params.api)
-    params.api.sizeColumnsToFit()
+    const savedState = localStorage.getItem(COLUMN_STATE_KEY)
+    if (savedState) {
+      try {
+        params.api.applyColumnState({ state: JSON.parse(savedState), applyOrder: true })
+      } catch {
+        localStorage.removeItem(COLUMN_STATE_KEY)
+      }
+    }
+  }, [])
+
+  // Save column state to localStorage when user finishes resizing
+  const onColumnResized = useCallback((event: ColumnResizedEvent) => {
+    if (event.finished && event.source === 'uiColumnResized') {
+      const state = event.api.getColumnState()
+      localStorage.setItem(COLUMN_STATE_KEY, JSON.stringify(state))
+    }
   }, [])
 
   // Track visible row count changes for result count display
@@ -158,9 +185,9 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     () => [
       {
         field: 'building_id',
-        headerName: 'Building Code',
-        headerTooltip: 'Building code and name',
-        width: 110,
+        headerName: 'Building ID',
+        headerTooltip: 'Building ID and name',
+        width: 120,
         sortable: true,
         filter: true,
         ...(enableGrouping && { rowGroup: true }),
@@ -174,8 +201,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       },
       {
         field: 'building_name',
-        headerName: 'Building',
-        width: 150,
+        headerName: 'Building Name',
+        width: 180,
         sortable: true,
         filter: true,
         hide: enableGrouping,
@@ -188,7 +215,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         sortable: true,
         filter: true,
         ...(enableGrouping && { rowGroup: true }),
-        hide: enableGrouping,
+        hide: true, // Hidden by default — accessible via detail view
         valueFormatter: (params) => {
           if (params.data?.room_name) {
             return `${params.value} - ${params.data.room_name}`
@@ -198,48 +225,48 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       },
       {
         field: 'room_name',
-        headerName: 'Room',
-        width: 130,
+        headerName: 'Room Name',
+        width: 160,
         sortable: true,
         filter: true,
         hide: enableGrouping,
       },
       {
         field: 'product',
-        headerName: 'Product',
-        headerTooltip: 'Asbestos product type',
-        width: 140,
+        headerName: 'ACM Name',
+        headerTooltip: 'Asbestos containing material name',
+        width: 160,
         sortable: true,
         filter: true,
       },
       {
         field: 'material_description',
-        headerName: 'Description',
+        headerName: 'Material Description',
         headerTooltip: 'Material description and location details',
         flex: 1,
-        minWidth: 200,
+        minWidth: 250,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'result',
+        headerName: 'Result',
+        width: 130,
         sortable: true,
         filter: true,
       },
       {
         field: 'risk_status',
-        headerName: 'Risk',
+        headerName: 'Risk Status',
         headerTooltip: 'Risk status: High, Medium, Low, or Presumed',
-        width: 100,
+        width: 110,
         sortable: true,
         filter: true,
         cellRenderer: RiskStatusRenderer,
       },
       {
-        field: 'result',
-        headerName: 'Result',
-        width: 100,
-        sortable: true,
-        filter: true,
-      },
-      {
         field: 'friable',
-        headerName: 'Friable',
+        headerName: 'Friability',
         width: 100,
         sortable: true,
         filter: true,
@@ -247,7 +274,36 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       {
         field: 'material_condition',
         headerName: 'Condition',
-        width: 100,
+        width: 110,
+        sortable: true,
+        filter: true,
+        hide: true, // Hidden by default — accessible via detail view
+      },
+      {
+        field: 'area_type',
+        headerName: 'Internal/External',
+        width: 130,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'acm_product_group',
+        headerName: 'ACM Product Group',
+        width: 160,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'acm_product_type',
+        headerName: 'ACM Product Type',
+        width: 160,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'hygienist_recommendations',
+        headerName: 'Hygienist Recommendations',
+        width: 200,
         sortable: true,
         filter: true,
       },
@@ -303,8 +359,11 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       const recordId = event.data.id
       if (!recordId) return
 
-      // If onCellSelect is provided, use it for citation viewing
-      if (onCellSelect) {
+      // Row click opens detail dialog if handler is provided
+      if (onRowClick) {
+        onRowClick(event.data)
+      } else if (onCellSelect) {
+        // Fallback: use cell selection for citation viewing
         onCellSelect({
           recordId,
           field: field,
@@ -313,11 +372,11 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
           record: event.data,
         })
       } else {
-        // Fallback to edit behavior if no cell select handler
+        // Final fallback to edit behavior
         onEdit(event.data)
       }
     },
-    [onEdit, onCellSelect]
+    [onEdit, onCellSelect, onRowClick]
   )
 
   // Keyboard navigation: Enter, Space, E, Delete key handlers
@@ -328,12 +387,14 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
 
       if (!key || !event.data) return
 
-      // Enter key: Open cell citation viewer or edit record
+      // Enter key: Open detail dialog or fallback to citation/edit
       if (key === 'Enter' && !event.node.group) {
         const field = event.colDef?.field
         const recordId = event.data.id
         if (field && event.colDef?.headerName !== 'Actions' && recordId) {
-          if (onCellSelect) {
+          if (onRowClick) {
+            onRowClick(event.data)
+          } else if (onCellSelect) {
             onCellSelect({
               recordId,
               field: field,
@@ -365,12 +426,12 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         onDelete(event.data)
       }
     },
-    [onEdit, onDelete, onCellSelect]
+    [onEdit, onDelete, onCellSelect, onRowClick]
   )
 
   return (
     <div
-      className="ag-theme-alpine h-[calc(100vh-280px)] min-h-[400px] w-full"
+      className="ag-theme-alpine h-[calc(100vh-200px)] min-h-[500px] w-full"
       role="region"
       aria-label="ACM Records Data Grid - Use arrow keys to navigate, Enter to view details"
     >
@@ -404,6 +465,10 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         .ag-theme-alpine .ag-row-level-2 .ag-group-value {
           padding-left: 16px;
         }
+        /* Clickable row cursor */
+        .ag-theme-alpine .ag-row:not(.ag-row-group) {
+          cursor: pointer;
+        }
       `}</style>
       <AgGridReact<ACMRecord>
         ref={gridRef}
@@ -414,6 +479,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         onCellClicked={onCellClicked}
         onCellKeyDown={onCellKeyDown}
         onModelUpdated={onModelUpdated}
+        onColumnResized={onColumnResized}
         loading={isLoading}
         animateRows={true}
         rowSelection="single"

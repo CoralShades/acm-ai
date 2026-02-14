@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { ACMRegisterSkeleton } from '@/components/skeletons/ACMRegisterSkeleton'
@@ -19,8 +19,9 @@ import {
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { FileWarning, AlertCircle } from 'lucide-react'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
-import { ACMGrid } from '@/components/acm/ACMGrid'
+import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
 import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
+import { ACMRecordDetailDialog } from '@/components/acm/ACMRecordDetailDialog'
 import { ACMStatsCards } from '@/components/acm/ACMStatsCards'
 import { ACMToolbar } from '@/components/acm/ACMToolbar'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
@@ -46,6 +47,12 @@ function ACMPageContent() {
   const [selectedRecord, setSelectedRecord] = useState<ACMRecord | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [recordToDelete, setRecordToDelete] = useState<ACMRecord | null>(null)
+  // Detail dialog state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [detailRecord, setDetailRecord] = useState<ACMRecord | null>(null)
+
+  // Refs
+  const gridRef = useRef<ACMGridRef>(null)
 
   // Fetch sources for selector (we'll use all sources without notebook filter)
   const { data: sources, isLoading: isLoadingSources } = useSources('')
@@ -140,6 +147,23 @@ function ACMPageContent() {
     refetchRecords()
   }
 
+  // Row click handler — opens read-only detail dialog
+  const handleRowClick = (record: ACMRecord) => {
+    setDetailRecord(record)
+    setDetailDialogOpen(true)
+  }
+
+  // Edit from detail dialog — close detail and open edit dialog
+  const handleEditFromDetail = (record: ACMRecord) => {
+    setDetailDialogOpen(false)
+    setDetailRecord(null)
+    handleEdit(record)
+  }
+
+  const handleResetColumns = () => {
+    gridRef.current?.resetColumns()
+  }
+
   return (
     <AppShell>
       <div className="flex flex-col h-full w-full max-w-none px-6 py-6 overflow-y-auto">
@@ -226,6 +250,7 @@ function ACMPageContent() {
                   onExportCsv={handleExportCsv}
                   onExportExcel={handleExportExcel}
                   onRefresh={handleRefresh}
+                  onResetColumns={handleResetColumns}
                   riskFilter={riskFilter}
                   onRiskFilterChange={setRiskFilter}
                   isExtracting={extractACM.isPending || extractionProgress.phase === 'extracting'}
@@ -269,11 +294,13 @@ function ACMPageContent() {
                 {/* AG Grid */}
                 {!isLoadingRecords && hasRecords && (
                   <ACMGrid
+                    ref={gridRef}
                     records={records}
                     isLoading={isLoadingRecords}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     quickFilterText={searchText}
+                    onRowClick={handleRowClick}
                   />
                 )}
               </CardContent>
@@ -291,6 +318,14 @@ function ACMPageContent() {
             mode={dialogMode}
           />
         )}
+
+        {/* Record Detail Dialog (read-only) */}
+        <ACMRecordDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          record={detailRecord}
+          onEdit={handleEditFromDetail}
+        />
 
         {/* Delete Confirmation Dialog */}
         <ConfirmDialog

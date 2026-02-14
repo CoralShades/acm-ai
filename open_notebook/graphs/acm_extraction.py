@@ -83,40 +83,46 @@ CHUNK_OVERLAP_CHARS = 500  # Overlap between chunks to preserve context
 
 def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
     """
-    Extract just the ACM Register section from a SAMP document.
+    Extract just the ACM Register section from a document.
 
-    SAMP documents have lots of boilerplate text before the actual ACM Register.
+    SAMP and ARA documents have boilerplate text before the actual ACM Register.
     This function finds and extracts just the relevant section.
 
     Returns:
         Tuple of (extracted_content, was_extracted)
     """
     # Look for common markers that indicate start of ACM Register section
-    start_markers = [
-        "Appendix B: Asbestos Register",
-        "Appendix B - Asbestos Register",
-        "Asbestos Register",
-        "Interior",  # Often the first area type in the register
+    # Use case-insensitive search to handle "ASBESTOS REGISTER" (ARA) and
+    # "Asbestos Register" (SAMP) formats
+    start_marker_patterns = [
+        re.compile(r"Appendix\s+B[:\s-]+Asbestos\s+Register", re.IGNORECASE),
+        re.compile(r"Asbestos\s+Register", re.IGNORECASE),
     ]
 
     # Look for building pattern which indicates start of actual data
-    building_pattern = r"(B\d{3}\s*-\s*[A-Za-z])"
+    # Supports both SAMP (B###) and ARA (named buildings via "Building Name:")
+    building_patterns = [
+        re.compile(r"B\d{3}\s*-\s*[A-Za-z]"),
+        re.compile(r"Building\s+Name:\s*\S", re.IGNORECASE),
+    ]
 
     start_idx = -1
 
-    # Try to find a good starting point
-    for marker in start_markers:
-        idx = content.find(marker)
-        if idx != -1:
-            start_idx = idx
+    # Try to find a good starting point using register markers
+    for pattern in start_marker_patterns:
+        match = pattern.search(content)
+        if match:
+            start_idx = match.start()
             break
 
-    # If no marker found, try to find the first building ID pattern
+    # If no marker found, try to find the first building pattern
     if start_idx == -1:
-        match = re.search(building_pattern, content)
-        if match:
-            # Go back a bit to include potential headers
-            start_idx = max(0, match.start() - 200)
+        for pattern in building_patterns:
+            match = pattern.search(content)
+            if match:
+                # Go back a bit to include potential headers
+                start_idx = max(0, match.start() - 200)
+                break
 
     if (
         start_idx != -1 and start_idx > 500
@@ -130,6 +136,44 @@ def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
     return content, False
 
 
+def _detect_document_format(content: str) -> str:
+    """Detect whether content is SAMP or ARA format.
+
+    Returns:
+        "samp" for B###-style IDs, "ara" for named buildings,
+        "unknown" otherwise.
+    """
+    # Check for SAMP format indicators
+    samp_building = re.search(r"B\d{3}\s*-\s*R\d{4}", content)
+    if samp_building:
+        return "samp"
+
+    # Check for ARA format indicators
+    ara_indicators = 0
+    if re.search(r"Building Name:\s*\S", content):
+        ara_indicators += 1
+    if re.search(
+        r"(?:Presumed\s+)?(?:Positive|Negative)\b", content, re.IGNORECASE
+    ):
+        ara_indicators += 1
+    if re.search(
+        r"\b(?:Dist\.\s*Potential|Risk Rating|Friability)\b", content, re.IGNORECASE
+    ):
+        ara_indicators += 1
+    # ARA section dividers: "BuildingName - Interior/Exterior - Level"
+    if re.search(
+        r".+\s*-\s*(?:Interior|Exterior)\s*-\s*(?:Ground|First|Second|Basement)\s+Level",
+        content,
+        re.IGNORECASE,
+    ):
+        ara_indicators += 1
+
+    if ara_indicators >= 2:
+        return "ara"
+
+    return "unknown"
+
+
 def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     """
     Pre-process ACM document content to help LLM understand the structure.
@@ -137,19 +181,21 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     The content from PyMuPDF/content-core often comes in vertical format where
     table columns are stacked vertically. This function:
     1. Extracts the ACM Register section (removes boilerplate)
-    2. Identifies room/building headers
-    3. Groups related content together
-    4. Adds structural markers to help LLM parsing
+    2. Detects document format (SAMP vs ARA)
+    3. Identifies room/building headers
+    4. Groups related content together
+    5. Adds structural markers to help LLM parsing
 
     Returns:
         Tuple of (processed_content, metadata_dict)
     """
-    metadata = {
+    metadata: Dict[str, Any] = {
         "original_length": len(content),
         "rooms_found": 0,
         "acm_indicators_found": 0,
         "no_asbestos_found": 0,
         "section_extracted": False,
+        "document_format": "unknown",
     }
 
     # First, try to extract just the ACM Register section
@@ -157,10 +203,87 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     metadata["section_extracted"] = was_extracted
     metadata["extracted_length"] = len(content)
 
+    # Detect document format
+    doc_format = _detect_document_format(content)
+    metadata["document_format"] = doc_format
+
     # Count key patterns for metadata
     metadata["acm_indicators_found"] = content.count("Asbestos-containing")
     metadata["no_asbestos_found"] = content.count("No Asbestos")
 
+    # Add section markers to help LLM understand structure
+    processed = content
+
+    if doc_format == "ara":
+        # ARA format: Named buildings, sequential items, section dividers
+        processed, metadata = _preprocess_ara_format(processed, metadata)
+    else:
+        # SAMP format or unknown: B###/R#### IDs
+        processed, metadata = _preprocess_samp_format(processed, metadata)
+
+    metadata["processed_length"] = len(processed)
+
+    return processed, metadata
+
+
+def _preprocess_ara_format(
+    content: str, metadata: Dict[str, Any]
+) -> Tuple[str, Dict[str, Any]]:
+    """Pre-process ARA format content (named buildings, numbered items, section dividers)."""
+    processed = content
+
+    # Find building names from header blocks
+    building_name_pattern = r"Building Name:\s*(.+?)(?:\n|$)"
+    building_names = re.findall(building_name_pattern, content)
+    unique_buildings = list(dict.fromkeys(name.strip() for name in building_names))
+    metadata["ara_buildings_found"] = len(unique_buildings)
+
+    # Find section dividers: "BuildingName - Interior/Exterior - Level"
+    section_pattern = r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(.+?)$"
+    section_dividers = re.findall(section_pattern, content, re.MULTILINE)
+    metadata["ara_section_dividers"] = len(section_dividers)
+
+    # Add section markers for dividers
+    for building, area_type, level in section_dividers:
+        original = f"{building.strip()} - {area_type} - {level.strip()}"
+        marker = f"\n=== SECTION: {original} ===\n"
+        processed = processed.replace(original, marker + original)
+
+    # Count hazard types
+    asbestos_count = len(re.findall(r"^Asbestos$", content, re.MULTILINE))
+    none_count = len(re.findall(r"^None$", content, re.MULTILINE))
+    metadata["acm_indicators_found"] = asbestos_count
+    metadata["ara_none_hazard_count"] = none_count
+
+    # Count positive/negative results
+    positive_patterns = [
+        r"\bPositive\b",
+        r"\bPresumed Positive\b",
+    ]
+    negative_patterns = [
+        r"\bNegative\b",
+        r"\bPresumed Negative\b",
+    ]
+
+    pos_count = sum(len(re.findall(p, content)) for p in positive_patterns)
+    neg_count = sum(len(re.findall(p, content)) for p in negative_patterns)
+    metadata["ara_positive_count"] = pos_count
+    metadata["ara_negative_count"] = neg_count
+
+    if debug_config.DEBUG_ENABLED:
+        acm_debug(
+            f"Pre-process (ARA): {len(unique_buildings)} buildings, "
+            f"{len(section_dividers)} section dividers, "
+            f"{asbestos_count} asbestos items, {none_count} none items"
+        )
+
+    return processed, metadata
+
+
+def _preprocess_samp_format(
+    content: str, metadata: Dict[str, Any]
+) -> Tuple[str, Dict[str, Any]]:
+    """Pre-process SAMP format content (B###/R#### building/room IDs)."""
     # Room header pattern: B009 - R0005 - General Storeroom - 6.61 m2
     room_pattern = r"(B\d{3}\s*-\s*R\d{4,5}\s*-\s*[^-\n]+\s*-\s*[\d.]+\s*m2)"
     rooms = re.findall(room_pattern, content)
@@ -171,12 +294,12 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     buildings = re.findall(building_pattern, content)
 
     if debug_config.DEBUG_ENABLED:
-        acm_debug(f"Pre-process found: {len(rooms)} rooms, {len(buildings)} buildings")
+        acm_debug(f"Pre-process (SAMP): {len(rooms)} rooms, {len(buildings)} buildings")
         acm_debug(
-            f"ACM indicators: {metadata['acm_indicators_found']}, No Asbestos: {metadata['no_asbestos_found']}"
+            f"ACM indicators: {metadata['acm_indicators_found']}, "
+            f"No Asbestos: {metadata['no_asbestos_found']}"
         )
 
-    # Add section markers to help LLM understand structure
     processed = content
 
     # Mark building headers clearly
@@ -189,14 +312,9 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
         marker = f"\n--- ROOM: {room} ---\n"
         processed = processed.replace(room, marker + room)
 
-    # Mark ACM result patterns (replace newline-split version first, then check for already-marked)
+    # Mark ACM result patterns (replace newline-split version first)
     acm_marker = ">>> ACM DETECTED: Asbestos-containing material <<<"
-
-    # Replace newline-split version (most common in PDF extraction)
     processed = processed.replace("Asbestos-containing\nmaterial", acm_marker)
-
-    # Replace single-line version only if not already marked
-    # This prevents double-marking
     processed = processed.replace("Asbestos-containing material", acm_marker)
 
     # Clean up any accidental double markers
@@ -324,7 +442,7 @@ def _extract_page_range_text(content: str, page_start: int, page_end: int) -> st
     if not content:
         return ""
 
-    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$))"
+    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$)|PAGE\s+(\d+)\s+OF\s+\d+)"
     matches = list(re.finditer(page_pattern, content, re.IGNORECASE))
 
     if not matches:
@@ -368,7 +486,8 @@ def _chunk_content(
     # 1. Dashes format: "--- Page 5 ---" or "——— Page 5 ———"
     # 2. HTML comment format: "<!-- Page 5 -->"
     # 3. Simple format: "Page 5" at line start
-    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$))"
+    # 4. ARA footer format: "PAGE 8 OF 34"
+    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$)|PAGE\s+(\d+)\s+OF\s+\d+)"
 
     if tokens <= threshold:
         # No chunking needed, but still extract first page number if available
@@ -761,7 +880,7 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     if doc_structure and doc_structure.register_start_page:
         # Find the page marker for register_start_page and trim content
         page_pattern = re.compile(
-            rf"(?:[-—]+|<!--)\s*Page\s+{doc_structure.register_start_page}\s*(?:[-—]+|-->)",
+            rf"(?:[-—]+|<!--)\s*Page\s+{doc_structure.register_start_page}\s*(?:[-—]+|-->)|PAGE\s+{doc_structure.register_start_page}\s+OF\s+\d+",
             re.IGNORECASE,
         )
         match = page_pattern.search(content)
@@ -870,7 +989,8 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             model_id,
             "extraction",  # Uses default_extraction_model or falls back to chat
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
-            max_tokens=8192,  # Haiku max output; use chunked extraction for larger docs
+            # Model-aware token limit: Haiku has 8K output limit; larger models support 32K
+            max_tokens=8192 if "haiku" in str(model_id).lower() else 32768,
         )
         # Track model ID and prompt template for observability (E1-S21, AC #4)
         if pl:
@@ -1044,15 +1164,9 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
         # Order matters: check negative compound terms before simple "detected"
         if record.result:
             result_lower = record.result.lower()
-            if (
-                "assumed positive" in result_lower
-                or "presumed positive" in result_lower
-            ):
+            if "assumed positive" in result_lower or "presumed positive" in result_lower:
                 record.result = "Assumed Positive"
-            elif (
-                "assumed negative" in result_lower
-                or "presumed negative" in result_lower
-            ):
+            elif "assumed negative" in result_lower or "presumed negative" in result_lower:
                 record.result = "Assumed Negative"
             elif any(
                 x in result_lower
@@ -1064,6 +1178,13 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
                 for x in ["positive", "detected", "asbestos-containing"]
             ):
                 record.result = "Positive"
+            elif "presumed" in result_lower:
+                # Use sample_result to disambiguate bare "presumed" results
+                sr = (record.sample_result or "").lower()
+                if "negative" in sr:
+                    record.result = "Assumed Negative"
+                else:
+                    record.result = "Assumed Positive"
             else:
                 record.result = "Unknown"
         else:
