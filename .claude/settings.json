@@ -10,7 +10,12 @@
     }
   },
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_EXPERIMENTAL_MCPCLI": "1"
+  },
+  "hooks": {
+    "SessionStart": ".claude/hooks/session-start.sh",
+    "PreToolUse": ".claude/hooks/pre-tool-use.sh"
   }
 
 }

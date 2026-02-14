@@ -31,45 +31,87 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
-          
-          # Direct prompt for automated review (no @claude mention needed)
-          direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-            
-            Be constructive and helpful in your feedback.
-          
-          # Optional: Customize review based on file types
-          # direct_prompt: |
-          #   Review this PR focusing on:
-          #   - For TypeScript files: Type safety and proper interface usage
-          #   - For API endpoints: Security, input validation, and error handling
-          #   - For React components: Performance, accessibility, and best practices
-          #   - For tests: Coverage, edge cases, and test quality
-          
-          # Optional: Different prompts for different authors
-          # direct_prompt: |
-          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' && 
-          #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
-          #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
-          
-          # Optional: Add specific tools for running tests or linting
-          # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
-          
-          # Optional: Skip review for certain conditions
-          # if: |
-          #   !contains(github.event.pull_request.title, '[skip-review]') &&
-          #   !contains(github.event.pull_request.title, '[WIP]')
+          github_token: ${{ steps.app-token.outputs.token }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: "claude-4-0-sonnet-20250805"
+          track_progress: true
+          prompt: |
+            Review this PR for the ACM-AI project (Asbestos Containing Material compliance management system).
+
+            **Focus Areas:**
+
+            **Backend (Python/FastAPI):**
+            - ACM extraction logic correctness (open_notebook/extractors/)
+            - Table parsing accuracy (MinerU integration, regex fallback)
+            - Negative marker detection (ND/NDA/NAD handling)
+            - Field mapping completeness (sample_no, quantity, labelled, floor_level, result)
+            - Type hints and Pydantic models
+            - Async/await patterns
+            - Error handling and logging
+            - SurrealDB query efficiency
+            - Repository pattern adherence
+            - LangGraph workflow correctness
+
+            **Frontend (Next.js/React):**
+            - Next.js 15 App Router patterns
+            - React 19 best practices
+            - Component patterns (composition, reusability)
+            - React Query usage (server state)
+            - Zustand usage (client state)
+            - AG Grid integration
+            - Radix UI accessibility
+            - Tailwind CSS 4 conventions
+            - Performance (bundle size, hydration)
+            - WCAG accessibility standards
+
+            **ACM Domain:**
+            - BAR (Building Asbestos Register) compliance
+            - SAMP (School Asbestos Management Plan) format adherence
+            - Victorian compliance requirements
+            - Data accuracy and validation
+
+            **Security:**
+            - Input validation (PDF uploads, user input)
+            - API authentication/authorization
+            - OWASP Top 10 vulnerabilities
+            - Secret management (.env files)
+            - SQL/NoSQL injection prevention
+
+            **Testing:**
+            - Coverage for critical paths (extraction, API, UI)
+            - Edge cases from E2E findings (26% baseline)
+            - Pytest patterns and fixtures
+            - Integration test completeness
+
+            **Project Conventions:**
+            - Story Verification Protocol compliance
+            - Conventional commits (feat:, fix:, docs:, refactor:, test:)
+            - CLAUDE.md guidance adherence
+            - Sprint artifacts documentation
+
+            **Reference:**
+            - CLAUDE.md for project conventions
+            - docs/sprint-artifacts/ for story requirements
+            - _bmad-output/implementation-artifacts/findings.md for E2E gaps
+
+            Be constructive and provide specific file:line references for all feedback.
+          allowed_tools: |
+            Read,
+            Glob,
+            Grep,
+            Bash(uv run ruff check *),
+            Bash(uv run pytest *),
+            Bash(npm run lint),
+            Bash(npm run typecheck)
 
