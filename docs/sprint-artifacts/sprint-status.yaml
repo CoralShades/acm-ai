@@ -40,6 +40,11 @@ project_key: acm-ai
 tracking_system: file-system
 story_location: _bmad-output/sprint-artifacts
 
+reconciliation:
+  last_reconciled: 2026-02-15
+  reconciled_branches: [main, Sanju]
+  notes: "Documentation updated to reflect Smart Chat expansion and 7-stage pipeline evolution"
+
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
   # 21/21 stories complete - EPIC COMPLETE
@@ -92,6 +97,12 @@ development_status:
   epic-3-retrospective: optional
 
   # Epic 4: Chat with ACM Context (P0)
+  # IMPLEMENTATION NOTE: Scope expanded during development to include:
+  # - CopilotKit framework (not in original PRD)
+  # - AG-UI protocol integration (not in original PRD)
+  # - Supervisor agent architecture (not in original PRD)
+  # - Tool result renderers (not in original PRD)
+  # See Epic 4 in 05-epics-and-stories.md for full implementation details
   epic-4: done
   e4-s1-add-acm-records-to-chat-context: done
   e4-s2-create-acm-context-toggle: done
