@@ -237,21 +237,6 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 
 **Important:** BAR uses "Moderate" not "Medium" for disturbance potential. Map "Medium" -> "Moderate".
 
-### CRITICAL: Extract EVERY Room Entry — Both Positive AND Negative
-
-A complete BAR (Building Asbestos Register) requires BOTH positive AND negative results. Missing negatives = non-compliant register. You MUST extract every room entry in this building section.
-
-1. **SCAN** the content for ALL room entries (B### - R#### pattern) — do NOT skip any
-2. **EXTRACT** the vertical sequence of fields for EVERY room entry found
-3. **CLASSIFY** each record's result:
-   - `>>> ACM DETECTED:` or `Asbestos-containing material` → result: "Positive"
-   - Assumed/Presumed ACM → result: "Assumed Positive"
-   - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` → result: "Negative"
-   - Assumed/Presumed no asbestos → result: "Assumed Negative"
-4. **For Negative/Assumed Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
-
-**WARNING:** If you extract fewer records than room entries visible in the content, you are missing records. Go back and extract them ALL.
-
 ### Data Completeness Rules
 
 - Extract ALL available fields from each ACM entry
