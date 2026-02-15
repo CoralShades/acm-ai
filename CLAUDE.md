@@ -187,17 +187,46 @@ When delegating tasks to sub-agents via the Task tool:
   - Involves novel problem-solving not covered by existing patterns
   - Risk of incomplete understanding with smaller models
 
-**Example:**
+### Agent Teams and TeamCreate
+
+**IMPORTANT**: When creating agent teams using `TeamCreate` or spawning teammates via the `Task` tool within a team:
+
+- **Only use `model: "sonnet"` or `model: "haiku"`** - DO NOT use `model: "opus"` for team members
+- **Rationale**: Cost control and performance - multiple agents running in parallel can quickly consume resources
+- **Default for teams**: Use `model: "sonnet"` for team leads and complex tasks, `model: "haiku"` for simple/focused tasks
+- **Exception**: Single-agent Task tool calls (not part of a team) may still use opus when justified by task complexity
+
+**Examples:**
 ```python
-# Well-documented feature area → sonnet
+# Single agent - Well-documented feature area → sonnet
 Task(description="Add new field to existing table",
      subagent_type="Explore",
      model="sonnet")
 
-# Complex, undocumented area → opus
+# Single agent - Complex, undocumented area → opus (allowed for single agents)
 Task(description="Design new RAG strategy for novel extraction pattern",
      subagent_type="acm-rag-strategist",
      model="opus")
+
+# Team creation → ONLY sonnet or haiku
+TeamCreate(team_name="implementation-team",
+           description="Multi-agent implementation team")
+
+# Team member spawn → ONLY sonnet or haiku
+Task(description="Implement backend service",
+     subagent_type="acm-extraction-core",
+     team_name="implementation-team",
+     name="backend-dev",
+     model="sonnet")  # ✓ Correct - sonnet for team members
+
+Task(description="Run unit tests",
+     subagent_type="general-purpose",
+     team_name="implementation-team",
+     name="test-runner",
+     model="haiku")  # ✓ Correct - haiku for simple tasks in teams
+
+# NEVER do this in teams:
+# model="opus"  # ✗ WRONG - do not use opus for team members
 ```
 
 ## Story Verification Protocol
