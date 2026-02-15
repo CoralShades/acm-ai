@@ -390,10 +390,7 @@ class TestBuildingInventoryPrompt:
     def test_prompt_has_ara_format(self):
         from pathlib import Path
 
-        prompt_path = Path(
-            r"c:\Users\Local Admin\Documents\Silvatron\ACM Register"
-            r"\prompts\acm\building_inventory.jinja"
-        )
+        prompt_path = Path(__file__).parent.parent / "prompts" / "acm" / "building_inventory.jinja"
         content = prompt_path.read_text(encoding="utf-8")
 
         assert "FORMAT B:" in content or "ARA Format" in content
@@ -403,10 +400,7 @@ class TestBuildingInventoryPrompt:
     def test_building_extraction_prompt_has_ara_format(self):
         from pathlib import Path
 
-        prompt_path = Path(
-            r"c:\Users\Local Admin\Documents\Silvatron\ACM Register"
-            r"\prompts\acm\building_extraction.jinja"
-        )
+        prompt_path = Path(__file__).parent.parent / "prompts" / "acm" / "building_extraction.jinja"
         content = prompt_path.read_text(encoding="utf-8")
 
         assert "FORMAT B:" in content or "ARA Format" in content
@@ -416,10 +410,7 @@ class TestBuildingInventoryPrompt:
     def test_extraction_prompt_has_ara_format(self):
         from pathlib import Path
 
-        prompt_path = Path(
-            r"c:\Users\Local Admin\Documents\Silvatron\ACM Register"
-            r"\prompts\acm\extraction.jinja"
-        )
+        prompt_path = Path(__file__).parent.parent / "prompts" / "acm" / "extraction.jinja"
         content = prompt_path.read_text(encoding="utf-8")
 
         assert "FORMAT B:" in content or "ARA Format" in content

@@ -5,6 +5,9 @@ data/
 .uploads/
 sqlite-db/
 surreal-data/
+# Test data files (prevent accidental commits)
+UsersLocal
+**/test-data/*.json
 docker.env
 !setup_guide/docker.env
 notebook_data/
