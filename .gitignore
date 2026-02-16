@@ -205,3 +205,4 @@ _bmad-output/github-issue/task_plan.md
 test-results/
 playwright-report/trace/
 .last-run.json
+nul*
