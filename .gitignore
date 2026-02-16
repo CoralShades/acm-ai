@@ -200,3 +200,8 @@ _bmad-output/github-issue/issue_draft.md
 _bmad-output/github-issue/progress_github.md
 _bmad-output/github-issue/task_plan.md
 .claude/settings.json
+
+# Playwright test execution artifacts (temporary, regenerated on each test run)
+test-results/
+playwright-report/trace/
+.last-run.json
