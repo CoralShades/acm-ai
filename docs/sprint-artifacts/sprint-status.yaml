@@ -47,7 +47,7 @@ reconciliation:
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  # 22/23 stories complete, 1 ready-for-dev (E1-S23 token validation)
+  # 22/27 stories complete, 1 ready-for-dev, 4 backlog (E1-S24-S27 from E2E gap analysis)
   epic-1: in-progress
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
@@ -73,6 +73,11 @@ development_status:
   e1-s22-extraction-output-token-limit-fix: done  # Fix max_tokens 8192->32768 for large document extraction
   # POST-MERGE REVIEW 2026-02-15:
   e1-s23-token-limit-quality-validation: ready-for-dev  # Validate Haiku 8K vs Sonnet 32K quality on buildings >50 rooms
+  # E2E TEST GAP ANALYSIS 2026-02-16 (Phase 4 - 13% remaining gap after 26%→87% improvement):
+  e1-s24-fix-assumed-positive-detection: backlog  # HIGH: Fix missed assumed positive records (Rows #30, #31) - 2/4 remaining unextracted
+  e1-s25-fix-external-internal-merging: backlog  # MEDIUM: Fix external/internal location merging (Row #20) - 1/4 remaining unextracted
+  e1-s26-reduce-false-positive-extraction: backlog  # MEDIUM: Reduce false positives (Ceiling Space hallucination) - quality issue
+  e1-s27-handle-duplicate-room-items: backlog  # LOW: Handle duplicate items in same room (Row #9) - edge case
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -219,24 +224,26 @@ development_status:
   e14-s11-pydantic-typescript-type-generation: done
   epic-14-retrospective: optional
 
-  # Bug Fixes (standalone)
+  # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
+  # E2E TEST INFRASTRUCTURE 2026-02-16 (Phase 4 - Critical for regression monitoring):
+  e2e-ci-github-actions-setup: backlog  # P0: GitHub Actions E2E testing pipeline - prevent accuracy regression from 87% back to 26%
 
 # SUMMARY:
 # ========
 # Total Epics: 14 (5 done, 5 in-progress, 3 backlog, 1 archived)
-# Total Stories: 89 (88 regular stories + 1 bug fix)
-# Stories Done: 66 (74%)  # Includes E2-S10-FIX hotfix
+# Total Stories: 94 (93 regular stories + 1 bug fix)
+# Stories Done: 66 (70%)  # Includes E2-S10-FIX hotfix
 # Stories Review: 0
 # Stories Ready-for-dev: 6 (E2-S8, E2-S11, E2-S12, E5-S3, E5-S4, E1-S23)
 # Stories Drafted: 2 (E9-S3, E10-S1)
-# Stories Backlog: 8 (E11-S2, E12-S1..S4, E13-S1..S3)
+# Stories Backlog: 13 (E1-S24..S27, e2e-ci, E11-S2, E12-S1..S4, E13-S1..S3)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-15
+# Last Updated: 2026-02-16  # E2E gap analysis stories added
 #
 # COMPLETED EPICS: E3, E4, E6, E7, E14
-# IN-PROGRESS EPICS: E1 (22/23), E2 (9/12), E5 (2/4), E9 (2/3), E11 (1/2)
+# IN-PROGRESS EPICS: E1 (22/27), E2 (9/12), E5 (2/4), E9 (2/3), E11 (1/2)
 # BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
