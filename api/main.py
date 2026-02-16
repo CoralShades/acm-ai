@@ -3,7 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import asyncio
+import os
+import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +39,7 @@ from api.routers import (
 )
 from api.routers import commands as commands_router
 from open_notebook.database.async_migrate import AsyncMigrationManager
+from open_notebook.database.repository import repo_query
 
 # Import commands to register them in the API process
 try:
@@ -163,4 +168,128 @@ async def root():
 
 @app.get("/health")
 async def health():
+    """Basic liveness check - returns 200 if API is up."""
     return {"status": "healthy"}
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """Readiness check - verifies SurrealDB connectivity.
+
+    Returns:
+        200 OK if database is reachable
+        503 Service Unavailable if database is down
+    """
+    try:
+        # 2-second timeout for database health check
+        result = await asyncio.wait_for(repo_query("RETURN 1"), timeout=2.0)
+        if result:
+            return {"status": "ready", "database": "connected"}
+        return {"status": "not_ready", "database": "offline", "error": "Empty result"}
+    except asyncio.TimeoutError:
+        logger.warning("Database health check timed out after 2 seconds")
+        return {"status": "not_ready", "database": "offline", "error": "Timeout"}
+    except Exception as e:
+        logger.warning(f"Database health check failed: {e}")
+        return {"status": "not_ready", "database": "offline", "error": str(e)}
+
+
+@app.get("/health/detailed")
+async def health_detailed():
+    """Detailed health check with all component status.
+
+    Returns component health for:
+    - SurrealDB connectivity
+    - Worker process status
+    - Last extraction timestamp
+    - API uptime
+    - Memory usage
+    """
+    # Track API start time for uptime calculation
+    if not hasattr(health_detailed, "_start_time"):
+        health_detailed._start_time = time.time()
+
+    uptime_seconds = int(time.time() - health_detailed._start_time)
+
+    # Check database connectivity
+    db_status = "connected"
+    db_error = None
+    try:
+        result = await asyncio.wait_for(repo_query("RETURN 1"), timeout=2.0)
+        if not result:
+            db_status = "disconnected"
+            db_error = "Empty result"
+    except asyncio.TimeoutError:
+        db_status = "disconnected"
+        db_error = "Timeout after 2s"
+    except Exception as e:
+        db_status = "disconnected"
+        db_error = str(e)
+
+    # Check worker process via PID file
+    worker_status = "unknown"
+    worker_pid = None
+    pid_file = os.environ.get("WORKER_PID_FILE", ".pids/worker.pid")
+    if os.path.exists(pid_file):
+        try:
+            with open(pid_file) as f:
+                worker_pid = int(f.read().strip())
+            # Check if process is running
+            try:
+                os.kill(worker_pid, 0)  # Signal 0 = check if process exists
+                worker_status = "running"
+            except ProcessLookupError:
+                worker_status = "stopped"
+                worker_pid = None
+        except Exception:
+            worker_status = "stopped"
+
+    # Get last extraction time from database
+    last_extraction = None
+    try:
+        result = await asyncio.wait_for(
+            repo_query(
+                """
+                SELECT created_at FROM extraction_progress
+                ORDER BY created_at DESC LIMIT 1
+                """
+            ),
+            timeout=2.0,
+        )
+        if result and len(result) > 0:
+            last_extraction = result[0].get("created_at")
+    except Exception:
+        pass
+
+    # Get memory usage (basic - using stdlib only)
+    try:
+        import resource
+
+        memory_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # On Linux, ru_maxrss is in KB; on macOS, it's in bytes
+        if os.uname().sysname == "Darwin":
+            memory_mb = memory_kb / 1024 / 1024
+        else:
+            memory_mb = memory_kb / 1024
+    except Exception:
+        memory_mb = 0  # Fallback if resource module unavailable
+
+    return {
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "components": {
+            "database": {
+                "status": db_status,
+                "error": db_error,
+            },
+            "worker": {
+                "status": worker_status,
+                "pid": worker_pid,
+            },
+            "api": {
+                "uptime_seconds": uptime_seconds,
+                "memory_mb": round(memory_mb, 2),
+            },
+        },
+        "last_extraction": last_extraction,
+    }

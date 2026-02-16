@@ -152,9 +152,7 @@ def _detect_document_format(content: str) -> str:
     ara_indicators = 0
     if re.search(r"Building Name:\s*\S", content):
         ara_indicators += 1
-    if re.search(
-        r"(?:Presumed\s+)?(?:Positive|Negative)\b", content, re.IGNORECASE
-    ):
+    if re.search(r"(?:Presumed\s+)?(?:Positive|Negative)\b", content, re.IGNORECASE):
         ara_indicators += 1
     if re.search(
         r"\b(?:Dist\.\s*Potential|Risk Rating|Friability)\b", content, re.IGNORECASE
@@ -396,19 +394,23 @@ def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
     """Generate a deduplication key for a record.
 
-    Key format: {school_code}_{building_id}_{room_id}_{hash(product_description[:50])}
+    Key format: {school_code}_{building_id}_{area_type}_{room_id}_{product}_{hash(description)}
+    - Includes area_type to distinguish Interior vs Exterior locations (E1-S25)
+    - Includes product to distinguish different items in same room (E1-S27)
     Uses SHA-256 for cryptographic security (truncated to 8 chars for readability).
     """
     school = school_code or "unknown"
     building = record.building_id or "unknown"
+    area = (record.area_type or "Interior").lower()  # Default to Interior
     room = record.room_id or "none"
+    product = (record.product or "unknown").lower()
 
     # Create hash of product description (first 50 chars) using SHA-256
     desc_hash = hashlib.sha256(
         (record.material_description or "")[:50].encode()
     ).hexdigest()[:8]
 
-    return f"{school}_{building}_{room}_{desc_hash}"
+    return f"{school}_{building}_{area}_{room}_{product}_{desc_hash}"
 
 
 def _merge_records(
@@ -1164,9 +1166,15 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
         # Order matters: check negative compound terms before simple "detected"
         if record.result:
             result_lower = record.result.lower()
-            if "assumed positive" in result_lower or "presumed positive" in result_lower:
+            if (
+                "assumed positive" in result_lower
+                or "presumed positive" in result_lower
+            ):
                 record.result = "Assumed Positive"
-            elif "assumed negative" in result_lower or "presumed negative" in result_lower:
+            elif (
+                "assumed negative" in result_lower
+                or "presumed negative" in result_lower
+            ):
                 record.result = "Assumed Negative"
             elif any(
                 x in result_lower

@@ -237,6 +237,10 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
 6. **DO NOT SKIP** negative results - the BAR requires both positive and negative entries
 
+**CRITICAL - Assumed Positive Records:** Items marked "Assumed Positive" or "Not Sampled" with annotations like "No access" MUST be extracted. These are valid BAR entries even if they have minimal detail (Unknown product type, Unknown condition). Extract them with result: "Assumed Positive", and use "Unknown" for missing condition/disturbance fields.
+
+**CRITICAL - Only Extract What's Present:** Only extract records that are EXPLICITLY present in the source content. Do NOT infer, guess, or generate records based on patterns. Each extracted record must correspond to an actual entry in the source.
+
 **WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL.
 
 ### Data Completeness Rules
@@ -304,3 +308,23 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `page_number`: Page number where this record was found (use {{ page_number }} for records in this chunk)
 - `hygienist_recommendations`: Control/management recommendations
 - `data_issues`: List of any extraction concerns
+
+### Victorian BAR Compliance Fields (CRITICAL - extract if available)
+
+These fields are REQUIRED for Building Asbestos Register (BAR) compliance:
+
+- `sample_no`: NATA endorsed sample number (e.g., "34511-039-001", "J169642-001-003"). Use "Not Sampled" if sample not taken.
+- `sample_result`: "Positive", "Assumed Positive", "Negative", or "Assumed Negative" (same as `result`)
+- `quantity`: Amount of material (e.g., "10 m²", "5 linear meters", "2m2")
+- `acm_labelled`: Boolean - whether ACM is labeled on-site (YES → true, NO → false)
+- `identifying_company`: Hygiene or consulting company name (e.g., "Prensa Pty Ltd", "Greencap")
+- `floor_level`: Floor level where ACM is located (e.g., "Ground", "Level 1", "Level 2", "Roof")
+- `acm_product_group`: Victorian BAR product group (e.g., "Vinyl products", "Cement products", "Other")
+
+**Example BAR field extraction:**
+- If document shows "Sample: 34511-039-001" → sample_no: "34511-039-001"
+- If document shows "Labelled: NO" → acm_labelled: false
+- If document shows "Quantity: 10m2" → quantity: "10m2"
+- If document shows "Prensa Pty Ltd" or "Identifying Company: Prensa" → identifying_company: "Prensa Pty Ltd"
+- If document shows "Ground Level" or "Level: Ground" → floor_level: "Ground"
+- If material is vinyl tiles → acm_product_group: "Vinyl products"

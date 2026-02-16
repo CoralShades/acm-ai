@@ -173,6 +173,9 @@ class ACMExtractionRecord(BaseModel):
     acm_label_details: Optional[str] = Field(
         default=None, description="Label details if labeled"
     )
+    floor_level: Optional[str] = Field(
+        default=None, description="Floor level (e.g., 'Ground', 'Level 1', 'Roof')"
+    )
     hygienist_recommendations: Optional[str] = Field(
         default=None, description="Expert recommendations for this material"
     )

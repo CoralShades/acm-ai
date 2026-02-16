@@ -75,6 +75,12 @@ function RiskStatusRenderer({ value }: { value: string | null | undefined }) {
   )
 }
 
+// Custom cell renderer for boolean labelled field
+function LabelledRenderer({ value }: { value: boolean | null | undefined }) {
+  if (value === null || value === undefined) return <span className="text-muted-foreground">-</span>
+  return <span>{value ? 'YES' : 'NO'}</span>
+}
+
 // Custom cell renderer for actions
 function ActionsRenderer({
   data,
@@ -287,13 +293,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         filter: true,
       },
       {
-        field: 'acm_product_group',
-        headerName: 'ACM Product Group',
-        width: 160,
-        sortable: true,
-        filter: true,
-      },
-      {
         field: 'acm_product_type',
         headerName: 'ACM Product Type',
         width: 160,
@@ -312,6 +311,72 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         headerName: 'Page',
         width: 70,
         sortable: true,
+      },
+      // BAR Compliance Fields
+      {
+        headerName: 'BAR Compliance',
+        children: [
+          {
+            field: 'sample_no',
+            headerName: 'Sample No',
+            headerTooltip: 'Sample identification number',
+            width: 120,
+            sortable: true,
+            filter: true,
+          },
+          {
+            field: 'sample_result',
+            headerName: 'Sample Result',
+            headerTooltip: 'Laboratory sample result',
+            width: 130,
+            sortable: true,
+            filter: true,
+          },
+          {
+            field: 'quantity',
+            headerName: 'Quantity',
+            headerTooltip: 'Quantity of ACM present',
+            width: 100,
+            sortable: true,
+            filter: true,
+          },
+          {
+            field: 'floor_level',
+            headerName: 'Floor Level',
+            headerTooltip: 'Floor or level location',
+            width: 110,
+            sortable: true,
+            filter: true,
+          },
+          {
+            field: 'acm_labelled',
+            headerName: 'Labelled',
+            headerTooltip: 'Whether ACM is labelled',
+            width: 90,
+            sortable: true,
+            filter: true,
+            hide: true,
+            cellRenderer: LabelledRenderer,
+          },
+          {
+            field: 'identifying_company',
+            headerName: 'Identifying Company',
+            headerTooltip: 'Company that identified the ACM',
+            width: 180,
+            sortable: true,
+            filter: true,
+            hide: true,
+          },
+          {
+            field: 'acm_product_group',
+            headerName: 'Product Group',
+            headerTooltip: 'ACM product group classification',
+            width: 150,
+            sortable: true,
+            filter: true,
+            hide: true,
+          },
+        ],
       },
       {
         headerName: 'Actions',
