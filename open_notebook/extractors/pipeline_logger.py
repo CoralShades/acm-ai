@@ -30,6 +30,19 @@ from open_notebook.extractors.pipeline_events import (
     now_utc,
 )
 
+# --- Error Categories for Observability ---
+
+
+class PipelineErrorCategory:
+    """Error categories for pipeline monitoring and alerting."""
+
+    EXTRACTION = "ExtractionError"  # LLM extraction failures
+    PARSE = "ParseError"  # PDF/markdown parsing failures
+    VALIDATION = "ValidationError"  # Schema validation failures
+    DATABASE = "DatabaseError"  # SurrealDB write failures
+    TIMEOUT = "TimeoutError"  # Operation timeouts
+
+
 # Width of separator lines
 _SEP_WIDTH = 64
 
@@ -89,6 +102,9 @@ class PipelineLogger:
         self.command_id = command_id
         self._stage_timers: dict[str, float] = {}
         self._log_entries: list[str] = []
+        self._error_counts: dict[
+            str, dict[str, int]
+        ] = {}  # stage_id -> {category -> count}
         self._state = PipelineRunState(
             run_id=self.run_id,
             source_id=source_id,
@@ -244,21 +260,47 @@ class PipelineLogger:
         self._log(" | ".join(parts))
         self._schedule_persist()
 
-    def stage_fail(self, stage_id: StageId, error: str) -> None:
-        """Log stage failure."""
+    def stage_fail(
+        self,
+        stage_id: StageId,
+        error: str,
+        error_category: str = PipelineErrorCategory.EXTRACTION,
+        records_affected: int = 0,
+    ) -> None:
+        """Log stage failure with error categorization.
+
+        Args:
+            stage_id: The pipeline stage that failed
+            error: Human-readable error message
+            error_category: Error category (use PipelineErrorCategory constants)
+            records_affected: Number of records affected by this error
+        """
         prefix = STAGE_METADATA[stage_id]["log_prefix"]
         start = self._stage_timers.get(stage_id.value, time.monotonic())
         duration_s = time.monotonic() - start
         duration_ms = int(duration_s * 1000)
 
+        # Track error count by category
+        stage_key = stage_id.value
+        if stage_key not in self._error_counts:
+            self._error_counts[stage_key] = {}
+        self._error_counts[stage_key][error_category] = (
+            self._error_counts[stage_key].get(error_category, 0) + 1
+        )
+
         stage = self._state.get_stage(stage_id)
         stage.status = StageStatus.FAILED
         stage.completed_at = now_utc()
         stage.duration_ms = duration_ms
-        stage.error = StageError(message=error)
+        stage.error = StageError(
+            message=error, code=error_category, records_affected=records_affected
+        )
+
+        # Store error counts in stage metrics
+        stage.metrics["error_counts"] = self._error_counts[stage_key]
 
         self._log(
-            f"[PIPELINE] [{prefix}] FAILED in {duration_s:.1f}s | {error}",
+            f"[PIPELINE] [{prefix}] FAILED in {duration_s:.1f}s | [{error_category}] {error}",
             level="error",
         )
         self._schedule_persist()
