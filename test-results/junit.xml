@@ -1,48 +1,1568 @@
-<testsuites id="" name="" tests="10" failures="0" skipped="10" errors="0" time="0.158966">
-<testsuite name="notebooks.spec.ts" timestamp="2025-12-07T11:35:40.129Z" hostname="chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
-<testcase name="Notebook Management › can create a new notebook" classname="notebooks.spec.ts" time="0">
-<skipped>
-</skipped>
+<testsuites id="" name="" tests="34" failures="34" skipped="0" errors="0" time="21.498307">
+<testsuite name="acm-extraction.spec.ts" timestamp="2026-02-15T23:17:49.714Z" hostname="chromium" tests="8" failures="8" skipped="0" time="2.996" errors="0">
+<testcase name="ACM Extraction Pipeline @acm-extraction › extracts all records from Broadmeadows SAMP with 80%+ accuracy" classname="acm-extraction.spec.ts" time="0.374">
+<failure message="acm-extraction.spec.ts:66:7 extracts all records from Broadmeadows SAMP with 80%+ accuracy" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:66:7 › ACM Extraction Pipeline @acm-extraction › extracts all records from Broadmeadows SAMP with 80%+ accuracy 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:70:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-7834b-adows-SAMP-with-80-accuracy-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-7834b-adows-SAMP-with-80-accuracy-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-7834b-adows-SAMP-with-80-accuracy-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-7834b-adows-SAMP-with-80-accuracy-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-7834b-adows-SAMP-with-80-accuracy-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-7834b-adows-SAMP-with-80-accuracy-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-7834b-adows-SAMP-with-80-accuracy-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
-<testcase name="Notebook Management › can view notebook details" classname="notebooks.spec.ts" time="0">
-<skipped>
-</skipped>
+<testcase name="ACM Extraction Pipeline @acm-extraction › correctly identifies negative ACM results" classname="acm-extraction.spec.ts" time="0.408">
+<failure message="acm-extraction.spec.ts:125:7 correctly identifies negative ACM results" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:125:7 › ACM Extraction Pipeline @acm-extraction › correctly identifies negative ACM results 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:127:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-e1ed4-tifies-negative-ACM-results-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-e1ed4-tifies-negative-ACM-results-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-e1ed4-tifies-negative-ACM-results-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-e1ed4-tifies-negative-ACM-results-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-e1ed4-tifies-negative-ACM-results-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-e1ed4-tifies-negative-ACM-results-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-e1ed4-tifies-negative-ACM-results-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
-<testcase name="Notebook Management › can see notebooks list" classname="notebooks.spec.ts" time="0">
-<skipped>
-</skipped>
+<testcase name="ACM Extraction Pipeline @acm-extraction › handles merged cells in SAMP tables correctly" classname="acm-extraction.spec.ts" time="0.389">
+<failure message="acm-extraction.spec.ts:155:7 handles merged cells in SAMP tables correctly" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:155:7 › ACM Extraction Pipeline @acm-extraction › handles merged cells in SAMP tables correctly 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:157:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-43d48-ls-in-SAMP-tables-correctly-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-43d48-ls-in-SAMP-tables-correctly-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-43d48-ls-in-SAMP-tables-correctly-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-43d48-ls-in-SAMP-tables-correctly-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-43d48-ls-in-SAMP-tables-correctly-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-43d48-ls-in-SAMP-tables-correctly-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-43d48-ls-in-SAMP-tables-correctly-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="ACM Extraction Pipeline @acm-extraction › stitches multi-page ACM tables correctly" classname="acm-extraction.spec.ts" time="0.421">
+<failure message="acm-extraction.spec.ts:192:7 stitches multi-page ACM tables correctly" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:192:7 › ACM Extraction Pipeline @acm-extraction › stitches multi-page ACM tables correctly 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:194:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-c20f2-i-page-ACM-tables-correctly-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-c20f2-i-page-ACM-tables-correctly-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-c20f2-i-page-ACM-tables-correctly-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-c20f2-i-page-ACM-tables-correctly-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-c20f2-i-page-ACM-tables-correctly-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-c20f2-i-page-ACM-tables-correctly-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-c20f2-i-page-ACM-tables-correctly-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="ACM Extraction Pipeline @acm-extraction › extracts all compliance fields completely" classname="acm-extraction.spec.ts" time="0.369">
+<failure message="acm-extraction.spec.ts:228:7 extracts all compliance fields completely" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:228:7 › ACM Extraction Pipeline @acm-extraction › extracts all compliance fields completely 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:230:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-09abf-ompliance-fields-completely-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-09abf-ompliance-fields-completely-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-09abf-ompliance-fields-completely-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-09abf-ompliance-fields-completely-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-09abf-ompliance-fields-completely-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-09abf-ompliance-fields-completely-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-09abf-ompliance-fields-completely-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="ACM Extraction Pipeline @acm-extraction › exports ACM records as CSV successfully" classname="acm-extraction.spec.ts" time="0.332">
+<failure message="acm-extraction.spec.ts:271:7 exports ACM records as CSV successfully" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:271:7 › ACM Extraction Pipeline @acm-extraction › exports ACM records as CSV successfully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:273:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-56e57-records-as-CSV-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-56e57-records-as-CSV-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-56e57-records-as-CSV-successfully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-56e57-records-as-CSV-successfully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-56e57-records-as-CSV-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-56e57-records-as-CSV-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-56e57-records-as-CSV-successfully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="ACM Extraction Pipeline @acm-extraction › exports ACM records as Excel successfully" classname="acm-extraction.spec.ts" time="0.314">
+<failure message="acm-extraction.spec.ts:294:7 exports ACM records as Excel successfully" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:294:7 › ACM Extraction Pipeline @acm-extraction › exports ACM records as Excel successfully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:296:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-1663c-cords-as-Excel-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-1663c-cords-as-Excel-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-1663c-cords-as-Excel-successfully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-1663c-cords-as-Excel-successfully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-1663c-cords-as-Excel-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-1663c-cords-as-Excel-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-1663c-cords-as-Excel-successfully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="ACM Extraction Pipeline @acm-extraction › handles extraction errors gracefully" classname="acm-extraction.spec.ts" time="0.389">
+<failure message="acm-extraction.spec.ts:316:7 handles extraction errors gracefully" type="FAILURE">
+<![CDATA[  [chromium] › acm-extraction.spec.ts:316:7 › ACM Extraction Pipeline @acm-extraction › handles extraction errors gracefully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/acm-extraction.spec.ts:318:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-295fb-xtraction-errors-gracefully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-295fb-xtraction-errors-gracefully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/acm-extraction-ACM-Extract-295fb-xtraction-errors-gracefully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/acm-extraction-ACM-Extract-295fb-xtraction-errors-gracefully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|acm-extraction-ACM-Extract-295fb-xtraction-errors-gracefully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-295fb-xtraction-errors-gracefully-chromium/video.webm]]
+
+[[ATTACHMENT|acm-extraction-ACM-Extract-295fb-xtraction-errors-gracefully-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
 </testsuite>
-<testsuite name="smoke.spec.ts" timestamp="2025-12-07T11:35:40.129Z" hostname="chromium" tests="4" failures="0" skipped="4" time="0" errors="0">
-<testcase name="Smoke Tests @smoke › homepage loads successfully" classname="smoke.spec.ts" time="0">
-<skipped>
-</skipped>
+<testsuite name="notebooks.spec.ts" timestamp="2026-02-15T23:17:49.714Z" hostname="chromium" tests="3" failures="3" skipped="0" time="1.333" errors="0">
+<testcase name="Notebook Management › can create a new notebook" classname="notebooks.spec.ts" time="0.505">
+<failure message="notebooks.spec.ts:22:7 can create a new notebook" type="FAILURE">
+<![CDATA[  [chromium] › notebooks.spec.ts:22:7 › Notebook Management › can create a new notebook ────────────
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8502/
+    Call log:
+      - navigating to "http://localhost:8502/", waiting until "load"
+
+
+      22 |   test('can create a new notebook', async ({ page }) => {
+      23 |     // Given: User is on the homepage
+    > 24 |     await page.goto('/');
+         |                ^
+      25 |
+      26 |     // When: User clicks create button and fills form
+      27 |     const createButton = page.getByRole('button', { name: /create|new|add/i });
+        at /work/tests/e2e/notebooks.spec.ts:24:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-create-a-new-notebook-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-create-a-new-notebook-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-create-a-new-notebook-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/notebooks-Notebook-Management-can-create-a-new-notebook-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|notebooks-Notebook-Management-can-create-a-new-notebook-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|notebooks-Notebook-Management-can-create-a-new-notebook-chromium/video.webm]]
+
+[[ATTACHMENT|notebooks-Notebook-Management-can-create-a-new-notebook-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
-<testcase name="Smoke Tests @smoke › can navigate to notebooks page" classname="smoke.spec.ts" time="0">
-<skipped>
-</skipped>
+<testcase name="Notebook Management › can view notebook details" classname="notebooks.spec.ts" time="0.412">
+<failure message="notebooks.spec.ts:43:7 can view notebook details" type="FAILURE">
+<![CDATA[  [chromium] › notebooks.spec.ts:43:7 › Notebook Management › can view notebook details ────────────
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/notebooks.spec.ts:45:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-view-notebook-details-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-view-notebook-details-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-view-notebook-details-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/notebooks-Notebook-Management-can-view-notebook-details-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|notebooks-Notebook-Management-can-view-notebook-details-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|notebooks-Notebook-Management-can-view-notebook-details-chromium/video.webm]]
+
+[[ATTACHMENT|notebooks-Notebook-Management-can-view-notebook-details-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
-<testcase name="Smoke Tests @smoke › API health check passes" classname="smoke.spec.ts" time="0">
-<skipped>
-</skipped>
-</testcase>
-<testcase name="Smoke Tests @smoke › can list notebooks via API" classname="smoke.spec.ts" time="0">
-<skipped>
-</skipped>
+<testcase name="Notebook Management › can see notebooks list" classname="notebooks.spec.ts" time="0.416">
+<failure message="notebooks.spec.ts:53:7 can see notebooks list" type="FAILURE">
+<![CDATA[  [chromium] › notebooks.spec.ts:53:7 › Notebook Management › can see notebooks list ───────────────
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/notebooks.spec.ts:55:5
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-see-notebooks-list-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-see-notebooks-list-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/notebooks-Notebook-Management-can-see-notebooks-list-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/notebooks-Notebook-Management-can-see-notebooks-list-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|notebooks-Notebook-Management-can-see-notebooks-list-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|notebooks-Notebook-Management-can-see-notebooks-list-chromium/video.webm]]
+
+[[ATTACHMENT|notebooks-Notebook-Management-can-see-notebooks-list-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
 </testsuite>
-<testsuite name="sources.spec.ts" timestamp="2025-12-07T11:35:40.129Z" hostname="chromium" tests="3" failures="0" skipped="3" time="0" errors="0">
-<testcase name="Source Management › sources page loads" classname="sources.spec.ts" time="0">
-<skipped>
-</skipped>
+<testsuite name="smart-chat.spec.ts" timestamp="2026-02-15T23:17:49.714Z" hostname="chromium" tests="11" failures="11" skipped="0" time="4.192" errors="0">
+<testcase name="Smart Chat Interactions @smart-chat › sends message and receives response" classname="smart-chat.spec.ts" time="0.397">
+<failure message="smart-chat.spec.ts:56:7 sends message and receives response" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:56:7 › Smart Chat Interactions @smart-chat › sends message and receives response 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:58:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-4a257-ssage-and-receives-response-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-4a257-ssage-and-receives-response-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-4a257-ssage-and-receives-response-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-4a257-ssage-and-receives-response-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-4a257-ssage-and-receives-response-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-4a257-ssage-and-receives-response-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-4a257-ssage-and-receives-response-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
-<testcase name="Source Management › can navigate to source detail" classname="sources.spec.ts" time="0">
-<skipped>
-</skipped>
+<testcase name="Smart Chat Interactions @smart-chat › executes ACM-specific tool calls successfully" classname="smart-chat.spec.ts" time="0.396">
+<failure message="smart-chat.spec.ts:86:7 executes ACM-specific tool calls successfully" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:86:7 › Smart Chat Interactions @smart-chat › executes ACM-specific tool calls successfully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:88:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-44848-fic-tool-calls-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-44848-fic-tool-calls-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-44848-fic-tool-calls-successfully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-44848-fic-tool-calls-successfully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-44848-fic-tool-calls-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-44848-fic-tool-calls-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-44848-fic-tool-calls-successfully-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
-<testcase name="Source Management › upload button is accessible" classname="sources.spec.ts" time="0">
-<skipped>
-</skipped>
+<testcase name="Smart Chat Interactions @smart-chat › switches between chat modes seamlessly" classname="smart-chat.spec.ts" time="0.434">
+<failure message="smart-chat.spec.ts:111:7 switches between chat modes seamlessly" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:111:7 › Smart Chat Interactions @smart-chat › switches between chat modes seamlessly 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:113:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-81a4a-tween-chat-modes-seamlessly-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-81a4a-tween-chat-modes-seamlessly-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-81a4a-tween-chat-modes-seamlessly-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-81a4a-tween-chat-modes-seamlessly-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-81a4a-tween-chat-modes-seamlessly-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-81a4a-tween-chat-modes-seamlessly-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-81a4a-tween-chat-modes-seamlessly-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › handles chat errors gracefully" classname="smart-chat.spec.ts" time="0.315">
+<failure message="smart-chat.spec.ts:141:7 handles chat errors gracefully" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:141:7 › Smart Chat Interactions @smart-chat › handles chat errors gracefully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:143:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-390b2-dles-chat-errors-gracefully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-390b2-dles-chat-errors-gracefully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-390b2-dles-chat-errors-gracefully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-390b2-dles-chat-errors-gracefully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-390b2-dles-chat-errors-gracefully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-390b2-dles-chat-errors-gracefully-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-390b2-dles-chat-errors-gracefully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › streams responses progressively" classname="smart-chat.spec.ts" time="0.386">
+<failure message="smart-chat.spec.ts:161:7 streams responses progressively" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:161:7 › Smart Chat Interactions @smart-chat › streams responses progressively 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:163:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-895b9-ams-responses-progressively-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-895b9-ams-responses-progressively-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-895b9-ams-responses-progressively-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-895b9-ams-responses-progressively-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-895b9-ams-responses-progressively-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-895b9-ams-responses-progressively-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-895b9-ams-responses-progressively-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › queries ACM statistics successfully" classname="smart-chat.spec.ts" time="0.348">
+<failure message="smart-chat.spec.ts:193:7 queries ACM statistics successfully" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:193:7 › Smart Chat Interactions @smart-chat › queries ACM statistics successfully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:195:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-5464b-ACM-statistics-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-5464b-ACM-statistics-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-5464b-ACM-statistics-successfully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-5464b-ACM-statistics-successfully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-5464b-ACM-statistics-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-5464b-ACM-statistics-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-5464b-ACM-statistics-successfully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › searches ACM records successfully" classname="smart-chat.spec.ts" time="0.343">
+<failure message="smart-chat.spec.ts:217:7 searches ACM records successfully" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:217:7 › Smart Chat Interactions @smart-chat › searches ACM records successfully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:219:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-1a01d-es-ACM-records-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-1a01d-es-ACM-records-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-1a01d-es-ACM-records-successfully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-1a01d-es-ACM-records-successfully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-1a01d-es-ACM-records-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-1a01d-es-ACM-records-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-1a01d-es-ACM-records-successfully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › switches context from chat to grid navigation" classname="smart-chat.spec.ts" time="0.369">
+<failure message="smart-chat.spec.ts:241:7 switches context from chat to grid navigation" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:241:7 › Smart Chat Interactions @smart-chat › switches context from chat to grid navigation 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:243:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-c3ce4-rom-chat-to-grid-navigation-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-c3ce4-rom-chat-to-grid-navigation-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-c3ce4-rom-chat-to-grid-navigation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-c3ce4-rom-chat-to-grid-navigation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-c3ce4-rom-chat-to-grid-navigation-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-c3ce4-rom-chat-to-grid-navigation-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-c3ce4-rom-chat-to-grid-navigation-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › clears chat history successfully" classname="smart-chat.spec.ts" time="0.418">
+<failure message="smart-chat.spec.ts:265:7 clears chat history successfully" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:265:7 › Smart Chat Interactions @smart-chat › clears chat history successfully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:267:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-24d62-s-chat-history-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-24d62-s-chat-history-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-24d62-s-chat-history-successfully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-24d62-s-chat-history-successfully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-24d62-s-chat-history-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-24d62-s-chat-history-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-24d62-s-chat-history-successfully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › maintains chat context across multiple messages" classname="smart-chat.spec.ts" time="0.401">
+<failure message="smart-chat.spec.ts:293:7 maintains chat context across multiple messages" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:293:7 › Smart Chat Interactions @smart-chat › maintains chat context across multiple messages 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:295:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-46787-xt-across-multiple-messages-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-46787-xt-across-multiple-messages-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-46787-xt-across-multiple-messages-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-46787-xt-across-multiple-messages-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-46787-xt-across-multiple-messages-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-46787-xt-across-multiple-messages-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-46787-xt-across-multiple-messages-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smart Chat Interactions @smart-chat › handles concurrent tool calls gracefully" classname="smart-chat.spec.ts" time="0.385">
+<failure message="smart-chat.spec.ts:322:7 handles concurrent tool calls gracefully" type="FAILURE">
+<![CDATA[  [chromium] › smart-chat.spec.ts:322:7 › Smart Chat Interactions @smart-chat › handles concurrent tool calls gracefully 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/smart-chat.spec.ts:324:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-52eb4-rrent-tool-calls-gracefully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-52eb4-rrent-tool-calls-gracefully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smart-chat-Smart-Chat-Inte-52eb4-rrent-tool-calls-gracefully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smart-chat-Smart-Chat-Inte-52eb4-rrent-tool-calls-gracefully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-52eb4-rrent-tool-calls-gracefully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-52eb4-rrent-tool-calls-gracefully-chromium/video.webm]]
+
+[[ATTACHMENT|smart-chat-Smart-Chat-Inte-52eb4-rrent-tool-calls-gracefully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+<testsuite name="smoke.spec.ts" timestamp="2026-02-15T23:17:49.714Z" hostname="chromium" tests="4" failures="4" skipped="0" time="1.623" errors="0">
+<testcase name="Smoke Tests @smoke › homepage loads successfully" classname="smoke.spec.ts" time="0.38">
+<failure message="smoke.spec.ts:13:7 homepage loads successfully" type="FAILURE">
+<![CDATA[  [chromium] › smoke.spec.ts:13:7 › Smoke Tests @smoke › homepage loads successfully ───────────────
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8502/
+    Call log:
+      - navigating to "http://localhost:8502/", waiting until "load"
+
+
+      12 | test.describe('Smoke Tests @smoke', () => {
+      13 |   test('homepage loads successfully', async ({ page }) => {
+    > 14 |     await page.goto('/');
+         |                ^
+      15 |
+      16 |     // Verify page loaded (adjust selector based on actual UI)
+      17 |     await expect(page).toHaveTitle(/Open Notebook|Notebook/i);
+        at /work/tests/e2e/smoke.spec.ts:14:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-homepage-loads-successfully-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-homepage-loads-successfully-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-homepage-loads-successfully-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smoke-Smoke-Tests-smoke-homepage-loads-successfully-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-homepage-loads-successfully-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-homepage-loads-successfully-chromium/video.webm]]
+
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-homepage-loads-successfully-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smoke Tests @smoke › can navigate to notebooks page" classname="smoke.spec.ts" time="0.4">
+<failure message="smoke.spec.ts:20:7 can navigate to notebooks page" type="FAILURE">
+<![CDATA[  [chromium] › smoke.spec.ts:20:7 › Smoke Tests @smoke › can navigate to notebooks page ────────────
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8502/
+    Call log:
+      - navigating to "http://localhost:8502/", waiting until "load"
+
+
+      20 |   test('can navigate to notebooks page', async ({ page }) => {
+      21 |     // Given: User is on the homepage
+    > 22 |     await page.goto('/');
+         |                ^
+      23 |
+      24 |     // When: User clicks the notebooks link
+      25 |     const notebooksLink = page.getByRole('link', { name: /notebook/i });
+        at /work/tests/e2e/smoke.spec.ts:22:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-can-navigate-to-notebooks-page-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-can-navigate-to-notebooks-page-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-can-navigate-to-notebooks-page-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smoke-Smoke-Tests-smoke-can-navigate-to-notebooks-page-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-can-navigate-to-notebooks-page-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-can-navigate-to-notebooks-page-chromium/video.webm]]
+
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-can-navigate-to-notebooks-page-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smoke Tests @smoke › API health check passes" classname="smoke.spec.ts" time="0.44">
+<failure message="smoke.spec.ts:33:7 API health check passes" type="FAILURE">
+<![CDATA[  [chromium] › smoke.spec.ts:33:7 › Smoke Tests @smoke › API health check passes ───────────────────
+
+    Error: apiRequestContext.get: connect ECONNREFUSED ::1:5055
+    Call log:
+      - → GET http://localhost:5055/health
+        - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.7499.4 Safari/537.36
+        - accept: */*
+        - accept-encoding: gzip,deflate,br
+
+        at apiRequestContext.get: connect ECONNREFUSED ::1:5055
+        at Object.get (/work/tests/support/fixtures/index.ts:39:40)
+        at /work/tests/e2e/smoke.spec.ts:35:38
+
+    attachment #1: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-API-health-check-passes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smoke-Smoke-Tests-smoke-API-health-check-passes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-API-health-check-passes-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Smoke Tests @smoke › can list notebooks via API" classname="smoke.spec.ts" time="0.403">
+<failure message="smoke.spec.ts:39:7 can list notebooks via API" type="FAILURE">
+<![CDATA[  [chromium] › smoke.spec.ts:39:7 › Smoke Tests @smoke › can list notebooks via API ────────────────
+
+    Error: apiRequestContext.get: connect ECONNREFUSED ::1:5055
+    Call log:
+      - → GET http://localhost:5055/notebooks/
+        - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.7499.4 Safari/537.36
+        - accept: */*
+        - accept-encoding: gzip,deflate,br
+
+        at apiRequestContext.get: connect ECONNREFUSED ::1:5055
+        at Object.get (/work/tests/support/fixtures/index.ts:39:40)
+        at /work/tests/e2e/smoke.spec.ts:40:39
+
+    attachment #1: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/smoke-Smoke-Tests-smoke-can-list-notebooks-via-API-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/smoke-Smoke-Tests-smoke-can-list-notebooks-via-API-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|smoke-Smoke-Tests-smoke-can-list-notebooks-via-API-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+<testsuite name="sources.spec.ts" timestamp="2026-02-15T23:17:49.714Z" hostname="chromium" tests="3" failures="3" skipped="0" time="0.894" errors="0">
+<testcase name="Source Management › sources page loads" classname="sources.spec.ts" time="0.387">
+<failure message="sources.spec.ts:22:7 sources page loads" type="FAILURE">
+<![CDATA[  [chromium] › sources.spec.ts:22:7 › Source Management › sources page loads ───────────────────────
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8502/sources
+    Call log:
+      - navigating to "http://localhost:8502/sources", waiting until "load"
+
+
+      21 |
+      22 |   test('sources page loads', async ({ page }) => {
+    > 23 |     await page.goto('/sources');
+         |                ^
+      24 |
+      25 |     // Verify sources page loaded
+      26 |     await expect(page).toHaveURL(/sources/);
+        at /work/tests/e2e/sources.spec.ts:23:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-sources-page-loads-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-sources-page-loads-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-sources-page-loads-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/sources-Source-Management-sources-page-loads-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|sources-Source-Management-sources-page-loads-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|sources-Source-Management-sources-page-loads-chromium/video.webm]]
+
+[[ATTACHMENT|sources-Source-Management-sources-page-loads-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Source Management › can navigate to source detail" classname="sources.spec.ts" time="0.259">
+<failure message="sources.spec.ts:29:7 can navigate to source detail" type="FAILURE">
+<![CDATA[  [chromium] › sources.spec.ts:29:7 › Source Management › can navigate to source detail ────────────
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/sources.spec.ts:31:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-can-navigate-to-source-detail-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-can-navigate-to-source-detail-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-can-navigate-to-source-detail-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/sources-Source-Management-can-navigate-to-source-detail-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|sources-Source-Management-can-navigate-to-source-detail-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|sources-Source-Management-can-navigate-to-source-detail-chromium/video.webm]]
+
+[[ATTACHMENT|sources-Source-Management-can-navigate-to-source-detail-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="Source Management › upload button is accessible" classname="sources.spec.ts" time="0.248">
+<failure message="sources.spec.ts:41:7 upload button is accessible" type="FAILURE">
+<![CDATA[  [chromium] › sources.spec.ts:41:7 › Source Management › upload button is accessible ──────────────
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/sources.spec.ts:42:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-upload-button-is-accessible-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-upload-button-is-accessible-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/sources-Source-Management-upload-button-is-accessible-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/sources-Source-Management-upload-button-is-accessible-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|sources-Source-Management-upload-button-is-accessible-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|sources-Source-Management-upload-button-is-accessible-chromium/video.webm]]
+
+[[ATTACHMENT|sources-Source-Management-upload-button-is-accessible-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+<testsuite name="user-journeys.spec.ts" timestamp="2026-02-15T23:17:49.714Z" hostname="chromium" tests="5" failures="5" skipped="0" time="1.285" errors="0">
+<testcase name="End-to-End User Journeys @user-journeys › Journey 1: New user creates notebook, uploads SAMP, views data, asks questions, and exports" classname="user-journeys.spec.ts" time="0.302">
+<failure message="user-journeys.spec.ts:57:7 Journey 1: New user creates notebook, uploads SAMP, views data, asks questions, and exports" type="FAILURE">
+<![CDATA[  [chromium] › user-journeys.spec.ts:57:7 › End-to-End User Journeys @user-journeys › Journey 1: New user creates notebook, uploads SAMP, views data, asks questions, and exports 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8502/
+    Call log:
+      - navigating to "http://localhost:8502/", waiting until "load"
+
+
+      62 |
+      63 |     // Step 1: User creates a new notebook
+    > 64 |     await page.goto('/');
+         |                ^
+      65 |     workflowSteps.push('homepage-loaded');
+      66 |
+      67 |     const createButton = page.getByRole('button', { name: /create|new|add/i });
+        at /work/tests/e2e/user-journeys.spec.ts:64:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-4fbbb--asks-questions-and-exports-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-4fbbb--asks-questions-and-exports-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-4fbbb--asks-questions-and-exports-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/user-journeys-End-to-End-U-4fbbb--asks-questions-and-exports-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|user-journeys-End-to-End-U-4fbbb--asks-questions-and-exports-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-4fbbb--asks-questions-and-exports-chromium/video.webm]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-4fbbb--asks-questions-and-exports-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="End-to-End User Journeys @user-journeys › Journey 2: Power user compares multiple SAMPs, filters data, and exports consolidated report" classname="user-journeys.spec.ts" time="0.237">
+<failure message="user-journeys.spec.ts:127:7 Journey 2: Power user compares multiple SAMPs, filters data, and exports consolidated report" type="FAILURE">
+<![CDATA[  [chromium] › user-journeys.spec.ts:127:7 › End-to-End User Journeys @user-journeys › Journey 2: Power user compares multiple SAMPs, filters data, and exports consolidated report 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/user-journeys.spec.ts:134:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-90bde-exports-consolidated-report-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-90bde-exports-consolidated-report-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-90bde-exports-consolidated-report-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/user-journeys-End-to-End-U-90bde-exports-consolidated-report-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|user-journeys-End-to-End-U-90bde-exports-consolidated-report-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-90bde-exports-consolidated-report-chromium/video.webm]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-90bde-exports-consolidated-report-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="End-to-End User Journeys @user-journeys › Journey 3: QA analyst validates extraction quality, identifies issues, and flags problems" classname="user-journeys.spec.ts" time="0.234">
+<failure message="user-journeys.spec.ts:198:7 Journey 3: QA analyst validates extraction quality, identifies issues, and flags problems" type="FAILURE">
+<![CDATA[  [chromium] › user-journeys.spec.ts:198:7 › End-to-End User Journeys @user-journeys › Journey 3: QA analyst validates extraction quality, identifies issues, and flags problems 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/user-journeys.spec.ts:205:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-41df9-s-issues-and-flags-problems-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-41df9-s-issues-and-flags-problems-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-41df9-s-issues-and-flags-problems-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/user-journeys-End-to-End-U-41df9-s-issues-and-flags-problems-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|user-journeys-End-to-End-U-41df9-s-issues-and-flags-problems-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-41df9-s-issues-and-flags-problems-chromium/video.webm]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-41df9-s-issues-and-flags-problems-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="End-to-End User Journeys @user-journeys › Journey 4: Collaborative workflow - Multiple users working on same project" classname="user-journeys.spec.ts" time="0.242">
+<failure message="user-journeys.spec.ts:292:7 Journey 4: Collaborative workflow - Multiple users working on same project" type="FAILURE">
+<![CDATA[  [chromium] › user-journeys.spec.ts:292:7 › End-to-End User Journeys @user-journeys › Journey 4: Collaborative workflow - Multiple users working on same project 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/user-journeys.spec.ts:296:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-380ab-ers-working-on-same-project-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-380ab-ers-working-on-same-project-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-380ab-ers-working-on-same-project-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/user-journeys-End-to-End-U-380ab-ers-working-on-same-project-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|user-journeys-End-to-End-U-380ab-ers-working-on-same-project-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-380ab-ers-working-on-same-project-chromium/video.webm]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-380ab-ers-working-on-same-project-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="End-to-End User Journeys @user-journeys › Journey 5: Mobile user workflow - View ACM data on mobile device" classname="user-journeys.spec.ts" time="0.27">
+<failure message="user-journeys.spec.ts:334:7 Journey 5: Mobile user workflow - View ACM data on mobile device" type="FAILURE">
+<![CDATA[  [chromium] › user-journeys.spec.ts:334:7 › End-to-End User Journeys @user-journeys › Journey 5: Mobile user workflow - View ACM data on mobile device 
+
+    TypeError: fetch failed
+
+       at ../support/helpers/api-helpers.ts:48
+
+      46 |   data: Partial<Notebook> = {}
+      47 | ): Promise<Notebook> {
+    > 48 |   const response = await fetch(`${API_URL}/notebooks/`, {
+         |                    ^
+      49 |     method: 'POST',
+      50 |     headers: { 'Content-Type': 'application/json' },
+      51 |     body: JSON.stringify({
+        at createNotebook (/work/tests/support/helpers/api-helpers.ts:48:20)
+        at TestDataFactory.createNotebook (/work/tests/support/helpers/test-data-factory.ts:31:22)
+        at /work/tests/e2e/user-journeys.spec.ts:341:22
+    [cause]: AggregateError: 
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-27df7-w-ACM-data-on-mobile-device-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-27df7-w-ACM-data-on-mobile-device-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../test-results/user-journeys-End-to-End-U-27df7-w-ACM-data-on-mobile-device-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../test-results/user-journeys-End-to-End-U-27df7-w-ACM-data-on-mobile-device-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|user-journeys-End-to-End-U-27df7-w-ACM-data-on-mobile-device-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-27df7-w-ACM-data-on-mobile-device-chromium/video.webm]]
+
+[[ATTACHMENT|user-journeys-End-to-End-U-27df7-w-ACM-data-on-mobile-device-chromium/trace.zip]]
+]]>
+</system-out>
 </testcase>
 </testsuite>
 </testsuites>
