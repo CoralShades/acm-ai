@@ -58,5 +58,5 @@ To start the loop:
   .ralph/ralph_loop.sh
 
 To run manually:
-  claude --prompt-file .ralph/PROMPT.md
+  claude -p "$(cat .ralph/PROMPT.md)"
 ```

@@ -10,7 +10,6 @@
 # Examples:
 #   .ralph/ralph_loop.sh                    # Default: 40 iterations
 #   .ralph/ralph_loop.sh --max 20           # Limit to 20 iterations
-#   .ralph/ralph_loop.sh --tool "--tool claude"  # Explicit tool flag
 #
 # Exit codes:
 #   0 - All tasks completed successfully
@@ -19,13 +18,13 @@
 #   3 - Setup error (missing files, bad config)
 # =============================================================================
 
-set -uo pipefail
+set -euo pipefail
 
 # --- Configuration ---
 MAX_ITERATIONS=40
 TOOL_FLAG=""
-COMPLETION_PROMISE="COMPLETE"
-BLOCKED_SIGNAL="BLOCKED"
+COMPLETION_PROMISE="<promise>COMPLETE</promise>"
+BLOCKED_SIGNAL="<promise>BLOCKED</promise>"
 CHECKPOINT_INTERVAL=10
 LOG_DIR=".ralph/logs"
 FIX_PLAN=".ralph/@fix_plan.md"
@@ -62,6 +61,13 @@ preflight_check() {
     if [ ! -f "$FIX_PLAN" ]; then
         echo "ERROR: $FIX_PLAN not found. Run /ralph-init first."
         errors=$((errors + 1))
+    else
+        local task_count=0
+        task_count=$(grep -c '^\- \[' "$FIX_PLAN" 2>/dev/null) || task_count=0
+        if [ "$task_count" -eq 0 ]; then
+            echo "ERROR: $FIX_PLAN has no tasks. Run /ralph-init first to populate it."
+            errors=$((errors + 1))
+        fi
     fi
 
     if [ ! -f "$PROMPT_FILE" ]; then
@@ -132,8 +138,10 @@ print_dashboard() {
 safety_checkpoint() {
     local iteration="$1"
     echo "Safety checkpoint at iteration $iteration..."
-    git add -A 2>/dev/null
-    git commit -m "chore(ralph): safety checkpoint iteration $iteration" --allow-empty 2>/dev/null || true
+    # Stage only tracked files — avoid staging secrets or untracked artifacts
+    git add -u 2>/dev/null || true
+    git diff --cached --quiet 2>/dev/null || \
+        git commit -m "chore(ralph): safety checkpoint iteration $iteration" 2>/dev/null || true
     log_metric "$iteration" "checkpoint" "auto-commit safety checkpoint"
 }
 
@@ -160,9 +168,11 @@ main() {
         print_dashboard "$i"
         log_metric "$i" "iteration_start" "tasks=$(count_tasks)"
 
-        # Run Claude Code with the prompt
-        claude --print --prompt-file "$PROMPT_FILE" $TOOL_FLAG > "$iteration_log" 2>&1
-        local exit_code=$?
+        # Run Claude Code with the prompt file content piped via -p flag
+        local prompt_content
+        prompt_content=$(cat "$PROMPT_FILE")
+        claude -p "$prompt_content" $TOOL_FLAG > "$iteration_log" 2>&1 || true
+        local exit_code=${PIPESTATUS[0]:-$?}
 
         local end_time
         end_time=$(date +%s)
@@ -184,13 +194,13 @@ main() {
         } >> "$iteration_log"
 
         # Check for Claude CLI errors
-        if [ $exit_code -ne 0 ]; then
+        if [ "$exit_code" -ne 0 ]; then
             echo "WARNING: Claude CLI exited with code $exit_code"
             log_metric "$i" "cli_error" "exit_code=$exit_code"
         fi
 
-        # Check if complete
-        if grep -q "$COMPLETION_PROMISE" "$iteration_log" 2>/dev/null; then
+        # Check if complete (uses XML promise wrapper to avoid false positives)
+        if grep -qF "$COMPLETION_PROMISE" "$iteration_log" 2>/dev/null; then
             log_metric "$i" "complete" "tasks=$(count_tasks) total_elapsed=${total_elapsed}s"
             echo ""
             echo "============================================="
@@ -201,10 +211,10 @@ main() {
             exit 0
         fi
 
-        # Check if blocked
-        if grep -q "$BLOCKED_SIGNAL" "$iteration_log" 2>/dev/null; then
+        # Check if blocked (uses XML promise wrapper to avoid false positives)
+        if grep -qF "$BLOCKED_SIGNAL" "$iteration_log" 2>/dev/null; then
             local reason
-            reason=$(grep -oP "BLOCKED:?\s*\K.*" "$iteration_log" 2>/dev/null | head -1 || echo "Unknown reason")
+            reason=$(grep -oP "<promise>BLOCKED</promise>:?\s*\K.*" "$iteration_log" 2>/dev/null | head -1 || echo "Unknown reason")
             log_metric "$i" "blocked" "reason=$reason total_elapsed=${total_elapsed}s"
             echo ""
             echo "============================================="

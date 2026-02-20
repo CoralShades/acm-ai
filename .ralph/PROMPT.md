@@ -19,8 +19,8 @@ Read `CLAUDE.md` in the project root for conventions and architecture.
    - Frontend build: `cd frontend && npm run build`
 6. If all verification passes, check off the task in `@fix_plan.md` and commit with a conventional commit message
 7. If verification fails, fix the issue and retry (max 3 retries per task)
-8. After 3 failed retries on the same task, output `BLOCKED: [specific reason and error details]`
-9. Output `COMPLETE` when ALL tasks in `@fix_plan.md` are checked off AND all tests pass
+8. After 3 failed retries on the same task, output `<promise>BLOCKED</promise>: [specific reason and error details]`
+9. Output `<promise>COMPLETE</promise>` when ALL tasks in `@fix_plan.md` are checked off AND all tests pass
 
 ## Important
 

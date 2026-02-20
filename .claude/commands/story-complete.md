@@ -29,7 +29,6 @@ For each command:
 - Report PASS or FAIL
 - If FAIL, capture the specific error output
 - If `npx playwright test` fails because Playwright is not installed, note it as a warning (not a blocker)
-- If `npm test` fails because no test script is configured, note it as a warning (not a blocker)
 
 ### 3. Evaluate Results
 **All PASS (ignoring warnings for unconfigured test runners):**
@@ -43,7 +42,8 @@ For each command:
 
 ### 4. Commit and Push (only if all pass)
 ```bash
-git add -A
+# Stage only tracked files to avoid accidentally committing secrets or artifacts
+git add -u
 git commit -m "feat(story-id): [story title summary]"
 git push -u origin [current-branch]
 ```

@@ -353,15 +353,15 @@ This file is automatically merged by Docker Compose and keeps machine-specific c
 
 When running a Ralph autonomous loop on this repo:
 - **Max iterations**: 40
-- **Completion promise**: `COMPLETE`
-- **Blocked signal**: `BLOCKED`
+- **Completion promise**: `<promise>COMPLETE</promise>`
+- **Blocked signal**: `<promise>BLOCKED</promise>`
 
 ### Test Commands
 
 | Layer | Command |
 |-------|---------|
 | Backend | `pytest tests/ -x` |
-| Frontend | `cd frontend && npm test` |
+| Frontend | `cd frontend && npm run lint && npm run build` |
 | E2E | `npx playwright test` |
 
 ### Lint Commands
@@ -375,7 +375,7 @@ When running a Ralph autonomous loop on this repo:
 
 | File Pattern | Route To |
 |--------------|----------|
-| `/api/**`, `/open_notebook/**` | `backend-specialist` |
+| `/api/**`, `/open_notebook/**`, `/migrations/**`, `/commands/**` | `backend-specialist` |
 | `/frontend/**` | `frontend-specialist` |
 | `/tests/**`, `/playwright-report/**` | `qa-specialist` |
 | Story complete event | `docs-specialist` |
