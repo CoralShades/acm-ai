@@ -71,6 +71,16 @@ workflow_status:
 #   - Stale _bmad-output/implementation-artifacts/sprint-status.yaml identified (use docs/sprint-artifacts/ instead)
 #   - Proposal: _bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md
 # ===========
+# 2026-02-20: PR Merge Blitz - PRs #31-41 merged to main
+#   - PR #31: Smart chat + document intelligence + BAR compliance (E1-S16..S19 extractors,
+#     ACM extraction progress panel, migration 19, BAR columns, comprehensive tests)
+#   - PRs #32-37: 6 bug fixes (CRLF/.gitattributes, CopilotErrorBoundary, SSE heartbeat,
+#     .next artifacts, taskkill empty string, supports_tool_calling)
+#   - PRs #38-40: Ralph autonomous loop infrastructure v2 (8 critical fixes)
+#   - PR #41: Updated progress.md and task_plan.md tracking files
+#   - Sprint status reconciled: 104 total stories, 74 done (71%)
+#   - Story promotions: E15-S1, E16-S1..S3 drafted -> ready-for-dev
+#   - E5-S4 downgraded: ready-for-dev -> drafted (no tech-spec, blocked by E5-S3)
 # 2025-12-10: Initial workflow status created
 # 2026-02-04: Course Correction completed - Victorian BAR Format Expansion
 #   - PRD updated: 20→50 fields schema, BAR export format
