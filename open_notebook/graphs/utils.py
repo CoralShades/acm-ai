@@ -84,9 +84,4 @@ def supports_tool_calling(model: BaseChatModel) -> bool:
 
     # Models that are known to support tool calling
     # Most modern LangChain chat model wrappers support bind_tools
-    try:
-        # Quick test: bind_tools should be callable
-        callable(model.bind_tools)
-        return True
-    except Exception:
-        return False
+    return callable(model.bind_tools)

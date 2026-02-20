@@ -2,9 +2,9 @@
 
 > **Product:** ACM-AI v1.0
 > **Date:** 2025-12-07 (Updated: 2026-02-08)
-> **Status:** Draft - Updated for UX Audit &amp; Enterprise Readiness
+> **Status:** v1.4 - Updated for SCP-20260220 (Extraction Monitor + UX Enhancement)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-02-08 - UX Audit &amp; Enterprise Readiness (FR-700 series); Course correction: single generic configurable parser (see sprint-change-proposal-2026-02-08)
+> **Change Log:** 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -27,6 +27,8 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | Prensa PDF | Asbestos assessment format (Prensa Pty Ltd) | Supported |
 | Greencap PDF | Asbestos assessment format (Greencap) | Supported |
 
+> **Note:** Prensa and Greencap formats are not separate parser implementations. All consultant formats are handled by the single generic configurable parser (see Section 5.7) driven by `field_schema` configuration in SurrealDB. Format-specific differences are expressed as JSON configuration, not code.
+
 ---
 
 ## 2. Functional Requirements
@@ -36,7 +38,7 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | ID | Requirement | Priority | Acceptance Criteria |
 |----|-------------|----------|---------------------|
 | FR-101 | System shall accept PDF uploads up to 50MB | P0 | Upload succeeds for 50MB file within 30 seconds |
-| FR-102 | System shall extract text and tables from PDFs using Docling | P0 | Docling processes file and returns structured output |
+| FR-102 | System shall extract text and tables from PDFs using MinerU (primary) with Docling as fallback | P0 | MinerU processes PDF and returns structured table output; Docling used as fallback for text-based PDFs |
 | FR-103 | System shall identify ACM Register tables within SAMP/BAR documents | P0 | Tables matching ACM schema are extracted with >90% accuracy |
 | FR-104 | System shall parse hierarchical structure (Dept → Agency → Site → Building → Room → ACM Item) | P0 | Hierarchy correctly represented in data model |
 | FR-107 | System shall use configurable field definitions to parse any ACM PDF format via a single generic parser | P0 | Field schema config (register_row.schema.json, register_enums.json) drives parsing; single parser handles all consultant formats |
@@ -131,6 +133,28 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-709 | Keyboard navigation shall support all primary workflows | P2 | Command palette, grid nav, dialog shortcuts |
 | FR-710 | Deep pages shall display breadcrumb navigation | P2 | Source detail, ACM register breadcrumbs |
 | FR-711 | TypeScript types shall be auto-generated from Python Pydantic models | P2 | generate_types.py script, CI drift detection |
+
+### 2.8 Extraction Monitor (FR-800 Series)
+
+> **Added:** 2026-02-20 (SCP-20260220 — E15: Extraction Monitor & Live Logging UI)
+> **Spec References:** `docs/sprint-artifacts/e15-s1-extraction-log-panel.md`, `docs/sprint-artifacts/e15-s2-extraction-monitor-page.md`
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-801 | System shall display extraction logs for any document in the Document Library (historical and live SSE) | P0 | Chevron expands inline `ExtractionProgressPanel` per document row; loads historical log for completed docs, live SSE for active docs |
+| FR-802 | System shall provide a dedicated `/extraction-monitor` page with Active and History tabs, status filtering, and retry capability | P0 | Page accessible from sidebar CONFIGURE section; Active tab auto-refreshes 3s; History tab paginated with status/date filters; Retry button for failed/partial |
+
+### 2.9 UX Enhancement (FR-900 Series)
+
+> **Added:** 2026-02-20 (SCP-20260220 — E16: UX Enhancement Sprint + E9-S3)
+> **Spec References:** `docs/sprint-artifacts/e16-s1-dashboard-home.md`, `docs/sprint-artifacts/e16-s2-record-detail-panel.md`, `docs/sprint-artifacts/e16-s3-empty-states.md`
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-901 | System shall display a statistics dashboard home page with ACM metrics (total records, buildings, risk breakdown) and charts | P1 | Dashboard at `/` shows 4 summary cards, risk donut chart, top 10 buildings bar chart, and recent extractions list; all data from `/api/acm/stats` |
+| FR-902 | System shall provide a slide-out record detail panel showing all 47 ACM fields on row click | P0 | 380px right drawer slides in on grid row click; organises fields into 8 labeled sections; keyboard navigation (←→); edit mode with save/cancel |
+| FR-903 | System shall display empty state screens with appropriate CTAs when no documents or records exist | P1 | Empty states on Documents, ACM Register, Chat, and Extraction Monitor pages; dismissable onboarding hints on first visit |
+| FR-904 | System shall support bulk document operations (select multiple → delete/re-extract/export) | P1 | Checkbox selection in document list; bulk action toolbar appears; bulk delete, bulk re-extract, bulk CSV export |
 
 ---
 
@@ -381,6 +405,18 @@ DEFINE FIELD school_name ON acm_record TYPE option<string>;
 DEFINE FIELD school_code ON acm_record TYPE option<string>;
 DEFINE FIELD result ON acm_record TYPE option<string>;  -- Legacy result field
 
+-- BAR Compliance fields (Added: PR #30 / E1-S12 / E1-S14)
+DEFINE FIELD quantity ON acm_record TYPE option<string>;  -- Sample quantity (e.g. '10 m²', '5 linear meters')
+DEFINE FIELD acm_labelled ON acm_record TYPE option<bool>;  -- Boolean: whether ACM is labelled on-site
+DEFINE FIELD acm_label_details ON acm_record TYPE option<string>;  -- Label details if labelled
+DEFINE FIELD identifying_company ON acm_record TYPE option<string>;  -- Hygiene/consulting company (supplements hygiene_company)
+DEFINE FIELD floor_level ON acm_record TYPE option<string>;  -- Floor level (e.g. 'Ground', 'Level 1', 'Roof')
+DEFINE FIELD normalized_action ON acm_record TYPE option<string>;  -- Normalised consultant action wording (E1-S12, migration 15)
+DEFINE FIELD enriched_text ON acm_record TYPE option<string>;  -- Contextual embedding enrichment text (E1-S14, migration 16)
+
+-- Parent Document Retrieval (E11-S1, migration 18)
+DEFINE FIELD parent_table_id ON acm_record TYPE option<record<acm_table_section>>;  -- Link to raw table section for provenance
+
 -- Metadata
 DEFINE FIELD page_number ON acm_record TYPE option<int>;
 DEFINE FIELD extraction_confidence ON acm_record TYPE option<float>;
@@ -417,6 +453,53 @@ DEFINE FIELD updated_at ON site_config TYPE datetime DEFAULT time::now();
 DEFINE INDEX config_source ON site_config FIELDS source_id;
 ```
 
+### 5.1.2 Field Schema Table (E1-S11, migration 17)
+
+Runtime field configuration store. Loaded from JSON config files at startup; drives the GenericParser, AG Grid columns, and BAR export.
+
+```sql
+DEFINE TABLE field_schema SCHEMAFULL;
+DEFINE FIELD config_json ON TABLE field_schema TYPE string;  -- Serialized FieldSchemaConfig JSON
+DEFINE FIELD version ON TABLE field_schema TYPE string;      -- Semantic version of config
+DEFINE FIELD created ON TABLE field_schema TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated ON TABLE field_schema TYPE datetime DEFAULT time::now();
+```
+
+### 5.1.3 Parent Document Retrieval Table (E11-S1, migration 18)
+
+Stores raw HTML/text table sections as parent documents for extracted ACM records, enabling provenance and citation.
+
+```sql
+DEFINE TABLE acm_table_section SCHEMAFULL;
+DEFINE FIELD source_id ON acm_table_section TYPE record<source>;
+DEFINE FIELD page_start ON acm_table_section TYPE int;
+DEFINE FIELD page_end ON acm_table_section TYPE int;
+DEFINE FIELD raw_html ON acm_table_section TYPE option<string>;  -- Original HTML from MinerU
+DEFINE FIELD raw_text ON acm_table_section TYPE option<string>;  -- Plain text fallback
+DEFINE FIELD building_name ON acm_table_section TYPE option<string>;
+DEFINE FIELD table_type ON acm_table_section TYPE option<string>;
+DEFINE FIELD created ON acm_table_section TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated ON acm_table_section TYPE option<datetime>;
+```
+
+### 5.1.4 Extraction Progress Table (migration 19)
+
+Stores per-run pipeline state for SSE streaming and polling. Keyed by `command_id` (unique per extraction job).
+
+```sql
+DEFINE TABLE extraction_progress SCHEMAFULL;
+DEFINE FIELD command_id ON extraction_progress TYPE string;   -- Job ID from surreal-commands
+DEFINE FIELD run_id ON extraction_progress TYPE string;
+DEFINE FIELD source_id ON extraction_progress TYPE string;
+DEFINE FIELD status ON extraction_progress TYPE string;       -- "running", "completed", "failed"
+DEFINE FIELD state_json ON extraction_progress TYPE string;   -- Serialized PipelineRunState JSON
+DEFINE FIELD log_entries ON extraction_progress TYPE array DEFAULT [];
+DEFINE FIELD log_entries.* ON extraction_progress TYPE string;
+DEFINE FIELD updated_at ON extraction_progress TYPE datetime DEFAULT time::now();
+DEFINE FIELD created_at ON extraction_progress TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_extraction_progress_command ON extraction_progress FIELDS command_id UNIQUE;
+```
+
 ### 5.2 API Endpoints (Expanded)
 
 | Endpoint | Method | Description |
@@ -435,6 +518,9 @@ DEFINE INDEX config_source ON site_config FIELDS source_id;
 | `/api/acm/mappings` | GET | Get field mapping configuration |
 | `/api/acm/mappings` | PUT | Update field mapping configuration |
 | `/api/acm/classify` | POST | AI classification for Product Group/Type |
+| `/api/acm/extraction-progress/{command_id}/stream` | GET | SSE stream — real-time pipeline events (text/event-stream) |
+| `/api/acm/extraction-progress/{command_id}` | GET | REST polling fallback — current extraction state and log entries |
+| `/api/acm/field-schema` | GET | Active field schema config for AG Grid dynamic column definitions |
 
 ### 5.3 BAR Export Format Specification (NEW)
 
@@ -586,7 +672,7 @@ BAR Excel template → JSON config files → SurrealDB field_schema table → ru
 
 | System | Modification |
 |--------|--------------|
-| Source processing | Add ACM extraction step post-Docling |
+| Source processing | Add ACM extraction step post-MinerU/Docling |
 | Chat context builder | Include ACM records in context |
 | Citation parser | Handle `[acm:...]` references |
 | Frontend routing | Add ACM spreadsheet view |
@@ -667,7 +753,6 @@ BAR Excel template → JSON config files → SurrealDB field_schema table → ru
 
 | Item | Owner | Due |
 |------|-------|-----|
-| Confirm AG Grid license approach | User | Before development |
 | Validate extraction accuracy on all sample PDFs | Dev team | Phase 1 |
 | Design review for rebranding | User | Phase 3 |
 
@@ -707,3 +792,4 @@ BAR Excel template → JSON config files → SurrealDB field_schema table → ru
 | 2026-02-04 | 1.1 | Victorian BAR format expansion (Sprint Change Proposal) |
 | 2026-02-08 | 1.2 | UX Audit &amp; Enterprise Readiness - FR-700 series (11 requirements) |
 | 2026-02-08 | 1.3 | Course correction: replaced 3 consultant parsers (Prensa, Greencap, Generic) with 1 generic configurable parser driven by BAR field schema configuration (FR-107, Section 5.7). See `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md` |
+| 2026-02-20 | 1.4 | SCP-20260220: FR-102 updated (MinerU primary); 7 new `acm_record` fields (quantity, acm_labelled, identifying_company, floor_level, normalized_action, enriched_text, parent_table_id); 3 new tables (field_schema §5.1.2, acm_table_section §5.1.3, extraction_progress §5.1.4); 3 new API endpoints (extraction-progress SSE/REST, field-schema); FR-800 series (Extraction Monitor, E15); FR-900 series (UX Enhancement, E16); Section 1.4 note on generic parser; Section 9 resolved AG Grid license item |
