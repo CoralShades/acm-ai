@@ -159,7 +159,8 @@ _bmad/
 #node modules
 node_modules/
 .vercel
-frontend/.next-dev/cache/*
+.next/
+frontend/.next-dev/
 docker-compose.override.yml
 package-lock.json
 
