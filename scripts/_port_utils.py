@@ -112,9 +112,12 @@ def kill_port_owner(port: int, force: bool = False) -> bool:
 
     try:
         if platform.system() == "Windows":
-            flag = "/F" if force else ""
+            args = ["taskkill"]
+            if force:
+                args.append("/F")
+            args.extend(["/PID", str(conflict.pid)])
             subprocess.run(
-                ["taskkill", flag, "/PID", str(conflict.pid)],
+                args,
                 capture_output=True,
                 timeout=5,
             )
