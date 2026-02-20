@@ -596,8 +596,11 @@ class TestCompileBuildingInventory:
             )
 
         assert result is not None
-        assert result.total_buildings == 1
-        assert result.buildings[0].building_id == "B00A"
+        # LLM result is merged with heuristic buildings from content, so total > 1
+        assert result.total_buildings == 4
+        b00a = next(b for b in result.buildings if b.building_id == "B00A")
+        # LLM-assigned complexity is preserved after merge
+        assert b00a.complexity == BuildingComplexity.COMPLEX
         # Processing groups should be generated even from LLM path
         assert len(result.processing_groups) >= 1  # Generated from buildings
 
