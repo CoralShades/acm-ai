@@ -5,8 +5,8 @@
  * Validates extraction accuracy, negative detection, merged cells,
  * multi-page tables, field completeness, and export functionality.
  *
- * Target: 80%+ extraction accuracy (25/31 records from Broadmeadows SAMP)
- * Baseline: 26% accuracy (8/31 records)
+ * Target: 95%+ extraction accuracy (30/31 records from Broadmeadows SAMP)
+ * Baseline: 87% accuracy (27/31 records as of Sprint 1)
  *
  * Tag: @acm-extraction
  */
@@ -49,8 +49,8 @@ const expectedResults = JSON.parse(
   fs.readFileSync(EXPECTED_RESULTS_FILE, 'utf-8')
 );
 const EXPECTED_RECORD_COUNT = expectedResults.metadata.total_records; // 31
-const TARGET_ACCURACY = 0.8; // 80%
-const TARGET_EXTRACTED_COUNT = Math.ceil(EXPECTED_RECORD_COUNT * TARGET_ACCURACY); // 25
+const TARGET_ACCURACY = 0.95; // 95%
+const TARGET_EXTRACTED_COUNT = Math.ceil(EXPECTED_RECORD_COUNT * TARGET_ACCURACY); // 30
 
 test.describe('ACM Extraction Pipeline @acm-extraction', () => {
   let factory: TestDataFactory;
@@ -63,7 +63,7 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     await factory.cleanup();
   });
 
-  test('extracts all records from Broadmeadows SAMP with 80%+ accuracy', async ({
+  test('extracts all records from Broadmeadows SAMP with 95%+ accuracy', async ({
     page,
   }) => {
     // Given: User has created a notebook
@@ -97,22 +97,21 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     // Capture ACM grid state
     await captureEvidence(page, 'acm-grid-loaded');
 
-    // Then: Verify extraction accuracy meets 80%+ threshold
+    // Then: Verify extraction accuracy meets 95%+ threshold
     const actualCount = await getACMRecordCount(page);
     const accuracy = actualCount / EXPECTED_RECORD_COUNT;
 
     // Capture final grid state
     await captureEvidence(page, `acm-grid-final-count-${actualCount}`);
 
-    // Assert accuracy threshold
-    expect(actualCount).toBeGreaterThanOrEqual(
-      TARGET_EXTRACTED_COUNT,
-      `Expected at least ${TARGET_EXTRACTED_COUNT} records (80% of ${EXPECTED_RECORD_COUNT}), got ${actualCount} (${(accuracy * 100).toFixed(1)}%)`
+    // Log accuracy for debugging
+    console.log(
+      `Extraction: ${actualCount}/${EXPECTED_RECORD_COUNT} records (${(accuracy * 100).toFixed(1)}% accuracy)`
     );
-    expect(accuracy).toBeGreaterThanOrEqual(
-      TARGET_ACCURACY,
-      `Extraction accuracy ${(accuracy * 100).toFixed(1)}% is below 80% threshold`
-    );
+
+    // Assert accuracy threshold (95% = 30/31 records)
+    expect(actualCount).toBeGreaterThanOrEqual(TARGET_EXTRACTED_COUNT);
+    expect(accuracy).toBeGreaterThanOrEqual(TARGET_ACCURACY);
 
     // Verify some expected records exist
     const positiveRecordFound = await searchACMGrid(page, 'Fan Room');
@@ -268,6 +267,63 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     }
   });
 
+  test('extracts BAR compliance fields from SAMP documents', async ({ page }) => {
+    // Given: User has created a notebook
+    const notebook = await factory.createNotebook({
+      name: 'BAR Compliance Fields Test',
+    });
+    await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
+
+    // When: User uploads Broadmeadows SAMP (contains BAR fields)
+    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await waitForExtraction(page, 180000);
+    await navigateToACMRegister(page);
+
+    // Then: Verify BAR compliance fields appear in grid
+    // BAR fields: identifying_company, date_inspected, inspection_type,
+    //             bar_report_no, date_of_bar_report, asbestos_assessor, result_classification
+    const recordCount = await getACMRecordCount(page);
+    expect(recordCount).toBeGreaterThan(0);
+
+    // Capture grid with BAR columns
+    await captureEvidence(page, 'bar-fields-grid');
+
+    // Verify BAR columns are visible in grid
+    const grid = page.locator('[data-testid="acm-grid"]');
+    await expect(grid).toBeVisible();
+
+    // Check that BAR field column headers exist
+    // Note: AG Grid may virtualize columns, so we check for data presence instead
+    const firstRecord = await getACMRecordDetails(page, 0);
+
+    // Verify BAR fields exist in record structure
+    const barFields = [
+      'identifying_company',
+      'date_inspected',
+      'inspection_type',
+      'bar_report_no',
+      'date_of_bar_report',
+      'asbestos_assessor',
+      'result_classification',
+    ];
+
+    barFields.forEach(field => {
+      expect(firstRecord).toHaveProperty(field);
+    });
+
+    // Capture record detail with BAR fields
+    await captureEvidence(page, 'bar-fields-record-detail');
+
+    // Verify at least some BAR fields have non-null values
+    // (Not all SAMPs have all BAR fields, but Broadmeadows should have some)
+    const hasAnyBARValue = barFields.some(field => {
+      const value = firstRecord[field];
+      return value && value !== '' && value !== 'null' && value !== 'undefined';
+    });
+
+    expect(hasAnyBARValue).toBeTruthy();
+  });
+
   test('exports ACM records as CSV successfully', async ({ page }) => {
     // Given: User has uploaded SAMP and extracted ACM records
     const notebook = await factory.createNotebook({
@@ -343,6 +399,100 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
       // Capture error state
       await captureError(page, 'extraction-error-unexpected');
       throw error;
+    }
+  });
+
+  /**
+   * Baseline Test: Alexander District Hospital SAMP
+   *
+   * TODO: Establish accuracy baseline for Alexander District Hospital
+   *
+   * This test is a placeholder for establishing extraction accuracy
+   * baseline on a second SAMP document. Currently skipped until the
+   * PDF file is added to fixtures/samps/ directory.
+   *
+   * Steps to enable:
+   * 1. Add alexander-district-hospital-samp.pdf to tests/e2e/fixtures/samps/
+   * 2. Create alexander-expected-results.json with ground truth data
+   * 3. Update ALEXANDER_SAMP and ALEXANDER_EXPECTED_RESULTS paths below
+   * 4. Remove test.skip() to enable the test
+   *
+   * Expected outcome:
+   * - Extraction completes successfully
+   * - Record count > 0 (actual baseline TBD)
+   * - Accuracy measurement for comparison with Broadmeadows
+   */
+  test.skip('establishes extraction baseline for Alexander District Hospital SAMP', async ({
+    page,
+  }) => {
+    // Test fixture paths (to be added)
+    const ALEXANDER_SAMP = path.join(
+      SAMP_FIXTURES_DIR,
+      'alexander-district-hospital-samp.pdf'
+    );
+    const ALEXANDER_EXPECTED_RESULTS = path.join(
+      SAMP_FIXTURES_DIR,
+      'alexander-expected-results.json'
+    );
+
+    // Skip if fixture files don't exist yet
+    if (!fs.existsSync(ALEXANDER_SAMP)) {
+      console.log('⏭️  Skipping Alexander District Hospital baseline - fixture not found');
+      return;
+    }
+
+    // Given: User has created a notebook
+    const notebook = await factory.createNotebook({
+      name: 'Alexander District Hospital Baseline',
+    });
+    await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
+
+    // When: User uploads Alexander District Hospital SAMP
+    await uploadSAMP(page, ALEXANDER_SAMP);
+
+    // Capture upload workflow
+    await captureWorkflow(page, 'alexander-upload', [
+      'file-selected',
+      'upload-started',
+      'processing',
+    ]);
+
+    // Wait for extraction to complete
+    await waitForExtraction(page, 180000);
+
+    // Navigate to ACM register
+    await navigateToACMRegister(page);
+
+    // Capture grid state
+    await captureEvidence(page, 'alexander-grid-loaded');
+
+    // Then: Verify extraction completed and records were extracted
+    const recordCount = await getACMRecordCount(page);
+    expect(recordCount).toBeGreaterThan(0);
+
+    // If expected results exist, calculate accuracy
+    if (fs.existsSync(ALEXANDER_EXPECTED_RESULTS)) {
+      const alexResults = JSON.parse(
+        fs.readFileSync(ALEXANDER_EXPECTED_RESULTS, 'utf-8')
+      );
+      const expectedCount = alexResults.metadata.total_records;
+      const accuracy = recordCount / expectedCount;
+
+      console.log(
+        `📊 Alexander District Hospital Baseline: ${recordCount}/${expectedCount} records (${(accuracy * 100).toFixed(1)}% accuracy)`
+      );
+
+      // Capture final state with accuracy
+      await captureEvidence(
+        page,
+        `alexander-baseline-${recordCount}-of-${expectedCount}`
+      );
+
+      // Document baseline (no assertion yet - just measuring)
+      expect(recordCount).toBeGreaterThan(0);
+    } else {
+      console.log(`📊 Alexander District Hospital: ${recordCount} records extracted (ground truth TBD)`);
+      await captureEvidence(page, `alexander-baseline-${recordCount}-records`);
     }
   });
 });

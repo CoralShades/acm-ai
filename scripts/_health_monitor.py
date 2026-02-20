@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import time
 import urllib.request
 from enum import Enum
+from typing import Optional
 
 from _port_utils import PortConflict, check_all_ports, is_port_in_use
 from _process_utils import is_service_running
@@ -27,6 +29,26 @@ class ServiceStatus(Enum):
     UNHEALTHY = "UNHEALTHY"
     STARTING = "STARTING"
     STOPPED = "STOPPED"
+
+
+def get_detailed_health(api_url: str = "http://localhost:5055") -> Optional[dict]:
+    """Fetch detailed health information from API /health/detailed endpoint.
+
+    Args:
+        api_url: Base API URL (default: http://localhost:5055)
+
+    Returns:
+        Detailed health dict or None if API is unreachable
+    """
+    try:
+        req = urllib.request.Request(f"{api_url}/health/detailed", method="GET")
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            if resp.status < 400:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data
+    except Exception:
+        pass
+    return None
 
 
 def check_health(service: ServiceDef) -> ServiceStatus:
@@ -94,8 +116,16 @@ def _build_status_table(
     services: dict[str, ServiceDef],
     statuses: dict[str, ServiceStatus],
     conflicts: dict[str, PortConflict | None] | None = None,
+    detailed_health: Optional[dict] = None,
 ) -> Table:
-    """Build a rich Table showing service status."""
+    """Build a rich Table showing service status.
+
+    Args:
+        services: Service definitions
+        statuses: Service status dict
+        conflicts: Port conflicts dict
+        detailed_health: Optional detailed health info from /health/detailed endpoint
+    """
     table = Table(title="ACM-AI Service Status", show_lines=True)
     table.add_column("Service", style="bold", min_width=18)
     table.add_column("Status", min_width=10, justify="center")
@@ -126,6 +156,54 @@ def _build_status_table(
             info,
         )
 
+    # Add detailed health info if available
+    if detailed_health and "components" in detailed_health:
+        table.add_section()
+        components = detailed_health["components"]
+
+        # Database component
+        if "database" in components:
+            db = components["database"]
+            db_status = "HEALTHY" if db["status"] == "connected" else "UNHEALTHY"
+            db_color = "green" if db["status"] == "connected" else "red"
+            db_info = db.get("error", "Connected")
+            table.add_row(
+                "Database (SurrealDB)",
+                f"[{db_color}]{db_status}[/{db_color}]",
+                "-",
+                db_info,
+            )
+
+        # Worker component
+        if "worker" in components:
+            worker = components["worker"]
+            worker_status_map = {
+                "running": "HEALTHY",
+                "stopped": "STOPPED",
+                "unknown": "STOPPED",
+            }
+            worker_status = worker_status_map.get(worker["status"], "STOPPED")
+            worker_color = "green" if worker["status"] == "running" else "dim"
+            worker_info = f"PID {worker['pid']}" if worker.get("pid") else "Not running"
+            table.add_row(
+                "Worker Process",
+                f"[{worker_color}]{worker_status}[/{worker_color}]",
+                "-",
+                worker_info,
+            )
+
+        # API metrics
+        if "api" in components:
+            api = components["api"]
+            uptime_hours = api["uptime_seconds"] / 3600
+            memory_mb = api["memory_mb"]
+            table.add_row(
+                "API Metrics",
+                "-",
+                "-",
+                f"Uptime: {uptime_hours:.1f}h | Memory: {memory_mb:.0f}MB",
+            )
+
     return table
 
 
@@ -133,11 +211,19 @@ def display_status_table(
     services: dict[str, ServiceDef],
     statuses: dict[str, ServiceStatus],
     conflicts: dict[str, PortConflict | None] | None = None,
+    detailed_health: Optional[dict] = None,
 ) -> None:
-    """Display service status using rich or ANSI fallback."""
+    """Display service status using rich or ANSI fallback.
+
+    Args:
+        services: Service definitions
+        statuses: Service status dict
+        conflicts: Port conflicts dict
+        detailed_health: Optional detailed health info from /health/detailed endpoint
+    """
     if HAS_RICH:
         console = Console()
-        table = _build_status_table(services, statuses, conflicts)
+        table = _build_status_table(services, statuses, conflicts, detailed_health)
         console.print(table)
         console.print()
 
@@ -207,8 +293,12 @@ def _display_ansi_fallback(
     print()
 
 
-def live_health_dashboard(services: dict[str, ServiceDef]) -> None:
-    """Live-updating health dashboard using rich.Live."""
+def live_health_dashboard(services: dict[str, ServiceDef]) -> int:
+    """Live-updating health dashboard using rich.Live.
+
+    Returns:
+        Exit code: 0 if all healthy, 1 if any component unhealthy
+    """
     if not HAS_RICH:
         print("Live dashboard requires 'rich' library.")
         print("Install with: uv add rich --group dev")
@@ -223,11 +313,12 @@ def live_health_dashboard(services: dict[str, ServiceDef]) -> None:
                 time.sleep(3)
         except KeyboardInterrupt:
             print("\nDashboard stopped.")
-        return
+        return 0
 
     console = Console()
     console.print("[bold]ACM-AI Health Dashboard[/bold] (Ctrl+C to exit)\n")
 
+    final_statuses = {}
     try:
         with Live(
             _build_status_table(services, poll_all_health(services)),
@@ -237,7 +328,18 @@ def live_health_dashboard(services: dict[str, ServiceDef]) -> None:
             while True:
                 statuses = poll_all_health(services)
                 conflicts = check_all_ports(services)
-                live.update(_build_status_table(services, statuses, conflicts))
+                detailed_health = get_detailed_health()
+                live.update(
+                    _build_status_table(services, statuses, conflicts, detailed_health)
+                )
+                final_statuses = statuses
                 time.sleep(2)
     except KeyboardInterrupt:
         console.print("\n[dim]Dashboard stopped.[/dim]")
+
+    # Return non-zero if any service unhealthy
+    unhealthy = any(
+        s in (ServiceStatus.UNHEALTHY, ServiceStatus.STOPPED)
+        for s in final_statuses.values()
+    )
+    return 1 if unhealthy else 0
