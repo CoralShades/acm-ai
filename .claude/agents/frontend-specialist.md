@@ -8,7 +8,7 @@ tools:
   - Write
   - Edit
   - Bash
-model: claude-sonnet-4-6
+model: sonnet
 maxTurns: 40
 ---
 

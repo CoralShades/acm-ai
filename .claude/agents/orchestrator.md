@@ -9,7 +9,7 @@ tools:
   - Edit
   - Bash
   - Task
-model: claude-sonnet-4-6
+model: sonnet
 maxTurns: 50
 ---
 
