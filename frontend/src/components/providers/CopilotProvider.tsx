@@ -16,11 +16,16 @@ interface ErrorBoundaryState {
  * Error boundary that catches CopilotKit initialization failures
  * and renders children without the CopilotKit context.
  */
+interface CopilotErrorBoundaryProps {
+  children: React.ReactNode;
+  runtimeUrl: string;
+}
+
 class CopilotErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  CopilotErrorBoundaryProps,
   ErrorBoundaryState
 > {
-  constructor(props: { children: React.ReactNode }) {
+  constructor(props: CopilotErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
@@ -38,7 +43,11 @@ class CopilotErrorBoundary extends React.Component<
       // Render children without CopilotKit context - Smart Chat will be unavailable
       return this.props.children;
     }
-    return this.props.children;
+    return (
+      <CopilotKit runtimeUrl={this.props.runtimeUrl}>
+        {this.props.children}
+      </CopilotKit>
+    );
   }
 }
 
@@ -51,10 +60,8 @@ class CopilotErrorBoundary extends React.Component<
  */
 export function CopilotProvider({ children }: CopilotProviderProps) {
   return (
-    <CopilotErrorBoundary>
-      <CopilotKit runtimeUrl="/copilot">
-        {children}
-      </CopilotKit>
+    <CopilotErrorBoundary runtimeUrl="/copilot">
+      {children}
     </CopilotErrorBoundary>
   );
 }
