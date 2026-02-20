@@ -5,11 +5,15 @@
 # @fix_plan.md are complete or a blocker is hit.
 #
 # Usage:
-#   .ralph/ralph_loop.sh [--max N] [--tool TOOL_FLAG]
+#   .ralph/ralph_loop.sh [--max N] [--tool TOOL_FLAG] [--model MODEL]
+#                        [--fallback-model MODEL] [--log-dir DIR]
+#                        [--prompt FILE]
 #
 # Examples:
 #   .ralph/ralph_loop.sh                    # Default: 40 iterations
 #   .ralph/ralph_loop.sh --max 20           # Limit to 20 iterations
+#   .ralph/ralph_loop.sh --model sonnet --fallback-model opus
+#   .ralph/ralph_loop.sh --log-dir .ralph/logs/sprint-xxx/story-id/phase-dev
 #
 # Exit codes:
 #   0 - All tasks completed successfully
@@ -23,13 +27,15 @@ set -euo pipefail
 # --- Configuration ---
 MAX_ITERATIONS=40
 TOOL_FLAG=""
+MODEL=""
+FALLBACK_MODEL=""
 COMPLETION_PROMISE="<promise>COMPLETE</promise>"
 BLOCKED_SIGNAL="<promise>BLOCKED</promise>"
 CHECKPOINT_INTERVAL=10
 LOG_DIR=".ralph/logs"
 FIX_PLAN=".ralph/@fix_plan.md"
 PROMPT_FILE=".ralph/PROMPT.md"
-METRICS_FILE=".ralph/logs/metrics.log"
+METRICS_FILE=""  # Set after LOG_DIR is finalized
 LOOP_START_TIME=""
 
 # --- Parse Arguments ---
@@ -43,6 +49,22 @@ while [[ $# -gt 0 ]]; do
             TOOL_FLAG="$2"
             shift 2
             ;;
+        --model)
+            MODEL="$2"
+            shift 2
+            ;;
+        --fallback-model)
+            FALLBACK_MODEL="$2"
+            shift 2
+            ;;
+        --log-dir)
+            LOG_DIR="$2"
+            shift 2
+            ;;
+        --prompt)
+            PROMPT_FILE="$2"
+            shift 2
+            ;;
         --help|-h)
             head -20 "$0" | grep -E "^#" | sed 's/^# //' | sed 's/^#//'
             exit 0
@@ -53,6 +75,9 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Finalize metrics file path after LOG_DIR is set
+METRICS_FILE="$LOG_DIR/metrics.log"
 
 # --- Preflight Checks ---
 preflight_check() {
@@ -168,10 +193,20 @@ main() {
         print_dashboard "$i"
         log_metric "$i" "iteration_start" "tasks=$(count_tasks)"
 
-        # Run Claude Code with the prompt file content piped via -p flag
-        local prompt_content
-        prompt_content=$(cat "$PROMPT_FILE")
-        claude -p "$prompt_content" $TOOL_FLAG > "$iteration_log" 2>&1 || true
+        # Build Claude command with model flags
+        local claude_args=(-p "$(cat "$PROMPT_FILE")")
+        if [ -n "$MODEL" ]; then
+            claude_args+=(--model "$MODEL")
+        fi
+        if [ -n "$FALLBACK_MODEL" ]; then
+            claude_args+=(--fallback-model "$FALLBACK_MODEL")
+        fi
+        if [ -n "$TOOL_FLAG" ]; then
+            claude_args+=($TOOL_FLAG)
+        fi
+
+        # Run Claude Code
+        claude "${claude_args[@]}" > "$iteration_log" 2>&1 || true
         local exit_code=${PIPESTATUS[0]:-$?}
 
         local end_time
