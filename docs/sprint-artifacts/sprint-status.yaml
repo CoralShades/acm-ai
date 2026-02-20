@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-15
+updated: 2026-02-20
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -167,17 +167,19 @@ development_status:
   epic-8-retrospective: archived
 
   # Epic 9: Document Library Management (P0)
-  # 2/3 stories complete, 1 remaining (drafted)
+  # 2/3 stories complete, 1 remaining (ready-for-dev)
+  # PROMOTED 2026-02-20: E9-S3 drafted -> ready-for-dev (SCP-20260220)
   epic-9: in-progress
   e9-s1-create-document-library-view: done
   e9-s2-document-processing-status-dashboard: done
-  e9-s3-document-actions-and-bulk-operations: drafted
+  e9-s3-document-actions-and-bulk-operations: ready-for-dev
   epic-9-retrospective: optional
 
   # Epic 10: ACM-AI UI Simplification (P0)
-  # 0/1 stories complete, 1 remaining (drafted)
+  # 0/1 stories complete, 1 remaining (ready-for-dev)
+  # PROMOTED 2026-02-20: E10-S1 drafted -> ready-for-dev (SCP-20260220)
   epic-10: backlog
-  e10-s1-simplify-navigation: drafted
+  e10-s1-simplify-navigation: ready-for-dev
   epic-10-retrospective: optional
 
   # Epic 11: Search & Retrieval Enhancement (P0/P1) - RAG Strategy
@@ -224,6 +226,23 @@ development_status:
   e14-s11-pydantic-typescript-type-generation: done
   epic-14-retrospective: optional
 
+  # Epic 15: Extraction Monitor & Live Logging UI (P0) - NEW 2026-02-20
+  # 0/2 stories complete; story docs created 2026-02-20 in docs/sprint-artifacts/
+  # Rationale: Backend SSE + frontend log components exist (E1-S21 done) but not surfaced from Document Library
+  epic-15: backlog
+  e15-s1-extraction-log-panel-in-document-library: drafted  # docs/sprint-artifacts/e15-s1-extraction-log-panel.md
+  e15-s2-dedicated-extraction-monitor-page: drafted  # docs/sprint-artifacts/e15-s2-extraction-monitor-page.md
+  epic-15-retrospective: optional
+
+  # Epic 16: UX Enhancement Sprint (P0/P1) - NEW 2026-02-20
+  # 0/3 stories complete; story docs created 2026-02-20 in docs/sprint-artifacts/
+  # Rationale: Dashboard home, record detail slide-out, empty states not covered by E14
+  epic-16: backlog
+  e16-s1-dashboard-home-with-acm-stats: drafted  # docs/sprint-artifacts/e16-s1-dashboard-home.md
+  e16-s2-acm-record-detail-slide-out-panel: drafted  # docs/sprint-artifacts/e16-s2-record-detail-panel.md
+  e16-s3-empty-states-and-onboarding-hints: drafted  # docs/sprint-artifacts/e16-s3-empty-states.md
+  epic-16-retrospective: optional
+
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
   # E2E TEST INFRASTRUCTURE 2026-02-16 (Phase 4 - completed by PR #30):
@@ -231,21 +250,35 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 14 (5 done, 5 in-progress, 3 backlog, 1 archived)
-# Total Stories: 94 (93 regular stories + 1 bug fix)
-# Stories Done: 72 (77%)  # Includes E2-S10-FIX hotfix + PR #30 E2E gap fixes
+# Total Epics: 16 (5 done, 5 in-progress, 5 backlog, 1 archived)
+# Total Stories: 99 (98 regular stories + 1 bug fix)
+# Stories Done: 72 (73%)
 # Stories Review: 0
-# Stories Ready-for-dev: 5 (E2-S8, E2-S11, E5-S3, E5-S4, E1-S23)
-# Stories Drafted: 2 (E9-S3, E10-S1)
+# Stories Ready-for-dev: 7 (E2-S8, E2-S11, E5-S3, E5-S4, E1-S23, E9-S3, E10-S1)
+# Stories Drafted: 5 (E15-S1, E15-S2, E16-S1, E16-S2, E16-S3)
 # Stories Backlog: 8 (E11-S2, E12-S1..S4, E13-S1..S3)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-16  # PR #30 merged - E2E gap fix sprint completed
+# Last Updated: 2026-02-20  # SCP-20260220 - Added E15 + E16, promoted E9-S3 + E10-S1
 #
 # COMPLETED EPICS: E3, E4, E6, E7, E14
 # IN-PROGRESS EPICS: E1 (26/27), E2 (10/12), E5 (2/4), E9 (2/3), E11 (1/2)
-# BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3)
+# BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3), E15 (0/2), E16 (0/3)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
+#
+# KEY CHANGES (2026-02-20 - SCP-20260220 Extraction Monitor + UX):
+# ==================================================================
+# - NEW Epic 15: Extraction Monitor & Live Logging UI (2 stories, backlog)
+#   - E15-S1: Extraction Log Panel in Document Library
+#   - E15-S2: Dedicated Extraction Monitor Page
+# - NEW Epic 16: UX Enhancement Sprint (3 stories, backlog)
+#   - E16-S1: Dashboard Home Page with ACM Stats
+#   - E16-S2: ACM Record Detail Slide-Out Panel
+#   - E16-S3: Empty States & Onboarding Hints
+# - PROMOTED: E9-S3 drafted -> ready-for-dev
+# - PROMOTED: E10-S1 drafted -> ready-for-dev
+# - Total stories: 94 -> 99 (+5 new stories across E15, E16)
+# - Change proposal: _bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md
 #
 # KEY CHANGES (2026-02-16 - E2E Gap Fix Sprint Completed via PR #30):
 # =====================================================================

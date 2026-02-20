@@ -3,7 +3,9 @@
 > **Project:** ACM-AI v1.0
 > **Date:** 2025-12-07 (Updated: 2026-02-08)
 > **Status:** Draft - Updated for UX &amp; Enterprise Readiness
+> **Status:** v1.1 - Updated for SCP-20260220 (Extraction Monitor + UX Enhancement)
 > **Change Log:**
+> - 2026-02-20 - v1.1: SCP-20260220 migration 17–19 table additions, SSE endpoint fix, 7-stage pipeline heading, planned E15/E16 components
 > - 2026-02-08 - Frontend Design System Architecture (UX Audit)
 > - 2026-02-08 - Sections 5.2, 5.3 rewritten: Generic Configurable Parser Architecture (course correction per `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md`)
 
@@ -45,14 +47,14 @@
                     ┌──────────────────────────────┼──────────────────────────────┐
                     │                              │                              │
         ┌───────────▼───────────┐    ┌─────────────▼─────────────┐    ┌──────────▼──────────┐
-        │   SurrealDB (8000)    │    │   Background Worker       │    │   Docling Service   │
-        │  ┌─────────────────┐  │    │  ┌─────────────────────┐  │    │   (Local Python)    │
-        │  │ Tables          │  │    │  │ Commands            │  │    │                     │
-        │  │ ├─ source       │  │    │  │ ├─ process_source   │  │    │  PDF → Markdown     │
-        │  │ ├─ note         │  │    │  │ ├─ run_transform    │  │    │  Table Extraction   │
-        │  │ ├─ acm_record   │◄─┼────┼──┤ ├─ acm_extract(NEW) │  │    │                     │
-        │  │ ├─ site_config  │  │    │  │ └─ acm_classify     │  │    │  Multi-format       │
-        │  │ └─ embedding    │  │    │  └─────────────────────┘  │    │  (Prensa, Greencap) │
+        │   SurrealDB (8000)    │    │   Background Worker       │    │ MinerU (primary)    │
+        │  ┌─────────────────┐  │    │  ┌─────────────────────┐  │    │ Docling (fallback)  │
+        │  │ Tables          │  │    │  │ Commands            │  │    │   (Local Python)    │
+        │  │ ├─ source       │  │    │  │ ├─ process_source   │  │    │                     │
+        │  │ ├─ note         │  │    │  │ ├─ run_transform    │  │    │  PDF → Tables/MD    │
+        │  │ ├─ acm_record   │◄─┼────┼──┤ ├─ acm_extract(NEW) │  │    │  Table Extraction   │
+        │  │ ├─ site_config  │  │    │  │ └─ acm_classify     │  │    │                     │
+        │  │ └─ embedding    │  │    │  └─────────────────────┘  │    │  Generic Config.    │
         │  └─────────────────┘  │    └───────────────────────────┘    └─────────────────────┘
         └───────────────────────┘
 ```
@@ -99,7 +101,25 @@ frontend/src/
 │   │   ├── ACMContextToggle.tsx# Chat context switch
 │   │   ├── SiteConfigForm.tsx  # NEW: Site configuration form
 │   │   ├── ColumnVisibility.tsx# NEW: Column show/hide management
-│   │   └── BARExportDialog.tsx # NEW: BAR Excel export options
+│   │   ├── BARExportDialog.tsx # NEW: BAR Excel export options
+│   │   ├── ExtractionProgressPanel.tsx  # EXISTS (E1-S21): Stage pills + log panel
+│   │   ├── ExtractionLogStream.tsx      # EXISTS (E1-S21): Scrollable log terminal
+│   │   ├── StageProgressPill.tsx        # EXISTS (E1-S21): Stage badge component
+│   │   └── ACMRecordDetailPanel.tsx     # PLANNED (E16-S2): Slide-out 47-field detail panel
+│   │
+│   ├── extraction/             # Extraction Monitor (PLANNED - E15)
+│   │   ├── ExtractionMonitorPage.tsx    # PLANNED (E15-S2): Full-page monitor
+│   │   └── ExtractionHistoryList.tsx    # PLANNED (E15-S2): Paginated history list
+│   │
+│   ├── dashboard/              # Dashboard (PLANNED - E16)
+│   │   ├── DashboardPage.tsx   # PLANNED (E16-S1): Stats dashboard home
+│   │   ├── StatsCard.tsx       # PLANNED (E16-S1): Summary stat card
+│   │   ├── RiskDonutChart.tsx  # PLANNED (E16-S1): Recharts donut
+│   │   └── BuildingsBarChart.tsx # PLANNED (E16-S1): Recharts bar chart
+│   │
+│   ├── common/                 # Shared UX components (PLANNED - E16)
+│   │   ├── EmptyState.tsx      # PLANNED (E16-S3): Reusable empty state card
+│   │   └── OnboardingHint.tsx  # PLANNED (E16-S3): Dismissable hint banner
 │   │
 │   ├── source/
 │   │   └── ChatPanel.tsx       # Update: ACM context support
@@ -223,6 +243,19 @@ DEFINE FIELD school_name ON acm_record TYPE option<string>;
 DEFINE FIELD school_code ON acm_record TYPE option<string>;
 DEFINE FIELD result ON acm_record TYPE option<string>;
 
+-- BAR Compliance fields (Added: PR #30 / E1-S12 / E1-S14)
+DEFINE FIELD quantity ON acm_record TYPE option<string>;  -- Sample quantity (e.g. '10 m²')
+DEFINE FIELD acm_labelled ON acm_record TYPE option<bool>;  -- Boolean: ACM labelled on-site
+DEFINE FIELD acm_label_details ON acm_record TYPE option<string>;  -- Label details if labelled
+DEFINE FIELD identifying_company ON acm_record TYPE option<string>;  -- Hygiene/consulting company
+DEFINE FIELD floor_level ON acm_record TYPE option<string>;  -- Floor level (e.g. 'Ground', 'Level 1')
+DEFINE FIELD normalized_action ON acm_record TYPE option<string>;  -- Normalised action wording (E1-S12, migration 15)
+DEFINE FIELD enriched_text ON acm_record TYPE option<string>;  -- Contextual embedding enrichment (E1-S14, migration 16)
+
+-- Parent Document Retrieval (E11-S1, migration 18)
+DEFINE FIELD parent_table_id ON acm_record TYPE option<record<acm_table_section>>;
+DEFINE INDEX acm_parent ON acm_record FIELDS parent_table_id;
+
 -- Metadata
 DEFINE FIELD page_number ON acm_record TYPE option<int>;
 DEFINE FIELD extraction_confidence ON acm_record TYPE option<float>;
@@ -250,23 +283,67 @@ DEFINE FIELD public_access ON site_config TYPE option<string>;
 DEFINE FIELD building_unique_id ON site_config TYPE option<string>;
 DEFINE FIELD created_at ON site_config TYPE datetime DEFAULT time::now();
 DEFINE INDEX config_source ON site_config FIELDS source_id;
+
+-- Field Schema Table (E1-S11, migration 17) — Runtime field config store
+DEFINE TABLE field_schema SCHEMAFULL;
+DEFINE FIELD config_json ON TABLE field_schema TYPE string;  -- Serialized FieldSchemaConfig JSON
+DEFINE FIELD version ON TABLE field_schema TYPE string;
+DEFINE FIELD created ON TABLE field_schema TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated ON TABLE field_schema TYPE datetime DEFAULT time::now();
+
+-- Parent Document Retrieval Table (E11-S1, migration 18)
+DEFINE TABLE acm_table_section SCHEMAFULL;
+DEFINE FIELD source_id ON acm_table_section TYPE record<source>;
+DEFINE FIELD page_start ON acm_table_section TYPE int;
+DEFINE FIELD page_end ON acm_table_section TYPE int;
+DEFINE FIELD raw_html ON acm_table_section TYPE option<string>;   -- Original HTML from MinerU
+DEFINE FIELD raw_text ON acm_table_section TYPE option<string>;   -- Plain text fallback
+DEFINE FIELD building_name ON acm_table_section TYPE option<string>;
+DEFINE FIELD table_type ON acm_table_section TYPE option<string>;
+DEFINE FIELD created ON acm_table_section TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated ON acm_table_section TYPE option<datetime>;
+DEFINE INDEX section_source ON acm_table_section FIELDS source_id;
+DEFINE INDEX section_pages ON acm_table_section FIELDS page_start, page_end;
+
+-- Extraction Progress Table (migration 19) — SSE pipeline progress store
+DEFINE TABLE extraction_progress SCHEMAFULL;
+DEFINE FIELD command_id ON extraction_progress TYPE string;
+DEFINE FIELD run_id ON extraction_progress TYPE string;
+DEFINE FIELD source_id ON extraction_progress TYPE string;
+DEFINE FIELD status ON extraction_progress TYPE string;  -- "running", "completed", "failed"
+DEFINE FIELD state_json ON extraction_progress TYPE string;  -- Serialized PipelineRunState JSON
+DEFINE FIELD log_entries ON extraction_progress TYPE array DEFAULT [];
+DEFINE FIELD log_entries.* ON extraction_progress TYPE string;
+DEFINE FIELD updated_at ON extraction_progress TYPE datetime DEFAULT time::now();
+DEFINE FIELD created_at ON extraction_progress TYPE datetime DEFAULT time::now();
+DEFINE INDEX idx_extraction_progress_command ON extraction_progress FIELDS command_id UNIQUE;
 ```
 
 ### 3.2 Relationships
 
 ```
-┌─────────────┐         ┌─────────────┐
-│   source    │ 1───────┤ acm_record  │ N
-│   (PDF)     │         │             │
-└─────────────┘         └─────────────┘
-       │
-       │ 1
+┌─────────────┐         ┌─────────────────────┐         ┌───────────────────┐
+│   source    │ 1───────┤    acm_record        │ N───────┤  acm_table_section│
+│   (PDF)     │         │  (parent_table_id →) │         │  (parent doc)     │
+└─────────────┘         └─────────────────────┘         └───────────────────┘
+       │                                                          │
+       │ 1                                                        │ source_id
        │
        ▼ N
 ┌─────────────┐
 │    note     │
 │  (insights) │
 └─────────────┘
+
+┌──────────────────┐
+│ extraction_      │   keyed by command_id (1 per extraction job)
+│ progress         │   drives SSE stream to frontend
+└──────────────────┘
+
+┌──────────────────┐
+│  field_schema    │   keyed by version; loaded by GenericParser + AG Grid
+│  (config_json)   │
+└──────────────────┘
 ```
 
 ---
@@ -473,10 +550,11 @@ interface BARExportOptions {
 
 ## 5. ACM Extraction Pipeline
 
-> **Updated 2026-02-05:** Refactored to two-stage architecture (Extract → Interpret).
+> **Updated 2026-02-05:** 7-stage pipeline (Stages -1, 0, 0.5, 1, 2, 2.5, 3).
+> **Updated 2026-02-20:** Heading corrected from "Two-Stage" to "7-Stage Pipeline".
 > See `docs/reference/extraction-pipeline.md` for complete specification.
 
-### 5.1 Two-Stage Pipeline Architecture
+### 5.1 7-Stage Pipeline Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -773,16 +851,22 @@ class PipelineEventEmitter:
 | `pipeline:completed` | run_id, source_id, total_duration_ms, total_records, confidence_distribution | All stages done |
 | `pipeline:failed` | run_id, source_id, failed_at, error, last_successful_stage | Pipeline halted on error |
 
-**SSE Endpoint:**
+**SSE Endpoint** (confirmed: `api/routers/extraction_events.py:85`):
 ```
-GET /api/extraction/{source_id}/events
+GET /api/acm/extraction-progress/{command_id}/stream
 Accept: text/event-stream
 ```
 
+**REST Polling Fallback** (confirmed: `api/routers/extraction_events.py:103`):
+```
+GET /api/acm/extraction-progress/{command_id}
+```
+Returns `{ command_id, status, state: PipelineRunState, log_entries, updated_at }`.
+
 #### Frontend Integration
 
-**Hook:** `usePipelineStatus(sourceId)`
-- Opens SSE connection to event stream
+**Hook:** `usePipelineStatus(commandId)` (or `use-extraction-progress.ts`)
+- Opens SSE connection to `/api/acm/extraction-progress/{commandId}/stream`
 - Reduces events into `PipelineRunState`
 - Exposes current stage, progress, and full stage history
 - Fallback to polling if SSE unavailable
@@ -1323,8 +1407,7 @@ No new environment variables required - leverages existing configuration.
 
 ### 12.3 Database Migration
 
-The `acm_record` table is created by migration #10 (`migrations/10.surrealql`).
-Migrations run automatically on API startup, or manually via:
+The `acm_record` table was created by migration 10 and expanded through migrations 14–18. The `extraction_progress` table is migration 19. Migrations run automatically on API startup, or manually via:
 
 ```bash
 uv run python -c "from dotenv import load_dotenv; load_dotenv(); import asyncio; from open_notebook.database.async_migrate import AsyncMigrationManager; asyncio.run(AsyncMigrationManager().run_migration_up())"
@@ -1562,7 +1645,7 @@ Pipeline visualization provides real-time feedback during the 7-stage ACM extrac
 
 | Hook | Purpose | File Location |
 |------|---------|---------------|
-| `usePipelineStatus` | SSE connection to `/api/extraction/{source_id}/events`, reduces events into `PipelineRunState` | `frontend/src/lib/hooks/use-pipeline-status.ts` |
+| `usePipelineStatus` / `use-extraction-progress` | SSE connection to `/api/acm/extraction-progress/{commandId}/stream`, reduces events into `PipelineRunState`; polling fallback via REST endpoint | `frontend/src/lib/hooks/use-extraction-progress.ts` |
 
 **Features:**
 - 7-stage vertical stepper with real-time status updates
