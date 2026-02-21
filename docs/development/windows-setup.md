@@ -1,6 +1,152 @@
 # Windows Developer Setup
 
-This guide covers one-time configuration for Windows developers to prevent line-ending conflicts and take advantage of auto-commit automation.
+This guide covers prerequisites and one-time configuration for Windows developers to prevent line-ending conflicts and take advantage of auto-commit automation.
+
+---
+
+## Prerequisites
+
+There are two supported setups depending on your environment. Choose the one that matches you.
+
+---
+
+### Option A: Native Windows (PowerShell + Git for Windows)
+
+> **This is Sanju's setup.** No WSL2 required. Uses Git Bash (bundled with Git for Windows) to execute the hook scripts.
+
+#### A1. Install Claude Code
+
+```powershell
+npm install -g @anthropic-ai/claude-code
+```
+
+Update to latest:
+```powershell
+npm update -g @anthropic-ai/claude-code
+```
+
+Verify:
+```powershell
+claude --version
+# 2.1.x (Claude Code)
+```
+
+#### A2. Install Git for Windows (includes bash)
+
+Download and install from [git-scm.com](https://git-scm.com/download/win). During install, select:
+- **"Git from the command line and also from 3rd-party software"** (adds git + bash to PATH)
+- **"Use bundled OpenSSH"** (default)
+
+Verify bash is on PATH after install:
+```powershell
+bash --version
+# GNU bash, version 5.x.x (includes git bash)
+```
+
+> **Why bash?** The hook scripts (`.sh` files) are bash scripts. The hooks are registered in `settings.json` with `bash "..."` as the command, so Git Bash executes them automatically — no WSL2 needed.
+
+#### A3. Install GitHub CLI (`gh`) — for Auto-PR Creation
+
+```powershell
+winget install --id GitHub.cli
+```
+
+Authenticate:
+```powershell
+gh auth login
+# Choose: GitHub.com → HTTPS → Login with a web browser
+```
+
+Verify:
+```powershell
+gh auth status
+```
+
+If `gh` is not installed, the hooks skip PR creation gracefully and just commit + push.
+
+#### A4. Verify Python 3
+
+The `story-done-check.sh` hook uses `python3` to parse JSON input.
+
+```powershell
+python3 --version
+# Python 3.x.x
+```
+
+Git Bash ships with a minimal Python. If `python3` is missing in bash context, install Python from [python.org](https://www.python.org/downloads/windows/) and ensure it's on your PATH.
+
+#### A5. Verify Hooks Are Registered
+
+Open Claude Code from PowerShell in the project directory:
+```powershell
+cd D:\ailocal\acm-ai
+claude
+```
+
+Then type `/hooks` in the Claude Code prompt. You should see:
+- `[Project] Stop` → `bash ".../auto-commit.sh"`
+- `[Project] PostToolUse (Write|Edit)` → `bash ".../story-done-check.sh"`
+- `[Project] SessionStart (startup)` → `session-start.sh`
+
+---
+
+### Option B: WSL2 or Linux (your setup + hosted environments)
+
+> **This is the main dev setup (WSL2 on Windows, or Linux servers).** Everything runs natively in bash.
+
+#### B1. Install Claude Code
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Update:
+```bash
+npm update -g @anthropic-ai/claude-code
+```
+
+#### B2. Install GitHub CLI (`gh`)
+
+```bash
+# Ubuntu/Debian
+sudo apt install gh
+# or
+curl -sS https://webi.sh/gh | sh
+
+gh auth login
+```
+
+#### B3. Ensure Python 3 is available
+
+```bash
+python3 --version
+# Python 3.x.x — pre-installed on most Ubuntu/WSL2 distros
+```
+
+If missing: `sudo apt install python3`
+
+#### B4. Ensure Hook Scripts Are Executable
+
+```bash
+ls -la .claude/hooks/
+# Should show -rwxr-xr-x for auto-commit.sh and story-done-check.sh
+```
+
+If not:
+```bash
+chmod +x .claude/hooks/auto-commit.sh .claude/hooks/story-done-check.sh
+```
+
+#### B5. Launch Claude Code from WSL2 Terminal
+
+```bash
+cd /mnt/d/ailocal/acm-ai    # WSL2 path to project
+claude
+```
+
+Type `/hooks` to verify all three hooks appear.
+
+---
 
 ## Line Ending Setup (Required — do this once)
 

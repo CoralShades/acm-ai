@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/auto-commit.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-commit.sh\"",
             "timeout": 30
           }
         ]
@@ -75,7 +75,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/story-done-check.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/story-done-check.sh\"",
             "timeout": 60
           }
         ]
