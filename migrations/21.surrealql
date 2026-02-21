@@ -1,0 +1,21 @@
+-- Migration 22: AG-UI events table for extraction pipeline observability
+-- Story: E17-S1 AG-UI Extraction Pipeline Endpoint
+
+DEFINE TABLE agui_events SCHEMALESS;
+DEFINE FIELD command_id ON agui_events TYPE string;
+DEFINE FIELD sequence ON agui_events TYPE int;
+DEFINE FIELD type ON agui_events TYPE string;
+DEFINE FIELD payload ON agui_events TYPE object;
+DEFINE FIELD timestamp ON agui_events TYPE string;
+DEFINE INDEX agui_events_cmd_seq ON agui_events FIELDS command_id, sequence;
+
+-- A2A tasks table for agent-to-agent interoperability
+-- Story: E17-S5 A2A Agent Card & Task Lifecycle
+DEFINE TABLE a2a_tasks SCHEMALESS;
+DEFINE FIELD task_id ON a2a_tasks TYPE string;
+DEFINE FIELD status ON a2a_tasks TYPE string;
+DEFINE FIELD skill_id ON a2a_tasks TYPE string;
+DEFINE FIELD input ON a2a_tasks TYPE object;
+DEFINE FIELD result ON a2a_tasks TYPE option<object>;
+DEFINE FIELD created_at ON a2a_tasks TYPE datetime;
+DEFINE INDEX a2a_tasks_task_id ON a2a_tasks FIELDS task_id UNIQUE;

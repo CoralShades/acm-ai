@@ -1,0 +1,3 @@
+-- Rollback migration 22: Remove AG-UI events and A2A tasks tables
+REMOVE TABLE agui_events;
+REMOVE TABLE a2a_tasks;

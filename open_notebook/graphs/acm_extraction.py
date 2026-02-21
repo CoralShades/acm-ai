@@ -39,6 +39,7 @@ from open_notebook.extractors.acm_schemas import (
     BuildingRoomContext,
     ExtractionStatus,
 )
+from open_notebook.extractors.agui_event_emitter import AGUIEventEmitter
 from open_notebook.extractors.building_inventory import (
     BuildingInventory,
     compile_building_inventory,
@@ -385,11 +386,18 @@ class ExtractionState(TypedDict):
     orchestrator_stats: Optional[OrchestratorStats]
     # Pipeline observability (E1-S21)
     pipeline_logger: Optional[PipelineLogger]
+    # AG-UI event emitter (E17-S1)
+    agui_emitter: Optional[AGUIEventEmitter]
 
 
 def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
     """Safely get PipelineLogger from state (may be None for backward compat)."""
     return state.get("pipeline_logger")
+
+
+def _get_agui_emitter(state: dict) -> Optional[AGUIEventEmitter]:
+    """Safely get AGUIEventEmitter from state (may be None for backward compat)."""
+    return state.get("agui_emitter")
 
 
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
@@ -660,12 +668,17 @@ async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
     content = source.full_text or ""
     model_id = state.get("model_id")
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
     if pl:
         pl.stage_enter(StageId.STRUCTURE, "Extracting document metadata...")
+    if agui:
+        await agui.emit_step_started("extract_metadata")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for metadata extraction")
+        if agui:
+            await agui.emit_step_finished("extract_metadata")
         return {"document_metadata": None}
 
     try:
@@ -685,9 +698,17 @@ async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
                     consultant=consultant,
                     fields=fields_count,
                 )
+            if agui:
+                await agui.emit_state_delta(
+                    [{"op": "replace", "path": "/metadata", "value": {"consultant": consultant, "fields": fields_count}}]
+                )
+        if agui:
+            await agui.emit_step_finished("extract_metadata", fields=fields_count if metadata else 0)
         return {"document_metadata": metadata}
     except Exception as e:
         logger.warning(f"Metadata extraction failed for source {source.id}: {e}")
+        if agui:
+            await agui.emit_step_finished("extract_metadata")
         return {"document_metadata": None}
 
 
@@ -700,12 +721,17 @@ async def extract_structure(state: dict, config: RunnableConfig) -> dict:
     content = source.full_text or ""
     model_id = state.get("model_id")
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
     if pl:
         pl.stage_progress(StageId.STRUCTURE, "Extracting document structure...")
+    if agui:
+        await agui.emit_step_started("structure")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for structure extraction")
+        if agui:
+            await agui.emit_step_finished("structure")
         return {"document_structure": None}
 
     try:
@@ -723,9 +749,16 @@ async def extract_structure(state: dict, config: RunnableConfig) -> dict:
                 register_start=structure.register_start_page,
                 buildings=len(structure.building_ids),
             )
+        if agui:
+            await agui.emit_state_delta(
+                [{"op": "replace", "path": "/toc", "value": {"type": structure.document_type, "buildings": len(structure.building_ids)}}]
+            )
+            await agui.emit_step_finished("structure", buildings=len(structure.building_ids))
         return {"document_structure": structure}
     except Exception as e:
         logger.warning(f"Structure extraction failed for source {source.id}: {e}")
+        if agui:
+            await agui.emit_step_finished("structure")
         return {"document_structure": None}
 
 
@@ -739,12 +772,17 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
     model_id = state.get("model_id")
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
     if pl:
         pl.stage_progress(StageId.STRUCTURE, "Compiling building inventory...")
+    if agui:
+        await agui.emit_step_started("inventory")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for building inventory")
+        if agui:
+            await agui.emit_step_finished("inventory")
         return {"building_inventory": None}
 
     try:
@@ -769,11 +807,18 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
                 buildings=inventory.total_buildings,
                 pages=", ".join(page_ranges) if page_ranges else "N/A",
             )
+        if agui:
+            await agui.emit_state_delta(
+                [{"op": "replace", "path": "/buildings", "value": inventory.total_buildings}]
+            )
+            await agui.emit_step_finished("inventory", buildings=inventory.total_buildings)
         return {"building_inventory": inventory}
     except Exception as e:
         logger.warning(
             f"Building inventory compilation failed for source {source.id}: {e}"
         )
+        if agui:
+            await agui.emit_step_finished("inventory")
         return {"building_inventory": None}
 
 
@@ -788,12 +833,17 @@ async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
     inventory: Optional[BuildingInventory] = state.get("building_inventory")
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
     if pl:
         pl.stage_progress(StageId.STRUCTURE, "Tagging page sections...")
+    if agui:
+        await agui.emit_step_started("tag_pages")
 
     if not content:
         logger.warning(f"Source {source.id} has no content for page tagging")
+        if agui:
+            await agui.emit_step_finished("tag_pages")
         return {"page_tags": None}
 
     try:
@@ -815,6 +865,11 @@ async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
                 pages_tagged=len(result.pages),
                 register_range=str(result.register_page_range),
             )
+        if agui:
+            await agui.emit_state_delta(
+                [{"op": "replace", "path": "/page_tags", "value": len(result.pages)}]
+            )
+            await agui.emit_step_finished("tag_pages", pages_tagged=len(result.pages))
         return {"page_tags": result}
     except Exception as e:
         logger.warning(f"Page tagging failed for source {source.id}: {e}")
@@ -825,6 +880,8 @@ async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
                 pages_tagged=0,
                 warnings=1,
             )
+        if agui:
+            await agui.emit_step_finished("tag_pages")
         return {"page_tags": None}
 
 
@@ -857,6 +914,7 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     source: Source = state["source"]
     content = source.full_text or ""
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
     # Skip ORCHESTRATOR stage when taking the non-orchestrator path (E1-S21)
     if pl:
@@ -864,6 +922,8 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
 
     if pl:
         pl.stage_enter(StageId.PREFLIGHT, "Preparing content and chunking...")
+    if agui:
+        await agui.emit_step_started("prepare")
 
     if not content:
         logger.warning(f"Source {source.id} has no content")
@@ -924,6 +984,11 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
             content_chars=len(processed_content),
             acm_indicators=preprocess_meta.get("acm_indicators_found", 0),
         )
+    if agui:
+        await agui.emit_state_delta(
+            [{"op": "replace", "path": "/chunks", "value": len(chunks)}]
+        )
+        await agui.emit_step_finished("prepare", chunks=len(chunks))
 
     return {
         "content": processed_content,
@@ -944,6 +1009,10 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     model_id = state.get("model_id")
     retry_count = state.get("retry_count", 0)
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
+
+    # AG-UI tool call ID for this chunk
+    tool_call_id = f"extract_chunk_{current_index}"
 
     # Log stage entry on first chunk only
     if pl and current_index == 0 and retry_count == 0:
@@ -1027,6 +1096,16 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         ),
     ]
 
+    # Emit AG-UI tool call start
+    if agui:
+        import json as _json
+
+        await agui.emit_tool_call_start(tool_call_id, "extract_records")
+        await agui.emit_tool_call_args(
+            tool_call_id,
+            _json.dumps({"chunk_index": current_index, "total_chunks": len(chunks), "page": page_number, "content_length": len(chunk_content)}),
+        )
+
     # Use structured output
     try:
         chain = model.with_structured_output(ACMExtractionResult)
@@ -1095,6 +1174,26 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
                 records_so_far=total_so_far,
                 chunk=f"{current_index + 1}/{len(chunks)}",
             )
+
+        # AG-UI: emit tool call end and state delta for new records
+        if agui and new_records:
+            # Emit StateDelta for each new record (incremental streaming)
+            for rec in new_records:
+                await agui.emit_state_delta(
+                    [{"op": "add", "path": "/records/-", "value": {
+                        "building_id": rec.building_id,
+                        "room_name": rec.room_name,
+                        "product": rec.product,
+                        "result": rec.result,
+                        "page_number": rec.page_number,
+                    }}]
+                )
+            await agui.emit_tool_call_end(
+                tool_call_id,
+                f"{len(new_records)} records from chunk {current_index + 1}",
+            )
+        elif agui:
+            await agui.emit_tool_call_end(tool_call_id, "0 records")
 
         return {
             "records": existing_records + new_records,
@@ -1249,9 +1348,12 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
     # Log EXTRACT stage complete on first validation pass (marks end of extraction)
     correction_attempt = state.get("correction_attempt", 0)
+    if agui and correction_attempt == 0:
+        await agui.emit_step_started("validate")
     if pl and correction_attempt == 0:
         pl.stage_complete(
             StageId.EXTRACT,
@@ -1395,6 +1497,14 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             with_issues=len(records_with_issues),
         )
 
+    if agui:
+        await agui.emit_state_delta(
+            [{"op": "replace", "path": "/validation_result", "value": {
+                "accepted": len(validated_records), "rejected": rejected_count,
+            }}]
+        )
+        await agui.emit_step_finished("validate", accepted=len(validated_records), rejected=rejected_count)
+
     return {
         "records": validated_records,
         "records_rejected": rejected_count,
@@ -1414,12 +1524,15 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     records: List[ACMExtractionRecord] = state.get("records", [])
     correction_attempt = state.get("correction_attempt", 0)
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
     if pl:
         pl.stage_enter(
             StageId.CORRECT,
             f"Correction attempt {correction_attempt + 1}...",
         )
+    if agui:
+        await agui.emit_step_started("correct")
     correction_stats = state.get(
         "correction_stats",
         {
@@ -1515,6 +1628,12 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
             auto_corrected=auto,
             llm_corrected=llm,
             failed=failed,
+        )
+    if agui:
+        await agui.emit_step_finished(
+            "correct",
+            auto_corrected=correction_stats.get("auto_corrected", 0),
+            llm_corrected=correction_stats.get("llm_corrected", 0),
         )
 
     return {
@@ -1692,6 +1811,10 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
+
+    if agui:
+        await agui.emit_step_started("deduplicate")
 
     # Enter STORE stage here (dedup + save are both part of Enrich & Store)
     if pl:
@@ -1727,6 +1850,12 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
             duplicates_merged=duplicates_merged,
         )
 
+    if agui:
+        await agui.emit_state_delta(
+            [{"op": "replace", "path": "/final_count", "value": len(deduplicated)}]
+        )
+        await agui.emit_step_finished("deduplicate", unique=len(deduplicated), merged=duplicates_merged)
+
     return {"records": deduplicated}
 
 
@@ -1738,7 +1867,10 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     start_time = state.get("start_time", time.time())
     records_rejected = state.get("records_rejected", 0)
     pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
 
+    if agui:
+        await agui.emit_step_started("save")
     if pl:
         pl.stage_progress(StageId.STORE, f"Saving {len(records)} records...")
 
@@ -2027,6 +2159,12 @@ async def extract_acm_from_source(
         command_id=command_id,
     )
 
+    # Initialize AG-UI event emitter (E17-S1)
+    agui: Optional[AGUIEventEmitter] = None
+    if command_id:
+        agui = AGUIEventEmitter(command_id=command_id, source_id=str(source.id))
+        await agui.emit_run_started()
+
     if force:
         # Delete existing table sections and records (E11-S1)
         from open_notebook.domain.acm import ACMTableSection
@@ -2082,6 +2220,8 @@ async def extract_acm_from_source(
         "orchestrator_stats": None,
         # Pipeline observability (E1-S21)
         "pipeline_logger": pl,
+        # AG-UI event emitter (E17-S1)
+        "agui_emitter": agui,
     }
 
     try:
@@ -2107,6 +2247,8 @@ async def extract_acm_from_source(
 
         if error:
             # Pipeline failed — emit summary
+            if agui:
+                await agui.emit_run_error(error)
             pipeline_run = pl.fail(error)
             return ACMExtractionOutput(
                 source_id=str(source.id),
@@ -2136,6 +2278,10 @@ async def extract_acm_from_source(
         if orch_stats:
             strategy_dist = getattr(orch_stats, "strategy_distribution", None)
 
+        # AG-UI: emit RunFinished
+        if agui:
+            await agui.emit_run_finished(total_records=extraction_result.total_records)
+
         # Pipeline complete — emit summary
         pipeline_run = pl.complete(
             total_records=extraction_result.total_records,
@@ -2161,6 +2307,8 @@ async def extract_acm_from_source(
     except Exception as e:
         logger.exception(f"ACM extraction failed for source {source.id}")
         extraction_time = int((time.time() - start_time) * 1000)
+        if agui:
+            await agui.emit_run_error(str(e))
         pipeline_run = pl.fail(str(e))
         return ACMExtractionOutput(
             source_id=str(source.id),

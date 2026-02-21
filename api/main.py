@@ -5,18 +5,44 @@ load_dotenv()
 
 import asyncio
 import os
+import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
+# --- Loguru file logging ---
+_log_dir = Path(__file__).resolve().parent.parent / "logs"
+_log_dir.mkdir(exist_ok=True)
+logger.add(
+    _log_dir / "api.log",
+    rotation="10 MB",
+    retention="7 days",
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} | {message}",
+    backtrace=True,
+    diagnose=False,
+)
+logger.add(
+    _log_dir / "api-error.log",
+    rotation="10 MB",
+    retention="30 days",
+    level="ERROR",
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} | {message}",
+    backtrace=True,
+    diagnose=True,
+)
+
 from api.auth import PasswordAuthMiddleware
 from api.model_provisioning import run_model_provisioning
 from api.routers import (
+    a2a,
     acm,
+    agui_extraction,
     auth,
     chat,
     config,
@@ -115,6 +141,7 @@ app.add_middleware(
         "/api/auth/status",
         "/api/config",
         "/api/agui/chat",
+        "/.well-known/agent.json",
     ],
 )
 
@@ -151,6 +178,17 @@ app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(source_chat.router, prefix="/api", tags=["source-chat"])
 app.include_router(acm.router, prefix="/api/acm", tags=["acm"])
 app.include_router(extraction_events.router, prefix="/api", tags=["extraction-events"])
+app.include_router(a2a.router, prefix="/api", tags=["a2a"])
+app.include_router(agui_extraction.router, prefix="/api", tags=["agui-extraction"])
+
+# Mount static files for A2A agent card (.well-known)
+from pathlib import Path as _Path
+
+from fastapi.staticfiles import StaticFiles
+
+_static_dir = _Path(__file__).parent / "static"
+if _static_dir.exists():
+    app.mount("/.well-known", StaticFiles(directory=str(_static_dir / ".well-known")), name="well-known")
 
 # Register AG-UI endpoint for CopilotKit integration
 try:
