@@ -12,6 +12,7 @@ import { ACMRecordDialog } from './ACMRecordDialog'
 import { ACMRecordDetailPanel } from './ACMRecordDetailPanel'
 import { ACMExtractionBanner } from './ACMExtractionBanner'
 import { ACMStatsCards } from './ACMStatsCards'
+import { OnboardingHint } from '@/components/common/OnboardingHint'
 import { ACMToolbar } from './ACMToolbar'
 import { BuildingTabs } from './BuildingTabs'
 import { SiteConfigPanel } from './SiteConfigPanel'
@@ -42,6 +43,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const gridRef = useRef<ACMGridRef>(null)
 
   // State
+  const [gridApi, setGridApiState] = useState<import('ag-grid-community').GridApi | null>(null)
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
   const [searchText, setSearchText] = useState('')
   const [visibleCount, setVisibleCount] = useState<number | undefined>(undefined)
@@ -176,6 +178,20 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const handleResetColumns = useCallback(() => {
     gridRef.current?.resetColumns()
   }, [])
+
+  // Capture gridApi from the grid ref once it's available
+  useEffect(() => {
+    const checkApi = () => {
+      const api = gridRef.current?.getGridApi()
+      if (api && api !== gridApi) {
+        setGridApiState(api)
+      }
+    }
+    // Check immediately and after a short delay (grid may init async)
+    checkApi()
+    const timer = setTimeout(checkApi, 500)
+    return () => clearTimeout(timer)
+  }, [isLoadingRecords, gridApi])
 
   // Listen for acm-command custom events from Command Palette
   useEffect(() => {
@@ -322,6 +338,14 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             />
           )}
 
+          {/* Onboarding Hint — only when records exist */}
+          {hasRecords && (
+            <OnboardingHint
+              id="acm-register"
+              message="Use the Columns button to show/hide fields. Click any row for full record details."
+            />
+          )}
+
           {/* Toolbar */}
           <ACMToolbar
             onAddNew={handleAddNew}
@@ -332,6 +356,7 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             onExpandAll={handleExpandAll}
             onCollapseAll={handleCollapseAll}
             onResetColumns={handleResetColumns}
+            gridApi={gridApi}
             riskFilter={riskFilter}
             onRiskFilterChange={setRiskFilter}
             isExtracting={extractACM.isPending || extractionStatus.phase === 'extracting'}

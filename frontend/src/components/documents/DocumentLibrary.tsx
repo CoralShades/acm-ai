@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { DocumentsSkeleton } from '@/components/skeletons/DocumentsSkeleton'
 import { FileText, Upload } from 'lucide-react'
+import { OnboardingHint } from '@/components/common/OnboardingHint'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { sourcesApi } from '@/lib/api/sources'
@@ -260,6 +261,12 @@ export function DocumentLibrary() {
 
   return (
     <div className="flex flex-col flex-1 space-y-4">
+      {/* Onboarding Hint */}
+      <OnboardingHint
+        id="documents"
+        message="Drag and drop a PDF or use the Upload button to add a SAMP document."
+      />
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-4 flex-shrink-0">
         <DocumentFilters filters={filters} onChange={setFilters} />
