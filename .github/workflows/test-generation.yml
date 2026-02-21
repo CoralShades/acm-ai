@@ -1,0 +1,139 @@
+name: AI Test Generation
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sunday 2am UTC
+  workflow_dispatch:
+    inputs:
+      target_path:
+        description: 'Path to generate tests for'
+        required: false
+        default: 'open_notebook/'
+      coverage_threshold:
+        description: 'Coverage threshold (%)'
+        required: false
+        default: '80'
+      use_bmad:
+        description: 'Use BMAD testarch-automate workflow'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  generate-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install pytest-cov
+        run: uv pip install pytest pytest-cov
+
+      - name: Run coverage analysis
+        run: |
+          uv run pytest --cov=${{ github.event.inputs.target_path || 'open_notebook/' }} --cov-report=json
+          python -c "
+import json
+with open('coverage.json') as f:
+    cov = json.load(f)
+files = [(f, data['summary']['percent_covered']) for f, data in cov['files'].items()
+         if data['summary']['percent_covered'] < ${{ github.event.inputs.coverage_threshold || 80 }}]
+print(f'Found {len(files)} files with <${{ github.event.inputs.coverage_threshold || 80 }}% coverage')
+for f, pct in sorted(files, key=lambda x: x[1])[:10]:
+    print(f'{f}: {pct:.1f}%')
+          " | tee coverage_summary.txt
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Generate tests with Claude
+        if: ${{ !inputs.use_bmad }}
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: "claude-4-0-sonnet-20250805"
+          track_progress: true
+          prompt: |
+            Analyze the coverage report and generate pytest test cases for untested code in ${{ github.event.inputs.target_path || 'open_notebook/' }}.
+
+            **Priority Areas (from E2E findings - 26% extraction success):**
+            1. ACM extraction logic (open_notebook/extractors/)
+            2. Negative marker detection (ND/NDA/NAD/None Detected)
+            3. Field mapping gaps:
+               - sample_no (0% coverage)
+               - quantity (0% coverage)
+               - labelled (0% coverage)
+               - floor_level (0% coverage)
+               - result mapping
+
+            **Coverage Target:** >${{ github.event.inputs.coverage_threshold || 80 }}%
+
+            **Test Requirements:**
+            - Follow existing test patterns in tests/ directory
+            - Use pytest fixtures and parametrize for data-driven tests
+            - Include docstrings explaining what each test validates
+            - Test edge cases from E2E findings (_bmad-output/implementation-artifacts/findings.md)
+            - Follow AAA pattern (Arrange, Act, Assert)
+            - Test error handling and boundary conditions
+
+            **File Naming:** test_<module>_<component>.py
+
+            After generating tests:
+            1. Run pytest to verify they pass
+            2. Check coverage improvement
+            3. Create PR titled "[AI] Add test coverage for ${{ github.event.inputs.target_path || 'open_notebook/' }}"
+            4. Include coverage improvement stats in PR description
+
+          allowed_tools: |
+            Read,
+            Write,
+            Edit,
+            Glob,
+            Grep,
+            Bash(uv run pytest *),
+            Bash(uv run pytest --cov*),
+            Bash(git add *),
+            Bash(git commit *),
+            Bash(git push),
+            Bash(gh pr create *)
+
+      - name: Generate tests with BMAD
+        if: ${{ inputs.use_bmad }}
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: "claude-4-0-sonnet-20250805"
+          track_progress: true
+          prompt: |
+            Run the BMAD /testarch-automate workflow for ${{ github.event.inputs.target_path || 'open_notebook/' }}.
+
+            Use the workflow at .claude/commands/bmad/bmm/workflows/testarch-automate.md
+
+            Focus on ACM-AI patterns and E2E findings.
+
+            After generating tests, create a PR with results.
+          allowed_tools: |
+            Read,
+            Write,
+            Edit,
+            Glob,
+            Grep,
+            Bash,
+            Skill

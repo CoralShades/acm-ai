@@ -103,9 +103,25 @@ Throughout
 **Key SAMP patterns:**
 1. **Room Headers**: `B009 - R0005 - General Storeroom - 1.45 m2`
 2. **Building Headers**: `B009 - Special Purpose - 1950 - Steel`
-3. **ACM Markers**: `>>> ACM DETECTED:`, `Asbestos-containing material`, `Detected`
-4. **Negative Markers**: `>>> NO ASBESTOS:`, `No Asbestos`, `Not Detected`, `NAD`
-5. **Vertical Field Sequence**: Product → Material Category → Material Description → Extent → Location → Friable → Condition → Risk → Result
+3. **ACM-Positive Markers** - These indicate asbestos was found:
+   - `>>> ACM DETECTED: Asbestos-containing material <<<`
+   - `Asbestos-containing material` (if marker not present)
+   - `Detected`
+4. **Negative Result Markers** - These indicate NO asbestos was found:
+   - `>>> NO ASBESTOS: Negative result <<<`
+   - `No Asbestos` (if marker not present)
+   - `Not Detected`, `NAD`
+   - Extract these with result "Negative", friable "N/A (negative)", material_condition "N/A (negative)", disturbance_potential "N/A (negative)"
+5. **Vertical Field Sequence** (fields appear in this order, one per line):
+   - Product (e.g., "Floor Coverings", "Ceiling Linings", "Wall Linings")
+   - Material Category (e.g., "Res/Textile", "Flat/Profiled Sheeting")
+   - Material Description (e.g., "Vinyl Tiles", "Fibre Cement")
+   - Extent (e.g., "2m2", "10m2", "50%")
+   - Location (e.g., "Throughout", "Above ceiling", "External walls")
+   - Friable Status (e.g., "Non Friable", "Friable")
+   - Condition (e.g., "Minimal Damage", "Good Condition", "Poor Condition")
+   - Risk Level (e.g., "Low", "Medium", "High")
+   - Result (e.g., "Asbestos-containing material", "No Asbestos")
 
 ---
 
@@ -221,6 +237,10 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
 6. **DO NOT SKIP** negative results - the BAR requires both positive and negative entries
 
+**CRITICAL - Assumed Positive Records:** Items marked "Assumed Positive" or "Not Sampled" with annotations like "No access" MUST be extracted. These are valid BAR entries even if they have minimal detail (Unknown product type, Unknown condition). Extract them with result: "Assumed Positive", and use "Unknown" for missing condition/disturbance fields.
+
+**CRITICAL - Only Extract What's Present:** Only extract records that are EXPLICITLY present in the source content. Do NOT infer, guess, or generate records based on patterns. Each extracted record must correspond to an actual entry in the source.
+
 **WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL.
 
 ### Data Completeness Rules
@@ -245,6 +265,7 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 - **product**: The building element type (e.g., "Eaves", "Wall", "Floor Coverings", "Ceiling Linings", "Fire Door")
 - **material_description**: The specific material (e.g., "Flat Cement Sheeting", "Vinyl Tiles", "Chrysotile rope gasket")
 - For ARA format: split "Eaves - Flat Cement Sheeting - Painted White" into product="Eaves", material_description="Flat Cement Sheeting - Painted White"
+- `result` should map to BAR vocabulary: "Positive" for ACM-containing, "Assumed Positive" for presumed ACM, "Negative" for no asbestos, "Assumed Negative" for presumed no asbestos
 - Building IDs follow format: B### (e.g., B009, B010) for SAMP, or building name for ARA
 - Room IDs follow format: R#### (e.g., R0005, R0007) for SAMP, or null for ARA
 - Room area is typically at the end of the room header line (e.g., "1.45 m2")
@@ -258,7 +279,7 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 ## Output Format
 
 Return your extraction as a JSON object matching the ACMExtractionResult schema with:
-- `records`: Array of ALL extracted ACM records (both positive AND negative, but NOT "None" hazard type items)
+- `records`: Array of ALL extracted ACM records (both positive AND negative results, but NOT "None" hazard type items)
 - `status`: "valid" if extraction succeeded, "no_acm_data" if content has no ACM records
 - `extraction_notes`: Any important observations about the extraction
 
@@ -287,3 +308,23 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `page_number`: Page number where this record was found (use {{ page_number }} for records in this chunk)
 - `hygienist_recommendations`: Control/management recommendations
 - `data_issues`: List of any extraction concerns
+
+### Victorian BAR Compliance Fields (CRITICAL - extract if available)
+
+These fields are REQUIRED for Building Asbestos Register (BAR) compliance:
+
+- `sample_no`: NATA endorsed sample number (e.g., "34511-039-001", "J169642-001-003"). Use "Not Sampled" if sample not taken.
+- `sample_result`: "Positive", "Assumed Positive", "Negative", or "Assumed Negative" (same as `result`)
+- `quantity`: Amount of material (e.g., "10 m²", "5 linear meters", "2m2")
+- `acm_labelled`: Boolean - whether ACM is labeled on-site (YES → true, NO → false)
+- `identifying_company`: Hygiene or consulting company name (e.g., "Prensa Pty Ltd", "Greencap")
+- `floor_level`: Floor level where ACM is located (e.g., "Ground", "Level 1", "Level 2", "Roof")
+- `acm_product_group`: Victorian BAR product group (e.g., "Vinyl products", "Cement products", "Other")
+
+**Example BAR field extraction:**
+- If document shows "Sample: 34511-039-001" → sample_no: "34511-039-001"
+- If document shows "Labelled: NO" → acm_labelled: false
+- If document shows "Quantity: 10m2" → quantity: "10m2"
+- If document shows "Prensa Pty Ltd" or "Identifying Company: Prensa" → identifying_company: "Prensa Pty Ltd"
+- If document shows "Ground Level" or "Level: Ground" → floor_level: "Ground"
+- If material is vinyl tiles → acm_product_group: "Vinyl products"

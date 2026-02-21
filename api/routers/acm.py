@@ -335,11 +335,7 @@ async def export_acm_records(
                     record.sample_no or "",
                     record.sample_result or "",
                     record.quantity or "",
-                    "Yes"
-                    if record.acm_labelled
-                    else "No"
-                    if record.acm_labelled is not None
-                    else "",
+                    "Yes" if record.acm_labelled else "No" if record.acm_labelled is not None else "",
                     record.disturbance_potential or "",
                     record.identifying_company or "",
                     record.hygienist_recommendations or "",
@@ -652,9 +648,7 @@ async def semantic_search_acm(
                         if s.id:
                             parent_section_map[str(s.id)] = s
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to batch-fetch parent sections for {sid}: {e}"
-                    )
+                    logger.warning(f"Failed to batch-fetch parent sections for {sid}: {e}")
 
         # Convert to response objects
         search_results = []

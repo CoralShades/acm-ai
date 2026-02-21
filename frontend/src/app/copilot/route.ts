@@ -32,11 +32,12 @@ export const POST = async (req: Request) => {
   });
 
   const runtime = new CopilotRuntime({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     agents: {
       default: supervisorAgent.clone() as any,
       supervisor: supervisorAgent as any,
     },
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   });
 
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({

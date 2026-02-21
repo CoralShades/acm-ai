@@ -609,10 +609,6 @@ def _create_row_from_cells(
     material_desc = get_cell("material_description")
     result = get_cell("result")
 
-    # Skip if missing required fields - both product AND material_description are required
-    if not product or not material_desc:
-        return None
-
     # Normalize result to BAR vocabulary
     # Order matters: check compound terms before simple ones
     if result:
@@ -630,6 +626,23 @@ def _create_row_from_cells(
             x in result_lower for x in ["positive", "detected", "asbestos-containing"]
         ):
             result = "Positive"
+
+    # Skip if missing required fields
+    # E1-S24: Allow assumed positive records even with minimal detail (e.g., "Unknown" product type)
+    # For assumed positive, only require at least one of product OR material_description
+    is_assumed_positive = result == "Assumed Positive"
+    if is_assumed_positive:
+        if not product and not material_desc:
+            return None  # Need at least one
+        # Use "Unknown" as placeholder if one field is missing
+        if not product:
+            product = "Unknown"
+        if not material_desc:
+            material_desc = "Unknown"
+    else:
+        # For other results, require both product AND material_description
+        if not product or not material_desc:
+            return None
 
     return ExtractedACMRow(
         school_name=context.school_name or "Unknown School",

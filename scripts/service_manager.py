@@ -48,12 +48,15 @@ try:
     from rich.console import Console
 
     console = Console()
+
     def _print(msg: str = "", **kwargs) -> None:
         console.print(msg, **kwargs)
 except ImportError:
+
     def _print(msg: str = "", **kwargs) -> None:
         # Strip rich markup for plain output
         import re
+
         clean = re.sub(r"\[/?[^\]]+\]", "", msg)
         print(clean)
 
@@ -124,7 +127,9 @@ def cmd_check(args: argparse.Namespace) -> int:
     if HAS_RICH:
         _print("  [green]OK[/green]  rich is installed (TUI enabled)")
     else:
-        _print("  [yellow]WARN[/yellow] rich not found (install for TUI: uv add rich --group dev)")
+        _print(
+            "  [yellow]WARN[/yellow] rich not found (install for TUI: uv add rich --group dev)"
+        )
 
     # Ports
     _print()
@@ -190,7 +195,9 @@ def cmd_start(args: argparse.Namespace) -> int:
                     return 1
         else:
             _print()
-            _print("Run with --auto-fix to resolve, or stop conflicting processes manually.")
+            _print(
+                "Run with --auto-fix to resolve, or stop conflicting processes manually."
+            )
             return 1
         _print()
 
@@ -202,7 +209,9 @@ def cmd_start(args: argparse.Namespace) -> int:
     # Start services in order, waiting for each to be healthy before next
     for name in STARTUP_ORDER:
         svc = services[name]
-        target_name = args.service if hasattr(args, "service") and args.service else None
+        target_name = (
+            args.service if hasattr(args, "service") and args.service else None
+        )
         if target_name and target_name != name:
             continue
 
@@ -251,7 +260,9 @@ def cmd_stop(args: argparse.Namespace) -> int:
     # Stop in reverse order
     for name in SHUTDOWN_ORDER:
         svc = services[name]
-        target_name = args.service if hasattr(args, "service") and args.service else None
+        target_name = (
+            args.service if hasattr(args, "service") and args.service else None
+        )
         if target_name and target_name != name:
             continue
 
@@ -268,6 +279,7 @@ def cmd_stop(args: argparse.Namespace) -> int:
 
     # Kill tmux session if exists
     import subprocess
+
     subprocess.run(
         ["tmux", "kill-session", "-t", "acm-ai"],
         capture_output=True,
@@ -295,19 +307,34 @@ def cmd_restart(args: argparse.Namespace) -> int:
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    """Show current service status."""
+    """Show current service status with detailed health information."""
     services = get_services()
     statuses = poll_all_health(services)
     conflicts = check_all_ports(services)
-    display_status_table(services, statuses, conflicts)
-    return 0
+
+    # Try to get detailed health from API
+    from _health_monitor import get_detailed_health
+
+    detailed_health = get_detailed_health()
+
+    display_status_table(services, statuses, conflicts, detailed_health)
+
+    # Return non-zero if any service unhealthy
+    from _health_monitor import ServiceStatus
+
+    unhealthy = any(
+        s in (ServiceStatus.UNHEALTHY, ServiceStatus.STOPPED) for s in statuses.values()
+    )
+    return 1 if unhealthy else 0
 
 
 def cmd_health(args: argparse.Namespace) -> int:
-    """Live health dashboard."""
+    """Live health dashboard with detailed component health.
+
+    Returns non-zero exit code if any component is unhealthy.
+    """
     services = get_services()
-    live_health_dashboard(services)
-    return 0
+    return live_health_dashboard(services)
 
 
 def cmd_fix(args: argparse.Namespace) -> int:

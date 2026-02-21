@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-08)
-> **Status:** Draft - Updated for Generic Configurable Parser Course Correction
-> **Change Log:** Sprint Change Proposal approved 2026-02-08 - E1-S11 redefined, E12-S4 redefined, E2-S8 enhanced
+> **Date:** 2025-12-07 (Updated: 2026-02-20)
+> **Status:** Active - Updated for SCP-20260220 (Extraction Monitor + UX Enhancement)
+> **Change Log:** 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted, done statuses reconciled (72/99 done)
 
 ---
 
@@ -11,20 +11,22 @@
 
 | Epic | Title | Priority | Stories | Status |
 |------|-------|----------|---------|--------|
-| E1 | ACM Data Extraction Pipeline | P0 | **20** | Done (12), Ready (1), Backlog (7) |
-| E2 | AG Grid Spreadsheet Integration | P0 | **8** | Done (7), Ready (1) |
+| E1 | ACM Data Extraction Pipeline | P0 | **27** | Done (26), Ready (1) |
+| E2 | AG Grid Spreadsheet Integration | P0 | **12** | Done (10), Ready (2) |
 | E3 | Cell Citations & PDF Viewer | P0 | 4 | Done |
 | E4 | Chat with ACM Context | P0 | 4 | Done |
 | E5 | Export Functionality | **P0** (promoted) | **4** | Done (2), Ready (2) |
 | E6 | Rebranding to ACM-AI | P1 | 4 | Done |
 | E7 | Upload Wizard | P0 | **7** | Done |
 | E8 | UI Refresh (Bento Grid) | P1 | 10 | Archived |
-| E9 | Document Library Management | P0 | 3 | Done (2), Drafted (1) |
-| E10 | ACM-AI UI Simplification | P0 | 1 | Drafted |
-| E11 | Search & Retrieval Enhancement | P0/P1 | 2 | Backlog |
+| E9 | Document Library Management | P0 | 3 | Done (2), Ready (1) |
+| E10 | ACM-AI UI Simplification | P0 | 1 | Ready |
+| E11 | Search & Retrieval Enhancement | P0/P1 | 2 | Done (1), Backlog (1) |
 | E12 | Extraction Settings & Configuration UI | P1 | 4 | Backlog |
 | E13 | Knowledge Graph Visualization | P1 | 3 | Backlog |
 | E14 | UX & Enterprise Readiness | P0/P1 | 11 | Done |
+| E15 | Extraction Monitor & Live Logging UI | P0 | 2 | Backlog |
+| E16 | UX Enhancement Sprint | P0/P1 | 3 | Backlog |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -59,6 +61,22 @@
 ---
 
 ## Epic 1: ACM Data Extraction Pipeline
+
+> **Implementation Evolution (2026-02-05 to 2026-02-08):**
+> The pipeline evolved from the original 2-stage architecture (Stage 1: Extract, Stage 2: Interpret)
+> to a comprehensive 7-stage document intelligence pipeline:
+> - **Stage -1: Document Structure Analysis** (E1-S16) - TOC extraction, section hierarchy
+> - **Stage -1.5: Building Inventory** (E1-S17) - Building metadata compilation, page ranges
+> - **Stage 0: Preflight Validation** (Original design)
+> - **Stage 0.5: Agentic Orchestrator** (E1-S20) - Planned for intelligent routing/correction
+> - **Stage 1: Extraction** (E1-S3, E1-S10, E1-S11) - Verbatim extraction with MinerU, Generic Configurable Parser
+> - **Stage 2: Interpretation** (E1-S3, E1-S9, E1-S12) - Normalization, taxonomy classification
+> - **Stage 2.5: Corrective RAG Validation** (E1-S14, E1-S15) - Hybrid retrieval, contextual embeddings
+> - **Stage 3: Post-Processing** (Original design)
+>
+> Additional enhancements include page-level section tagging (E1-S18), enhanced metadata extraction (E1-S19),
+> and the shift from 3 specialized parsers to a single configurable parser driven by BAR field schema (E1-S11).
+> Status: **20/20 stories complete** as of 2026-02-08.
 
 ### E1-S1: Create ACM Data Model
 **As a** developer
@@ -649,6 +667,20 @@
 ---
 
 ## Epic 4: Chat with ACM Context
+
+> **Implementation Scope Expansion (2026-02-10):**
+> Originally scoped as 4 basic stories for ACM-aware chat, the implementation expanded significantly
+> to deliver a production-ready conversational AI interface:
+> - **CopilotKit Integration** - Full CopilotKit provider setup with React hooks ecosystem
+> - **AG-UI Protocol** - Server-sent events (SSE) streaming protocol for supervisor agent communication
+> - **Supervisor Agent Backend** - FastAPI `/api/supervisor/stream` endpoint exposing LangGraph workflows
+> - **Custom Tool Result Renderers** - ACM-specific renderers for extraction results, citations, tables
+> - **Real-time Streaming** - SSE-based streaming responses with token-by-token rendering
+> - **Dynamic Context Toggle** - User-controlled ACM context inclusion with visual indicators
+>
+> Implementation delivered across **15 files** (~1200 lines frontend, ~350 lines backend).
+> Completed: **2026-02-10** via PR #16.
+> Status: **All 4 original stories complete**, with significant value-add features included.
 
 ### E4-S1: Add ACM Records to Chat Context
 **As a** user
@@ -1860,3 +1892,127 @@ E10-S1 (independent)
 - `scripts/generate_types.py`
 - `frontend/src/lib/types/generated/acm.ts` (output)
 - `.github/workflows/type-check.yml` (CI)
+
+---
+
+## Epic 15: Extraction Monitor & Live Logging UI
+
+> **Priority:** P0
+> **Added:** 2026-02-20 (SCP-20260220)
+> **Status:** 0/2 complete
+> **Rationale:** Backend SSE pipeline and frontend log components (ExtractionProgressPanel, ExtractionLogStream,
+> StageProgressPill, use-extraction-progress.ts) were fully implemented in E1-S21 but are only accessible
+> during the upload wizard. This epic surfaces them persistently throughout the app.
+
+### E15-S1: Extraction Log Panel in Document Library (P0)
+**As a** compliance officer reviewing document processing
+**I want** to click any document and see the full extraction log with stage-by-stage progress
+**So that** I can understand what the AI extracted, identify failures, and retry without re-uploading
+
+**Acceptance Criteria:**
+- [ ] Document Library rows have expand chevron
+- [ ] Expanding shows ExtractionProgressPanel (stage pills + log terminal)
+- [ ] Active docs: live SSE stream via `/api/acm/extraction-progress/{commandId}/stream`
+- [ ] Completed docs: loads historical log via REST fallback endpoint
+- [ ] Stage pills: STRUCTURE, PREFLIGHT, ORCHESTRATOR, EXTRACT, VALIDATE, CORRECT, STORE
+- [ ] Log terminal scrollable, monospace, Copy All button
+- [ ] Retry button for failed/partial extractions
+- [ ] Keyboard accessible (Enter/Space expand, Escape collapse)
+
+**Technical Notes:**
+- All backend and frontend components exist — wiring only
+- Requires `command_id` exposed in `SourceResponse` from `api/models.py`
+
+**Key Files:** `frontend/src/components/documents/DocumentRow.tsx`, `api/models.py`
+
+**Story File:** `docs/sprint-artifacts/e15-s1-extraction-log-panel.md`
+
+---
+
+### E15-S2: Dedicated Extraction Monitor Page (P0)
+**As a** system administrator
+**I want** a single page showing all active and historical extractions with full log detail
+**So that** I can monitor system health, debug failures, and manage the extraction queue
+
+**Acceptance Criteria:**
+- [ ] Route: `/extraction-monitor` in sidebar CONFIGURE section
+- [ ] Active tab: live SSE per extraction, auto-refresh
+- [ ] History tab: paginated list, filter by status + date range
+- [ ] Expandable log terminal per extraction
+- [ ] Retry button for failed/partial
+- [ ] Empty states for both tabs
+
+**Technical Notes:**
+- New `GET /api/acm/extraction-progress` list endpoint needed
+- Reuses ExtractionProgressPanel from E15-S1
+
+**Key Files:** `frontend/src/app/(dashboard)/extraction-monitor/page.tsx`, `api/routers/extraction_events.py`
+
+**Story File:** `docs/sprint-artifacts/e15-s2-extraction-monitor-page.md`
+
+---
+
+## Epic 16: UX Enhancement Sprint
+
+> **Priority:** P0 (E16-S2) / P1 (E16-S1, E16-S3)
+> **Added:** 2026-02-20 (SCP-20260220)
+> **Status:** 0/3 complete
+> **Rationale:** Three high-impact UX patterns absent after E14: no system dashboard, no full-record view,
+> no empty states. E9-S3 (bulk operations) promoted from drafted to ready-for-dev alongside this epic.
+
+### E16-S1: Dashboard Home Page with ACM Stats (P1)
+**As a** user opening ACM-AI
+**I want** a dashboard overview with system metrics and quick actions
+**So that** I understand the system state at a glance
+
+**Acceptance Criteria:**
+- [ ] New home route with summary cards: total records, buildings, documents processed, risk breakdown
+- [ ] Risk distribution donut chart (Recharts)
+- [ ] Top 10 buildings by record count (horizontal bar chart)
+- [ ] Recent activity: last 5 extractions with status
+- [ ] Quick actions: Upload SAMP, View ACM Register, Extraction Monitor
+- [ ] Skeleton loading for all sections
+- [ ] New backend endpoint: `GET /api/acm/stats`
+
+**Key Files:** `frontend/src/app/(dashboard)/page.tsx`, `api/routers/stats.py`
+
+**Story File:** `docs/sprint-artifacts/e16-s1-dashboard-home.md`
+
+---
+
+### E16-S2: ACM Record Detail Slide-Out Panel (P0)
+**As a** compliance officer reviewing records
+**I want** to click an ACM record row to see all its fields in a readable panel
+**So that** I can review full record details without horizontal scrolling
+
+**Acceptance Criteria:**
+- [ ] Click row → 380px right slide-out drawer
+- [ ] All 47 fields in 8 organized sections (org, building, location, ACM details, assessment, docs, removal, metadata)
+- [ ] Empty fields shown as "—", booleans as YES/NO badges
+- [ ] "View in PDF" button opens existing PDF viewer at page_number
+- [ ] Edit mode toggle → inline editing → Save/Cancel → PUT /api/acm/{id}
+- [ ] ← → arrow keys cycle through records
+- [ ] Escape closes panel
+
+**Key Files:** `frontend/src/components/acm/ACMRecordDetailPanel.tsx`, `frontend/src/components/acm/ACMSpreadsheet.tsx`
+
+**Story File:** `docs/sprint-artifacts/e16-s2-record-detail-panel.md`
+
+---
+
+### E16-S3: Empty States & Onboarding Hints (P1)
+**As a** new user opening ACM-AI
+**I want** helpful guidance when there are no documents or records
+**So that** I know what to do next
+
+**Acceptance Criteria:**
+- [ ] Documents page empty state: upload CTA
+- [ ] ACM Register empty state: "extract a SAMP" prompt
+- [ ] Chat empty state: "add ACM context" guide
+- [ ] Extraction Monitor empty states (active + history tabs)
+- [ ] Dismissable onboarding hints on Documents page and ACM Register (localStorage)
+- [ ] Shared EmptyState and OnboardingHint components
+
+**Key Files:** `frontend/src/components/common/EmptyState.tsx`, `frontend/src/components/common/OnboardingHint.tsx`
+
+**Story File:** `docs/sprint-artifacts/e16-s3-empty-states.md`

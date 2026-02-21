@@ -348,3 +348,43 @@ SURREAL_URL=ws://localhost:8001/rpc
 ```
 
 This file is automatically merged by Docker Compose and keeps machine-specific config separate from the shared base.
+
+## Ralph Loop Configuration
+
+When running a Ralph autonomous loop on this repo:
+- **Max iterations**: 40
+- **Completion promise**: `<promise>COMPLETE</promise>`
+- **Blocked signal**: `<promise>BLOCKED</promise>`
+
+### Test Commands
+
+| Layer | Command |
+|-------|---------|
+| Backend | `pytest tests/ -x` |
+| Frontend | `cd frontend && npm run lint && npm run build` |
+| E2E | `npx playwright test` |
+
+### Lint Commands
+
+| Layer | Command |
+|-------|---------|
+| Python | `ruff check .` |
+| Frontend | `cd frontend && npm run lint` |
+
+### Subagent Routing Table
+
+| File Pattern | Route To |
+|--------------|----------|
+| `/api/**`, `/open_notebook/**`, `/migrations/**`, `/commands/**` | `backend-specialist` |
+| `/frontend/**` | `frontend-specialist` |
+| `/tests/**`, `/playwright-report/**` | `qa-specialist` |
+| Story complete event | `docs-specialist` |
+
+### Agent Teams
+
+Requires environment variable:
+```
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+Agent definitions in `.claude/agents/`. The `orchestrator` reads stories from `_bmad-output/implementation-artifacts/` and delegates to specialists based on the routing table above.

@@ -1,59 +1,58 @@
-# Task Plan: Fix Critical Regressions + E2E Validation
+# Task Plan — Remaining Stories
 
-## Status: PLANNING → RESEARCHING
-## Created: 2026-02-09
-## Last Updated: 2026-02-09
+Updated: 2026-02-21
+Source of truth: `docs/sprint-artifacts/sprint-status.yaml`
 
----
-
-## Objective
-Fix two critical regressions (Source Not Found, AG Grid RowGroupingModule error) introduced during E1-S11..S20, verify fixes with Playwright MCP, and create a true end-to-end PDF extraction test.
+**30 stories remaining** (7 ready-for-dev, 11 drafted, 2 backlog, 10 archived)
 
 ---
 
-## Phases
+## P0 — Tier 1: High Value, All Dependencies Satisfied
 
-### Phase 1: Research & Diagnosis
-- [ ] 1.1 Verify services are running (SurrealDB, API, Frontend)
-- [ ] 1.2 Use Playwright MCP to reproduce "Source Not Found" bug
-- [ ] 1.3 Use Playwright MCP to reproduce AG Grid RowGroupingModule error
-- [ ] 1.4 Investigate backend source routes/services for regression
-- [ ] 1.5 Investigate frontend AG Grid configuration
-- [ ] 1.6 Check git diff for E1-S11..S20 changes that could cause regressions
+All have tech-specs in `docs/sprint-artifacts/`. Implement in this order:
 
-### Phase 2: Fix Source Not Found
-- [ ] 2.1 Identify root cause
-- [ ] 2.2 Implement fix
-- [ ] 2.3 Verify fix with Playwright MCP
+| # | Story | Title | Size | Notes |
+|---|-------|-------|------|-------|
+| 1 | E16-S2 | ACM Record Detail Slide-Out Panel | M | High user value |
+| 2 | E15-S1 | Extraction Log Panel in Document Library | M | Unblocks E15-S2 |
+| 3 | E9-S3 | Document Actions & Bulk Operations | M | Has tech-spec |
+| 4 | E16-S1 | Dashboard Home Page with ACM Stats | L | |
+| 5 | E16-S3 | Empty States & Onboarding Hints | S | Quick win |
+| 6 | E10-S1 | Simplify Navigation | S | Independent |
 
-### Phase 3: Fix AG Grid RowGroupingModule Error
-- [ ] 3.1 Find AG Grid configuration in frontend
-- [ ] 3.2 Register RowGroupingModule from ag-grid-enterprise
-- [ ] 3.3 Verify fix with Playwright MCP
+## P1 — Tier 2: Foundation Work
 
-### Phase 4: E2E PDF Extraction Test
-- [ ] 4.1 Identify test fixtures and existing patterns
-- [ ] 4.2 Design E2E test: PDF → MinerU → LangGraph pipeline → assertions
-- [ ] 4.3 Implement and run E2E test
+| # | Story | Title | Size | Notes |
+|---|-------|-------|------|-------|
+| 7 | E12-S1 | Extraction Method Settings UI | M | Unblocks E12-S2, E12-S3 |
+| 8 | E2-S8 | Column Visibility Management | M | PR #30 partial coverage (hide:true) |
+| 9 | E5-S3 | BAR Template Management | M | Unblocks E5-S4 |
+| 10 | E1-S23 | Token Limit Quality Validation | M | Haiku 8K vs Sonnet 32K on large buildings |
+| 11 | E2-S11 | BAR Field Type Safety | S | PR #30 partial coverage (Pydantic schema) |
 
-### Phase 5: Final Verification
-- [ ] 5.1 Full Playwright verification of both fixes
-- [ ] 5.2 Run test suite for regression check
-- [ ] 5.3 Update sprint status if needed
+## P2 — Tier 3: Blocked Until Tier 2
+
+| # | Story | Title | Blocked By |
+|---|-------|-------|------------|
+| 12 | E15-S2 | Dedicated Extraction Monitor Page | E15-S1 |
+| 13 | E5-S4 | Export Field Mapping Configuration | E5-S3 |
+| 14 | E12-S2 | AI Model Configuration UI | E12-S1 |
+| 15 | E12-S3 | Processing Options Configuration | E12-S1 |
+| 16 | E12-S4 | BAR Field Schema Configuration UI | E12-S1 |
+| 17 | E13-S1 | SurrealDB Graph Entity Schema | — (lowest priority) |
+| 18 | E13-S2 | Knowledge Graph API & Data Service | E13-S1 |
+| 19 | E13-S3 | React Flow Knowledge Graph Visualization | E13-S2 |
+| 20 | E11-S2 | Hybrid Search Service | Large effort, after E11-S1 settles |
+
+## Archived (10)
+
+E8-S1 through E8-S10 — Bento Grid Design epic skipped by decision 2026-02-08.
 
 ---
 
-## Decisions Log
-| # | Decision | Rationale | Date |
-|---|----------|-----------|------|
-| - | - | - | - |
+### Notes
 
-## Blockers
-| # | Blocker | Status | Resolution |
-|---|---------|--------|------------|
-| - | - | - | - |
-
-## Errors Encountered
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| (none yet) | | |
+- Stories are prioritized by the NEXT RECOMMENDED ACTIONS section in `sprint-status.yaml`.
+- E1-S23 is the only incomplete E1 story (26/27 done).
+- Completed epics: E3, E4, E6, E7, E14 (all stories done).
+- New stories should be added through the BMAD workflow (`/bmad:bmm:workflows:create-story`).

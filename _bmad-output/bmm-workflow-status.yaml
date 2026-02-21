@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-08"
+updated: "2026-02-21"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -52,9 +52,34 @@ workflow_status:
   correct-course-rag: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-07.md"
   correct-course-docint: "_bmad-output/sprint-change-proposal-20260207-workflow-extraction.md"
   correct-course-generic-parser: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md"
+  correct-course-extraction-monitor-ux: "_bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md"
 
 # CHANGE LOG:
 # ===========
+# 2026-02-20: SCP-20260220 - Extraction Monitor UI + UX Enhancement Sprint
+#   - Project state reconciliation: 11 stories found done that were listed as backlog in old docs
+#   - True completion: 72/99 stories done (73%, up from stale 50/74 in old planning docs)
+#   - NEW Epic 15: Extraction Monitor & Live Logging UI (2 stories)
+#     - E15-S1: Extraction Log Panel in Document Library (surface E1-S21 SSE infra)
+#     - E15-S2: Dedicated Extraction Monitor Page (/extraction-monitor)
+#   - NEW Epic 16: UX Enhancement Sprint (3 stories)
+#     - E16-S1: Dashboard Home Page with ACM Stats
+#     - E16-S2: ACM Record Detail Slide-Out Panel
+#     - E16-S3: Empty States & Onboarding Hints
+#   - PROMOTED: E9-S3 drafted -> ready-for-dev
+#   - PROMOTED: E10-S1 drafted -> ready-for-dev
+#   - Stale _bmad-output/implementation-artifacts/sprint-status.yaml identified (use docs/sprint-artifacts/ instead)
+#   - Proposal: _bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md
+# 2026-02-20: PR Merge Blitz - PRs #31-41 merged to main
+#   - PR #31: Smart chat + document intelligence + BAR compliance (E1-S16..S19 extractors,
+#     ACM extraction progress panel, migration 19, BAR columns, comprehensive tests)
+#   - PRs #32-37: 6 bug fixes (CRLF/.gitattributes, CopilotErrorBoundary, SSE heartbeat,
+#     .next artifacts, taskkill empty string, supports_tool_calling)
+#   - PRs #38-40: Ralph autonomous loop infrastructure v2 (8 critical fixes)
+#   - PR #41: Updated progress.md and task_plan.md tracking files
+#   - Sprint status reconciled: 104 total stories, 74 done (71%)
+#   - Story promotions: E15-S1, E16-S1..S3 drafted -> ready-for-dev
+#   - E5-S4 downgraded: ready-for-dev -> drafted (no tech-spec, blocked by E5-S3)
 # 2025-12-10: Initial workflow status created
 # 2026-02-04: Course Correction completed - Victorian BAR Format Expansion
 #   - PRD updated: 20→50 fields schema, BAR export format

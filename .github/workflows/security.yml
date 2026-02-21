@@ -1,0 +1,180 @@
+name: Security Scanning
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6am UTC
+  pull_request:
+    paths:
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+  workflow_dispatch:
+
+jobs:
+  python-security:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Run pip-audit
+        run: |
+          uv pip install pip-audit
+          uv run pip-audit --format json --output audit-python.json || true
+
+      - name: Upload Python audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-audit
+          path: audit-python.json
+          retention-days: 30
+
+  npm-security:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        working-directory: ./frontend
+        run: |
+          npm audit --json > ../audit-npm.json || true
+
+      - name: Upload npm audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit
+          path: audit-npm.json
+          retention-days: 30
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+  codeql:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      matrix:
+        language: ['python', 'javascript']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  security-report:
+    needs: [python-security, npm-security, secret-scan, codeql]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download audit results
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Generate security report with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: "claude-4-0-sonnet-20250805"
+          track_progress: true
+          prompt: |
+            Analyze the security scan results from:
+            - python-audit/audit-python.json (Python dependencies)
+            - npm-audit/audit-npm.json (NPM dependencies)
+
+            **Your Task:**
+            1. Read and parse the audit files
+            2. Categorize vulnerabilities by severity:
+               - Critical (CVSS >= 9.0)
+               - High (CVSS >= 7.0)
+               - Medium (CVSS >= 4.0)
+               - Low (CVSS < 4.0)
+
+            3. For each vulnerability include:
+               - Package name and version
+               - CVE ID and CVSS score
+               - Description
+               - Recommended fix/upgrade path
+               - Links to CVE details
+
+            4. Create comprehensive security-report.md with sections:
+               - Executive Summary (# of findings by severity)
+               - Critical Findings (immediate action required)
+               - High Priority Findings
+               - Medium/Low Findings
+               - Remediation Summary
+
+            5. If Critical or High severity findings exist:
+               - Create GitHub issue titled "[Security] Critical/High vulnerabilities detected - $(date +%Y-%m-%d)"
+               - Label: security, critical (or high)
+               - Body: Summary with top findings and remediation steps
+               - Assign to repository maintainers
+
+            6. Save the full report as security-report.md
+
+            **ACM-AI Specific Concerns:**
+            - Check for vulnerabilities in: FastAPI, LangChain, MinerU, Next.js, React
+            - Flag any issues with PDF processing libraries (security risk for ACM uploads)
+            - Note authentication/authorization vulnerabilities (API security)
+
+          allowed_tools: |
+            Read,
+            Write,
+            Bash(gh issue create *)
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+          retention-days: 90

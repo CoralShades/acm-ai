@@ -73,10 +73,6 @@ async def _sse_generator(command_id: str):
                 if progress.get("status") in _TERMINAL_STATUSES:
                     yield f"event: done\ndata: {json.dumps({'status': progress['status']})}\n\n"
                     return
-        else:
-            # No progress record yet — send waiting event
-            heartbeat_counter += 1
-
         # Heartbeat to keep connection alive
         if heartbeat_counter >= polls_per_heartbeat:
             yield ": heartbeat\n\n"
@@ -113,9 +109,7 @@ async def get_extraction_progress(command_id: str):
     """
     progress = await _get_progress(command_id)
     if not progress:
-        raise HTTPException(
-            status_code=404, detail="No progress found for this command"
-        )
+        raise HTTPException(status_code=404, detail="No progress found for this command")
 
     state = None
     if progress.get("state_json"):

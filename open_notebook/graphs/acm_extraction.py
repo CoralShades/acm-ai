@@ -152,9 +152,7 @@ def _detect_document_format(content: str) -> str:
     ara_indicators = 0
     if re.search(r"Building Name:\s*\S", content):
         ara_indicators += 1
-    if re.search(
-        r"(?:Presumed\s+)?(?:Positive|Negative)\b", content, re.IGNORECASE
-    ):
+    if re.search(r"(?:Presumed\s+)?(?:Positive|Negative)\b", content, re.IGNORECASE):
         ara_indicators += 1
     if re.search(
         r"\b(?:Dist\.\s*Potential|Risk Rating|Friability)\b", content, re.IGNORECASE
@@ -396,19 +394,23 @@ def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
     """Generate a deduplication key for a record.
 
-    Key format: {school_code}_{building_id}_{room_id}_{hash(product_description[:50])}
+    Key format: {school_code}_{building_id}_{area_type}_{room_id}_{product}_{hash(description)}
+    - Includes area_type to distinguish Interior vs Exterior locations (E1-S25)
+    - Includes product to distinguish different items in same room (E1-S27)
     Uses SHA-256 for cryptographic security (truncated to 8 chars for readability).
     """
     school = school_code or "unknown"
     building = record.building_id or "unknown"
+    area = (record.area_type or "Interior").lower()  # Default to Interior
     room = record.room_id or "none"
+    product = (record.product or "unknown").lower()
 
     # Create hash of product description (first 50 chars) using SHA-256
     desc_hash = hashlib.sha256(
         (record.material_description or "")[:50].encode()
     ).hexdigest()[:8]
 
-    return f"{school}_{building}_{room}_{desc_hash}"
+    return f"{school}_{building}_{area}_{room}_{product}_{desc_hash}"
 
 
 def _merge_records(
@@ -989,7 +991,8 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             model_id,
             "extraction",  # Uses default_extraction_model or falls back to chat
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
-            max_tokens=32768,  # Increased from 8192 to handle larger extraction outputs
+            # Model-aware token limit: Haiku has 8K output limit; larger models support 32K
+            max_tokens=8192 if "haiku" in str(model_id).lower() else 32768,
         )
         # Track model ID and prompt template for observability (E1-S21, AC #4)
         if pl:
@@ -1184,7 +1187,7 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
             ):
                 record.result = "Positive"
             elif "presumed" in result_lower:
-                # Use sample_result to disambiguate presumed results
+                # Use sample_result to disambiguate bare "presumed" results
                 sr = (record.sample_result or "").lower()
                 if "negative" in sr:
                     record.result = "Assumed Negative"

@@ -29,31 +29,66 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
-          
-          # Optional: Customize the trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
-          
-          # Optional: Trigger when specific user is assigned to an issue
-          # assignee_trigger: "claude-bot"
-          
-          # Optional: Allow Claude to run specific commands
-          # allowed_tools: "Bash(npm install),Bash(npm run build),Bash(npm run test:*),Bash(npm run lint:*)"
-          
-          # Optional: Add custom instructions for Claude to customize its behavior for your project
-          # custom_instructions: |
-          #   Follow our coding standards
-          #   Ensure all new code has tests
-          #   Use TypeScript for new files
-          
-          # Optional: Custom environment variables for Claude
-          # claude_env: |
-          #   NODE_ENV: test
+          github_token: ${{ steps.app-token.outputs.token }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: "claude-4-0-sonnet-20250805"
+          track_progress: true
+          prompt: |
+            You are working on ACM-AI, an intelligent Asbestos Containing Material (ACM) compliance management system.
+
+            **Project Structure:**
+            - Backend: Python 3.11+ with FastAPI, LangChain/LangGraph, SurrealDB
+            - Frontend: Next.js 15 with React 19, Radix UI, Tailwind CSS 4, Zustand, React Query
+
+            **Available Commands:**
+            - `/start` - Start development services
+            - `/stop` - Stop all services
+            - `/test [path]` - Run pytest tests
+            - `/build [target]` - Build frontend or run backend checks
+            - `/status` - Check service health
+            - `/logs [service]` - View service logs
+
+            **Key Development Patterns:**
+            - Follow Story Verification Protocol before marking stories complete
+            - Use conventional commits (feat:, fix:, docs:, refactor:, test:)
+            - Backend: Repository pattern, DDD, type hints required
+            - Frontend: React Query for server state, Zustand for client state
+            - All tests must pass before completing work
+
+            **Context:**
+            - Repository: ${{ github.repository }}
+            - Issue/PR: #${{ github.event.issue.number || github.event.pull_request.number }}
+            - Author: @${{ github.event.comment.user.login || github.event.issue.user.login }}
+
+            Always check CLAUDE.md for project-specific guidance before starting work.
+          allowed_tools: |
+            Read,
+            Write,
+            Edit,
+            Glob,
+            Grep,
+            Bash(/start),
+            Bash(/stop),
+            Bash(/status),
+            Bash(/logs *),
+            Bash(/test *),
+            Bash(/build *),
+            Bash(make *),
+            Bash(uv run *),
+            Bash(npm run *),
+            Bash(pytest *),
+            Bash(git status),
+            Bash(git diff *),
+            Bash(git log *)
 
