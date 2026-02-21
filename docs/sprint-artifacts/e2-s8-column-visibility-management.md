@@ -68,57 +68,50 @@ All 47 BAR columns — `hide: false` on all column definitions.
 
 ## Technical Notes
 
+### ⚠️ Conflict Guard — Read Before Implementing
+
+**File reference correction:** Story references `ACMSpreadsheet.tsx` — this file does not exist.
+The correct file is `frontend/src/components/acm/ACMGrid.tsx`.
+
+**Existing localStorage state:** E2-S9 already persists full AG Grid column state (widths + visibility)
+to key `acm-grid-column-state` via `columnApi.getColumnState()` / `applyColumnState()`.
+Do NOT create a competing system with key `acm-column-visibility` — this will desync column widths
+and visibility on reload.
+
+**Correct integration approach:**
+1. Keep the Zustand store for tracking `activePreset` label only (no `persist` middleware needed).
+2. When applying a preset, call `gridRef.current.api.applyColumnState({ state: presetStateArray, applyOrder: true })` where `presetStateArray` maps each field to `{ colId, hide: boolean }`.
+3. Let E2-S9's existing `onColumnVisible` → `onColumnResized` handler save state to `acm-grid-column-state` automatically — do not add another save call.
+4. `resetToDefault()` must call `localStorage.removeItem('acm-grid-column-state')` (same key as E2-S9) then apply the Essential preset via AG Grid API.
+
+**Reset Columns button:** E2-S9 already added a "Reset Columns" button to `ACMToolbar.tsx`.
+The picker's "Reset to Default" footer button is a second entry point for the same action —
+call the same `onResetColumns` prop passed down from `ACMTab` → `ACMGrid` → `ACMToolbar`.
+Do not add a second `localStorage.removeItem` call independently.
+
+**Column definitions:** Remove `hide: true` from `room_id`, `material_condition`, `acm_labelled`,
+`identifying_company`, `acm_product_group` in `ACMGrid.tsx` only AFTER the column picker is wired
+and tested. Until then, the picker will override these on first load via `applyColumnState`.
+
 ### Zustand Store
 
 ```typescript
 // frontend/src/stores/column-visibility-store.ts
+// Only tracks active preset label for UI display — NOT column visibility state
+// Column visibility is managed entirely by AG Grid's own state via 'acm-grid-column-state' key
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 export type PresetName = 'essential' | 'full-bar' | 'assessment-focus' | 'removal-tracking' | 'custom'
 
-interface ColumnVisibilityState {
-  visibleColumns: string[]          // list of field keys that are visible
+interface ColumnPresetState {
   activePreset: PresetName
-  setVisibleColumns: (cols: string[]) => void
-  applyPreset: (preset: PresetName) => void
-  toggleColumn: (fieldKey: string) => void
-  resetToDefault: () => void
+  setActivePreset: (preset: PresetName) => void
 }
 
-export const PRESETS: Record<PresetName, string[]> = {
-  'essential': ['building_id', 'room_id', 'item_no', 'product_description', 'friability',
-                'result', 'risk_status', 'condition', 'recommendation_action',
-                'location_description', 'sampled', 'area_sqm'],
-  'full-bar': [],  // empty = show all
-  'assessment-focus': ['building_id', 'room_id', 'item_no', 'product_description', 'friability',
-                       'result', 'risk_status', 'condition', 'disturbance_potential',
-                       'accessibility', 'recommendation_action', 'reassessment_date', 'inspector_name'],
-  'removal-tracking': ['building_id', 'room_id', 'item_no', 'product_description', 'quantity',
-                       'unit_of_measure', 'removal_priority', 'removal_date', 'removal_contractor',
-                       'removal_method', 'disposal_certificate_no', 'verification_date'],
-  'custom': [],    // user-defined, populated dynamically
-}
-
-export const useColumnVisibilityStore = create<ColumnVisibilityState>()(
-  persist(
-    (set, get) => ({
-      visibleColumns: PRESETS['essential'],
-      activePreset: 'essential',
-      setVisibleColumns: (cols) => set({ visibleColumns: cols, activePreset: 'custom' }),
-      applyPreset: (preset) => set({ visibleColumns: PRESETS[preset], activePreset: preset }),
-      toggleColumn: (fieldKey) => {
-        const current = get().visibleColumns
-        const next = current.includes(fieldKey)
-          ? current.filter(k => k !== fieldKey)
-          : [...current, fieldKey]
-        set({ visibleColumns: next, activePreset: 'custom' })
-      },
-      resetToDefault: () => set({ visibleColumns: PRESETS['essential'], activePreset: 'essential' }),
-    }),
-    { name: 'acm-column-visibility' }  // localStorage key
-  )
-)
+export const useColumnPresetStore = create<ColumnPresetState>()((set) => ({
+  activePreset: 'essential' as PresetName,
+  setActivePreset: (preset) => set({ activePreset: preset }),
+}))
 ```
 
 ### AG Grid Integration
@@ -172,7 +165,7 @@ The column picker button is added to the existing ACM spreadsheet toolbar alongs
 |------|-------------|-------------|
 | `frontend/src/stores/column-visibility-store.ts` | NEW | Zustand store with localStorage persistence |
 | `frontend/src/components/acm/ColumnVisibilityPicker.tsx` | NEW | Dropdown column picker with presets |
-| `frontend/src/components/acm/ACMSpreadsheet.tsx` | MODIFY | Wire store to AG Grid Column API, add picker to toolbar, remove `hide: true` flags |
+| `frontend/src/components/acm/ACMGrid.tsx` | MODIFY | Wire store to AG Grid Column API, add picker to toolbar, remove `hide: true` flags |
 | `frontend/src/app/(dashboard)/sources/[id]/acm/page.tsx` | MODIFY (if needed) | Ensure store is available in page scope |
 
 ---

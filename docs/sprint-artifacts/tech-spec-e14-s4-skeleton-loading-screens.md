@@ -611,6 +611,46 @@ export function SearchSkeleton() {
 
 ---
 
+### ⚠️ Conflict Guard — `acm/page.tsx` Preservation (E2-S9)
+
+`frontend/src/app/(dashboard)/acm/page.tsx` was modified by E2-S9 and contains:
+- `ACMRecordDetailDialog` import and JSX (`<ACMRecordDetailDialog ... />`)
+- `selectedRecord` state and `handleRowClick` / `handleCloseDetail` handlers
+- `onResetColumns` callback wired to `ACMGrid`
+
+When adding skeleton loading to this page, **do not overwrite these additions**.
+Use an additive pattern:
+
+```tsx
+// CORRECT — additive
+const { data: sources, isLoading: sourcesLoading } = useSources()
+if (sourcesLoading) return <ACMRegisterSkeleton />
+
+// Below the loading guard, existing JSX (including ACMRecordDetailDialog) remains unchanged
+```
+
+Do NOT restructure the page component's return statement in a way that removes
+`<ACMRecordDetailDialog>` or its state handlers.
+
+### ⚠️ Skeleton Height Must Match Grid
+
+`ACMRegisterSkeleton.tsx` must use the same grid container height as `ACMGrid.tsx`.
+Before implementing, check the current value of the `className` on the `.ag-theme-alpine` div
+in `frontend/src/components/acm/ACMGrid.tsx`. As of E8-S11 (review), this is:
+`h-[calc(100vh-280px)] min-h-[400px]`
+
+Use the same value in the skeleton grid placeholder rows.
+If the value differs in the live file, use whatever is currently in `ACMGrid.tsx`.
+
+### ⚠️ Sequencing with Other `acm/page.tsx` Stories
+
+Three other ready-for-dev stories also modify `acm/page.tsx`:
+- **E14-S8** (Error Recovery) — additive
+- **E14-S10** (Breadcrumb Navigation) — layout change, will increase offset from 280px → 320px
+
+Recommended sequence: **E14-S4 → E14-S8 → E14-S10**
+Each must be merged and the next story's developer must read the updated file before starting.
+
 ### 4. Integration Pattern
 
 Each page component conditionally renders its skeleton while data is loading.

@@ -7,6 +7,7 @@ Uses AI-powered LangGraph extraction for accurate parsing of Docling output.
 Story: E1-S7 AI-Powered ACM Extraction
 """
 
+import asyncio
 import time
 from typing import Optional
 
@@ -82,13 +83,27 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         if not source_id or not isinstance(source_id, str):
             raise ValueError("source_id must be a non-empty string")
 
-        # 1. Load source
-        source = await Source.get(source_id)
+        # 1. Load source — wait for text content (race condition: process_source may still be running)
+        MAX_WAIT_SECONDS = 120
+        POLL_INTERVAL = 5
+        source = None
+        for _ in range(MAX_WAIT_SECONDS // POLL_INTERVAL):
+            source = await Source.get(source_id)
+            if source and source.full_text:
+                break
+            logger.info(
+                f"Source {source_id} text not ready yet, waiting {POLL_INTERVAL}s..."
+            )
+            await asyncio.sleep(POLL_INTERVAL)
+
         if not source:
             raise ValueError(f"Source {source_id} not found")
 
         if not source.full_text:
-            raise ValueError(f"Source {source_id} has no text content")
+            raise RuntimeError(
+                f"Source {source_id} text unavailable after {MAX_WAIT_SECONDS}s - "
+                "process_source may still be running or failed"
+            )
 
         # Enhanced start logging (E1-S21)
         text_len = len(source.full_text) if source.full_text else 0
