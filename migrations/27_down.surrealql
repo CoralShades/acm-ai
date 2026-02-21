@@ -1,0 +1,4 @@
+-- Rollback migration 27: remove full-text search indexes
+REMOVE INDEX acm_sample_idx ON acm_record;
+REMOVE INDEX acm_fulltext ON acm_record;
+REMOVE ANALYZER acm_analyzer;

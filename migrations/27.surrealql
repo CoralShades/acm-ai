@@ -1,0 +1,10 @@
+-- Migration 27: Full-text search indexes for hybrid search (E11-S2)
+DEFINE ANALYZER acm_analyzer TOKENIZERS blank, class FILTERS lowercase, snowball(english);
+
+DEFINE INDEX acm_fulltext ON acm_record
+  FIELDS product, material_description, location, hygienist_recommendations
+  SEARCH ANALYZER acm_analyzer BM25;
+
+DEFINE INDEX acm_sample_idx ON acm_record
+  FIELDS sample_no, sample_result
+  SEARCH ANALYZER acm_analyzer BM25;
