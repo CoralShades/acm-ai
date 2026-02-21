@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -125,15 +125,18 @@ function EditTextField({
   label,
   value,
   onChange,
+  type = 'text',
 }: {
   label: string
   value: string | undefined
   onChange: (v: string) => void
+  type?: 'text' | 'number'
 }) {
   return (
     <div className="grid grid-cols-[1fr_1fr] gap-x-3 py-1 items-center">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <Input
+        type={type}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         className="h-7 text-xs px-2"
@@ -187,26 +190,49 @@ export function ACMRecordDetailPanel({
 }: ACMRecordDetailPanelProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<ACMRecordUpdateRequest>({})
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const updateRecord = useUpdateACMRecord()
 
-  // Reset edit mode when record changes
+  // Reset edit mode and animation state when record changes
   useEffect(() => {
     setIsEditing(false)
     setFormData({})
+    setIsAnimatingOut(false)
   }, [record.id])
 
-  // Keyboard: Escape closes, arrows navigate (skip when inside grid or when editing)
+  // Cleanup close timer on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false)
+    setFormData({})
+  }, [])
+
+  // Animate out then notify parent (M2: exit animation)
+  const handleClose = useCallback(() => {
+    setIsAnimatingOut(true)
+    closeTimerRef.current = setTimeout(() => {
+      onClose()
+    }, 200)
+  }, [onClose])
+
+  // Keyboard: Escape closes/cancels, arrows navigate (M3: all used functions in deps)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (isEditing) {
           handleCancelEdit()
         } else {
-          onClose()
+          handleClose()
         }
         return
       }
-      // Don't navigate when focus is in AG Grid or in an input
+      // Don't navigate when focus is in AG Grid or in a form input
       const active = document.activeElement
       if (
         active instanceof HTMLInputElement ||
@@ -227,8 +253,7 @@ export function ACMRecordDetailPanel({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, onClose, onPrev, onNext])
+  }, [isEditing, handleClose, handleCancelEdit, onPrev, onNext])
 
   const handleStartEdit = useCallback(() => {
     setFormData({
@@ -254,11 +279,6 @@ export function ACMRecordDetailPanel({
     setIsEditing(true)
   }, [record])
 
-  const handleCancelEdit = useCallback(() => {
-    setIsEditing(false)
-    setFormData({})
-  }, [])
-
   const handleSave = useCallback(async () => {
     try {
       const updated = await updateRecord.mutateAsync({
@@ -282,23 +302,26 @@ export function ACMRecordDetailPanel({
   )
 
   // Render field — either as editable input or display text
+  // isNumeric=true: uses number input and converts string → number on change
   const renderField = useCallback(
     (
       label: string,
       field: keyof ACMRecordUpdateRequest,
       displayValue: string | number | boolean | null | undefined,
-      options?: string[]
+      options?: string[],
+      isNumeric?: boolean
     ) => {
       if (!isEditing) {
         return <DisplayField key={label} label={label} value={displayValue} />
       }
-      const editVal = formData[field] as string | undefined
+      const rawVal = formData[field]
+      const editValStr = rawVal !== undefined ? String(rawVal) : undefined
       if (options) {
         return (
           <EditSelectField
             key={label}
             label={label}
-            value={editVal}
+            value={editValStr}
             options={options}
             onChange={(v) => setField(field, v)}
           />
@@ -308,8 +331,11 @@ export function ACMRecordDetailPanel({
         <EditTextField
           key={label}
           label={label}
-          value={editVal}
-          onChange={(v) => setField(field, v)}
+          value={editValStr}
+          type={isNumeric ? 'number' : 'text'}
+          onChange={(v) =>
+            setField(field, isNumeric ? (v === '' ? undefined : Number(v)) : v)
+          }
         />
       )
     },
@@ -321,7 +347,9 @@ export function ACMRecordDetailPanel({
       className={cn(
         'fixed inset-y-0 right-0 z-40 flex flex-col',
         'w-[380px] bg-background border-l shadow-xl',
-        'animate-in slide-in-from-right duration-200'
+        isAnimatingOut
+          ? 'animate-out slide-out-to-right duration-200'
+          : 'animate-in slide-in-from-right duration-200'
       )}
       role="complementary"
       aria-label="ACM Record Details"
@@ -374,7 +402,7 @@ export function ACMRecordDetailPanel({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close panel"
           >
             <X className="h-4 w-4" />
@@ -430,7 +458,7 @@ export function ACMRecordDetailPanel({
             <dl>
               {renderField('Building ID', 'building_id', record.building_id)}
               {renderField('Building Name', 'building_name', record.building_name)}
-              {renderField('Year Built', 'building_year', record.building_year)}
+              {renderField('Year Built', 'building_year', record.building_year, undefined, true)}
               {renderField(
                 'Construction',
                 'building_construction',
@@ -494,9 +522,14 @@ export function ACMRecordDetailPanel({
                 value={record.disturbance_potential}
               />
               {renderField('Extent', 'extent', record.extent)}
-              <DisplayField label="Risk Status">
-                <RiskBadge value={record.risk_status} />
-              </DisplayField>
+              {isEditing
+                ? renderField('Risk Status', 'risk_status', record.risk_status,
+                    ['Low', 'Medium', 'High', 'Presumed'])
+                : (
+                  <DisplayField label="Risk Status">
+                    <RiskBadge value={record.risk_status} />
+                  </DisplayField>
+                )}
               <DisplayField
                 label="Identifying Company"
                 value={record.identifying_company}

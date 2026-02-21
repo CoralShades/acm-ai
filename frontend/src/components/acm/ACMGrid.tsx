@@ -19,6 +19,8 @@ export interface ACMGridRef {
   expandAll: () => void
   collapseAll: () => void
   resetColumns: () => void
+  /** Returns records in current AG Grid sort/filter order (excludes group rows) */
+  getVisibleRows: () => ACMRecord[]
 }
 
 // Cell selection details for citation viewer
@@ -130,7 +132,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
   const [gridApi, setGridApi] = useState<GridApi<ACMRecord> | null>(null)
 
-  // Expose expand/collapse/resetColumns methods to parent via ref
+  // Expose grid control methods to parent via ref
   useImperativeHandle(ref, () => ({
     expandAll: () => {
       gridApi?.expandAll()
@@ -143,6 +145,14 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         localStorage.removeItem(COLUMN_STATE_KEY)
         gridApi.resetColumnState()
       }
+    },
+    getVisibleRows: () => {
+      if (!gridApi) return []
+      const rows: ACMRecord[] = []
+      gridApi.forEachNodeAfterFilterAndSort((node) => {
+        if (!node.group && node.data) rows.push(node.data)
+      })
+      return rows
     },
   }), [gridApi])
 

@@ -138,6 +138,18 @@ Implemented the ACM Record Detail Slide-Out Panel as a right-side fixed panel (n
 - **Record navigation**: `handleDetailPrev/Next` operate on the current building-filtered `records` array
 
 ### Build Verification
-- `npm run build`: PASS (exit code 0)
+- `npm run build`: PASS (exit code 0) — both initial and post-review fixes
 - `npm run lint`: PASS — no ESLint warnings or errors
 - `npx tsc --noEmit`: PASS — no type errors in our files
+
+### Code Review Fixes Applied (2026-02-21)
+Review found 3 HIGH + 3 MEDIUM issues — all fixed automatically:
+
+| ID | Severity | Issue | Fix |
+|----|----------|-------|-----|
+| H1 | HIGH | `risk_status` not editable in edit mode | Changed to `renderField` with Select options; keeps RiskBadge in view mode |
+| H2 | HIGH | `building_year` saved as string not number | Added `isNumeric` param to `renderField`/`EditTextField`; converts on change |
+| H3 | HIGH | Arrow navigation ignored AG Grid sort order | Added `getVisibleRows()` to `ACMGridRef`; nav handlers use it |
+| M1 | MEDIUM | `findIndex` called twice per render | Memoized as `detailRecordIndex` useMemo |
+| M2 | MEDIUM | No exit animation (panel closed abruptly) | Internal `isAnimatingOut` state + `animate-out slide-out-to-right` |
+| M3 | MEDIUM | `handleCancelEdit` missing from keyboard effect deps | Moved `handleCancelEdit` before `useEffect`; added to deps array |

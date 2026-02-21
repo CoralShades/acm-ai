@@ -263,18 +263,26 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     return allRecords.filter((r) => r.building_id === selectedBuilding)
   }, [allRecords, selectedBuilding])
 
-  // Navigate to previous record in current filtered list
+  // Memoize index of detail record in filtered array (for hasPrev/hasNext button state)
+  const detailRecordIndex = useMemo(
+    () => (detailRecord ? records.findIndex((r) => r.id === detailRecord.id) : -1),
+    [detailRecord, records]
+  )
+
+  // Navigate to previous record — follows AG Grid's current sort/filter order
   const handleDetailPrev = useCallback(() => {
     if (!detailRecord) return
-    const idx = records.findIndex((r) => r.id === detailRecord.id)
-    if (idx > 0) setDetailRecord(records[idx - 1])
+    const visibleRows = gridRef.current?.getVisibleRows() ?? records
+    const idx = visibleRows.findIndex((r) => r.id === detailRecord.id)
+    if (idx > 0) setDetailRecord(visibleRows[idx - 1])
   }, [detailRecord, records])
 
-  // Navigate to next record in current filtered list
+  // Navigate to next record — follows AG Grid's current sort/filter order
   const handleDetailNext = useCallback(() => {
     if (!detailRecord) return
-    const idx = records.findIndex((r) => r.id === detailRecord.id)
-    if (idx < records.length - 1) setDetailRecord(records[idx + 1])
+    const visibleRows = gridRef.current?.getVisibleRows() ?? records
+    const idx = visibleRows.findIndex((r) => r.id === detailRecord.id)
+    if (idx < visibleRows.length - 1) setDetailRecord(visibleRows[idx + 1])
   }, [detailRecord, records])
 
   const totalCount = allRecords.length
@@ -379,10 +387,8 @@ export function ACMTab({ sourceId }: ACMTabProps) {
         <ACMRecordDetailPanel
           record={detailRecord}
           sourceId={sourceId}
-          hasPrev={records.findIndex((r) => r.id === detailRecord.id) > 0}
-          hasNext={
-            records.findIndex((r) => r.id === detailRecord.id) < records.length - 1
-          }
+          hasPrev={detailRecordIndex > 0}
+          hasNext={detailRecordIndex < records.length - 1}
           onPrev={handleDetailPrev}
           onNext={handleDetailNext}
           onClose={handleDetailClose}
