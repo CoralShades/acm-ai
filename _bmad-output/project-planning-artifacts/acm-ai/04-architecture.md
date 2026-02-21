@@ -2,9 +2,9 @@
 
 > **Project:** ACM-AI v1.0
 > **Date:** 2025-12-07 (Updated: 2026-02-08)
-> **Status:** Draft - Updated for UX &amp; Enterprise Readiness
-> **Status:** v1.1 - Updated for SCP-20260220 (Extraction Monitor + UX Enhancement)
+> **Status:** v1.2 - Updated for E17 (Live Extraction Intelligence — AG-UI + A2A)
 > **Change Log:**
+> - 2026-02-22 - v1.2: E17 AG-UI extraction relay (AGUIEventEmitter, agui_events table, Phase 2 SSE), A2A agent card, incremental record streaming architecture
 > - 2026-02-20 - v1.1: SCP-20260220 migration 17–19 table additions, SSE endpoint fix, 7-stage pipeline heading, planned E15/E16 components
 > - 2026-02-08 - Frontend Design System Architecture (UX Audit)
 > - 2026-02-08 - Sections 5.2, 5.3 rewritten: Generic Configurable Parser Architecture (course correction per `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md`)
@@ -1471,13 +1471,51 @@ Browser ──SSE──▶ FastAPI ──Events──▶ LangGraph Nodes
     PipelineEventEmitter (asyncio.Queue per subscriber)
 ```
 
-**Status:** ✅ **Phase 1 (implemented)**
+**Status:** ✅ **Phase 1 (implemented)**, ✅ **Phase 2 (implemented)**
+
+#### Phase 1: Chat AG-UI (implemented)
 - **Live Endpoint:** `/api/agui/chat` (AG-UI protocol via `ag-ui-langgraph` adapter)
 - **Frontend:** `CopilotProvider`, `SmartChatPanel`, custom tool result renderers
 - **Backend:** `supervisor_agent.py` exposed via `LangGraphAgent` adapter
 
+#### Phase 2: Extraction AG-UI Relay (implemented — E17)
+
+The extraction pipeline runs in the worker process (surreal-commands), not the API process. AG-UI SSE must be served from FastAPI. Solution: SurrealDB event relay.
+
+```
+Worker Process                    API Process                    Frontend
+┌─────────────┐    SurrealDB     ┌──────────────┐    SSE       ┌──────────┐
+│ AGUIEvent    │──→ agui_events ──→ /agui/       │────────────→│useCoAgent│
+│ Emitter      │    table        │  extraction/  │             │  hook    │
+│ (fire&forget)│                 │  {cmd}/stream │             │          │
+└─────────────┘                  └──────────────┘              └──────────┘
+```
+
+- **`AGUIEventEmitter`** (`open_notebook/extractors/agui_event_emitter.py`): Persists AG-UI events to `agui_events` SurrealDB table using fire-and-forget async tasks (same pattern as `PipelineLogger._schedule_persist()`)
+- **SSE Endpoint:** `GET /api/agui/extraction/{command_id}/stream` — polls `agui_events` table every 500ms, streams as named SSE events, heartbeat every 15s, auto-closes on RunFinished/RunError
+- **Frontend:** `useExtractionAgent()` hook via CopilotKit `useCoAgent({ name: 'extraction' })` for incremental record streaming
+- **All 10 graph nodes instrumented:** extract_metadata, structure, inventory, tag_pages, prepare, extract, validate, correct, deduplicate, save
+
+**AG-UI Event Types (Extraction):**
+| Graph Node | AG-UI Events |
+|------------|-------------|
+| extract_metadata/structure/inventory/tag_pages/prepare | StepStarted → StateDelta → StepFinished |
+| extract_records | ToolCallStart → ToolCallArgs → StateDelta (per record) → ToolCallEnd |
+| validate/correct/deduplicate | StepStarted → StateDelta → StepFinished |
+| save | StepStarted → RunFinished |
+
+**SurrealDB Table:** `agui_events` (migration 21)
+- Fields: `command_id`, `sequence`, `type`, `payload`, `timestamp`
+- Index: `agui_events_cmd_seq` on `(command_id, sequence)`
+
+#### A2A (Agent-to-Agent) Protocol (E17-S5)
+- **Agent Card:** `GET /.well-known/agent.json` — static JSON served from `api/static/.well-known/`
+- **Task Lifecycle:** `POST /api/a2a/tasks` creates extraction task, `GET /api/a2a/tasks/{id}` returns status
+- Maps to existing surreal-command dispatch internally
+
 **Transport Strategy:**
-- **Phase 1:** SSE (Server-Sent Events) for real-time extraction progress and chat streaming
+- **Phase 1:** SSE for chat streaming via `/api/agui/chat`
+- **Phase 2:** SSE for extraction AG-UI events via `/api/agui/extraction/{cmd}/stream`
 - **Fallback:** 3-second polling via existing `useExtractionStatus` hook
 
 **State Management:**
@@ -1485,7 +1523,7 @@ Browser ──SSE──▶ FastAPI ──Events──▶ LangGraph Nodes
 - 7-stage pipeline: Upload → Parse → Extract → Interpret → Validate → Store → Index
 - Each stage has: status (pending/active/complete/error), progress %, timing
 
-**Event Schema:**
+**Event Schema (Phase 1 — Pipeline):**
 ```typescript
 interface PipelineEvent {
   type: 'stage_start' | 'stage_progress' | 'stage_complete' | 'stage_error';

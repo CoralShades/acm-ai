@@ -2,9 +2,9 @@
 
 > **Product:** ACM-AI v1.0
 > **Date:** 2025-12-07 (Updated: 2026-02-08)
-> **Status:** v1.4 - Updated for SCP-20260220 (Extraction Monitor + UX Enhancement)
+> **Status:** v1.5 - Updated for E17 (Live Extraction Intelligence — AG-UI + A2A)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
+> **Change Log:** 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -155,6 +155,20 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-902 | System shall provide a slide-out record detail panel showing all 47 ACM fields on row click | P0 | 380px right drawer slides in on grid row click; organises fields into 8 labeled sections; keyboard navigation (←→); edit mode with save/cancel |
 | FR-903 | System shall display empty state screens with appropriate CTAs when no documents or records exist | P1 | Empty states on Documents, ACM Register, Chat, and Extraction Monitor pages; dismissable onboarding hints on first visit |
 | FR-904 | System shall support bulk document operations (select multiple → delete/re-extract/export) | P1 | Checkbox selection in document list; bulk action toolbar appears; bulk delete, bulk re-extract, bulk CSV export |
+
+### 2.10 Live Extraction Intelligence (FR-1000 Series)
+
+> **Added:** 2026-02-22 (E17: Live Extraction Intelligence — AG-UI + A2A + Real-time Observability)
+> **Spec References:** `docs/sprint-artifacts/e17-s1-agui-extraction-endpoint.md` through `e17-s6-new-openrouter-models.md`
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1001 | System shall emit AG-UI protocol events during extraction via SurrealDB relay (AGUIEventEmitter → agui_events table → SSE endpoint) | P0 | `GET /api/agui/extraction/{command_id}/stream` returns AG-UI compliant SSE; events include RunStarted, StepStarted/Finished, StateDelta, ToolCallStart/End, RunFinished/RunError |
+| FR-1002 | System shall stream extracted records incrementally to the AG Grid during extraction via AG-UI StateDelta events | P0 | Records appear in AG Grid within 2s of each chunk; preview rows visually distinguished (italic/pulsing border); replaced by final records on completion |
+| FR-1003 | System shall display reasoning tokens from thinking models (DeepSeek R1, Claude extended thinking) in a collapsible panel | P1 | "Agent Thinking" panel in ExtractionProgressPanel; streams tokens character-by-character; hidden by default; non-reasoning models: panel doesn't appear |
+| FR-1004 | System shall display extraction tool call operations in a live feed showing step names, arguments, results, and durations | P1 | Each graph node transition shows as a tool call entry; in-flight calls show spinner; completed calls show check + result summary + duration |
+| FR-1005 | System shall expose an A2A (Agent-to-Agent) agent card at `/.well-known/agent.json` with task lifecycle endpoints | P1 | `GET /.well-known/agent.json` returns valid A2A agent card; `POST /api/a2a/tasks` accepts extraction task; `GET /api/a2a/tasks/{id}` returns status |
+| FR-1006 | System shall support 6 additional frontier AI models via OpenRouter: MiniMax M2.1, Kimi K2.5, DeepSeek V3.2, Claude Sonnet 4.6, GPT 5.2, Gemini 2.5 Pro | P1 | Models auto-provisioned on startup when `OPENROUTER_API_KEY` set; correct context windows and capability flags (structured output, tool calling) |
 
 ---
 

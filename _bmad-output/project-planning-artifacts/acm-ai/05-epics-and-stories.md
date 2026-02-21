@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-20)
-> **Status:** Active - Updated for SCP-20260220 (Extraction Monitor + UX Enhancement)
-> **Change Log:** 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted, done statuses reconciled (72/99 done)
+> **Date:** 2025-12-07 (Updated: 2026-02-22)
+> **Status:** Active - Updated for E17 (Live Extraction Intelligence)
+> **Change Log:** 2026-02-22 — E17 added (6 stories: AG-UI extraction relay, incremental streaming, reasoning display, tool observability, A2A, models); 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted, done statuses reconciled (72/99 done)
 
 ---
 
@@ -27,6 +27,7 @@
 | E14 | UX & Enterprise Readiness | P0/P1 | 11 | Done |
 | E15 | Extraction Monitor & Live Logging UI | P0 | 2 | Backlog |
 | E16 | UX Enhancement Sprint | P0/P1 | 3 | Backlog |
+| E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | In Progress |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2016,3 +2017,132 @@ E10-S1 (independent)
 **Key Files:** `frontend/src/components/common/EmptyState.tsx`, `frontend/src/components/common/OnboardingHint.tsx`
 
 **Story File:** `docs/sprint-artifacts/e16-s3-empty-states.md`
+
+---
+
+## Epic 17: Live Extraction Intelligence — AG-UI + A2A + Real-time Observability
+
+> **Added:** 2026-02-22
+> **Priority:** P0/P1
+> **Status:** In Progress (6 stories: S1-S4 implemented, S5-S6 implemented)
+
+**Goal:** Transform the extraction pipeline from a black box into a live, observable, interoperable system. Records appear incrementally, agent reasoning is visible, tool calls are tracked, and the service is discoverable via A2A protocol.
+
+**Dependencies:** Builds on existing AG-UI/CopilotKit infrastructure (E4 chat), PipelineLogger (E1-S3), SSE extraction progress (E15).
+
+---
+
+### E17-S1: AG-UI Extraction Pipeline Endpoint (P0) — Done
+
+**As a** developer integrating with the extraction pipeline
+**I want** AG-UI compliant SSE events emitted during extraction
+**So that** the frontend can display real-time extraction state via CopilotKit
+
+**Acceptance Criteria:**
+- [x] `GET /api/agui/extraction/{command_id}/stream` returns AG-UI compliant SSE
+- [x] Events: RunStarted, StepStarted/Finished per node, StateDelta, ToolCallStart/End, RunFinished/RunError
+- [x] Existing SSE at `/api/acm/extraction-progress/` unchanged
+- [x] 500ms poll interval, heartbeat every 15s
+- [x] Stream auto-closes on RunFinished/RunError
+
+**Key Files:** `open_notebook/extractors/agui_event_emitter.py`, `api/routers/agui_extraction.py`, `migrations/21.surrealql`, `open_notebook/graphs/acm_extraction.py`
+
+**Story File:** `docs/sprint-artifacts/e17-s1-agui-extraction-endpoint.md`
+
+---
+
+### E17-S2: Incremental Record Streaming to AG Grid (P0) — Done
+
+**As a** user running extraction
+**I want** records to appear in the AG Grid as they are extracted (not all at the end)
+**So that** I can see progress and catch issues early
+
+**Acceptance Criteria:**
+- [x] Records appear in AG Grid within 2s of each chunk being processed
+- [x] Preview records visually distinguished (italic/ghost styling with pulsing border)
+- [x] On completion, preview records replaced by final saved records
+- [x] Chunk progress counter visible (e.g., "Chunk 3/8")
+
+**Key Files:** `frontend/src/lib/hooks/use-extraction-agent.ts`, `frontend/src/components/acm/PreviewRecordBadge.tsx`, `frontend/src/components/acm/ACMGrid.tsx`, `frontend/src/components/acm/ACMTab.tsx`
+
+**Story File:** `docs/sprint-artifacts/e17-s2-incremental-record-streaming.md`
+
+---
+
+### E17-S3: Reasoning Token Display (P1) — Done
+
+**As a** user using reasoning models (DeepSeek R1, Claude extended thinking)
+**I want** to see the model's reasoning process during extraction
+**So that** I can understand how the AI is interpreting the document
+
+**Acceptance Criteria:**
+- [x] Collapsible "Agent Thinking" panel in ExtractionProgressPanel
+- [x] Streams reasoning tokens character-by-character
+- [x] Hidden by default, user can expand
+- [x] Non-reasoning models: panel doesn't appear
+
+**Key Files:** `frontend/src/components/acm/ExtractionThinkingPanel.tsx`, `frontend/src/components/acm/ExtractionProgressPanel.tsx`
+
+**Story File:** `docs/sprint-artifacts/e17-s3-reasoning-token-display.md`
+
+---
+
+### E17-S4: Extraction Tool Call Observability (P1) — Done
+
+**As a** user monitoring an extraction
+**I want** to see which extraction step is running and what it's doing
+**So that** I can understand progress and diagnose issues
+
+**Acceptance Criteria:**
+- [x] Each graph node transition shows as a tool call entry
+- [x] In-flight calls show spinner + elapsed time
+- [x] Completed calls show check + result summary + duration
+- [x] Args displayed: chunk_index, page_range, model_id, content_length
+
+**Key Files:** `frontend/src/components/acm/ExtractionToolCallFeed.tsx`, `frontend/src/components/acm/ExtractionProgressPanel.tsx`
+
+**Story File:** `docs/sprint-artifacts/e17-s4-extraction-tool-observability.md`
+
+---
+
+### E17-S5: A2A Agent Card + Task Lifecycle (P1) — Done
+
+**As a** developer building multi-agent workflows
+**I want** the extraction service discoverable via A2A protocol
+**So that** other agents can find and invoke extraction capabilities
+
+**Acceptance Criteria:**
+- [x] `GET /.well-known/agent.json` returns valid A2A agent card
+- [x] `POST /api/a2a/tasks` accepts extraction task, returns task_id
+- [x] `GET /api/a2a/tasks/{task_id}` returns status (submitted/working/completed/failed)
+- [x] A2A task maps to existing `acm_extract` surreal-command internally
+
+**Key Files:** `api/routers/a2a.py`, `api/static/.well-known/agent.json`, `api/main.py`
+
+**Story File:** `docs/sprint-artifacts/e17-s5-a2a-agent-card.md`
+
+---
+
+### E17-S6: New OpenRouter Model Additions (P1) — Done
+
+**As a** user wanting access to frontier AI models
+**I want** 6 new models available via OpenRouter
+**So that** I can choose the best model for extraction quality/cost
+
+**Models Added:**
+- MiniMax M2.1 (`minimax/minimax-m2.1`, 196K context)
+- Kimi K2.5 (`moonshotai/kimi-k2.5`, 262K context)
+- DeepSeek V3.2 (`deepseek/deepseek-v3.2`, 163K context)
+- Claude Sonnet 4.6 (`anthropic/claude-sonnet-4.6`, 1M context)
+- GPT 5.2 (`openai/gpt-5.2`, 400K context)
+- Gemini 2.5 Pro (`google/gemini-2.5-pro`, 1M context)
+
+**Acceptance Criteria:**
+- [x] 6 new models in `MODEL_CATALOG`
+- [x] `_PROVIDER_DEFAULTS` entries for each with correct context_window/max_output
+- [x] `supports_structured_output` and `supports_tool_calling` detection updated
+- [x] `seed_model_catalog()` creates them on startup when `OPENROUTER_API_KEY` set
+
+**Key Files:** `api/model_provisioning.py`, `open_notebook/domain/models.py`
+
+**Story File:** `docs/sprint-artifacts/e17-s6-new-openrouter-models.md`
