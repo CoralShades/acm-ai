@@ -1,5 +1,6 @@
 'use client'
 
+import { Fragment, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { sourcesApi } from '@/lib/api/sources'
 import { SourceListResponse } from '@/lib/types/api'
@@ -21,8 +22,11 @@ import {
   FileText,
   ExternalLink,
   Upload,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { DocumentLogPanel } from './DocumentLogPanel'
 
 interface DocumentListProps {
   documents: SourceListResponse[]
@@ -92,6 +96,22 @@ export function DocumentList({
   onRefetch,
 }: DocumentListProps) {
   const router = useRouter()
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const toggleExpand = (docId: string) => {
+    setExpandedId((prev) => (prev === docId ? null : docId))
+  }
+
+  // Collapse on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setExpandedId(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const handleAction = async (action: string, doc: SourceListResponse) => {
     switch (action) {
@@ -145,6 +165,8 @@ export function DocumentList({
                 onCheckedChange={onSelectAll}
               />
             </th>
+            {/* Chevron column header */}
+            <th className="w-8 p-3" />
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">
               Name
             </th>
@@ -168,88 +190,137 @@ export function DocumentList({
             const Icon = getDocumentIcon(doc)
             const statusInfo = getStatusInfo(doc)
             const docType = getDocumentType(doc)
+            const isExpanded = expandedId === doc.id
+            const hasCommandId = !!doc.command_id
 
             return (
-              <tr
-                key={doc.id}
-                className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
-                onClick={() => router.push(`/sources/${doc.id}`)}
-              >
-                <td
-                  className="p-3"
-                  onClick={(e) => e.stopPropagation()}
+              <Fragment key={doc.id}>
+                <tr
+                  className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                  onClick={() => router.push(`/sources/${doc.id}`)}
                 >
-                  <Checkbox
-                    checked={selectedIds.has(doc.id)}
-                    onCheckedChange={() => onSelect(doc.id)}
-                  />
-                </td>
-                <td className="p-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    <span className="font-medium truncate">
-                      {doc.title || 'Untitled'}
-                    </span>
-                  </div>
-                </td>
-                <td className="p-3 hidden md:table-cell">
-                  <Badge variant="outline" className="text-xs">
-                    {docType}
-                  </Badge>
-                </td>
-                <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
-                  {formatDate(doc.created)}
-                </td>
-                <td className="p-3">
-                  <Badge className={statusInfo.className}>
-                    {statusInfo.label}
-                  </Badge>
-                </td>
-                <td className="p-3 text-sm text-muted-foreground hidden lg:table-cell">
-                  {doc.insights_count > 0
-                    ? `${doc.insights_count} insights`
-                    : doc.embedded
-                      ? `${doc.embedded_chunks} chunks`
-                      : '—'}
-                </td>
-                <td
-                  className="p-3"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="w-4 h-4" />
+                  <td
+                    className="p-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(doc.id)}
+                      onCheckedChange={() => onSelect(doc.id)}
+                    />
+                  </td>
+                  {/* Chevron cell */}
+                  <td
+                    className="p-3"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (hasCommandId) toggleExpand(doc.id)
+                    }}
+                  >
+                    {hasCommandId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        aria-label={
+                          isExpanded
+                            ? 'Collapse extraction log'
+                            : 'Expand extraction log'
+                        }
+                        aria-expanded={isExpanded}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleExpand(doc.id)
+                        }}
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => handleAction('view', doc)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" /> View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleAction('reprocess', doc)}
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" /> Re-process
-                      </DropdownMenuItem>
-                      {doc.asset?.file_path && (
+                    )}
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <span className="font-medium truncate">
+                        {doc.title || 'Untitled'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-3 hidden md:table-cell">
+                    <Badge variant="outline" className="text-xs">
+                      {docType}
+                    </Badge>
+                  </td>
+                  <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
+                    {formatDate(doc.created)}
+                  </td>
+                  <td className="p-3">
+                    <Badge className={statusInfo.className}>
+                      {statusInfo.label}
+                    </Badge>
+                  </td>
+                  <td className="p-3 text-sm text-muted-foreground hidden lg:table-cell">
+                    {doc.insights_count > 0
+                      ? `${doc.insights_count} insights`
+                      : doc.embedded
+                        ? `${doc.embedded_chunks} chunks`
+                        : '—'}
+                  </td>
+                  <td
+                    className="p-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => handleAction('download', doc)}
+                          onClick={() => handleAction('view', doc)}
                         >
-                          <Download className="w-4 h-4 mr-2" /> Download
+                          <Eye className="w-4 h-4 mr-2" /> View
                         </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem
-                        onClick={() => handleAction('delete', doc)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
+                        <DropdownMenuItem
+                          onClick={() => handleAction('reprocess', doc)}
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" /> Re-process
+                        </DropdownMenuItem>
+                        {doc.asset?.file_path && (
+                          <DropdownMenuItem
+                            onClick={() => handleAction('download', doc)}
+                          >
+                            <Download className="w-4 h-4 mr-2" /> Download
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          onClick={() => handleAction('delete', doc)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+                {/* Inline log panel row */}
+                {isExpanded && hasCommandId && (
+                  <tr className="border-b last:border-b-0">
+                    <td colSpan={8} className="p-0">
+                      <DocumentLogPanel
+                        commandId={doc.command_id!}
+                        sourceId={doc.id}
+                        status={doc.status}
+                        onRetry={() => handleAction('reprocess', doc)}
+                        onClose={() => setExpandedId(null)}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             )
           })}
         </tbody>
