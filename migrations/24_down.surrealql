@@ -1,0 +1,2 @@
+-- Rollback migration 24: remove extraction settings table
+REMOVE TABLE extraction_settings;

@@ -3,6 +3,7 @@
 import { AppShell } from '@/components/layout/AppShell'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { FlaskConical } from 'lucide-react'
+import { ExtractionSettingsForm } from '@/components/settings/ExtractionSettingsForm'
 
 export default function ExtractionSettingsPage() {
   return (
@@ -28,14 +29,7 @@ export default function ExtractionSettingsPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg border border-dashed border-muted-foreground/25 p-8 text-center">
-                  <p className="text-muted-foreground">
-                    Extraction configuration is coming in a future update.
-                  </p>
-                  <p className="text-sm text-muted-foreground/60 mt-2">
-                    This will include MinerU settings, table detection parameters, and extraction pipeline configuration.
-                  </p>
-                </div>
+                <ExtractionSettingsForm />
               </CardContent>
             </Card>
           </div>

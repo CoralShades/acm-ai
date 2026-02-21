@@ -1,0 +1,13 @@
+-- Migration 24: Extraction settings table (E12-S1)
+DEFINE TABLE extraction_settings SCHEMAFULL;
+
+DEFINE FIELD extraction_method ON extraction_settings TYPE string DEFAULT "hybrid";
+DEFINE FIELD fallback_enabled ON extraction_settings TYPE bool DEFAULT true;
+DEFINE FIELD enable_toc_extraction ON extraction_settings TYPE bool DEFAULT true;
+DEFINE FIELD enable_building_inventory ON extraction_settings TYPE bool DEFAULT true;
+DEFINE FIELD enable_page_tagging ON extraction_settings TYPE bool DEFAULT true;
+DEFINE FIELD enable_metadata_enhancement ON extraction_settings TYPE bool DEFAULT true;
+DEFINE FIELD enable_corrective_rag ON extraction_settings TYPE bool DEFAULT true;
+DEFINE FIELD max_correction_attempts ON extraction_settings TYPE int DEFAULT 2;
+DEFINE FIELD created ON extraction_settings TYPE option<datetime> DEFAULT time::now();
+DEFINE FIELD updated ON extraction_settings TYPE option<datetime> DEFAULT time::now();
