@@ -1,10 +1,15 @@
 #!/bin/bash
 # =============================================================================
-# Ralph Sprint Runner - ACM-AI
+# Ralph Sprint Runner - ACM-AI (v2 — Direct-to-Main)
 # Outer loop that auto-iterates through ready stories with full lifecycle:
 #   INIT → DEV → REVIEW → TEST → FIX → COMPLETE → NEXT
 #
-# Supports resume after rate limit pauses via --resume flag.
+# Key changes from v1:
+#   - Direct-to-main commits (no feature branches)
+#   - Opus model by default (OAuth only, no API key)
+#   - BMAD story file updates in COMPLETE phase
+#   - Hook-based quality gates (exit 2 strategies)
+#   - Push to remote after each completed story
 #
 # Usage:
 #   .ralph/ralph_sprint.sh [options]
@@ -12,8 +17,7 @@
 # Options:
 #   --max-stories N       Max stories to attempt (default: unlimited)
 #   --max-hours N         Stop after N hours (default: unlimited)
-#   --model MODEL         Primary Claude model (default: sonnet)
-#   --fallback MODEL      Fallback model for rate limits (default: opus)
+#   --model MODEL         Primary Claude model (default: opus)
 #   --dev-iters N         Max iterations per dev phase (default: 40)
 #   --fix-iters N         Max iterations per fix phase (default: 10)
 #   --dry-run             Show which stories would run, don't execute
@@ -33,8 +37,7 @@ set -euo pipefail
 # --- Configuration ---
 MAX_STORIES=0          # 0 = unlimited
 MAX_HOURS=0            # 0 = unlimited
-MODEL="sonnet"
-FALLBACK="opus"
+MODEL="opus"
 DEV_ITERS=40
 FIX_ITERS=10
 DRY_RUN=false
@@ -51,7 +54,6 @@ while [[ $# -gt 0 ]]; do
         --max-stories)   MAX_STORIES="$2"; shift 2 ;;
         --max-hours)     MAX_HOURS="$2"; shift 2 ;;
         --model)         MODEL="$2"; shift 2 ;;
-        --fallback)      FALLBACK="$2"; shift 2 ;;
         --dev-iters)     DEV_ITERS="$2"; shift 2 ;;
         --fix-iters)     FIX_ITERS="$2"; shift 2 ;;
         --dry-run)       DRY_RUN=true; shift ;;
@@ -73,7 +75,6 @@ done
 if [ "$RESUME" = true ] && [ -n "$RESUME_DIR" ]; then
     SPRINT_LOG_DIR="$RESUME_DIR"
 elif [ "$RESUME" = true ]; then
-    # Find most recent sprint log directory
     SPRINT_LOG_DIR=$(ls -dt "$RALPH_DIR"/logs/sprint-* 2>/dev/null | head -1)
     if [ -z "$SPRINT_LOG_DIR" ]; then
         echo "ERROR: No previous sprint run found to resume."
@@ -108,7 +109,6 @@ save_state() {
   "story_index": $story_index,
   "phase": "$phase",
   "model": "$MODEL",
-  "fallback": "$FALLBACK",
   "dev_iters": $DEV_ITERS,
   "fix_iters": $FIX_ITERS,
   "skip_review": $SKIP_REVIEW,
@@ -123,7 +123,6 @@ EOF
 load_state() {
     if [ -f "$STATE_FILE" ]; then
         echo "Resuming from saved state..."
-        # Parse with grep/sed since jq may not be available
         RESUME_INDEX=$(grep '"story_index"' "$STATE_FILE" | grep -oP '\d+')
         RESUME_PHASE=$(grep '"phase"' "$STATE_FILE" | grep -oP ':\s*"\K[^"]+')
         sprint_log "[SPRINT] Resuming from story index=$RESUME_INDEX phase=$RESUME_PHASE"
@@ -133,12 +132,9 @@ load_state() {
 }
 
 # --- Story Parsing ---
-# Extracts ready stories from task_plan.md P0 and P1 tables
-# Writes one "STORY_ID|Title" per line to a temp file, returns the path
 parse_ready_stories() {
     local tmpfile
     tmpfile=$(mktemp)
-    # Parse table rows — Format: | # | Story | Title | Size | Notes |
     while IFS= read -r line; do
         local story_id
         story_id=$(echo "$line" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $3); print $3}')
@@ -154,14 +150,13 @@ parse_ready_stories() {
 # Map story ID to its tech spec filename
 find_spec_file() {
     local story_id="$1"
-    # Convert E16-S2 → e16-s2, look for files matching the pattern
     local lower_id
     lower_id=$(echo "$story_id" | tr '[:upper:]' '[:lower:]')
-    # Try common naming patterns
     local spec=""
     for pattern in \
         "docs/sprint-artifacts/${lower_id}-"*.md \
         "docs/sprint-artifacts/${lower_id}."*.md \
+        "docs/sprint-artifacts/tech-spec-${lower_id}-"*.md \
         "docs/sprint-artifacts/"*"${lower_id}"*.md; do
         local match
         match=$(ls $pattern 2>/dev/null | head -1)
@@ -171,18 +166,6 @@ find_spec_file() {
         fi
     done
     echo "$spec"
-}
-
-# Convert story ID to branch-safe slug
-story_to_branch() {
-    local story_id="$1"
-    local title="$2"
-    # E16-S2 + "ACM Record Detail Panel" → feature/story-e16-s2-acm-record-detail-panel
-    local lower_id
-    lower_id=$(echo "$story_id" | tr '[:upper:]' '[:lower:]')
-    local slug
-    slug=$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd 'a-z0-9-' | head -c 40)
-    echo "feature/story-${lower_id}-${slug}"
 }
 
 # --- Phase Functions ---
@@ -198,7 +181,6 @@ run_phase_init() {
 
     sprint_log "[STORY:$story_id] Phase INIT — $title"
 
-    # Find the spec file
     if [ -z "$spec_file" ]; then
         sprint_log "[STORY:$story_id] Phase INIT — FAILED: no tech spec found"
         echo "NO_SPEC" > "$story_log_dir/.init_result"
@@ -207,28 +189,12 @@ run_phase_init() {
 
     sprint_log "[STORY:$story_id] Phase INIT — Spec: $spec_file"
 
-    # Create feature branch
-    local branch
-    branch=$(story_to_branch "$story_id" "$title")
-    sprint_log "[STORY:$story_id] Phase INIT — Branch: $branch"
-
-    # Check if branch already exists (resume case)
-    if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
-        sprint_log "[STORY:$story_id] Phase INIT — Branch exists, checking out"
-        git checkout "$branch" 2>&1 | tee -a "$phase_log"
-    else
-        git checkout -b "$branch" 2>&1 | tee -a "$phase_log"
-    fi
-
     # Generate the init prompt with spec file substituted
     local init_prompt
     init_prompt=$(cat "$RALPH_DIR/PROMPT_INIT.md" | sed "s|SPEC_FILE_PLACEHOLDER|$(basename "$spec_file")|g")
 
-    # Run Claude to generate the fix plan
-    local claude_args=(-p "$init_prompt" --model "$MODEL")
-    if [ -n "$FALLBACK" ]; then
-        claude_args+=(--fallback-model "$FALLBACK")
-    fi
+    # Run Claude to generate the fix plan (OAuth only — strip API key)
+    local claude_args=(-p "$init_prompt" --model "$MODEL" --dangerously-skip-permissions)
 
     sprint_log "[STORY:$story_id] Phase INIT — Generating fix plan..."
     env -u ANTHROPIC_API_KEY claude "${claude_args[@]}" > "$phase_log" 2>&1 || true
@@ -247,13 +213,11 @@ run_phase_init() {
         return 1
     fi
 
-    # Check for INIT_COMPLETE signal
     if grep -qF "INIT_COMPLETE" "$phase_log" 2>/dev/null; then
         sprint_log "[STORY:$story_id] Phase INIT — COMPLETE"
         return 0
     fi
 
-    # Even if no explicit signal, if fix plan exists with tasks, proceed
     sprint_log "[STORY:$story_id] Phase INIT — Proceeding (fix plan generated)"
     return 0
 }
@@ -267,11 +231,7 @@ run_phase_dev() {
 
     sprint_log "[STORY:$story_id] Phase DEV — Starting (max $DEV_ITERS iterations)"
 
-    # Run the inner loop with model and log-dir passthrough
     local loop_args=(--max "$DEV_ITERS" --log-dir "$dev_log_dir" --model "$MODEL")
-    if [ -n "$FALLBACK" ]; then
-        loop_args+=(--fallback-model "$FALLBACK")
-    fi
 
     "$RALPH_DIR/ralph_loop.sh" "${loop_args[@]}"
     local exit_code=$?
@@ -286,7 +246,6 @@ run_phase_dev() {
             return 1
             ;;
         2)
-            # Max iterations — check if ANY tasks were completed
             local done_count=0
             done_count=$(grep -c '^\- \[x\]' "$RALPH_DIR/@fix_plan.md" 2>/dev/null) || done_count=0
             if [ "$done_count" -eq 0 ]; then
@@ -298,7 +257,7 @@ run_phase_dev() {
             ;;
         4)
             sprint_log "[STORY:$story_id] Phase DEV — Infrastructure failure"
-            return 2  # Signal infra failure to sprint loop
+            return 2
             ;;
         *)
             sprint_log "[STORY:$story_id] Phase DEV — ERROR (exit code $exit_code)"
@@ -320,20 +279,16 @@ run_phase_review() {
 
     sprint_log "[STORY:$story_id] Phase REVIEW — Starting code review"
 
-    # Clean up previous review issues
     rm -f "$RALPH_DIR/@review_issues.md"
 
     local review_prompt
     review_prompt=$(cat "$RALPH_DIR/PROMPT_REVIEW.md")
 
-    local claude_args=(-p "$review_prompt" --model "$MODEL")
-    if [ -n "$FALLBACK" ]; then
-        claude_args+=(--fallback-model "$FALLBACK")
-    fi
+    # OAuth only
+    local claude_args=(-p "$review_prompt" --model "$MODEL" --dangerously-skip-permissions)
 
     env -u ANTHROPIC_API_KEY claude "${claude_args[@]}" > "$phase_log" 2>&1 || true
 
-    # Check review result
     if grep -qF "REVIEW_PASS" "$phase_log" 2>/dev/null; then
         sprint_log "[STORY:$story_id] Phase REVIEW — PASS"
         return 0
@@ -345,7 +300,6 @@ run_phase_review() {
         sprint_log "[STORY:$story_id] Phase REVIEW — Found $issue_count issues"
         return 1
     else
-        # Ambiguous — check if review issues file was created
         if [ -f "$RALPH_DIR/@review_issues.md" ] && [ -s "$RALPH_DIR/@review_issues.md" ]; then
             sprint_log "[STORY:$story_id] Phase REVIEW — Issues file found (no explicit signal)"
             return 1
@@ -410,8 +364,6 @@ run_phase_test() {
         sprint_log "[STORY:$story_id] Phase TEST — ALL PASS"
         return 0
     else
-        # Write failures for the fix phase
-        printf "%b" "$failures" > "$RALPH_DIR/@test_failures.md"
         {
             echo "# Test Failures"
             echo ""
@@ -436,12 +388,8 @@ run_phase_fix() {
 
     sprint_log "[STORY:$story_id] Phase FIX — Starting (max $FIX_ITERS iterations)"
 
-    # The fix phase reuses the inner loop with the fix prompt
     local loop_args=(--max "$FIX_ITERS" --log-dir "$fix_log_dir" --model "$MODEL")
     loop_args+=(--prompt "$RALPH_DIR/PROMPT_FIX.md")
-    if [ -n "$FALLBACK" ]; then
-        loop_args+=(--fallback-model "$FALLBACK")
-    fi
 
     "$RALPH_DIR/ralph_loop.sh" "${loop_args[@]}"
     local exit_code=$?
@@ -461,7 +409,7 @@ run_phase_fix() {
             ;;
         4)
             sprint_log "[STORY:$story_id] Phase FIX — Infrastructure failure"
-            return 2  # Signal infra failure to sprint loop
+            return 2
             ;;
         *)
             sprint_log "[STORY:$story_id] Phase FIX — ERROR (exit code $exit_code)"
@@ -473,54 +421,43 @@ run_phase_fix() {
 run_phase_complete() {
     local story_id="$1"
     local title="$2"
-    local story_log_dir="$3"
+    local spec_file="$3"
+    local story_log_dir="$4"
 
     local phase_log="$story_log_dir/phase-complete.log"
-    local branch
-    branch=$(git branch --show-current)
 
-    sprint_log "[STORY:$story_id] Phase COMPLETE — Committing and merging"
+    sprint_log "[STORY:$story_id] Phase COMPLETE — Committing and finalizing"
 
-    # Stage and commit any remaining changes
+    # Stage and commit any remaining changes (direct to main)
     git add -u 2>&1 | tee -a "$phase_log"
     if ! git diff --cached --quiet 2>/dev/null; then
         git commit -m "feat(${story_id}): ${title}" 2>&1 | tee -a "$phase_log"
     fi
 
-    # Push the branch
-    sprint_log "[STORY:$story_id] Phase COMPLETE — Pushing $branch"
-    git push -u origin "$branch" 2>&1 | tee -a "$phase_log" || true
+    # Update sprint-status.yaml using Claude agent for reliability
+    sprint_log "[STORY:$story_id] Phase COMPLETE — Updating sprint-status.yaml"
+    local update_prompt="Read docs/sprint-artifacts/sprint-status.yaml. Find the entry for story ${story_id} and change its status from 'ready-for-dev' or 'in-progress' to 'done'. Also update the summary counts. Write the updated file. Output only 'STATUS_UPDATED' when done."
+    env -u ANTHROPIC_API_KEY claude -p "$update_prompt" --model "$MODEL" --dangerously-skip-permissions >> "$phase_log" 2>&1 || true
 
-    # Merge to main
-    sprint_log "[STORY:$story_id] Phase COMPLETE — Merging to main"
-    git checkout main 2>&1 | tee -a "$phase_log"
-    git merge --no-ff "$branch" -m "Merge $branch: $title" 2>&1 | tee -a "$phase_log"
-
-    if [ $? -eq 0 ]; then
-        git push origin main 2>&1 | tee -a "$phase_log" || true
-        sprint_log "[STORY:$story_id] Phase COMPLETE — Merged to main"
-
-        # Update sprint-status.yaml: mark story as done
-        if [ -f "docs/sprint-artifacts/sprint-status.yaml" ]; then
-            # Use sed to update the story status
-            sed -i "s/\(${story_id}.*status:\s*\)ready-for-dev/\1done/" \
-                "docs/sprint-artifacts/sprint-status.yaml" 2>/dev/null || true
-            sed -i "s/\(${story_id}.*status:\s*\)in-progress/\1done/" \
-                "docs/sprint-artifacts/sprint-status.yaml" 2>/dev/null || true
-        fi
-
-        # Clean up the feature branch
-        git branch -d "$branch" 2>/dev/null || true
-        git push origin --delete "$branch" 2>/dev/null || true
-
-        sprint_log "[STORY:$story_id] DONE"
-        return 0
-    else
-        sprint_log "[STORY:$story_id] Phase COMPLETE — MERGE CONFLICT"
-        git merge --abort 2>/dev/null || true
-        git checkout "$branch" 2>/dev/null || true
-        return 1
+    # Update the story file — mark as done and fill Dev Agent Record
+    if [ -n "$spec_file" ] && [ -f "$spec_file" ]; then
+        sprint_log "[STORY:$story_id] Phase COMPLETE — Updating story file"
+        local story_update_prompt="Read the story file at '${spec_file}'. Update it: 1) Change 'Status: ready-for-dev' or 'Status: in-progress' to 'Status: done'. 2) If there is a 'Dev Agent Record' section, fill it with: Build Status=PASS, implementation notes about what was done. 3) Mark any unchecked task checkboxes as checked. Write the updated file. Output only 'STORY_UPDATED' when done."
+        env -u ANTHROPIC_API_KEY claude -p "$story_update_prompt" --model "$MODEL" --dangerously-skip-permissions >> "$phase_log" 2>&1 || true
     fi
+
+    # Commit the status updates
+    git add -u 2>&1 | tee -a "$phase_log"
+    if ! git diff --cached --quiet 2>/dev/null; then
+        git commit -m "docs(${story_id}): mark story done, update sprint status" 2>&1 | tee -a "$phase_log"
+    fi
+
+    # Push to remote
+    sprint_log "[STORY:$story_id] Phase COMPLETE — Pushing to remote"
+    git push origin main 2>&1 | tee -a "$phase_log" || true
+
+    sprint_log "[STORY:$story_id] DONE"
+    return 0
 }
 
 # --- Time Check ---
@@ -552,7 +489,6 @@ print_sprint_summary() {
     sprint_log "[SPRINT]   Log directory:     $SPRINT_LOG_DIR"
     sprint_log "[SPRINT] ============================================="
 
-    # Write machine-readable summary
     cat > "$SUMMARY_FILE" <<EOF
 {
   "completed": $completed_count,
@@ -560,7 +496,6 @@ print_sprint_summary() {
   "skipped": $skipped_count,
   "total_elapsed_seconds": $total_elapsed,
   "model": "$MODEL",
-  "fallback": "$FALLBACK",
   "log_dir": "$SPRINT_LOG_DIR",
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 }
@@ -572,8 +507,8 @@ main() {
     SPRINT_START_TIME=$(date +%s)
 
     sprint_log "[SPRINT] ============================================="
-    sprint_log "[SPRINT] Ralph Sprint Runner Starting"
-    sprint_log "[SPRINT]   Model: $MODEL  Fallback: $FALLBACK"
+    sprint_log "[SPRINT] Ralph Sprint Runner v2 (Direct-to-Main)"
+    sprint_log "[SPRINT]   Model: $MODEL (OAuth only)"
     sprint_log "[SPRINT]   Dev iterations: $DEV_ITERS  Fix iterations: $FIX_ITERS"
     sprint_log "[SPRINT]   Max stories: ${MAX_STORIES:-unlimited}  Max hours: ${MAX_HOURS:-unlimited}"
     sprint_log "[SPRINT]   Log dir: $SPRINT_LOG_DIR"
@@ -589,18 +524,23 @@ main() {
         exit 3
     fi
 
-    # Ensure we start from main
+    # Verify we're on main
     local current_branch
     current_branch=$(git branch --show-current)
-    if [ "$current_branch" != "main" ] && [ "$RESUME" != true ]; then
-        sprint_log "[SPRINT] Switching to main branch..."
-        git checkout main 2>/dev/null || {
-            sprint_log "[SPRINT] ERROR: Cannot checkout main. Stash or commit changes first."
-            exit 3
-        }
+    if [ "$current_branch" != "main" ]; then
+        sprint_log "[SPRINT] ERROR: Must be on main branch (currently on $current_branch)"
+        sprint_log "[SPRINT] Run: git checkout main"
+        exit 3
     fi
 
-    # Parse stories into a temp file (one "STORY_ID|Title" per line)
+    # Verify clean working tree
+    if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+        sprint_log "[SPRINT] WARNING: Uncommitted changes detected. Committing safety checkpoint..."
+        git add -u 2>/dev/null || true
+        git commit -m "chore: pre-sprint safety checkpoint" 2>/dev/null || true
+    fi
+
+    # Parse stories
     local stories_file
     stories_file=$(parse_ready_stories)
     local story_count
@@ -614,7 +554,7 @@ main() {
 
     sprint_log "[SPRINT] Found $story_count stories in task plan"
 
-    # Dry run — just list stories
+    # Dry run
     if [ "$DRY_RUN" = true ]; then
         sprint_log "[SPRINT] === DRY RUN ==="
         local idx=0
@@ -649,19 +589,16 @@ main() {
     local idx=0
 
     while IFS='|' read -r story_id story_title; do
-        # Skip stories before resume point
         if [ "$idx" -lt "$start_index" ]; then
             idx=$((idx + 1))
             continue
         fi
 
-        # Max stories check
         if [ "$MAX_STORIES" -gt 0 ] && [ "$completed_count" -ge "$MAX_STORIES" ]; then
             sprint_log "[SPRINT] Max stories ($MAX_STORIES) reached"
             break
         fi
 
-        # Time limit check
         if ! check_time_limit; then
             break
         fi
@@ -674,7 +611,6 @@ main() {
         sprint_log "[SPRINT] Story $((idx + 1))/$story_count: $story_id — $story_title"
         sprint_log "[SPRINT] ─────────────────────────────────────────"
 
-        # Save state at story start
         save_state "$idx" "init" "$completed_json" "$blocked_json" "$skipped_json"
 
         # Find tech spec
@@ -686,7 +622,6 @@ main() {
             sprint_log "[STORY:$story_id] Skipping — init failed"
             skipped_count=$((skipped_count + 1))
             skipped_json=$(echo "$skipped_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
-            git checkout main 2>/dev/null || true
             idx=$((idx + 1))
             continue
         fi
@@ -697,12 +632,10 @@ main() {
         run_phase_dev "$story_id" "$story_log_dir"
         local dev_result=$?
         if [ "$dev_result" -eq 2 ]; then
-            # Infrastructure failure
             consecutive_infra=$((consecutive_infra + 1))
             sprint_log "[STORY:$story_id] Infrastructure failure ($consecutive_infra consecutive)"
             blocked_count=$((blocked_count + 1))
             blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
-            git checkout main 2>/dev/null || true
             idx=$((idx + 1))
             if [ "$consecutive_infra" -ge 2 ]; then
                 sprint_log "[SPRINT] ABORT: $consecutive_infra consecutive infrastructure failures"
@@ -714,7 +647,6 @@ main() {
             consecutive_infra=0
             blocked_count=$((blocked_count + 1))
             blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
-            git checkout main 2>/dev/null || true
             idx=$((idx + 1))
             continue
         else
@@ -748,7 +680,6 @@ main() {
                 sprint_log "[STORY:$story_id] Fix phase — infrastructure failure ($consecutive_infra consecutive)"
                 blocked_count=$((blocked_count + 1))
                 blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
-                git checkout main 2>/dev/null || true
                 idx=$((idx + 1))
                 if [ "$consecutive_infra" -ge 2 ]; then
                     sprint_log "[SPRINT] ABORT: $consecutive_infra consecutive infrastructure failures"
@@ -760,7 +691,6 @@ main() {
                 consecutive_infra=0
                 blocked_count=$((blocked_count + 1))
                 blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
-                git checkout main 2>/dev/null || true
                 idx=$((idx + 1))
                 continue
             fi
@@ -771,7 +701,6 @@ main() {
                 sprint_log "[STORY:$story_id] Tests still failing after fix — blocked"
                 blocked_count=$((blocked_count + 1))
                 blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
-                git checkout main 2>/dev/null || true
                 idx=$((idx + 1))
                 continue
             fi
@@ -780,21 +709,18 @@ main() {
         save_state "$idx" "complete" "$completed_json" "$blocked_json" "$skipped_json"
 
         # === Phase 6: COMPLETE ===
-        if run_phase_complete "$story_id" "$story_title" "$story_log_dir"; then
+        if run_phase_complete "$story_id" "$story_title" "$spec_file" "$story_log_dir"; then
             completed_count=$((completed_count + 1))
             completed_json=$(echo "$completed_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
 
             local story_elapsed=$(( $(date +%s) - story_start_time ))
             sprint_log "[STORY:$story_id] DONE — Total: ${story_elapsed}s"
         else
-            sprint_log "[STORY:$story_id] Complete phase failed (merge conflict?)"
+            sprint_log "[STORY:$story_id] Complete phase failed"
             blocked_count=$((blocked_count + 1))
             blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
-            git checkout main 2>/dev/null || true
         fi
 
-        # Ensure we're on main for the next story
-        git checkout main 2>/dev/null || true
         idx=$((idx + 1))
     done < "$stories_file"
 

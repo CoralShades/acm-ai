@@ -23,6 +23,7 @@
       "Bash(rm .claude/ralph-loop.local.md)",
       "Bash(chmod +x *)",
       "Bash(.ralph/ralph_loop.sh *)",
+      "Bash(.ralph/ralph_sprint.sh *)",
       "Bash(ruff check *)",
       "Bash(ruff format *)",
       "Bash(pytest *)",
@@ -59,12 +60,41 @@
     ],
     "Stop": [
       {
-        "matcher": "",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/ralph-stop-gate.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking Ralph task completion..."
+          },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-commit.sh\"",
             "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/scope-guard.sh\"",
+            "timeout": 5,
+            "statusMessage": "Scope guard check..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-gate.sh\"",
+            "timeout": 120,
+            "statusMessage": "Pre-commit verification..."
           }
         ]
       }
@@ -77,6 +107,18 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/story-done-check.sh\"",
             "timeout": 60
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/task-quality-gate.sh\"",
+            "timeout": 180,
+            "statusMessage": "Running quality gates..."
           }
         ]
       }

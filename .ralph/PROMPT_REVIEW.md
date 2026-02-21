@@ -3,8 +3,8 @@ You are performing an adversarial code review for ACM-AI.
 ## Your Task
 
 1. Read `CLAUDE.md` in the project root for project conventions
-2. Run `git diff main...HEAD` to see all changes on this branch
-3. Review every changed file for:
+2. Read `.ralph/@fix_plan.md` to understand what was implemented
+3. For each task that was checked off, review the modified files for:
    - **Security issues**: injection, XSS, exposed secrets, unsafe operations
    - **Correctness**: logic errors, off-by-one, null/undefined handling, race conditions
    - **Pattern violations**: deviations from project conventions documented in CLAUDE.md

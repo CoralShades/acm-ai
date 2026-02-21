@@ -28,7 +28,7 @@ set -euo pipefail
 # --- Configuration ---
 MAX_ITERATIONS=40
 TOOL_FLAG=""
-MODEL=""
+MODEL="opus"
 FALLBACK_MODEL=""
 COMPLETION_PROMISE="<promise>COMPLETE</promise>"
 BLOCKED_SIGNAL="<promise>BLOCKED</promise>"

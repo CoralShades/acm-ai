@@ -1,17 +1,17 @@
 Initialize a Ralph autonomous coding loop for an ACM-AI story.
 
 ## Arguments
-- `$ARGUMENTS` — Path to a story file in `_bmad-output/implementation-artifacts/` (e.g., `e1-s13-fix-page-reference-tracking.md`)
+- `$ARGUMENTS` — Path to a story file in `docs/sprint-artifacts/` (e.g., `e2-s8-column-visibility-management.md`) or a story ID like `e2-s8`
 
 ## Steps
 
 ### 1. Locate and Read the Story
 - If `$ARGUMENTS` is a full path, read that file directly
-- If `$ARGUMENTS` is a story ID like `e1-s13`, find the matching file in `_bmad-output/implementation-artifacts/`
+- If `$ARGUMENTS` is a story ID like `e2-s8`, find the matching file in `docs/sprint-artifacts/`
 - If no argument provided, read `task_plan.md` and pick the top (next priority) story
 - Read the full story file and extract:
   - Story title (from the `# Story` heading)
-  - Story ID (from the filename, e.g., `e1-s13`)
+  - Story ID (from the filename, e.g., `e2-s8`)
   - All acceptance criteria (lines matching `**AC\d+:` or numbered criteria)
   - Status (from `Status:` line — abort if already `done`)
 
@@ -23,7 +23,7 @@ Write the fix plan file at `.ralph/@fix_plan.md`:
 
 ## Source
 - **Story file**: [full path to story file]
-- **Story ID**: [e.g., E1-S13]
+- **Story ID**: [e.g., E2-S8]
 - **Generated**: [ISO timestamp]
 
 ## Tasks
@@ -40,23 +40,23 @@ Write the fix plan file at `.ralph/@fix_plan.md`:
 - Changes committed with conventional commit message
 ```
 
-### 3. Create Feature Branch
+### 3. Verify on Main Branch
+Ensure we are on the `main` branch. This loop commits directly to main — no feature branches.
 ```bash
-git checkout -b feature/story-[id]-[slug]
+git checkout main  # if not already on main
 ```
-Where `[slug]` is derived from the story title (lowercase, hyphens, max 40 chars).
 
 ### 4. Report
 Output a summary:
 ```
 Ralph initialized for: [Story Title]
-Branch: feature/story-[id]-[slug]
+Branch: main (direct commits)
 Tasks: [N] acceptance criteria
 Fix plan: .ralph/@fix_plan.md
 
 To start the loop:
   .ralph/ralph_loop.sh
 
-To run manually:
-  claude -p "$(cat .ralph/PROMPT.md)"
+To run the full sprint:
+  .ralph/ralph_sprint.sh
 ```

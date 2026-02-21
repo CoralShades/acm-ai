@@ -8,19 +8,27 @@ Read `CLAUDE.md` in the project root for conventions and architecture.
 1. Pick the next unchecked task from `@fix_plan.md`
 2. Read the relevant source files BEFORE making any changes
 3. Implement the task following the patterns described in `CLAUDE.md`
-4. Route work to specialist agents via the Task tool based on file paths:
+4. For complex tasks, delegate to specialist sub-agents via the Task tool:
    - `/api/**`, `/open_notebook/**`, `/migrations/**`, `/commands/**` → `backend-specialist`
    - `/frontend/**` → `frontend-specialist`
    - `/tests/**` → `qa-specialist`
+   Only use sub-agents when the task genuinely requires it (multiple files across layers). For simple single-file changes, implement directly.
 5. Run verification after each change:
    - Python: `ruff check .`
    - Backend tests: `pytest tests/ -x`
    - Frontend lint: `cd frontend && npm run lint`
    - Frontend build: `cd frontend && npm run build`
-6. If all verification passes, check off the task in `@fix_plan.md` and commit with a conventional commit message
+6. If all verification passes, check off the task in `@fix_plan.md` and commit with a conventional commit message directly to main
 7. If verification fails, fix the issue and retry (max 3 retries per task)
 8. After 3 failed retries on the same task, output `<promise>BLOCKED</promise>: [specific reason and error details]`
 9. Output `<promise>COMPLETE</promise>` when ALL tasks in `@fix_plan.md` are checked off AND all tests pass
+
+## Commit Strategy
+
+- You are committing directly to the **main** branch (no feature branches)
+- Each completed task gets its own atomic commit: `feat(STORY-ID): brief description of change`
+- Do NOT push — the sprint runner handles pushing after all tasks are done
+- Safety checkpoints are handled automatically
 
 ## Important
 
@@ -30,3 +38,4 @@ Read `CLAUDE.md` in the project root for conventions and architecture.
 - NEVER change database migrations without explicit approval in the story
 - Always write tests alongside implementation
 - Commit after each successfully completed task
+- Keep sub-agent usage minimal — only delegate when genuinely needed

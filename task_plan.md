@@ -51,17 +51,17 @@ Story files for all 10 completed stories:
 
 ## Remaining Stories (from sprint-status.yaml)
 
-### P0 — Tier 1: Ready for Dev (8 stories)
+### P0 — Tier 1: Ready for Dev (8 stories, reordered for Ralph sprint)
 | # | Story | Title | Size |
 |---|-------|-------|------|
-| 1 | E9-S3 | Document Actions & Bulk Operations | M |
-| 2 | E16-S1 | Dashboard Home Page with ACM Stats | L |
+| 1 | E2-S8 | Column Visibility Management | S |
+| 2 | E10-S1 | Simplify Navigation | S |
 | 3 | E16-S3 | Empty States & Onboarding Hints | S |
-| 4 | E10-S1 | Simplify Navigation | S |
-| 5 | E2-S8 | Column Visibility Management | M |
-| 6 | E5-S3 | BAR Template Management | M |
-| 7 | E1-S23 | Token Limit Quality Validation | M |
-| 8 | E2-S11 | BAR Field Type Safety | S |
+| 4 | E2-S11 | BAR Field Type Safety | M |
+| 5 | E1-S23 | Token Limit Quality Validation | M |
+| 6 | E9-S3 | Document Actions & Bulk Operations | M |
+| 7 | E5-S3 | BAR Template Management | M |
+| 8 | E16-S1 | Dashboard Home Page with ACM Stats | L |
 
 ### P1 — Tier 2: Drafted (need promotion)
 | # | Story | Title | Blocked By |
