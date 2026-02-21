@@ -16,10 +16,11 @@
 #   .ralph/ralph_loop.sh --log-dir .ralph/logs/sprint-xxx/story-id/phase-dev
 #
 # Exit codes:
-#   0 - All tasks completed successfully
-#   1 - Loop blocked (cannot proceed)
-#   2 - Max iterations reached without completion
+#   0 - All tasks completed successfully (COMPLETE signal)
+#   1 - Loop blocked (BLOCKED signal or circuit breaker)
+#   2 - Max iterations reached without completion (some progress made)
 #   3 - Setup error (missing files, bad config)
+#   4 - Infrastructure failure (credits, auth, rate limit, network)
 # =============================================================================
 
 set -euo pipefail
@@ -37,6 +38,9 @@ FIX_PLAN=".ralph/@fix_plan.md"
 PROMPT_FILE=".ralph/PROMPT.md"
 METRICS_FILE=""  # Set after LOG_DIR is finalized
 LOOP_START_TIME=""
+NO_PROGRESS_THRESHOLD=3
+consecutive_no_progress=0
+last_task_count=""
 
 # --- Parse Arguments ---
 while [[ $# -gt 0 ]]; do
@@ -133,6 +137,31 @@ count_tasks() {
     printf "%d/%d" "$checked" "$total"
 }
 
+# --- Fatal Error Detection ---
+# Scans iteration log for infrastructure errors (credits, auth, rate limits, network)
+# Returns 0 (match found) with the matching pattern on stdout, or 1 (no match)
+check_fatal_errors() {
+    local log="$1"
+    local patterns=(
+        "Credit balance is too low"
+        "rate limit"
+        "rate_limit_error"
+        "insufficient_quota"
+        "Authentication failed"
+        "invalid_api_key"
+        "Could not connect"
+        "Connection refused"
+        "overloaded_error"
+    )
+    for p in "${patterns[@]}"; do
+        if grep -qi "$p" "$log" 2>/dev/null; then
+            echo "$p"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # --- Dashboard Output ---
 print_dashboard() {
     local iteration="$1"
@@ -194,7 +223,7 @@ main() {
         log_metric "$i" "iteration_start" "tasks=$(count_tasks)"
 
         # Build Claude command with model flags
-        local claude_args=(-p "$(cat "$PROMPT_FILE")")
+        local claude_args=(-p "$(cat "$PROMPT_FILE")" --dangerously-skip-permissions)
         if [ -n "$MODEL" ]; then
             claude_args+=(--model "$MODEL")
         fi
@@ -205,9 +234,9 @@ main() {
             claude_args+=($TOOL_FLAG)
         fi
 
-        # Run Claude Code
-        claude "${claude_args[@]}" > "$iteration_log" 2>&1 || true
-        local exit_code=${PIPESTATUS[0]:-$?}
+        # Run Claude Code (env -u strips ANTHROPIC_API_KEY so CLI uses OAuth)
+        local exit_code=0
+        env -u ANTHROPIC_API_KEY claude "${claude_args[@]}" > "$iteration_log" 2>&1 || exit_code=$?
 
         local end_time
         end_time=$(date +%s)
@@ -258,6 +287,46 @@ main() {
             echo "  Check: $iteration_log"
             echo "============================================="
             exit 1
+        fi
+
+        # Check for infrastructure errors (credits, auth, rate limits, network)
+        local fatal_msg=""
+        if fatal_msg=$(check_fatal_errors "$iteration_log"); then
+            log_metric "$i" "fatal_error" "pattern=$fatal_msg"
+            echo ""
+            echo "============================================="
+            echo "  FATAL: Infrastructure error at iteration $i"
+            echo "  Error: $fatal_msg"
+            echo "  Check: $iteration_log"
+            echo "============================================="
+            exit 4
+        fi
+
+        # No-progress circuit breaker
+        local current_tasks
+        current_tasks=$(count_tasks)
+        if [ "$current_tasks" = "$last_task_count" ]; then
+            consecutive_no_progress=$((consecutive_no_progress + 1))
+            if [ "$consecutive_no_progress" -ge "$NO_PROGRESS_THRESHOLD" ]; then
+                log_metric "$i" "circuit_breaker" "no progress for $NO_PROGRESS_THRESHOLD consecutive iterations"
+                echo ""
+                echo "============================================="
+                echo "  Circuit breaker: $NO_PROGRESS_THRESHOLD iterations with no progress"
+                echo "  Tasks stuck at: $current_tasks"
+                echo "  Check logs in: $LOG_DIR/"
+                echo "============================================="
+                exit 1
+            fi
+        else
+            consecutive_no_progress=0
+        fi
+        last_task_count="$current_tasks"
+
+        # Inter-iteration delay (backoff on errors, brief pause on success)
+        if [ "$exit_code" -ne 0 ]; then
+            sleep 30
+        else
+            sleep 2
         fi
 
         # Safety checkpoint every N iterations
