@@ -227,10 +227,10 @@ development_status:
   epic-14-retrospective: optional
 
   # Epic 15: Extraction Monitor & Live Logging UI (P0) - NEW 2026-02-20
-  # 0/2 stories complete, 1 ready-for-dev, 1 drafted (blocked by E15-S1)
+  # 1/2 stories complete, 1 drafted (blocked by E15-S1)
   # Rationale: Backend SSE + frontend log components exist (E1-S21 done) but not surfaced from Document Library
-  epic-15: backlog
-  e15-s1-extraction-log-panel-in-document-library: ready-for-dev  # docs/sprint-artifacts/e15-s1-extraction-log-panel.md  # PROMOTED 2026-02-21
+  epic-15: in-progress
+  e15-s1-extraction-log-panel-in-document-library: done  # docs/sprint-artifacts/e15-s1-extraction-log-panel.md  # DONE 2026-02-21
   e15-s2-dedicated-extraction-monitor-page: drafted  # docs/sprint-artifacts/e15-s2-extraction-monitor-page.md
   epic-15-retrospective: optional
 
