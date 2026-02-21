@@ -2,7 +2,7 @@
 
 **Epic:** E16 — UX Enhancement Sprint
 **Priority:** P0
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260220 (2026-02-20)
 
 ---
@@ -104,3 +104,40 @@ ACMSpreadsheet
 ## Estimated Effort
 
 M (Medium) — New panel component + wiring into existing grid. Edit mode adds some complexity. No new backend needed.
+
+---
+
+## Dev Agent Record
+
+**Implemented by:** Claude Sonnet 4.6
+**Date:** 2026-02-21
+**Branch:** Sanju
+
+### Implementation Summary
+
+Implemented the ACM Record Detail Slide-Out Panel as a right-side fixed panel (no overlay, grid stays interactive).
+
+### Files Created
+| File | Description |
+|------|-------------|
+| `frontend/src/components/acm/ACMRecordDetailPanel.tsx` | New slide-out panel component with view/edit modes |
+
+### Files Modified
+| File | Change |
+|------|--------|
+| `frontend/src/components/acm/ACMGrid.tsx` | Added `selectedRecordId` prop + `acm-row-detail-selected` CSS highlight |
+| `frontend/src/components/acm/ACMTab.tsx` | Replaced `ACMRecordDetailDialog` with `ACMRecordDetailPanel`, added arrow-key navigation, PDF trigger |
+
+### Key Design Decisions
+- **No overlay**: Panel uses `fixed` positioning without a backdrop so the grid stays fully interactive (scroll, filter, etc.)
+- **Slide animation**: Uses Tailwind `animate-in slide-in-from-right duration-200` for smooth open animation
+- **Arrow key navigation**: Global `keydown` listener skips when focus is in AG Grid or an input element to avoid conflicts
+- **Same-row toggle**: Clicking an already-selected row closes the panel
+- **Edit mode**: Inline controlled inputs using existing `useUpdateACMRecord` hook; save/cancel in an action bar
+- **PDF integration**: Triggers existing `ACMCellViewer` by setting a synthetic `selectedCell` with the record's `page_number`
+- **Record navigation**: `handleDetailPrev/Next` operate on the current building-filtered `records` array
+
+### Build Verification
+- `npm run build`: PASS (exit code 0)
+- `npm run lint`: PASS — no ESLint warnings or errors
+- `npx tsc --noEmit`: PASS — no type errors in our files

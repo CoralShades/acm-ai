@@ -239,7 +239,7 @@ development_status:
   # Rationale: Dashboard home, record detail slide-out, empty states not covered by E14
   epic-16: backlog
   e16-s1-dashboard-home-with-acm-stats: ready-for-dev  # docs/sprint-artifacts/e16-s1-dashboard-home.md  # PROMOTED 2026-02-21
-  e16-s2-acm-record-detail-slide-out-panel: ready-for-dev  # docs/sprint-artifacts/e16-s2-record-detail-panel.md  # PROMOTED 2026-02-21
+  e16-s2-acm-record-detail-slide-out-panel: done  # docs/sprint-artifacts/e16-s2-record-detail-panel.md  # PROMOTED 2026-02-21
   e16-s3-empty-states-and-onboarding-hints: ready-for-dev  # docs/sprint-artifacts/e16-s3-empty-states.md  # PROMOTED 2026-02-21
   epic-16-retrospective: optional
 

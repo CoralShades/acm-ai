@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent } from 'ag-grid-community'
+import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent, RowClassParams } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,8 @@ interface ACMGridProps {
   onCellSelect?: (details: CellSelectionDetails) => void
   // Callback when a row is clicked to show record details
   onRowClick?: (record: ACMRecord) => void
+  // ID of the currently-selected record (for row highlighting)
+  selectedRecordId?: string | null
 }
 
 // Custom cell renderer for risk status with theme-aware colors
@@ -122,7 +124,7 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick },
+  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
@@ -410,6 +412,17 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     },
   }), [])
 
+  // Row class: highlight the selected record
+  const getRowClass = useCallback(
+    (params: RowClassParams<ACMRecord>) => {
+      if (selectedRecordId && params.data?.id === selectedRecordId) {
+        return 'acm-row-detail-selected'
+      }
+      return undefined
+    },
+    [selectedRecordId]
+  )
+
   const onCellClicked = useCallback(
     (event: CellClickedEvent<ACMRecord>) => {
       // Skip if clicking on Actions column or group row
@@ -534,6 +547,11 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         .ag-theme-alpine .ag-row:not(.ag-row-group) {
           cursor: pointer;
         }
+        /* Selected row highlight (detail panel open) */
+        .ag-theme-alpine .acm-row-detail-selected {
+          background-color: hsl(var(--primary) / 0.08) !important;
+          border-left: 3px solid hsl(var(--primary));
+        }
       `}</style>
       <AgGridReact<ACMRecord>
         ref={gridRef}
@@ -546,6 +564,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         onModelUpdated={onModelUpdated}
         onColumnResized={onColumnResized}
         loading={isLoading}
+        getRowClass={getRowClass}
         animateRows={true}
         rowSelection="single"
         suppressRowClickSelection={true}
