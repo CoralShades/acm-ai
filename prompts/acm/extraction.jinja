@@ -18,6 +18,9 @@ Current Building Context:
 {% if chunk_info %}
 Processing Chunk {{ chunk_info.chunk_index + 1 }} of {{ chunk_info.total_chunks }}
 {% endif %}
+{% if expected_records %}
+**IMPORTANT: This chunk contains exactly {{ expected_records }} records (delimited by `--- RECORD: ---` markers). You MUST extract ALL {{ expected_records }} records. Do NOT skip or merge any records.**
+{% endif %}
 
 ## CRITICAL: Understanding the Content Format
 

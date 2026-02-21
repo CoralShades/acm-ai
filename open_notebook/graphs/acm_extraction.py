@@ -782,6 +782,51 @@ def _split_by_sections(content: str, max_tokens: int, base_page: int) -> List[st
     return chunks if chunks else [content]
 
 
+def _chunk_prensa_by_records(
+    content: str, records_per_chunk: int = 12
+) -> List[Dict[str, Any]]:
+    """Split Prensa-format content into chunks by ``--- RECORD:`` boundaries.
+
+    Groups records into batches of *records_per_chunk* so the LLM can
+    process a manageable number of records per call.  Any preamble text
+    before the first record marker is prepended to the first chunk.
+    """
+    record_pattern = re.compile(r"^--- RECORD: .+ ---$", re.MULTILINE)
+    matches = list(record_pattern.finditer(content))
+
+    if not matches:
+        # Fallback — no record markers found
+        return [{"content": content, "page_number": 1, "page_markers": {}, "chunk_index": 0}]
+
+    preamble = content[: matches[0].start()]
+    chunks: List[Dict[str, Any]] = []
+
+    for batch_start in range(0, len(matches), records_per_chunk):
+        batch_end = min(batch_start + records_per_chunk, len(matches))
+        start_pos = matches[batch_start].start()
+        end_pos = matches[batch_end].start() if batch_end < len(matches) else len(content)
+
+        chunk_content = content[start_pos:end_pos]
+        # Prepend preamble to first chunk for context (building name, etc.)
+        if batch_start == 0 and preamble.strip():
+            chunk_content = preamble + chunk_content
+
+        record_count = batch_end - batch_start
+        chunks.append({
+            "content": chunk_content,
+            "page_number": 1,
+            "page_markers": {},
+            "chunk_index": len(chunks),
+            "expected_records": record_count,
+        })
+
+    logger.info(
+        f"Prensa content split into {len(chunks)} chunks "
+        f"({len(matches)} records, {records_per_chunk}/chunk)"
+    )
+    return chunks
+
+
 def _assign_record_page(
     product: Optional[str],
     chunk_content: str,
@@ -1080,8 +1125,13 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     if source.title:
         context.school_name = source.title
 
-    # Chunk processed content if needed
-    chunks = _chunk_content(processed_content)
+    # For Prensa format, split on record boundaries into smaller chunks
+    # so the LLM can process manageable batches (~12 records per chunk)
+    if preprocess_meta.get("document_format") == "prensa":
+        chunks = _chunk_prensa_by_records(processed_content, records_per_chunk=12)
+    else:
+        # Chunk processed content if needed
+        chunks = _chunk_content(processed_content)
 
     logger.info(f"Prepared {len(chunks)} chunks for extraction from source {source.id}")
     acm_debug(
@@ -1136,12 +1186,14 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     context.current_page = page_number
 
     # Render the extraction prompt
+    expected_records = chunk.get("expected_records")
     prompter = Prompter(prompt_template="acm/extraction")
     system_prompt = prompter.render(
         data={
             "school_name": context.school_name,
             "page_number": page_number,
             "building_context": context,
+            "expected_records": expected_records,
             "chunk_info": {
                 "chunk_index": current_index,
                 "total_chunks": len(chunks),

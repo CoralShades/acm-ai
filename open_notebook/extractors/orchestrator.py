@@ -201,7 +201,21 @@ def plan_extraction(
 
 
 def should_use_orchestrator(state: dict) -> bool:
-    """Decide whether to use the orchestrator path or legacy path (Task 2.3)."""
+    """Decide whether to use the orchestrator path or legacy path (Task 2.3).
+
+    Returns False for Prensa-format documents because they require
+    specialised pre-processing (record boundary markers, header stripping)
+    that only runs inside the ``prepare_context`` node.
+    """
+    # Prensa tabular format needs the prepare_context pre-processor
+    source = state.get("source")
+    if source and source.full_text:
+        from open_notebook.graphs.acm_extraction import _detect_document_format
+
+        if _detect_document_format(source.full_text) == "prensa":
+            logger.info("Skipping orchestrator — Prensa format detected, routing to prepare_context")
+            return False
+
     inventory: Optional[BuildingInventory] = state.get("building_inventory")
     if not inventory:
         return False
