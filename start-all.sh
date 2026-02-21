@@ -7,6 +7,19 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Detect WSL running against Windows filesystem (9P mount) — extremely slow and crash-prone
+if [[ "$SCRIPT_DIR" == /mnt/* ]]; then
+    echo "WARNING: Running from Windows filesystem (/mnt/...) via WSL2."
+    echo "The 9P bridge causes severe I/O overhead and can crash WSL2 + Docker."
+    echo ""
+    echo "Options:"
+    echo "  1. Use start-all.bat from Windows CMD/PowerShell (recommended)"
+    echo "  2. Clone the repo inside WSL: git clone ... ~/acm-ai && cd ~/acm-ai"
+    echo ""
+    read -p "Continue anyway? (y/N): " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
+fi
+
 # Helper: wait for a port to be listening
 wait_port() {
     local port=$1 name=$2 i=0
@@ -76,7 +89,7 @@ echo ""
 # [4/5] Start Background Worker
 echo "[4/5] Starting Background Worker..."
 cd "$SCRIPT_DIR"
-nohup uv run surreal-commands-worker --import-modules commands > /tmp/acm-ai-worker.log 2>&1 &
+nohup uv run python run_worker.py --import-modules commands > /tmp/acm-ai-worker.log 2>&1 &
 echo $! > /tmp/acm-ai-worker.pid
 echo "Worker started (PID: $(cat /tmp/acm-ai-worker.pid))"
 sleep 2

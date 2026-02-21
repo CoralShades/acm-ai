@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./surreal_data:/mydata
+      - surreal_data:/mydata
     environment:
       - SURREAL_EXPERIMENTAL_GRAPHQL=true
     command: start --log info --user root --pass root surrealkv://mydata/open_notebook.db
@@ -82,5 +82,7 @@ services:
       retries: 3
 
 volumes:
+  surreal_data:
+    name: acm-ai-surreal-data
   ollama_data:
     name: acm-ai-ollama-data

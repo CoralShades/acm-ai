@@ -5,7 +5,7 @@ echo   ACM-AI - Stopping All Services
 echo ========================================
 echo.
 
-cd /d "D:\ailocal\acm-ai"
+cd /d "%~dp0"
 
 echo Current status:
 uv run python scripts/service_manager.py status 2>nul

@@ -5,7 +5,7 @@ echo   ACM-AI - Stopping Ollama
 echo ========================================
 echo.
 
-cd /d "D:\ailocal\acm-ai"
+cd /d "%~dp0"
 
 echo Stopping Ollama container...
 docker stop acm-ai-ollama 2>nul

@@ -5,7 +5,7 @@ echo   ACM-AI - Ollama Local AI Setup
 echo ========================================
 echo.
 
-cd /d "D:\ailocal\acm-ai"
+cd /d "%~dp0"
 
 echo Choose your Ollama configuration:
 echo.

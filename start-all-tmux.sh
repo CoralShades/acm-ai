@@ -7,6 +7,19 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SESSION_NAME="acm-ai"
 
+# Detect WSL running against Windows filesystem (9P mount) — extremely slow and crash-prone
+if [[ "$SCRIPT_DIR" == /mnt/* ]]; then
+    echo "WARNING: Running from Windows filesystem (/mnt/...) via WSL2."
+    echo "The 9P bridge causes severe I/O overhead and can crash WSL2 + Docker."
+    echo ""
+    echo "Options:"
+    echo "  1. Use start-all.bat from Windows CMD/PowerShell (recommended)"
+    echo "  2. Clone the repo inside WSL: git clone ... ~/acm-ai && cd ~/acm-ai"
+    echo ""
+    read -p "Continue anyway? (y/N): " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
+fi
+
 # Check if tmux is installed
 if ! command -v tmux &> /dev/null; then
     echo "tmux is not installed."
@@ -73,7 +86,7 @@ tmux send-keys -t $SESSION_NAME:0.0 "echo '=== SurrealDB (Database) ==='; cd $SD
 tmux send-keys -t $SESSION_NAME:0.2 "cd $SD && $SD/scripts/_wait_for_port.sh 8000 SurrealDB 60 && echo '=== API Server (port 5055) ===' && API_RELOAD=false uv run python run_api.py" C-m
 
 # Pane 3: Worker (waits for SurrealDB port 8000)
-tmux send-keys -t $SESSION_NAME:0.3 "cd $SD && $SD/scripts/_wait_for_port.sh 8000 SurrealDB 60 && echo '=== Background Worker ===' && uv run surreal-commands-worker --import-modules commands" C-m
+tmux send-keys -t $SESSION_NAME:0.3 "cd $SD && $SD/scripts/_wait_for_port.sh 8000 SurrealDB 60 && echo '=== Background Worker ===' && uv run python run_worker.py --import-modules commands" C-m
 
 # Pane 4: Frontend (waits for API health - ensures API is fully initialized)
 tmux send-keys -t $SESSION_NAME:0.4 "cd $SD && $SD/scripts/_wait_for.sh http://localhost:5055/health 'API Server' 120 && echo '=== Frontend (port 8502) ===' && cd $SD/frontend && PORT=8502 npm run dev -- -p 8502" C-m

@@ -151,10 +151,10 @@ start-all:
 	@docker compose up -d surrealdb
 	@sleep 3
 	@echo "🔧 Starting API backend (port 5055)..."
-	@nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 & echo $$! > /tmp/acm-ai-api.pid
+	@API_RELOAD=false nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 & echo $$! > /tmp/acm-ai-api.pid
 	@sleep 3
 	@echo "⚙️ Starting background worker..."
-	@nohup uv run surreal-commands-worker --import-modules commands > /tmp/acm-ai-worker.log 2>&1 & echo $$! > /tmp/acm-ai-worker.pid
+	@nohup uv run python run_worker.py --import-modules commands > /tmp/acm-ai-worker.log 2>&1 & echo $$! > /tmp/acm-ai-worker.pid
 	@sleep 2
 	@echo "🌐 Starting Next.js frontend (port 8502)..."
 	@echo "✅ All services started!"

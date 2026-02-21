@@ -6,6 +6,13 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Detect WSL running against Windows filesystem (9P mount)
+if [[ "$SCRIPT_DIR" == /mnt/* ]]; then
+    echo "WARNING: Running from Windows filesystem (/mnt/...) via WSL2."
+    echo "For best results, use stop-all.bat from Windows CMD/PowerShell."
+    echo ""
+fi
+
 echo "========================================"
 echo "  ACM-AI - Stopping All Services"
 echo "========================================"

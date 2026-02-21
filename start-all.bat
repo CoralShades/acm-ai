@@ -5,7 +5,11 @@ echo   ACM-AI - Starting All Services
 echo ========================================
 echo.
 
-cd /d "D:\ailocal\acm-ai"
+set "ACM_DIR=%~dp0"
+cd /d "%ACM_DIR%"
+
+REM Create logs directory
+if not exist "%ACM_DIR%logs" mkdir "%ACM_DIR%logs"
 
 echo [0/5] Syncing Python dependencies...
 set UV_LINK_MODE=copy
@@ -13,7 +17,14 @@ uv sync --quiet
 echo Dependencies synced.
 echo.
 
-echo [1/5] Clearing ports and fixing conflicts...
+echo [1/5] Clearing ports and killing stale processes...
+REM Kill any leftover ACM-AI service windows from previous runs
+taskkill /FI "WINDOWTITLE eq ACM-AI - Frontend*" /F >nul 2>&1
+taskkill /FI "WINDOWTITLE eq ACM-AI - Worker*" /F >nul 2>&1
+taskkill /FI "WINDOWTITLE eq ACM-AI - API*" /F >nul 2>&1
+REM Force-kill anything still holding our ports (5055, 8502)
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5055.*LISTENING"') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8502.*LISTENING"') do taskkill /F /PID %%a >nul 2>&1
 uv run python scripts/service_manager.py fix --auto-fix 2>nul
 echo.
 
@@ -26,10 +37,12 @@ if %errorlevel% neq 0 (
 ) else (
     echo SurrealDB is already running.
 )
+REM Save SurrealDB startup logs
+docker compose logs --no-color --tail 200 surrealdb > "%ACM_DIR%logs\surrealdb.log" 2>&1
 echo.
 
 echo [3/5] Starting API Server (port 5055)...
-start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && set API_RELOAD=false && uv run python run_api.py"
+start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d %ACM_DIR% && set API_RELOAD=false && uv run python run_api.py"
 echo Waiting for API to be ready...
 :wait_api
 timeout /t 2 /nobreak >nul
@@ -39,12 +52,12 @@ echo API Server is ready!
 echo.
 
 echo [4/5] Starting Background Worker...
-start "ACM-AI - Worker" cmd /k "chcp 65001 >nul && cd /d D:\ailocal\acm-ai && set PYTHONIOENCODING=utf-8 && uv run surreal-commands-worker --import-modules commands"
+start "ACM-AI - Worker" cmd /k "chcp 65001 >nul && cd /d %ACM_DIR% && set PYTHONIOENCODING=utf-8 && uv run python run_worker.py --import-modules commands"
 timeout /t 2 /nobreak >nul
 echo.
 
 echo [5/5] Starting Frontend (port 8502)...
-start "ACM-AI - Frontend" cmd /k "cd /d D:\ailocal\acm-ai\frontend && set PORT=8502 && npm run dev -- -p 8502"
+start "ACM-AI - Frontend" powershell -NoProfile -Command "cd '%ACM_DIR%frontend'; $env:PORT='8502'; npm run dev -- -p 8502 2>&1 | Tee-Object -FilePath '%ACM_DIR%logs\frontend.log'"
 echo.
 
 echo ========================================
@@ -57,6 +70,12 @@ echo   API Docs:  http://localhost:5055/docs
 echo.
 echo   Each service runs in its own window.
 echo   Close the windows to stop services.
+echo.
+echo   Logs (persistent):
+echo     API:       logs\api.log  (+ logs\api-error.log)
+echo     Worker:    logs\worker.log  (+ logs\worker-error.log)
+echo     SurrealDB: logs\surrealdb.log  (or: docker compose logs surrealdb)
+echo     Frontend:  logs\frontend.log
 echo ========================================
 echo.
 
