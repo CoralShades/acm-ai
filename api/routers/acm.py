@@ -39,6 +39,7 @@ from api.models import (
     ClassifyRequest,
     ClassifyResponse,
     FieldDefResponse,
+    FieldMappingUpdateRequest,
     FieldSchemaConfigResponse,
     FieldSchemaConfigUpdateRequest,
     NormalizeRequest,
@@ -304,6 +305,13 @@ async def _get_export_mapping() -> tuple[list[str], list[str | None]]:
     return headers, fields
 
 
+def _sanitize_csv_value(value: str) -> str:
+    """Sanitize a value to prevent CSV injection in spreadsheet applications."""
+    if value and value[0] in ("=", "+", "-", "@"):
+        return f"'{value}"
+    return value
+
+
 def _get_record_value(record: ACMRecord, field: str | None) -> str:
     """Get a display value from an ACMRecord for a given field name."""
     if not field:
@@ -314,8 +322,8 @@ def _get_record_value(record: ACMRecord, field: str | None) -> str:
     if isinstance(val, bool):
         return "Yes" if val else "No"
     if isinstance(val, list):
-        return "; ".join(str(v) for v in val)
-    return str(val)
+        return _sanitize_csv_value("; ".join(str(v) for v in val))
+    return _sanitize_csv_value(str(val))
 
 
 @router.get("/export")
@@ -1614,20 +1622,20 @@ async def get_field_mapping():
 
 
 @router.put("/field-mapping")
-async def update_field_mapping(data: dict):
+async def update_field_mapping(data: FieldMappingUpdateRequest):
     """Update the active field mapping."""
     from open_notebook.domain.field_mapping import FieldMapping, FieldMappingEntry
 
     try:
         mapping = await FieldMapping.get_active()
-        if "mappings" in data:
+        if data.mappings is not None:
             mapping.mappings = [
-                FieldMappingEntry.model_validate(m) for m in data["mappings"]
+                FieldMappingEntry.model_validate(m.model_dump()) for m in data.mappings
             ]
-        if "name" in data:
-            mapping.name = data["name"]
-        if "notes" in data:
-            mapping.notes = data["notes"]
+        if data.name is not None:
+            mapping.name = data.name
+        if data.notes is not None:
+            mapping.notes = data.notes
         await mapping.update()
         return mapping.model_dump()
     except Exception as e:

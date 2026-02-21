@@ -1,7 +1,7 @@
 """Knowledge Graph Backfill Script
 
 Idempotent backfill that creates graph entities and relations
-from existing acm_record data.
+from existing acm_record data. Uses UPSERT to safely handle re-runs.
 
 Story: E13-S1 Knowledge Graph Schema
 """
@@ -21,7 +21,10 @@ def _safe_id(value: str) -> str:
 async def backfill_knowledge_graph() -> dict:
     """Build graph entities from existing acm_record data.
 
-    Returns dict with counts of created entities.
+    Uses UPSERT for entities and deterministic relation IDs
+    to ensure idempotent re-runs.
+
+    Returns dict with counts of created/updated entities.
     """
     stats = {"schools": 0, "buildings": 0, "rooms": 0, "relations": 0}
 
@@ -49,32 +52,37 @@ async def backfill_knowledge_graph() -> dict:
         sch_id = _safe_id(school_code)
         bld_id = f"{sch_id}_{_safe_id(building_code)}"
 
-        # Create school
+        # Upsert school
         if sch_id not in seen_schools:
             await repo_query(
-                "CREATE school SET "
-                "id = $id, school_code = $code, created = time::now(), updated = time::now()",
+                "UPSERT $id SET "
+                "school_code = $code, updated = time::now(), "
+                "created = created OR time::now()",
                 {"id": f"school:sch_{sch_id}", "code": school_code},
             )
             seen_schools.add(sch_id)
             stats["schools"] += 1
 
-        # Create building
+        # Upsert building
         if bld_id not in seen_buildings:
             await repo_query(
-                "CREATE building SET "
-                "id = $id, school_code = $scode, building_code = $bcode, "
-                "created = time::now(), updated = time::now()",
+                "UPSERT $id SET "
+                "school_code = $scode, building_code = $bcode, "
+                "updated = time::now(), created = created OR time::now()",
                 {
                     "id": f"building:bld_{bld_id}",
                     "scode": school_code,
                     "bcode": building_code,
                 },
             )
-            # school -> building relation
+            # school -> building relation (deterministic ID)
+            rel_id = f"shb_{sch_id}_{_safe_id(building_code)}"
             await repo_query(
-                "RELATE $from->school_has_building->$to",
+                "UPSERT $rel_id SET "
+                "in = $from, out = $to, updated = time::now(), "
+                "created = created OR time::now()",
                 {
+                    "rel_id": f"school_has_building:{rel_id}",
                     "from": f"school:sch_{sch_id}",
                     "to": f"building:bld_{bld_id}",
                 },
@@ -83,15 +91,15 @@ async def backfill_knowledge_graph() -> dict:
             stats["buildings"] += 1
             stats["relations"] += 1
 
-        # Create room
+        # Upsert room
         if room_code:
             rm_id = f"{bld_id}_{_safe_id(room_code)}"
             if rm_id not in seen_rooms:
                 await repo_query(
-                    "CREATE room SET "
-                    "id = $id, school_code = $scode, building_code = $bcode, "
+                    "UPSERT $id SET "
+                    "school_code = $scode, building_code = $bcode, "
                     "room_code = $rcode, floor_level = $floor, "
-                    "created = time::now(), updated = time::now()",
+                    "updated = time::now(), created = created OR time::now()",
                     {
                         "id": f"room:rm_{rm_id}",
                         "scode": school_code,
@@ -100,10 +108,14 @@ async def backfill_knowledge_graph() -> dict:
                         "floor": rec.get("floor_level"),
                     },
                 )
-                # building -> room relation
+                # building -> room relation (deterministic ID)
+                bhr_id = f"bhr_{bld_id}_{_safe_id(room_code)}"
                 await repo_query(
-                    "RELATE $from->building_has_room->$to",
+                    "UPSERT $rel_id SET "
+                    "in = $from, out = $to, updated = time::now(), "
+                    "created = created OR time::now()",
                     {
+                        "rel_id": f"building_has_room:{bhr_id}",
                         "from": f"building:bld_{bld_id}",
                         "to": f"room:rm_{rm_id}",
                     },
@@ -112,22 +124,39 @@ async def backfill_knowledge_graph() -> dict:
                 stats["rooms"] += 1
                 stats["relations"] += 1
 
-            # room -> acm_record relation
+            # room -> acm_record relation (deterministic ID from acm_id)
             acm_id = rec.get("id")
             if acm_id:
+                # Extract the record part of the acm_id for a deterministic relation ID
+                acm_short = str(acm_id).replace(":", "_")
+                rha_id = f"rha_{rm_id}_{acm_short}"
                 await repo_query(
-                    "RELATE $from->room_has_acm->$to",
-                    {"from": f"room:rm_{rm_id}", "to": acm_id},
+                    "UPSERT $rel_id SET "
+                    "in = $from, out = $to, updated = time::now(), "
+                    "created = created OR time::now()",
+                    {
+                        "rel_id": f"room_has_acm:{rha_id}",
+                        "from": f"room:rm_{rm_id}",
+                        "to": acm_id,
+                    },
                 )
                 stats["relations"] += 1
 
-        # extracted_from relation
+        # extracted_from relation (deterministic ID from acm_id)
         source_id = rec.get("source_id")
         acm_id = rec.get("id")
         if source_id and acm_id:
+            acm_short = str(acm_id).replace(":", "_")
+            ef_id = f"ef_{acm_short}"
             await repo_query(
-                "RELATE $from->extracted_from->$to",
-                {"from": acm_id, "to": source_id},
+                "UPSERT $rel_id SET "
+                "in = $from, out = $to, updated = time::now(), "
+                "created = created OR time::now()",
+                {
+                    "rel_id": f"extracted_from:{ef_id}",
+                    "from": acm_id,
+                    "to": source_id,
+                },
             )
             stats["relations"] += 1
 

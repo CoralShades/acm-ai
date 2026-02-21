@@ -147,11 +147,20 @@ async def list_extraction_progress(
         f"SELECT * FROM extraction_progress {where_clause} "
         f"ORDER BY updated_at DESC LIMIT $limit START $offset"
     )
+    count_query = f"SELECT count() FROM extraction_progress {where_clause} GROUP ALL"
     try:
         results = await repo_query(query, params)
+        count_result = await repo_query(
+            count_query,
+            {k: v for k, v in params.items() if k not in ("limit", "offset")},
+        )
     except Exception as e:
         logger.error(f"Failed to list extraction progress: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+    total = 0
+    if count_result and isinstance(count_result, list) and len(count_result) > 0:
+        total = count_result[0].get("count", 0)
 
     items = []
     for row in results or []:
@@ -176,4 +185,4 @@ async def list_extraction_progress(
             }
         )
 
-    return {"items": items, "total": len(items)}
+    return {"items": items, "total": total}

@@ -541,7 +541,7 @@ class ACMRecordCreateRequest(BaseModel):
     @field_validator("result", mode="before")
     @classmethod
     def normalize_result(cls, v: str) -> str:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
@@ -555,7 +555,7 @@ class ACMRecordCreateRequest(BaseModel):
     @field_validator("friable", mode="before")
     @classmethod
     def normalize_friable(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         stripped = v.strip()
         valid = {"Friable", "Non Friable"}
@@ -569,7 +569,7 @@ class ACMRecordCreateRequest(BaseModel):
     @field_validator("risk_status", mode="before")
     @classmethod
     def normalize_risk_status(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Low", "Medium", "High"}
@@ -580,7 +580,7 @@ class ACMRecordCreateRequest(BaseModel):
     @field_validator("material_condition", mode="before")
     @classmethod
     def normalize_material_condition(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Good", "Fair", "Poor", "Damaged"}
@@ -591,7 +591,7 @@ class ACMRecordCreateRequest(BaseModel):
     @field_validator("area_type", mode="before")
     @classmethod
     def normalize_area_type(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Interior", "Exterior", "Grounds"}
@@ -684,7 +684,7 @@ class ACMRecordUpdateRequest(BaseModel):
     @field_validator("result", mode="before")
     @classmethod
     def normalize_result(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
@@ -698,7 +698,7 @@ class ACMRecordUpdateRequest(BaseModel):
     @field_validator("friable", mode="before")
     @classmethod
     def normalize_friable(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         stripped = v.strip()
         valid = {"Friable", "Non Friable"}
@@ -712,7 +712,7 @@ class ACMRecordUpdateRequest(BaseModel):
     @field_validator("risk_status", mode="before")
     @classmethod
     def normalize_risk_status(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Low", "Medium", "High"}
@@ -723,7 +723,7 @@ class ACMRecordUpdateRequest(BaseModel):
     @field_validator("material_condition", mode="before")
     @classmethod
     def normalize_material_condition(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Good", "Fair", "Poor", "Damaged"}
@@ -734,7 +734,7 @@ class ACMRecordUpdateRequest(BaseModel):
     @field_validator("area_type", mode="before")
     @classmethod
     def normalize_area_type(cls, v: str | None) -> str | None:
-        if not v:
+        if v is None:
             return v
         normalized = v.strip().title()
         valid = {"Interior", "Exterior", "Grounds"}
@@ -1019,3 +1019,23 @@ class BackfillParentsResponse(BaseModel):
 
     records_updated: int = Field(..., description="Number of records linked to parents")
     message: str = Field(..., description="Status message")
+
+
+class FieldMappingEntryRequest(BaseModel):
+    """Single field mapping entry for update requests."""
+
+    bar_column: str = Field(..., min_length=1, description="BAR export column name")
+    bar_column_index: int = Field(..., ge=0, description="0-based column position")
+    acm_field: Optional[str] = Field(None, description="ACMRecord field name")
+    is_computed: bool = Field(default=False)
+    formula: Optional[str] = Field(None)
+
+
+class FieldMappingUpdateRequest(BaseModel):
+    """Request to update field mapping configuration."""
+
+    name: Optional[str] = Field(None, min_length=1, description="Mapping profile name")
+    mappings: Optional[List[FieldMappingEntryRequest]] = Field(
+        None, description="Column mappings"
+    )
+    notes: Optional[str] = None

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -20,7 +22,7 @@ class ExtractionSettingsResponse(BaseModel):
 
 
 class ExtractionSettingsUpdate(BaseModel):
-    extraction_method: str | None = None
+    extraction_method: Literal["mineru", "docling", "hybrid"] | None = None
     fallback_enabled: bool | None = None
     enable_toc_extraction: bool | None = None
     enable_building_inventory: bool | None = None

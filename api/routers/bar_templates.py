@@ -84,6 +84,12 @@ async def upload_template(file: UploadFile = File(...)):
 
     try:
         content = await file.read()
+        max_size = 10 * 1024 * 1024  # 10 MB
+        if len(content) > max_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File too large ({len(content)} bytes). Maximum size is 10 MB.",
+            )
         template = parse_bar_template(content, file.filename)
         await template.save()
         logger.info(f"Uploaded BAR template: {template.filename} ({template.column_count} columns)")

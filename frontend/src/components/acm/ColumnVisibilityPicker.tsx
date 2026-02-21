@@ -120,7 +120,8 @@ export function ColumnVisibilityPicker({
           visible: col.isVisible(),
         }
       })
-  }, [gridApi, fieldInfos, open]) // re-compute when popover opens
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-compute when popover opens
+  }, [gridApi, fieldInfos, open])
 
   const handleToggleColumn = useCallback(
     (colId: string) => {

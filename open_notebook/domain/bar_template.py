@@ -6,7 +6,7 @@ including parsed column structure for export compliance validation.
 Story: E5-S3 BAR Template Management
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import ClassVar, List, Optional
 
 from loguru import logger
@@ -35,7 +35,7 @@ class BARTemplate(ObjectModel):
 
     filename: str = Field(description="Original upload filename")
     version_label: str = Field(description="Version label (e.g., v2024.1)")
-    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     is_active: bool = Field(default=False)
     column_count: int = Field(default=0)
     columns: List[BARTemplateColumn] = Field(default_factory=list)
