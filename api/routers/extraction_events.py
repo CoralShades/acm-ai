@@ -8,11 +8,11 @@ import asyncio
 import json
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from open_notebook.database.repository import db_connection
+from open_notebook.database.repository import db_connection, repo_query
 
 router = APIRouter()
 
@@ -125,3 +125,55 @@ async def get_extraction_progress(command_id: str):
         "log_entries": progress.get("log_entries", []),
         "updated_at": progress.get("updated_at"),
     }
+
+
+@router.get("/acm/extraction-progress")
+async def list_extraction_progress(
+    status: Optional[str] = Query(None, description="Filter by status: running, completed, failed"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    """List all extraction progress records with optional status filter.
+
+    Used by the Extraction Monitor page (E15-S2).
+    """
+    where_clause = ""
+    params: dict = {"limit": limit, "offset": offset}
+    if status:
+        where_clause = "WHERE status = $status"
+        params["status"] = status
+
+    query = (
+        f"SELECT * FROM extraction_progress {where_clause} "
+        f"ORDER BY updated_at DESC LIMIT $limit START $offset"
+    )
+    try:
+        results = await repo_query(query, params)
+    except Exception as e:
+        logger.error(f"Failed to list extraction progress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    items = []
+    for row in results or []:
+        state = None
+        if row.get("state_json"):
+            try:
+                state = json.loads(row["state_json"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        items.append(
+            {
+                "id": row.get("id"),
+                "command_id": row.get("command_id"),
+                "source_id": row.get("source_id"),
+                "status": row.get("status", "unknown"),
+                "state": state,
+                "log_entries": row.get("log_entries", []),
+                "token_limit_exceeded": row.get("token_limit_exceeded", False),
+                "chunk_count": row.get("chunk_count"),
+                "created_at": row.get("created_at"),
+                "updated_at": row.get("updated_at"),
+            }
+        )
+
+    return {"items": items, "total": len(items)}

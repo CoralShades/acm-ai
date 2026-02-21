@@ -40,6 +40,8 @@ import {
   FileCode,
   Cog,
   SlidersHorizontal,
+  Activity,
+  TableProperties,
 } from 'lucide-react'
 
 interface NavItem {
@@ -67,9 +69,11 @@ const navigation: NavSection[] = [
   {
     title: 'Configure',
     items: [
+      { name: 'Extraction Monitor', href: '/extraction-monitor', icon: Activity },
       { name: 'Extraction', href: '/settings/extraction', icon: FlaskConical },
       { name: 'AI Models', href: '/settings/models', icon: Bot },
       { name: 'Parsers', href: '/settings/parsers', icon: FileCode },
+      { name: 'Field Mapping', href: '/settings/field-mapping', icon: TableProperties },
       { name: 'Processing', href: '/settings/processing', icon: Cog },
       { name: 'General', href: '/settings', icon: SlidersHorizontal },
     ],
