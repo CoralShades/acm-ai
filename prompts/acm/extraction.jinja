@@ -212,10 +212,96 @@ Negative
 
 ---
 
+### FORMAT C: Prensa Tabular Format (Division 5 Assessments)
+
+Used by Prensa Pty Ltd. Table columns are stacked vertically. Each record starts with an Area/Level line, followed by Room & Location, Feature, Item Description, Hazard Type, Hazard Status, Sample Number, and additional fields.
+
+**Pre-processed markers:**
+- `--- RECORD: Ground floor | Main foyer ---` marks the start of each record
+- `>>> POSITIVE <<<` / `>>> NEGATIVE <<<` / `>>> ASSUMED POSITIVE <<<` marks hazard status
+
+**EXAMPLE: ONE complete Prensa record (vertical format):**
+```
+--- RECORD: Ground floor | Main foyer ---
+Ground
+floor
+Main foyer
+Floor
+Vinyl sheet
+(cream)
+Asbestos
+>>> NEGATIVE <<<
+34511-039-001
+-
+-
+...
+```
+
+**Extracted as:**
+- building_id: "Broadmeadows Police Station" (from document context)
+- area_type: "Interior" (ground/first floor = Interior)
+- room_name: "Main foyer"
+- product: "Floor"
+- material_description: "Vinyl sheet (cream)"
+- result: "Negative"
+- sample_result: "Negative"
+- sample_no: "34511-039-001"
+
+**EXAMPLE: Positive Prensa record:**
+```
+--- RECORD: First floor | Fan Room ---
+First
+floor
+Fan Room
+Air handling
+unit ductwork
+Flange mastic
+(grey)
+Asbestos
+>>> POSITIVE <<<
+34511-039-007
+Non-friable
+Yes
+...
+Low
+Good
+Low
+Throughout
+P4
+```
+
+**Extracted as:**
+- building_id: "Broadmeadows Police Station"
+- area_type: "Interior"
+- room_name: "Fan Room"
+- product: "Air handling unit ductwork"
+- material_description: "Flange mastic (grey)"
+- result: "Positive"
+- sample_no: "34511-039-007"
+- friable: "Non-friable"
+- material_condition: "Good"
+- disturbance_potential: "Low"
+- risk_status: "Low"
+- quantity: "Throughout"
+
+**Key Prensa patterns:**
+1. **Each record delimited** by `--- RECORD: ... ---` markers (area/level | room)
+2. **Area/Level** → determines area_type: Ground/First/Basement floor = "Interior", External/Roof = "Exterior"
+3. **Fields are vertical** - each table column value appears on its own line
+4. **Hazard Type** is always "Asbestos" for ACM items
+5. **Hazard Status** marked as `>>> POSITIVE <<<`, `>>> NEGATIVE <<<`, `>>> ASSUMED POSITIVE <<<`, or `>>> ASSUMED NEGATIVE <<<`
+6. **Sample numbers** follow format: NNNNN-NNN-NNN (e.g., 34511-039-001). "Same as NNNNN-NNN-NNN" means reference to another sample.
+7. **Negative records** have dashes (-) for most fields after the sample number. Extract them with result "Negative".
+8. **"No access" entries** may appear with all dashes - extract these with extraction_confidence "low" and note "No access"
+9. **CRITICAL**: Count the `--- RECORD: ---` markers - you MUST extract one record per marker
+
+---
+
 ### How to Determine the Format
 
 - **B### - R#### room headers** (e.g., "B009 - R0005") → FORMAT A
 - **Numbered items**, **"Building Name:" in headers**, **Hazard Type "Asbestos"/"None"** → FORMAT B
+- **`--- RECORD:` markers**, **vertical fields**, **Prensa** → FORMAT C
 - When in doubt, extract ALL items regardless of format
 
 ---
@@ -226,7 +312,7 @@ Negative
 
 A complete BAR (Building Asbestos Register) requires BOTH positive AND negative results. Missing negatives = non-compliant register. You MUST extract every entry you find.
 
-1. **SCAN** the content for ALL entries — room entries (B### - R#### pattern) for SAMP, or numbered items for ARA — do NOT skip any
+1. **SCAN** the content for ALL entries — room entries (B### - R#### pattern) for SAMP, numbered items for ARA, or `--- RECORD: ---` markers for Prensa — do NOT skip any
 2. **EXTRACT** every item where Hazard Type is "Asbestos" (or equivalent ACM markers). **SKIP** items with Hazard Type "None"
 3. **CLASSIFY** each record's result using BAR vocabulary:
    - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"

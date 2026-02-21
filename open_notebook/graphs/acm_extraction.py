@@ -137,16 +137,39 @@ def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
 
 
 def _detect_document_format(content: str) -> str:
-    """Detect whether content is SAMP or ARA format.
+    """Detect whether content is SAMP, ARA, or Prensa tabular format.
 
     Returns:
         "samp" for B###-style IDs, "ara" for named buildings,
+        "prensa" for Prensa tabular format (vertical columns),
         "unknown" otherwise.
     """
     # Check for SAMP format indicators
     samp_building = re.search(r"B\d{3}\s*-\s*R\d{4}", content)
     if samp_building:
         return "samp"
+
+    # Check for Prensa tabular format indicators
+    # Prensa format: repeated header blocks with "Area / Level", "Room & Location",
+    # "Feature", "Item Description", "Hazard Type", "Hazard Status", "Sample Number"
+    prensa_indicators = 0
+    if content.count("Area /\nLevel") >= 2:
+        prensa_indicators += 2  # Repeated headers are strong signal
+    if re.search(r"Room & Location", content):
+        prensa_indicators += 1
+    if re.search(r"Hazard\s*\nType", content) or re.search(
+        r"Hazard\s*\nStatus", content
+    ):
+        prensa_indicators += 1
+    if re.search(r"Disturb\.\s*\nPotential", content):
+        prensa_indicators += 1
+    if re.search(r"\d{5}-\d{3}[-\n]\d{3}", content):
+        prensa_indicators += 1  # Prensa sample number format: NNNNN-NNN-NNN
+    if re.search(r"Prensa", content):
+        prensa_indicators += 1
+
+    if prensa_indicators >= 3:
+        return "prensa"
 
     # Check for ARA format indicators
     ara_indicators = 0
@@ -212,7 +235,10 @@ def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
     # Add section markers to help LLM understand structure
     processed = content
 
-    if doc_format == "ara":
+    if doc_format == "prensa":
+        # Prensa tabular format: vertical columns, repeated headers
+        processed, metadata = _preprocess_prensa_format(processed, metadata)
+    elif doc_format == "ara":
         # ARA format: Named buildings, sequential items, section dividers
         processed, metadata = _preprocess_ara_format(processed, metadata)
     else:
@@ -273,6 +299,154 @@ def _preprocess_ara_format(
             f"Pre-process (ARA): {len(unique_buildings)} buildings, "
             f"{len(section_dividers)} section dividers, "
             f"{asbestos_count} asbestos items, {none_count} none items"
+        )
+
+    return processed, metadata
+
+
+def _preprocess_prensa_format(
+    content: str, metadata: Dict[str, Any]
+) -> Tuple[str, Dict[str, Any]]:
+    """Pre-process Prensa tabular format content (vertical columns, repeated headers).
+
+    Prensa reports have a distinctive tabular format where each PDF table column
+    is rendered vertically. The table header block repeats on every page. This
+    pre-processor:
+    1. Strips duplicate header blocks (keeps first)
+    2. Adds record boundary markers based on area/level patterns
+    3. Marks hazard status results (Positive/Negative/Assumed)
+    """
+    processed = content
+
+    # --- Step 1: Strip repeated header blocks ---
+    # The header block contains "Area /\nLevel\nRoom & Location\nFeature\n..."
+    # followed by "Site Address:" and "Client:" lines.
+    # Keep only the first occurrence.
+    header_pattern = re.compile(
+        r"(?:Prensa Pty Ltd\.\n.*?\n.*?\n.*?\nAsbestos Register\n"
+        r"Job No:.*?\n)?"
+        r"Area\s*/\s*\nLevel\s*\n"
+        r"Room & Location\s*\n"
+        r"Feature\s*\n"
+        r"Item\s*\n"
+        r"Description\s*\n"
+        r"Hazard\s*\n"
+        r"Type\s*\n"
+        r"Hazard\s*\n"
+        r"Status\s*\n"
+        r"Sample\s*\n"
+        r"Number\s*\n"
+        r".*?"  # Variable-length middle columns
+        r"(?:Photograph|Date|Reinspect)\s*\n?"
+        r"(?:Site Address:.*?\n)?"
+        r"(?:Client:.*?\n)?",
+        re.DOTALL,
+    )
+
+    header_matches = list(header_pattern.finditer(processed))
+    if len(header_matches) > 1:
+        # Remove all but the first header block
+        # Process from end to preserve indices
+        for match in reversed(header_matches[1:]):
+            processed = processed[: match.start()] + processed[match.end() :]
+        acm_debug(
+            f"Stripped {len(header_matches) - 1} duplicate header blocks"
+        )
+
+    # Also strip page footer/header lines like "Broadmeadows Police Station Register 34511-039 V2"
+    # and "LXM:34511-039:May 2020" and standalone page numbers
+    processed = re.sub(
+        r"^.+Register\s+\d{5}-\d{3}\s+V\d+\s*$", "", processed, flags=re.MULTILINE
+    )
+    processed = re.sub(
+        r"^[A-Z]{2,4}:\d{5}-\d{3}:.*$", "", processed, flags=re.MULTILINE
+    )
+    processed = re.sub(r"^\d+\s*$", "", processed, flags=re.MULTILINE)
+
+    # --- Step 2: Add record boundary markers ---
+    # Each record starts with an area/level line (Ground/First/External/Internal/Roof/Basement)
+    # followed by a "floor" or other qualifier, then Room & Location
+    record_start_pattern = re.compile(
+        r"^((?:Ground|First|Second|Third|Basement|External|Internal|Roof)\s*\n?"
+        r"(?:floor|level)?\s*\n)"
+        r"(.+?)$",  # Room & Location line
+        re.MULTILINE | re.IGNORECASE,
+    )
+
+    record_count = 0
+    parts = []
+    last_end = 0
+    for match in record_start_pattern.finditer(processed):
+        area_level = match.group(1).strip().replace("\n", " ")
+        room_location = match.group(2).strip()
+        parts.append(processed[last_end : match.start()])
+        parts.append(
+            f"\n--- RECORD: {area_level} | {room_location} ---\n"
+        )
+        parts.append(match.group(0))
+        last_end = match.end()
+        record_count += 1
+
+    if parts:
+        parts.append(processed[last_end:])
+        processed = "".join(parts)
+
+    # --- Step 3: Mark hazard status results ---
+    # Positive/Negative/Assumed positive/Assumed negative as standalone lines
+    processed = re.sub(
+        r"^(Assumed\s*\n?positive)$",
+        ">>> ASSUMED POSITIVE <<<",
+        processed,
+        flags=re.MULTILINE | re.IGNORECASE,
+    )
+    processed = re.sub(
+        r"^(Assumed\s*\n?negative)$",
+        ">>> ASSUMED NEGATIVE <<<",
+        processed,
+        flags=re.MULTILINE | re.IGNORECASE,
+    )
+    # Standalone "Positive" on its own line (not part of "Assumed positive")
+    processed = re.sub(
+        r"^Positive$",
+        ">>> POSITIVE <<<",
+        processed,
+        flags=re.MULTILINE,
+    )
+    # Standalone "Negative" on its own line
+    processed = re.sub(
+        r"^Negative$",
+        ">>> NEGATIVE <<<",
+        processed,
+        flags=re.MULTILINE,
+    )
+
+    # --- Step 4: Strip "no access" non-record entries ---
+    # These have no hazard type and just say "No access..."
+    # They still get record markers but the LLM should skip them
+
+    # Count results for metadata
+    pos_count = processed.count(">>> POSITIVE <<<")
+    neg_count = processed.count(">>> NEGATIVE <<<")
+    assumed_pos_count = processed.count(">>> ASSUMED POSITIVE <<<")
+    assumed_neg_count = processed.count(">>> ASSUMED NEGATIVE <<<")
+
+    metadata["document_format"] = "prensa"
+    metadata["prensa_records_found"] = record_count
+    metadata["prensa_positive"] = pos_count
+    metadata["prensa_negative"] = neg_count
+    metadata["prensa_assumed_positive"] = assumed_pos_count
+    metadata["prensa_assumed_negative"] = assumed_neg_count
+    metadata["processed_length"] = len(processed)
+
+    # Collapse multiple blank lines
+    processed = re.sub(r"\n{3,}", "\n\n", processed)
+
+    if debug_config.DEBUG_ENABLED:
+        acm_debug(
+            f"Pre-process (Prensa): {record_count} record boundaries, "
+            f"Positive={pos_count}, Negative={neg_count}, "
+            f"Assumed+={assumed_pos_count}, Assumed-={assumed_neg_count}, "
+            f"headers stripped={len(header_matches) - 1 if len(header_matches) > 1 else 0}"
         )
 
     return processed, metadata
