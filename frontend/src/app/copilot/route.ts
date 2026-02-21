@@ -31,11 +31,16 @@ export const POST = async (req: Request) => {
     url: `${BACKEND_URL}/api/agui/chat`,
   });
 
+  const extractionAgent = new HttpAgent({
+    url: `${BACKEND_URL}/api/agui/extraction`,
+  });
+
   const runtime = new CopilotRuntime({
     /* eslint-disable @typescript-eslint/no-explicit-any */
     agents: {
       default: supervisorAgent.clone() as any,
       supervisor: supervisorAgent as any,
+      extraction: extractionAgent as any,
     },
     /* eslint-enable @typescript-eslint/no-explicit-any */
   });

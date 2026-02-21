@@ -24,6 +24,7 @@ import {
   useExportACMExcel,
 } from '@/lib/hooks/use-acm'
 import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
+import { useExtractionAgent } from '@/lib/hooks/use-extraction-agent'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
 import { useSessionStorage } from '@/lib/hooks/use-session-storage'
@@ -105,6 +106,9 @@ export function ACMTab({ sourceId }: ACMTabProps) {
 
   // Extraction status tracking
   const extractionStatus = useExtractionStatus(sourceId)
+
+  // AG-UI incremental record streaming (E17-S2)
+  const extractionAgent = useExtractionAgent(sourceId)
 
   // Mutations
   const deleteRecord = useDeleteACMRecord()
@@ -349,6 +353,22 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             onDismiss={extractionStatus.dismiss}
           />
 
+          {/* AG-UI Chunk Progress (E17-S2) */}
+          {extractionStatus.phase === 'extracting' && extractionAgent.chunksTotal > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              Chunk {extractionAgent.chunksProcessed} / {extractionAgent.chunksTotal}
+              {extractionAgent.previewRecords.length > 0 && (
+                <span className="font-medium">
+                  — {extractionAgent.previewRecords.length} record{extractionAgent.previewRecords.length !== 1 ? 's' : ''} streaming
+                </span>
+              )}
+            </div>
+          )}
+
           {/* No Records Alert */}
           {!isLoadingRecords && !hasRecords && extractionStatus.phase !== 'extracting' && (
             <Alert>
@@ -367,6 +387,11 @@ export function ACMTab({ sourceId }: ACMTabProps) {
             <ACMGrid
               ref={gridRef}
               records={records}
+              previewRecords={
+                extractionStatus.phase === 'extracting'
+                  ? (extractionAgent.previewRecords as unknown as ACMRecord[])
+                  : undefined
+              }
               isLoading={isLoadingRecords}
               onEdit={handleEdit}
               onDelete={handleDelete}

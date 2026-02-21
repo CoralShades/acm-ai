@@ -29,8 +29,12 @@ export interface CellSelectionDetails {
   record: ACMRecord
 }
 
+// Extended record type for preview rows from AG-UI streaming
+type ACMGridRecord = ACMRecord & { _is_preview?: boolean }
+
 interface ACMGridProps {
   records: ACMRecord[]
+  previewRecords?: ACMRecord[]
   isLoading?: boolean
   onEdit: (record: ACMRecord) => void
   onDelete: (record: ACMRecord) => void
@@ -94,11 +98,22 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId },
+  { records, previewRecords, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId },
   ref
 ) {
-  const gridRef = useRef<AgGridReact<ACMRecord>>(null)
-  const [gridApi, setGridApi] = useState<GridApi<ACMRecord> | null>(null)
+  const gridRef = useRef<AgGridReact<ACMGridRecord>>(null)
+  const [gridApi, setGridApi] = useState<GridApi<ACMGridRecord> | null>(null)
+
+  // Merge saved records with preview (streaming) records
+  const mergedRows = useMemo<ACMGridRecord[]>(() => {
+    if (!previewRecords || previewRecords.length === 0) return records
+    const previewRows: ACMGridRecord[] = previewRecords.map((r, i) => ({
+      ...r,
+      id: r.id || `_preview_${i}`,
+      _is_preview: true,
+    }))
+    return [...records, ...previewRows]
+  }, [records, previewRecords])
 
   // Expose expand/collapse/resetColumns methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -166,13 +181,17 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     }
   }, [gridApi, selectedRecordId])
 
-  // Apply highlight class to selected row
+  // Apply highlight class to selected row and preview styling
   const getRowClass = useCallback(
-    (params: RowClassParams<ACMRecord>) => {
-      if (params.data?.id && params.data.id === selectedRecordId) {
-        return 'acm-row-selected'
+    (params: RowClassParams<ACMGridRecord>) => {
+      const classes: string[] = []
+      if ((params.data as ACMGridRecord)?._is_preview) {
+        classes.push('acm-row-preview')
       }
-      return undefined
+      if (params.data?.id && params.data.id === selectedRecordId) {
+        classes.push('acm-row-selected')
+      }
+      return classes.length > 0 ? classes.join(' ') : undefined
     },
     [selectedRecordId]
   )
@@ -519,10 +538,21 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         .dark .ag-theme-alpine .acm-row-selected {
           background-color: hsl(var(--primary) / 0.2) !important;
         }
+        /* Preview/streaming row styling (E17-S2) */
+        .ag-theme-alpine .acm-row-preview {
+          font-style: italic;
+          opacity: 0.75;
+          border-left: 3px solid hsl(var(--primary) / 0.5) !important;
+          animation: acm-preview-pulse 2s ease-in-out infinite;
+        }
+        @keyframes acm-preview-pulse {
+          0%, 100% { border-left-color: hsl(var(--primary) / 0.3); }
+          50% { border-left-color: hsl(var(--primary)); }
+        }
       `}</style>
-      <AgGridReact<ACMRecord>
+      <AgGridReact<ACMGridRecord>
         ref={gridRef}
-        rowData={records}
+        rowData={mergedRows}
         columnDefs={columnDefs}
         defaultColDef={defaultColDef}
         onGridReady={onGridReady}

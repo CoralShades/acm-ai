@@ -7,6 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ChevronDown, ChevronUp, CheckCircle2, XCircle } from 'lucide-react'
 import { StageProgressPill } from './StageProgressPill'
 import { ExtractionLogStream } from './ExtractionLogStream'
+import { ExtractionThinkingPanel } from './ExtractionThinkingPanel'
+import { ExtractionToolCallFeed, type ToolCallEntry } from './ExtractionToolCallFeed'
 import type { ExtractionPhase } from '@/lib/hooks/use-extraction-progress'
 import type { PipelineRunState, StageId } from '@/lib/types/pipeline'
 
@@ -17,6 +19,9 @@ interface ExtractionProgressPanelProps {
   recordsCreated?: number
   errorMessage?: string
   onDismiss: () => void
+  // AG-UI observability (E17-S3, E17-S4)
+  reasoningText?: string
+  toolCalls?: ToolCallEntry[]
 }
 
 const STAGE_ORDER: StageId[] = [
@@ -36,6 +41,8 @@ export function ExtractionProgressPanel({
   recordsCreated,
   errorMessage,
   onDismiss,
+  reasoningText,
+  toolCalls,
 }: ExtractionProgressPanelProps) {
   const [logsExpanded, setLogsExpanded] = useState(false)
 
@@ -91,6 +98,14 @@ export function ExtractionProgressPanel({
               <span className="font-medium">{pipelineState.total_records}</span>
             </div>
           )}
+
+          {/* Tool Call Feed (E17-S4) */}
+          {toolCalls && toolCalls.length > 0 && (
+            <ExtractionToolCallFeed toolCalls={toolCalls} />
+          )}
+
+          {/* Reasoning/Thinking Panel (E17-S3) */}
+          {reasoningText && <ExtractionThinkingPanel reasoningText={reasoningText} />}
 
           {/* Expandable Logs */}
           {logEntries.length > 0 && (

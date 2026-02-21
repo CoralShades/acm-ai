@@ -57,3 +57,27 @@ export interface ExtractionProgressEvent {
   state: PipelineRunState
   log_entries: string[]
 }
+
+/**
+ * AG-UI Extraction Agent State — synced via useCoAgent
+ * Mirrors the ExtractionState TypedDict from the backend graph.
+ */
+export interface ExtractionAgentState {
+  source_id: string
+  records: Array<{
+    building_id?: string
+    room_name?: string
+    product?: string
+    result?: string
+    page_number?: number
+    [key: string]: unknown
+  }>
+  current_chunk_index: number
+  total_chunks: number
+  current_step: string | null
+  validation_result: {
+    accepted: number
+    rejected: number
+  } | null
+  final_count: number | null
+}
