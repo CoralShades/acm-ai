@@ -4,7 +4,7 @@
 # project: acm-ai
 # project_key: acm-ai
 # tracking_system: file-system
-# story_location: _bmad-output/sprint-artifacts
+# story_location: docs/sprint-artifacts
 
 # STATUS DEFINITIONS:
 # ==================
@@ -38,7 +38,7 @@ updated: 2026-02-21
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
-story_location: _bmad-output/sprint-artifacts
+story_location: docs/sprint-artifacts
 
 reconciliation:
   last_reconciled: 2026-02-21

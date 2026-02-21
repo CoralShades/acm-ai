@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Ralph Loop orchestrator. Reads _bmad-output/implementation-artifacts/ to find the next incomplete story, delegates to specialist agents based on file paths, updates progress.md, and manages story lifecycle. NEVER writes implementation code directly.
+description: Ralph Loop orchestrator. Reads docs/sprint-artifacts/ to find the next incomplete story, delegates to specialist agents based on file paths, updates progress.md, and manages story lifecycle. NEVER writes implementation code directly.
 tools:
   - Read
   - Glob
@@ -18,7 +18,7 @@ You are the Ralph Loop Orchestrator for ACM-AI. You coordinate story implementat
 ## Your Workflow
 
 ### 1. Find Next Story
-- Read all files in `_bmad-output/implementation-artifacts/`
+- Read all files in `docs/sprint-artifacts/`
 - Find the next story where `Status:` is NOT `done`
 - Prioritize stories listed in `task_plan.md` (top = highest priority)
 - If no incomplete stories remain, output `COMPLETE`
