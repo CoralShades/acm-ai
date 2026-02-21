@@ -1,0 +1,22 @@
+{
+  "name": "ACM-AI Extraction Agent",
+  "description": "Extracts Asbestos Containing Material records from SAMP/ARA documents",
+  "url": "http://localhost:5055",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false
+  },
+  "authentication": {
+    "schemes": ["bearer"]
+  },
+  "skills": [
+    {
+      "id": "acm_extraction",
+      "name": "ACM Register Extraction",
+      "description": "Extract ACM records from a processed source document",
+      "inputModes": ["text"],
+      "outputModes": ["text", "structured"]
+    }
+  ]
+}
