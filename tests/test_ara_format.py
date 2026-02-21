@@ -9,7 +9,6 @@ import re
 
 import pytest
 
-
 # ── ARA content snippets (from Greencap report) ──────────────────────────────
 
 ARA_CONTENT_SNIPPET = """
@@ -281,8 +280,8 @@ class TestValidation:
 
     @pytest.mark.asyncio
     async def test_validate_ara_positive_result(self, _make_state, _config):
-        from open_notebook.graphs.acm_extraction import validate_records
         from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+        from open_notebook.graphs.acm_extraction import validate_records
 
         record = ACMExtractionRecord(
             building_id="Mortuary Buildings",
@@ -298,8 +297,8 @@ class TestValidation:
 
     @pytest.mark.asyncio
     async def test_validate_ara_presumed_positive(self, _make_state, _config):
-        from open_notebook.graphs.acm_extraction import validate_records
         from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+        from open_notebook.graphs.acm_extraction import validate_records
 
         record = ACMExtractionRecord(
             building_id="Mortuary Buildings",
@@ -315,8 +314,8 @@ class TestValidation:
 
     @pytest.mark.asyncio
     async def test_validate_ara_negative_result(self, _make_state, _config):
-        from open_notebook.graphs.acm_extraction import validate_records
         from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+        from open_notebook.graphs.acm_extraction import validate_records
 
         record = ACMExtractionRecord(
             building_id="Mortuary Buildings",
@@ -332,8 +331,8 @@ class TestValidation:
 
     @pytest.mark.asyncio
     async def test_validate_ara_presumed_negative(self, _make_state, _config):
-        from open_notebook.graphs.acm_extraction import validate_records
         from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+        from open_notebook.graphs.acm_extraction import validate_records
 
         record = ACMExtractionRecord(
             building_id="Mortuary Buildings",
@@ -349,8 +348,8 @@ class TestValidation:
 
     @pytest.mark.asyncio
     async def test_validate_negative_sets_na_fields(self, _make_state, _config):
-        from open_notebook.graphs.acm_extraction import validate_records
         from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+        from open_notebook.graphs.acm_extraction import validate_records
 
         record = ACMExtractionRecord(
             building_id="Mortuary Buildings",
@@ -367,8 +366,8 @@ class TestValidation:
     @pytest.mark.asyncio
     async def test_validate_medium_to_moderate_mapping(self, _make_state, _config):
         """BAR uses 'Moderate' not 'Medium' for disturbance potential."""
-        from open_notebook.graphs.acm_extraction import validate_records
         from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+        from open_notebook.graphs.acm_extraction import validate_records
 
         record = ACMExtractionRecord(
             building_id="Mortuary Buildings",

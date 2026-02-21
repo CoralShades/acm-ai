@@ -387,4 +387,4 @@ Requires environment variable:
 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 ```
 
-Agent definitions in `.claude/agents/`. The `orchestrator` reads stories from `_bmad-output/implementation-artifacts/` and delegates to specialists based on the routing table above.
+Agent definitions in `.claude/agents/`. The `orchestrator` reads stories from `docs/sprint-artifacts/` and delegates to specialists based on the routing table above.

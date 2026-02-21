@@ -231,7 +231,7 @@ run_phase_init() {
     fi
 
     sprint_log "[STORY:$story_id] Phase INIT — Generating fix plan..."
-    claude "${claude_args[@]}" > "$phase_log" 2>&1 || true
+    env -u ANTHROPIC_API_KEY claude "${claude_args[@]}" > "$phase_log" 2>&1 || true
 
     # Verify fix plan was created
     if [ -f "$RALPH_DIR/@fix_plan.md" ]; then
@@ -286,9 +286,19 @@ run_phase_dev() {
             return 1
             ;;
         2)
-            sprint_log "[STORY:$story_id] Phase DEV — Max iterations reached"
-            # Not necessarily a failure — review and test will tell
+            # Max iterations — check if ANY tasks were completed
+            local done_count=0
+            done_count=$(grep -c '^\- \[x\]' "$RALPH_DIR/@fix_plan.md" 2>/dev/null) || done_count=0
+            if [ "$done_count" -eq 0 ]; then
+                sprint_log "[STORY:$story_id] Phase DEV — Max iterations, ZERO tasks done — blocked"
+                return 1
+            fi
+            sprint_log "[STORY:$story_id] Phase DEV — Max iterations, partial progress ($done_count tasks)"
             return 0
+            ;;
+        4)
+            sprint_log "[STORY:$story_id] Phase DEV — Infrastructure failure"
+            return 2  # Signal infra failure to sprint loop
             ;;
         *)
             sprint_log "[STORY:$story_id] Phase DEV — ERROR (exit code $exit_code)"
@@ -321,7 +331,7 @@ run_phase_review() {
         claude_args+=(--fallback-model "$FALLBACK")
     fi
 
-    claude "${claude_args[@]}" > "$phase_log" 2>&1 || true
+    env -u ANTHROPIC_API_KEY claude "${claude_args[@]}" > "$phase_log" 2>&1 || true
 
     # Check review result
     if grep -qF "REVIEW_PASS" "$phase_log" 2>/dev/null; then
@@ -448,6 +458,10 @@ run_phase_fix() {
         2)
             sprint_log "[STORY:$story_id] Phase FIX — Max iterations reached"
             return 1
+            ;;
+        4)
+            sprint_log "[STORY:$story_id] Phase FIX — Infrastructure failure"
+            return 2  # Signal infra failure to sprint loop
             ;;
         *)
             sprint_log "[STORY:$story_id] Phase FIX — ERROR (exit code $exit_code)"
@@ -628,6 +642,7 @@ main() {
     local completed_count=0
     local blocked_count=0
     local skipped_count=0
+    local consecutive_infra=0
     local completed_json="[]"
     local blocked_json="[]"
     local skipped_json="[]"
@@ -679,13 +694,31 @@ main() {
         save_state "$idx" "dev" "$completed_json" "$blocked_json" "$skipped_json"
 
         # === Phase 2: DEV ===
-        if ! run_phase_dev "$story_id" "$story_log_dir"; then
+        run_phase_dev "$story_id" "$story_log_dir"
+        local dev_result=$?
+        if [ "$dev_result" -eq 2 ]; then
+            # Infrastructure failure
+            consecutive_infra=$((consecutive_infra + 1))
+            sprint_log "[STORY:$story_id] Infrastructure failure ($consecutive_infra consecutive)"
+            blocked_count=$((blocked_count + 1))
+            blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
+            git checkout main 2>/dev/null || true
+            idx=$((idx + 1))
+            if [ "$consecutive_infra" -ge 2 ]; then
+                sprint_log "[SPRINT] ABORT: $consecutive_infra consecutive infrastructure failures"
+                break
+            fi
+            continue
+        elif [ "$dev_result" -ne 0 ]; then
             sprint_log "[STORY:$story_id] Blocked during dev phase"
+            consecutive_infra=0
             blocked_count=$((blocked_count + 1))
             blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
             git checkout main 2>/dev/null || true
             idx=$((idx + 1))
             continue
+        else
+            consecutive_infra=0
         fi
 
         save_state "$idx" "review" "$completed_json" "$blocked_json" "$skipped_json"
@@ -708,8 +741,23 @@ main() {
         if [ "$review_has_issues" = true ] || [ "$test_failed" = true ]; then
             save_state "$idx" "fix" "$completed_json" "$blocked_json" "$skipped_json"
 
-            if ! run_phase_fix "$story_id" "$story_log_dir"; then
+            run_phase_fix "$story_id" "$story_log_dir"
+            local fix_result=$?
+            if [ "$fix_result" -eq 2 ]; then
+                consecutive_infra=$((consecutive_infra + 1))
+                sprint_log "[STORY:$story_id] Fix phase — infrastructure failure ($consecutive_infra consecutive)"
+                blocked_count=$((blocked_count + 1))
+                blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
+                git checkout main 2>/dev/null || true
+                idx=$((idx + 1))
+                if [ "$consecutive_infra" -ge 2 ]; then
+                    sprint_log "[SPRINT] ABORT: $consecutive_infra consecutive infrastructure failures"
+                    break
+                fi
+                continue
+            elif [ "$fix_result" -ne 0 ]; then
                 sprint_log "[STORY:$story_id] Fix phase failed"
+                consecutive_infra=0
                 blocked_count=$((blocked_count + 1))
                 blocked_json=$(echo "$blocked_json" | sed 's/\]$//' | sed "s/$/\"$story_id\"]/" | sed 's/^\["/["/')
                 git checkout main 2>/dev/null || true

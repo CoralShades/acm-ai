@@ -51,8 +51,9 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const [recordToDelete, setRecordToDelete] = useState<ACMRecord | null>(null)
   // Cell citation viewer state
   const [selectedCell, setSelectedCell] = useState<CellSelectionDetails | null>(null)
-  // Detail panel state (slide-out)
-  const [detailRecord, setDetailRecord] = useState<ACMRecord | null>(null)
+  // Detail panel state (slide-out, replaces modal dialog)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [panelRecordId, setPanelRecordId] = useState<string | null>(null)
 
   // Building tab state - persisted per source in session storage
   const [selectedBuilding, setSelectedBuilding] = useSessionStorage<string | null>(
@@ -202,33 +203,22 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     return () => window.removeEventListener('acm-command', handleACMCommand)
   }, [handleExtract, handleExportCsv, handleExportExcel, handleAddNew, router])
 
-  // Row click handler — opens/closes slide-out detail panel
+  // Row click handler — toggles slide-out detail panel
   const handleRowClick = useCallback((record: ACMRecord) => {
-    setDetailRecord((prev) => (prev?.id === record.id ? null : record))
+    if (panelOpen && panelRecordId === record.id) {
+      // Same row clicked again → close panel
+      setPanelOpen(false)
+      setPanelRecordId(null)
+    } else {
+      setPanelRecordId(record.id)
+      setPanelOpen(true)
+    }
+  }, [panelOpen, panelRecordId])
+
+  const handlePanelClose = useCallback(() => {
+    setPanelOpen(false)
+    setPanelRecordId(null)
   }, [])
-
-  // Close the detail panel
-  const handleDetailClose = useCallback(() => {
-    setDetailRecord(null)
-  }, [])
-
-  // Handle successful save from panel — sync updated record into local state
-  const handleDetailRecordUpdated = useCallback((updated: ACMRecord) => {
-    setDetailRecord(updated)
-    refetchRecords()
-  }, [refetchRecords])
-
-  // Open PDF viewer from the detail panel
-  const handleViewInPdf = useCallback((pageNumber: number) => {
-    if (!detailRecord) return
-    setSelectedCell({
-      recordId: detailRecord.id,
-      field: 'page_number',
-      value: pageNumber,
-      pageNumber,
-      record: detailRecord,
-    })
-  }, [detailRecord])
 
   // Cell citation viewer handler
   const handleCellSelect = useCallback((details: CellSelectionDetails) => {
@@ -263,27 +253,35 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     return allRecords.filter((r) => r.building_id === selectedBuilding)
   }, [allRecords, selectedBuilding])
 
-  // Memoize index of detail record in filtered array (for hasPrev/hasNext button state)
-  const detailRecordIndex = useMemo(
-    () => (detailRecord ? records.findIndex((r) => r.id === detailRecord.id) : -1),
-    [detailRecord, records]
-  )
+  // Panel navigation — must be after records/allRecords are defined
+  const panelIndex = useMemo(() => {
+    if (!panelRecordId) return -1
+    return records.findIndex((r) => r.id === panelRecordId)
+  }, [records, panelRecordId])
 
-  // Navigate to previous record — follows AG Grid's current sort/filter order
-  const handleDetailPrev = useCallback(() => {
-    if (!detailRecord) return
-    const visibleRows = gridRef.current?.getVisibleRows() ?? records
-    const idx = visibleRows.findIndex((r) => r.id === detailRecord.id)
-    if (idx > 0) setDetailRecord(visibleRows[idx - 1])
-  }, [detailRecord, records])
+  const handlePanelNavigatePrev = useCallback(() => {
+    if (panelIndex > 0) {
+      setPanelRecordId(records[panelIndex - 1].id)
+    }
+  }, [panelIndex, records])
 
-  // Navigate to next record — follows AG Grid's current sort/filter order
-  const handleDetailNext = useCallback(() => {
-    if (!detailRecord) return
-    const visibleRows = gridRef.current?.getVisibleRows() ?? records
-    const idx = visibleRows.findIndex((r) => r.id === detailRecord.id)
-    if (idx < visibleRows.length - 1) setDetailRecord(visibleRows[idx + 1])
-  }, [detailRecord, records])
+  const handlePanelNavigateNext = useCallback(() => {
+    if (panelIndex < records.length - 1) {
+      setPanelRecordId(records[panelIndex + 1].id)
+    }
+  }, [panelIndex, records])
+
+  const handlePanelViewInPDF = useCallback((pageNumber: number) => {
+    const record = allRecords.find((r) => r.id === panelRecordId)
+    if (!record) return
+    setSelectedCell({
+      recordId: record.id,
+      field: 'page_number',
+      value: pageNumber,
+      pageNumber: pageNumber,
+      record: record,
+    })
+  }, [panelRecordId, allRecords])
 
   const totalCount = allRecords.length
   const filteredCount = records.length
@@ -376,26 +374,24 @@ export function ACMTab({ sourceId }: ACMTabProps) {
               onVisibleCountChange={handleVisibleCountChange}
               onCellSelect={handleCellSelect}
               onRowClick={handleRowClick}
-              selectedRecordId={detailRecord?.id}
+              selectedRecordId={panelRecordId}
             />
           )}
         </CardContent>
       </Card>
 
-      {/* Record Detail Panel (slide-out, no overlay) */}
-      {detailRecord && (
-        <ACMRecordDetailPanel
-          record={detailRecord}
-          sourceId={sourceId}
-          hasPrev={detailRecordIndex > 0}
-          hasNext={detailRecordIndex < records.length - 1}
-          onPrev={handleDetailPrev}
-          onNext={handleDetailNext}
-          onClose={handleDetailClose}
-          onViewInPdf={pdfUrl ? handleViewInPdf : undefined}
-          onRecordUpdated={handleDetailRecordUpdated}
-        />
-      )}
+      {/* Record Detail Panel (slide-out) */}
+      <ACMRecordDetailPanel
+        recordId={panelRecordId}
+        open={panelOpen}
+        sourceId={sourceId}
+        onClose={handlePanelClose}
+        onViewInPDF={handlePanelViewInPDF}
+        onNavigatePrev={handlePanelNavigatePrev}
+        onNavigateNext={handlePanelNavigateNext}
+        hasPrev={panelIndex > 0}
+        hasNext={panelIndex < records.length - 1 && panelIndex >= 0}
+      />
 
       {/* Create/Edit Dialog */}
       <ACMRecordDialog

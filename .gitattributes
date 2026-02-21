@@ -1,1 +1,46 @@
+# Normalize all text files to LF
+* text=auto eol=lf
+
+# Explicit text file types
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.mdx text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
 *.sh text eol=lf
+*.py text eol=lf
+*.pyi text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.env text eol=lf
+*.env.example text eol=lf
+*.xml text eol=lf
+*.sql text eol=lf
+*.txt text eol=lf
+
+# Explicitly lock lock files to LF (prevents package-lock.json churn)
+package-lock.json text eol=lf
+uv.lock text eol=lf
+poetry.lock text eol=lf
+
+# Binary — never convert
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.pyc binary

@@ -1,19 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { RecordFieldSection } from './RecordFieldSection'
+import type { SectionField } from './RecordFieldSection'
+import { useACMRecordDetail } from '@/lib/hooks/use-acm-record'
 import {
   X,
   ChevronLeft,
@@ -24,353 +20,427 @@ import {
   XCircle,
   Loader2,
 } from 'lucide-react'
-import { useUpdateACMRecord } from '@/lib/hooks/use-acm'
 import type { ACMRecord, ACMRecordUpdateRequest } from '@/lib/types/acm'
 import { cn } from '@/lib/utils'
 
 interface ACMRecordDetailPanelProps {
-  record: ACMRecord
+  recordId: string | null
+  open: boolean
   sourceId: string
+  onClose: () => void
+  onViewInPDF: (pageNumber: number) => void
+  onNavigatePrev: () => void
+  onNavigateNext: () => void
   hasPrev: boolean
   hasNext: boolean
-  onPrev: () => void
-  onNext: () => void
-  onClose: () => void
-  onViewInPdf?: (pageNumber: number) => void
-  /** Called after a successful save so parent can update its record state */
-  onRecordUpdated?: (record: ACMRecord) => void
 }
 
-// ---- Small display helpers ----
-
-function RiskBadge({ value }: { value: string | null | undefined }) {
-  if (!value) return <span className="text-xs text-muted-foreground">—</span>
-  const variants: Record<string, string> = {
-    High: 'bg-risk-high-bg text-risk-high-foreground',
-    Medium: 'bg-risk-medium-bg text-risk-medium-foreground',
-    Low: 'bg-risk-low-bg text-risk-low-foreground',
-    Presumed: 'bg-risk-presumed-bg text-risk-presumed-foreground',
-  }
-  return (
-    <Badge variant="secondary" className={variants[value] || ''}>
-      {value}
-    </Badge>
-  )
+function buildSections(record: ACMRecord): Array<{ title: string; fields: SectionField[] }> {
+  return [
+    {
+      title: 'Organisation',
+      fields: [
+        { label: 'School Name', value: record.school_name },
+        { label: 'School Code', value: record.school_code },
+      ],
+    },
+    {
+      title: 'Building',
+      fields: [
+        { label: 'Building ID', value: record.building_id },
+        { label: 'Building Name', value: record.building_name },
+        { label: 'Year Built', value: record.building_year },
+        { label: 'Construction', value: record.building_construction },
+      ],
+    },
+    {
+      title: 'Location',
+      fields: [
+        { label: 'Area Type', value: record.area_type },
+        { label: 'Floor Level', value: record.floor_level },
+        { label: 'Room ID', value: record.room_id },
+        { label: 'Room Name', value: record.room_name },
+        { label: 'Room Area', value: record.room_area ? `${record.room_area} m²` : null },
+        { label: 'Location', value: record.location },
+      ],
+    },
+    {
+      title: 'ACM Details',
+      fields: [
+        { label: 'Product', value: record.product },
+        { label: 'Material Description', value: record.material_description },
+        { label: 'Friable', value: record.friable, type: 'boolean' },
+        { label: 'Product Group', value: record.acm_product_group },
+        { label: 'Product Type', value: record.acm_product_type },
+        { label: 'Sample No.', value: record.sample_no },
+        { label: 'Sample Result', value: record.sample_result },
+        { label: 'Quantity', value: record.quantity },
+      ],
+    },
+    {
+      title: 'Assessment',
+      fields: [
+        { label: 'Material Condition', value: record.material_condition },
+        { label: 'Disturbance Potential', value: record.disturbance_potential },
+        { label: 'Extent', value: record.extent },
+        { label: 'Risk Status', value: record.risk_status, type: 'risk' },
+        { label: 'Result', value: record.result },
+        { label: 'Identifying Company', value: record.identifying_company },
+      ],
+    },
+    {
+      title: 'Documentation',
+      fields: [
+        { label: 'ACM Labelled', value: record.acm_labelled, type: 'boolean' },
+        { label: 'Label Details', value: record.acm_label_details },
+        { label: 'Hygienist Recommendations', value: record.hygienist_recommendations },
+        { label: 'Normalized Action', value: record.normalized_action },
+        { label: 'Classification Method', value: record.classification_method },
+      ],
+    },
+    {
+      title: 'Metadata',
+      fields: [
+        { label: 'Page Number', value: record.page_number },
+        { label: 'Extraction Confidence', value: record.extraction_confidence, type: 'confidence' },
+        { label: 'Classification Confidence', value: record.classification_confidence, type: 'confidence' },
+        { label: 'Created', value: record.created },
+        { label: 'Updated', value: record.updated },
+      ],
+    },
+  ]
 }
 
-function BoolBadge({ value }: { value: boolean | null | undefined }) {
-  if (value === null || value === undefined)
-    return <span className="text-xs text-muted-foreground">—</span>
-  return (
-    <Badge variant={value ? 'default' : 'secondary'}>{value ? 'YES' : 'NO'}</Badge>
-  )
+interface EditableFieldsProps {
+  record: ACMRecord
+  editData: ACMRecordUpdateRequest
+  onChange: (updates: Partial<ACMRecordUpdateRequest>) => void
 }
 
-function ConfidenceBadge({ value }: { value: number | null | undefined }) {
-  if (value === null || value === undefined)
-    return <span className="text-xs text-muted-foreground">—</span>
-  const pct = value <= 1 ? Math.round(value * 100) : Math.round(value)
-  const color =
-    pct >= 80
-      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      : pct >= 60
-      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-  return (
-    <Badge variant="outline" className={color}>
-      {pct}%
-    </Badge>
-  )
-}
-
-function DisplayField({
-  label,
-  value,
-  children,
-}: {
-  label: string
-  value?: string | number | boolean | null
-  children?: React.ReactNode
-}) {
-  const display =
-    value === null || value === undefined || value === ''
-      ? '—'
-      : typeof value === 'boolean'
-      ? value
-        ? 'YES'
-        : 'NO'
-      : String(value)
+function EditableFields({ record, editData, onChange }: EditableFieldsProps) {
+  const val = <K extends keyof ACMRecordUpdateRequest>(
+    key: K,
+    fallback: ACMRecord[keyof ACMRecord]
+  ): string => String(editData[key] ?? fallback ?? '')
 
   return (
-    <div className="grid grid-cols-[1fr_1fr] gap-x-3 py-1">
-      <dt className="text-xs text-muted-foreground truncate">{label}</dt>
-      <dd className="text-xs font-medium leading-tight break-words">
-        {children ?? display}
-      </dd>
+    <div className="space-y-6">
+      {/* Organisation */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Organisation</h3>
+        <Separator />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">School Name</Label>
+            <Input
+              value={val('school_name', record.school_name)}
+              onChange={(e) => onChange({ school_name: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">School Code</Label>
+            <Input
+              value={val('school_code', record.school_code)}
+              onChange={(e) => onChange({ school_code: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Building */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Building</h3>
+        <Separator />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Building ID</Label>
+            <Input
+              value={val('building_id', record.building_id)}
+              onChange={(e) => onChange({ building_id: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Building Name</Label>
+            <Input
+              value={val('building_name', record.building_name)}
+              onChange={(e) => onChange({ building_name: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Year Built</Label>
+            <Input
+              type="number"
+              value={editData.building_year ?? record.building_year ?? ''}
+              onChange={(e) => onChange({ building_year: e.target.value ? Number(e.target.value) : undefined })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Construction</Label>
+            <Input
+              value={val('building_construction', record.building_construction)}
+              onChange={(e) => onChange({ building_construction: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Location */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</h3>
+        <Separator />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Area Type</Label>
+            <Select
+              value={editData.area_type ?? record.area_type ?? ''}
+              onValueChange={(v) => onChange({ area_type: v })}
+            >
+              <SelectTrigger className="h-7 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Interior">Interior</SelectItem>
+                <SelectItem value="Exterior">Exterior</SelectItem>
+                <SelectItem value="Grounds">Grounds</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Room ID</Label>
+            <Input
+              value={val('room_id', record.room_id)}
+              onChange={(e) => onChange({ room_id: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Room Name</Label>
+            <Input
+              value={val('room_name', record.room_name)}
+              onChange={(e) => onChange({ room_name: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Room Area (m²)</Label>
+            <Input
+              type="number"
+              value={editData.room_area ?? record.room_area ?? ''}
+              onChange={(e) => onChange({ room_area: e.target.value ? Number(e.target.value) : undefined })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="col-span-2 space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Location</Label>
+            <Input
+              value={val('location', record.location)}
+              onChange={(e) => onChange({ location: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ACM Details */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">ACM Details</h3>
+        <Separator />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Product</Label>
+            <Input
+              value={val('product', record.product)}
+              onChange={(e) => onChange({ product: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="col-span-2 space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Material Description</Label>
+            <Input
+              value={val('material_description', record.material_description)}
+              onChange={(e) => onChange({ material_description: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Friable</Label>
+            <Select
+              value={editData.friable ?? record.friable ?? ''}
+              onValueChange={(v) => onChange({ friable: v })}
+            >
+              <SelectTrigger className="h-7 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Friable">Friable</SelectItem>
+                <SelectItem value="Non-friable">Non-friable</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Result</Label>
+            <Input
+              value={val('result', record.result)}
+              onChange={(e) => onChange({ result: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Extent</Label>
+            <Input
+              value={val('extent', record.extent)}
+              onChange={(e) => onChange({ extent: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Page Number</Label>
+            <Input
+              type="number"
+              value={editData.page_number ?? record.page_number ?? ''}
+              onChange={(e) => onChange({ page_number: e.target.value ? Number(e.target.value) : undefined })}
+              className="h-7 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Assessment */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assessment</h3>
+        <Separator />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Material Condition</Label>
+            <Input
+              value={val('material_condition', record.material_condition)}
+              onChange={(e) => onChange({ material_condition: e.target.value })}
+              className="h-7 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] uppercase tracking-wide">Risk Status</Label>
+            <Select
+              value={editData.risk_status ?? record.risk_status ?? ''}
+              onValueChange={(v) => onChange({ risk_status: v })}
+            >
+              <SelectTrigger className="h-7 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Low">Low</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+                <SelectItem value="Presumed">Presumed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-      {title}
-    </h3>
-  )
-}
-
-// ---- Edit field helpers ----
-
-function EditTextField({
-  label,
-  value,
-  onChange,
-  type = 'text',
-}: {
-  label: string
-  value: string | undefined
-  onChange: (v: string) => void
-  type?: 'text' | 'number'
-}) {
-  return (
-    <div className="grid grid-cols-[1fr_1fr] gap-x-3 py-1 items-center">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input
-        type={type}
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-7 text-xs px-2"
-      />
-    </div>
-  )
-}
-
-function EditSelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string
-  value: string | undefined
-  options: string[]
-  onChange: (v: string) => void
-}) {
-  return (
-    <div className="grid grid-cols-[1fr_1fr] gap-x-3 py-1 items-center">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Select value={value ?? ''} onValueChange={onChange}>
-        <SelectTrigger className="h-7 text-xs px-2">
-          <SelectValue placeholder="—" />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o} value={o} className="text-xs">
-              {o}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-
-// ---- Main panel ----
 
 export function ACMRecordDetailPanel({
-  record,
+  recordId,
+  open,
   sourceId,
+  onClose,
+  onViewInPDF,
+  onNavigatePrev,
+  onNavigateNext,
   hasPrev,
   hasNext,
-  onPrev,
-  onNext,
-  onClose,
-  onViewInPdf,
-  onRecordUpdated,
 }: ACMRecordDetailPanelProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [formData, setFormData] = useState<ACMRecordUpdateRequest>({})
-  const [isAnimatingOut, setIsAnimatingOut] = useState(false)
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const updateRecord = useUpdateACMRecord()
+  const { record, isLoading, isEditing, isSaving, setIsEditing, saveRecord } =
+    useACMRecordDetail(recordId)
+  const [editData, setEditData] = useState<ACMRecordUpdateRequest>({})
 
-  // Reset edit mode and animation state when record changes
+  // Reset edit state when record changes
   useEffect(() => {
+    setEditData({})
     setIsEditing(false)
-    setFormData({})
-    setIsAnimatingOut(false)
-  }, [record.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordId])
 
-  // Cleanup close timer on unmount
+  // Keyboard shortcuts: Escape, ArrowLeft, ArrowRight
   useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
-    }
-  }, [])
-
-  const handleCancelEdit = useCallback(() => {
-    setIsEditing(false)
-    setFormData({})
-  }, [])
-
-  // Animate out then notify parent (M2: exit animation)
-  const handleClose = useCallback(() => {
-    setIsAnimatingOut(true)
-    closeTimerRef.current = setTimeout(() => {
-      onClose()
-    }, 200)
-  }, [onClose])
-
-  // Keyboard: Escape closes/cancels, arrows navigate (M3: all used functions in deps)
-  useEffect(() => {
+    if (!open) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (isEditing) {
-          handleCancelEdit()
-        } else {
-          handleClose()
+      // Don't intercept keys when focus is in an input/select
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') {
+          if (isEditing) setIsEditing(false)
         }
         return
       }
-      // Don't navigate when focus is in AG Grid or in a form input
-      const active = document.activeElement
-      if (
-        active instanceof HTMLInputElement ||
-        active instanceof HTMLTextAreaElement ||
-        active instanceof HTMLSelectElement
-      ) {
-        return
+      if (e.key === 'Escape') {
+        if (isEditing) {
+          setIsEditing(false)
+        } else {
+          onClose()
+        }
       }
-      const inGrid = active?.closest('.ag-theme-alpine')
-      if (inGrid) return
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault()
-        onPrev()
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault()
-        onNext()
+      if (e.key === 'ArrowLeft' && !isEditing) {
+        onNavigatePrev()
+      }
+      if (e.key === 'ArrowRight' && !isEditing) {
+        onNavigateNext()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isEditing, handleClose, handleCancelEdit, onPrev, onNext])
+  }, [open, isEditing, onClose, setIsEditing, onNavigatePrev, onNavigateNext])
 
-  const handleStartEdit = useCallback(() => {
-    setFormData({
-      product: record.product ?? undefined,
-      material_description: record.material_description ?? undefined,
-      school_name: record.school_name ?? undefined,
-      school_code: record.school_code ?? undefined,
-      building_id: record.building_id ?? undefined,
-      building_name: record.building_name ?? undefined,
-      building_year: record.building_year ?? undefined,
-      building_construction: record.building_construction ?? undefined,
-      room_id: record.room_id ?? undefined,
-      room_name: record.room_name ?? undefined,
-      area_type: record.area_type ?? undefined,
-      extent: record.extent ?? undefined,
-      location: record.location ?? undefined,
-      friable: record.friable ?? undefined,
-      material_condition: record.material_condition ?? undefined,
-      risk_status: record.risk_status ?? undefined,
-      result: record.result ?? undefined,
-      page_number: record.page_number ?? undefined,
-    })
-    setIsEditing(true)
-  }, [record])
+  const handleEditChange = useCallback((updates: Partial<ACMRecordUpdateRequest>) => {
+    setEditData((prev) => ({ ...prev, ...updates }))
+  }, [])
 
   const handleSave = useCallback(async () => {
+    if (!record) return
     try {
-      const updated = await updateRecord.mutateAsync({
-        recordId: record.id,
-        sourceId,
-        data: formData,
-      })
-      setIsEditing(false)
-      setFormData({})
-      onRecordUpdated?.(updated)
+      await saveRecord(editData, sourceId)
     } catch {
-      // toast is handled by useUpdateACMRecord
+      // Toast shown by mutation's onError handler in useUpdateACMRecord
     }
-  }, [record.id, sourceId, formData, updateRecord, onRecordUpdated])
+  }, [record, editData, saveRecord, sourceId])
 
-  const setField = useCallback(
-    (field: keyof ACMRecordUpdateRequest, value: string | number | undefined) => {
-      setFormData((prev) => ({ ...prev, [field]: value }))
-    },
-    []
-  )
+  const handleCancelEdit = useCallback(() => {
+    setEditData({})
+    setIsEditing(false)
+  }, [setIsEditing])
 
-  // Render field — either as editable input or display text
-  // isNumeric=true: uses number input and converts string → number on change
-  const renderField = useCallback(
-    (
-      label: string,
-      field: keyof ACMRecordUpdateRequest,
-      displayValue: string | number | boolean | null | undefined,
-      options?: string[],
-      isNumeric?: boolean
-    ) => {
-      if (!isEditing) {
-        return <DisplayField key={label} label={label} value={displayValue} />
-      }
-      const rawVal = formData[field]
-      const editValStr = rawVal !== undefined ? String(rawVal) : undefined
-      if (options) {
-        return (
-          <EditSelectField
-            key={label}
-            label={label}
-            value={editValStr}
-            options={options}
-            onChange={(v) => setField(field, v)}
-          />
-        )
-      }
-      return (
-        <EditTextField
-          key={label}
-          label={label}
-          value={editValStr}
-          type={isNumeric ? 'number' : 'text'}
-          onChange={(v) =>
-            setField(field, isNumeric ? (v === '' ? undefined : Number(v)) : v)
-          }
-        />
-      )
-    },
-    [isEditing, formData, setField]
-  )
+  const sections = record ? buildSections(record) : []
 
   return (
     <div
       className={cn(
-        'fixed inset-y-0 right-0 z-40 flex flex-col',
-        'w-[380px] bg-background border-l shadow-xl',
-        isAnimatingOut
-          ? 'animate-out slide-out-to-right duration-200'
-          : 'animate-in slide-in-from-right duration-200'
+        'fixed right-0 top-0 bottom-0 z-40 w-[380px]',
+        'bg-background border-l shadow-xl',
+        'flex flex-col',
+        'transition-transform duration-200 ease-in-out',
+        open ? 'translate-x-0' : 'translate-x-full'
       )}
+      aria-label="ACM Record Detail Panel"
       role="complementary"
-      aria-label="ACM Record Details"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-        <div className="min-w-0 flex-1 pr-2">
-          <p className="text-sm font-semibold truncate">{record.product}</p>
-          <p className="text-xs text-muted-foreground truncate">
-            {[record.building_name, record.room_name].filter(Boolean).join(' › ') ||
-              record.building_id}
-          </p>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {/* Arrow navigation */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b shrink-0">
+        <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={onPrev}
-            disabled={!hasPrev}
+            onClick={onNavigatePrev}
+            disabled={!hasPrev || isEditing}
+            title="Previous record (←)"
             aria-label="Previous record"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -379,30 +449,50 @@ export function ACMRecordDetailPanel({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={onNext}
-            disabled={!hasNext}
+            onClick={onNavigateNext}
+            disabled={!hasNext || isEditing}
+            title="Next record (→)"
             aria-label="Next record"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          {/* Edit toggle */}
+        </div>
+
+        <span className="text-sm font-semibold truncate flex-1 min-w-0">
+          {record?.product || 'ACM Record'}
+        </span>
+
+        <div className="flex items-center gap-0.5 shrink-0">
+          {record?.page_number != null && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onViewInPDF(record.page_number!)}
+              title={`View in PDF (page ${record.page_number})`}
+              aria-label="View in PDF"
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+          )}
           {!isEditing && (
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={handleStartEdit}
+              onClick={() => setIsEditing(true)}
+              title="Edit record"
               aria-label="Edit record"
             >
               <Edit2 className="h-4 w-4" />
             </Button>
           )}
-          {/* Close */}
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={handleClose}
+            onClick={onClose}
+            title="Close panel (Esc)"
             aria-label="Close panel"
           >
             <X className="h-4 w-4" />
@@ -412,180 +502,78 @@ export function ACMRecordDetailPanel({
 
       {/* Edit mode action bar */}
       {isEditing && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30 shrink-0">
-          <span className="text-xs text-muted-foreground flex-1">Editing record</span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={handleCancelEdit}
-          >
-            <XCircle className="h-3.5 w-3.5" />
-            Cancel
-          </Button>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border-b shrink-0">
           <Button
             size="sm"
-            className="h-7 text-xs gap-1"
             onClick={handleSave}
-            disabled={updateRecord.isPending}
+            disabled={isSaving}
+            className="h-7"
           >
-            {updateRecord.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            {isSaving ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
             ) : (
-              <Save className="h-3.5 w-3.5" />
+              <Save className="mr-1 h-3 w-3" />
             )}
             Save
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCancelEdit}
+            disabled={isSaving}
+            className="h-7"
+          >
+            <XCircle className="mr-1 h-3 w-3" />
+            Cancel
+          </Button>
+          <span className="text-xs text-muted-foreground">Esc to cancel</span>
         </div>
       )}
 
       {/* Body */}
-      <ScrollArea className="flex-1 px-4 py-3">
-        <div className="space-y-5">
-          {/* Organisation */}
-          <div>
-            <SectionHeader title="Organisation" />
-            <dl>
-              {renderField('Site Name', 'school_name', record.school_name)}
-              {renderField('Code', 'school_code', record.school_code)}
-            </dl>
-          </div>
-          <Separator />
-
-          {/* Building */}
-          <div>
-            <SectionHeader title="Building" />
-            <dl>
-              {renderField('Building ID', 'building_id', record.building_id)}
-              {renderField('Building Name', 'building_name', record.building_name)}
-              {renderField('Year Built', 'building_year', record.building_year, undefined, true)}
-              {renderField(
-                'Construction',
-                'building_construction',
-                record.building_construction
-              )}
-            </dl>
-          </div>
-          <Separator />
-
-          {/* Location */}
-          <div>
-            <SectionHeader title="Location" />
-            <dl>
-              {renderField(
-                'Internal/External',
-                'area_type',
-                record.area_type,
-                ['Interior', 'Exterior', 'Grounds']
-              )}
-              {renderField('Room ID', 'room_id', record.room_id)}
-              {renderField('Room Name', 'room_name', record.room_name)}
-              {renderField('Location', 'location', record.location)}
-              <DisplayField label="Floor Level" value={record.floor_level} />
-            </dl>
-          </div>
-          <Separator />
-
-          {/* ACM Details */}
-          <div>
-            <SectionHeader title="ACM Details" />
-            <dl>
-              {renderField('Product', 'product', record.product)}
-              {renderField('Material Description', 'material_description', record.material_description)}
-              {renderField(
-                'Friable',
-                'friable',
-                record.friable,
-                ['Friable', 'Non-friable']
-              )}
-              <DisplayField label="Product Group" value={record.acm_product_group} />
-              <DisplayField label="Product Type" value={record.acm_product_type} />
-              <DisplayField label="Sample No." value={record.sample_no} />
-              <DisplayField label="Sample Result" value={record.sample_result} />
-              <DisplayField label="Quantity" value={record.quantity} />
-            </dl>
-          </div>
-          <Separator />
-
-          {/* Assessment */}
-          <div>
-            <SectionHeader title="Assessment" />
-            <dl>
-              {renderField(
-                'Condition',
-                'material_condition',
-                record.material_condition,
-                ['Good', 'Fair', 'Poor', 'Very Poor']
-              )}
-              <DisplayField
-                label="Disturbance Potential"
-                value={record.disturbance_potential}
-              />
-              {renderField('Extent', 'extent', record.extent)}
-              {isEditing
-                ? renderField('Risk Status', 'risk_status', record.risk_status,
-                    ['Low', 'Medium', 'High', 'Presumed'])
-                : (
-                  <DisplayField label="Risk Status">
-                    <RiskBadge value={record.risk_status} />
-                  </DisplayField>
-                )}
-              <DisplayField
-                label="Identifying Company"
-                value={record.identifying_company}
-              />
-            </dl>
-          </div>
-          <Separator />
-
-          {/* Documentation */}
-          <div>
-            <SectionHeader title="Documentation" />
-            <dl>
-              <DisplayField label="Labelled">
-                <BoolBadge value={record.acm_labelled} />
-              </DisplayField>
-              <DisplayField label="Label Details" value={record.acm_label_details} />
-              <DisplayField
-                label="Recommendations"
-                value={record.hygienist_recommendations}
-              />
+      <ScrollArea className="flex-1">
+        <div className="px-4 py-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !record ? (
+            <div className="text-sm text-muted-foreground text-center py-8">
+              No record selected
+            </div>
+          ) : isEditing ? (
+            <EditableFields
+              record={record}
+              editData={editData}
+              onChange={handleEditChange}
+            />
+          ) : (
+            <div className="space-y-6">
+              {sections
+                .filter((s) => s.fields.length > 0)
+                .map((section) => (
+                  <RecordFieldSection
+                    key={section.title}
+                    title={section.title}
+                    fields={section.fields}
+                  />
+                ))}
               {record.data_issues && record.data_issues.length > 0 && (
-                <DisplayField label="Data Issues" value={record.data_issues.join('; ')} />
+                <div className="space-y-1 p-2 rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wide">
+                    Data Issues
+                  </p>
+                  <ul className="text-xs text-amber-600 dark:text-amber-400 space-y-0.5">
+                    {record.data_issues.map((issue, i) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            </dl>
-          </div>
-          <Separator />
-
-          {/* Metadata */}
-          <div>
-            <SectionHeader title="Metadata" />
-            <dl>
-              <DisplayField label="Page Number" value={record.page_number} />
-              <DisplayField label="Extraction Confidence">
-                <ConfidenceBadge value={record.extraction_confidence} />
-              </DisplayField>
-              <DisplayField label="Created" value={record.created} />
-              <DisplayField label="Updated" value={record.updated} />
-            </dl>
-          </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
-
-      {/* Footer */}
-      {record.page_number && onViewInPdf && (
-        <div className="px-4 py-3 border-t shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-2"
-            onClick={() => onViewInPdf(record.page_number!)}
-          >
-            <FileText className="h-4 w-4" />
-            View in PDF (page {record.page_number})
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

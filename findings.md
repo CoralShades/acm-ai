@@ -1,7 +1,39 @@
-# Findings: Critical Bug Investigation + E2E Test Design
+# Findings: Sprint Artifact Cleanup + Historical Context
 
-## Created: 2026-02-09
-## Last Updated: 2026-02-09
+## Last Updated: 2026-02-21 (Sprint Artifact Consolidation Plan)
+## Originally Created: 2026-02-09
+
+---
+
+## Sprint Artifact Cleanup (2026-02-21)
+
+### Root Cause of Duplication
+`_bmad/bmm/config.yaml` does not exist. All BMAD workflows use `{config_source}:implementation_artifacts` which falls back to `_bmad-output/implementation-artifacts/`. The team manually created stories in `docs/sprint-artifacts/` which became more up-to-date and complete.
+
+### Canonical Location Decision
+`docs/sprint-artifacts/` is the single source of truth for:
+- Sprint status YAML
+- All tech-specs and story spec files
+- Sprint change proposals (in `change-proposals/` subfolder)
+- Historical reports (in `reports/` subfolder)
+
+### Fix: Create `_bmad/bmm/config.yaml`
+Setting `implementation_artifacts: "{project-root}/docs/sprint-artifacts"` propagates to ALL BMAD workflows automatically via their `{config_source}:implementation_artifacts` reference.
+
+### Files to Migrate from `_bmad-output/implementation-artifacts/` → `docs/sprint-artifacts/`
+Done-story files not yet in docs/sprint-artifacts:
+- e1-s11-generic-configurable-parser.md, e1-s13 through e1-s22, e11-s1, e2-s9, e5-s4, e8-s11
+
+### Sprint Change Proposals → `docs/sprint-artifacts/change-proposals/`
+- _bmad-output/sprint-change-proposal-20260204.md
+- _bmad-output/sprint-change-proposal-20260207-workflow-extraction.md
+- _bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md
+- _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-07.md
+- _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
+
+---
+
+## Historical: Bug Investigation + E2E Test Design (2026-02-09)
 
 ---
 

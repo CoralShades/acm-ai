@@ -19,8 +19,6 @@ export interface ACMGridRef {
   expandAll: () => void
   collapseAll: () => void
   resetColumns: () => void
-  /** Returns records in current AG Grid sort/filter order (excludes group rows) */
-  getVisibleRows: () => ACMRecord[]
 }
 
 // Cell selection details for citation viewer
@@ -46,7 +44,7 @@ interface ACMGridProps {
   onCellSelect?: (details: CellSelectionDetails) => void
   // Callback when a row is clicked to show record details
   onRowClick?: (record: ACMRecord) => void
-  // ID of the currently-selected record (for row highlighting)
+  // ID of the currently selected/highlighted record
   selectedRecordId?: string | null
 }
 
@@ -132,7 +130,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
   const [gridApi, setGridApi] = useState<GridApi<ACMRecord> | null>(null)
 
-  // Expose grid control methods to parent via ref
+  // Expose expand/collapse/resetColumns methods to parent via ref
   useImperativeHandle(ref, () => ({
     expandAll: () => {
       gridApi?.expandAll()
@@ -145,14 +143,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         localStorage.removeItem(COLUMN_STATE_KEY)
         gridApi.resetColumnState()
       }
-    },
-    getVisibleRows: () => {
-      if (!gridApi) return []
-      const rows: ACMRecord[] = []
-      gridApi.forEachNodeAfterFilterAndSort((node) => {
-        if (!node.group && node.data) rows.push(node.data)
-      })
-      return rows
     },
   }), [gridApi])
 
@@ -198,6 +188,24 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       onVisibleCountChange(dataRowCount)
     }
   }, [onVisibleCountChange])
+
+  // Redraw rows when selected record changes to update highlighting
+  useEffect(() => {
+    if (gridApi) {
+      gridApi.redrawRows()
+    }
+  }, [gridApi, selectedRecordId])
+
+  // Apply highlight class to selected row
+  const getRowClass = useCallback(
+    (params: RowClassParams<ACMRecord>) => {
+      if (params.data?.id && params.data.id === selectedRecordId) {
+        return 'acm-row-selected'
+      }
+      return undefined
+    },
+    [selectedRecordId]
+  )
 
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(
     () => [
@@ -422,17 +430,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     },
   }), [])
 
-  // Row class: highlight the selected record
-  const getRowClass = useCallback(
-    (params: RowClassParams<ACMRecord>) => {
-      if (selectedRecordId && params.data?.id === selectedRecordId) {
-        return 'acm-row-detail-selected'
-      }
-      return undefined
-    },
-    [selectedRecordId]
-  )
-
   const onCellClicked = useCallback(
     (event: CellClickedEvent<ACMRecord>) => {
       // Skip if clicking on Actions column or group row
@@ -557,10 +554,13 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         .ag-theme-alpine .ag-row:not(.ag-row-group) {
           cursor: pointer;
         }
-        /* Selected row highlight (detail panel open) */
-        .ag-theme-alpine .acm-row-detail-selected {
-          background-color: hsl(var(--primary) / 0.08) !important;
-          border-left: 3px solid hsl(var(--primary));
+        /* Selected row highlight for detail panel */
+        .ag-theme-alpine .acm-row-selected {
+          background-color: hsl(var(--primary) / 0.12) !important;
+          border-left: 3px solid hsl(var(--primary)) !important;
+        }
+        .dark .ag-theme-alpine .acm-row-selected {
+          background-color: hsl(var(--primary) / 0.2) !important;
         }
       `}</style>
       <AgGridReact<ACMRecord>
@@ -573,8 +573,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         onCellKeyDown={onCellKeyDown}
         onModelUpdated={onModelUpdated}
         onColumnResized={onColumnResized}
-        loading={isLoading}
         getRowClass={getRowClass}
+        loading={isLoading}
         animateRows={true}
         rowSelection="single"
         suppressRowClickSelection={true}
