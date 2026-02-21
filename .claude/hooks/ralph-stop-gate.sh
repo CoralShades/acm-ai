@@ -7,44 +7,37 @@
 # Hook event: Stop
 # Exit 2 = block stop (Claude continues working)
 # Exit 0 = allow stop
+#
+# IMPORTANT: Only active when ralph_sprint.sh is running (checks for PID file)
 # =============================================================================
 
+# Only activate during Ralph sprint runs (not interactive sessions)
+RALPH_PID_FILE=".ralph/.sprint_pid"
+if [ ! -f "$RALPH_PID_FILE" ]; then
+    exit 0
+fi
+
+# Read stdin — parse without jq using grep/sed
 INPUT=$(cat)
-LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // empty')
-STOP_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 
-# CRITICAL: Prevent infinite loop — if stop hook already active, allow stop
-if [ "$STOP_ACTIVE" = "true" ]; then
+# Extract last_assistant_message using grep (rough but jq-free)
+LAST_MSG=$(echo "$INPUT" | grep -o '"last_assistant_message":"[^"]*"' | sed 's/^"last_assistant_message":"//;s/"$//' || echo "")
+
+# Check stop_hook_active to prevent infinite loop
+if echo "$INPUT" | grep -q '"stop_hook_active":true'; then
     exit 0
 fi
 
-# Allow stop on explicit COMPLETE signal
-if echo "$LAST_MSG" | grep -qF '<promise>COMPLETE</promise>'; then
-    exit 0
-fi
+# Allow stop on explicit signals
+for SIGNAL in '<promise>COMPLETE</promise>' '<promise>BLOCKED</promise>' 'INIT_COMPLETE' 'INIT_FAILED' 'REVIEW_PASS' 'REVIEW_ISSUES'; do
+    if echo "$LAST_MSG" | grep -qF "$SIGNAL"; then
+        exit 0
+    fi
+done
 
-# Allow stop on explicit BLOCKED signal
-if echo "$LAST_MSG" | grep -qF '<promise>BLOCKED</promise>'; then
-    exit 0
-fi
-
-# Allow stop on INIT_COMPLETE signal (during init phase)
-if echo "$LAST_MSG" | grep -qF 'INIT_COMPLETE'; then
-    exit 0
-fi
-
-# Allow stop on REVIEW_PASS / REVIEW_ISSUES signals (during review phase)
-if echo "$LAST_MSG" | grep -qF 'REVIEW_PASS'; then
-    exit 0
-fi
-if echo "$LAST_MSG" | grep -qF 'REVIEW_ISSUES'; then
-    exit 0
-fi
-
-# Check if we're in a Ralph loop (fix plan exists)
+# Check if fix plan exists
 FIX_PLAN=".ralph/@fix_plan.md"
 if [ ! -f "$FIX_PLAN" ]; then
-    # Not in a Ralph loop — allow normal stop
     exit 0
 fi
 
@@ -55,8 +48,7 @@ CHECKED=$(grep -c '^\- \[x\]' "$FIX_PLAN" 2>/dev/null || echo "0")
 
 if [ "$UNCHECKED" -gt 0 ]; then
     echo "Ralph: $UNCHECKED/$TOTAL tasks remaining ($CHECKED done). Continue implementing the next unchecked task in .ralph/@fix_plan.md" >&2
-    exit 2  # Block stop — Claude continues
+    exit 2
 fi
 
-# All tasks checked — allow stop
 exit 0
