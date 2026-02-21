@@ -14,7 +14,7 @@ from typing import ClassVar, List, Optional
 from loguru import logger
 from pydantic import Field
 
-from open_notebook.database.repository import repo_query
+from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.base import ObjectModel
 from open_notebook.exceptions import DatabaseOperationError
 
@@ -131,7 +131,7 @@ class SiteConfig(ObjectModel):
             query = (
                 f"SELECT * FROM {cls.table_name} WHERE source_id = $source_id LIMIT 1;"
             )
-            result = await repo_query(query, {"source_id": source_id})
+            result = await repo_query(query, {"source_id": ensure_record_id(source_id)})
 
             if result and len(result) > 0:
                 return cls(**result[0])
@@ -242,6 +242,13 @@ class SiteConfig(ObjectModel):
         except Exception as e:
             logger.error(f"Error upserting site config for {source_id}: {e}")
             raise DatabaseOperationError(f"Failed to save site config: {e}")
+
+    def _prepare_save_data(self) -> dict:
+        """Override to ensure source_id is proper record format (TYPE record<source>)."""
+        data = super()._prepare_save_data()
+        if data.get("source_id"):
+            data["source_id"] = ensure_record_id(data["source_id"])
+        return data
 
     def get_missing_bar_fields(self) -> List[str]:
         """

@@ -98,6 +98,11 @@ ignore = [
 "app_home.py" = ["E402"]
 "pages/**/*.py" = ["E402"]
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests requiring external services (ANTHROPIC_API_KEY, DB, etc.)",
+]
+
 [tool.mypy]
 # Exclude Streamlit UI pages from type checking
 [[tool.mypy.overrides]]

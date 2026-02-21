@@ -36,6 +36,25 @@ This addresses **UX Audit Finding NAV-03** ("Limited keyboard navigation") and *
 
 ## Technical Design
 
+### ⚠️ Already Implemented by E2-S9 — Do NOT Re-implement
+
+The following items listed in this spec are **already present in the codebase**:
+
+**`ACMGrid.tsx` — `onCellKeyDown` handlers:**
+- `Space` → expand/collapse group row (`node.setExpanded`)
+- `e` → edit record (`onEdit(data)`)
+- `Delete` → delete record (`onDelete(data)`)
+- `Enter` → open detail panel (`onRowClick(data)`)
+
+These handlers are live. Adding new `keydown` listeners for the same keys will double-fire.
+In `### 2. AG Grid Keyboard Navigation` below: **skip the `onCellKeyDown` additions entirely.**
+Only add the keyboard hint footer text below the grid.
+
+**`ACMTab.tsx` — `acm-command` CustomEvent listener:**
+`window.addEventListener('acm-command', handleACMCommand)` is already wired in `ACMTab.tsx`
+handling: `extract`, `export-csv`, `export-excel`, `add-record`, `upload`.
+In `### 6. ACMTab Event Listener` below: **no changes needed to `ACMTab.tsx`.**
+
 ### 1. Command Palette Expansion
 
 **File:** `frontend/src/components/common/CommandPalette.tsx`
@@ -653,11 +672,11 @@ useEffect(() => {
 | File | Change Type | Description |
 |------|-------------|-------------|
 | `frontend/src/components/common/CommandPalette.tsx` | Modify | Add Actions and Go To command groups, add `handleAction` callback, update imports |
-| `frontend/src/components/acm/ACMGrid.tsx` | Modify | Enhance `onCellKeyDown` with Space (expand/collapse), E (edit), Delete keys; add keyboard hint footer |
+| `frontend/src/components/acm/ACMGrid.tsx` | **No change** | Space/E/Delete/Enter handlers already implemented by E2-S9. Only add keyboard hint footer text. |
 | `frontend/src/components/common/KeyboardShortcutSheet.tsx` | Create | New component showing all keyboard shortcuts in a modal, triggered by `?` key |
 | `frontend/src/components/common/NavigationShortcuts.tsx` | Create | New component handling G+[key] navigation shortcuts |
 | `frontend/src/app/(dashboard)/layout.tsx` | Modify | Register `KeyboardShortcutSheet` and `NavigationShortcuts` components |
-| `frontend/src/components/acm/ACMTab.tsx` | Modify | Add event listener for command palette actions dispatched via custom events |
+| `frontend/src/components/acm/ACMTab.tsx` | **No change** | acm-command CustomEvent listener already implemented by E2-S9. |
 | `frontend/src/components/acm/ACMToolbar.tsx` | No Change | Already has Ctrl+F shortcut for search (lines 67-87) |
 
 ---

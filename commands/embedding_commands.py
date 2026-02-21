@@ -263,11 +263,17 @@ async def embed_chunk_command(
             chunk_index=input_data.chunk_index,
         )
 
-    except RuntimeError:
-        # Re-raise RuntimeError to allow retry mechanism to handle DB transaction conflicts
-        logger.warning(
-            f"Transaction conflict for chunk {input_data.chunk_index} - will be retried by retry mechanism"
-        )
+    except RuntimeError as e:
+        # Re-raise RuntimeError to allow retry mechanism to handle transient failures
+        if "All connection attempts failed" in str(e) or "Connection refused" in str(e):
+            logger.warning(
+                f"Embedding provider unreachable for chunk {input_data.chunk_index} - "
+                f"check if Ollama/embedding service is running at configured endpoint. Error: {e}"
+            )
+        else:
+            logger.warning(
+                f"Transaction conflict for chunk {input_data.chunk_index} - will be retried by retry mechanism"
+            )
         raise
     except (ConnectionError, TimeoutError) as e:
         # Re-raise network/timeout errors to allow retry mechanism to handle transient provider failures
