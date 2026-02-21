@@ -1,0 +1,43 @@
+-- Migration 25: Knowledge Graph entity and relation tables (E13-S1)
+
+-- Entity tables
+DEFINE TABLE school SCHEMAFULL;
+DEFINE FIELD school_code ON school TYPE string;
+DEFINE FIELD name ON school TYPE option<string>;
+DEFINE FIELD address ON school TYPE option<string>;
+DEFINE FIELD region ON school TYPE option<string>;
+DEFINE FIELD created ON school TYPE option<datetime> DEFAULT time::now();
+DEFINE FIELD updated ON school TYPE option<datetime> DEFAULT time::now();
+DEFINE INDEX idx_school_code ON school FIELDS school_code UNIQUE;
+
+DEFINE TABLE building SCHEMAFULL;
+DEFINE FIELD school_code ON building TYPE string;
+DEFINE FIELD building_code ON building TYPE string;
+DEFINE FIELD building_name ON building TYPE option<string>;
+DEFINE FIELD year_built ON building TYPE option<string>;
+DEFINE FIELD created ON building TYPE option<datetime> DEFAULT time::now();
+DEFINE FIELD updated ON building TYPE option<datetime> DEFAULT time::now();
+DEFINE INDEX idx_building_school_code ON building FIELDS school_code, building_code UNIQUE;
+
+DEFINE TABLE room SCHEMAFULL;
+DEFINE FIELD school_code ON room TYPE string;
+DEFINE FIELD building_code ON room TYPE string;
+DEFINE FIELD room_code ON room TYPE string;
+DEFINE FIELD room_name ON room TYPE option<string>;
+DEFINE FIELD floor_level ON room TYPE option<string>;
+DEFINE FIELD created ON room TYPE option<datetime> DEFAULT time::now();
+DEFINE FIELD updated ON room TYPE option<datetime> DEFAULT time::now();
+DEFINE INDEX idx_room_composite ON room FIELDS school_code, building_code, room_code UNIQUE;
+
+-- Relation tables
+DEFINE TABLE school_has_building TYPE RELATION IN school OUT building SCHEMAFULL;
+DEFINE FIELD created ON school_has_building TYPE option<datetime> DEFAULT time::now();
+
+DEFINE TABLE building_has_room TYPE RELATION IN building OUT room SCHEMAFULL;
+DEFINE FIELD created ON building_has_room TYPE option<datetime> DEFAULT time::now();
+
+DEFINE TABLE room_has_acm TYPE RELATION IN room OUT acm_record SCHEMAFULL;
+DEFINE FIELD created ON room_has_acm TYPE option<datetime> DEFAULT time::now();
+
+DEFINE TABLE extracted_from TYPE RELATION IN acm_record OUT source SCHEMAFULL;
+DEFINE FIELD created ON extracted_from TYPE option<datetime> DEFAULT time::now();

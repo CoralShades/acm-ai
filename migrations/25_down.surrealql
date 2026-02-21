@@ -1,0 +1,8 @@
+-- Rollback migration 25: remove knowledge graph tables
+REMOVE TABLE extracted_from;
+REMOVE TABLE room_has_acm;
+REMOVE TABLE building_has_room;
+REMOVE TABLE school_has_building;
+REMOVE TABLE room;
+REMOVE TABLE building;
+REMOVE TABLE school;
