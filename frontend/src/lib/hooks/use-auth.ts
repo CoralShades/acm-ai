@@ -21,22 +21,25 @@ export function useAuth() {
   useEffect(() => {
     // Only check auth after the store has hydrated from localStorage
     if (hasHydrated) {
-      // First check if auth is required
       if (authRequired === null) {
+        // First visit or cleared storage — need to check if auth is required
         checkAuthRequired().then((required) => {
-          // If auth is required, check if we have valid credentials
           if (required) {
             checkAuth()
           }
         })
-      } else if (authRequired) {
-        // Auth is required, check credentials
+      } else if (authRequired === false) {
+        // Auth not required — ensure authenticated flag is set
+        if (!isAuthenticated) {
+          checkAuthRequired()
+        }
+      } else {
+        // Auth is required — validate credentials (checkAuth skips if checked recently)
         checkAuth()
       }
-      // If authRequired === false, we're already authenticated (set in checkAuthRequired)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, authRequired])
+  }, [hasHydrated])
 
   const handleLogin = async (password: string) => {
     const success = await login(password)

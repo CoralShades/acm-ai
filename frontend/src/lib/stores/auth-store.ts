@@ -161,9 +161,9 @@ export const useAuthStore = create<AuthState>()(
           return false
         }
 
-        // If we checked recently (within 30 seconds) and are authenticated, skip
+        // If we checked recently (within 5 minutes) and are authenticated, skip
         const now = Date.now()
-        if (isAuthenticated && lastAuthCheck && (now - lastAuthCheck) < 30000) {
+        if (isAuthenticated && lastAuthCheck && (now - lastAuthCheck) < 5 * 60 * 1000) {
           return true
         }
 
@@ -212,7 +212,9 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       partialize: (state) => ({
         token: state.token,
-        isAuthenticated: state.isAuthenticated
+        isAuthenticated: state.isAuthenticated,
+        authRequired: state.authRequired,
+        lastAuthCheck: state.lastAuthCheck,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
