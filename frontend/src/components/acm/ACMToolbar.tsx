@@ -16,7 +16,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ChevronDown, ChevronRight, Columns3, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Search, Sparkles, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Search, Sparkles, X } from 'lucide-react'
+import { ColumnVisibilityPicker } from './ColumnVisibilityPicker'
+import type { GridApi } from 'ag-grid-community'
 
 interface ACMToolbarProps {
   onAddNew: () => void
@@ -27,6 +29,7 @@ interface ACMToolbarProps {
   onExpandAll?: () => void
   onCollapseAll?: () => void
   onResetColumns?: () => void
+  gridApi?: GridApi | null
   riskFilter?: string
   onRiskFilterChange: (value: string | undefined) => void
   isExtracting?: boolean
@@ -51,6 +54,7 @@ export function ACMToolbar({
   onExpandAll,
   onCollapseAll,
   onResetColumns,
+  gridApi,
   riskFilter,
   onRiskFilterChange,
   isExtracting = false,
@@ -177,18 +181,13 @@ export function ACMToolbar({
             </>
           )}
 
-          {/* Reset Columns Button */}
+          {/* Column Visibility Picker */}
           {onResetColumns && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onResetColumns}
+            <ColumnVisibilityPicker
+              gridApi={gridApi ?? null}
+              onResetColumns={onResetColumns}
               disabled={disabled}
-              title="Reset column widths to defaults"
-            >
-              <Columns3 className="mr-1 h-4 w-4" />
-              Reset Columns
-            </Button>
+            />
           )}
 
           {/* Refresh Button */}

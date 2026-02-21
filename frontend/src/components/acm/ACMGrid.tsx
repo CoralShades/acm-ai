@@ -2,8 +2,9 @@
 
 import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent, RowClassParams } from 'ag-grid-community'
+import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent, ColumnVisibleEvent, RowClassParams } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
+import { PRESET_COLUMNS, useColumnPresetStore } from '@/lib/stores/column-visibility-store'
 import { Button } from '@/components/ui/button'
 import { Edit2, Trash2 } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -18,6 +19,7 @@ export interface ACMGridRef {
   expandAll: () => void
   collapseAll: () => void
   resetColumns: () => void
+  getGridApi: () => GridApi | null
 }
 
 // Cell selection details for citation viewer
@@ -129,6 +131,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         gridApi.resetColumnState()
       }
     },
+    getGridApi: () => gridApi,
   }), [gridApi])
 
   // Apply quick filter when search text changes
@@ -138,7 +141,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     }
   }, [gridApi, quickFilterText])
 
-  // Restore saved column state from localStorage on grid ready
+  // Restore saved column state from localStorage on grid ready, or apply Essential preset
   const onGridReady = useCallback((params: GridReadyEvent<ACMRecord>) => {
     setGridApi(params.api)
     const savedState = localStorage.getItem(COLUMN_STATE_KEY)
@@ -148,12 +151,34 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       } catch {
         localStorage.removeItem(COLUMN_STATE_KEY)
       }
+    } else {
+      // No saved state — apply Essential preset to hide non-essential columns
+      const essentialCols = PRESET_COLUMNS.essential
+      const allCols = params.api.getColumns() ?? []
+      const stateArray = allCols.map((col) => {
+        const id = col.getColId()
+        const isActions = col.getColDef().headerName === 'Actions'
+        return {
+          colId: id,
+          hide: isActions ? false : !essentialCols.includes(id),
+        }
+      })
+      params.api.applyColumnState({ state: stateArray })
+      useColumnPresetStore.getState().setActivePreset('essential')
     }
   }, [])
 
   // Save column state to localStorage when user finishes resizing
   const onColumnResized = useCallback((event: ColumnResizedEvent) => {
     if (event.finished && event.source === 'uiColumnResized') {
+      const state = event.api.getColumnState()
+      localStorage.setItem(COLUMN_STATE_KEY, JSON.stringify(state))
+    }
+  }, [])
+
+  // Save column state to localStorage when column visibility changes (from picker or API calls)
+  const onColumnVisible = useCallback((event: ColumnVisibleEvent) => {
+    if (event.source === 'api' || event.source === 'toolPanelUi') {
       const state = event.api.getColumnState()
       localStorage.setItem(COLUMN_STATE_KEY, JSON.stringify(state))
     }
@@ -230,7 +255,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         sortable: true,
         filter: true,
         ...(enableGrouping && { rowGroup: true }),
-        hide: true, // Hidden by default — accessible via detail view
         valueFormatter: (params) => {
           if (params.data?.room_name) {
             return `${params.value} - ${params.data.room_name}`
@@ -286,7 +310,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         width: 110,
         sortable: true,
         filter: true,
-        hide: true, // Hidden by default — accessible via detail view
       },
       {
         field: 'area_type',
@@ -351,7 +374,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
             width: 90,
             sortable: true,
             filter: true,
-            hide: true,
             cellRenderer: LabelledRenderer,
           },
           {
@@ -361,7 +383,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
             width: 180,
             sortable: true,
             filter: true,
-            hide: true,
           },
           {
             field: 'acm_product_group',
@@ -370,7 +391,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
             width: 150,
             sortable: true,
             filter: true,
-            hide: true,
           },
         ],
       },
@@ -560,6 +580,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         onCellKeyDown={onCellKeyDown}
         onModelUpdated={onModelUpdated}
         onColumnResized={onColumnResized}
+        onColumnVisible={onColumnVisible}
         getRowClass={getRowClass}
         loading={isLoading}
         animateRows={true}
