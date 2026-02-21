@@ -190,17 +190,19 @@ class SiteConfig(ObjectModel):
         try:
             if department:
                 query = """
-                    SELECT DISTINCT agency
+                    SELECT agency
                     FROM site_config
                     WHERE agency != NONE AND department = $department
+                    GROUP BY agency
                     ORDER BY agency;
                 """
                 result = await repo_query(query, {"department": department})
             else:
                 query = """
-                    SELECT DISTINCT agency
+                    SELECT agency
                     FROM site_config
                     WHERE agency != NONE
+                    GROUP BY agency
                     ORDER BY agency;
                 """
                 result = await repo_query(query)

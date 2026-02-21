@@ -254,6 +254,8 @@ development_status:
   e2e-ci-github-actions-setup: done  # PR #30 added .github/workflows/e2e-tests.yml
 
   # BUG FIX SPRINT 2026-02-21 (Bug Triage Plan - 4 Phases):
+  # Post-Implementation Fix 2026-02-22:
+  bug-migration-runner-registration: done  # Register migrations 14-20 in runner + fix SurrealQL DISTINCT→GROUP BY
   # Phase 1: Quick Wins
   bug-site-config-query-fix: done  # Null guard on getConfigTemplates() return
   bug-grid-column-fixes: done  # Building ID→Building Code, merged ACM Product Type, removed risk_status (Epic 2)
@@ -267,20 +269,28 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 16 (5 done, 7 in-progress, 3 backlog, 1 archived)
-# Total Stories: 114 (104 previous + 7 bug fixes + 3 new E1 stories)
-# Stories Done: 85 (75%)
+# Total Stories: 115 (104 previous + 7 bug fixes + 3 new E1 stories + 1 infra fix)
+# Stories Done: 86 (75%)
 # Stories Review: 0
 # Stories Ready-for-dev: 8 (E1-S23, E2-S8, E2-S11, E5-S3, E9-S3, E10-S1, E16-S1, E16-S3)
 # Stories Drafted: 8 (E5-S4, E11-S2, E12-S1..S4, E13-S1, E15-S2)
 # Stories Backlog: 2 (E13-S2, E13-S3)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-21  # Bug triage plan: 10 stories implemented across 4 phases
+# Last Updated: 2026-02-22  # Post-implementation fix: migration runner + SurrealQL syntax
 #
 # COMPLETED EPICS: E3, E4, E6, E7, E14
 # IN-PROGRESS EPICS: E1 (29/30), E2 (10/12), E5 (2/4), E9 (2/3), E11 (1/2), E15 (1/2), E16 (1/3)
 # BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
+#
+# KEY CHANGES (2026-02-22 - Post-Implementation Fix: Migration Runner + SurrealQL):
+# ==================================================================================
+# CRITICAL: Migrations 14-20 were never registered in AsyncMigrationManager.
+# DB was stuck at version 13 — all schema changes from E1-S9 through E1-S28 broken.
+# Fix: Registered migrations 14-20 in both up_migrations and down_migrations lists.
+# Fix: Replaced invalid SELECT DISTINCT with SurrealQL GROUP BY in site_config.py.
+# Impact: Unblocks all features depending on migrations 14-20 at the database level.
 #
 # KEY CHANGES (2026-02-21 - Bug Triage Plan: 4 Phases, 10 Stories):
 # ==================================================================
