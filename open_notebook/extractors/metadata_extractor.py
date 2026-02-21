@@ -218,6 +218,8 @@ async def _llm_extract_metadata(
     prompter = Prompter(prompt_template="acm/metadata_extraction")
     system_prompt = prompter.render(data={"cover_pages": content})
 
+    # TODO: Use model.get_max_output_tokens() when Model domain object is available here
+    # 2048 is appropriate for metadata extraction (small structured output)
     model = await provision_langchain_model(
         content,
         model_id,

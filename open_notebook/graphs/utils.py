@@ -14,7 +14,7 @@ async def provision_langchain_model(
 ) -> BaseChatModel:
     """
     Returns the best model to use based on the context size and on whether there is a specific model being requested in Config.
-    If context > 105_000, returns the large_context_model
+    If context > 105_000, returns the large_context_model (if configured), else falls back to default.
     If model_id is specified in Config, returns that model
     Otherwise, returns the default model for the given type
     """
@@ -25,6 +25,13 @@ async def provision_langchain_model(
             f"Using large context model because the content has {tokens} tokens"
         )
         model = await model_manager.get_default_model("large_context", **kwargs)
+        if model is None:
+            # large_context_model not configured — fall back to default model type
+            logger.warning(
+                "large_context_model is not configured; falling back to default "
+                f"{default_type} model for {tokens}-token content"
+            )
+            model = await model_manager.get_default_model(default_type, **kwargs)
     elif model_id:
         model = await model_manager.get_model(model_id, **kwargs)
     else:
@@ -77,11 +84,15 @@ async def provision_langchain_model_with_tools(
 def supports_tool_calling(model: BaseChatModel) -> bool:
     """Check if a LangChain model supports tool calling.
 
-    Checks for the bind_tools method and known tool-calling capable model types.
+    Checks the model's supports_tool_calling capability field when available,
+    then falls back to checking for the bind_tools method.
+
+    Note: For domain-level Model objects use model.supports_tool_calling directly.
+    This function operates on LangChain BaseChatModel instances returned by
+    provision_langchain_model.
     """
     if not hasattr(model, "bind_tools"):
         return False
 
-    # Models that are known to support tool calling
     # Most modern LangChain chat model wrappers support bind_tools
     return callable(model.bind_tools)

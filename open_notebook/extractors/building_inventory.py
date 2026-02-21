@@ -437,6 +437,7 @@ async def _llm_compile_inventory(
     prompter = Prompter(prompt_template="acm/building_inventory")
     system_prompt = prompter.render(data={"content": content})
 
+    # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
         content,
         model_id,

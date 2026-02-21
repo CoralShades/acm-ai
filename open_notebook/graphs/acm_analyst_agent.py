@@ -54,6 +54,9 @@ def call_acm_analyst(state: ACMAnalystState, config: RunnableConfig) -> dict:
     # Provision model with tools
     model_id = config.get("configurable", {}).get("model_id")
 
+    # TODO: Use Model.get(model_id).get_max_output_tokens() for dynamic lookup
+    # when the sync-to-async bridge pattern here allows it without deadlocks.
+    # 8192 is a safe cross-model default (Haiku limit; larger models handle more).
     def run_in_new_loop():
         new_loop = asyncio.new_event_loop()
         try:

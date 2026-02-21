@@ -31,6 +31,9 @@ def call_model_with_messages(state: ThreadState, config: RunnableConfig) -> dict
     )
 
     # Handle async model provisioning from sync context
+    # TODO: Use Model.get(model_id).get_max_output_tokens() for dynamic lookup
+    # when the sync-to-async bridge pattern here allows it without deadlocks.
+    # 8192 is a safe cross-model default (Haiku limit; larger models handle more).
     def run_in_new_loop():
         """Run the async function in a new event loop"""
         new_loop = asyncio.new_event_loop()

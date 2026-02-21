@@ -85,7 +85,7 @@ FALLBACK_MODELS = {
         "embedding": "mxbai-embed-large",
     },
     "anthropic": {
-        "chat": "claude-haiku-3-5-20241022",
+        "chat": "claude-3-5-haiku-20241022",
         "transformation": "claude-sonnet-4-20250514",
         "tools": "claude-sonnet-4-20250514",
         "large_context": "claude-sonnet-4-20250514",
@@ -130,9 +130,29 @@ async def find_or_create_model(
         logger.debug(f"Found existing model: {provider}/{name} -> {model_id}")
         return model_id
 
-    # Create new model
+    # Create new model with auto-detected capabilities
     try:
         new_model = Model(name=name, provider=provider, type=model_type)
+        # Populate capabilities from known defaults
+        new_model.max_output_tokens = (
+            new_model.get_max_output_tokens() if model_type == "language" else None
+        )
+        new_model.context_window = (
+            new_model.get_context_window() if model_type == "language" else None
+        )
+        new_model.embedding_dimensions = (
+            new_model.get_embedding_dimensions() if model_type == "embedding" else None
+        )
+        # Set structured output and tool calling support based on provider
+        if model_type == "language":
+            name_lower = name.lower()
+            new_model.supports_structured_output = any(
+                k in name_lower
+                for k in ["claude", "gpt-4", "qwen3", "llama3", "mistral"]
+            )
+            new_model.supports_tool_calling = any(
+                k in name_lower for k in ["claude", "gpt-4", "qwen3"]
+            )
         await new_model.save()
         logger.info(f"Created model: {provider}/{name} -> {new_model.id}")
         return new_model.id

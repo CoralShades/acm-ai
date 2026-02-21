@@ -70,7 +70,8 @@ def call_model_with_source_context(
                 source_id=source_id,
                 include_insights=True,
                 include_notes=False,  # Focus on source-specific content
-                max_tokens=50000,  # Reasonable limit for source context
+                # TODO: Derive from model.get_context_window() * 0.4 when Model object available
+                max_tokens=50000,  # Conservative context budget (~40% of 128K default)
             )
             context_result = new_loop.run_until_complete(context_builder.build())
 
@@ -150,6 +151,9 @@ def call_model_with_source_context(
     payload = [SystemMessage(content=system_prompt)] + state.get("messages", [])
 
     # Handle async model provisioning from sync context
+    # TODO: Use Model.get(model_id).get_max_output_tokens() for dynamic lookup
+    # when the sync-to-async bridge pattern here allows it without deadlocks.
+    # 8192 is a safe cross-model default (Haiku limit; larger models handle more).
     def run_in_new_loop():
         """Run the async function in a new event loop"""
         new_loop = asyncio.new_event_loop()

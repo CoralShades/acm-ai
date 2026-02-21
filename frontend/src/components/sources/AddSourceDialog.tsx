@@ -21,6 +21,7 @@ import { ProcessingStep } from './steps/ProcessingStep'
 import { SiteConfigStep, SiteConfigFormData } from './steps/SiteConfigStep'
 import { useNotebooks } from '@/lib/hooks/use-notebooks'
 import { useTransformations } from '@/lib/hooks/use-transformations'
+import { useRouter } from 'next/navigation'
 import { useCreateSource } from '@/lib/hooks/use-sources'
 import { useSettings } from '@/lib/hooks/use-settings'
 import { CreateSourceRequest } from '@/lib/types/api'
@@ -129,6 +130,8 @@ export function AddSourceDialog({
   const [siteConfig, setSiteConfig] = useState<SiteConfigFormData>({})
   const [applyConfigToAll, setApplyConfigToAll] = useState(true)
   const [skipSiteConfig, setSkipSiteConfig] = useState(false)
+
+  const router = useRouter()
 
   // Cleanup timeouts to prevent memory leaks
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -368,6 +371,11 @@ export function AddSourceDialog({
         console.error('Failed to save site config:', error)
         toast.warning('Source created but site config failed to save')
       }
+    }
+
+    // Navigate to the newly created source's detail page
+    if (createdSource?.id) {
+      router.push(`/sources/${createdSource.id}`)
     }
   }
 

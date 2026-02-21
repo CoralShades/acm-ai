@@ -20,6 +20,69 @@ class Model(ObjectModel):
     name: str
     provider: str
     type: str
+    # Model capabilities (populated during provisioning or manually)
+    max_output_tokens: Optional[int] = None
+    context_window: Optional[int] = None
+    supports_structured_output: Optional[bool] = None
+    supports_tool_calling: Optional[bool] = None
+    embedding_dimensions: Optional[int] = None
+
+    # Known provider defaults for output tokens and context windows
+    _PROVIDER_DEFAULTS: ClassVar[Dict[str, Dict[str, int]]] = {
+        # Anthropic Claude
+        "claude-3-5-haiku": {"max_output": 8192, "context": 200000},
+        "claude-3-haiku": {"max_output": 4096, "context": 200000},
+        "claude-sonnet-4": {"max_output": 16384, "context": 200000},
+        "claude-opus-4": {"max_output": 32768, "context": 200000},
+        "claude-3-5-sonnet": {"max_output": 8192, "context": 200000},
+        # OpenAI
+        "gpt-4o": {"max_output": 16384, "context": 128000},
+        "gpt-4o-mini": {"max_output": 16384, "context": 128000},
+        "gpt-4-turbo": {"max_output": 4096, "context": 128000},
+        # Ollama common models
+        "qwen3": {"max_output": 8192, "context": 32768},
+        "llama3": {"max_output": 8192, "context": 8192},
+        "mistral": {"max_output": 8192, "context": 32768},
+    }
+
+    _EMBEDDING_DEFAULTS: ClassVar[Dict[str, int]] = {
+        "mxbai-embed-large": 1024,
+        "text-embedding-3-small": 1536,
+        "text-embedding-3-large": 3072,
+        "text-embedding-ada-002": 1536,
+        "nomic-embed-text": 768,
+    }
+
+    def get_max_output_tokens(self, fallback: int = 8192) -> int:
+        """Get max output tokens, using stored value or provider defaults."""
+        if self.max_output_tokens:
+            return self.max_output_tokens
+        # Try to match against known model families
+        name_lower = self.name.lower()
+        for key, defaults in self._PROVIDER_DEFAULTS.items():
+            if key in name_lower:
+                return defaults["max_output"]
+        return fallback
+
+    def get_context_window(self, fallback: int = 128000) -> int:
+        """Get context window, using stored value or provider defaults."""
+        if self.context_window:
+            return self.context_window
+        name_lower = self.name.lower()
+        for key, defaults in self._PROVIDER_DEFAULTS.items():
+            if key in name_lower:
+                return defaults["context"]
+        return fallback
+
+    def get_embedding_dimensions(self, fallback: int = 1024) -> int:
+        """Get embedding dimensions, using stored value or known defaults."""
+        if self.embedding_dimensions:
+            return self.embedding_dimensions
+        name_lower = self.name.lower()
+        for key, dims in self._EMBEDDING_DEFAULTS.items():
+            if key in name_lower:
+                return dims
+        return fallback
 
     @classmethod
     async def get_models_by_type(cls, model_type):

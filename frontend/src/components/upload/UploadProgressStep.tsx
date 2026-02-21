@@ -197,11 +197,19 @@ export function UploadProgressStep({ onReset }: UploadProgressStepProps) {
     await session.start();
   };
 
-  // Navigate to sources list
+  // Navigate to source detail (if single file) or sources list (if batch)
   const handleDone = () => {
+    // If only one file was uploaded successfully, navigate to its detail page
+    const successEntries = Array.from(fileStatuses.entries()).filter(
+      ([, s]) => s.status === 'success' && s.sourceId
+    );
+    const targetPath = successEntries.length === 1
+      ? `/sources/${successEntries[0][1].sourceId}`
+      : '/sources';
+
     clearFiles();
     resetOptions();
-    router.push('/sources');
+    router.push(targetPath);
   };
 
   // Reset wizard for more uploads

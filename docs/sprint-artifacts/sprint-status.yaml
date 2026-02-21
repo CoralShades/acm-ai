@@ -47,7 +47,7 @@ reconciliation:
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  # 26/27 stories complete, 1 ready-for-dev (E1-S23)
+  # 29/30 stories complete, 1 ready-for-dev (E1-S23)
   epic-1: in-progress
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
@@ -78,6 +78,11 @@ development_status:
   e1-s25-fix-external-internal-merging: done  # Fixed by PR #30 - external/internal merging
   e1-s26-reduce-false-positive-extraction: done  # Fixed by PR #30 - false positive reduction with dedup key
   e1-s27-handle-duplicate-room-items: done  # Fixed by PR #30 - duplicate room items edge case
+  # BUG TRIAGE 2026-02-21 (Phase 3 + Phase 4):
+  bug-negative-results-regression: done  # Extended Unknown placeholders to negative records
+  e1-s28-model-capabilities-schema: done  # Migration 20: capability fields on model table
+  e1-s29-replace-hardcoded-token-limits: done  # Dynamic max_tokens lookups in extraction pipeline
+  e1-s30-dynamic-embedding-dimensions: done  # Embedding dimension validation and model capability support
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
@@ -248,23 +253,45 @@ development_status:
   # E2E TEST INFRASTRUCTURE 2026-02-16 (Phase 4 - completed by PR #30):
   e2e-ci-github-actions-setup: done  # PR #30 added .github/workflows/e2e-tests.yml
 
+  # BUG FIX SPRINT 2026-02-21 (Bug Triage Plan - 4 Phases):
+  # Phase 1: Quick Wins
+  bug-site-config-query-fix: done  # Null guard on getConfigTemplates() return
+  bug-grid-column-fixes: done  # Building ID→Building Code, merged ACM Product Type, removed risk_status (Epic 2)
+  bug-post-upload-navigation: done  # Navigate to source detail after upload (Epic 7)
+  bug-ui-ux-vaea-branding: done  # VAEA branding, command palette height, TabsList overflow (Epic 14)
+  # Phase 2: Frontend UX
+  bug-auth-loading-ux: done  # Skeleton layout replacing blank spinner, cached authRequired (Epic 14)
+  bug-extraction-progress-fix: done  # Semantic design tokens replacing hardcoded colors (Epic 15)
+  # Phase 3 + Phase 4: Moved to Epic 1 section (bug-negative-results-regression, E1-S28/S29/S30)
+
 # SUMMARY:
 # ========
-# Total Epics: 16 (5 done, 6 in-progress, 4 backlog, 1 archived)
-# Total Stories: 104 (102 regular stories + 1 bug fix + 1 e2e-ci infra)
-# Stories Done: 75 (72%)
+# Total Epics: 16 (5 done, 7 in-progress, 3 backlog, 1 archived)
+# Total Stories: 114 (104 previous + 7 bug fixes + 3 new E1 stories)
+# Stories Done: 85 (75%)
 # Stories Review: 0
-# Stories Ready-for-dev: 9 (E1-S23, E2-S8, E2-S11, E5-S3, E9-S3, E10-S1, E15-S1, E16-S1, E16-S3)
+# Stories Ready-for-dev: 8 (E1-S23, E2-S8, E2-S11, E5-S3, E9-S3, E10-S1, E16-S1, E16-S3)
 # Stories Drafted: 8 (E5-S4, E11-S2, E12-S1..S4, E13-S1, E15-S2)
 # Stories Backlog: 2 (E13-S2, E13-S3)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-21  # E16-S2 ACM Record Detail Panel implemented and marked done
+# Last Updated: 2026-02-21  # Bug triage plan: 10 stories implemented across 4 phases
 #
 # COMPLETED EPICS: E3, E4, E6, E7, E14
-# IN-PROGRESS EPICS: E1 (26/27), E2 (10/12), E5 (2/4), E9 (2/3), E11 (1/2), E16 (1/3)
-# BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3), E15 (0/2)
+# IN-PROGRESS EPICS: E1 (29/30), E2 (10/12), E5 (2/4), E9 (2/3), E11 (1/2), E15 (1/2), E16 (1/3)
+# BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
+#
+# KEY CHANGES (2026-02-21 - Bug Triage Plan: 4 Phases, 10 Stories):
+# ==================================================================
+# Phase 1 Quick Wins: site-config null guard, grid column fixes (Building Code,
+#   merged ACM Product Type, removed risk_status), post-upload navigation, VAEA branding
+# Phase 2 Frontend UX: skeleton loading replacing blank spinner, semantic design tokens
+# Phase 3 Extraction Quality: negative results no longer silently dropped
+# Phase 4 Model Abstraction: migration 20 (capability fields), dynamic max_tokens,
+#   embedding dimension validation. Fixed Anthropic model ID typo.
+# 10 story files created in docs/sprint-artifacts/
+# Files changed: 29 files, +222/-86 lines
 #
 # KEY CHANGES (2026-02-20 - SCP-20260220 Extraction Monitor + UX):
 # ==================================================================
@@ -356,8 +383,7 @@ development_status:
 # =========================
 # All ready-for-dev stories have tech-specs. Implement in this order:
 # P0 - Tier 1 (all deps satisfied, ready-for-dev):
-#   1. E15-S1 Extraction Log Panel (M, unblocks E15-S2)
-#   2. E9-S3 Bulk Document Actions (M)
+#   1. E9-S3 Bulk Document Actions (M)
 #   3. E16-S1 Dashboard Home (L)
 #   4. E16-S3 Empty States (S, quick win)
 #   5. E10-S1 UI Simplification (S, independent)

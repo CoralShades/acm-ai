@@ -1,0 +1,8 @@
+-- Migration 20: Model capabilities fields for dynamic token limits and provider compatibility
+-- Enables multi-model support by storing capabilities per model instead of hardcoding
+
+DEFINE FIELD max_output_tokens ON model TYPE option<int>;
+DEFINE FIELD context_window ON model TYPE option<int>;
+DEFINE FIELD supports_structured_output ON model TYPE option<bool> DEFAULT false;
+DEFINE FIELD supports_tool_calling ON model TYPE option<bool> DEFAULT false;
+DEFINE FIELD embedding_dimensions ON model TYPE option<int>;

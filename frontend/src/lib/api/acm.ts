@@ -142,7 +142,7 @@ export const acmApi = {
     const response = await apiClient.get<{ templates: SiteConfigTemplate[] }>('/acm/config/templates', {
       params: { limit }
     })
-    return response.data.templates
+    return response.data.templates ?? []
   },
 
   /**

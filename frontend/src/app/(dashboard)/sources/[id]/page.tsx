@@ -340,7 +340,7 @@ export default function SourceDetailPage() {
               onValueChange={setActiveTab}
               className="flex flex-col h-full"
             >
-              <BentoCardHeader className="flex-shrink-0">
+              <BentoCardHeader className="flex-shrink-0 overflow-x-auto">
                 <TabsList>
                   <TabsTrigger value="content" className="gap-1.5">
                     <FileText className="w-4 h-4" />

@@ -1,0 +1,7 @@
+-- Rollback migration 20: Remove model capability fields
+
+REMOVE FIELD max_output_tokens ON model;
+REMOVE FIELD context_window ON model;
+REMOVE FIELD supports_structured_output ON model;
+REMOVE FIELD supports_tool_calling ON model;
+REMOVE FIELD embedding_dimensions ON model;

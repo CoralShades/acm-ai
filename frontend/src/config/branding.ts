@@ -12,7 +12,7 @@ export const BRANDING = {
   organizationFull: 'Victorian Asbestos Eradication Agency',
 
   /** Short application name */
-  name: 'ACM-AI',
+  name: 'VAEA | ACM AI',
 
   /** Full application name with description */
   fullName: 'VAEA ACM-AI - Asbestos Register Management',

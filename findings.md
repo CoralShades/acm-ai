@@ -1,7 +1,67 @@
-# Findings: Sprint Artifact Cleanup + Historical Context
+# Findings: Bug Triage Investigation + Sprint Artifact Cleanup
 
-## Last Updated: 2026-02-21 (Sprint Artifact Consolidation Plan)
+## Last Updated: 2026-02-21 (Bug Triage Plan Findings)
 ## Originally Created: 2026-02-09
+
+---
+
+## Bug Triage Investigation (2026-02-21)
+
+### Bug #1+9: Multi-Model Compatibility — RESOLVED
+
+**Root Cause:** 15+ hardcoded `max_tokens` values throughout the extraction pipeline, with the critical path using `"haiku" in str(model_id).lower()` to select token limits. This tested against SurrealDB record IDs (e.g., `model:h2ucwvxqwo76y7vqw1bz`) rather than actual model names, making the check always fail.
+
+**Fix:** Created model capabilities system (E1-S28) with migration 20 adding `max_output_tokens`, `context_window`, `supports_structured_output`, `supports_tool_calling`, `embedding_dimensions` fields to the `model` table. Provider-default fallback lookup tables in `Model` class. Dynamic token limit replacement in critical extraction path (E1-S29). Embedding dimension validation (E1-S30).
+
+**Impact:** All models (qwen, deepseek, llama, gemini, Claude, GPT) now get appropriate token limits automatically.
+
+### Bug #2: Blank Loading Spinner — RESOLVED
+
+**Root Cause:** Triple blocking pattern: Zustand hydration → `checkAuthRequired()` API call → generic `<LoadingSpinner />`. Users saw blank screen for 1-3 seconds.
+
+**Fix:** Replaced spinner with skeleton layout matching dashboard structure. Cached `authRequired` in Zustand persist store.
+
+### Bug #3/5: No Post-Upload Navigation — RESOLVED
+
+**Root Cause:** Both `AddSourceDialog` and `UploadProgressStep` navigated to generic `/sources` list regardless of upload count.
+
+**Fix:** Smart navigation — single file → `/sources/{id}`, multiple → `/sources` list.
+
+### Bug #4/6: Extraction Progress Panel Colors — RESOLVED
+
+**Root Cause:** Hardcoded Tailwind colors (`bg-blue-500`, etc.) instead of VAEA design system tokens.
+
+**Fix:** Replaced with semantic tokens (`bg-primary`, `bg-destructive`, `bg-emerald-500`).
+
+### Bug #7: Column Naming Regressions — RESOLVED
+
+**Root Cause:** Victorian BAR terminology not applied consistently. "Building ID" should be "Building Code", separate material columns should be merged, risk_status is external.
+
+**Fix:** Renamed columns in grid + CSV + Excel exports. Merged `material_description`/`acm_product_type` with fallback valueGetter.
+
+### Bug #8: Negative Results Regression — RESOLVED
+
+**Root Cause:** `_create_row_from_cells()` in `acm_extractor.py:631-645` silently dropped negative records missing product/material_description (returned `None`), while assumed-positive records got "Unknown" placeholders.
+
+**Investigation:** Git history confirmed prompts correctly instruct negative inclusion (commits a6721fc, 18c6baf). No filtering code in `validate_records()`. Structural risk was only in row creation logic.
+
+**Fix:** Extended "Unknown" placeholder treatment to "Negative" and "Assumed Negative" results.
+
+### Bug #10: Query Data Undefined — RESOLVED
+
+**Root Cause:** `getConfigTemplates()` returned `undefined` when API has no templates property.
+
+**Fix:** Added `?? []` null guard.
+
+### Bug #11: UI/UX Polish + VAEA Branding — RESOLVED
+
+**Fix:** App name → "VAEA | ACM AI", manifest updated, command palette height increased, TabsList overflow-x-auto.
+
+**Deferred:** Favicon conversion from `docs/vaea-assets/VAEA_Ripple2_FavIcon_0.png` — needs image processing tools.
+
+### Anthropic Model ID Typo — RESOLVED
+
+**Found during investigation:** `model_provisioning.py` had `"claude-haiku-3-5-20241022"` instead of `"claude-3-5-haiku-20241022"`. Fixed in E1-S28.
 
 ---
 
@@ -17,75 +77,15 @@
 - Sprint change proposals (in `change-proposals/` subfolder)
 - Historical reports (in `reports/` subfolder)
 
-### Fix: Create `_bmad/bmm/config.yaml`
-Setting `implementation_artifacts: "{project-root}/docs/sprint-artifacts"` propagates to ALL BMAD workflows automatically via their `{config_source}:implementation_artifacts` reference.
-
-### Files to Migrate from `_bmad-output/implementation-artifacts/` → `docs/sprint-artifacts/`
-Done-story files not yet in docs/sprint-artifacts:
-- e1-s11-generic-configurable-parser.md, e1-s13 through e1-s22, e11-s1, e2-s9, e5-s4, e8-s11
-
-### Sprint Change Proposals → `docs/sprint-artifacts/change-proposals/`
-- _bmad-output/sprint-change-proposal-20260204.md
-- _bmad-output/sprint-change-proposal-20260207-workflow-extraction.md
-- _bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md
-- _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-07.md
-- _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
-
 ---
 
 ## Historical: Bug Investigation + E2E Test Design (2026-02-09)
 
----
+### Bug 1: Source Not Found - RESOLVED
+Stale API process. Killed and restarted.
 
-## Bug 1: Source Not Found - RESOLVED
+### Bug 2: AG Grid RowGroupingModule Error #200 - RESOLVED
+Changed default `enableGrouping` from `true` to `false` in ACMGrid.tsx.
 
-**Symptom:** When opening or uploading a source, getting "Source Not Found" 500 error with `[Errno 2] No such file or directory`.
-
-### Root Cause
-The running API process had stale code and wasn't auto-reloading. Uvicorn's StatReload doesn't detect WSL file changes because `watchfiles` package isn't installed. The actual code in `api/routers/sources.py` was correct.
-
-### Resolution
-Killed all stale API processes and restarted. All source endpoints now return HTTP 200.
-
-### Verification
-- curl: All 3 test sources return HTTP 200
-- Playwright: Source detail page loads with full content, ACM tabs, and chat panel
-
-### Files Involved
-- `api/routers/sources.py` (lines 649-706) - get_source endpoint (no changes needed)
-- `run_api.py` - API startup with uvicorn reload
-
----
-
-## Bug 2: AG Grid RowGroupingModule Error #200 - RESOLVED
-
-**Symptom:** Console error #200: "Unable to use rowGroup as RowGroupingModule is not registered" when viewing ACM records.
-
-### Root Cause
-`ACMGrid.tsx` had `enableGrouping = true` as default prop, which activated enterprise-only `rowGroup` feature. Only `ag-grid-community` is installed (no enterprise module).
-
-### Resolution
-Changed default `enableGrouping` from `true` to `false` in ACMGrid.tsx. The column definitions already used the correct spread pattern `...(enableGrouping && { rowGroup: true })` to conditionally include the property, so with `enableGrouping = false`, the `rowGroup` property is completely omitted from column defs.
-
-### Verification
-- Playwright: ACM tab loads with 2 records, no AG Grid error #200
-- Only remaining console items: 4 AG Grid deprecation warnings (non-critical) + 1 React Query warning (unrelated)
-
-### Files Modified
-- `frontend/src/components/acm/ACMGrid.tsx` line 114: `enableGrouping = true` -> `enableGrouping = false`
-- Same change applied to lane-b worktree at `/mnt/d/ailocal/acm-ai-frontend/frontend/src/components/acm/ACMGrid.tsx`
-
----
-
-## Bug 3: E2E PDF Extraction Test - PENDING
-
-**Requirement:** True end-to-end PDF extraction test.
-
-### Test Flow
-1. Load real PDF from tests/fixtures/
-2. Run MinerU extraction -> markdown
-3. Run full LangGraph pipeline (metadata -> structure -> inventory -> tagging -> extraction -> validation)
-4. Assert on actual extracted ACM records
-
-### Status
+### Bug 3: E2E PDF Extraction Test - PENDING
 Research completed, implementation not yet started.

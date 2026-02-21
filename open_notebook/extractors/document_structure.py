@@ -132,6 +132,7 @@ async def _llm_extract_structure(
     prompter = Prompter(prompt_template="acm/structure_extraction")
     system_prompt = prompter.render(data={"content": content})
 
+    # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
         content,
         model_id,

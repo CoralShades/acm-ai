@@ -371,12 +371,13 @@ async def _llm_extract_building(
             }
         )
 
+        # TODO: Use model.get_max_output_tokens() when Model domain object is available here
         model = await provision_langchain_model(
             chunk_content,
             model_id,
             "extraction",
             temperature=0.1,
-            max_tokens=32768,
+            max_tokens=8192,  # Conservative default; increase via model capabilities if needed
         )
 
         from langchain_core.messages import HumanMessage, SystemMessage

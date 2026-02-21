@@ -4,7 +4,6 @@ import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef
 import { AgGridReact } from 'ag-grid-react'
 import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent, RowClassParams } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Edit2, Trash2 } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -46,35 +45,6 @@ interface ACMGridProps {
   onRowClick?: (record: ACMRecord) => void
   // ID of the currently selected/highlighted record
   selectedRecordId?: string | null
-}
-
-// Custom cell renderer for risk status with theme-aware colors
-function RiskStatusRenderer({ value }: { value: string | null | undefined }) {
-  if (!value) return null
-
-  const variants: Record<string, string> = {
-    High: 'bg-risk-high-bg text-risk-high-foreground',
-    Medium: 'bg-risk-medium-bg text-risk-medium-foreground',
-    Low: 'bg-risk-low-bg text-risk-low-foreground',
-    Presumed: 'bg-risk-presumed-bg text-risk-presumed-foreground',
-  }
-
-  const ariaLabels: Record<string, string> = {
-    High: 'High risk asbestos material',
-    Medium: 'Medium risk asbestos material',
-    Low: 'Low risk asbestos material',
-    Presumed: 'Presumed asbestos material',
-  }
-
-  return (
-    <Badge
-      variant="secondary"
-      className={variants[value] || ''}
-      aria-label={ariaLabels[value] || `Risk status: ${value}`}
-    >
-      {value}
-    </Badge>
-  )
 }
 
 // Custom cell renderer for boolean labelled field
@@ -211,8 +181,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
     () => [
       {
         field: 'building_id',
-        headerName: 'Building ID',
-        headerTooltip: 'Building ID and name',
+        headerName: 'Building Code',
+        headerTooltip: 'Building code identifier',
         width: 120,
         sortable: true,
         filter: true,
@@ -266,13 +236,16 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         filter: true,
       },
       {
-        field: 'material_description',
-        headerName: 'Material Description',
-        headerTooltip: 'Material description and location details',
+        field: 'acm_product_type',
+        headerName: 'ACM Product Type',
+        headerTooltip: 'AI-classified product type (falls back to raw description)',
         flex: 1,
         minWidth: 250,
         sortable: true,
         filter: true,
+        valueGetter: (params) => {
+          return params.data?.acm_product_type || params.data?.material_description || ''
+        },
       },
       {
         field: 'result',
@@ -280,15 +253,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         width: 130,
         sortable: true,
         filter: true,
-      },
-      {
-        field: 'risk_status',
-        headerName: 'Risk Status',
-        headerTooltip: 'Risk status: High, Medium, Low, or Presumed',
-        width: 110,
-        sortable: true,
-        filter: true,
-        cellRenderer: RiskStatusRenderer,
       },
       {
         field: 'friable',
@@ -309,13 +273,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         field: 'area_type',
         headerName: 'Internal/External',
         width: 130,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'acm_product_type',
-        headerName: 'ACM Product Type',
-        width: 160,
         sortable: true,
         filter: true,
       },

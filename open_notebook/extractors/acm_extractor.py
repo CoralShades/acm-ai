@@ -629,9 +629,10 @@ def _create_row_from_cells(
 
     # Skip if missing required fields
     # E1-S24: Allow assumed positive records even with minimal detail (e.g., "Unknown" product type)
-    # For assumed positive, only require at least one of product OR material_description
+    # For assumed positive and negative records, only require at least one of product OR material_description
     is_assumed_positive = result == "Assumed Positive"
-    if is_assumed_positive:
+    is_negative = result in ("Negative", "Assumed Negative")
+    if is_assumed_positive or is_negative:
         if not product and not material_desc:
             return None  # Need at least one
         # Use "Unknown" as placeholder if one field is missing

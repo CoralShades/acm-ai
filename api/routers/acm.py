@@ -291,7 +291,7 @@ async def export_acm_records(
 
         # Write header
         headers = [
-            "Building ID",
+            "Building Code",
             "Building Name",
             "Room ID",
             "Room Name",
@@ -301,7 +301,7 @@ async def export_acm_records(
             "Extent",
             "Location",
             "Friable",
-            "Material Condition",
+            "Condition",
             "Risk Status",
             "Result",
             "Sample No",
@@ -406,7 +406,7 @@ async def export_acm_excel(
 
         # Define columns: (header, field, width)
         columns = [
-            ("Building ID", "building_id", 12),
+            ("Building Code", "building_id", 12),
             ("Building Name", "building_name", 20),
             ("Room ID", "room_id", 10),
             ("Room Name", "room_name", 15),

@@ -22,6 +22,7 @@ from pydantic import ValidationError
 from typing_extensions import TypedDict
 
 from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.models import Model
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_debug import (
     acm_debug,
@@ -72,7 +73,7 @@ from open_notebook.utils import token_count
 
 # Constants
 CHUNK_THRESHOLD_RATIO = 0.5  # Chunk if content > 50% of context window
-DEFAULT_CONTEXT_WINDOW = 128000  # Default context window (GPT-4o-mini)
+DEFAULT_CONTEXT_WINDOW = 128000  # Fallback used when model capabilities aren't available via Model.get_context_window()
 MAX_RETRIES = 3
 RETRY_DELAYS = [1, 2, 4]  # Exponential backoff in seconds
 
@@ -986,13 +987,23 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
 
     # Get the model
     try:
+        # Dynamic max_tokens: look up model capabilities; fall back to 8192 if unavailable
+        _max_tokens = 8192  # safe fallback
+        if model_id:
+            try:
+                _domain_model = await Model.get(model_id)
+                _max_tokens = _domain_model.get_max_output_tokens(fallback=8192)
+            except Exception:
+                logger.debug(
+                    f"Could not fetch Model capabilities for {model_id}; "
+                    "using fallback max_tokens=8192"
+                )
         model = await provision_langchain_model(
             chunk_content,
             model_id,
             "extraction",  # Uses default_extraction_model or falls back to chat
             temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
-            # Model-aware token limit: Haiku has 8K output limit; larger models support 32K
-            max_tokens=8192 if "haiku" in str(model_id).lower() else 32768,
+            max_tokens=_max_tokens,
         )
         # Track model ID and prompt template for observability (E1-S21, AC #4)
         if pl:

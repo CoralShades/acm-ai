@@ -32,17 +32,17 @@ export function StageProgressPill({ stage }: StageProgressPillProps) {
     switch (stage.status) {
       case 'running':
         return {
-          container: 'bg-blue-500 text-white animate-pulse',
+          container: 'bg-primary text-primary-foreground animate-pulse',
           icon: <Loader2 className="h-3 w-3 animate-spin" />,
         }
       case 'complete':
         return {
-          container: 'bg-green-500 text-white',
+          container: 'bg-emerald-500 text-white',
           icon: <CheckCircle2 className="h-3 w-3" />,
         }
       case 'failed':
         return {
-          container: 'bg-red-500 text-white',
+          container: 'bg-destructive text-destructive-foreground',
           icon: <XCircle className="h-3 w-3" />,
         }
       case 'skipped':

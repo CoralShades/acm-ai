@@ -94,6 +94,13 @@ class ACMEmbeddingService:
                 # Use Esperanto's batch embedding (aembed for async)
                 embeddings = await embedding_model.aembed(valid_texts)
 
+                # Validate dimensions on first embedding
+                if embeddings and len(embeddings[0]) != 1024:
+                    logger.warning(
+                        f"Embedding dimension {len(embeddings[0])} differs from "
+                        f"vector index (1024). May need index re-creation."
+                    )
+
                 # Assign embeddings to records
                 now = datetime.now(UTC)
                 for idx, embedding in zip(valid_indices, embeddings):

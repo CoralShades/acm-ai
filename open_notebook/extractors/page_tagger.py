@@ -344,6 +344,7 @@ async def _llm_tag_batch(
     # Concatenate batch text for model provisioning (token estimation)
     batch_text = "\n".join(text for _, text in batch)
 
+    # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
         batch_text,
         model_id,

@@ -3,7 +3,6 @@
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { ModalProvider } from '@/components/providers/ModalProvider'
 import { CreateDialogsProvider } from '@/lib/hooks/use-create-dialogs'
@@ -96,11 +95,30 @@ export default function DashboardLayout({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [isAuthenticated, authRequired, checkAuth, router])
 
-  // Show loading spinner during initial auth check or while loading
+  // Show skeleton layout during initial auth check or while loading
   if (isLoading || !hasCheckedAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="min-h-screen flex">
+        {/* Sidebar skeleton */}
+        <div className="hidden md:flex w-64 flex-col border-r bg-muted/40 p-4 gap-4">
+          <div className="h-8 w-32 rounded bg-muted animate-pulse" />
+          <div className="space-y-2 mt-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-8 w-full rounded bg-muted animate-pulse" />
+            ))}
+          </div>
+        </div>
+        {/* Content skeleton */}
+        <div className="flex-1 p-6 space-y-4">
+          <div className="h-8 w-48 rounded bg-muted animate-pulse" />
+          <div className="h-4 w-96 rounded bg-muted animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-32 rounded-lg bg-muted animate-pulse" />
+            ))}
+          </div>
+          <div className="h-64 rounded-lg bg-muted animate-pulse mt-4" />
+        </div>
       </div>
     )
   }

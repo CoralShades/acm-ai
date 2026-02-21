@@ -6,9 +6,12 @@ from pydantic import BaseModel
 from surreal_commands import CommandInput, CommandOutput, command, submit_command
 
 from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.domain.models import model_manager
+from open_notebook.domain.models import Model, model_manager
 from open_notebook.domain.notebook import Note, Source, SourceInsight
 from open_notebook.utils.text_utils import split_text
+
+# Default vector index dimension (must match migration 12 MTREE DIMENSION)
+EXPECTED_EMBEDDING_DIM = 1024
 
 
 def full_model_dump(model):
@@ -234,6 +237,15 @@ async def embed_chunk_command(
 
         # Generate embedding for the chunk
         embedding = (await EMBEDDING_MODEL.aembed([input_data.chunk_text]))[0]
+
+        # Validate embedding dimensions match the vector index
+        actual_dim = len(embedding) if embedding else 0
+        if actual_dim != EXPECTED_EMBEDDING_DIM:
+            logger.warning(
+                f"Embedding dimension mismatch: got {actual_dim}, "
+                f"expected {EXPECTED_EMBEDDING_DIM}. Vector index may need "
+                f"re-creation if using a different embedding model."
+            )
 
         # Insert chunk embedding into database
         await repo_query(

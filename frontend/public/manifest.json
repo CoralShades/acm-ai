@@ -1,6 +1,6 @@
 {
-  "name": "VAEA ACM-AI",
-  "short_name": "ACM-AI",
+  "name": "VAEA | ACM AI",
+  "short_name": "VAEA | ACM AI",
   "description": "Victorian government platform for managing Asbestos Containing Material registers",
   "start_url": "/",
   "display": "standalone",

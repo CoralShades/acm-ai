@@ -51,9 +51,9 @@ export function ExtractionProgressPanel({
   // Extracting phase
   if (phase === 'extracting') {
     return (
-      <Card className="border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20">
+      <Card className="border-primary/50 bg-primary/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+          <CardTitle className="flex items-center gap-2 text-primary">
             Extracting ACM Records
           </CardTitle>
         </CardHeader>
@@ -78,7 +78,7 @@ export function ExtractionProgressPanel({
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-blue-500 transition-all duration-500"
+                className="h-full bg-primary transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
