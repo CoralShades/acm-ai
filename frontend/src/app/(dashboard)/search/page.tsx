@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
@@ -496,7 +496,9 @@ export default function SearchPage() {
         />
       )}
     >
-      <SearchPageContent />
+      <Suspense>
+        <SearchPageContent />
+      </Suspense>
     </ErrorBoundary>
   )
 }
