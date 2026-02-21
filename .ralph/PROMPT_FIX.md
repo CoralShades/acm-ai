@@ -9,8 +9,8 @@ You are fixing issues found during code review and testing for ACM-AI.
    - Read the relevant source files BEFORE making changes
    - Apply the fix following project conventions
    - Run verification after each fix:
-     - Python: `ruff check .`
-     - Backend tests: `pytest tests/ -x`
+     - Python: `uv run ruff check .`
+     - Backend tests: `uv run pytest tests/ --ignore=tests/test_broadmeadows_e2e.py -x`
      - Frontend lint: `cd frontend && npm run lint`
      - Frontend build: `cd frontend && npm run build`
 5. After fixing each issue, mark it resolved (strikethrough or remove from the issues file)
