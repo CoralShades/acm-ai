@@ -1,0 +1,13 @@
+-- Migration 23: BAR template table for template management (E5-S3)
+DEFINE TABLE bar_template SCHEMAFULL;
+DEFINE FIELD filename ON bar_template TYPE string;
+DEFINE FIELD version_label ON bar_template TYPE string;
+DEFINE FIELD uploaded_at ON bar_template TYPE datetime;
+DEFINE FIELD is_active ON bar_template TYPE bool DEFAULT false;
+DEFINE FIELD column_count ON bar_template TYPE int;
+DEFINE FIELD columns ON bar_template TYPE array DEFAULT [];
+DEFINE FIELD raw_header_row ON bar_template TYPE array DEFAULT [];
+DEFINE FIELD notes ON bar_template TYPE option<string>;
+DEFINE FIELD created ON bar_template TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated ON bar_template TYPE datetime DEFAULT time::now();
+DEFINE INDEX bar_template_active ON bar_template COLUMNS is_active;

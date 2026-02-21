@@ -1,0 +1,2 @@
+-- Rollback migration 23: drop bar_template table
+REMOVE TABLE bar_template;
