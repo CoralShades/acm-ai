@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent } from 'ag-grid-community'
+import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridApi, ModelUpdatedEvent, ColumnResizedEvent, RowClassParams } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,8 @@ interface ACMGridProps {
   onCellSelect?: (details: CellSelectionDetails) => void
   // Callback when a row is clicked to show record details
   onRowClick?: (record: ACMRecord) => void
+  // ID of the currently selected/highlighted record
+  selectedRecordId?: string | null
 }
 
 // Custom cell renderer for risk status with theme-aware colors
@@ -122,7 +124,7 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick },
+  { records, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMRecord>>(null)
@@ -186,6 +188,24 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       onVisibleCountChange(dataRowCount)
     }
   }, [onVisibleCountChange])
+
+  // Redraw rows when selected record changes to update highlighting
+  useEffect(() => {
+    if (gridApi) {
+      gridApi.redrawRows()
+    }
+  }, [gridApi, selectedRecordId])
+
+  // Apply highlight class to selected row
+  const getRowClass = useCallback(
+    (params: RowClassParams<ACMRecord>) => {
+      if (params.data?.id && params.data.id === selectedRecordId) {
+        return 'acm-row-selected'
+      }
+      return undefined
+    },
+    [selectedRecordId]
+  )
 
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(
     () => [
@@ -534,6 +554,14 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         .ag-theme-alpine .ag-row:not(.ag-row-group) {
           cursor: pointer;
         }
+        /* Selected row highlight for detail panel */
+        .ag-theme-alpine .acm-row-selected {
+          background-color: hsl(var(--primary) / 0.12) !important;
+          border-left: 3px solid hsl(var(--primary)) !important;
+        }
+        .dark .ag-theme-alpine .acm-row-selected {
+          background-color: hsl(var(--primary) / 0.2) !important;
+        }
       `}</style>
       <AgGridReact<ACMRecord>
         ref={gridRef}
@@ -545,6 +573,7 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         onCellKeyDown={onCellKeyDown}
         onModelUpdated={onModelUpdated}
         onColumnResized={onColumnResized}
+        getRowClass={getRowClass}
         loading={isLoading}
         animateRows={true}
         rowSelection="single"

@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ACMGrid, type ACMGridRef, type CellSelectionDetails } from './ACMGrid'
 import { ACMCellViewer } from './ACMCellViewer'
 import { ACMRecordDialog } from './ACMRecordDialog'
-import { ACMRecordDetailDialog } from './ACMRecordDetailDialog'
+import { ACMRecordDetailPanel } from './ACMRecordDetailPanel'
 import { ACMExtractionBanner } from './ACMExtractionBanner'
 import { ACMStatsCards } from './ACMStatsCards'
 import { ACMToolbar } from './ACMToolbar'
@@ -51,9 +51,9 @@ export function ACMTab({ sourceId }: ACMTabProps) {
   const [recordToDelete, setRecordToDelete] = useState<ACMRecord | null>(null)
   // Cell citation viewer state
   const [selectedCell, setSelectedCell] = useState<CellSelectionDetails | null>(null)
-  // Detail dialog state
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
-  const [detailRecord, setDetailRecord] = useState<ACMRecord | null>(null)
+  // Detail panel state (slide-out, replaces modal dialog)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [panelRecordId, setPanelRecordId] = useState<string | null>(null)
 
   // Building tab state - persisted per source in session storage
   const [selectedBuilding, setSelectedBuilding] = useSessionStorage<string | null>(
@@ -203,18 +203,22 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     return () => window.removeEventListener('acm-command', handleACMCommand)
   }, [handleExtract, handleExportCsv, handleExportExcel, handleAddNew, router])
 
-  // Row click handler — opens read-only detail dialog
+  // Row click handler — toggles slide-out detail panel
   const handleRowClick = useCallback((record: ACMRecord) => {
-    setDetailRecord(record)
-    setDetailDialogOpen(true)
-  }, [])
+    if (panelOpen && panelRecordId === record.id) {
+      // Same row clicked again → close panel
+      setPanelOpen(false)
+      setPanelRecordId(null)
+    } else {
+      setPanelRecordId(record.id)
+      setPanelOpen(true)
+    }
+  }, [panelOpen, panelRecordId])
 
-  // Edit from detail dialog — close detail and open edit dialog
-  const handleEditFromDetail = useCallback((record: ACMRecord) => {
-    setDetailDialogOpen(false)
-    setDetailRecord(null)
-    handleEdit(record)
-  }, [handleEdit])
+  const handlePanelClose = useCallback(() => {
+    setPanelOpen(false)
+    setPanelRecordId(null)
+  }, [])
 
   // Cell citation viewer handler
   const handleCellSelect = useCallback((details: CellSelectionDetails) => {
@@ -248,6 +252,36 @@ export function ACMTab({ sourceId }: ACMTabProps) {
     if (!selectedBuilding) return allRecords
     return allRecords.filter((r) => r.building_id === selectedBuilding)
   }, [allRecords, selectedBuilding])
+
+  // Panel navigation — must be after records/allRecords are defined
+  const panelIndex = useMemo(() => {
+    if (!panelRecordId) return -1
+    return records.findIndex((r) => r.id === panelRecordId)
+  }, [records, panelRecordId])
+
+  const handlePanelNavigatePrev = useCallback(() => {
+    if (panelIndex > 0) {
+      setPanelRecordId(records[panelIndex - 1].id)
+    }
+  }, [panelIndex, records])
+
+  const handlePanelNavigateNext = useCallback(() => {
+    if (panelIndex < records.length - 1) {
+      setPanelRecordId(records[panelIndex + 1].id)
+    }
+  }, [panelIndex, records])
+
+  const handlePanelViewInPDF = useCallback((pageNumber: number) => {
+    const record = allRecords.find((r) => r.id === panelRecordId)
+    if (!record) return
+    setSelectedCell({
+      recordId: record.id,
+      field: 'page_number',
+      value: pageNumber,
+      pageNumber: pageNumber,
+      record: record,
+    })
+  }, [panelRecordId, allRecords])
 
   const totalCount = allRecords.length
   const filteredCount = records.length
@@ -340,17 +374,23 @@ export function ACMTab({ sourceId }: ACMTabProps) {
               onVisibleCountChange={handleVisibleCountChange}
               onCellSelect={handleCellSelect}
               onRowClick={handleRowClick}
+              selectedRecordId={panelRecordId}
             />
           )}
         </CardContent>
       </Card>
 
-      {/* Record Detail Dialog (read-only) */}
-      <ACMRecordDetailDialog
-        open={detailDialogOpen}
-        onOpenChange={setDetailDialogOpen}
-        record={detailRecord}
-        onEdit={handleEditFromDetail}
+      {/* Record Detail Panel (slide-out) */}
+      <ACMRecordDetailPanel
+        recordId={panelRecordId}
+        open={panelOpen}
+        sourceId={sourceId}
+        onClose={handlePanelClose}
+        onViewInPDF={handlePanelViewInPDF}
+        onNavigatePrev={handlePanelNavigatePrev}
+        onNavigateNext={handlePanelNavigateNext}
+        hasPrev={panelIndex > 0}
+        hasNext={panelIndex < records.length - 1 && panelIndex >= 0}
       />
 
       {/* Create/Edit Dialog */}
