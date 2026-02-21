@@ -19,7 +19,7 @@
       "friable": "Non Friable",
       "material_condition": "Good",
       "risk_status": "Low",
-      "result": "Detected",
+      "result": "Positive",
       "page_number": 1
     },
     {
@@ -35,7 +35,7 @@
       "friable": "Non Friable",
       "material_condition": "Fair",
       "risk_status": "Medium",
-      "result": "Detected",
+      "result": "Positive",
       "page_number": 1
     },
     {
@@ -52,7 +52,7 @@
       "friable": "Non Friable",
       "material_condition": "Good",
       "risk_status": "Low",
-      "result": "Not Detected",
+      "result": "Negative",
       "page_number": 1
     },
     {
@@ -71,7 +71,7 @@
       "friable": "Non Friable",
       "material_condition": "Fair",
       "risk_status": "Medium",
-      "result": "Detected",
+      "result": "Positive",
       "page_number": 2
     },
     {
@@ -87,7 +87,7 @@
       "friable": "Non Friable",
       "material_condition": "Good",
       "risk_status": "Low",
-      "result": "Presumed",
+      "result": "Assumed Positive",
       "page_number": 2
     },
     {
@@ -103,7 +103,7 @@
       "friable": "Non Friable",
       "material_condition": "Poor",
       "risk_status": "High",
-      "result": "Detected",
+      "result": "Positive",
       "page_number": 2
     }
   ]

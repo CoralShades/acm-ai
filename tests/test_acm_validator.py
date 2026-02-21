@@ -442,7 +442,7 @@ class TestCorrectiveLoopRouter:
             building_id="B001",
             product="Floor Tiles",
             material_description="Vinyl tiles",
-            result="Detected",
+            result="Positive",
             sample_result="Bonded",  # Invalid enum
             material_condition="Good",
             friable="Non-friable",
@@ -468,7 +468,7 @@ class TestCorrectiveLoopRouter:
             building_id="B001",
             product="Floor Tiles",
             material_description="Vinyl tiles",
-            result="Detected",
+            result="Positive",
             sample_result="Positive",
             material_condition="Good",
             friable="Non-friable",
@@ -494,7 +494,7 @@ class TestCorrectiveLoopRouter:
             building_id="B001",
             product="Floor Tiles",
             material_description="Vinyl tiles",
-            result="Detected",
+            result="Positive",
             sample_result="Bonded",  # Still invalid after max attempts
             material_condition="Good",
             friable="Non-friable",
@@ -520,11 +520,11 @@ class TestCorrectiveLoopRouter:
             building_id="B001",
             product="Floor Tiles",
             material_description="Vinyl tiles",
-            result="Detected",
+            result="Positive",
             sample_result="Bonded",  # Has issues, but loop disabled
-            material_condition="Excellent",
-            friable="Maybe",
-            disturbance_potential="Level 3 Risk",
+            material_condition="Good",
+            friable="Non Friable",
+            disturbance_potential="Low",
         )
 
         state = {

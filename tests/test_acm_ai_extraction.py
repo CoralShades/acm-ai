@@ -20,7 +20,7 @@ class TestACMExtractionSchemas:
             building_id="B1",
             product="Floor Tiles",
             material_description="Vinyl asbestos tiles",
-            result="Detected",
+            result="Positive",
         )
         assert record.building_id == "B1"
         assert record.extraction_confidence == "medium"  # default
@@ -46,7 +46,7 @@ class TestACMExtractionSchemas:
             friable="Non Friable",
             material_condition="Good",
             risk_status="Low",
-            result="Detected",
+            result="Positive",
             disturbance_potential="Low",
             sample_no="S001",
             sample_result="Chrysotile detected",
@@ -92,21 +92,21 @@ class TestACMExtractionSchemas:
                 building_id="B1",
                 product="Tiles",
                 material_description="Vinyl",
-                result="Detected",
+                result="Positive",
                 extraction_confidence="high",
             ),
             ACMExtractionRecord(
                 building_id="B1",
                 product="Lagging",
                 material_description="Pipe wrap",
-                result="Detected",
+                result="Positive",
                 extraction_confidence="medium",
             ),
             ACMExtractionRecord(
                 building_id="B2",
                 product="Insulation",
                 material_description="Wall insulation",
-                result="Presumed",
+                result="Assumed Positive",
                 extraction_confidence="low",
             ),
         ]
@@ -141,7 +141,7 @@ class TestACMRecordModel:
             building_id="B1",
             product="Tiles",
             material_description="Vinyl tiles",
-            result="Detected",
+            result="Positive",
             # New fields
             disturbance_potential="Low",
             sample_no="S001",
@@ -176,7 +176,7 @@ class TestACMRecordModel:
                 building_id="B1",
                 product="Tiles",
                 material_description="Vinyl",
-                result="Detected",
+                result="Positive",
                 extraction_confidence=conf,
             )
             assert record.extraction_confidence in ["high", "medium", "low"]
@@ -189,7 +189,7 @@ class TestACMRecordModel:
                 building_id="B1",
                 product="Tiles",
                 material_description="Vinyl",
-                result="Detected",
+                result="Positive",
                 extraction_confidence="invalid",
             )
 
@@ -204,7 +204,7 @@ class TestACMRecordModel:
             building_id="B1",
             product="Tiles",
             material_description="Vinyl tiles",
-            result="Detected",
+            result="Positive",
         )
 
         # All new fields should be None
@@ -273,7 +273,7 @@ class TestDeduplicationLogic:
             room_id="B1-R1",
             product="Tiles",
             material_description="Vinyl floor tiles with asbestos",
-            result="Detected",
+            result="Positive",
         )
 
         key = _generate_dedup_key(record, "SCHOOL01")
@@ -292,7 +292,7 @@ class TestDeduplicationLogic:
             room_id="B1-R1",
             product="Tiles",
             material_description="Vinyl floor tiles",
-            result="Detected",
+            result="Positive",
         )
 
         record2 = ACMExtractionRecord(
@@ -300,7 +300,7 @@ class TestDeduplicationLogic:
             room_id="B1-R1",
             product="Lagging",
             material_description="Pipe insulation",
-            result="Detected",
+            result="Positive",
         )
 
         key1 = _generate_dedup_key(record1, "SCHOOL01")
@@ -317,7 +317,7 @@ class TestDeduplicationLogic:
             building_id="B1",
             product="Tiles",
             material_description="Vinyl",
-            result="Detected",
+            result="Positive",
             extraction_confidence="low",
             data_issues=["Issue from low"],
         )
@@ -326,7 +326,7 @@ class TestDeduplicationLogic:
             building_id="B1",
             product="Tiles",
             material_description="Vinyl",
-            result="Detected",
+            result="Positive",
             extraction_confidence="high",
             data_issues=["Issue from high"],
         )
@@ -345,14 +345,14 @@ class TestValidationLogic:
     def test_result_normalization(self):
         """Test that result values are normalized during validation."""
         # This tests the validation logic in the graph
-        # We test the expected behavior
+        # We test the expected behavior (BAR standard values)
         result_mappings = {
-            "no asbestos detected": "Not Detected",
-            "NAD": "Not Detected",
-            "not detected": "Not Detected",
-            "detected": "Detected",
-            "positive": "Detected",
-            "presumed": "Presumed",
+            "no asbestos detected": "Negative",
+            "NAD": "Negative",
+            "not detected": "Negative",
+            "detected": "Positive",
+            "positive": "Positive",
+            "presumed": "Assumed Positive",
         }
 
         for input_val, expected in result_mappings.items():
@@ -364,11 +364,11 @@ class TestValidationLogic:
                 or "nad" in result_lower
                 or "not detected" in result_lower
             ):
-                normalized = "Not Detected"
+                normalized = "Negative"
             elif "detected" in result_lower or "positive" in result_lower:
-                normalized = "Detected"
+                normalized = "Positive"
             elif "presumed" in result_lower:
-                normalized = "Presumed"
+                normalized = "Assumed Positive"
             else:
                 normalized = "Unknown"
 
@@ -445,7 +445,7 @@ class TestAssumedPositiveDetection:
             sample_no="Not Sampled",
             acm_product_group="Other",
             acm_product_type="Unknown",
-            material_condition="Unknown",
+            material_condition=None,
             disturbance_potential="Unknown",
             acm_labelled=False,
             identifying_company="Prensa Pty Ltd",
@@ -456,7 +456,7 @@ class TestAssumedPositiveDetection:
         # Should be valid - not filtered out
         assert record.result == "Assumed Positive"
         assert record.sample_no == "Not Sampled"
-        assert record.material_condition == "Unknown"
+        assert record.material_condition is None
         assert record.disturbance_potential == "Unknown"
         assert "No access" in record.data_issues[0]
 
@@ -476,7 +476,7 @@ class TestAssumedPositiveDetection:
             sample_no="Not Sampled",
             acm_product_group="Other",
             acm_product_type="Unknown",
-            material_condition="Unknown",
+            material_condition=None,
             disturbance_potential="Unknown",
             acm_labelled=False,
             identifying_company="Prensa Pty Ltd",

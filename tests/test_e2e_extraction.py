@@ -403,20 +403,21 @@ class TestPipelineLegacyPath:
     @pytest.mark.asyncio
     async def test_validation_normalizes_results(self, mock_source):
         """Verify that records go through validation and normalization."""
-        # Create records with raw result values that need normalization
+        # Create records with result values that pass E2-S11 validators
+        # (normalization happens case-insensitively at validator level)
         records = [
             ACMExtractionRecord(
                 building_id="A1",
                 product="Floor Tiles",
                 material_description="Vinyl asbestos tiles",
-                result="No Asbestos Detected",  # Should normalize to "Not Detected"
+                result="negative",  # Should normalize to "Negative" (case)
                 extraction_confidence="high",
             ),
             ACMExtractionRecord(
                 building_id="B1",
                 product="Pipe Lagging",
                 material_description="Cement-bound insulation",
-                result="Detected",
+                result="Positive",
                 extraction_confidence="invalid",  # Should normalize to "medium"
             ),
         ]
@@ -478,7 +479,7 @@ class TestPipelineLegacyPath:
                 room_id="A1-R001",
                 product="Floor Tiles",
                 material_description="Vinyl asbestos tiles",
-                result="Detected",
+                result="Positive",
                 extraction_confidence="medium",
             ),
             ACMExtractionRecord(
@@ -486,7 +487,7 @@ class TestPipelineLegacyPath:
                 room_id="A1-R001",
                 product="Floor Tiles",
                 material_description="Vinyl asbestos tiles",
-                result="Detected",
+                result="Positive",
                 extraction_confidence="high",  # Higher confidence → this one wins
             ),
         ]

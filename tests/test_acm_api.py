@@ -136,7 +136,7 @@ class TestGetACMRecord:
         mock_record.friable = "Non Friable"
         mock_record.material_condition = "Good"
         mock_record.risk_status = "Low"
-        mock_record.result = "Detected"
+        mock_record.result = "Positive"
         mock_record.page_number = 5
         mock_record.extraction_confidence = (
             "high"  # Must be string: "high", "medium", or "low"
@@ -231,7 +231,7 @@ class TestExportACMRecords:
         mock_record.friable = "Non Friable"
         mock_record.material_condition = "Good"
         mock_record.risk_status = "Low"
-        mock_record.result = "Detected"
+        mock_record.result = "Positive"
         mock_record.page_number = 5
         mock_record.floor_level = None
         mock_record.sample_no = None
@@ -253,7 +253,7 @@ class TestExportACMRecords:
 
         # Verify CSV content
         content = response.text
-        assert "Building ID" in content
+        assert "Building Code" in content
         assert "B001" in content
         assert "Ceiling Tiles" in content
 
@@ -629,7 +629,7 @@ class TestACMRecordResponseClassificationFields:
         mock_record.friable = "Non Friable"
         mock_record.material_condition = "Good"
         mock_record.risk_status = "Low"
-        mock_record.result = "Detected"
+        mock_record.result = "Positive"
         mock_record.page_number = 5
         mock_record.extraction_confidence = "high"
         # Classification fields

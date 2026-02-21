@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # Notebook models
@@ -538,6 +538,67 @@ class ACMRecordCreateRequest(BaseModel):
     result: str = Field(..., min_length=1, description="Test result")
     page_number: Optional[int] = Field(None, description="Source page number")
 
+    @field_validator("result", mode="before")
+    @classmethod
+    def normalize_result(cls, v: str) -> str:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+        if normalized not in valid:
+            for val in valid:
+                if val.lower() == normalized.lower():
+                    return val
+            raise ValueError(f"result must be one of {sorted(valid)}, got '{v}'")
+        return normalized
+
+    @field_validator("friable", mode="before")
+    @classmethod
+    def normalize_friable(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        stripped = v.strip()
+        valid = {"Friable", "Non Friable"}
+        for val in valid:
+            if val.lower() == stripped.lower():
+                return val
+        if stripped.lower() in ("non-friable", "nonfriable"):
+            return "Non Friable"
+        raise ValueError(f"friable must be one of {sorted(valid)}, got '{v}'")
+
+    @field_validator("risk_status", mode="before")
+    @classmethod
+    def normalize_risk_status(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Low", "Medium", "High"}
+        if normalized not in valid:
+            raise ValueError(f"risk_status must be one of {sorted(valid)}, got '{v}'")
+        return normalized
+
+    @field_validator("material_condition", mode="before")
+    @classmethod
+    def normalize_material_condition(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Good", "Fair", "Poor", "Damaged"}
+        if normalized not in valid:
+            raise ValueError(f"material_condition must be one of {sorted(valid)}, got '{v}'")
+        return normalized
+
+    @field_validator("area_type", mode="before")
+    @classmethod
+    def normalize_area_type(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Interior", "Exterior", "Grounds"}
+        if normalized not in valid:
+            raise ValueError(f"area_type must be one of {sorted(valid)}, got '{v}'")
+        return normalized
+
 
 class ParentContextResponse(BaseModel):
     """Parent table section context for search results (E11-S1)."""
@@ -619,6 +680,67 @@ class ACMRecordUpdateRequest(BaseModel):
         None,
         description="Mark as manual override (set to True when user corrects classification)",
     )
+
+    @field_validator("result", mode="before")
+    @classmethod
+    def normalize_result(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+        if normalized not in valid:
+            for val in valid:
+                if val.lower() == normalized.lower():
+                    return val
+            raise ValueError(f"result must be one of {sorted(valid)}, got '{v}'")
+        return normalized
+
+    @field_validator("friable", mode="before")
+    @classmethod
+    def normalize_friable(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        stripped = v.strip()
+        valid = {"Friable", "Non Friable"}
+        for val in valid:
+            if val.lower() == stripped.lower():
+                return val
+        if stripped.lower() in ("non-friable", "nonfriable"):
+            return "Non Friable"
+        raise ValueError(f"friable must be one of {sorted(valid)}, got '{v}'")
+
+    @field_validator("risk_status", mode="before")
+    @classmethod
+    def normalize_risk_status(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Low", "Medium", "High"}
+        if normalized not in valid:
+            raise ValueError(f"risk_status must be one of {sorted(valid)}, got '{v}'")
+        return normalized
+
+    @field_validator("material_condition", mode="before")
+    @classmethod
+    def normalize_material_condition(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Good", "Fair", "Poor", "Damaged"}
+        if normalized not in valid:
+            raise ValueError(f"material_condition must be one of {sorted(valid)}, got '{v}'")
+        return normalized
+
+    @field_validator("area_type", mode="before")
+    @classmethod
+    def normalize_area_type(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        normalized = v.strip().title()
+        valid = {"Interior", "Exterior", "Grounds"}
+        if normalized not in valid:
+            raise ValueError(f"area_type must be one of {sorted(valid)}, got '{v}'")
+        return normalized
 
 
 # Site Configuration Models (E1-S8 - Victorian BAR Compliance)

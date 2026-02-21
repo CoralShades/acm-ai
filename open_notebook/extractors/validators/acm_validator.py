@@ -90,7 +90,12 @@ def validate_enum_fields(record: dict) -> list[ValidationIssue]:
         if not valid_values:
             continue
 
-        if value not in valid_values:
+        # Normalize for comparison: case-insensitive, treat hyphens as spaces
+        def _norm(s: str) -> str:
+            return s.strip().lower().replace("-", " ")
+
+        value_norm = _norm(value)
+        if not any(_norm(v) == value_norm for v in valid_values):
             issues.append(
                 ValidationIssue(
                     field_name=field_name,

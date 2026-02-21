@@ -7,13 +7,21 @@ ACM records from PDF documents processed by Docling.
 Story: E1-S7 AI-Powered ACM Extraction
 """
 
+import re
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # Import ExtractionConfidence from domain to avoid duplication
 from open_notebook.domain.acm import ExtractionConfidence
+
+# BAR field enums — canonical allowed values
+RESULT_VALUES = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+FRIABLE_VALUES = {"Friable", "Non Friable"}
+RISK_STATUS_VALUES = {"Low", "Medium", "High"}
+MATERIAL_CONDITION_VALUES = {"Good", "Fair", "Poor", "Damaged"}
+AREA_TYPE_VALUES = {"Interior", "Exterior", "Grounds"}
 
 
 class ExtractionStatus(str, Enum):
@@ -190,6 +198,79 @@ class ACMExtractionRecord(BaseModel):
         default=None, description="Date of removal if applicable"
     )
 
+    @field_validator("result", mode="before")
+    @classmethod
+    def validate_result(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip().title()
+        # Handle "Assumed positive" -> "Assumed Positive" etc.
+        if normalized not in RESULT_VALUES:
+            # Try case-insensitive match
+            for valid in RESULT_VALUES:
+                if v.strip().lower() == valid.lower():
+                    return valid
+            raise ValueError(f"result must be one of {sorted(RESULT_VALUES)}, got '{v}'")
+        return normalized
+
+    @field_validator("friable", mode="before")
+    @classmethod
+    def validate_friable(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        stripped = v.strip()
+        for valid in FRIABLE_VALUES:
+            if stripped.lower() == valid.lower():
+                return valid
+        # Accept common variants
+        if stripped.lower() in ("non-friable", "nonfriable"):
+            return "Non Friable"
+        raise ValueError(f"friable must be one of {sorted(FRIABLE_VALUES)}, got '{v}'")
+
+    @field_validator("risk_status", mode="before")
+    @classmethod
+    def validate_risk_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip().title()
+        if normalized in RISK_STATUS_VALUES:
+            return normalized
+        raise ValueError(f"risk_status must be one of {sorted(RISK_STATUS_VALUES)}, got '{v}'")
+
+    @field_validator("material_condition", mode="before")
+    @classmethod
+    def validate_material_condition(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip().title()
+        if normalized in MATERIAL_CONDITION_VALUES:
+            return normalized
+        raise ValueError(
+            f"material_condition must be one of {sorted(MATERIAL_CONDITION_VALUES)}, got '{v}'"
+        )
+
+    @field_validator("area_type", mode="before")
+    @classmethod
+    def validate_area_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip().title()
+        if normalized in AREA_TYPE_VALUES:
+            return normalized
+        raise ValueError(f"area_type must be one of {sorted(AREA_TYPE_VALUES)}, got '{v}'")
+
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def validate_quantity(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        match = re.match(r"^\s*(-?\d+(?:\.\d+)?)", str(v))
+        if match:
+            numeric = float(match.group(1))
+            if numeric < 0:
+                raise ValueError(f"quantity cannot be negative, got '{v}'")
+        return v
+
     # Extraction metadata
     extraction_confidence: str = Field(
         default="medium", description="Confidence level: 'high', 'medium', 'low'"
@@ -307,4 +388,12 @@ class ACMExtractionOutput(BaseModel):
     pipeline_run: Optional[dict] = Field(
         default=None,
         description="Pipeline run state: stage timings, metrics, models used (E1-S21)",
+    )
+    token_limit_exceeded: bool = Field(
+        default=False,
+        description="Whether input exceeded model context window (E1-S23)",
+    )
+    chunk_count: int = Field(
+        default=1,
+        description="Number of chunks used for extraction (1 = no chunking needed) (E1-S23)",
     )

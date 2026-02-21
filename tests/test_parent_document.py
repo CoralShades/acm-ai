@@ -290,7 +290,7 @@ class TestSearchWithParentContext:
             }
         ]
 
-        response = client.get("/api/acm/search?query=ceiling+tiles")
+        response = client.get("/api/acm/search?query=ceiling+tiles&search_mode=vector")
 
         assert response.status_code == 200
         data = response.json()
@@ -345,7 +345,7 @@ class TestSearchWithParentContext:
         mock_section.id = "acm_table_section:sec1"
         mock_get_by_source.return_value = [mock_section]
 
-        response = client.get("/api/acm/search?query=ceiling+tiles&include_parent=true")
+        response = client.get("/api/acm/search?query=ceiling+tiles&include_parent=true&search_mode=vector")
 
         assert response.status_code == 200
         data = response.json()
@@ -407,7 +407,7 @@ class TestSaveRecordsParentCreation:
             area_type="Interior",
             product="Floor Tiles",
             material_description="Vinyl tiles",
-            result="Detected",
+            result="Positive",
             page_number=14,
         )
 

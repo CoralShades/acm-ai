@@ -418,11 +418,20 @@ export function ACMRecordDialog({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="material_condition">Condition</Label>
-                  <Input
-                    id="material_condition"
-                    {...register('material_condition')}
-                    placeholder="e.g., Good, Fair, Poor"
-                  />
+                  <Select
+                    value={watch('material_condition') || ''}
+                    onValueChange={(value) => setValue('material_condition', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Good">Good</SelectItem>
+                      <SelectItem value="Fair">Fair</SelectItem>
+                      <SelectItem value="Poor">Poor</SelectItem>
+                      <SelectItem value="Damaged">Damaged</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="risk_status">Risk Status</Label>
@@ -442,11 +451,21 @@ export function ACMRecordDialog({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="result">Result *</Label>
-                  <Input
-                    id="result"
-                    {...register('result')}
-                    placeholder="e.g., Detected, Not Detected"
-                  />
+                  <Select
+                    value={watch('result') || ''}
+                    onValueChange={(value) => setValue('result', value, { shouldValidate: true })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select result" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Positive">Positive</SelectItem>
+                      <SelectItem value="Assumed Positive">Assumed Positive</SelectItem>
+                      <SelectItem value="Negative">Negative</SelectItem>
+                      <SelectItem value="Assumed Negative">Assumed Negative</SelectItem>
+                      <SelectItem value="Unknown">Unknown</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {errors.result && (
                     <p className="text-sm text-destructive">{errors.result.message}</p>
                   )}

@@ -517,7 +517,7 @@ class TestExtractBuilding:
                 building_id="B00A",
                 product="Floor Coverings",
                 material_description="Vinyl Tiles",
-                result="Detected",
+                result="Positive",
             ),
         ]
         with patch(
@@ -786,13 +786,13 @@ class TestMergeBuildingResults:
             building_id="B00A",
             product="Floor",
             material_description="Vinyl",
-            result="Detected",
+            result="Positive",
         )
         r2 = ACMExtractionRecord(
             building_id="B00B",
             product="Ceiling",
             material_description="Fibre Cement",
-            result="Detected",
+            result="Positive",
         )
         results = [
             (
