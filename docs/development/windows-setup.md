@@ -186,9 +186,9 @@ This repository has Claude Code hooks that automatically commit work in progress
 
 ### How It Works
 
-**Layer 1 — Stop Hook (session end safety net)**
+**Layer 1 — Stop Hook (response-end safety net)**
 
-When you close a Claude Code session, `.claude/hooks/auto-commit.sh` runs automatically. If there are any uncommitted tracked changes on a non-main branch, it commits them with a `wip: safety checkpoint` message and pushes to the remote.
+After every Claude Code response turn (not just when you close the app), `.claude/hooks/auto-commit.sh` runs automatically. If there are any uncommitted tracked changes on a non-main branch, it commits them with a `wip: safety checkpoint` message and pushes to the remote. This means changes are committed frequently — you almost can't lose work.
 
 - Uses `git add -u` (tracked files only — never commits `.env`, secrets, or build artifacts)
 - Skips if already on `main`/`master`
