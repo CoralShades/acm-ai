@@ -1,0 +1,2 @@
+-- Rollback migration 26: remove field mapping table
+REMOVE TABLE field_mapping;

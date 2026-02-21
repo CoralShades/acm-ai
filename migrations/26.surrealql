@@ -1,0 +1,9 @@
+-- Migration 26: Field mapping table (E5-S4)
+DEFINE TABLE field_mapping SCHEMAFULL;
+
+DEFINE FIELD name ON field_mapping TYPE string DEFAULT "default";
+DEFINE FIELD is_active ON field_mapping TYPE bool DEFAULT true;
+DEFINE FIELD mappings ON field_mapping FLEXIBLE TYPE option<array>;
+DEFINE FIELD notes ON field_mapping TYPE option<string>;
+DEFINE FIELD created ON field_mapping TYPE option<datetime> DEFAULT time::now();
+DEFINE FIELD updated ON field_mapping TYPE option<datetime> DEFAULT time::now();

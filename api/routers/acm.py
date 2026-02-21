@@ -267,6 +267,57 @@ async def trigger_acm_extraction(request: ACMExtractRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def _get_export_mapping() -> tuple[list[str], list[str | None]]:
+    """Get export headers and field names from active field mapping.
+
+    Returns (headers, fields) where fields[i] is the ACMRecord attribute
+    for headers[i], or None if unmapped.
+    """
+    try:
+        from open_notebook.domain.field_mapping import FieldMapping
+
+        mapping = await FieldMapping.get_active()
+        if mapping.mappings:
+            headers = [m.bar_column for m in mapping.mappings]
+            fields = [m.acm_field for m in mapping.mappings]
+            return headers, fields
+    except Exception as e:
+        logger.debug(f"Failed to load field mapping, using defaults: {e}")
+
+    # Fallback to hardcoded defaults
+    headers = [
+        "Building Code", "Building Name", "Room ID", "Room Name",
+        "Floor Level", "Product", "Material Description", "Extent",
+        "Location", "Friable", "Condition", "Risk Status", "Result",
+        "Sample No", "Sample Result", "Quantity", "ACM Labelled",
+        "Disturbance Potential", "Identifying Company",
+        "Hygienist Recommendations", "Page Number",
+    ]
+    fields: list[str | None] = [
+        "building_id", "building_name", "room_id", "room_name",
+        "floor_level", "product", "material_description", "extent",
+        "location", "friable", "material_condition", "risk_status", "result",
+        "sample_no", "sample_result", "quantity", "acm_labelled",
+        "disturbance_potential", "identifying_company",
+        "hygienist_recommendations", "page_number",
+    ]
+    return headers, fields
+
+
+def _get_record_value(record: ACMRecord, field: str | None) -> str:
+    """Get a display value from an ACMRecord for a given field name."""
+    if not field:
+        return ""
+    val = getattr(record, field, None)
+    if val is None:
+        return ""
+    if isinstance(val, bool):
+        return "Yes" if val else "No"
+    if isinstance(val, list):
+        return "; ".join(str(v) for v in val)
+    return str(val)
+
+
 @router.get("/export")
 async def export_acm_records(
     source_id: str = Query(..., description="Source ID to export"),
@@ -275,6 +326,7 @@ async def export_acm_records(
     Export ACM records as CSV file.
 
     Downloads all records for the specified source as a CSV file.
+    Uses active field mapping for column order when available.
     """
     try:
         # Get all records for source
@@ -285,63 +337,19 @@ async def export_acm_records(
                 status_code=404, detail="No ACM records found for source"
             )
 
+        # Get export mapping
+        headers, fields = await _get_export_mapping()
+
         # Create CSV in memory
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Write header
-        headers = [
-            "Building Code",
-            "Building Name",
-            "Room ID",
-            "Room Name",
-            "Floor Level",
-            "Product",
-            "Material Description",
-            "Extent",
-            "Location",
-            "Friable",
-            "Condition",
-            "Risk Status",
-            "Result",
-            "Sample No",
-            "Sample Result",
-            "Quantity",
-            "ACM Labelled",
-            "Disturbance Potential",
-            "Identifying Company",
-            "Hygienist Recommendations",
-            "Page Number",
-        ]
+        # Write header — use field mapping
         writer.writerow(headers)
 
-        # Write data rows
+        # Write data rows using field mapping
         for record in records:
-            writer.writerow(
-                [
-                    record.building_id,
-                    record.building_name or "",
-                    record.room_id or "",
-                    record.room_name or "",
-                    record.floor_level or "",
-                    record.product,
-                    record.material_description,
-                    record.extent or "",
-                    record.location or "",
-                    record.friable or "",
-                    record.material_condition or "",
-                    record.risk_status or "",
-                    record.result,
-                    record.sample_no or "",
-                    record.sample_result or "",
-                    record.quantity or "",
-                    "Yes" if record.acm_labelled else "No" if record.acm_labelled is not None else "",
-                    record.disturbance_potential or "",
-                    record.identifying_company or "",
-                    record.hygienist_recommendations or "",
-                    record.page_number or "",
-                ]
-            )
+            writer.writerow([_get_record_value(record, f) for f in fields])
 
         # Create response
         output.seek(0)
@@ -404,29 +412,11 @@ async def export_acm_excel(
         ws = wb.active
         ws.title = "ACM Register"
 
-        # Define columns: (header, field, width)
+        # Get columns from active field mapping
+        export_headers, export_fields = await _get_export_mapping()
         columns = [
-            ("Building Code", "building_id", 12),
-            ("Building Name", "building_name", 20),
-            ("Room ID", "room_id", 10),
-            ("Room Name", "room_name", 15),
-            ("Floor Level", "floor_level", 12),
-            ("Product", "product", 20),
-            ("Material Description", "material_description", 35),
-            ("Extent", "extent", 15),
-            ("Location", "location", 20),
-            ("Friable", "friable", 10),
-            ("Condition", "material_condition", 12),
-            ("Risk Status", "risk_status", 12),
-            ("Result", "result", 15),
-            ("Sample No", "sample_no", 12),
-            ("Sample Result", "sample_result", 16),
-            ("Quantity", "quantity", 10),
-            ("ACM Labelled", "acm_labelled", 12),
-            ("Disturbance Potential", "disturbance_potential", 20),
-            ("Identifying Company", "identifying_company", 20),
-            ("Hygienist Recommendations", "hygienist_recommendations", 30),
-            ("Page", "page_number", 8),
+            (h, f, max(12, len(h) + 2))
+            for h, f in zip(export_headers, export_fields)
         ]
 
         # Header styles
@@ -454,11 +444,8 @@ async def export_acm_excel(
         # Write data rows
         for row_idx, record in enumerate(records, 2):
             for col_idx, (_, field, _) in enumerate(columns, 1):
-                value = getattr(record, field, None)
-                # Convert value to string if not None
-                if value is not None:
-                    value = str(value) if not isinstance(value, str) else value
-                cell = ws.cell(row=row_idx, column=col_idx, value=value or "")
+                value = _get_record_value(record, field)
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.border = thin_border
 
                 # Color code risk status
@@ -564,6 +551,10 @@ async def semantic_search_acm(
     include_parent: bool = Query(
         False, description="Include parent table section context (E11-S1)"
     ),
+    search_mode: str = Query(
+        "hybrid",
+        description="Search mode: hybrid (BM25+vector+RRF), vector, or bm25 (E11-S2)",
+    ),
 ):
     """
     Semantic search across ACM records.
@@ -581,56 +572,83 @@ async def semantic_search_acm(
     """
     try:
         from api.services.acm_embedding_service import ACMEmbeddingService
+        from api.services.acm_hybrid_search_service import HybridSearchService
         from open_notebook.domain.models import model_manager
 
-        # Get embedding model
-        embedding_model = await model_manager.get_embedding_model()
-        if not embedding_model:
-            raise HTTPException(
-                status_code=400,
-                detail="No embedding model configured. Please configure one in Settings.",
+        resolved_source_id = ensure_record_id(source_id) if source_id else None
+
+        # BM25-only mode doesn't need embeddings
+        if search_mode == "bm25":
+            hybrid_svc = HybridSearchService()
+            filtered_results = await hybrid_svc.bm25_search(
+                query,
+                source_id=resolved_source_id,
+                building_id=building_id,
+                limit=limit,
             )
+            # Normalize score field
+            for r in filtered_results:
+                r["score"] = r.get("bm25_score", 0)
+        else:
+            # Get embedding model for vector/hybrid modes
+            embedding_model = await model_manager.get_embedding_model()
+            if not embedding_model:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No embedding model configured. Please configure one in Settings.",
+                )
 
-        # Embed the query
-        try:
-            query_embedding = (await embedding_model.aembed([query]))[0]
-        except Exception as e:
-            logger.error(f"Failed to embed query: {e}")
-            raise HTTPException(
-                status_code=500, detail=f"Failed to embed query: {str(e)}"
-            )
+            # Embed the query
+            try:
+                query_embedding = (await embedding_model.aembed([query]))[0]
+            except Exception as e:
+                logger.error(f"Failed to embed query: {e}")
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to embed query: {str(e)}"
+                )
 
-        # Build filter clause
-        filters = ["embedding IS NOT NULL"]
-        params = {
-            "query_embedding": query_embedding,
-            "limit": limit,
-        }
+            if search_mode == "hybrid":
+                hybrid_svc = HybridSearchService()
+                filtered_results = await hybrid_svc.search(
+                    query=query,
+                    query_embedding=query_embedding,
+                    source_id=resolved_source_id,
+                    building_id=building_id,
+                    limit=limit,
+                    threshold=threshold,
+                    mode="hybrid",
+                )
+                # Normalize score: use RRF score as primary
+                for r in filtered_results:
+                    r["score"] = r.get("rrf_score", r.get("similarity", 0))
+            else:
+                # Pure vector search (original behavior)
+                filters = ["embedding IS NOT NULL"]
+                params = {
+                    "query_embedding": query_embedding,
+                    "limit": limit,
+                }
 
-        if source_id:
-            filters.append("source_id = $source_id")
-            params["source_id"] = ensure_record_id(source_id)
-        if building_id:
-            filters.append("building_id = $building_id")
-            params["building_id"] = building_id
+                if resolved_source_id:
+                    filters.append("source_id = $source_id")
+                    params["source_id"] = resolved_source_id
+                if building_id:
+                    filters.append("building_id = $building_id")
+                    params["building_id"] = building_id
 
-        where_clause = " AND ".join(filters)
+                where_clause = " AND ".join(filters)
 
-        # Execute vector similarity search
-        # Note: SurrealDB vector::similarity::cosine returns 0-1 where 1 is most similar
-        search_query = f"""
-            SELECT *,
-                   vector::similarity::cosine(embedding, $query_embedding) AS score
-            FROM acm_record
-            WHERE {where_clause}
-            ORDER BY score DESC
-            LIMIT $limit
-        """
+                search_query = f"""
+                    SELECT *,
+                           vector::similarity::cosine(embedding, $query_embedding) AS score
+                    FROM acm_record
+                    WHERE {where_clause}
+                    ORDER BY score DESC
+                    LIMIT $limit
+                """
 
-        results = await repo_query(search_query, params)
-
-        # Filter by threshold
-        filtered_results = [r for r in results if r.get("score", 0) >= threshold]
+                results = await repo_query(search_query, params)
+                filtered_results = [r for r in results if r.get("score", 0) >= threshold]
 
         # Batch-fetch parent sections if requested (avoids N+1 queries)
         parent_section_map: dict[str, ACMTableSection] = {}
@@ -692,8 +710,8 @@ async def semantic_search_acm(
             )
 
         logger.info(
-            f"Semantic search for '{query}': {len(search_results)} results "
-            f"(threshold={threshold}, limit={limit}, include_parent={include_parent})"
+            f"ACM search for '{query}': {len(search_results)} results "
+            f"(mode={search_mode}, threshold={threshold}, limit={limit})"
         )
 
         return ACMSearchResponse(
@@ -1576,4 +1594,55 @@ async def get_taxonomy(
 
     except Exception as e:
         logger.error(f"Error fetching taxonomy: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Field Mapping Endpoints (E5-S4) ---
+
+
+@router.get("/field-mapping")
+async def get_field_mapping():
+    """Get the active export field mapping."""
+    from open_notebook.domain.field_mapping import FieldMapping
+
+    try:
+        mapping = await FieldMapping.get_active()
+        return mapping.model_dump()
+    except Exception as e:
+        logger.error(f"Error fetching field mapping: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/field-mapping")
+async def update_field_mapping(data: dict):
+    """Update the active field mapping."""
+    from open_notebook.domain.field_mapping import FieldMapping, FieldMappingEntry
+
+    try:
+        mapping = await FieldMapping.get_active()
+        if "mappings" in data:
+            mapping.mappings = [
+                FieldMappingEntry.model_validate(m) for m in data["mappings"]
+            ]
+        if "name" in data:
+            mapping.name = data["name"]
+        if "notes" in data:
+            mapping.notes = data["notes"]
+        await mapping.update()
+        return mapping.model_dump()
+    except Exception as e:
+        logger.error(f"Error updating field mapping: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/field-mapping/reset")
+async def reset_field_mapping():
+    """Reset field mapping to defaults."""
+    from open_notebook.domain.field_mapping import FieldMapping
+
+    try:
+        mapping = await FieldMapping.reset_to_defaults()
+        return mapping.model_dump()
+    except Exception as e:
+        logger.error(f"Error resetting field mapping: {e}")
         raise HTTPException(status_code=500, detail=str(e))
