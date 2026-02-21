@@ -77,11 +77,11 @@ def is_provider_available(provider: str) -> bool:
 # Default fallback models per provider (used when primary is unavailable)
 FALLBACK_MODELS = {
     "ollama": {
-        "chat": "qwen3:14b",
+        "chat": "qwen3:latest",
         "transformation": "qwen3:32b",
         "tools": "qwen3:32b",
-        "large_context": "qwen3:32b",
-        "extraction": "qwen3:32b",
+        "large_context": "qwen2.5:32b",
+        "extraction": "deepseek-r1:8b",
         "embedding": "mxbai-embed-large",
     },
     "anthropic": {
@@ -90,7 +90,7 @@ FALLBACK_MODELS = {
         "tools": "claude-sonnet-4-20250514",
         "large_context": "claude-sonnet-4-20250514",
         "extraction": "claude-sonnet-4-20250514",
-        "embedding": None,  # Anthropic doesn't have embeddings
+        "embedding": None,
     },
     "openai": {
         "chat": "gpt-4o-mini",
@@ -101,14 +101,88 @@ FALLBACK_MODELS = {
         "embedding": "text-embedding-3-small",
     },
     "openrouter": {
-        "chat": "anthropic/claude-3-haiku",
-        "transformation": "anthropic/claude-3.5-sonnet",
-        "tools": "anthropic/claude-3.5-sonnet",
-        "large_context": "google/gemini-pro-1.5",
-        "extraction": "anthropic/claude-3.5-sonnet",
-        "embedding": None,  # OpenRouter doesn't have embeddings
+        "chat": "qwen/qwen3-next-80b-a3b-instruct:free",
+        "transformation": "qwen/qwen3-next-80b-a3b-instruct:free",
+        "tools": "qwen/qwen3-235b-a22b-thinking-2507",
+        "large_context": "qwen/qwen3-235b-a22b-thinking-2507",
+        "extraction": "deepseek/deepseek-r1-0528:free",
+        "embedding": None,
     },
 }
+
+
+# Full model catalog: (provider, model_name, model_type) for all known models
+MODEL_CATALOG: list[tuple[str, str, str]] = [
+    # Ollama local models
+    ("ollama", "qwen3:latest", "language"),
+    ("ollama", "qwen3:8b", "language"),
+    ("ollama", "qwen3:14b", "language"),
+    ("ollama", "qwen3:32b", "language"),
+    ("ollama", "qwen2.5:32b", "language"),
+    ("ollama", "qwen2.5-coder:32b", "language"),
+    ("ollama", "deepseek-r1:8b", "language"),
+    ("ollama", "deepseek-r1:14b", "language"),
+    ("ollama", "deepseek-r1:32b", "language"),
+    ("ollama", "llama3.3:70b", "language"),
+    ("ollama", "llama3.2:3b", "language"),
+    ("ollama", "llama3.1:8b", "language"),
+    ("ollama", "gemma3:27b", "language"),
+    ("ollama", "gemma3:12b", "language"),
+    ("ollama", "phi4:14b", "language"),
+    ("ollama", "mistral-nemo:12b", "language"),
+    ("ollama", "mxbai-embed-large", "embedding"),
+    ("ollama", "nomic-embed-text", "embedding"),
+    ("ollama", "bge-m3", "embedding"),
+    ("ollama", "bge-large", "embedding"),
+    # Anthropic
+    ("anthropic", "claude-3-5-haiku-20241022", "language"),
+    ("anthropic", "claude-3-5-sonnet-20241022", "language"),
+    ("anthropic", "claude-sonnet-4-20250514", "language"),
+    ("anthropic", "claude-opus-4-20250514", "language"),
+    # OpenAI
+    ("openai", "gpt-4o-mini", "language"),
+    ("openai", "gpt-4o", "language"),
+    ("openai", "gpt-4-turbo", "language"),
+    ("openai", "text-embedding-3-small", "embedding"),
+    ("openai", "text-embedding-3-large", "embedding"),
+    # OpenRouter (free + paid)
+    ("openrouter", "qwen/qwen3-14b", "language"),
+    ("openrouter", "qwen/qwen3-30b-a3b", "language"),
+    ("openrouter", "qwen/qwen3-235b-a22b", "language"),
+    ("openrouter", "qwen/qwen3-235b-a22b-thinking-2507", "language"),
+    ("openrouter", "qwen/qwen3-next-80b-a3b-instruct:free", "language"),
+    ("openrouter", "qwen/qwen3-coder", "language"),
+    ("openrouter", "deepseek/deepseek-r1-0528:free", "language"),
+    ("openrouter", "deepseek/deepseek-r1", "language"),
+    ("openrouter", "deepseek/deepseek-v3", "language"),
+    ("openrouter", "meta-llama/llama-3.3-70b-instruct", "language"),
+    ("openrouter", "meta-llama/llama-3.2-3b-instruct:free", "language"),
+    ("openrouter", "google/gemma-3-27b-it", "language"),
+    ("openrouter", "microsoft/phi-4", "language"),
+    ("openrouter", "mistralai/mistral-nemo", "language"),
+    ("openrouter", "moonshotai/kimi-k2", "language"),
+    ("openrouter", "moonshotai/kimi-k2.5", "language"),
+    ("openrouter", "minimax/minimax-m2", "language"),
+    ("openrouter", "minimax/minimax-m2.1", "language"),
+    ("openrouter", "zhipuai/glm-5", "language"),
+    ("openrouter", "deepseek/deepseek-v3.2", "language"),
+    ("openrouter", "anthropic/claude-sonnet-4.6", "language"),
+    ("openrouter", "openai/gpt-5.2", "language"),
+    ("openrouter", "google/gemini-2.5-pro", "language"),
+]
+
+
+async def seed_model_catalog() -> int:
+    """Seed all known models for available providers. Idempotent via find_or_create_model()."""
+    created = 0
+    for provider, name, model_type in MODEL_CATALOG:
+        if not is_provider_available(provider):
+            continue
+        model_id = await find_or_create_model(provider, name, model_type)
+        if model_id:
+            created += 1
+    logger.info(f"Model catalog: {created} models available across active providers")
+    return created
 
 
 async def find_or_create_model(
@@ -148,10 +222,26 @@ async def find_or_create_model(
             name_lower = name.lower()
             new_model.supports_structured_output = any(
                 k in name_lower
-                for k in ["claude", "gpt-4", "qwen3", "llama3", "mistral"]
+                for k in [
+                    "claude", "gpt-4", "gpt-5",
+                    "qwen3", "qwen2.5",
+                    "llama3", "llama-3",
+                    "mistral", "deepseek",
+                    "gemma-3", "gemini",
+                    "phi4", "kimi-k2",
+                    "minimax-m2", "glm-5",
+                ]
             )
             new_model.supports_tool_calling = any(
-                k in name_lower for k in ["claude", "gpt-4", "qwen3"]
+                k in name_lower
+                for k in [
+                    "claude", "gpt-4", "gpt-5",
+                    "qwen3", "qwen2.5",
+                    "deepseek", "llama-3",
+                    "mistral", "gemini-2.5",
+                    "kimi-k2",
+                    "minimax-m2", "glm-5",
+                ]
             )
         await new_model.save()
         logger.info(f"Created model: {provider}/{name} -> {new_model.id}")
@@ -280,21 +370,20 @@ async def update_defaults_if_needed(provisioned: dict[str, Optional[str]]) -> No
 
         current_value = getattr(defaults, field, None)
 
-        # Check if current value is valid
+        # Skip only if current value already matches the provisioned model
+        if current_value == model_id:
+            continue
+
+        # Log why we're updating
         if current_value:
-            existing = await repo_query(
-                "SELECT id FROM model WHERE id = $id LIMIT 1", {"id": current_value}
+            logger.info(
+                f"Updating {field}: {current_value} -> {model_id} (env var changed)"
             )
-            if existing:
-                # Current value is valid, skip
-                continue
-            logger.warning(
-                f"Current {field} points to non-existent model, updating to {model_id}"
-            )
+        else:
+            logger.info(f"Setting {field} = {model_id}")
 
         setattr(defaults, field, model_id)
         updated = True
-        logger.info(f"Setting {field} = {model_id}")
 
     if updated:
         await defaults.update()
@@ -309,7 +398,10 @@ async def run_model_provisioning() -> None:
     Called during API startup after database migrations.
     """
     try:
-        # Check if any DEFAULT_*_MODEL env vars are set
+        # Step 1: Always seed full catalog for available providers
+        await seed_model_catalog()
+
+        # Step 2: Set default assignments from env vars (if any configured)
         env_vars = [
             "DEFAULT_CHAT_MODEL",
             "DEFAULT_TRANSFORMATION_MODEL",
@@ -319,12 +411,9 @@ async def run_model_provisioning() -> None:
             "DEFAULT_EMBEDDING_MODEL",
         ]
 
-        has_config = any(os.getenv(var) for var in env_vars)
-
-        if not has_config:
-            logger.info("No DEFAULT_*_MODEL env vars set, skipping model provisioning")
+        if not any(os.getenv(var) for var in env_vars):
             logger.info(
-                "Tip: Set DEFAULT_CHAT_MODEL=ollama/qwen3:14b in .env to auto-provision models"
+                "No DEFAULT_*_MODEL env vars set, skipping default assignment"
             )
             return
 

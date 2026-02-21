@@ -28,29 +28,91 @@ class Model(ObjectModel):
     embedding_dimensions: Optional[int] = None
 
     # Known provider defaults for output tokens and context windows
+    # Keys are matched via `if key in name_lower` — order most-specific first within each family
     _PROVIDER_DEFAULTS: ClassVar[Dict[str, Dict[str, int]]] = {
         # Anthropic Claude
         "claude-3-5-haiku": {"max_output": 8192, "context": 200000},
         "claude-3-haiku": {"max_output": 4096, "context": 200000},
+        "claude-sonnet-4.6": {"max_output": 16384, "context": 1000000},
         "claude-sonnet-4": {"max_output": 16384, "context": 200000},
         "claude-opus-4": {"max_output": 32768, "context": 200000},
         "claude-3-5-sonnet": {"max_output": 8192, "context": 200000},
         # OpenAI
-        "gpt-4o": {"max_output": 16384, "context": 128000},
+        "gpt-5.2": {"max_output": 32768, "context": 400000},
         "gpt-4o-mini": {"max_output": 16384, "context": 128000},
+        "gpt-4o": {"max_output": 16384, "context": 128000},
         "gpt-4-turbo": {"max_output": 4096, "context": 128000},
-        # Ollama common models
+        # Qwen3 (most-specific first)
+        "qwen3-next-80b": {"max_output": 16384, "context": 262144},
+        "qwen3-235b-a22b-thinking": {"max_output": 81920, "context": 262144},
+        "qwen3-235b": {"max_output": 32768, "context": 262144},
+        "qwen3-coder": {"max_output": 32768, "context": 262144},
+        "qwen3-30b": {"max_output": 32768, "context": 131072},
+        "qwen3-14b": {"max_output": 8192, "context": 131072},
+        "qwen3-8b": {"max_output": 8192, "context": 131072},
         "qwen3": {"max_output": 8192, "context": 32768},
+        # Qwen2.5
+        "qwen2.5-coder-32b": {"max_output": 8192, "context": 131072},
+        "qwen2.5-coder": {"max_output": 8192, "context": 32768},
+        "qwen2.5-72b": {"max_output": 8192, "context": 131072},
+        "qwen2.5-32b": {"max_output": 8192, "context": 131072},
+        "qwen2.5": {"max_output": 8192, "context": 32768},
+        # DeepSeek
+        "deepseek-r1-0528": {"max_output": 64000, "context": 131072},
+        "deepseek-r1": {"max_output": 32768, "context": 131072},
+        "deepseek-v3.2": {"max_output": 16384, "context": 163840},
+        "deepseek-v3": {"max_output": 8192, "context": 131072},
+        "deepseek": {"max_output": 8192, "context": 65536},
+        # Meta Llama
+        "llama-3.3": {"max_output": 8192, "context": 131072},
+        "llama-3.2": {"max_output": 8192, "context": 131072},
+        "llama-3.1": {"max_output": 8192, "context": 131072},
         "llama3": {"max_output": 8192, "context": 8192},
+        # Google Gemini
+        "gemini-2.5-pro": {"max_output": 65536, "context": 1000000},
+        # Google Gemma
+        "gemma-3-27b": {"max_output": 8192, "context": 131072},
+        "gemma-3": {"max_output": 8192, "context": 131072},
+        "gemma": {"max_output": 8192, "context": 32768},
+        # Microsoft Phi
+        "phi4": {"max_output": 8192, "context": 16384},
+        "phi3": {"max_output": 4096, "context": 128000},
+        # Moonshot Kimi
+        "kimi-k2.5": {"max_output": 32768, "context": 262144},
+        "kimi-k2": {"max_output": 32768, "context": 262144},
+        # MiniMax
+        "minimax-m2.1": {"max_output": 32768, "context": 196608},
+        "minimax-m2": {"max_output": 32768, "context": 204800},
+        # Z.AI GLM
+        "glm-5": {"max_output": 32768, "context": 200000},
+        "glm-4": {"max_output": 8192, "context": 131072},
+        # Mistral
+        "mistral-large": {"max_output": 8192, "context": 131072},
+        "mistral-nemo": {"max_output": 8192, "context": 131072},
         "mistral": {"max_output": 8192, "context": 32768},
     }
 
     _EMBEDDING_DEFAULTS: ClassVar[Dict[str, int]] = {
+        # Ollama local
         "mxbai-embed-large": 1024,
-        "text-embedding-3-small": 1536,
-        "text-embedding-3-large": 3072,
-        "text-embedding-ada-002": 1536,
         "nomic-embed-text": 768,
+        # OpenAI
+        "text-embedding-3-large": 3072,
+        "text-embedding-3-small": 1536,
+        "text-embedding-ada-002": 1536,
+        # Qwen3 Embedding
+        "qwen3-embedding-8b": 4096,
+        "qwen3-embedding-4b": 2560,
+        "qwen3-embedding": 4096,
+        # Google
+        "gemini-embedding-001": 3072,
+        # Mistral
+        "codestral-embed-2505": 3072,
+        "codestral-embed": 3072,
+        "mistral-embed": 1024,
+        # BAAI BGE
+        "bge-m3": 1024,
+        "bge-large": 1024,
     }
 
     def get_max_output_tokens(self, fallback: int = 8192) -> int:
