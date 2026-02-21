@@ -1,0 +1,3 @@
+-- Rollback migration 22: remove token limit tracking fields
+REMOVE FIELD token_limit_exceeded ON extraction_progress;
+REMOVE FIELD chunk_count ON extraction_progress;

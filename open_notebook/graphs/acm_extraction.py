@@ -65,6 +65,7 @@ from open_notebook.extractors.page_tagger import (
 from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.extractors.token_limit_validator import TokenLimitValidator
 from open_notebook.extractors.validators.acm_validator import (
     CorrectionStats,
     validate_acm_record,
@@ -2292,6 +2293,22 @@ async def extract_acm_from_source(
             strategy_distribution=strategy_dist,
         )
 
+        # Token limit assessment (E1-S23)
+        token_limit_exceeded = False
+        chunk_count = max(total_chunks, 1)
+        content = result.get("content", "")
+        if content:
+            validator = TokenLimitValidator(
+                model_id=model_id or "unknown",
+                context_window=DEFAULT_CONTEXT_WINDOW,
+            )
+            assessment = validator.assess_extraction(
+                content=content,
+                chunks_used=chunk_count,
+                records_extracted=extraction_result.total_records,
+            )
+            token_limit_exceeded = assessment["token_limit_exceeded"]
+
         return ACMExtractionOutput(
             source_id=str(source.id),
             status=status,
@@ -2302,6 +2319,8 @@ async def extract_acm_from_source(
             correction_stats=correction_stats if has_corrections else None,
             orchestrator_stats=orch_stats_dict,
             pipeline_run=pipeline_run.model_dump(mode="json"),
+            token_limit_exceeded=token_limit_exceeded,
+            chunk_count=chunk_count,
         )
 
     except Exception as e:

@@ -1,0 +1,3 @@
+-- Migration 22: Add token limit tracking fields to extraction_progress table (E1-S23)
+DEFINE FIELD token_limit_exceeded ON extraction_progress TYPE bool DEFAULT false;
+DEFINE FIELD chunk_count ON extraction_progress TYPE int DEFAULT 1;
