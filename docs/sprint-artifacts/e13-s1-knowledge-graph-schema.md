@@ -2,7 +2,7 @@
 
 **Epic:** E13 — Knowledge Graph Visualization
 **Priority:** P1
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260207 (2026-02-07)
 **Blocks:** E13-S2 (Knowledge Graph API) which blocks E13-S3 (React Flow UI)
 

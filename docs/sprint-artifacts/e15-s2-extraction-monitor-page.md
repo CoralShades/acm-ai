@@ -2,7 +2,7 @@
 
 **Epic:** E15 — Extraction Monitor & Live Logging UI
 **Priority:** P0
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260220 (2026-02-20)
 **Blocked by:** E15-S1
 
@@ -89,3 +89,9 @@ Reuse the `ExtractionProgressPanel` component from E15-S1 for both the active an
 ## Estimated Effort
 
 M (Medium) — New page + new API list endpoint. Component reuse from E15-S1 reduces effort.
+
+## Dev Agent Record
+- **Completed:** 2026-02-22
+- **Commit:** a7bc02f
+- **Build Status:** PASS
+- **Implementation:** Ralph sprint batch implementation

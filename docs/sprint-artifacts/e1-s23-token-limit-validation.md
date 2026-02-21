@@ -2,7 +2,7 @@
 
 **Epic:** E1 — ACM Data Extraction Pipeline
 **Priority:** P0
-**Status:** ready-for-dev
+**Status:** done
 **Added:** Post-merge review 2026-02-15
 
 ---

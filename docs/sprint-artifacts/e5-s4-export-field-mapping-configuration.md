@@ -1,6 +1,6 @@
 # Story 5.4: Export Field Mapping Configuration
 
-Status: Archived (Outdated)
+Status: done
 
 ## Story
 

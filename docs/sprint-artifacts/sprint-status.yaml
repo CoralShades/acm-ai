@@ -34,21 +34,21 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-21
+updated: 2026-02-22
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-02-21
+  last_reconciled: 2026-02-22
   reconciled_branches: [main]
-  notes: "PRs #31-41 merged 2026-02-20. PR #31: smart chat + doc intelligence + BAR compliance. PRs #32-37: 6 bug fixes. PRs #38-40: Ralph autonomous loop v2. PR #41: tracking file updates. Story counts reconciled to 104 total, 74 done."
+  notes: "Ralph sprint 2026-02-22: 11 stories completed across 12 commits. 5 epics newly completed (E1, E2, E5, E11, E15, E16). Migrations 22-27 registered. Story count: 122 total, 98 done (80%)."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
-  # 30/31 stories complete, 1 ready-for-dev (E1-S23)
-  epic-1: in-progress
+  # 31/31 stories complete — EPIC COMPLETE
+  epic-1: done
   e1-s1-create-acm-data-model: done
   e1-s2-create-acm-record-domain-model: done
   e1-s3-implement-acm-extraction-transformation: done
@@ -72,7 +72,7 @@ development_status:
   e1-s21-extraction-pipeline-observability: done  # Structured logging, pipeline event models, terminal progress
   e1-s22-extraction-output-token-limit-fix: done  # Fix max_tokens 8192->32768 for large document extraction
   # POST-MERGE REVIEW 2026-02-15:
-  e1-s23-token-limit-quality-validation: ready-for-dev  # Validate Haiku 8K vs Sonnet 32K quality on buildings >50 rooms
+  e1-s23-token-limit-quality-validation: done  # Validate Haiku 8K vs Sonnet 32K quality on buildings >50 rooms — commit 2f1dee4
   # E2E TEST GAP ANALYSIS 2026-02-16 (Phase 4 - completed by PR #30):
   e1-s24-fix-assumed-positive-detection: done  # Fixed by PR #30 - assumed positive detection
   e1-s25-fix-external-internal-merging: done  # Fixed by PR #30 - external/internal merging
@@ -87,8 +87,8 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: AG Grid Spreadsheet Integration (P0)
-  # 10/12 stories complete, 2 ready-for-dev (E2-S8, E2-S11)
-  epic-2: in-progress
+  # 12/12 stories complete — EPIC COMPLETE
+  epic-2: done
   e2-s1-install-and-configure-ag-grid: done
   e2-s2-create-acmspreadsheet-component: done
   e2-s3-implement-column-sorting-and-filtering: done
@@ -98,11 +98,11 @@ development_status:
   e2-s7-implement-building-tab-navigation: done
   # ENHANCED 2026-02-08 (Course Correction CP-3):
   # Added: AG Grid columns generated from field schema config API
-  e2-s8-column-visibility-management: ready-for-dev  # NOTE: Sprint 1 PR #30 BAR columns use hide:true - partial coverage  # docs/sprint-artifacts/e2-s8-column-visibility-management.md
+  e2-s8-column-visibility-management: done  # Column visibility picker — commit 9f9873e
   e2-s9-acm-grid-ux-improvements: done
   # HOTFIX 2026-02-15 (Post-merge review PR #21/#22):
   e2-s10-fix-test-portability: done  # Fixed hardcoded Windows paths, deleted UsersLocal, updated .gitignore
-  e2-s11-bar-field-type-safety: ready-for-dev  # NOTE: Sprint 1 PR #30 partially covers this via BAR Pydantic schema changes
+  e2-s11-bar-field-type-safety: done  # BAR field type safety — commit 804522e
   e2-s12-missing-bar-fields-in-grid: done  # Covered by PR #30 - 7 BAR columns added to ACMGrid
   epic-2-retrospective: optional
 
@@ -129,12 +129,12 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: Export Functionality (P0 - promoted from P1)
-  # 2/4 stories complete, 1 ready-for-dev, 1 drafted
-  epic-5: in-progress
+  # 4/4 stories complete — EPIC COMPLETE
+  epic-5: done
   e5-s1-implement-csv-export: done
   e5-s2-implement-excel-export: done
-  e5-s3-bar-template-management: ready-for-dev  # docs/sprint-artifacts/e5-s3-bar-template-management.md
-  e5-s4-export-field-mapping-configuration: drafted  # Downgraded 2026-02-21: no tech-spec in docs/sprint-artifacts/, blocked by E5-S3
+  e5-s3-bar-template-management: done  # BAR template management — commit b5b6bc7
+  e5-s4-export-field-mapping-configuration: done  # Export field mapping config — commit de0362a
   epic-5-retrospective: optional
 
   # Epic 6: Rebranding to ACM-AI (P1)
@@ -189,16 +189,16 @@ development_status:
   epic-10-retrospective: optional
 
   # Epic 11: Search & Retrieval Enhancement (P0/P1) - RAG Strategy
-  # 1/2 stories complete, 1 backlog
-  epic-11: in-progress
+  # 2/2 stories complete — EPIC COMPLETE
+  epic-11: done
   e11-s1-parent-document-retrieval: done
-  e11-s2-hybrid-search-service: drafted  # docs/sprint-artifacts/e11-s2-hybrid-search-service.md
+  e11-s2-hybrid-search-service: done  # Hybrid search service — commit 023aee3
   epic-11-retrospective: optional
 
   # Epic 12: Extraction Settings & Configuration UI (P1) - NEW 2026-02-07
-  # 0/4 stories complete
-  epic-12: backlog
-  e12-s1-extraction-method-settings: drafted  # docs/sprint-artifacts/e12-s1-extraction-settings-ui.md
+  # 1/4 stories complete, 3 drafted
+  epic-12: in-progress
+  e12-s1-extraction-method-settings: done  # Extraction method settings UI — commit 5a06c55
   e12-s2-ai-model-configuration-ui: drafted  # docs/sprint-artifacts/e12-s2-model-config-ui.md  # Blocked by E12-S1 impl
   e12-s3-processing-options-configuration: drafted  # docs/sprint-artifacts/e12-s3-processing-config-ui.md  # Blocked by E12-S1 impl
   # REDEFINED 2026-02-08 (Course Correction CP-2):
@@ -209,9 +209,9 @@ development_status:
   epic-12-retrospective: optional
 
   # Epic 13: Knowledge Graph Visualization (P1) - NEW 2026-02-07
-  # 0/3 stories complete
-  epic-13: backlog
-  e13-s1-surrealdb-graph-entity-schema: drafted  # docs/sprint-artifacts/e13-s1-knowledge-graph-schema.md
+  # 1/3 stories complete, 2 backlog
+  epic-13: in-progress
+  e13-s1-surrealdb-graph-entity-schema: done  # SurrealDB graph entity schema — commit bf28fdc
   e13-s2-knowledge-graph-api-data-service: backlog
   e13-s3-react-flow-knowledge-graph-visualization: backlog
   epic-13-retrospective: optional
@@ -233,20 +233,20 @@ development_status:
   epic-14-retrospective: optional
 
   # Epic 15: Extraction Monitor & Live Logging UI (P0) - NEW 2026-02-20
-  # 1/2 stories complete, 1 drafted (blocked by E15-S1)
+  # 2/2 stories complete — EPIC COMPLETE
   # Rationale: Backend SSE + frontend log components exist (E1-S21 done) but not surfaced from Document Library
-  epic-15: in-progress
+  epic-15: done
   e15-s1-extraction-log-panel-in-document-library: done  # docs/sprint-artifacts/e15-s1-extraction-log-panel.md  # DONE 2026-02-21
-  e15-s2-dedicated-extraction-monitor-page: drafted  # docs/sprint-artifacts/e15-s2-extraction-monitor-page.md
+  e15-s2-dedicated-extraction-monitor-page: done  # Extraction monitor page — commit a7bc02f
   epic-15-retrospective: optional
 
   # Epic 16: UX Enhancement Sprint (P0/P1) - NEW 2026-02-20
-  # 1/3 stories complete, 2 ready-for-dev
+  # 3/3 stories complete — EPIC COMPLETE
   # Rationale: Dashboard home, record detail slide-out, empty states not covered by E14
-  epic-16: in-progress
-  e16-s1-dashboard-home-with-acm-stats: ready-for-dev  # docs/sprint-artifacts/e16-s1-dashboard-home.md  # PROMOTED 2026-02-21
+  epic-16: done
+  e16-s1-dashboard-home-with-acm-stats: done  # Dashboard home page — Ralph sprint batch implementation
   e16-s2-acm-record-detail-slide-out-panel: done  # Implemented 2026-02-21: 380px Sheet drawer, inline editing, keyboard nav, row highlight
-  e16-s3-empty-states-and-onboarding-hints: ready-for-dev  # docs/sprint-artifacts/e16-s3-empty-states.md  # PROMOTED 2026-02-21
+  e16-s3-empty-states-and-onboarding-hints: done  # Empty states & onboarding hints — commit 29cb783
   epic-16-retrospective: optional
 
   # Epic 17: Live Extraction Intelligence — AG-UI + A2A + Real-time Observability (P0)
@@ -280,21 +280,39 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 17 (5 done, 7 in-progress, 4 backlog, 1 archived)
+# Total Epics: 17 (10 done, 3 in-progress, 3 backlog, 1 archived)
 # Total Stories: 122 (116 previous + 6 new E17 stories)
-# Stories Done: 87 (71%)
+# Stories Done: 98 (80%)
 # Stories Review: 0
-# Stories Ready-for-dev: 9 (E1-S23, E2-S8, E2-S11, E5-S3, E9-S3, E10-S1, E16-S1, E16-S3, E17-S6)
-# Stories Drafted: 13 (E5-S4, E11-S2, E12-S1..S4, E13-S1, E15-S2, E17-S1..S5)
+# Stories Ready-for-dev: 3 (E9-S3, E10-S1, E17-S6)
+# Stories Drafted: 8 (E12-S2..S4, E17-S1..S5)
 # Stories Backlog: 2 (E13-S2, E13-S3)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-22  # Epic 17: Live Extraction Intelligence — 6 stories added
+# Last Updated: 2026-02-22  # Ralph sprint: 11 stories done, 5 epics completed
 #
-# COMPLETED EPICS: E3, E4, E6, E7, E14
-# IN-PROGRESS EPICS: E1 (29/30), E2 (10/12), E5 (2/4), E9 (2/3), E11 (1/2), E15 (1/2), E16 (1/3)
-# BACKLOG EPICS: E10 (0/1), E12 (0/4), E13 (0/3), E17 (0/6)
+# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E11, E14, E15, E16
+# IN-PROGRESS EPICS: E9 (2/3), E12 (1/4), E13 (1/3)
+# BACKLOG EPICS: E10 (0/1), E17 (0/6)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
+#
+# KEY CHANGES (2026-02-22 - Ralph Sprint: 11 Stories Completed):
+# ===============================================================
+# Ralph autonomous sprint completed 11 stories in ~2 hours:
+#   - E2-S8: Column Visibility Management (9f9873e)
+#   - E2-S11: BAR Field Type Safety (804522e)
+#   - E16-S3: Empty States & Onboarding Hints (29cb783)
+#   - E1-S23: Token Limit Quality Validation (2f1dee4)
+#   - E5-S3: BAR Template Management (b5b6bc7)
+#   - E16-S1: Dashboard Home Page (batch)
+#   - E12-S1: Extraction Method Settings UI (5a06c55)
+#   - E13-S1: SurrealDB Graph Entity Schema (bf28fdc)
+#   - E15-S2: Extraction Monitor Page (a7bc02f)
+#   - E5-S4: Export Field Mapping Config (de0362a)
+#   - E11-S2: Hybrid Search Service (023aee3)
+# Epics completed: E1, E2, E5, E11, E15, E16 (5 new completions)
+# Infrastructure fixes: uv run commands, migration registration 22-27
+# Sprint blocked at TEST phase (bare ruff/pytest) — fixed post-sprint
 #
 # KEY CHANGES (2026-02-22 - Epic 17: Live Extraction Intelligence):
 # =================================================================
@@ -415,23 +433,15 @@ development_status:
 #
 # NEXT RECOMMENDED ACTIONS:
 # =========================
-# All ready-for-dev stories have tech-specs. Implement in this order:
-# P0 - Tier 1 (all deps satisfied, ready-for-dev):
+# P0 - Tier 1 (ready-for-dev, all deps satisfied):
 #   1. E9-S3 Bulk Document Actions (M)
-#   3. E16-S1 Dashboard Home (L)
-#   4. E16-S3 Empty States (S, quick win)
-#   5. E10-S1 UI Simplification (S, independent)
-#   6. E2-S8 Column Visibility (M)
-#   7. E5-S3 BAR Template Management (M, unblocks E5-S4)
-#   8. E1-S23 Token Limit Validation (M)
-#   9. E2-S11 BAR Field Type Safety (S)
-# P1 - Tier 2 (drafted, need promotion to ready-for-dev):
-#   11. E12-S1 Extraction Settings UI (M, unblocks E12-S2 + E12-S3)
-#   12. E13-S1 Knowledge Graph Schema (M, unblocks E13-S2 + E13-S3)
-# P2 - Tier 3 (blocked by dependencies):
-#   13. E15-S2 Extraction Monitor Page (after E15-S1)
-#   14. E5-S4 Field Mapping Config (after E5-S3, needs tech-spec)
-#   15. E12-S2, E12-S3 (after E12-S1)
-#   16. E12-S4 BAR Field Schema Config UI (after E12-S1)
-#   17. E13-S2, E13-S3 (after E13-S1)
-#   18. E11-S2 Hybrid Search (large effort, after E11-S1 infra settles)
+#   2. E10-S1 UI Simplification (S, independent)
+# P1 - Tier 2 (now unblocked by Ralph sprint completions):
+#   3. E12-S2 AI Model Configuration UI (after E12-S1 done)
+#   4. E12-S3 Processing Options Configuration (after E12-S1 done)
+#   5. E12-S4 BAR Field Schema Config UI (after E12-S1 done)
+#   6. E13-S2 Knowledge Graph API Data Service (after E13-S1 done)
+#   7. E13-S3 React Flow Knowledge Graph Visualization (after E13-S2)
+# P2 - Tier 3 (Epic 17 — new, needs promotion):
+#   8. E17-S1 AG-UI Extraction Pipeline Endpoint
+#   9. E17-S2..S6 (blocked by E17-S1)

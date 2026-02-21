@@ -2,7 +2,7 @@
 
 **Epic:** E2 — AG Grid Spreadsheet Integration
 **Priority:** P0
-**Status:** ready-for-dev
+**Status:** done
 **Sprint:** Post-PR-30 hardening
 
 ---

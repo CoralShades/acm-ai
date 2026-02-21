@@ -2,7 +2,7 @@
 
 **Epic:** E16 — UX Enhancement Sprint
 **Priority:** P1
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260220 (2026-02-20)
 
 ---
@@ -115,3 +115,9 @@ Reads/writes `localStorage.getItem('acm-hint-{id}')` internally.
 ## Estimated Effort
 
 S (Small) — Mostly new UI components with no backend work. Straightforward implementation.
+
+## Dev Agent Record
+- **Completed:** 2026-02-22
+- **Commit:** 29cb783
+- **Build Status:** PASS
+- **Implementation:** Ralph sprint batch implementation

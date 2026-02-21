@@ -2,7 +2,7 @@
 
 **Epic:** E11 — Search & Retrieval Enhancement
 **Priority:** P1
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-2026-02-07 (RAG Strategy Alignment, CP-19)
 
 ---

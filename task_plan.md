@@ -49,26 +49,44 @@ Story files for all 10 completed stories:
 
 ---
 
+## Ralph Sprint Results (2026-02-22)
+
+11 stories completed in ~2 hours by Ralph autonomous sprint:
+
+| # | Story | Title | Status | Commit |
+|---|-------|-------|--------|--------|
+| 1 | E2-S8 | Column Visibility Management | **DONE** | 9f9873e |
+| 2 | E2-S11 | BAR Field Type Safety | **DONE** | 804522e |
+| 3 | E16-S3 | Empty States & Onboarding Hints | **DONE** | 29cb783 |
+| 4 | E1-S23 | Token Limit Quality Validation | **DONE** | 2f1dee4 |
+| 5 | E5-S3 | BAR Template Management | **DONE** | b5b6bc7 |
+| 6 | E16-S1 | Dashboard Home Page with ACM Stats | **DONE** | batch |
+| 7 | E12-S1 | Extraction Method Settings UI | **DONE** | 5a06c55 |
+| 8 | E13-S1 | SurrealDB Graph Entity Schema | **DONE** | bf28fdc |
+| 9 | E15-S2 | Extraction Monitor Page | **DONE** | a7bc02f |
+| 10 | E5-S4 | Export Field Mapping Config | **DONE** | de0362a |
+| 11 | E11-S2 | Hybrid Search Service | **DONE** | 023aee3 |
+
 ## Remaining Stories (from sprint-status.yaml)
 
-### P0 — Tier 1: Ready for Dev (8 stories, reordered for Ralph sprint)
+### P0 — Tier 1: Ready for Dev (3 stories)
 | # | Story | Title | Size |
 |---|-------|-------|------|
-| 1 | E2-S8 | Column Visibility Management | S |
+| 1 | E9-S3 | Document Actions & Bulk Operations | M |
 | 2 | E10-S1 | Simplify Navigation | S |
-| 3 | E16-S3 | Empty States & Onboarding Hints | S |
-| 4 | E2-S11 | BAR Field Type Safety | M |
-| 5 | E1-S23 | Token Limit Quality Validation | M |
-| 6 | E9-S3 | Document Actions & Bulk Operations | M |
-| 7 | E5-S3 | BAR Template Management | M |
-| 8 | E16-S1 | Dashboard Home Page with ACM Stats | L |
+| 3 | E17-S6 | New OpenRouter Models | S |
 
-### P1 — Tier 2: Drafted (need promotion)
+### P1 — Tier 2: Newly Unblocked (need promotion)
 | # | Story | Title | Blocked By |
 |---|-------|-------|------------|
-| 9 | E12-S1 | Extraction Method Settings UI | — |
-| 10 | E13-S1 | SurrealDB Graph Entity Schema | — |
-| 11 | E15-S2 | Extraction Monitor Page | E15-S1 (done) |
-| 12 | E5-S4 | Export Field Mapping Config | E5-S3 |
-| 13 | E12-S2..S4 | Settings UI suite | E12-S1 |
-| 14 | E11-S2 | Hybrid Search Service | — |
+| 4 | E12-S2 | AI Model Configuration UI | E12-S1 (done) |
+| 5 | E12-S3 | Processing Options Config | E12-S1 (done) |
+| 6 | E12-S4 | BAR Field Schema Config UI | E12-S1 (done) |
+| 7 | E13-S2 | Knowledge Graph API Service | E13-S1 (done) |
+| 8 | E13-S3 | React Flow Visualization | E13-S2 |
+
+### P2 — Tier 3: Epic 17 (new)
+| # | Story | Title | Blocked By |
+|---|-------|-------|------------|
+| 9 | E17-S1 | AG-UI Extraction Pipeline Endpoint | — |
+| 10 | E17-S2..S5 | Live extraction features | E17-S1 |

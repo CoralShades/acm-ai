@@ -2,7 +2,7 @@
 
 **Epic:** E5 — Export Functionality
 **Priority:** P0 (epic promoted from P1)
-**Status:** ready-for-dev
+**Status:** done
 **Change Proposal:** Sprint Change Proposal CP#3 (2026-02-04)
 
 ---

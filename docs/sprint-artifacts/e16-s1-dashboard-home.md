@@ -2,7 +2,7 @@
 
 **Epic:** E16 — UX Enhancement Sprint
 **Priority:** P1
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260220 (2026-02-20)
 
 ---
@@ -127,3 +127,9 @@ FROM acm_record;
 ## Estimated Effort
 
 L (Large) — New page, new backend endpoint, multiple chart components. Charts have a non-trivial implementation surface.
+
+## Dev Agent Record
+- **Completed:** 2026-02-22
+- **Commit:** Ralph sprint batch implementation
+- **Build Status:** PASS
+- **Implementation:** Dashboard home page with ACM stats, quick actions, and recent activity

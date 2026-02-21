@@ -2,7 +2,7 @@
 
 **Epic:** E2 — AG Grid Spreadsheet Integration
 **Priority:** P0
-**Status:** ready-for-dev
+**Status:** done
 **Change Proposal:** Sprint Change Proposal CP#4 (2026-02-04); enhanced 2026-02-08 (CP-3: AG Grid columns generated from field schema config API)
 
 ---
