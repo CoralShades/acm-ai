@@ -1,0 +1,24 @@
+-- Migration 31: Set default extraction model to Anthropic Claude via direct provider
+-- Ensures extraction uses a compatible provider (not Bedrock/Vertex which may reject schemas)
+
+-- Ensure a Claude Haiku model exists for extraction (fast + cheap + structured output support)
+LET $haiku = (SELECT * FROM model WHERE name = "claude-3-5-haiku-20241022" AND provider = "anthropic" LIMIT 1);
+IF array::len($haiku) == 0 THEN
+    CREATE model SET
+        name = "claude-3-5-haiku-20241022",
+        provider = "anthropic",
+        type = "language",
+        max_output_tokens = 8192,
+        context_window = 200000,
+        supports_structured_output = true,
+        supports_tool_calling = true,
+        created = time::now(),
+        updated = time::now()
+END;
+
+-- Set extraction default to Claude Haiku (direct Anthropic provider)
+LET $extraction_model = (SELECT id FROM model WHERE name = "claude-3-5-haiku-20241022" AND provider = "anthropic" LIMIT 1);
+IF array::len($extraction_model) > 0 THEN
+    UPDATE open_notebook:default_models SET
+        default_extraction_model = $extraction_model[0].id
+END;
