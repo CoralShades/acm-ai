@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ProviderStatus } from '../../models/components/ProviderStatus'
 import { ModelTypeSection } from '../../models/components/ModelTypeSection'
 import { DefaultModelsSection } from '../../models/components/DefaultModelsSection'
+import { ExtractionStageModels } from '../../models/components/ExtractionStageModels'
 import { useModels, useModelDefaults, useProviders } from '@/lib/hooks/use-models'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { RefreshCw } from 'lucide-react'
@@ -64,6 +65,7 @@ function ModelsPageContent() {
           <div className="grid gap-6">
             <ProviderStatus providers={providers} />
             <DefaultModelsSection models={models} defaults={defaults} />
+            <ExtractionStageModels models={models} />
             <div className="grid gap-6 lg:grid-cols-2">
               <ModelTypeSection
                 type="language"

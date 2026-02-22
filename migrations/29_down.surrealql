@@ -1,0 +1,2 @@
+-- Rollback Migration 29
+REMOVE TABLE extraction_stage_models;

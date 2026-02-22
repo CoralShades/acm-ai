@@ -1,10 +1,11 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from api.models import SettingsResponse, SettingsUpdate
+from open_notebook.database.repository import repo_query
 from open_notebook.domain.content_settings import ContentSettings
 from open_notebook.domain.extraction_settings import ExtractionSettings
 from open_notebook.exceptions import DatabaseOperationError, InvalidInputError
@@ -163,4 +164,90 @@ async def reset_extraction_settings():
         settings = await ExtractionSettings.reset_to_defaults()
         return _extraction_to_response(settings)
     except DatabaseOperationError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Extraction Stage Model Configuration (E12-S2) ---
+
+
+class StageModelAssignment(BaseModel):
+    """Per-stage model assignment for extraction pipeline."""
+
+    structure_analysis: Optional[str] = None
+    building_inventory: Optional[str] = None
+    acm_extraction: Optional[str] = None
+    page_tagging: Optional[str] = None
+    product_classification: Optional[str] = None
+    corrective_validation: Optional[str] = None
+
+
+STAGE_RECORD_ID = "extraction_stage_models:active"
+
+
+@router.get(
+    "/settings/extraction/stage-models", response_model=StageModelAssignment
+)
+async def get_extraction_stage_models():
+    """Get per-stage model assignments for extraction pipeline."""
+    try:
+        result = await repo_query(
+            "SELECT * FROM ONLY $id",
+            {"id": STAGE_RECORD_ID},
+        )
+        if result:
+            data = result[0] if isinstance(result, list) else result
+            return StageModelAssignment(
+                structure_analysis=data.get("structure_analysis"),
+                building_inventory=data.get("building_inventory"),
+                acm_extraction=data.get("acm_extraction"),
+                page_tagging=data.get("page_tagging"),
+                product_classification=data.get("product_classification"),
+                corrective_validation=data.get("corrective_validation"),
+            )
+        return StageModelAssignment()
+    except Exception as e:
+        logger.error(f"Error fetching stage models: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put(
+    "/settings/extraction/stage-models", response_model=StageModelAssignment
+)
+async def update_extraction_stage_models(update: StageModelAssignment):
+    """Update per-stage model assignments."""
+    try:
+        data = update.model_dump(exclude_none=True)
+        await repo_query(
+            "UPSERT $id SET "
+            "structure_analysis = $structure_analysis, "
+            "building_inventory = $building_inventory, "
+            "acm_extraction = $acm_extraction, "
+            "page_tagging = $page_tagging, "
+            "product_classification = $product_classification, "
+            "corrective_validation = $corrective_validation, "
+            "updated = time::now()",
+            {
+                "id": STAGE_RECORD_ID,
+                "structure_analysis": data.get("structure_analysis"),
+                "building_inventory": data.get("building_inventory"),
+                "acm_extraction": data.get("acm_extraction"),
+                "page_tagging": data.get("page_tagging"),
+                "product_classification": data.get("product_classification"),
+                "corrective_validation": data.get("corrective_validation"),
+            },
+        )
+        return update
+    except Exception as e:
+        logger.error(f"Error updating stage models: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/settings/extraction/stage-models/reset")
+async def reset_extraction_stage_models():
+    """Reset all stage model assignments to use default extraction model."""
+    try:
+        await repo_query("DELETE FROM extraction_stage_models")
+        return {"message": "Stage model assignments reset to defaults"}
+    except Exception as e:
+        logger.error(f"Error resetting stage models: {e}")
         raise HTTPException(status_code=500, detail=str(e))

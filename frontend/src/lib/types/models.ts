@@ -29,3 +29,18 @@ export interface ProviderAvailability {
   unavailable: string[]
   supported_types: Record<string, string[]>
 }
+
+export interface StageModelAssignment {
+  structure_analysis?: string | null
+  building_inventory?: string | null
+  acm_extraction?: string | null
+  page_tagging?: string | null
+  product_classification?: string | null
+  corrective_validation?: string | null
+}
+
+export interface ExtractionStageConfig {
+  key: keyof StageModelAssignment
+  label: string
+  description: string
+}

@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { modelsApi } from '@/lib/api/models'
 import { useToast } from '@/lib/hooks/use-toast'
-import { CreateModelRequest, ModelDefaults } from '@/lib/types/models'
+import { CreateModelRequest, ModelDefaults, StageModelAssignment } from '@/lib/types/models'
 
 export const MODEL_QUERY_KEYS = {
   models: ['models'] as const,
   model: (id: string) => ['models', id] as const,
   defaults: ['models', 'defaults'] as const,
   providers: ['models', 'providers'] as const,
+  stageModels: ['models', 'stage-models'] as const,
 }
 
 export function useModels() {
@@ -107,5 +108,58 @@ export function useProviders() {
   return useQuery({
     queryKey: MODEL_QUERY_KEYS.providers,
     queryFn: () => modelsApi.getProviders(),
+  })
+}
+
+export function useStageModels() {
+  return useQuery({
+    queryKey: MODEL_QUERY_KEYS.stageModels,
+    queryFn: () => modelsApi.getStageModels(),
+  })
+}
+
+export function useUpdateStageModels() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: (data: StageModelAssignment) => modelsApi.updateStageModels(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MODEL_QUERY_KEYS.stageModels })
+      toast({
+        title: 'Success',
+        description: 'Stage model assignments updated',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update stage models',
+        variant: 'destructive',
+      })
+    },
+  })
+}
+
+export function useResetStageModels() {
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  return useMutation({
+    mutationFn: () => modelsApi.resetStageModels(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MODEL_QUERY_KEYS.stageModels })
+      toast({
+        title: 'Success',
+        description: 'Stage model assignments reset to defaults',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to reset stage models',
+        variant: 'destructive',
+      })
+    },
   })
 }

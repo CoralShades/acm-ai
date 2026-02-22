@@ -1,5 +1,5 @@
 import apiClient from './client'
-import { Model, CreateModelRequest, ModelDefaults, ProviderAvailability } from '@/lib/types/models'
+import { Model, CreateModelRequest, ModelDefaults, ProviderAvailability, StageModelAssignment } from '@/lib/types/models'
 
 export const modelsApi = {
   list: async () => {
@@ -34,5 +34,19 @@ export const modelsApi = {
   getProviders: async () => {
     const response = await apiClient.get<ProviderAvailability>('/models/providers')
     return response.data
+  },
+
+  getStageModels: async () => {
+    const response = await apiClient.get<StageModelAssignment>('/settings/extraction/stage-models')
+    return response.data
+  },
+
+  updateStageModels: async (data: StageModelAssignment) => {
+    const response = await apiClient.put<StageModelAssignment>('/settings/extraction/stage-models', data)
+    return response.data
+  },
+
+  resetStageModels: async () => {
+    await apiClient.post('/settings/extraction/stage-models/reset')
   }
 }

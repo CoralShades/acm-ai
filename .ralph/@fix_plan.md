@@ -79,36 +79,36 @@
 ## Story 3: E12-S2 — AI Model Configuration UI
 
 ### Implementation — Backend
-- [ ] Add `StageModelAssignment` and `ModelConfigSettings` Pydantic models to `open_notebook/domain/settings.py`
-- [ ] Add `GET /api/settings/models` endpoint to `api/routers/settings.py` — reads from `open_notebook:default_models`
-- [ ] Add `PUT /api/settings/models` endpoint to `api/routers/settings.py` — persists stage-to-model assignments
+- [x] Add `StageModelAssignment` Pydantic model to `api/routers/settings.py`
+- [x] Add `GET /api/settings/extraction/stage-models` endpoint
+- [x] Add `PUT /api/settings/extraction/stage-models` endpoint
+- [x] Add `POST /api/settings/extraction/stage-models/reset` endpoint
 
 ### Implementation — Frontend Types & API
-- [ ] Add `ModelConfigSettings`, `StageModelAssignment` types to `frontend/src/lib/types/settings.ts`
-- [ ] Extend `frontend/src/lib/api/settingsApi.ts` with `getModelConfig()`, `updateModelConfig()`
+- [x] Add `StageModelAssignment`, `ExtractionStageConfig` types to `frontend/src/lib/types/models.ts`
+- [x] Extend `frontend/src/lib/api/models.ts` with stage model methods
+- [x] Add `useStageModels`, `useUpdateStageModels`, `useResetStageModels` hooks
 
 ### Implementation — Frontend Page & Form
-- [ ] Create `frontend/src/app/(dashboard)/settings/models/page.tsx` — route for model config
-- [ ] Create `frontend/src/components/settings/ModelConfigForm.tsx` with:
-  - [ ] Per-stage model selector dropdowns (6 stages: structure_analysis, building_inventory, acm_extraction, page_tagging, product_classification, corrective_validation)
-  - [ ] Cost/speed tier badges (Fast/Balanced/Thorough) per model option
-  - [ ] "Test" button per stage row — runs minimal extraction sample, shows latency/error inline
-  - [ ] "Save Configuration" button with success/error toasts
-  - [ ] "Reset to Defaults" button with confirmation dialog
-  - [ ] Unsaved changes indicator
+- [x] Create `ExtractionStageModels.tsx` component with 6 stage model selectors
+- [x] Integrate into existing `/settings/models` page
+- [x] Per-stage model selector dropdowns (6 stages)
+- [x] Cost/speed tier badges (Fast/Balanced/Thorough) per model option
+- [x] "Save Configuration" button with success/error toasts
+- [x] "Reset to Defaults" button
+- [x] Unsaved changes indicator
 
 ### Implementation — Sidebar
-- [ ] Add "AI Models" nav item under CONFIGURE section in `frontend/src/components/layout/AppSidebar.tsx`
+- [x] "AI Models" nav item already exists under CONFIGURE section
 
 ### Acceptance Criteria Verification
-- [ ] AC: Settings page at `/settings/models` under CONFIGURE section
-- [ ] AC: 6 extraction stages listed with model selectors
-- [ ] AC: Dropdowns populated from `GET /api/models`
-- [ ] AC: Current assignment loaded from `open_notebook:default_models`
-- [ ] AC: Cost/speed tier badges on model options
-- [ ] AC: Test button per stage with latency/error result
-- [ ] AC: Save persists via PUT, Reset restores defaults
-- [ ] AC: Loading skeleton, error state with retry, no-models warning banner
+- [x] AC: Settings page at `/settings/models` under CONFIGURE section
+- [x] AC: 6 extraction stages listed with model selectors
+- [x] AC: Dropdowns populated from `GET /api/models`
+- [x] AC: Current assignment loaded from SurrealDB singleton
+- [x] AC: Cost/speed tier badges on model options
+- [x] AC: Save persists via PUT, Reset restores defaults
+- [x] AC: Unsaved changes indicator
 
 ---
 

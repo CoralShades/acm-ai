@@ -1,0 +1,10 @@
+-- Migration 29: Extraction stage model configuration (E12-S2)
+-- Stores per-extraction-stage model assignments as a singleton record
+DEFINE TABLE IF NOT EXISTS extraction_stage_models SCHEMAFULL;
+DEFINE FIELD structure_analysis ON extraction_stage_models TYPE option<string>;
+DEFINE FIELD building_inventory ON extraction_stage_models TYPE option<string>;
+DEFINE FIELD acm_extraction ON extraction_stage_models TYPE option<string>;
+DEFINE FIELD page_tagging ON extraction_stage_models TYPE option<string>;
+DEFINE FIELD product_classification ON extraction_stage_models TYPE option<string>;
+DEFINE FIELD corrective_validation ON extraction_stage_models TYPE option<string>;
+DEFINE FIELD updated ON extraction_stage_models TYPE option<datetime> DEFAULT time::now();
