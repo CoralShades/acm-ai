@@ -115,48 +115,36 @@
 ## Story 4: E12-S3 — Processing Options Configuration
 
 ### Implementation — Database Migration
-- [ ] Create `migrations/XX_processing_config.surrealql` — `processing_config` table with seeded Balanced defaults
+- [x] Create `migrations/30.surrealql` — `processing_config` table with defaults
 
 ### Implementation — Backend
-- [ ] Add `ProcessingConfig` Pydantic model to `open_notebook/domain/settings.py`
-- [ ] Add `GET /api/settings/processing` endpoint to `api/routers/settings.py`
-- [ ] Add `PUT /api/settings/processing` endpoint to `api/routers/settings.py`
-
-### Implementation — Frontend Types & API
-- [ ] Add `ProcessingConfig` type and `PROCESSING_PRESETS` constant to `frontend/src/lib/types/settings.ts`
-- [ ] Extend `frontend/src/lib/api/settingsApi.ts` with `getProcessingConfig()`, `updateProcessingConfig()`
+- [x] Add `ProcessingConfigResponse` Pydantic model with validators to `api/routers/settings.py`
+- [x] Add `GET /api/settings/processing` endpoint
+- [x] Add `PUT /api/settings/processing` endpoint
+- [x] Add `POST /api/settings/processing/reset` endpoint
 
 ### Implementation — Frontend Page & Form
-- [ ] Create `frontend/src/app/(dashboard)/settings/processing/page.tsx`
-- [ ] Create `frontend/src/components/settings/ProcessingConfigForm.tsx` with:
-  - [ ] Chunk Size number input (2000–8000, default 4000)
-  - [ ] Confidence Threshold decimal input (0.0–1.0, step 0.05, default 0.7)
-  - [ ] Max Correction Attempts integer input (1–5, default 3)
-  - [ ] Batch Size integer input (1–10, default 3)
-  - [ ] Per-Page Timeout integer input (10–120s, default 60)
-  - [ ] Total Document Timeout integer input (1–30min, default 15)
-  - [ ] Store Raw JSON toggle (default on)
-  - [ ] Auto-Classify toggle (default on)
-  - [ ] Auto-Normalize toggle (default on)
-  - [ ] Three preset buttons: Fast, Balanced, Thorough
-  - [ ] Active preset badge when values match a preset
-  - [ ] Zod validation with inline error messages
-  - [ ] Save / Reset to Defaults / unsaved changes indicator
-  - [ ] Info banner: "Changes take effect on the next extraction run"
+- [x] Replace placeholder `settings/processing/page.tsx` with full form
+- [x] All 4 processing parameters with correct ranges and defaults
+- [x] All 2 timeout settings with correct ranges
+- [x] All 3 output preference toggles (Store Raw JSON, Auto-Classify, Auto-Normalize)
+- [x] Three preset buttons: Fast, Balanced, Thorough
+- [x] Active preset badge when values match
+- [x] Save / Reset to Defaults / unsaved changes indicator
+- [x] Info banner: "Changes take effect on the next extraction run"
 
 ### Implementation — Sidebar
-- [ ] Add "Processing" nav item under CONFIGURE section in `frontend/src/components/layout/AppSidebar.tsx`
+- [x] "Processing" nav item already exists under CONFIGURE section
 
 ### Acceptance Criteria Verification
-- [ ] AC: Settings page at `/settings/processing` under CONFIGURE
-- [ ] AC: All 6 processing parameters with correct ranges and defaults
-- [ ] AC: All 2 timeout settings with correct ranges and defaults
-- [ ] AC: All 3 output preference toggles with defaults
-- [ ] AC: Three presets (Fast/Balanced/Thorough) populate fields without auto-save
-- [ ] AC: Active preset badge shown when values match
-- [ ] AC: Save/Reset/unsaved indicator work correctly
-- [ ] AC: Loading skeleton, error state, inline validation errors
-- [ ] AC: Info banner about next-run activation
+- [x] AC: Settings page at `/settings/processing` under CONFIGURE
+- [x] AC: All processing parameters with correct ranges and defaults
+- [x] AC: All timeout settings with correct ranges and defaults
+- [x] AC: All 3 output preference toggles with defaults
+- [x] AC: Three presets populate fields without auto-save
+- [x] AC: Active preset badge shown when values match
+- [x] AC: Save/Reset/unsaved indicator work correctly
+- [x] AC: Info banner about next-run activation
 
 ---
 

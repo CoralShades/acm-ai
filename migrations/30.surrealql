@@ -1,0 +1,12 @@
+-- Migration 30: Processing configuration (E12-S3)
+DEFINE TABLE IF NOT EXISTS processing_config SCHEMAFULL;
+DEFINE FIELD chunk_size ON processing_config TYPE option<int> DEFAULT 4000;
+DEFINE FIELD confidence_threshold ON processing_config TYPE option<float> DEFAULT 0.7;
+DEFINE FIELD max_correction_attempts ON processing_config TYPE option<int> DEFAULT 3;
+DEFINE FIELD batch_size ON processing_config TYPE option<int> DEFAULT 3;
+DEFINE FIELD per_page_timeout ON processing_config TYPE option<int> DEFAULT 60;
+DEFINE FIELD total_document_timeout ON processing_config TYPE option<int> DEFAULT 15;
+DEFINE FIELD store_raw_json ON processing_config TYPE option<bool> DEFAULT true;
+DEFINE FIELD auto_classify ON processing_config TYPE option<bool> DEFAULT true;
+DEFINE FIELD auto_normalize ON processing_config TYPE option<bool> DEFAULT true;
+DEFINE FIELD updated ON processing_config TYPE option<datetime> DEFAULT time::now();

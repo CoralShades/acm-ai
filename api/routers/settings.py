@@ -2,7 +2,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from api.models import SettingsResponse, SettingsUpdate
 from open_notebook.database.repository import repo_query
@@ -250,4 +250,133 @@ async def reset_extraction_stage_models():
         return {"message": "Stage model assignments reset to defaults"}
     except Exception as e:
         logger.error(f"Error resetting stage models: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Processing Configuration (E12-S3) ---
+
+
+class ProcessingConfigResponse(BaseModel):
+    """Processing pipeline configuration."""
+
+    chunk_size: int = 4000
+    confidence_threshold: float = 0.7
+    max_correction_attempts: int = 3
+    batch_size: int = 3
+    per_page_timeout: int = 60
+    total_document_timeout: int = 15
+    store_raw_json: bool = True
+    auto_classify: bool = True
+    auto_normalize: bool = True
+
+    @field_validator("chunk_size")
+    @classmethod
+    def validate_chunk_size(cls, v: int) -> int:
+        if not 2000 <= v <= 8000:
+            raise ValueError("chunk_size must be between 2000 and 8000")
+        return v
+
+    @field_validator("confidence_threshold")
+    @classmethod
+    def validate_confidence(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("confidence_threshold must be between 0.0 and 1.0")
+        return v
+
+    @field_validator("max_correction_attempts")
+    @classmethod
+    def validate_max_corrections(cls, v: int) -> int:
+        if not 1 <= v <= 5:
+            raise ValueError("max_correction_attempts must be between 1 and 5")
+        return v
+
+    @field_validator("batch_size")
+    @classmethod
+    def validate_batch_size(cls, v: int) -> int:
+        if not 1 <= v <= 10:
+            raise ValueError("batch_size must be between 1 and 10")
+        return v
+
+    @field_validator("per_page_timeout")
+    @classmethod
+    def validate_page_timeout(cls, v: int) -> int:
+        if not 10 <= v <= 120:
+            raise ValueError("per_page_timeout must be between 10 and 120")
+        return v
+
+    @field_validator("total_document_timeout")
+    @classmethod
+    def validate_doc_timeout(cls, v: int) -> int:
+        if not 1 <= v <= 30:
+            raise ValueError("total_document_timeout must be between 1 and 30")
+        return v
+
+
+PROCESSING_RECORD_ID = "processing_config:active"
+
+
+@router.get(
+    "/settings/processing", response_model=ProcessingConfigResponse
+)
+async def get_processing_config():
+    """Get processing pipeline configuration."""
+    try:
+        result = await repo_query(
+            "SELECT * FROM ONLY $id",
+            {"id": PROCESSING_RECORD_ID},
+        )
+        if result:
+            data = result[0] if isinstance(result, list) else result
+            return ProcessingConfigResponse(
+                chunk_size=data.get("chunk_size", 4000),
+                confidence_threshold=data.get("confidence_threshold", 0.7),
+                max_correction_attempts=data.get("max_correction_attempts", 3),
+                batch_size=data.get("batch_size", 3),
+                per_page_timeout=data.get("per_page_timeout", 60),
+                total_document_timeout=data.get("total_document_timeout", 15),
+                store_raw_json=data.get("store_raw_json", True),
+                auto_classify=data.get("auto_classify", True),
+                auto_normalize=data.get("auto_normalize", True),
+            )
+        return ProcessingConfigResponse()
+    except Exception as e:
+        logger.error(f"Error fetching processing config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put(
+    "/settings/processing", response_model=ProcessingConfigResponse
+)
+async def update_processing_config(update: ProcessingConfigResponse):
+    """Update processing pipeline configuration."""
+    try:
+        data = update.model_dump()
+        await repo_query(
+            "UPSERT $id SET "
+            "chunk_size = $chunk_size, "
+            "confidence_threshold = $confidence_threshold, "
+            "max_correction_attempts = $max_correction_attempts, "
+            "batch_size = $batch_size, "
+            "per_page_timeout = $per_page_timeout, "
+            "total_document_timeout = $total_document_timeout, "
+            "store_raw_json = $store_raw_json, "
+            "auto_classify = $auto_classify, "
+            "auto_normalize = $auto_normalize, "
+            "updated = time::now()",
+            {"id": PROCESSING_RECORD_ID, **data},
+        )
+        return update
+    except Exception as e:
+        logger.error(f"Error updating processing config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/settings/processing/reset", response_model=ProcessingConfigResponse)
+async def reset_processing_config():
+    """Reset processing configuration to defaults."""
+    try:
+        await repo_query("DELETE FROM processing_config")
+        return ProcessingConfigResponse()
+    except Exception as e:
+        logger.error(f"Error resetting processing config: {e}")
         raise HTTPException(status_code=500, detail=str(e))
