@@ -1,0 +1,65 @@
+# Backend-only build for Railway / cloud deployment
+# Runs FastAPI API + background worker (no Node.js / frontend)
+
+# Build stage
+FROM python:3.12-slim-bookworm AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+    gcc g++ git make \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV MAKEFLAGS="-j$(nproc)"
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
+WORKDIR /app
+
+# Copy dependency files first for layer caching
+COPY pyproject.toml uv.lock ./
+COPY open_notebook/__init__.py ./open_notebook/__init__.py
+
+RUN uv sync --frozen --no-dev
+
+# Copy application code (no frontend needed)
+COPY api/ ./api/
+COPY commands/ ./commands/
+COPY migrations/ ./migrations/
+COPY open_notebook/ ./open_notebook/
+COPY prompts/ ./prompts/
+COPY scripts/ ./scripts/
+COPY run_api.py run_worker.py ./
+
+# Runtime stage
+FROM python:3.12-slim-bookworm AS runtime
+
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
+    ffmpeg \
+    supervisor \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# Copy virtual environment and app code from builder
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app /app
+
+# Create data and log directories
+RUN mkdir -p /app/data /app/logs /var/log/supervisor
+
+# Copy supervisord config for API-only deployment
+COPY supervisord.api.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Railway provides PORT dynamically; default to 5055
+ENV PORT=5055
+
+# Expose the API port
+EXPOSE ${PORT}
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
