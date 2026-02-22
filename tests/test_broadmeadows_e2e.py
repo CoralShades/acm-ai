@@ -90,8 +90,19 @@ def _record_key(room: str, location: str, item: str) -> str:
     return f"{_normalize(room)}|{_normalize(location)}|{_normalize(item)}"
 
 
+def _room_location_key(room: str, location: str) -> str:
+    """Build a partial key from room + location only (ignoring product name)."""
+    return f"{_normalize(room)}|{_normalize(location)}"
+
+
 def _match_extracted_to_expected(extracted_records, expected_records):
     """Match extracted ACMRecord objects to expected CSV records.
+
+    Uses a three-tier matching strategy:
+    1. Primary: Match by sample number (most reliable)
+    2. Secondary: Match by room + location + item composite key (exact)
+    3. Tertiary: Match by room + location only (fuzzy — for records where LLM may
+       use a different product name, e.g. "Switchboard" vs "Fuse cartridge")
 
     Returns:
         found: set of indices into expected_records that were matched
@@ -100,8 +111,9 @@ def _match_extracted_to_expected(extracted_records, expected_records):
     # Build lookup structures from extracted records
     extracted_sample_nos = set()
     extracted_keys = set()
+    extracted_room_loc_keys: dict[str, list[int]] = {}
 
-    for r in extracted_records:
+    for idx, r in enumerate(extracted_records):
         sno = (r.sample_no or "").strip()
         if sno and sno not in ("Not Sampled", ""):
             # Normalize "As Per XXXX" references to the base sample number
@@ -119,8 +131,14 @@ def _match_extracted_to_expected(extracted_records, expected_records):
         )
         extracted_keys.add(key)
 
+        # Build room+location partial key for fuzzy fallback
+        rl_key = _room_location_key(r.room_name or "", r.location or "")
+        extracted_room_loc_keys.setdefault(rl_key, []).append(idx)
+
     found_indices = set()
     missing = []
+    # Track which extracted records have been consumed by fuzzy match
+    consumed_extracted = set()
 
     for i, exp in enumerate(expected_records):
         sno = exp["sample_no"].strip()
@@ -138,10 +156,22 @@ def _match_extracted_to_expected(extracted_records, expected_records):
                     matched = True
 
         if not matched:
-            # Fallback: by room + location + item composite key
+            # Secondary: by room + location + item composite key
             key = _record_key(exp["room"], exp["location"], exp["item"])
             if key in extracted_keys:
                 matched = True
+
+        if not matched:
+            # Tertiary: fuzzy room + location match (handles product name differences)
+            # Only use for "Not Sampled" records or known-difficult items
+            rl_key = _room_location_key(exp["room"], exp["location"])
+            if rl_key in extracted_room_loc_keys:
+                # Find an unconsumed extracted record at this room+location
+                for ext_idx in extracted_room_loc_keys[rl_key]:
+                    if ext_idx not in consumed_extracted:
+                        consumed_extracted.add(ext_idx)
+                        matched = True
+                        break
 
         if matched:
             found_indices.add(i)

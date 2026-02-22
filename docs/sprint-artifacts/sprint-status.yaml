@@ -262,7 +262,7 @@ development_status:
   e18-s2-upload-wizard-ux: done  # feat: title editing, ACM-focused types, auto-redirect
   e18-s3-extraction-monitor-defaults: done  # fix: default to history tab so completed extractions visible
   e18-s4-demo-validation: in-progress  # Manual validation of extraction + UX fixes
-  e18-s5-extraction-quality-fuse-cartridge-no-access: drafted  # Fix remaining 5/31 records: fuse cartridge naming + no-access items
+  e18-s5-extraction-quality-fuse-cartridge-no-access: review  # Prompt + test matching improvements done, pending live E2E validation
   e18-s6-browser-demo-validation: drafted  # Browser-based feature validation via Playwright
 
   # Bug Fixes & Infrastructure (standalone)
