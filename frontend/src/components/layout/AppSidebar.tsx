@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -25,60 +25,16 @@ import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
 import { VendorAttribution } from '@/components/brand/VendorAttribution'
 import {
-  LayoutDashboard,
-  Search,
-  Bot,
   LogOut,
   ChevronLeft,
   ChevronDown,
   Menu,
   Upload,
   Command,
-  FileWarning,
-  Library,
-  FlaskConical,
-  FileCode,
-  Cog,
-  SlidersHorizontal,
-  Activity,
-  TableProperties,
 } from 'lucide-react'
+import { getFilteredNavigation, type NavGroup } from '@/config/navigation'
 
-interface NavItem {
-  name: string
-  href: string
-  icon: React.ElementType
-  badge?: string
-}
-
-interface NavSection {
-  title: string
-  items: NavItem[]
-}
-
-const navigation: NavSection[] = [
-  {
-    title: 'Workspace',
-    items: [
-      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Documents', href: '/documents', icon: Library },
-      { name: 'ACM Register', href: '/acm', icon: FileWarning },
-      { name: 'Search', href: '/search', icon: Search },
-    ],
-  },
-  {
-    title: 'Configure',
-    items: [
-      { name: 'Extraction Monitor', href: '/extraction-monitor', icon: Activity },
-      { name: 'Extraction', href: '/settings/extraction', icon: FlaskConical },
-      { name: 'AI Models', href: '/settings/models', icon: Bot },
-      { name: 'Parsers', href: '/settings/parsers', icon: FileCode },
-      { name: 'Field Mapping', href: '/settings/field-mapping', icon: TableProperties },
-      { name: 'Processing', href: '/settings/processing', icon: Cog },
-      { name: 'General', href: '/settings', icon: SlidersHorizontal },
-    ],
-  },
-]
+const isAcmMode = process.env.NEXT_PUBLIC_ACM_MODE !== 'false'
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -88,6 +44,8 @@ export function AppSidebar() {
   const { openSourceDialog } = useCreateDialogs()
 
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
+
+  const navigation = useMemo(() => getFilteredNavigation(isAcmMode), [])
 
   // Detect platform for keyboard shortcut display
   useEffect(() => {
@@ -99,7 +57,7 @@ export function AppSidebar() {
     href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   // Check if any item in a section is active
-  const isSectionActive = (section: NavSection) =>
+  const isSectionActive = (section: NavGroup) =>
     section.items.some((item) => isItemActive(item.href))
 
   return (
