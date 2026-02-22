@@ -102,15 +102,13 @@ class TestSectionModel:
         section = Section(section_id=7, title="Appendix", page_start=50)
         assert section.section_id == 7
 
-    def test_section_id_out_of_range_raises(self):
-        """Section IDs outside 0-7 should raise ValidationError."""
-        from pydantic import ValidationError
+    def test_section_id_out_of_range_accepted(self):
+        """Section IDs outside 0-7 are accepted (constraints removed for LLM schema compat)."""
+        section = Section(section_id=8, title="Invalid", page_start=1)
+        assert section.section_id == 8
 
-        with pytest.raises(ValidationError):
-            Section(section_id=8, title="Invalid", page_start=1)
-
-        with pytest.raises(ValidationError):
-            Section(section_id=-1, title="Invalid", page_start=1)
+        section = Section(section_id=-1, title="Invalid", page_start=1)
+        assert section.section_id == -1
 
 
 class TestDocumentStructureModel:
