@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sourcesApi } from '@/lib/api/sources'
 import { SourceListResponse } from '@/lib/types/api'
@@ -11,6 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -22,9 +24,12 @@ import {
   FileText,
   ExternalLink,
   Upload,
+  Pencil,
+  Archive,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { EditDocumentDialog } from './EditDocumentDialog'
 
 interface DocumentCardProps {
   document: SourceListResponse
@@ -79,11 +84,15 @@ export function DocumentCard({
   const Icon = getDocumentIcon(doc)
   const statusInfo = getStatusInfo(doc)
   const docType = getDocumentType(doc)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   const handleAction = async (action: string) => {
     switch (action) {
       case 'view':
         router.push(`/sources/${doc.id}`)
+        break
+      case 'edit':
+        setEditDialogOpen(true)
         break
       case 'reprocess':
         try {
@@ -92,6 +101,15 @@ export function DocumentCard({
           onRefetch()
         } catch {
           toast.error('Failed to re-process')
+        }
+        break
+      case 'archive':
+        try {
+          await sourcesApi.bulkArchive([doc.id])
+          toast.success('Document archived')
+          onRefetch()
+        } catch {
+          toast.error('Failed to archive')
         }
         break
       case 'download':
@@ -120,83 +138,101 @@ export function DocumentCard({
   }
 
   return (
-    <Card
-      className={cn(
-        'relative transition-shadow hover:shadow-md cursor-pointer',
-        isSelected && 'ring-2 ring-primary'
-      )}
-      onClick={() => router.push(`/sources/${doc.id}`)}
-    >
-      {/* Selection Checkbox */}
-      <div
-        className="absolute top-3 left-3 z-10"
-        onClick={(e) => e.stopPropagation()}
+    <>
+      <Card
+        className={cn(
+          'relative transition-shadow hover:shadow-md cursor-pointer',
+          isSelected && 'ring-2 ring-primary'
+        )}
+        onClick={() => router.push(`/sources/${doc.id}`)}
       >
-        <Checkbox checked={isSelected} onCheckedChange={onSelect} />
-      </div>
+        {/* Selection Checkbox */}
+        <div
+          className="absolute top-3 left-3 z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox checked={isSelected} onCheckedChange={onSelect} />
+        </div>
 
-      <CardHeader className="pt-10 pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-medium line-clamp-1">{doc.title || 'Untitled'}</h3>
-              <p className="text-sm text-muted-foreground">
-                {formatDate(doc.created)}
-              </p>
+        <CardHeader className="pt-10 pb-2">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0">
+                <h3 className="font-medium line-clamp-1">{doc.title || 'Untitled'}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {formatDate(doc.created)}
+                </p>
+              </div>
+            </div>
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleAction('view')}>
+                    <Eye className="w-4 h-4 mr-2" /> View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAction('edit')}>
+                    <Pencil className="w-4 h-4 mr-2" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAction('reprocess')}>
+                    <RefreshCw className="w-4 h-4 mr-2" /> Re-process
+                  </DropdownMenuItem>
+                  {doc.asset?.file_path && (
+                    <DropdownMenuItem onClick={() => handleAction('download')}>
+                      <Download className="w-4 h-4 mr-2" /> Download
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleAction('archive')}>
+                    <Archive className="w-4 h-4 mr-2" /> Archive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleAction('delete')}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-          <div onClick={(e) => e.stopPropagation()}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleAction('view')}>
-                  <Eye className="w-4 h-4 mr-2" /> View
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleAction('reprocess')}>
-                  <RefreshCw className="w-4 h-4 mr-2" /> Re-process
-                </DropdownMenuItem>
-                {doc.asset?.file_path && (
-                  <DropdownMenuItem onClick={() => handleAction('download')}>
-                    <Download className="w-4 h-4 mr-2" /> Download
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => handleAction('delete')}
-                  className="text-destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        </CardHeader>
+
+        <CardContent className="pb-2">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">{docType}</Badge>
+            <Badge className={statusInfo.className}>{statusInfo.label}</Badge>
           </div>
-        </div>
-      </CardHeader>
+        </CardContent>
 
-      <CardContent className="pb-2">
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{docType}</Badge>
-          <Badge className={statusInfo.className}>{statusInfo.label}</Badge>
-        </div>
-      </CardContent>
+        <CardFooter className="text-sm text-muted-foreground pt-0">
+          <div className="flex items-center gap-4">
+            {doc.embedded && (
+              <span>{doc.embedded_chunks} chunks</span>
+            )}
+            {doc.insights_count > 0 && (
+              <span>{doc.insights_count} insights</span>
+            )}
+            {!doc.embedded && doc.insights_count === 0 && (
+              <span>No data extracted</span>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
 
-      <CardFooter className="text-sm text-muted-foreground pt-0">
-        <div className="flex items-center gap-4">
-          {doc.embedded && (
-            <span>{doc.embedded_chunks} chunks</span>
-          )}
-          {doc.insights_count > 0 && (
-            <span>{doc.insights_count} insights</span>
-          )}
-          {!doc.embedded && doc.insights_count === 0 && (
-            <span>No data extracted</span>
-          )}
-        </div>
-      </CardFooter>
-    </Card>
+      <EditDocumentDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        sourceId={doc.id}
+        currentTitle={doc.title || ''}
+        currentTopics={doc.topics || []}
+        onSaved={onRefetch}
+      />
+    </>
   )
 }

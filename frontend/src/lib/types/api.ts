@@ -104,6 +104,7 @@ export interface UpdateNoteRequest {
 
 export interface UpdateSourceRequest {
   title?: string
+  topics?: string[]
   type?: 'link' | 'upload' | 'text'
   url?: string
   content?: string

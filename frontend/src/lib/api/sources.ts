@@ -105,4 +105,29 @@ export const sourcesApi = {
       responseType: 'blob',
     })
   },
+
+  bulkDelete: async (sourceIds: string[]) => {
+    const response = await apiClient.post<{ success: string[]; failed: string[]; message: string }>('/sources/bulk/delete', { source_ids: sourceIds })
+    return response.data
+  },
+
+  bulkUndoDelete: async (sourceIds: string[]) => {
+    const response = await apiClient.post<{ success: string[]; failed: string[]; message: string }>('/sources/bulk/undo-delete', { source_ids: sourceIds })
+    return response.data
+  },
+
+  bulkReprocess: async (sourceIds: string[]) => {
+    const response = await apiClient.post<{ success: string[]; failed: string[]; message: string }>('/sources/bulk/reprocess', { source_ids: sourceIds })
+    return response.data
+  },
+
+  bulkArchive: async (sourceIds: string[]) => {
+    const response = await apiClient.post<{ success: string[]; failed: string[]; message: string }>('/sources/bulk/archive', { source_ids: sourceIds })
+    return response.data
+  },
+
+  bulkUnarchive: async (sourceIds: string[]) => {
+    const response = await apiClient.post<{ success: string[]; failed: string[]; message: string }>('/sources/bulk/unarchive', { source_ids: sourceIds })
+    return response.data
+  },
 }

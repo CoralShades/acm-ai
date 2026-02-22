@@ -1,0 +1,5 @@
+-- Down migration 28
+REMOVE INDEX source_status_idx ON source;
+REMOVE FIELD status ON source;
+REMOVE FIELD deleted_at ON source;
+REMOVE FIELD archived_at ON source;

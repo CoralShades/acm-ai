@@ -59,6 +59,7 @@ from api.routers import (
     podcasts,
     search,
     settings,
+    source_bulk,
     source_chat,
     sources,
     speaker_profiles,
@@ -182,6 +183,7 @@ app.include_router(extraction_events.router, prefix="/api", tags=["extraction-ev
 app.include_router(a2a.router, prefix="/api", tags=["a2a"])
 app.include_router(agui_extraction.router, prefix="/api", tags=["agui-extraction"])
 app.include_router(bar_templates.router, tags=["bar-templates"])
+app.include_router(source_bulk.router, prefix="/api", tags=["source-bulk"])
 
 # Mount static files for A2A agent card (.well-known)
 from pathlib import Path as _Path

@@ -1,0 +1,5 @@
+-- Migration 28: Add archive and soft-delete fields to source table (E9-S3)
+DEFINE FIELD archived_at ON source TYPE option<datetime>;
+DEFINE FIELD deleted_at ON source TYPE option<datetime>;
+DEFINE FIELD status ON source TYPE option<string> DEFAULT 'active';
+DEFINE INDEX source_status_idx ON source FIELDS status;
