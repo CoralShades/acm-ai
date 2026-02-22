@@ -1,14 +1,15 @@
--- Migration 31: Set default extraction model to Anthropic Claude via direct provider
--- Ensures extraction uses a compatible provider (not Bedrock/Vertex which may reject schemas)
+-- Migration 31: Set default extraction model via OpenRouter
+-- Ensures extraction uses a compatible provider with structured output support
+-- Note: All LLM access goes through OpenRouter (no direct Anthropic/OpenAI keys)
 
--- Ensure a Claude Haiku model exists for extraction (fast + cheap + structured output support)
-LET $haiku = (SELECT * FROM model WHERE name = "claude-3-5-haiku-20241022" AND provider = "anthropic" LIMIT 1);
-IF array::len($haiku) == 0 THEN
+-- Ensure a Claude Sonnet model exists via OpenRouter for extraction
+LET $sonnet = (SELECT * FROM model WHERE name = "anthropic/claude-sonnet-4" AND provider = "openrouter" LIMIT 1);
+IF array::len($sonnet) == 0 THEN
     CREATE model SET
-        name = "claude-3-5-haiku-20241022",
-        provider = "anthropic",
+        name = "anthropic/claude-sonnet-4",
+        provider = "openrouter",
         type = "language",
-        max_output_tokens = 8192,
+        max_output_tokens = 16384,
         context_window = 200000,
         supports_structured_output = true,
         supports_tool_calling = true,
@@ -16,8 +17,8 @@ IF array::len($haiku) == 0 THEN
         updated = time::now()
 END;
 
--- Set extraction default to Claude Haiku (direct Anthropic provider)
-LET $extraction_model = (SELECT id FROM model WHERE name = "claude-3-5-haiku-20241022" AND provider = "anthropic" LIMIT 1);
+-- Set extraction default to Claude Sonnet via OpenRouter
+LET $extraction_model = (SELECT id FROM model WHERE name = "anthropic/claude-sonnet-4" AND provider = "openrouter" LIMIT 1);
 IF array::len($extraction_model) > 0 THEN
     UPDATE open_notebook:default_models SET
         default_extraction_model = $extraction_model[0].id
