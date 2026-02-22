@@ -151,12 +151,12 @@
 ## Story 5: E12-S4 — BAR Field Schema Config UI
 
 ### Implementation — Database Migration
-- [ ] Create `migrations/XX_bar_schema_config.surrealql` — `bar_schema_config` table (singleton `bar_schema_config:active`)
+- [x] `field_schema` table already exists (used by `_load_db_field_config` / `_save_db_field_config` in `api/routers/acm.py`)
 
 ### Implementation — Backend
-- [ ] Add `FieldSchemaConfig` domain model to `open_notebook/domain/settings.py` (or extend from `field_config.py`)
-- [ ] Add `GET /api/settings/field-schema` endpoint to `api/routers/settings.py`
-- [ ] Add `PUT /api/settings/field-schema` endpoint to `api/routers/settings.py`
+- [x] `FieldSchemaConfig` domain model exists at `open_notebook/extractors/parsers/field_config.py`
+- [x] `GET /api/acm/field-config` endpoint exists in `api/routers/acm.py:1495` (frontend calls `/acm/field-config`)
+- [x] `PUT /api/acm/field-config` endpoint exists in `api/routers/acm.py:1519` (frontend calls `/acm/field-config`)
 
 ### Implementation — Frontend Components
 - [x] Create `frontend/src/app/(dashboard)/settings/field-schema/page.tsx` with grouped field list, edit dialog, business rules toggle
