@@ -32,6 +32,7 @@ The content may have been pre-processed to add helpful markers:
 - `--- ROOM: ... ---` marks room section headers
 - `>>> ACM DETECTED: Asbestos-containing material <<<` marks ACM-positive entries
 - `>>> NO ASBESTOS: Negative result <<<` marks negative (no ACM) entries
+- `>>> NO ACCESS ENTRY: ...` marks entries where sampling was not possible (no access, height restriction, etc.)
 
 If these markers are absent, the document may use the ARA format (see Format B below).
 
@@ -232,6 +233,7 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
    - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"
    - Assumed/Presumed ACM → result: "Assumed Positive"
    - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` or `Negative` → result: "Negative"
+   - `>>> NO ACCESS ENTRY:` or "No access" or "Height restriction" or "Restricted Access" or "Presumed ACM" → result: "Assumed Positive", sample_no: "Not Sampled"
    - Assumed/Presumed no asbestos → result: "Assumed Negative"
 4. **For Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
 5. **For Assumed Negative records**: use "N/A (assumed negative)" instead

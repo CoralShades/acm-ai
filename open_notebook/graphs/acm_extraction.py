@@ -350,6 +350,30 @@ def _preprocess_samp_format(
     while double_neg in processed:
         processed = processed.replace(double_neg, no_acm_marker)
 
+    # Mark "No access" / restricted access patterns as valid entries
+    # These phrases come from consultant_wording_rules.json patterns
+    # and common SAMP report wording — order: longer phrases first
+    NO_ACCESS_PHRASES = [
+        "No access at the time of the Assessment",
+        "No access due to locked door",
+        "No access due to",
+        "No access at time of",
+        "Height restriction",
+        "Height or access restriction",
+        "Restricted Access",
+        "Live Electrical Hazard",
+        "Presumed ACM",
+        "No access",
+    ]
+    NO_ACCESS_MARKER = ">>> NO ACCESS ENTRY: Sample Result = Assumed Positive — MUST be extracted as a separate ACM record <<<"
+    for phrase in NO_ACCESS_PHRASES:
+        processed = re.sub(
+            re.escape(phrase),
+            NO_ACCESS_MARKER + "\n" + phrase,
+            processed,
+            flags=re.IGNORECASE,
+        )
+
     metadata["processed_length"] = len(processed)
 
     return processed, metadata
