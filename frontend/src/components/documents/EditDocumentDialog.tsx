@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,12 @@ export function EditDocumentDialog({
   const [title, setTitle] = useState(currentTitle)
   const [topics, setTopics] = useState(currentTopics.join(', '))
   const [saving, setSaving] = useState(false)
+
+  // Sync state when props change (dialog reused for different documents)
+  useEffect(() => {
+    setTitle(currentTitle)
+    setTopics(currentTopics.join(', '))
+  }, [currentTitle, currentTopics])
 
   const handleSave = async () => {
     setSaving(true)

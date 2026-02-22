@@ -70,7 +70,7 @@ def _build_graph_from_records(
     """Build React Flow graph from ACM records."""
     nodes: Dict[str, GraphNode] = {}
     edges: List[GraphEdge] = []
-    edge_set: set = set()
+    edge_set: set[tuple[str, str]] = set()
 
     school_x: Dict[str, int] = {}
     building_x: Dict[str, int] = {}
@@ -123,9 +123,9 @@ def _build_graph_from_records(
                     "construction": record.get("building_construction"),
                 },
             )
-            edge_key = f"{school_node_id}->{bld_node_id}"
-            if edge_key not in edge_set:
-                edge_set.add(edge_key)
+            edge_pair = (school_node_id, bld_node_id)
+            if edge_pair not in edge_set:
+                edge_set.add(edge_pair)
 
         # Room node
         room_key = room_id_val or room_name
@@ -144,9 +144,9 @@ def _build_graph_from_records(
                     "floor_level": record.get("floor_level"),
                 },
             )
-            edge_key = f"{bld_node_id}->{room_node_id}"
-            if edge_key not in edge_set:
-                edge_set.add(edge_key)
+            edge_pair = (bld_node_id, room_node_id)
+            if edge_pair not in edge_set:
+                edge_set.add(edge_pair)
 
         # ACM node
         acm_node_id = f"acm:{record_id}"
@@ -172,16 +172,15 @@ def _build_graph_from_records(
                     ),
                 },
             )
-            edge_key = f"{room_node_id}->{acm_node_id}"
-            if edge_key not in edge_set:
-                edge_set.add(edge_key)
+            edge_pair = (room_node_id, acm_node_id)
+            if edge_pair not in edge_set:
+                edge_set.add(edge_pair)
 
     # Build edges list
     graph_edges = []
-    for edge_key in edge_set:
-        source, target = edge_key.split("->")
+    for source, target in edge_set:
         graph_edges.append(
-            GraphEdge(id=edge_key, source=source, target=target)
+            GraphEdge(id=f"{source}|{target}", source=source, target=target)
         )
 
     return GraphResponse(nodes=list(nodes.values()), edges=graph_edges)
@@ -204,7 +203,7 @@ async def get_source_graph(
         return _build_graph_from_records(records or [], risk_filter)
     except Exception as e:
         logger.error(f"Error building source graph: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error building source graph")
 
 
 @router.get("/graph/school/{school_code}", response_model=GraphResponse)
@@ -221,7 +220,7 @@ async def get_school_graph(
         return _build_graph_from_records(records or [], risk_filter)
     except Exception as e:
         logger.error(f"Error building school graph: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error building school graph")
 
 
 @router.get("/graph/building/{building_id}", response_model=GraphResponse)
@@ -238,7 +237,7 @@ async def get_building_graph(
         return _build_graph_from_records(records or [], risk_filter)
     except Exception as e:
         logger.error(f"Error building building graph: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error building building graph")
 
 
 @router.get("/graph/stats/{source_id}", response_model=GraphStatsResponse)
@@ -288,4 +287,4 @@ async def get_graph_stats(source_id: str):
         )
     except Exception as e:
         logger.error(f"Error computing graph stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error computing graph stats")

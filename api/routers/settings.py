@@ -246,7 +246,7 @@ async def update_extraction_stage_models(update: StageModelAssignment):
 async def reset_extraction_stage_models():
     """Reset all stage model assignments to use default extraction model."""
     try:
-        await repo_query("DELETE FROM extraction_stage_models")
+        await repo_query("DELETE $id", {"id": STAGE_RECORD_ID})
         return {"message": "Stage model assignments reset to defaults"}
     except Exception as e:
         logger.error(f"Error resetting stage models: {e}")
@@ -312,6 +312,20 @@ class ProcessingConfigResponse(BaseModel):
         return v
 
 
+class ProcessingConfigUpdate(BaseModel):
+    """Partial update model for processing config."""
+
+    chunk_size: Optional[int] = Field(default=None, ge=2000, le=8000)
+    confidence_threshold: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    max_correction_attempts: Optional[int] = Field(default=None, ge=1, le=5)
+    batch_size: Optional[int] = Field(default=None, ge=1, le=10)
+    per_page_timeout: Optional[int] = Field(default=None, ge=10, le=120)
+    total_document_timeout: Optional[int] = Field(default=None, ge=1, le=30)
+    store_raw_json: Optional[bool] = None
+    auto_classify: Optional[bool] = None
+    auto_normalize: Optional[bool] = None
+
+
 PROCESSING_RECORD_ID = "processing_config:active"
 
 
@@ -347,10 +361,30 @@ async def get_processing_config():
 @router.put(
     "/settings/processing", response_model=ProcessingConfigResponse
 )
-async def update_processing_config(update: ProcessingConfigResponse):
-    """Update processing pipeline configuration."""
+async def update_processing_config(update: ProcessingConfigUpdate):
+    """Update processing pipeline configuration (partial update)."""
     try:
-        data = update.model_dump()
+        # Get current config as base
+        current = await repo_query(
+            "SELECT * FROM ONLY $id",
+            {"id": PROCESSING_RECORD_ID},
+        )
+        defaults = ProcessingConfigResponse()
+        base = {}
+        if current:
+            data = current[0] if isinstance(current, list) else current
+            base = {f: data.get(f, getattr(defaults, f)) for f in defaults.model_fields}
+        else:
+            base = defaults.model_dump()
+
+        # Merge provided fields
+        for field_name, value in update.model_dump(exclude_none=True).items():
+            base[field_name] = value
+
+        # Validate merged result
+        merged = ProcessingConfigResponse(**base)
+        data = merged.model_dump()
+
         await repo_query(
             "UPSERT $id SET "
             "chunk_size = $chunk_size, "
@@ -365,7 +399,7 @@ async def update_processing_config(update: ProcessingConfigResponse):
             "updated = time::now()",
             {"id": PROCESSING_RECORD_ID, **data},
         )
-        return update
+        return merged
     except Exception as e:
         logger.error(f"Error updating processing config: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -375,7 +409,7 @@ async def update_processing_config(update: ProcessingConfigResponse):
 async def reset_processing_config():
     """Reset processing configuration to defaults."""
     try:
-        await repo_query("DELETE FROM processing_config")
+        await repo_query("DELETE $id", {"id": PROCESSING_RECORD_ID})
         return ProcessingConfigResponse()
     except Exception as e:
         logger.error(f"Error resetting processing config: {e}")

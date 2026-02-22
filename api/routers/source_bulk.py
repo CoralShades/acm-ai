@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from open_notebook.database.repository import ensure_record_id, repo_query
 
@@ -10,12 +10,13 @@ router = APIRouter()
 
 
 class BulkOperationRequest(BaseModel):
-    source_ids: List[str]
+    source_ids: List[str] = Field(..., max_length=100)
 
 
 class BulkOperationResponse(BaseModel):
     success: List[str]
     failed: List[str]
+    errors: dict[str, str] = Field(default_factory=dict)
     message: str
 
 
@@ -49,24 +50,37 @@ async def bulk_undo_delete(request: BulkOperationRequest):
     """Restore soft-deleted sources within 30-minute grace period."""
     success = []
     failed = []
+    errors: dict[str, str] = {}
     for source_id in request.source_ids:
         try:
+            record_id = ensure_record_id(source_id)
             result = await repo_query(
                 """UPDATE $id SET deleted_at = NONE, status = 'active'
                    WHERE deleted_at != NONE
                      AND deleted_at > time::now() - 30m""",
-                {"id": ensure_record_id(source_id)},
+                {"id": record_id},
             )
             if result:
                 success.append(source_id)
             else:
+                # Check if the record exists with an expired grace period
+                check = await repo_query(
+                    "SELECT deleted_at FROM ONLY $id",
+                    {"id": record_id},
+                )
+                if check and (check[0] if isinstance(check, list) else check).get("deleted_at"):
+                    errors[source_id] = "Grace period expired"
+                else:
+                    errors[source_id] = "Not found or not deleted"
                 failed.append(source_id)
         except Exception as e:
             logger.error(f"Failed to undo delete for {source_id}: {e}")
+            errors[source_id] = "Internal error"
             failed.append(source_id)
     return BulkOperationResponse(
         success=success,
         failed=failed,
+        errors=errors,
         message=f"Restored {len(success)} documents, {len(failed)} failed",
     )
 

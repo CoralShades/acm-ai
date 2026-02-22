@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   ReactFlow,
   Controls,
@@ -71,12 +71,12 @@ export function KnowledgeGraph({ sourceId }: KnowledgeGraphProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState(graphData?.edges || [])
 
   // Update nodes/edges when data changes
-  const prevDataRef = useRef<GraphData | null>(null)
-  if (graphData && graphData !== prevDataRef.current) {
-    prevDataRef.current = graphData
-    setNodes(graphData.nodes)
-    setEdges(graphData.edges)
-  }
+  useEffect(() => {
+    if (graphData) {
+      setNodes(graphData.nodes)
+      setEdges(graphData.edges)
+    }
+  }, [graphData, setNodes, setEdges])
 
   const onInit = useCallback((instance: ReactFlowInstance) => {
     reactFlowRef.current = instance
