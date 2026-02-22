@@ -236,12 +236,16 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 4. **For Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
 5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
 6. **DO NOT SKIP** negative results - the BAR requires both positive and negative entries
-
-**CRITICAL - Assumed Positive Records:** Items marked "Assumed Positive" or "Not Sampled" with annotations like "No access" MUST be extracted. These are valid BAR entries even if they have minimal detail (Unknown product type, Unknown condition). Extract them with result: "Assumed Positive", and use "Unknown" for missing condition/disturbance fields.
+7. **"No Access" / "Restricted Access" / "Height Restriction" entries are VALID register rows — do NOT skip them.**
+   - These indicate areas where sampling could not be performed due to physical access constraints
+   - Extract them as normal ACM records with result: "Assumed Positive" and sample_result: "Assumed Positive"
+   - Set sample_no to "Not Sampled" if no sample number is given
+   - Add a note to `data_issues` describing the access restriction (e.g., "No access — unable to sample")
+   - These items are presumed to contain asbestos until proven otherwise by future sampling
 
 **CRITICAL - Only Extract What's Present:** Only extract records that are EXPLICITLY present in the source content. Do NOT infer, guess, or generate records based on patterns. Each extracted record must correspond to an actual entry in the source.
 
-**WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL.
+**WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL. This includes "No access" and "Restricted Access" entries.
 
 ### Data Completeness Rules
 
@@ -262,13 +266,54 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 
 ### Product and Material Description Mapping
 
-- **product**: The building element type (e.g., "Eaves", "Wall", "Floor Coverings", "Ceiling Linings", "Fire Door")
-- **material_description**: The specific material (e.g., "Flat Cement Sheeting", "Vinyl Tiles", "Chrysotile rope gasket")
+- **product**: The specific ACM item or use — what the asbestos-containing material actually IS (e.g., "Fuse cartridge", "Floor Coverings", "Eaves", "Internal lining", "Pipe Insulation", "Fire Door", "Gasket")
+- **material_description**: The specific material composition (e.g., "Flat Cement Sheeting", "Vinyl Tiles", "Fibre Cement", "Chrysotile rope gasket")
+- **location**: Where in the room the ACM is found — the equipment or fixture it is associated with (e.g., "Switchboard", "Auto Battery Charger", "Lift", "Throughout", "Under sink", "Above ceiling")
 - For ARA format: split "Eaves - Flat Cement Sheeting - Painted White" into product="Eaves", material_description="Flat Cement Sheeting - Painted White"
-- `result` should map to BAR vocabulary: "Positive" for ACM-containing, "Assumed Positive" for presumed ACM, "Negative" for no asbestos, "Assumed Negative" for presumed no asbestos
 - Building IDs follow format: B### (e.g., B009, B010) for SAMP, or building name for ARA
 - Room IDs follow format: R#### (e.g., R0005, R0007) for SAMP, or null for ARA
 - Room area is typically at the end of the room header line (e.g., "1.45 m2")
+
+#### CRITICAL: ACM Item vs Equipment/Location Distinction
+
+When a register entry references an equipment item (Switchboard, Boiler, Lift, Auto Battery Charger) AND a specific ACM component within it (Fuse cartridge, Internal lining, Gasket, Insulation), you MUST distinguish them:
+- **`product`** = the specific ACM item/product (what the asbestos material IS)
+- **`location`** = the equipment or fixture where the ACM is found (where it IS)
+
+**Examples:**
+| Register says | product (ACM item) | location (equipment) |
+|---|---|---|
+| Switchboard — Fuse cartridge | Fuse cartridge | Switchboard |
+| Auto Battery Charger — Fuse cartridge | Fuse cartridge | Auto Battery Charger |
+| Lift — Internal lining | Internal lining | Lift |
+| Boiler — Gasket | Gasket | Boiler |
+| Switchboard — Switchboard Lining | Switchboard Lining | Switchboard |
+
+**Common mistake to AVOID:** Do NOT use the equipment name (Switchboard, Auto Battery Charger) as the `product`. The equipment is where the ACM is located, not what the ACM is. The specific ACM component (Fuse cartridge, Internal lining, etc.) is the `product`.
+
+### ACM Product Vocabulary Guide (Victorian BAR SpecificUses)
+
+Use these canonical product names when they match the register entry:
+
+**Electrical/Mechanical Equipment ACM:**
+- Fuse cartridge, Switchboard Lining, Switchboard cupboard lining, Switchboard insulation, Electrical backing board, Electrical panel
+
+**Linings and Sheeting:**
+- Internal lining, External cladding, Ceiling lining, Wall lining, Eaves, Soffit lining, Flat sheeting, Corrugated sheeting
+
+**Insulation and Lagging:**
+- Pipe Insulation, Pipe lagging, Boiler insulation, Duct insulation, Tank insulation, Calorifier insulation
+
+**Flooring:**
+- Floor Coverings, Vinyl Tiles, Vinyl Sheet, Bituminous adhesive (black mastic)
+
+**Gaskets and Seals:**
+- Gasket, Flange gasket, Rope gasket, Door seal
+
+**Other Common Items:**
+- Fire Door, Roof, Gutter, Downpipe, Toilet cistern, Textured coating, Millboard, Packing material
+
+When the register entry uses one of these terms (or a close variant), prefer the canonical name above.
 
 ## Content to Extract
 

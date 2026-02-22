@@ -1,0 +1,25 @@
+-- Migration 31: Set default extraction model via OpenRouter
+-- Ensures extraction uses a compatible provider with structured output support
+-- Note: All LLM access goes through OpenRouter (no direct Anthropic/OpenAI keys)
+
+-- Ensure a Claude Sonnet model exists via OpenRouter for extraction
+LET $sonnet = (SELECT * FROM model WHERE name = "anthropic/claude-sonnet-4" AND provider = "openrouter" LIMIT 1);
+IF array::len($sonnet) == 0 THEN
+    CREATE model SET
+        name = "anthropic/claude-sonnet-4",
+        provider = "openrouter",
+        type = "language",
+        max_output_tokens = 16384,
+        context_window = 200000,
+        supports_structured_output = true,
+        supports_tool_calling = true,
+        created = time::now(),
+        updated = time::now()
+END;
+
+-- Set extraction default to Claude Sonnet via OpenRouter
+LET $extraction_model = (SELECT id FROM model WHERE name = "anthropic/claude-sonnet-4" AND provider = "openrouter" LIMIT 1);
+IF array::len($extraction_model) > 0 THEN
+    UPDATE open_notebook:default_models SET
+        default_extraction_model = $extraction_model[0].id
+END;

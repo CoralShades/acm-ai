@@ -308,18 +308,26 @@ def _regex_extract_simple_building(
 
 
 ROOM_HEADER_PATTERN = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
-SUB_CHUNK_ROOM_THRESHOLD = 12  # ~250 tokens/record; 8192 tokens fits ~15-20 safely
+# ARA-format item pattern: numbered items like "1." or "1\n" at start of line
+ARA_ITEM_PATTERN = re.compile(r"(?:^|\n)(\d+)\.\s", re.MULTILINE)
+SUB_CHUNK_ROOM_THRESHOLD = 12  # ~250 tokens/record; 32768 tokens fits many more safely
 
 
 def _split_building_by_rooms(
     content: str, max_rooms: int = SUB_CHUNK_ROOM_THRESHOLD
 ) -> List[str]:
-    """Split building content into sub-chunks by room groups.
+    """Split building content into sub-chunks by room/item groups.
 
-    Finds room header boundaries and groups them into sub-chunks of
-    max_rooms each to avoid output token truncation.
+    Finds room header boundaries (SAMP format) or numbered item boundaries
+    (ARA format) and groups them into sub-chunks of max_rooms each to avoid
+    output token truncation.
     """
     room_matches = list(ROOM_HEADER_PATTERN.finditer(content))
+
+    # Fallback to ARA-format numbered items when SAMP pattern finds nothing
+    if not room_matches:
+        room_matches = list(ARA_ITEM_PATTERN.finditer(content))
+
     if len(room_matches) <= max_rooms:
         return [content]
 
@@ -333,7 +341,7 @@ def _split_building_by_rooms(
 
     logger.info(
         f"Split building content into {len(chunks)} sub-chunks "
-        f"({len(room_matches)} rooms, threshold={max_rooms})"
+        f"({len(room_matches)} items, threshold={max_rooms})"
     )
     return chunks
 
@@ -377,7 +385,7 @@ async def _llm_extract_building(
             model_id,
             "extraction",
             temperature=0.1,
-            max_tokens=8192,  # Conservative default; increase via model capabilities if needed
+            max_tokens=32768,
         )
 
         from langchain_core.messages import HumanMessage, SystemMessage

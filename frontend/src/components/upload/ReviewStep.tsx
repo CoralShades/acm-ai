@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { formatFileSize } from '@/lib/utils';
 import {
   FileText,
@@ -44,7 +45,7 @@ interface ReviewStepProps {
 }
 
 export function ReviewStep({ onGoToStep, onConfirmChange }: ReviewStepProps) {
-  const { files, options } = useUploadStore();
+  const { files, options, setTitle } = useUploadStore();
   const { data: notebooks, isLoading: isLoadingNotebooks } = useNotebooks();
   const [confirmed, setConfirmed] = useState(false);
 
@@ -238,10 +239,11 @@ export function ReviewStep({ onGoToStep, onConfirmChange }: ReviewStepProps) {
           </div>
         </div>
 
-        <div className="max-h-64 overflow-y-auto border rounded-lg">
+        <div className="max-h-80 overflow-y-auto border rounded-lg">
           {/* Table Header */}
-          <div className="grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-2 bg-muted font-medium text-sm border-b">
+          <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 px-4 py-2 bg-muted font-medium text-sm border-b">
             <div>File</div>
+            <div>Title</div>
             <div>Type</div>
             <div className="text-right">Size</div>
           </div>
@@ -252,14 +254,23 @@ export function ReviewStep({ onGoToStep, onConfirmChange }: ReviewStepProps) {
               const docType = file.documentType || 'other';
               const TypeIcon = TYPE_ICONS[docType];
               const iconColor = TYPE_COLORS[docType];
+              const defaultTitle = file.name.replace(/\.[^/.]+$/, '');
 
               return (
                 <div
                   key={file.id}
-                  className="grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-2 text-sm items-center hover:bg-muted/50"
+                  className="grid grid-cols-[1fr_1fr_auto_auto] gap-4 px-4 py-2 text-sm items-center hover:bg-muted/50"
                 >
                   <div className="font-medium truncate" title={file.name}>
                     {file.name}
+                  </div>
+                  <div>
+                    <Input
+                      value={file.title ?? defaultTitle}
+                      onChange={(e) => setTitle(file.id, e.target.value)}
+                      className="h-7 text-sm"
+                      placeholder="Document title"
+                    />
                   </div>
                   <div className="flex items-center gap-1">
                     <TypeIcon className={`w-4 h-4 ${iconColor}`} />

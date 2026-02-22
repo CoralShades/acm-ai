@@ -198,7 +198,7 @@ export function UploadProgressStep({ onReset }: UploadProgressStepProps) {
   };
 
   // Navigate to source detail (if single file) or sources list (if batch)
-  const handleDone = () => {
+  const handleDone = useCallback(() => {
     // If only one file was uploaded successfully, navigate to its detail page
     const successEntries = Array.from(fileStatuses.entries()).filter(
       ([, s]) => s.status === 'success' && s.sourceId
@@ -210,7 +210,25 @@ export function UploadProgressStep({ onReset }: UploadProgressStepProps) {
     clearFiles();
     resetOptions();
     router.push(targetPath);
-  };
+  }, [fileStatuses, clearFiles, resetOptions, router]);
+
+  // Auto-redirect after successful completion (2s delay)
+  const [autoRedirectCountdown, setAutoRedirectCountdown] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isComplete || errorCount > 0) return;
+    setAutoRedirectCountdown(3);
+    const interval = setInterval(() => {
+      setAutoRedirectCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          handleDone();
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isComplete, errorCount, handleDone]);
 
   // Reset wizard for more uploads
   const handleUploadMore = () => {
@@ -361,6 +379,15 @@ export function UploadProgressStep({ onReset }: UploadProgressStepProps) {
           );
         })}
       </div>
+
+      {/* Auto-redirect notice */}
+      {autoRedirectCountdown !== null && (
+        <Card className="p-4 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+          <p className="text-sm text-green-700 dark:text-green-300 text-center">
+            Redirecting in {autoRedirectCountdown}s...
+          </p>
+        </Card>
+      )}
 
       {/* Actions */}
       {isComplete && (

@@ -5,7 +5,6 @@ Story: E1-S18 Page-Level Section Tagging
 """
 
 import pytest
-from pydantic import ValidationError
 
 from open_notebook.extractors.page_tagger import (
     _SECTION_TITLES,
@@ -156,13 +155,14 @@ class TestSubSectionTag:
         assert tag.section_id == 3
 
     def test_subsection_section_id_range(self):
+        """Section IDs outside 0-7 are accepted (constraints removed for LLM schema compat)."""
         from open_notebook.extractors.page_tagger import SubSectionTag
 
-        with pytest.raises(ValidationError):
-            SubSectionTag(subsection_number="1.1", title="Bad", section_id=8)
+        tag = SubSectionTag(subsection_number="1.1", title="Bad", section_id=8)
+        assert tag.section_id == 8
 
-        with pytest.raises(ValidationError):
-            SubSectionTag(subsection_number="1.1", title="Bad", section_id=-1)
+        tag = SubSectionTag(subsection_number="1.1", title="Bad", section_id=-1)
+        assert tag.section_id == -1
 
 
 class TestPageTag:
@@ -211,46 +211,48 @@ class TestPageTag:
         assert tag.content_summary is not None
 
     def test_page_tag_confidence_bounds(self):
+        """Confidence outside 0.0-1.0 is accepted (constraints removed for LLM schema compat)."""
         from open_notebook.extractors.page_tagger import PageTag, PageType
 
-        with pytest.raises(ValidationError):
-            PageTag(
-                page_number=1,
-                section_id=0,
-                section_title="Test",
-                confidence=1.5,
-                page_type=PageType.CONTENT,
-            )
+        tag = PageTag(
+            page_number=1,
+            section_id=0,
+            section_title="Test",
+            confidence=1.5,
+            page_type=PageType.CONTENT,
+        )
+        assert tag.confidence == 1.5
 
-        with pytest.raises(ValidationError):
-            PageTag(
-                page_number=1,
-                section_id=0,
-                section_title="Test",
-                confidence=-0.1,
-                page_type=PageType.CONTENT,
-            )
+        tag = PageTag(
+            page_number=1,
+            section_id=0,
+            section_title="Test",
+            confidence=-0.1,
+            page_type=PageType.CONTENT,
+        )
+        assert tag.confidence == -0.1
 
     def test_page_tag_section_id_bounds(self):
+        """Section IDs outside 0-7 are accepted (constraints removed for LLM schema compat)."""
         from open_notebook.extractors.page_tagger import PageTag, PageType
 
-        with pytest.raises(ValidationError):
-            PageTag(
-                page_number=1,
-                section_id=8,
-                section_title="Test",
-                confidence=0.9,
-                page_type=PageType.CONTENT,
-            )
+        tag = PageTag(
+            page_number=1,
+            section_id=8,
+            section_title="Test",
+            confidence=0.9,
+            page_type=PageType.CONTENT,
+        )
+        assert tag.section_id == 8
 
-        with pytest.raises(ValidationError):
-            PageTag(
-                page_number=1,
-                section_id=-1,
-                section_title="Test",
-                confidence=0.9,
-                page_type=PageType.CONTENT,
-            )
+        tag = PageTag(
+            page_number=1,
+            section_id=-1,
+            section_title="Test",
+            confidence=0.9,
+            page_type=PageType.CONTENT,
+        )
+        assert tag.section_id == -1
 
 
 class TestPageTaggingResult:

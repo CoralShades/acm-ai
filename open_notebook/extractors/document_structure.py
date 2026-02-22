@@ -48,7 +48,7 @@ class Section(BaseModel):
         7: Appendix
     """
 
-    section_id: int = Field(ge=0, le=7)
+    section_id: int = Field(description="Section ID (0-7)")
     title: str
     page_start: int
     page_end: Optional[int] = None
@@ -138,7 +138,7 @@ async def _llm_extract_structure(
         model_id,
         "extraction",
         temperature=0.1,
-        max_tokens=4096,
+        max_tokens=16384,
     )
 
     chain = model.with_structured_output(DocumentStructureLLM)

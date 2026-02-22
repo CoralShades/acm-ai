@@ -255,6 +255,16 @@ development_status:
   e17-s6-new-openrouter-models: done  # docs/sprint-artifacts/e17-s6-new-openrouter-models.md — 6 frontier models added
   epic-17-retrospective: done  # Consolidated project retrospective 2026-02-22
 
+  # Epic 18: Production Hardening & Demo Stability (P1)
+  # 1/4 stories complete — EPIC IN PROGRESS
+  epic-18: in-progress
+  e18-s1-extraction-provider-compatibility: done  # fix: remove ge/le constraints, increase max_tokens, ARA sub-chunking, migration 31
+  e18-s2-upload-wizard-ux: done  # feat: title editing, ACM-focused types, auto-redirect
+  e18-s3-extraction-monitor-defaults: done  # fix: default to history tab so completed extractions visible
+  e18-s4-demo-validation: in-progress  # Manual validation of extraction + UX fixes
+  e18-s5-extraction-quality-fuse-cartridge-no-access: review  # Prompt + test matching improvements done, pending live E2E validation
+  e18-s6-browser-demo-validation: drafted  # Browser-based feature validation via Playwright
+
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
   # E2E TEST INFRASTRUCTURE 2026-02-16 (Phase 4 - completed by PR #30):
@@ -275,19 +285,20 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 17 (16 done, 0 in-progress, 0 backlog, 1 archived)
-# Total Stories: 122
-# Stories Done: 112 (92%)
+# Total Epics: 18 (16 done, 1 in-progress, 0 backlog, 1 archived)
+# Total Stories: 128
+# Stories Done: 115 (90%)
 # Stories Review: 0
+# Stories In-Progress: 1 (E18-S4)
 # Stories Ready-for-dev: 0
-# Stories Drafted: 0
+# Stories Drafted: 2 (E18-S5, E18-S6)
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-22  # All feature stories complete! 7 remaining stories reconciled.
+# Last Updated: 2026-02-22  # SCP: extraction quality + demo validation stories
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17
-# IN-PROGRESS EPICS: (none)
+# IN-PROGRESS EPICS: E18
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
@@ -446,6 +457,16 @@ development_status:
 # Epics completed: E9, E10, E12, E13 (4 new completions)
 # Sprint: 112/122 stories done (92%), 10 archived (E8). ALL FEATURE EPICS COMPLETE.
 # .ralph/ state files cleaned for next sprint cycle.
+#
+# KEY CHANGES (2026-02-22 - SCP: Extraction Quality + Demo Validation):
+# =====================================================================
+# Phase B OpenRouter fixes committed: migration 31 + E2E test rewritten
+# Extraction verification: 26/31 (84%) from Broadmeadows PDF
+# Report: docs/sprint-artifacts/reports/demo-extraction-report-2026-02-22.md
+# NEW E18-S5: Fix remaining 5 records (3 fuse cartridge naming, 2 no-access)
+# NEW E18-S6: Browser-based demo validation via Playwright
+# Taxonomy files referenced: docs/samplePDF/instructions-sample/*.json
+# SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260222-extraction-quality.md
 #
 # KEY CHANGES (2026-02-22 - E17 Status Reconciliation + Sprint Planning):
 # =========================================================================
