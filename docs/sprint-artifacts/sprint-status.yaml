@@ -256,9 +256,12 @@ development_status:
   epic-17-retrospective: done  # Consolidated project retrospective 2026-02-22
 
   # Epic 18: Production Hardening & Demo Stability (P1)
-  # 0/1 stories complete — EPIC IN PROGRESS
+  # 1/4 stories complete — EPIC IN PROGRESS
   epic-18: in-progress
-  e18-s1-extraction-provider-compatibility: drafted  # docs/sprint-artifacts/e18-s1-extraction-provider-compatibility.md — Provider header/schema/token issues
+  e18-s1-extraction-provider-compatibility: done  # fix: remove ge/le constraints, increase max_tokens, ARA sub-chunking, migration 31
+  e18-s2-upload-wizard-ux: done  # feat: title editing, ACM-focused types, auto-redirect
+  e18-s3-extraction-monitor-defaults: done  # fix: default to history tab so completed extractions visible
+  e18-s4-demo-validation: in-progress  # Manual validation of extraction + UX fixes
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
@@ -281,15 +284,16 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 18 (16 done, 1 in-progress, 0 backlog, 1 archived)
-# Total Stories: 123
-# Stories Done: 112 (91%)
+# Total Stories: 126
+# Stories Done: 115 (91%)
 # Stories Review: 0
+# Stories In-Progress: 1 (E18-S4)
 # Stories Ready-for-dev: 0
-# Stories Drafted: 1 (E18-S1)
+# Stories Drafted: 0
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-22  # E18 created for production hardening / demo stability
+# Last Updated: 2026-02-22  # E18 demo prep: extraction fixes + upload UX
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17
 # IN-PROGRESS EPICS: E18
