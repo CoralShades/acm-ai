@@ -26,6 +26,7 @@ interface UploadStore {
   updateFile: (id: string, updates: Partial<UploadFile>) => void;
   clearFiles: () => void;
   setDocumentType: (id: string, type: UploadFile['documentType']) => void;
+  setTitle: (id: string, title: string) => void;
   setOptions: (updates: Partial<ProcessingOptions>) => void;
   resetOptions: () => void;
 }
@@ -70,6 +71,14 @@ export const useUploadStore = create<UploadStore>((set) => ({
     set((state) => ({
       files: state.files.map((f) =>
         f.id === id ? { ...f, documentType: type } : f
+      ),
+    }));
+  },
+
+  setTitle: (id, title) => {
+    set((state) => ({
+      files: state.files.map((f) =>
+        f.id === id ? { ...f, title } : f
       ),
     }));
   },
