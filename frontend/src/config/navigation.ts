@@ -14,6 +14,7 @@ import {
   Podcast,
   Wand2,
   Layers,
+  ListChecks,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -56,6 +57,7 @@ export const navigationConfig: NavGroup[] = [
       { name: 'Extraction', href: '/settings/extraction', icon: FlaskConical, acmOnly: true },
       { name: 'AI Models', href: '/settings/models', icon: Bot },
       { name: 'Parsers', href: '/settings/parsers', icon: FileCode },
+      { name: 'Field Schema', href: '/settings/field-schema', icon: ListChecks, acmOnly: true },
       { name: 'Field Mapping', href: '/settings/field-mapping', icon: TableProperties, acmOnly: true },
       { name: 'Processing', href: '/settings/processing', icon: Cog },
       { name: 'General', href: '/settings', icon: SlidersHorizontal },

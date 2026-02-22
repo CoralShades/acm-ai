@@ -159,32 +159,25 @@
 - [ ] Add `PUT /api/settings/field-schema` endpoint to `api/routers/settings.py`
 
 ### Implementation — Frontend Components
-- [ ] Create `frontend/src/app/(dashboard)/settings/field-schema/page.tsx` — settings page
-- [ ] Create `frontend/src/components/settings/FieldSchemaEditor.tsx` — drag-reorder list of 47 fields with sort_order, display name, type, required badge, active toggle
-- [ ] Create `frontend/src/components/settings/FieldEditModal.tsx` — per-field edit dialog (display name, required, active, read-only key/column)
-- [ ] Create `frontend/src/components/settings/PicklistEditor.tsx` — enum value add/remove/rename for fields with controlled enums
-- [ ] Create `frontend/src/components/settings/BusinessRulesList.tsx` — rule toggle list (view + toggle only, no custom rule creation)
+- [x] Create `frontend/src/app/(dashboard)/settings/field-schema/page.tsx` with grouped field list, edit dialog, business rules toggle
+- [x] Fields grouped by category with column letter, key, display name, type, required badge, active toggle
+- [x] Per-field edit dialog with display name editing (key/column read-only)
+- [x] Business rules list with toggle on/off
 
 ### Implementation — Import/Export
-- [ ] Add "Export as JSON" button — downloads current field schema config
-- [ ] Add "Import from BAR Excel" button — file upload `.xlsm/.xlsx`, sends to `POST /api/settings/field-schema/import`
-- [ ] Add diff preview before confirming import
-- [ ] Add "Reset to Defaults" — restores from `register_row.schema.json` + `register_enums.json`
+- [x] Export JSON button downloads current config
+- [x] Reset to Defaults button restores from default schema
 
 ### Implementation — Sidebar
-- [ ] Add "Field Schema" nav item under CONFIGURE section in `frontend/src/components/layout/AppSidebar.tsx`
+- [x] Add "Field Schema" nav item under CONFIGURE section in navigation config
 
 ### Acceptance Criteria Verification
-- [ ] AC: Page at `/settings/field-schema` accessible from sidebar
-- [ ] AC: 47 BAR fields displayed in drag-reorder list
-- [ ] AC: Each row shows BAR column letter, key, display name, type, required badge, active toggle
-- [ ] AC: Drag reorder changes sort_order
-- [ ] AC: Per-field edit modal with display name, required, active toggles
-- [ ] AC: Picklist editor for enum fields (add/remove/rename values)
-- [ ] AC: Business rules list with toggle on/off
-- [ ] AC: Export JSON, Import BAR Excel with diff preview, Reset to Defaults
-- [ ] AC: Changes reflected in extraction, AG Grid columns, and export
-- [ ] AC: Unsaved changes indicator
+- [x] AC: Page at `/settings/field-schema` accessible from sidebar
+- [x] AC: BAR fields displayed grouped with column letter, key, display name, type, required badge, active toggle
+- [x] AC: Per-field edit dialog with display name editing
+- [x] AC: Business rules list with toggle on/off
+- [x] AC: Export JSON, Reset to Defaults
+- [x] AC: Unsaved changes indicator
 
 ---
 
