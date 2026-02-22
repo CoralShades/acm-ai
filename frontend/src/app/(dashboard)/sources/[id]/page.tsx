@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Lightbulb,
   TableProperties,
+  Network,
   Download,
   Trash2,
   MoreVertical,
@@ -52,6 +53,7 @@ import { acmApi } from '@/lib/api/acm';
 import { useSource } from '@/lib/hooks/use-sources';
 import { useACMStats } from '@/lib/hooks/use-acm';
 import { ACMTab } from '@/components/acm/ACMTab';
+import { KnowledgeGraph } from '@/components/acm/KnowledgeGraph';
 import { SourceContentPanel } from '@/components/source/SourceContentPanel';
 import { SourceInsightsPanel } from '@/components/source/SourceInsightsPanel';
 import { SourceDetailsPanel } from '@/components/source/SourceDetailsPanel';
@@ -355,6 +357,12 @@ export default function SourceDetailPage() {
                       </Badge>
                     ) : null}
                   </TabsTrigger>
+                  {showAcmToggle && (
+                    <TabsTrigger value="graph" className="gap-1.5">
+                      <Network className="w-4 h-4" />
+                      Graph
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="insights" className="gap-1.5">
                     <Lightbulb className="w-4 h-4" />
                     Insights
@@ -379,6 +387,12 @@ export default function SourceDetailPage() {
                   className="h-full m-0 p-4 overflow-auto"
                 >
                   <ACMTab sourceId={sourceId} />
+                </TabsContent>
+                <TabsContent
+                  value="graph"
+                  className="h-full m-0 overflow-hidden"
+                >
+                  <KnowledgeGraph sourceId={sourceId} />
                 </TabsContent>
                 <TabsContent
                   value="insights"
