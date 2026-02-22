@@ -5,6 +5,7 @@ Story: E1-S18 Page-Level Section Tagging
 """
 
 import pytest
+
 from open_notebook.extractors.page_tagger import (
     _SECTION_TITLES,
     PageTag,
