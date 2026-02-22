@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E13 — Knowledge Graph Visualization
-- **Status**: ready-for-dev
+- **Status**: done
 - **Priority**: P1
 - **Size**: L (Large)
 - **Created**: 2026-02-22

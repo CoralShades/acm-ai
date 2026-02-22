@@ -2,7 +2,7 @@
 
 **Epic:** E12 — Extraction Settings & Configuration UI
 **Priority:** P1
-**Status:** ready-for-dev
+**Status:** done
 **Change Proposal:** SCP-20260208 (2026-02-08) — Course Correction CP-2
 
 ---

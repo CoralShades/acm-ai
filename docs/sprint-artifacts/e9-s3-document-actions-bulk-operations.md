@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E9 — Document Library Management
-- **Status**: ready-for-dev
+- **Status**: done
 - **Priority**: P0
 - **Size**: M (Medium)
 - **Created**: 2026-02-22

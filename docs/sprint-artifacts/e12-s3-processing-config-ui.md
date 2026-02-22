@@ -2,7 +2,7 @@
 
 **Epic:** E12 — Extraction Settings & Configuration UI
 **Priority:** P1
-**Status:** ready-for-dev
+**Status:** done
 **Change Proposal:** SCP-20260207 (2026-02-07)
 **Depends on:** E12-S1 (done)
 **Blocks:** none
