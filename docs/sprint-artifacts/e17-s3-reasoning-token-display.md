@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E17 — Live Extraction Intelligence
-- **Status**: drafted
+- **Status**: done
 - **Priority**: P1
 - **Size**: S (Small)
 - **Created**: 2026-02-22
@@ -28,6 +28,12 @@ When using reasoning models (DeepSeek R1, Claude with extended thinking), captur
 | `frontend/src/components/acm/ExtractionThinkingPanel.tsx` | CREATE | Collapsible reasoning display with monospace streaming text |
 | `open_notebook/graphs/acm_extraction.py` | MODIFY | Parse reasoning from LLM response before structured output |
 | `frontend/src/components/acm/ExtractionProgressPanel.tsx` | MODIFY | Add ExtractionThinkingPanel below stage pills |
+
+## Dev Agent Record
+- **Completed**: 2026-02-22
+- **Build**: PASS (ruff, frontend build)
+- **Files verified**: ExtractionThinkingPanel.tsx, acm_extraction.py, ExtractionProgressPanel.tsx
+- **Notes**: Collapsible reasoning panel for DeepSeek R1 and Claude extended thinking.
 
 ## Technical Notes
 

@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E17 — Live Extraction Intelligence
-- **Status**: ready-for-dev
+- **Status**: done
 - **Priority**: P1
 - **Size**: S (Small)
 - **Created**: 2026-02-22
@@ -26,6 +26,12 @@ Add 6 new frontier models to the model catalog: MiniMax M2.1, Kimi K2.5, DeepSee
 |------|--------|---------|
 | `api/model_provisioning.py` | MODIFY | Add 6 entries to MODEL_CATALOG; update capability detection |
 | `open_notebook/domain/models.py` | MODIFY | Add 6 entries to _PROVIDER_DEFAULTS |
+
+## Dev Agent Record
+- **Completed**: 2026-02-22
+- **Build**: PASS (ruff, frontend build)
+- **Files verified**: model_provisioning.py (MODEL_CATALOG), models.py (_PROVIDER_DEFAULTS)
+- **Notes**: 6 frontier models added to catalog with capability detection.
 
 ## Models to Add
 

@@ -2,8 +2,8 @@
 
 > **Project:** ACM-AI v1.0
 > **Date:** 2025-12-07 (Updated: 2026-02-22)
-> **Status:** Active - Updated for E17 (Live Extraction Intelligence)
-> **Change Log:** 2026-02-22 — E17 added (6 stories: AG-UI extraction relay, incremental streaming, reasoning display, tool observability, A2A, models); 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted, done statuses reconciled (72/99 done)
+> **Status:** Active - Sprint Planning for remaining 7 stories
+> **Change Log:** 2026-02-22 — E17 verified & marked Done (6 stories); E13-S2/S3 story specs created; E12-S2..S4 promoted to ready-for-dev; 104/122 done (85%); 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
 
@@ -11,23 +11,23 @@
 
 | Epic | Title | Priority | Stories | Status |
 |------|-------|----------|---------|--------|
-| E1 | ACM Data Extraction Pipeline | P0 | **27** | Done (26), Ready (1) |
-| E2 | AG Grid Spreadsheet Integration | P0 | **12** | Done (10), Ready (2) |
+| E1 | ACM Data Extraction Pipeline | P0 | **31** | Done |
+| E2 | AG Grid Spreadsheet Integration | P0 | **12** | Done |
 | E3 | Cell Citations & PDF Viewer | P0 | 4 | Done |
 | E4 | Chat with ACM Context | P0 | 4 | Done |
-| E5 | Export Functionality | **P0** (promoted) | **4** | Done (2), Ready (2) |
+| E5 | Export Functionality | **P0** (promoted) | **4** | Done |
 | E6 | Rebranding to ACM-AI | P1 | 4 | Done |
 | E7 | Upload Wizard | P0 | **7** | Done |
 | E8 | UI Refresh (Bento Grid) | P1 | 10 | Archived |
 | E9 | Document Library Management | P0 | 3 | Done (2), Ready (1) |
 | E10 | ACM-AI UI Simplification | P0 | 1 | Ready |
-| E11 | Search & Retrieval Enhancement | P0/P1 | 2 | Done (1), Backlog (1) |
-| E12 | Extraction Settings & Configuration UI | P1 | 4 | Backlog |
-| E13 | Knowledge Graph Visualization | P1 | 3 | Backlog |
+| E11 | Search & Retrieval Enhancement | P0/P1 | 2 | Done |
+| E12 | Extraction Settings & Configuration UI | P1 | 4 | Done (1), Ready (3) |
+| E13 | Knowledge Graph Visualization | P1 | 3 | Done (1), Ready (2) |
 | E14 | UX & Enterprise Readiness | P0/P1 | 11 | Done |
-| E15 | Extraction Monitor & Live Logging UI | P0 | 2 | Backlog |
-| E16 | UX Enhancement Sprint | P0/P1 | 3 | Backlog |
-| E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | In Progress |
+| E15 | Extraction Monitor & Live Logging UI | P0 | 2 | Done |
+| E16 | UX Enhancement Sprint | P0/P1 | 3 | Done |
+| E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | Done |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).

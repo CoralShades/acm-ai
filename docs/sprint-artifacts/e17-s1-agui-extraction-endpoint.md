@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E17 — Live Extraction Intelligence
-- **Status**: drafted
+- **Status**: done
 - **Priority**: P0
 - **Size**: M (Medium)
 - **Created**: 2026-02-22
@@ -32,6 +32,12 @@ Create an AG-UI compliant SSE endpoint for the extraction pipeline. The extracti
 | `open_notebook/graphs/acm_extraction.py` | MODIFY | Add agui_emitter to ExtractionState; emit events in each node |
 | `open_notebook/database/async_migrate.py` | MODIFY | Register migration 22 |
 | `api/main.py` | MODIFY | Register agui_extraction router |
+
+## Dev Agent Record
+- **Completed**: 2026-02-22
+- **Build**: PASS (ruff, frontend build)
+- **Files verified**: agui_event_emitter.py, agui_extraction.py, migrations/22.surrealql, acm_extraction.py, api/main.py
+- **Notes**: SurrealDB event relay pattern implemented. Backend AG-UI SSE endpoint functional.
 
 ## Technical Notes
 

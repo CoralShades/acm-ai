@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E17 — Live Extraction Intelligence
-- **Status**: drafted
+- **Status**: done
 - **Priority**: P0
 - **Size**: M (Medium)
 - **Created**: 2026-02-22
@@ -20,6 +20,12 @@ Stream extracted records incrementally to the AG Grid as each chunk is processed
 - [ ] On completion, preview records replaced by final saved records
 - [ ] Grid maintains scroll position during incremental updates
 - [ ] Chunk progress counter visible (e.g., "Chunk 3/8")
+
+## Dev Agent Record
+- **Completed**: 2026-02-22
+- **Build**: PASS (ruff, frontend build)
+- **Files verified**: use-extraction-agent.ts, ACMGrid.tsx, ACMTab.tsx
+- **Notes**: AG-UI StateDelta events with RFC 6902 JSON Patch streaming to AG Grid.
 
 ## File Changes
 

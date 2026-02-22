@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E17 — Live Extraction Intelligence
-- **Status**: drafted
+- **Status**: done
 - **Priority**: P1
 - **Size**: S (Small)
 - **Created**: 2026-02-22
@@ -20,6 +20,12 @@ Map LangGraph node executions to AG-UI ToolCallStart/Args/End/Result events and 
 - [ ] Completed calls show check + result summary + duration
 - [ ] Args displayed: chunk_index, page_range, model_id, content_length
 - [ ] Results displayed: records_found, duration_ms
+
+## Dev Agent Record
+- **Completed**: 2026-02-22
+- **Build**: PASS (ruff, frontend build)
+- **Files verified**: ExtractionToolCallFeed.tsx, ExtractionProgressPanel.tsx
+- **Notes**: Live tool call feed with spinner/check icons for graph node transitions.
 
 ## File Changes
 
