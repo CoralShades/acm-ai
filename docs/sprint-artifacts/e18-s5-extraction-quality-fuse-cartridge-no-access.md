@@ -159,7 +159,7 @@ Claude Opus 4.6
 | 3 | Lift Foyer (G) | Lift | Internal lining | No access — still skipped |
 | 4 | Main Foyer (G) | Room Adjacent Disabled Toilet | Unknown | No access — still skipped |
 
-These may require content preprocessing (injecting markers into the PDF text) or multi-shot prompting to reliably extract.
+Fix A (NO ACCESS marker injection) addresses records #3 and #4. E2E re-run pending to confirm.
 
 ### File List
 
@@ -169,6 +169,7 @@ These may require content preprocessing (injecting markers into the PDF text) or
 - `tests/test_broadmeadows_e2e.py` — Modified (three-tier matching logic)
 - `docs/sprint-artifacts/e18-s5-extraction-quality-fuse-cartridge-no-access.md` — Modified (task tracking)
 - `docs/sprint-artifacts/sprint-status.yaml` — Modified (story status)
+- `tests/test_preprocess_samp.py` — NEW (9 unit tests for NO ACCESS marker injection)
 
 ### Change Log
 
@@ -177,3 +178,4 @@ These may require content preprocessing (injecting markers into the PDF text) or
 - 2026-02-23: Added fallback JSON parser for OpenRouter structured output compatibility. Increased max_tokens 8192→16384.
 - 2026-02-23: E2E result: 27/31 (87%), up from 26/31 baseline. Fuse cartridge naming fixed for 2/3 items. No-access items still skipped by LLM.
 - 2026-02-23: Commits dce30de (prompt+test) and 0b05bda (extraction.jinja+fallback parser) pushed to main.
+- 2026-02-23: Fix A implemented — NO ACCESS marker injection in `_preprocess_samp_format()`. Added `NO_ACCESS_PHRASES` list (10 phrases) with `>>> NO ACCESS ENTRY:` marker. Updated both extraction prompt templates with CLASSIFY rule. 9 unit tests added in `tests/test_preprocess_samp.py`.
