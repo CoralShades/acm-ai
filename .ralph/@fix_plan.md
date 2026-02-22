@@ -184,31 +184,31 @@
 ## Story 6: E13-S2 — Knowledge Graph API & Data Service
 
 ### Implementation — Backend Repository
-- [ ] Create `open_notebook/database/graph_repository.py` — SurrealDB graph traversal queries using `->` and `<-` operators
+- [x] Create `open_notebook/database/graph_repository.py` — consolidated into router with direct repo_query calls
 
 ### Implementation — Backend Service
-- [ ] Create `api/graph_service.py` — graph data service with dagre layout calculation, risk aggregation
+- [x] Create `api/graph_service.py` — consolidated into router with _build_graph_from_records helper
 
 ### Implementation — Backend Router
-- [ ] Create `api/routers/graph.py` with endpoints:
-  - [ ] `GET /api/graph/source/{source_id}` — full graph for a source
-  - [ ] `GET /api/graph/school/{school_id}` — school-centric graph
-  - [ ] `GET /api/graph/building/{building_id}` — building-centric graph
-  - [ ] `GET /api/graph/stats/{source_id}` — graph statistics
-- [ ] Register graph router in `api/main.py`
+- [x] Create `api/routers/graph.py` with endpoints:
+  - [x] `GET /api/graph/source/{source_id}` — full graph for a source
+  - [x] `GET /api/graph/school/{school_id}` — school-centric graph
+  - [x] `GET /api/graph/building/{building_id}` — building-centric graph
+  - [x] `GET /api/graph/stats/{source_id}` — graph statistics
+- [x] Register graph router in `api/main.py`
 
 ### Implementation — Response Format
-- [ ] Return React Flow compatible `{ nodes: ReactFlowNode[], edges: ReactFlowEdge[] }` JSON
-- [ ] Implement auto-layout calculation (hierarchical top-down via dagre)
-- [ ] Implement risk summary aggregation per node
-- [ ] Implement filter options: by risk level, by building, by ACM status
+- [x] Return React Flow compatible `{ nodes: ReactFlowNode[], edges: ReactFlowEdge[] }` JSON
+- [x] Implement auto-layout calculation (hierarchical top-down via dagre)
+- [x] Implement risk summary aggregation per node
+- [x] Implement filter options: by risk level, by building, by ACM status
 
 ### Acceptance Criteria Verification
-- [ ] AC: All 4 API endpoints return correct graph data
-- [ ] AC: Response format is React Flow compatible nodes and edges JSON
-- [ ] AC: Auto-layout via dagre algorithm
-- [ ] AC: Risk summary aggregation per node
-- [ ] AC: Filter options work correctly
+- [x] AC: All 4 API endpoints return correct graph data
+- [x] AC: Response format is React Flow compatible nodes and edges JSON
+- [x] AC: Auto-layout via dagre algorithm
+- [x] AC: Risk summary aggregation per node
+- [x] AC: Filter options work correctly
 
 ---
 
