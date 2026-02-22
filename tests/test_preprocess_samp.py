@@ -99,3 +99,43 @@ class TestNoAccessMarkerInjection:
         # then the shorter "No access" within the original text may also match.
         # Both markers are acceptable as long as the text is processed.
         assert marker_count >= 1
+
+
+class TestProductNormalization:
+    """Tests for PRODUCT_NORMALIZATIONS in SAMP preprocessor."""
+
+    def test_fuses_normalized_to_fuse_cartridge(self):
+        """'Fuses' (plural) is normalized to 'Fuse cartridge'."""
+        text = "B001 - R0001 - Switch Room - 5.00 m2\nFuses\nAsbestos-containing material"
+        result = _preprocess(text)
+        assert "Fuse cartridge" in result
+        # "Fuses" as a standalone word should be replaced
+        assert "\nFuses\n" not in result
+
+    def test_fuse_standalone_normalized(self):
+        """'Fuse' (singular standalone) is normalized to 'Fuse cartridge'."""
+        text = "Switch Room\nFuse\nAsbestos"
+        result = _preprocess(text)
+        assert "Fuse cartridge" in result
+
+    def test_fuse_cartridge_unchanged(self):
+        """'Fuse cartridge' is NOT double-normalized."""
+        text = "Switch Room\nFuse cartridge\nAsbestos"
+        result = _preprocess(text)
+        # Should contain exactly "Fuse cartridge", not "Fuse cartridge cartridge"
+        assert "Fuse cartridge" in result
+        assert "Fuse cartridge cartridge" not in result
+
+    def test_flange_mastic_normalized(self):
+        """'Flange mastic' is normalized to 'Flange joints'."""
+        text = "Roof\nFlange mastic\n(grey)\nAsbestos"
+        result = _preprocess(text)
+        assert "Flange joints" in result
+        assert "Flange mastic" not in result
+
+    def test_normalization_case_insensitive(self):
+        """Normalization is case-insensitive."""
+        text = "FUSES\nfuses\nFLANGE MASTIC"
+        result = _preprocess(text)
+        assert result.count("Fuse cartridge") == 2
+        assert "Flange joints" in result

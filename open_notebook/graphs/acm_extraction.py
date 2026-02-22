@@ -303,6 +303,16 @@ def _preprocess_samp_format(
 
     processed = content
 
+    # Normalize abbreviated product names to canonical BAR vocabulary
+    # Applied BEFORE marker injection so normalized text feeds into markers
+    PRODUCT_NORMALIZATIONS = {
+        r"\bFuses\b": "Fuse cartridge",
+        r"\bFuse\b(?!\s+cartridge)": "Fuse cartridge",
+        r"\bFlange\s+mastic\b": "Flange joints",
+    }
+    for pattern, replacement in PRODUCT_NORMALIZATIONS.items():
+        processed = re.sub(pattern, replacement, processed, flags=re.IGNORECASE)
+
     # Mark building headers clearly
     for building in buildings:
         marker = f"\n\n=== BUILDING: {building} ===\n"
