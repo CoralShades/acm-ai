@@ -54,7 +54,7 @@ function ExtractionItem({ item }: { item: ExtractionProgressItem }) {
 }
 
 export default function ExtractionMonitorPage() {
-  const [activeTab, setActiveTab] = useState('active')
+  const [activeTab, setActiveTab] = useState('history')
   const [items, setItems] = useState<ExtractionProgressItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
