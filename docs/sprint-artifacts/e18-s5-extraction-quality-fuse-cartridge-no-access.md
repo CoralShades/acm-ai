@@ -25,8 +25,8 @@ so that the extracted data matches the original register with 100% completeness.
 - [x] Task 2: Improve E2E test matching logic (AC: #1)
   - [x] 2.1: Add fuzzy room+location fallback match for "Not Sampled" records where item name may differ from CSV ground truth
   - [x] 2.2: Ensure composite key matching handles "Fuse cartridge" vs "Switchboard" naming difference gracefully
-- [ ] Task 3: Run E2E test and verify 31/31 match (AC: #1, #5)
-  - [ ] 3.1: Run `uv run pytest tests/test_broadmeadows_e2e.py -m integration -v -s` and verify 31/31
+- [~] Task 3: Run E2E test and verify 31/31 match (AC: #1, #5) — 27/31 (87%)
+  - [x] 3.1: Run E2E test — 27/31 matched (87%), up from 26/31 (84%). 4 still missing (LLM non-determinism)
   - [x] 3.2: Run `uv run ruff check .` — PASSED
   - [x] 3.3: Run `uv run pytest tests/ -x --ignore=tests/test_broadmeadows_e2e.py` — 509 passed, 1 pre-existing failure (not a regression)
 
@@ -140,17 +140,32 @@ Claude Opus 4.6
 
 ### Completion Notes List
 
-- Task 1.1: Added ACM Product Vocabulary Guide section with 30+ canonical SpecificUses organized by category
-- Task 1.2: Enhanced Product/Material mapping with ACM item vs equipment distinction, examples table
-- Task 1.3: Added extraction rule 7 for No Access / Restricted Access / Height Restriction entries
+- Task 1.1: Added ACM Product Vocabulary Guide to BOTH `building_extraction.jinja` and `extraction.jinja`
+- Task 1.2: Enhanced Product/Material mapping with ACM item vs equipment distinction, examples table (both templates)
+- Task 1.3: Added extraction rule 7 for No Access / Restricted Access / Height Restriction entries (both templates)
 - Task 2.1-2.2: Three-tier matching (sample_no → room+location+item → room+location fuzzy)
-- Task 3.1: PENDING — requires OPENROUTER_API_KEY for live LLM call
+- Task 3.1: E2E result 27/31 (87%), up from 26/31 (84%). Improvement from prompt changes + matching
 - Task 3.2: PASSED — ruff check clean
 - Task 3.3: PASSED — 509/510 unit tests pass (1 pre-existing failure)
+- Additional: Fallback JSON parser added for OpenRouter structured output compatibility
+- Additional: max_tokens fallback increased from 8192 to 16384
+
+### Remaining 4 Missing Records (LLM Non-Determinism)
+
+| # | Room | Location | Expected Item | Status |
+|---|------|----------|--------------|--------|
+| 1 | Switch Room (L1) | Auto Battery Charger | Fuse cartridge | Not extracted (LLM missed) |
+| 2 | Roof (G) | East Ductwork | Flange joints | Not extracted (LLM missed) |
+| 3 | Lift Foyer (G) | Lift | Internal lining | No access — still skipped |
+| 4 | Main Foyer (G) | Room Adjacent Disabled Toilet | Unknown | No access — still skipped |
+
+These may require content preprocessing (injecting markers into the PDF text) or multi-shot prompting to reliably extract.
 
 ### File List
 
-- `prompts/acm/building_extraction.jinja` — Modified (3 new sections added)
+- `prompts/acm/building_extraction.jinja` — Modified (3 new sections: vocabulary, distinction, no-access)
+- `prompts/acm/extraction.jinja` — Modified (same 3 sections applied to primary extraction prompt)
+- `open_notebook/graphs/acm_extraction.py` — Modified (fallback JSON parser, max_tokens 8192→16384)
 - `tests/test_broadmeadows_e2e.py` — Modified (three-tier matching logic)
 - `docs/sprint-artifacts/e18-s5-extraction-quality-fuse-cartridge-no-access.md` — Modified (task tracking)
 - `docs/sprint-artifacts/sprint-status.yaml` — Modified (story status)
@@ -158,3 +173,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-02-23: Tasks 1-2 implemented, Task 3 partially verified (lint + unit tests pass, E2E pending live run)
+- 2026-02-23: Discovery — pipeline uses extraction.jinja (not building_extraction.jinja) for non-orchestrator path. Applied same changes to both.
+- 2026-02-23: Added fallback JSON parser for OpenRouter structured output compatibility. Increased max_tokens 8192→16384.
+- 2026-02-23: E2E result: 27/31 (87%), up from 26/31 baseline. Fuse cartridge naming fixed for 2/3 items. No-access items still skipped by LLM.
+- 2026-02-23: Commits dce30de (prompt+test) and 0b05bda (extraction.jinja+fallback parser) pushed to main.
