@@ -5,7 +5,7 @@ Tests pattern matching, friability-based taxonomy selection,
 and LLM fallback classification.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -388,34 +388,8 @@ class TestClassifyWithLLM:
         assert result.method == "none"
 
     @pytest.mark.asyncio
-    async def test_llm_success_mocked(self):
-        """Test successful LLM classification with mocked response."""
-        mock_response = MagicMock()
-        mock_response.content = '{"product_group": "T3 Vinyl products", "product_type": "Vinyl Tiles", "confidence": 0.85}'
-
-        mock_model = MagicMock()
-        mock_langchain = MagicMock()
-        mock_langchain.ainvoke = AsyncMock(return_value=mock_response)
-        mock_model.to_langchain.return_value = mock_langchain
-
-        mock_model_manager = MagicMock()
-        mock_model_manager.get_default_model = AsyncMock(return_value=mock_model)
-
-        with patch.dict("sys.modules", {"ai_prompter": MagicMock()}):
-            with patch("open_notebook.domain.models.model_manager", mock_model_manager):
-                with patch("ai_prompter.Prompter") as mock_prompter:
-                    mock_prompter.return_value.render.return_value = "Test prompt"
-                    result = await classify_with_llm("Vinyl floor tiles", "Non-friable")
-
-        # LLM may not be called if dependencies mocking is incomplete
-        # Just verify it returns a valid result (either llm or none)
-        assert result.method in ["llm", "none"]
-
-    @pytest.mark.asyncio
-    async def test_llm_json_in_markdown_block(self):
-        """Test parsing JSON from markdown code block - verify pattern matching works first."""
-        # Since LLM mocking is complex, verify the simpler case
-        # Pattern matching should work for "Fibro sheeting"
+    async def test_pattern_match_fibro_sheeting(self):
+        """Test that pattern matching classifies 'Fibro sheeting' correctly."""
         result = classify_product("Fibro sheeting", "Non-friable")
         assert result.product_group == "T1 Cement products"
         assert result.method == "pattern"

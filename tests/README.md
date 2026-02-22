@@ -225,3 +225,27 @@ Tests run on push/PR via GitHub Actions. Artifacts (screenshots, videos, traces)
 ```bash
 npx playwright install --with-deps chromium
 ```
+
+## TODO: Missing Test Coverage
+
+The following mock/placeholder tests were removed (2026-02-23) because they asserted
+local variables equal themselves or used trivially-true mock checks, providing false
+confidence with zero production code coverage:
+
+### Deleted (real coverage exists elsewhere)
+
+- `test_acm_ai_extraction.py::TestBroadmeadowsGroundTruth` (5 tests) — hardcoded
+  ints asserting `31 == 31`, `11 == 11`, etc. Real coverage:
+  `test_broadmeadows_e2e.py` runs full LLM extraction vs CSV ground truth.
+
+### Deleted (coverage gap — needs real tests)
+
+- `test_acm_chat_context.py::TestACMContextIntegration` (2 tests) — asserted mock
+  return values equal the values they were set to. **Need:** real integration test
+  for `format_acm_context()` in the chat flow with a live (or properly mocked)
+  ContextBuilder.
+
+- `test_taxonomy.py::test_llm_success_mocked` (1 test) — accepted any outcome
+  (`method in ["llm", "none"]`) with incomplete mock patching. **Need:** real
+  `classify_with_llm()` test with properly mocked LLM that verifies JSON parsing
+  and classification output.

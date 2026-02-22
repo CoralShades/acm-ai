@@ -264,6 +264,7 @@ development_status:
   e18-s4-demo-validation: in-progress  # Manual validation of extraction + UX fixes
   e18-s5-extraction-quality-fuse-cartridge-no-access: review  # Prompt + test matching improvements done, pending live E2E validation
   e18-s6-browser-demo-validation: drafted  # Browser-based feature validation via Playwright
+  e18-s7-qwen25-32b-support: review  # Qwen2.5:32b full Ollama + OpenRouter support for extraction
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
@@ -282,11 +283,12 @@ development_status:
   bug-auth-loading-ux: done  # Skeleton layout replacing blank spinner, cached authRequired (Epic 14)
   bug-extraction-progress-fix: done  # Semantic design tokens replacing hardcoded colors (Epic 15)
   # Phase 3 + Phase 4: Moved to Epic 1 section (bug-negative-results-regression, E1-S28/S29/S30)
+  bug-cleanup-mock-tests: done  # Remove self-referential mock tests
 
 # SUMMARY:
 # ========
 # Total Epics: 18 (16 done, 1 in-progress, 0 backlog, 1 archived)
-# Total Stories: 128
+# Total Stories: 129
 # Stories Done: 115 (90%)
 # Stories Review: 0
 # Stories In-Progress: 1 (E18-S4)

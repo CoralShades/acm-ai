@@ -997,47 +997,5 @@ class TestBARFieldPopulation:
         assert isinstance(getattr(record, field_name), field_type)
 
 
-class TestBroadmeadowsGroundTruth:
-    """Integration test suite validating against Broadmeadows CSV ground truth.
-
-    Tests key records from the 31-row Broadmeadows dataset.
-    """
-
-    def test_broadmeadows_total_record_count(self):
-        """Test that Broadmeadows has 31 data rows (excluding header)."""
-        # This is a placeholder - actual extraction test
-        # Ground truth: 31 records (rows 2-32 in CSV)
-        expected_count = 31
-        assert expected_count == 31
-
-    def test_broadmeadows_positive_count(self):
-        """Test positive/assumed positive count from Broadmeadows."""
-        # Ground truth from CSV analysis:
-        # Positive: rows 12, 13, 19, 21, 27 = 5 records
-        # Assumed Positive: rows 4, 9, 10, 22, 31, 32 = 6 records
-        # Total positive/assumed: 11 records
-        positive_count = 11
-        assert positive_count == 11
-
-    def test_broadmeadows_negative_count(self):
-        """Test negative count from Broadmeadows."""
-        # Ground truth: 20 negative records
-        # 31 total - 11 positive/assumed = 20 negative
-        negative_count = 20
-        assert negative_count == 20
-
-    def test_broadmeadows_external_count(self):
-        """Test external area count from Broadmeadows."""
-        # External records: rows 21-29 = 9 records
-        external_count = 9
-        assert external_count == 9
-
-    def test_broadmeadows_internal_count(self):
-        """Test internal area count from Broadmeadows."""
-        # Internal records: rows 2-20, 30-32 = 22 records
-        internal_count = 22
-        assert internal_count == 22
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
