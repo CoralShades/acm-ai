@@ -15,8 +15,8 @@ const nextConfig: NextConfig = {
   ...(!isDev && !process.env.VERCEL ? { output: "standalone" } : {}),
 
   // Set workspace root to parent directory to resolve multiple lockfile warning
-  // Only apply for production builds, not development
-  ...(!isDev ? { outputFileTracingRoot: path.join(__dirname, '../') } : {}),
+  // Only apply for Docker standalone builds (skip for Vercel and dev)
+  ...(!isDev && !process.env.VERCEL ? { outputFileTracingRoot: path.join(__dirname, '../') } : {}),
 
   // API Rewrites: Proxy /api/* requests to FastAPI backend
   async rewrites() {

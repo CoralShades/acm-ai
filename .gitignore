@@ -197,3 +197,5 @@ test-results/
 playwright-report/trace/
 .last-run.json
 nul*
+
+.vercel
