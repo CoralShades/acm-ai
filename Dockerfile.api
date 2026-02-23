@@ -59,6 +59,12 @@ COPY supervisord.api.conf /etc/supervisor/conf.d/supervisord.conf
 # Railway provides PORT dynamically; default to 5055
 ENV PORT=5055
 
+# Python memory optimizations for constrained environments
+ENV PYTHONMALLOC=malloc
+ENV MALLOC_TRIM_THRESHOLD_=65536
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 # Expose the API port
 EXPOSE ${PORT}
 
