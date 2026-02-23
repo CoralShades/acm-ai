@@ -1,6 +1,6 @@
 import json
 import re
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from esperanto import LanguageModel
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -108,11 +108,24 @@ def supports_tool_calling(model: BaseChatModel) -> bool:
     return callable(model.bind_tools)
 
 
-def parse_json_response(response_text: str):
+def _is_qwen_model(model: "BaseChatModel") -> bool:
+    """Check if a LangChain model instance is a Qwen2.5 model.
+
+    Matches both Ollama (qwen2.5:32b) and OpenRouter (qwen/qwen2.5-32b-instruct).
+    Qwen3+ models are NOT matched — they support tool calling.
+    """
+    model_name = getattr(model, "model_name", "") or getattr(model, "model", "") or ""
+    if not isinstance(model_name, str):
+        return False
+    return "qwen2.5" in model_name.lower()
+
+
+def parse_json_response(response_text: str) -> dict[str, Any]:
     """Extract and parse a JSON object from LLM response text.
 
     Tries fenced ```json blocks first, then falls back to raw brace-depth
-    matching. Returns the parsed dict. Raises ValueError if no JSON found.
+    matching. Returns the parsed dict. Raises ValueError if no JSON found
+    or if the extracted structure is not valid JSON.
     """
     # Try ```json ... ``` blocks first
     json_match = re.search(
@@ -121,7 +134,10 @@ def parse_json_response(response_text: str):
         re.DOTALL,
     )
     if json_match:
-        return json.loads(json_match.group(1))
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Found JSON-like structure but failed to parse: {e}") from e
 
     # Fall back to raw brace-depth matching
     brace_start = response_text.find("{")
@@ -134,6 +150,11 @@ def parse_json_response(response_text: str):
                 depth -= 1
                 if depth == 0:
                     json_str = response_text[brace_start : brace_start + idx + 1]
-                    return json.loads(json_str)
+                    try:
+                        return json.loads(json_str)
+                    except json.JSONDecodeError as e:
+                        raise ValueError(
+                            f"Found JSON-like structure but failed to parse: {e}"
+                        ) from e
 
     raise ValueError("No JSON object found in response text")
