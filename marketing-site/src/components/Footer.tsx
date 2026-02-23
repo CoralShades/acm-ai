@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import Image from "next/image";
 import { APP_URL } from "@/lib/site-urls";
 
 const footerLinks: Record<string, Array<{ label: string; href: string; external?: boolean }>> = {
@@ -31,9 +31,13 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-vaea-teal-500">
-                <Shield className="h-4 w-4 text-white" />
-              </div>
+              <Image
+                src="/acm-logo-bg.svg"
+                alt="ACM-AI logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-lg"
+              />
               <span className="font-[family-name:var(--font-dm-serif)] text-lg text-white">
                 ACM-AI
               </span>

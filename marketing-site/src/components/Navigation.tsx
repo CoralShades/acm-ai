@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, Menu, X } from "lucide-react";
+import Image from "next/image";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { APP_URL } from "@/lib/site-urls";
@@ -23,9 +24,14 @@ export function Navigation() {
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-vaea-teal-500">
-            <Shield className="h-4 w-4 text-white" />
-          </div>
+          <Image
+            src="/acm-logo-bg.svg"
+            alt="ACM-AI logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg"
+            priority
+          />
           <span className="font-[family-name:var(--font-dm-serif)] text-lg font-normal tracking-tight text-foreground">
             ACM-AI
           </span>

@@ -37,9 +37,11 @@ interface VercelStatus {
 
 interface RailwayStatus {
   status: StatusLevel;
+  services?: Array<{ name: string; status: StatusLevel; lastDeploy: string | null }>;
   lastDeploy: string | null;
   uptime: string | null;
   updatedAt: string;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -47,6 +49,24 @@ interface RailwayStatus {
 // ---------------------------------------------------------------------------
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const STATUS_COLORS: Record<StatusLevel, string> = {
+  operational: "bg-emerald-500",
+  degraded: "bg-amber-500",
+  down: "bg-red-500",
+  unknown: "bg-gray-400",
+};
+
+const STATUS_LABELS: Record<StatusLevel, string> = {
+  operational: "Operational",
+  degraded: "Degraded",
+  down: "Down",
+  unknown: "Unknown",
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -254,6 +274,94 @@ function SprintSparkline() {
         </span>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// StatusHeroBar — aggregated live status strip
+// ---------------------------------------------------------------------------
+
+function StatusHeroBar() {
+  const { data: github } = useSWR<GitHubStats>("/api/github/stats", fetcher, { refreshInterval: 60000 });
+  const { data: vercel } = useSWR<VercelStatus>("/api/vercel/status", fetcher, { refreshInterval: 60000 });
+  const { data: railway } = useSWR<RailwayStatus>("/api/railway/status", fetcher, { refreshInterval: 60000 });
+
+  const services: Array<{ name: string; status: StatusLevel }> = [
+    { name: "GitHub", status: github?.status ?? "unknown" },
+    { name: "Vercel", status: vercel?.status ?? "unknown" },
+    { name: "Railway", status: railway?.status ?? "unknown" },
+  ];
+
+  const hasDown = services.some((s) => s.status === "down");
+  const hasDegraded = services.some((s) => s.status === "degraded");
+  const allOperational = services.every((s) => s.status === "operational");
+  const anyKnown = services.some((s) => s.status !== "unknown");
+
+  let overallStatus: StatusLevel = "unknown";
+  let overallLabel = "Checking Services…";
+  if (anyKnown) {
+    if (hasDown) {
+      overallStatus = "down";
+      overallLabel = "Service Incident Detected";
+    } else if (hasDegraded) {
+      overallStatus = "degraded";
+      overallLabel = "Partial Degradation";
+    } else if (allOperational) {
+      overallStatus = "operational";
+      overallLabel = "All Systems Operational";
+    }
+  }
+
+  const latestUpdate = [github?.updatedAt, vercel?.updatedAt, railway?.updatedAt]
+    .filter(Boolean)
+    .sort()
+    .reverse()[0];
+
+  return (
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      animate="visible"
+      className={cn(
+        "rounded-2xl border p-5",
+        overallStatus === "operational"
+          ? "border-emerald-500/30 bg-emerald-500/5"
+          : overallStatus === "degraded"
+            ? "border-amber-500/30 bg-amber-500/5"
+            : overallStatus === "down"
+              ? "border-red-500/30 bg-red-500/5"
+              : "border-border bg-card"
+      )}
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Overall status */}
+        <div className="flex items-center gap-3">
+          <span className={cn("h-3 w-3 rounded-full animate-pulse", STATUS_COLORS[overallStatus])} />
+          <span className="text-lg font-semibold text-foreground">{overallLabel}</span>
+        </div>
+
+        {/* Per-service pills */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {services.map((svc) => (
+            <div
+              key={svc.name}
+              className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium"
+            >
+              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_COLORS[svc.status])} />
+              <span className="text-muted-foreground">{svc.name}</span>
+              <span className="text-foreground">{STATUS_LABELS[svc.status]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Last checked timestamp */}
+      {latestUpdate && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Last checked: {formatRelativeDate(latestUpdate)} — auto-refreshes every 60s
+        </p>
+      )}
+    </motion.div>
   );
 }
 
@@ -472,6 +580,9 @@ export default function StatusPage() {
       </section>
 
       <div className="mx-auto max-w-7xl space-y-16 px-4 py-16 sm:px-6 lg:px-8">
+
+        {/* ── A. Live Status Hero Bar ── */}
+        <StatusHeroBar />
 
         {/* ── B. Infrastructure Status Grid ── */}
         <section>

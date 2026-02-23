@@ -224,3 +224,12 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Hide scrollbar for mobile tab bar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

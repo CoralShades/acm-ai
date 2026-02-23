@@ -16,10 +16,10 @@ const sectionDividerClass =
 export default function DemoPage() {
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sticky sidebar — fixed, 56px wide, hidden on mobile */}
+      {/* Sticky sidebar — expandable on hover, hidden on mobile (tab bar shown instead) */}
       <DemoSidebar />
 
-      {/* Main content — offset by sidebar width on desktop */}
+      {/* Main content — offset by collapsed sidebar width on desktop */}
       <main className="flex-1 lg:ml-14 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
 

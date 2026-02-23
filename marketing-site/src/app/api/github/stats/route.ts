@@ -13,7 +13,7 @@ interface GitHubStatsResponse {
 
 const FALLBACK: GitHubStatsResponse = {
   status: "unknown",
-  commits: 281,
+  commits: 318,
   openPRs: 3,
   lastCommitMessage: "feat: add cloud deployment config for Railway + Vercel",
   lastCommitDate: new Date().toISOString(),
@@ -37,11 +37,11 @@ export async function GET(): Promise<NextResponse> {
   try {
     const octokit = new Octokit({ auth: token });
 
-    const [repoData, commitsData, prsData, workflowData] = await Promise.all([
-      octokit.repos.get({ owner, repo }),
+    const [commitsData, prsData, workflowData, contributorsData] = await Promise.all([
       octokit.repos.listCommits({ owner, repo, per_page: 1 }),
       octokit.pulls.list({ owner, repo, state: "open" }),
       octokit.actions.listWorkflowRunsForRepo({ owner, repo, per_page: 1 }),
+      octokit.repos.getContributorsStats({ owner, repo }).catch(() => null),
     ]);
 
     const lastCommit = commitsData.data[0];
@@ -57,7 +57,9 @@ export async function GET(): Promise<NextResponse> {
 
     const response: GitHubStatsResponse = {
       status: "operational",
-      commits: repoData.data.size > 0 ? repoData.data.size : FALLBACK.commits,
+      commits: contributorsData?.data && Array.isArray(contributorsData.data)
+        ? contributorsData.data.reduce((sum: number, c: { total?: number }) => sum + (c.total ?? 0), 0)
+        : FALLBACK.commits,
       openPRs: prsData.data.length,
       lastCommitMessage:
         lastCommit?.commit?.message?.split("\n")[0] ?? FALLBACK.lastCommitMessage,

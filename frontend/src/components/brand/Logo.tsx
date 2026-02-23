@@ -13,16 +13,18 @@ interface LogoProps {
 /**
  * VAEA ACM-AI Logo Component
  *
- * Uses the official VAEA Ripple logo for government branding compliance.
+ * Uses the official VAEA Ripple logo (SVG) for government branding compliance.
+ * Full variant uses acm-logo-bg.svg (dark background with mark).
+ * Icon variant uses acm-icon.svg (transparent mark only).
  */
 export function Logo({ variant = 'full', className, iconClassName }: LogoProps) {
   const icon = (
     <Image
-      src="/logo.png"
+      src={variant === 'icon' ? '/acm-icon.svg' : '/acm-logo-bg.svg'}
       alt="VAEA - Victorian Asbestos Eradication Agency"
       width={32}
       height={32}
-      className={cn('w-8 h-8', iconClassName)}
+      className={cn('w-8 h-8 rounded-md', iconClassName)}
       priority
     />
   )

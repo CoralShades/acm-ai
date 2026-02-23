@@ -30,9 +30,9 @@ export const metadata: Metadata = {
   keywords: [...BRANDING.keywords],
   icons: {
     icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/acm-icon.svg', type: 'image/svg+xml' },
     ],
-    apple: '/icon.svg',
+    apple: '/acm-icon.svg',
   },
   manifest: '/manifest.json',
 };
