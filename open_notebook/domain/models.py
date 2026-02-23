@@ -51,7 +51,10 @@ class Model(ObjectModel):
         "qwen3-14b": {"max_output": 8192, "context": 131072},
         "qwen3-8b": {"max_output": 8192, "context": 131072},
         "qwen3": {"max_output": 8192, "context": 32768},
-        # Qwen2.5
+        # Qwen2.5 (Ollama colon-format first, then OpenRouter dash-format)
+        "qwen2.5:32b": {"max_output": 8192, "context": 131072},
+        "qwen2.5:14b": {"max_output": 8192, "context": 131072},
+        "qwen2.5:7b": {"max_output": 8192, "context": 131072},
         "qwen2.5-coder-32b": {"max_output": 8192, "context": 131072},
         "qwen2.5-coder": {"max_output": 8192, "context": 32768},
         "qwen2.5-72b": {"max_output": 8192, "context": 131072},

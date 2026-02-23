@@ -237,7 +237,7 @@ async def find_or_create_model(
                 k in name_lower
                 for k in [
                     "claude", "gpt-4", "gpt-5",
-                    "qwen3", "qwen2.5",
+                    "qwen3",
                     "deepseek", "llama-3",
                     "mistral", "gemini-2.5",
                     "kimi-k2",
