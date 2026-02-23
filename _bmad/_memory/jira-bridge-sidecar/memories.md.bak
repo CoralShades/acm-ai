@@ -1,0 +1,182 @@
+# Jira Bridge Memory Bank
+
+## Project Mappings
+
+### Active Projects
+
+**ACM-AI v2** | Project: ARPP | Cloud: coralshades.atlassian.net
+Source Doc: `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md`
+Mapped: 2026-02-05 | 10 Epics, 57 Stories
+
+### Epic Mappings
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E1 | ARPP-205 | ACM Data Extraction Pipeline | In Progress |
+| E2 | ARPP-206 | AG Grid Spreadsheet Integration | In Progress |
+| E3 | ARPP-207 | Cell Citations & PDF Viewer | Done |
+| E4 | ARPP-208 | Chat with ACM Context | Done |
+| E5 | ARPP-209 | Export Functionality | In Progress |
+| E6 | ARPP-210 | Rebranding to ACM-AI | Done |
+| E7 | ARPP-211 | Upload Wizard | In Progress |
+| E8 | ARPP-212 | UI Refresh (Bento Grid Design) | In Progress |
+| E9 | ARPP-213 | Document Library Management | To Do |
+| E10 | ARPP-214 | ACM-AI UI Simplification | To Do |
+
+### Story Mappings
+
+#### Epic 1: ACM Data Extraction Pipeline (ARPP-205)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E1-S1 | ARPP-215 | Create ACM Data Model | Done |
+| E1-S2 | ARPP-216 | Create ACM Record Domain Model | Done |
+| E1-S3 | ARPP-217 | Implement Two-Stage ACM Extraction Pipeline | Done |
+| E1-S4 | ARPP-218 | Create ACM API Endpoints | Done |
+| E1-S5 | ARPP-219 | Integrate ACM Extraction into Source Processing | Done |
+| E1-S6 | ARPP-220 | Configure Local Embedding Pipeline | Done |
+| E1-S7 | ARPP-221 | [Placeholder] Embedding Search Integration | Done |
+| E1-S8 | ARPP-222 | Site Configuration Data Entry | To Do |
+| E1-S9 | ARPP-228 | ACM Product Classification | To Do |
+| E1-S10 | ARPP-230 | MinerU Table Extraction Integration | To Do |
+| E1-S11 | ARPP-232 | Extensible Consultant Parser Framework | To Do |
+| E1-S12 | ARPP-234 | Consultant Wording Normalization | To Do |
+
+#### Epic 2: AG Grid Spreadsheet (ARPP-206)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E2-S1 | ARPP-223 | Install and Configure AG Grid | Done |
+| E2-S2 | ARPP-224 | Create ACMSpreadsheet Component | Done |
+| E2-S3 | ARPP-225 | Implement Column Sorting and Filtering | Done |
+| E2-S4 | ARPP-226 | Implement Row Grouping | Done |
+| E2-S5 | ARPP-227 | Implement Risk Status Color Coding | Done |
+| E2-S6 | ARPP-229 | Add Search Bar to Spreadsheet | Done |
+| E2-S7 | ARPP-231 | Implement Building Tab Navigation | Done |
+| E2-S8 | ARPP-233 | Column Visibility Management | To Do |
+
+#### Epic 3: Cell Citations & PDF Viewer (ARPP-207)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E3-S1 | ARPP-235 | Make Cells Clickable | Done |
+| E3-S2 | ARPP-236 | Create PDF Viewer Modal | Done |
+| E3-S3 | ARPP-237 | Implement ACM Citation Reference Type | Done |
+| E3-S4 | ARPP-239 | Store Page Numbers During Extraction | Done |
+
+#### Epic 4: Chat with ACM Context (ARPP-208)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E4-S1 | ARPP-240 | Add ACM Records to Chat Context | Done |
+| E4-S2 | ARPP-242 | Create ACM Context Toggle | Done |
+| E4-S3 | ARPP-244 | Generate ACM-Aware Chat Responses | Done |
+| E4-S4 | ARPP-247 | Support ACM-Specific Questions | Done |
+
+#### Epic 5: Export Functionality (ARPP-209)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E5-S1 | ARPP-238 | Implement CSV Export | Done |
+| E5-S2 | ARPP-241 | Implement Excel BAR Export | Done |
+| E5-S3 | ARPP-243 | BAR Template Management | To Do |
+| E5-S4 | ARPP-245 | Export Field Mapping Configuration | To Do |
+
+#### Epic 6: Rebranding to ACM-AI (ARPP-210)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E6-S1 | ARPP-246 | Update Application Name and Title | Done |
+| E6-S2 | ARPP-248 | Create New Logo and Favicon | Done |
+| E6-S3 | ARPP-249 | Update Color Theme | Done |
+| E6-S4 | ARPP-250 | Update Landing/Home Page | Done |
+
+#### Epic 7: Upload Wizard (ARPP-211)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E7-S1 | ARPP-251 | Create Wizard Framework Component | Done |
+| E7-S2 | ARPP-252 | File Upload Step with Drag & Drop | Done |
+| E7-S3 | ARPP-253 | Document Type Detection Step | Done |
+| E7-S4 | ARPP-255 | Processing Options Step | Done |
+| E7-S5 | ARPP-258 | Review & Confirm Step | Done |
+| E7-S6 | ARPP-260 | Upload Progress & Results Step | Done |
+| E7-S7 | ARPP-262 | Site Configuration During Upload | To Do |
+
+#### Epic 8: UI Refresh - Bento Grid (ARPP-212)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E8-S1 | ARPP-254 | Install UI/UX Pro Max Skill | In Progress |
+| E8-S2 | ARPP-256 | Define ACM-AI Design Tokens | In Progress |
+| E8-S3 | ARPP-257 | Create Bento Card Component | In Progress |
+| E8-S4 | ARPP-259 | Create Bento Grid Layout Component | In Progress |
+| E8-S5 | ARPP-261 | Redesign Dashboard/Home Page | In Progress |
+| E8-S6 | ARPP-263 | Redesign Sources List Page | In Progress |
+| E8-S7 | ARPP-264 | Redesign Source Detail Page | In Progress |
+| E8-S8 | ARPP-265 | Update Navigation & Sidebar | To Do |
+| E8-S9 | ARPP-266 | Typography & Font Updates | To Do |
+| E8-S10 | ARPP-267 | Dark Mode Refinement | To Do |
+
+#### Epic 9: Document Library Management (ARPP-213)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E9-S1 | ARPP-268 | Create Document Library View | To Do |
+| E9-S2 | ARPP-269 | Document Processing Status Dashboard | To Do |
+| E9-S3 | ARPP-270 | Document Actions and Bulk Operations | To Do |
+
+#### Epic 10: ACM-AI UI Simplification (ARPP-214)
+
+| BMAD ID | Jira Key | Summary | Status |
+|---------|----------|---------|--------|
+| E10-S1 | ARPP-271 | Simplify Navigation for ACM-AI Focus | To Do |
+
+## Issue Cache
+
+### Project Keys
+- ARPP (ACM-Ai) - Active project
+
+### Key Ranges
+- Legacy v1 issues: ARPP-9 through ARPP-204 (labeled `legacy-v1`)
+- ACM-AI v2 Epics: ARPP-205 through ARPP-214
+- ACM-AI v2 Stories: ARPP-215 through ARPP-271
+
+## Operation History
+
+### Session Log
+
+| Date | Operation | Details | Result |
+|------|-----------|--------|--------|
+| 2026-02-05 | map-project | Full project mapping from 05-epics-and-stories.md | 10 Epics + 57 Stories created |
+| 2026-02-05 | label-legacy | Added `legacy-v1` label to ARPP-9 through ARPP-204 | In progress |
+| 2026-02-05 | transition-done | Transitioned 34 stories + 3 epics to Done | In progress |
+| 2026-02-05 | transition-ip | Transitioned 5 epics to In Progress | In progress |
+
+## Learned Patterns
+
+### Naming Conventions
+- Epics: `E{n}: {Title}` (e.g., "E1: ACM Data Extraction Pipeline")
+- Stories: `E{epic}-S{story}: {Title}` (e.g., "E1-S1: Create ACM Data Model")
+- Labels: `acm-ai-v2` for all v2 issues, `legacy-v1` for old architecture
+
+### Field Usage
+- Priority mapping: P0 = Highest, P1 = High
+- Labels used: `acm-ai-v2`, `extraction`, `frontend`, `ai`, `export`, `branding`, `design`, `victorian-bar`
+
+### Relationship Patterns
+- Epics use parent field for Story relationships
+- Stories linked to Epics via `parent` field during creation
+
+## User Preferences
+
+### Communication Preferences
+- User name: Demi
+- Language: English
+- Prefers full traceability (create Done items too)
+- Appreciates detailed mapping plans before execution
+
+### Workflow Preferences
+- Prefers full project mapping over incremental creation
+- Wants legacy issues labeled rather than archived
+- Wants Done stories actually transitioned to Done (not just labeled)
