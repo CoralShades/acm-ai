@@ -1,6 +1,6 @@
 # Story 18.5: Extraction Quality — Fuse Cartridge & No-Access Records
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -191,7 +191,10 @@ All 4 missing records now have deterministic preprocessor fixes (Fixes A, B) and
 - `tests/test_broadmeadows_e2e.py` — Modified (three-tier matching logic)
 - `docs/sprint-artifacts/e18-s5-extraction-quality-fuse-cartridge-no-access.md` — Modified (task tracking)
 - `docs/sprint-artifacts/sprint-status.yaml` — Modified (story status)
-- `tests/test_preprocess_samp.py` — NEW (9 unit tests for NO ACCESS marker injection)
+- `tests/test_preprocess_samp.py` — NEW (14 unit tests: 9 NO ACCESS + 5 product normalization)
+- `tests/test_qwen_extraction.py` — NEW (13 unit tests: 6 _is_qwen_model + 7 parse_json_response)
+- `open_notebook/graphs/utils.py` — Modified (PR#55 post-review: _is_qwen_model moved here, parse_json_response return type + JSONDecodeError wrap)
+- `open_notebook/extractors/orchestrator.py` — Modified (PR#55 post-review: top-level import from utils, C4 Qwen try/except)
 
 ### Change Log
 
@@ -204,3 +207,15 @@ All 4 missing records now have deterministic preprocessor fixes (Fixes A, B) and
 - 2026-02-23: Fix B implemented — PRODUCT_NORMALIZATIONS in `_preprocess_samp_format()`: "Fuses"→"Fuse cartridge", "Fuse"(standalone)→"Fuse cartridge", "Flange mastic"→"Flange joints". Vocabulary mapping table added to both prompt templates. 5 unit tests added.
 - 2026-02-23: Fix C implemented — PRODUCT_SYNONYMS + synonym-normalized Tier 2.5 matching in `test_broadmeadows_e2e.py`. Covers flange joints/mastic, fuse cartridge/fuses, internal lining variants.
 - 2026-02-23: **Code Review** — 2 HIGH, 3 MEDIUM, 2 LOW findings. AC #1 not met (E2E not re-run after Fixes B+C). Double marker injection accepted but not prevented. Prompt duplication across templates flagged. 7 action items added to Review Follow-ups.
+- 2026-02-23: **PR #55 Post-Review Fixes (Amelia/Dev Agent)** — All critical+high findings from `docs/issues/pr55-qwen25-extraction-quality-review.md` implemented on main. See `docs/issues/pr55-fixes/` for planning files.
+  - C1: NO_ACCESS cascade bug FIXED — replaced sequential for-loop with single-pass combined alternation regex; `test_no_double_markers` updated to `== 1`
+  - C2: `model_family = "default"` initialized BEFORE outer try in `extract_records()`
+  - C3: `asyncio.CancelledError` re-raised in inner except; `logger.debug` → `logger.warning`
+  - C4: Qwen block in `orchestrator._llm_extract_building()` wrapped with `try/except (ValueError, ValidationError)` + error logging + re-raise
+  - H1: Temperature override in `_llm_correct_records()` moved to provision call via pre-provision `_correction_qwen` detection (replaces frozen-model attribute mutation)
+  - H2: `_is_qwen_model()` moved from `acm_extraction.py` to `utils.py`; deferred import in `orchestrator.py` replaced with top-level import from utils; `isinstance(model_name, str)` guard added (fixes AsyncMock test regression)
+  - H3: `except (ValidationError, Exception)` split into two separate clauses with `_exc_info` pattern for shared fallback
+  - H5: Fallback except now logs `source_id`, chunk position, `response_text[:300]`
+  - H6: `json.loads` in `parse_json_response()` wrapped → `JSONDecodeError` re-raised as `ValueError`
+  - V1: `parse_json_response()` annotated with `-> dict[str, Any]` return type
+  - Full test suite: 974/974 pass; ruff: clean; imports: clean

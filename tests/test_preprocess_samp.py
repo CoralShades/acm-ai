@@ -92,13 +92,11 @@ class TestNoAccessMarkerInjection:
         """'No access due to locked door' should not also trigger standalone 'No access' marker."""
         text = "No access due to locked door"
         result = _preprocess(text)
-        # Should have exactly one marker occurrence (the longer phrase match)
-        # The shorter "No access" is already consumed by the longer match
+        # Single-pass combined regex: each position visited once, so longer phrase
+        # consumes "No access due to locked door" as one match — the shorter
+        # "No access" sub-string inside the appended original phrase is NOT re-matched.
         marker_count = result.count(NO_ACCESS_MARKER)
-        # Due to re.sub ordering (longer first), the longer phrase gets its marker,
-        # then the shorter "No access" within the original text may also match.
-        # Both markers are acceptable as long as the text is processed.
-        assert marker_count >= 1
+        assert marker_count == 1
 
 
 class TestProductNormalization:

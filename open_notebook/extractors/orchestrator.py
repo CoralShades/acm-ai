@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.runnables import RunnableConfig
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_schemas import (
@@ -39,6 +39,7 @@ from open_notebook.extractors.page_tagger import (
     SectionTaxonomy,
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
+from open_notebook.graphs.utils import _is_qwen_model, parse_json_response
 
 # ---------------------------------------------------------------------------
 # Task 1: Pydantic Models (AC #3, #5, #7)
@@ -380,8 +381,6 @@ async def _llm_extract_building(
             max_tokens=32768,
         )
 
-        from open_notebook.graphs.acm_extraction import _is_qwen_model
-
         is_qwen = _is_qwen_model(model)
         model_family = "qwen" if is_qwen else "default"
 
@@ -402,19 +401,26 @@ async def _llm_extract_building(
         ]
 
         if is_qwen:
-            from open_notebook.graphs.utils import parse_json_response
-
-            raw_response = await model.ainvoke(messages)
-            response_text = (
-                raw_response.content
-                if hasattr(raw_response, "content")
-                else str(raw_response)
-            )
-            parsed = parse_json_response(response_text)
-            result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
-            logger.info(
-                f"Building {plan.building_id} Qwen direct JSON: {len(result.records)} records"
-            )
+            try:
+                raw_response = await model.ainvoke(messages)
+                response_text = (
+                    raw_response.content
+                    if hasattr(raw_response, "content")
+                    else str(raw_response)
+                )
+                parsed = parse_json_response(response_text)
+                result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
+                logger.info(
+                    f"Building {plan.building_id} Qwen direct JSON: "
+                    f"{len(result.records)} records"
+                )
+            except (ValueError, ValidationError) as qwen_err:
+                logger.error(
+                    f"Building {plan.building_id} Qwen JSON parsing failed: {qwen_err}. "
+                    f"Response preview: "
+                    f"{response_text[:200] if 'response_text' in dir() else 'N/A'}"
+                )
+                raise
         else:
             chain = model.with_structured_output(ACMExtractionResult)
             result = await chain.ainvoke(messages)
