@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) - ACM-AI
 
 > **Product:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-08)
-> **Status:** v1.5 - Updated for E17 (Live Extraction Intelligence — AG-UI + A2A)
+> **Date:** 2025-12-07 (Updated: 2026-02-23)
+> **Status:** v1.6 - Updated for E20 (Marketing-App Cross-Site Navigation & Domain Cutover)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
+> **Change Log:** 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -40,7 +40,7 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-101 | System shall accept PDF uploads up to 50MB | P0 | Upload succeeds for 50MB file within 30 seconds |
 | FR-102 | System shall extract text and tables from PDFs using MinerU (primary) with Docling as fallback | P0 | MinerU processes PDF and returns structured table output; Docling used as fallback for text-based PDFs |
 | FR-103 | System shall identify ACM Register tables within SAMP/BAR documents | P0 | Tables matching ACM schema are extracted with >90% accuracy |
-| FR-104 | System shall parse hierarchical structure (Dept → Agency → Site → Building → Room → ACM Item) | P0 | Hierarchy correctly represented in data model |
+| FR-104 | System shall parse hierarchical structure (Dept â†’ Agency â†’ Site â†’ Building â†’ Room â†’ ACM Item) | P0 | Hierarchy correctly represented in data model |
 | FR-107 | System shall use configurable field definitions to parse any ACM PDF format via a single generic parser | P0 | Field schema config (register_row.schema.json, register_enums.json) drives parsing; single parser handles all consultant formats |
 | FR-108 | System shall allow configuration of non-extractable fields | P0 | User can set Department, Building Type, etc. |
 | FR-109 | System shall analyze document structure before extraction | P0 | TOC/inventory in Stage -1 |
@@ -126,7 +126,7 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-702 | Navigation shall use WORKSPACE + CONFIGURE taxonomy | P0 | Sidebar redesigned per navigation-cleanup-spec |
 | FR-703 | Brownfield features (Podcasts, Transformations, Notebooks) shall be hidden from navigation | P0 | Features inaccessible from nav but code preserved |
 | FR-704 | All pages shall display skeleton loading placeholders during data fetch | P1 | Zero CLS, shimmer animation, aria-busy |
-| FR-705 | Toast notifications shall provide promise-based feedback for long operations | P1 | Extraction/export shows loading→success→error toasts |
+| FR-705 | Toast notifications shall provide promise-based feedback for long operations | P1 | Extraction/export shows loadingâ†’successâ†’error toasts |
 | FR-706 | Application shall meet WCAG 2.1 AA accessibility standards | P1 | Color contrast, focus management, aria labels verified |
 | FR-707 | Sources and Documents pages shall be merged into unified Documents view | P1 | Single /documents route with redirect from /sources |
 | FR-708 | Application shall gracefully handle connection drops and session timeouts | P2 | Reconnection, offline indicator, timeout prompt |
@@ -136,7 +136,7 @@ This document covers MVP requirements. Future enhancements are noted but not det
 
 ### 2.8 Extraction Monitor (FR-800 Series)
 
-> **Added:** 2026-02-20 (SCP-20260220 — E15: Extraction Monitor & Live Logging UI)
+> **Added:** 2026-02-20 (SCP-20260220 â€” E15: Extraction Monitor & Live Logging UI)
 > **Spec References:** `docs/sprint-artifacts/e15-s1-extraction-log-panel.md`, `docs/sprint-artifacts/e15-s2-extraction-monitor-page.md`
 
 | ID | Requirement | Priority | Acceptance Criteria |
@@ -146,33 +146,42 @@ This document covers MVP requirements. Future enhancements are noted but not det
 
 ### 2.9 UX Enhancement (FR-900 Series)
 
-> **Added:** 2026-02-20 (SCP-20260220 — E16: UX Enhancement Sprint + E9-S3)
+> **Added:** 2026-02-20 (SCP-20260220 â€” E16: UX Enhancement Sprint + E9-S3)
 > **Spec References:** `docs/sprint-artifacts/e16-s1-dashboard-home.md`, `docs/sprint-artifacts/e16-s2-record-detail-panel.md`, `docs/sprint-artifacts/e16-s3-empty-states.md`
 
 | ID | Requirement | Priority | Acceptance Criteria |
 |----|-------------|----------|---------------------|
 | FR-901 | System shall display a statistics dashboard home page with ACM metrics (total records, buildings, risk breakdown) and charts | P1 | Dashboard at `/` shows 4 summary cards, risk donut chart, top 10 buildings bar chart, and recent extractions list; all data from `/api/acm/stats` |
-| FR-902 | System shall provide a slide-out record detail panel showing all 47 ACM fields on row click | P0 | 380px right drawer slides in on grid row click; organises fields into 8 labeled sections; keyboard navigation (←→); edit mode with save/cancel |
+| FR-902 | System shall provide a slide-out record detail panel showing all 47 ACM fields on row click | P0 | 380px right drawer slides in on grid row click; organises fields into 8 labeled sections; keyboard navigation (â†â†’); edit mode with save/cancel |
 | FR-903 | System shall display empty state screens with appropriate CTAs when no documents or records exist | P1 | Empty states on Documents, ACM Register, Chat, and Extraction Monitor pages; dismissable onboarding hints on first visit |
-| FR-904 | System shall support bulk document operations (select multiple → delete/re-extract/export) | P1 | Checkbox selection in document list; bulk action toolbar appears; bulk delete, bulk re-extract, bulk CSV export |
+| FR-904 | System shall support bulk document operations (select multiple â†’ delete/re-extract/export) | P1 | Checkbox selection in document list; bulk action toolbar appears; bulk delete, bulk re-extract, bulk CSV export |
 
 ### 2.10 Live Extraction Intelligence (FR-1000 Series)
 
-> **Added:** 2026-02-22 (E17: Live Extraction Intelligence — AG-UI + A2A + Real-time Observability)
+> **Added:** 2026-02-22 (E17: Live Extraction Intelligence â€” AG-UI + A2A + Real-time Observability)
 > **Spec References:** `docs/sprint-artifacts/e17-s1-agui-extraction-endpoint.md` through `e17-s6-new-openrouter-models.md`
 
 | ID | Requirement | Priority | Acceptance Criteria |
 |----|-------------|----------|---------------------|
-| FR-1001 | System shall emit AG-UI protocol events during extraction via SurrealDB relay (AGUIEventEmitter → agui_events table → SSE endpoint) | P0 | `GET /api/agui/extraction/{command_id}/stream` returns AG-UI compliant SSE; events include RunStarted, StepStarted/Finished, StateDelta, ToolCallStart/End, RunFinished/RunError |
+| FR-1001 | System shall emit AG-UI protocol events during extraction via SurrealDB relay (AGUIEventEmitter â†’ agui_events table â†’ SSE endpoint) | P0 | `GET /api/agui/extraction/{command_id}/stream` returns AG-UI compliant SSE; events include RunStarted, StepStarted/Finished, StateDelta, ToolCallStart/End, RunFinished/RunError |
 | FR-1002 | System shall stream extracted records incrementally to the AG Grid during extraction via AG-UI StateDelta events | P0 | Records appear in AG Grid within 2s of each chunk; preview rows visually distinguished (italic/pulsing border); replaced by final records on completion |
 | FR-1003 | System shall display reasoning tokens from thinking models (DeepSeek R1, Claude extended thinking) in a collapsible panel | P1 | "Agent Thinking" panel in ExtractionProgressPanel; streams tokens character-by-character; hidden by default; non-reasoning models: panel doesn't appear |
 | FR-1004 | System shall display extraction tool call operations in a live feed showing step names, arguments, results, and durations | P1 | Each graph node transition shows as a tool call entry; in-flight calls show spinner; completed calls show check + result summary + duration |
 | FR-1005 | System shall expose an A2A (Agent-to-Agent) agent card at `/.well-known/agent.json` with task lifecycle endpoints | P1 | `GET /.well-known/agent.json` returns valid A2A agent card; `POST /api/a2a/tasks` accepts extraction task; `GET /api/a2a/tasks/{id}` returns status |
 | FR-1006 | System shall support 6 additional frontier AI models via OpenRouter: MiniMax M2.1, Kimi K2.5, DeepSeek V3.2, Claude Sonnet 4.6, GPT 5.2, Gemini 2.5 Pro | P1 | Models auto-provisioned on startup when `OPENROUTER_API_KEY` set; correct context windows and capability flags (structured output, tool calling) |
+### 2.11 Cross-Site Navigation & Domain Topology (FR-1100 Series)
 
----
+> **Added:** 2026-02-23 (E20: Marketing-App Linking & Vercel Domain Cutover)
+> **Spec References:** `docs/sprint-artifacts/e20-s1-marketing-to-app-linking.md`, `docs/sprint-artifacts/e20-s2-app-to-marketing-navigation-cutover.md`
 
-## 3. Non-Functional Requirements
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1101 | System shall present the marketing site as the primary entrypoint for users | P0 | `vaea.coralshades.ai` serves marketing site content and canonical docs links |
+| FR-1102 | Marketing site shall provide clear CTAs to open the application workspace | P0 | Header, hero CTA, and footer include `Open App` link to configured app host |
+| FR-1103 | Application workspace shall provide links back to landing and docs | P0 | App sidebar and command palette include links to landing and docs on marketing host |
+| FR-1104 | Cross-site URLs shall be environment-configurable per deployment | P0 | `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_MARKETING_URL` are documented and used by UI navigation |
+
+
 
 ### 3.1 Performance (NFR-100 Series)
 
@@ -215,24 +224,24 @@ This document covers MVP requirements. Future enhancements are noted but not det
 
 Current Open Notebook layout (3-column):
 ```
-┌─────────────┬─────────────┬─────────────┐
-│   Sources   │    Notes    │    Chat     │
-└─────────────┴─────────────┴─────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   Sources   â”‚    Notes    â”‚    Chat     â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ACM-AI layout (configurable):
 ```
 Mode 1: Spreadsheet Focus
-┌─────────────┬───────────────────────────┐
-│   Sources   │      ACM Spreadsheet      │
-│             ├───────────────────────────┤
-│             │         Chat              │
-└─────────────┴───────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   Sources   â”‚      ACM Spreadsheet      â”‚
+â”‚             â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚             â”‚         Chat              â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 
 Mode 2: Document Focus (existing behavior)
-┌─────────────┬─────────────┬─────────────┐
-│   Sources   │    Notes    │    Chat     │
-└─────────────┴─────────────┴─────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   Sources   â”‚    Notes    â”‚    Chat     â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### 4.2 New Components
@@ -271,7 +280,7 @@ const acmColumnGroups = {
     { field: 'public_access', headerName: 'Public Access', width: 100 },
     { field: 'date_of_inspection', headerName: 'Inspection Date', width: 120 },
     { field: 'building_year', headerName: 'Year Built', width: 80 },
-    { field: 'building_size_m2', headerName: 'Size (m²)', width: 80 },
+    { field: 'building_size_m2', headerName: 'Size (mÂ²)', width: 80 },
     { field: 'number_of_levels', headerName: 'Levels', width: 70 },
     { field: 'building_construction', headerName: 'Construction', width: 120 },
     { field: 'roof_type', headerName: 'Roof Type', width: 100 },
@@ -420,7 +429,7 @@ DEFINE FIELD school_code ON acm_record TYPE option<string>;
 DEFINE FIELD result ON acm_record TYPE option<string>;  -- Legacy result field
 
 -- BAR Compliance fields (Added: PR #30 / E1-S12 / E1-S14)
-DEFINE FIELD quantity ON acm_record TYPE option<string>;  -- Sample quantity (e.g. '10 m²', '5 linear meters')
+DEFINE FIELD quantity ON acm_record TYPE option<string>;  -- Sample quantity (e.g. '10 mÂ²', '5 linear meters')
 DEFINE FIELD acm_labelled ON acm_record TYPE option<bool>;  -- Boolean: whether ACM is labelled on-site
 DEFINE FIELD acm_label_details ON acm_record TYPE option<string>;  -- Label details if labelled
 DEFINE FIELD identifying_company ON acm_record TYPE option<string>;  -- Hygiene/consulting company (supplements hygiene_company)
@@ -532,8 +541,8 @@ DEFINE INDEX idx_extraction_progress_command ON extraction_progress FIELDS comma
 | `/api/acm/mappings` | GET | Get field mapping configuration |
 | `/api/acm/mappings` | PUT | Update field mapping configuration |
 | `/api/acm/classify` | POST | AI classification for Product Group/Type |
-| `/api/acm/extraction-progress/{command_id}/stream` | GET | SSE stream — real-time pipeline events (text/event-stream) |
-| `/api/acm/extraction-progress/{command_id}` | GET | REST polling fallback — current extraction state and log entries |
+| `/api/acm/extraction-progress/{command_id}/stream` | GET | SSE stream â€” real-time pipeline events (text/event-stream) |
+| `/api/acm/extraction-progress/{command_id}` | GET | REST polling fallback â€” current extraction state and log entries |
 | `/api/acm/field-schema` | GET | Active field schema config for AG Grid dynamic column definitions |
 
 ### 5.3 BAR Export Format Specification (NEW)
@@ -545,19 +554,19 @@ The system shall export Excel files compliant with Victorian Government BAR form
 - Reference sheets (optional): Building Types, Product Types, Suburbs, etc.
 
 **Column Order (47 columns):**
-1. Department → 2. Agency → 3. Sub Agency → 4. Site Name → 5. Building Name
-6. Building Type → 7. Building Address → 8. Suburb → 9. Postcode → 10. Owned or Leased
-11. Building Unique ID → 12. Frequency of use → 13. Public Access? → 14. Date of Inspection
-15. Estimated Year Built → 16. Est. Building Size (m2) → 17. Number of Levels
-18. Construction Type → 19. Roof Type → 20. Internal / External → 21. Level
-22. Room or Area → 23. Location in Room → 24. Specific Item/ACM Name
-25. Friability of material → 26. ACM Product Group → 27. ACM Product Type
-28. NATA Endorsed Sample number → 29. Sample Result → 30. Identifying Hygiene Company
-31. Condition → 32. Disturbance Potential → 33. Quantity → 34. Labelled
-35. Label Details → 36. Hygienist Recommendations → 37. Additional Comments
-38. PSB Supplied ACM ID → 39. Assumed Removed? → 40. Date of Removal
-41. Quantity Removed → 42. Asbestos Removal Notification No
-43. EPA Waste Transport Certificate No → 44. Removal Comments → 45. Photo Reference Number
+1. Department â†’ 2. Agency â†’ 3. Sub Agency â†’ 4. Site Name â†’ 5. Building Name
+6. Building Type â†’ 7. Building Address â†’ 8. Suburb â†’ 9. Postcode â†’ 10. Owned or Leased
+11. Building Unique ID â†’ 12. Frequency of use â†’ 13. Public Access? â†’ 14. Date of Inspection
+15. Estimated Year Built â†’ 16. Est. Building Size (m2) â†’ 17. Number of Levels
+18. Construction Type â†’ 19. Roof Type â†’ 20. Internal / External â†’ 21. Level
+22. Room or Area â†’ 23. Location in Room â†’ 24. Specific Item/ACM Name
+25. Friability of material â†’ 26. ACM Product Group â†’ 27. ACM Product Type
+28. NATA Endorsed Sample number â†’ 29. Sample Result â†’ 30. Identifying Hygiene Company
+31. Condition â†’ 32. Disturbance Potential â†’ 33. Quantity â†’ 34. Labelled
+35. Label Details â†’ 36. Hygienist Recommendations â†’ 37. Additional Comments
+38. PSB Supplied ACM ID â†’ 39. Assumed Removed? â†’ 40. Date of Removal
+41. Quantity Removed â†’ 42. Asbestos Removal Notification No
+43. EPA Waste Transport Certificate No â†’ 44. Removal Comments â†’ 45. Photo Reference Number
 
 ### 5.4 Extraction Pipeline Architecture
 
@@ -613,7 +622,7 @@ Seven-stage pipeline with real-time observability:
 | Internal/External | `Internal`, `External`, `External & Internal` |
 | Owned or Leased | `Owned`, `Leased` |
 | Yes/No | `YES`, `NO` |
-| Frequency of Use | `Every day`, `Every day with intermittent breaks`, `Once every 3–5 days`, `Every 2–3 weeks`, `Once every 2–3 months`, `Annually or less frequently` |
+| Frequency of Use | `Every day`, `Every day with intermittent breaks`, `Once every 3â€“5 days`, `Every 2â€“3 weeks`, `Once every 2â€“3 months`, `Annually or less frequently` |
 
 **Business Rules:**
 - If Sample Result is `Negative` or `Assumed Negative`:
@@ -658,7 +667,7 @@ The system uses a **single generic configurable parser** driven by BAR field sch
 
 **Configuration-Driven Parsing Pipeline:**
 ```
-BAR Excel template → JSON config files → SurrealDB field_schema table → runtime parser
+BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema table â†’ runtime parser
 ```
 
 **Schema Sources:**
@@ -806,4 +815,6 @@ BAR Excel template → JSON config files → SurrealDB field_schema table → ru
 | 2026-02-04 | 1.1 | Victorian BAR format expansion (Sprint Change Proposal) |
 | 2026-02-08 | 1.2 | UX Audit &amp; Enterprise Readiness - FR-700 series (11 requirements) |
 | 2026-02-08 | 1.3 | Course correction: replaced 3 consultant parsers (Prensa, Greencap, Generic) with 1 generic configurable parser driven by BAR field schema configuration (FR-107, Section 5.7). See `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md` |
-| 2026-02-20 | 1.4 | SCP-20260220: FR-102 updated (MinerU primary); 7 new `acm_record` fields (quantity, acm_labelled, identifying_company, floor_level, normalized_action, enriched_text, parent_table_id); 3 new tables (field_schema §5.1.2, acm_table_section §5.1.3, extraction_progress §5.1.4); 3 new API endpoints (extraction-progress SSE/REST, field-schema); FR-800 series (Extraction Monitor, E15); FR-900 series (UX Enhancement, E16); Section 1.4 note on generic parser; Section 9 resolved AG Grid license item |
+| 2026-02-20 | 1.4 | SCP-20260220: FR-102 updated (MinerU primary); 7 new `acm_record` fields (quantity, acm_labelled, identifying_company, floor_level, normalized_action, enriched_text, parent_table_id); 3 new tables (field_schema Â§5.1.2, acm_table_section Â§5.1.3, extraction_progress Â§5.1.4); 3 new API endpoints (extraction-progress SSE/REST, field-schema); FR-800 series (Extraction Monitor, E15); FR-900 series (UX Enhancement, E16); Section 1.4 note on generic parser; Section 9 resolved AG Grid license item |
+| 2026-02-23 | 1.6 | Added FR-1100 series for cross-site marketing-app navigation, canonical root-domain behavior, and env-configurable URL contract for Vercel multi-project deployment |
+

@@ -26,6 +26,16 @@ Source of truth: `docs/sprint-artifacts/sprint-status.yaml`
 
 ---
 
+## 2026-02-23 Release Task: Cross-Site Navigation + Domain Cutover
+
+- [x] Add marketing -> app `Open App` CTAs (header, hero, footer) using `NEXT_PUBLIC_APP_URL`
+- [x] Add app -> marketing links in sidebar + command palette using `NEXT_PUBLIC_MARKETING_URL`
+- [x] Update env examples (`frontend/.env.example`, `marketing-site/.env.local.example`, root `.env.example`)
+- [x] Update deployment docs with two-project Vercel domain mapping
+- [x] Update BMAD planning artifacts (PRD, architecture, epics/stories, sprint status, workflow status)
+
+---
+
 ## Sprint History
 
 ### Final Reconciliation (2026-02-22): 7 stories verified & marked done

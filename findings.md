@@ -70,3 +70,19 @@ All 7 "remaining" stories were implemented in a prior Ralph sprint but tracking 
 ### Sprint Artifact Location (2026-02-21)
 - `docs/sprint-artifacts/` is canonical (not `_bmad-output/implementation-artifacts/`)
 - `_bmad/bmm/config.yaml` sets `implementation_artifacts` to `docs/sprint-artifacts`
+
+---
+
+## Cross-Site Navigation Findings (2026-02-23)
+
+- `frontend` is already linked to a Vercel project (`frontend/.vercel/project.json`).
+- `marketing-site` currently has no local `.vercel/project.json` binding in repo.
+- Best minimal-risk integration points:
+  - Marketing: `Navigation.tsx`, `Hero.tsx`, `Footer.tsx`
+  - App: `navigation.ts`, `AppSidebar.tsx`, `CommandPalette.tsx`
+- Environment-based URL contract implemented:
+  - Marketing reads `NEXT_PUBLIC_APP_URL`
+  - App reads `NEXT_PUBLIC_MARKETING_URL`
+- Chosen domain topology:
+  - Marketing canonical root: `vaea.coralshades.ai`
+  - App workspace: `demo.vaea.coralshades.ai`

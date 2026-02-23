@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-22)
-> **Status:** Feature Complete — All stories implemented
-> **Change Log:** 2026-02-22 — Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted
+> **Date:** 2025-12-07 (Updated: 2026-02-23)
+> **Status:** Feature Complete + E20 Navigation/Domain Integration implemented
+> **Change Log:** 2026-02-23 — Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 — Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
 
@@ -27,7 +27,7 @@
 | E14 | UX & Enterprise Readiness | P0/P1 | 11 | Done |
 | E15 | Extraction Monitor & Live Logging UI | P0 | 2 | Done |
 | E16 | UX Enhancement Sprint | P0/P1 | 3 | Done |
-| E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | Done |
+| E17 | Live Extraction Intelligence Ã¢â‚¬â€ AG-UI + A2A + Observability | P0/P1 | 6 | Done |`r`n| E19 | Marketing & Stakeholder Presentation | P1 | 1 | Done |`r`n| E20 | Marketing-App Cross-Site Navigation & Domain Cutover | P0 | 2 | Done |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -125,14 +125,14 @@
   - [ ] Output `RawExtraction` JSON with `DocumentMeta` and `RawACMItem[]`
   - [ ] Store raw extraction for audit/debugging
 - [ ] **Stage 2 (INTERPRET):**
-  - [ ] Map consultant columns → BAR columns
+  - [ ] Map consultant columns Ã¢â€ â€™ BAR columns
   - [ ] Normalize values to controlled enums (see PRD 5.5)
   - [ ] Classify products using taxonomy (see PRD 5.6)
-  - [ ] Apply business rules (Negative → N/A for Condition/Disturbance)
+  - [ ] Apply business rules (Negative Ã¢â€ â€™ N/A for Condition/Disturbance)
   - [ ] Validate against BAR schema
   - [ ] Output validated `ACMRecord` objects
 - [ ] Identifies ACM Register tables by header patterns
-- [ ] Extracts hierarchical structure (Building → Room → Item)
+- [ ] Extracts hierarchical structure (Building Ã¢â€ â€™ Room Ã¢â€ â€™ Item)
 - [ ] Works on Prensa and Greencap sample PDFs with >90% accuracy
 
 **Technical Notes:**
@@ -838,7 +838,7 @@
 
 **Technical Notes:**
 - Store mappings in JSON configuration
-- UI: simple table with source → target mapping
+- UI: simple table with source Ã¢â€ â€™ target mapping
 - Location: `frontend/src/components/acm/FieldMappingConfig.tsx`
 - Reference: Sprint Change Proposal CP#3
 
@@ -918,48 +918,48 @@
 
 ```
 # Core Extraction Pipeline - REFACTORED for Two-Stage Architecture
-E1-S1 (Schema) → E1-S2 (Domain Model) → E1-S10 (MinerU) → E1-S11 (Parser Framework)
-                                              ↓
-                                        E1-S3 (Two-Stage Pipeline) → E1-S12 (Wording Normalization)
-                                              ↓
+E1-S1 (Schema) Ã¢â€ â€™ E1-S2 (Domain Model) Ã¢â€ â€™ E1-S10 (MinerU) Ã¢â€ â€™ E1-S11 (Parser Framework)
+                                              Ã¢â€ â€œ
+                                        E1-S3 (Two-Stage Pipeline) Ã¢â€ â€™ E1-S12 (Wording Normalization)
+                                              Ã¢â€ â€œ
                                         E1-S9 (Taxonomy Classification)
-                                              ↓
-                                        E1-S4 (API) → E1-S5 (Integration) → E1-S6 → E1-S7
-                                              ↓
+                                              Ã¢â€ â€œ
+                                        E1-S4 (API) Ã¢â€ â€™ E1-S5 (Integration) Ã¢â€ â€™ E1-S6 Ã¢â€ â€™ E1-S7
+                                              Ã¢â€ â€œ
 # Victorian BAR stories
-E1-S4 (API) → E1-S8 (Site Config) → E7-S7 (Upload Config)
-E1-S3 (Extraction) → E1-S9 (Product Classification)
+E1-S4 (API) Ã¢â€ â€™ E1-S8 (Site Config) Ã¢â€ â€™ E7-S7 (Upload Config)
+E1-S3 (Extraction) Ã¢â€ â€™ E1-S9 (Product Classification)
 
-# Spreadsheet (✅ DONE through E2-S7)
-E2-S1 → E2-S2 → E2-S3/S4/S5/S6 → E2-S7 (all done)
-                  ↓
+# Spreadsheet (Ã¢Å“â€¦ DONE through E2-S7)
+E2-S1 Ã¢â€ â€™ E2-S2 Ã¢â€ â€™ E2-S3/S4/S5/S6 Ã¢â€ â€™ E2-S7 (all done)
+                  Ã¢â€ â€œ
 # NEW: Column Visibility
-E2-S7 → E2-S8 (Column Visibility)
+E2-S7 Ã¢â€ â€™ E2-S8 (Column Visibility)
 
-# Citations (✅ DONE)
-E3-S1 → E3-S2 → E3-S3 → E3-S4 (all done)
+# Citations (Ã¢Å“â€¦ DONE)
+E3-S1 Ã¢â€ â€™ E3-S2 Ã¢â€ â€™ E3-S3 Ã¢â€ â€™ E3-S4 (all done)
 
-# Chat (✅ DONE)
-E4-S1 → E4-S2 → E4-S3 → E4-S4 (all done)
+# Chat (Ã¢Å“â€¦ DONE)
+E4-S1 Ã¢â€ â€™ E4-S2 Ã¢â€ â€™ E4-S3 Ã¢â€ â€™ E4-S4 (all done)
 
-# Export (✅ S1-S2 DONE, NEW S3-S4)
-E2-S2 → E5-S1 → E5-S2 (done)
-              ↓
-E5-S2 → E5-S3 (Template Management) → E5-S4 (Field Mapping)
+# Export (Ã¢Å“â€¦ S1-S2 DONE, NEW S3-S4)
+E2-S2 Ã¢â€ â€™ E5-S1 Ã¢â€ â€™ E5-S2 (done)
+              Ã¢â€ â€œ
+E5-S2 Ã¢â€ â€™ E5-S3 (Template Management) Ã¢â€ â€™ E5-S4 (Field Mapping)
 
-# Rebranding (✅ DONE)
+# Rebranding (Ã¢Å“â€¦ DONE)
 E6-S1/S2/S3/S4 (all done)
 
-# Upload Wizard (✅ DONE through E7-S6, NEW E7-S7)
-E7-S1 → E7-S2 → E7-S3 → E7-S4 → E7-S5 → E7-S6 (all done)
-                              ↓
-E1-S8 (Site Config) → E7-S7 (Upload Site Config)
+# Upload Wizard (Ã¢Å“â€¦ DONE through E7-S6, NEW E7-S7)
+E7-S1 Ã¢â€ â€™ E7-S2 Ã¢â€ â€™ E7-S3 Ã¢â€ â€™ E7-S4 Ã¢â€ â€™ E7-S5 Ã¢â€ â€™ E7-S6 (all done)
+                              Ã¢â€ â€œ
+E1-S8 (Site Config) Ã¢â€ â€™ E7-S7 (Upload Site Config)
 
 # UI Refresh (IN PROGRESS)
-E8-S1/S2 → E8-S3/S4 → E8-S5/S6/S7 (done) → E8-S8/S9/S10 (drafted)
+E8-S1/S2 Ã¢â€ â€™ E8-S3/S4 Ã¢â€ â€™ E8-S5/S6/S7 (done) Ã¢â€ â€™ E8-S8/S9/S10 (drafted)
 
 # Document Library (BACKLOG)
-E1-S4 → E9-S1 → E9-S2 → E9-S3
+E1-S4 Ã¢â€ â€™ E9-S1 Ã¢â€ â€™ E9-S2 Ã¢â€ â€™ E9-S3
 
 # UI Simplification (BACKLOG)
 E10-S1 (independent)
@@ -998,27 +998,27 @@ E10-S1 (independent)
 ## MVP Scope Summary (UPDATED 2026-02-04)
 
 **Must Have (MVP):**
-- E1: S1-S5 (extraction pipeline core) ✅ DONE
+- E1: S1-S5 (extraction pipeline core) Ã¢Å“â€¦ DONE
 - E1: **S10-S11 (NEW - MinerU, Parser Framework)** - Research Integration
 - E1: **S8-S9, S12 (Site Config, Classification, Normalization)** - Victorian BAR
-- E2: S1-S4, S7 (core spreadsheet + building tabs) ✅ DONE
+- E2: S1-S4, S7 (core spreadsheet + building tabs) Ã¢Å“â€¦ DONE
 - E2: **S8 (NEW - Column Visibility)** - Victorian BAR
-- E3: S1-S3 (citations) ✅ DONE
-- E4: S1, S3 (basic chat integration) ✅ DONE
+- E3: S1-S3 (citations) Ã¢Å“â€¦ DONE
+- E4: S1, S3 (basic chat integration) Ã¢Å“â€¦ DONE
 - **E5: S1-S2 (CSV + Excel BAR export)** - PROMOTED to MVP
-- E6: S1 (basic rebrand) ✅ DONE
-- E7: S1-S6 (upload wizard) ✅ DONE
+- E6: S1 (basic rebrand) Ã¢Å“â€¦ DONE
+- E7: S1-S6 (upload wizard) Ã¢Å“â€¦ DONE
 - E7: **S7 (NEW - Site Config during upload)** - Victorian BAR
 - E9: S1 (document library view)
 - E10: S1 (UI simplification - focus on ACM workflow)
 
 **Should Have:**
-- E1: S6 (local embeddings for privacy) ✅ DONE
-- E2: S5, S6 (polish) ✅ DONE
-- E3: S4 (page numbers) ✅ DONE
-- E4: S2, S4 (chat polish) ✅ DONE
+- E1: S6 (local embeddings for privacy) Ã¢Å“â€¦ DONE
+- E2: S5, S6 (polish) Ã¢Å“â€¦ DONE
+- E3: S4 (page numbers) Ã¢Å“â€¦ DONE
+- E4: S2, S4 (chat polish) Ã¢Å“â€¦ DONE
 - E5: **S3-S4 (NEW - Template Management, Field Mapping)**
-- E6: S2-S4 (full rebrand) ✅ DONE
+- E6: S2-S4 (full rebrand) Ã¢Å“â€¦ DONE
 - E9: S2, S3 (processing status, bulk actions)
 
 **Must Have (MVP) - Document Intelligence (NEW 2026-02-07):**
@@ -1900,7 +1900,7 @@ E10-S1 (independent)
 
 > **Priority:** P0
 > **Added:** 2026-02-20 (SCP-20260220)
-> **Status:** 0/2 complete
+> **Status:** Done (2/2 stories)
 > **Rationale:** Backend SSE pipeline and frontend log components (ExtractionProgressPanel, ExtractionLogStream,
 > StageProgressPill, use-extraction-progress.ts) were fully implemented in E1-S21 but are only accessible
 > during the upload wizard. This epic surfaces them persistently throughout the app.
@@ -1921,7 +1921,7 @@ E10-S1 (independent)
 - [ ] Keyboard accessible (Enter/Space expand, Escape collapse)
 
 **Technical Notes:**
-- All backend and frontend components exist — wiring only
+- All backend and frontend components exist Ã¢â‚¬â€ wiring only
 - Requires `command_id` exposed in `SourceResponse` from `api/models.py`
 
 **Key Files:** `frontend/src/components/documents/DocumentRow.tsx`, `api/models.py`
@@ -1957,7 +1957,7 @@ E10-S1 (independent)
 
 > **Priority:** P0 (E16-S2) / P1 (E16-S1, E16-S3)
 > **Added:** 2026-02-20 (SCP-20260220)
-> **Status:** 0/3 complete
+> **Status:** Done (3/3 stories)
 > **Rationale:** Three high-impact UX patterns absent after E14: no system dashboard, no full-record view,
 > no empty states. E9-S3 (bulk operations) promoted from drafted to ready-for-dev alongside this epic.
 
@@ -1987,12 +1987,12 @@ E10-S1 (independent)
 **So that** I can review full record details without horizontal scrolling
 
 **Acceptance Criteria:**
-- [ ] Click row → 380px right slide-out drawer
+- [ ] Click row Ã¢â€ â€™ 380px right slide-out drawer
 - [ ] All 47 fields in 8 organized sections (org, building, location, ACM details, assessment, docs, removal, metadata)
-- [ ] Empty fields shown as "—", booleans as YES/NO badges
+- [ ] Empty fields shown as "Ã¢â‚¬â€", booleans as YES/NO badges
 - [ ] "View in PDF" button opens existing PDF viewer at page_number
-- [ ] Edit mode toggle → inline editing → Save/Cancel → PUT /api/acm/{id}
-- [ ] ← → arrow keys cycle through records
+- [ ] Edit mode toggle Ã¢â€ â€™ inline editing Ã¢â€ â€™ Save/Cancel Ã¢â€ â€™ PUT /api/acm/{id}
+- [ ] Ã¢â€ Â Ã¢â€ â€™ arrow keys cycle through records
 - [ ] Escape closes panel
 
 **Key Files:** `frontend/src/components/acm/ACMRecordDetailPanel.tsx`, `frontend/src/components/acm/ACMSpreadsheet.tsx`
@@ -2020,11 +2020,11 @@ E10-S1 (independent)
 
 ---
 
-## Epic 17: Live Extraction Intelligence — AG-UI + A2A + Real-time Observability
+## Epic 17: Live Extraction Intelligence Ã¢â‚¬â€ AG-UI + A2A + Real-time Observability
 
 > **Added:** 2026-02-22
 > **Priority:** P0/P1
-> **Status:** In Progress (6 stories: S1-S4 implemented, S5-S6 implemented)
+> **Status:** Done (6/6 stories)
 
 **Goal:** Transform the extraction pipeline from a black box into a live, observable, interoperable system. Records appear incrementally, agent reasoning is visible, tool calls are tracked, and the service is discoverable via A2A protocol.
 
@@ -2032,7 +2032,7 @@ E10-S1 (independent)
 
 ---
 
-### E17-S1: AG-UI Extraction Pipeline Endpoint (P0) — Done
+### E17-S1: AG-UI Extraction Pipeline Endpoint (P0) Ã¢â‚¬â€ Done
 
 **As a** developer integrating with the extraction pipeline
 **I want** AG-UI compliant SSE events emitted during extraction
@@ -2051,7 +2051,7 @@ E10-S1 (independent)
 
 ---
 
-### E17-S2: Incremental Record Streaming to AG Grid (P0) — Done
+### E17-S2: Incremental Record Streaming to AG Grid (P0) Ã¢â‚¬â€ Done
 
 **As a** user running extraction
 **I want** records to appear in the AG Grid as they are extracted (not all at the end)
@@ -2069,7 +2069,7 @@ E10-S1 (independent)
 
 ---
 
-### E17-S3: Reasoning Token Display (P1) — Done
+### E17-S3: Reasoning Token Display (P1) Ã¢â‚¬â€ Done
 
 **As a** user using reasoning models (DeepSeek R1, Claude extended thinking)
 **I want** to see the model's reasoning process during extraction
@@ -2087,7 +2087,7 @@ E10-S1 (independent)
 
 ---
 
-### E17-S4: Extraction Tool Call Observability (P1) — Done
+### E17-S4: Extraction Tool Call Observability (P1) Ã¢â‚¬â€ Done
 
 **As a** user monitoring an extraction
 **I want** to see which extraction step is running and what it's doing
@@ -2105,7 +2105,7 @@ E10-S1 (independent)
 
 ---
 
-### E17-S5: A2A Agent Card + Task Lifecycle (P1) — Done
+### E17-S5: A2A Agent Card + Task Lifecycle (P1) Ã¢â‚¬â€ Done
 
 **As a** developer building multi-agent workflows
 **I want** the extraction service discoverable via A2A protocol
@@ -2123,7 +2123,7 @@ E10-S1 (independent)
 
 ---
 
-### E17-S6: New OpenRouter Model Additions (P1) — Done
+### E17-S6: New OpenRouter Model Additions (P1) Ã¢â‚¬â€ Done
 
 **As a** user wanting access to frontier AI models
 **I want** 6 new models available via OpenRouter
@@ -2146,3 +2146,44 @@ E10-S1 (independent)
 **Key Files:** `api/model_provisioning.py`, `open_notebook/domain/models.py`
 
 **Story File:** `docs/sprint-artifacts/e17-s6-new-openrouter-models.md`
+
+---
+
+## Epic 20: Marketing-App Cross-Site Navigation & Domain Cutover
+
+> **Added:** 2026-02-23
+> **Priority:** P0
+> **Status:** Done (2/2 stories)
+
+### E20-S1: Marketing to App Linking (P0) â€” Done
+**As a** user landing on the public website  
+**I want** obvious and consistent calls-to-action to open the app workspace  
+**So that** I can move from marketing content into the product quickly
+
+**Acceptance Criteria:**
+- [x] Header includes external `Open App` action using environment-configured host
+- [x] Hero primary CTA uses `Open App` and targets app host
+- [x] Footer includes `Open App` in Product links
+- [x] URL source is `NEXT_PUBLIC_APP_URL` with safe default for production subdomain
+
+**Key Files:** `marketing-site/src/components/Navigation.tsx`, `marketing-site/src/components/landing/Hero.tsx`, `marketing-site/src/components/Footer.tsx`, `marketing-site/src/lib/site-urls.ts`
+
+**Story File:** `docs/sprint-artifacts/e20-s1-marketing-to-app-linking.md`
+
+---
+
+### E20-S2: App to Marketing Navigation + Domain Cutover Contract (P0) â€” Done
+**As a** user inside the app workspace  
+**I want** direct links back to landing and documentation  
+**So that** I can move between product usage and informational content without confusion
+
+**Acceptance Criteria:**
+- [x] App sidebar includes `Visit Landing` and `Documentation` external links
+- [x] Command palette includes external commands for landing/docs
+- [x] URL source is `NEXT_PUBLIC_MARKETING_URL` and derived docs URL
+- [x] Env examples document cross-site URL contract for Vercel deployments
+- [x] Deployment docs define root-domain marketing + demo subdomain app topology
+
+**Key Files:** `frontend/src/config/navigation.ts`, `frontend/src/components/layout/AppSidebar.tsx`, `frontend/src/components/common/CommandPalette.tsx`, `frontend/src/lib/site-urls.ts`, `docs/marketing-site/deployment.md`
+
+**Story File:** `docs/sprint-artifacts/e20-s2-app-to-marketing-navigation-cutover.md`

@@ -53,12 +53,12 @@ export function AppSidebar() {
   }, [])
 
   // Check if a nav item is active (exact match for root, prefix match for others)
-  const isItemActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href)
+  const isItemActive = (item: { href: string; external?: boolean }) =>
+    item.external ? false : item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
 
   // Check if any item in a section is active
   const isSectionActive = (section: NavGroup) =>
-    section.items.some((item) => isItemActive(item.href))
+    section.items.some((item) => isItemActive(item))
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -158,11 +158,15 @@ export function AppSidebar() {
                   // Collapsed mode: show items directly with tooltips
                   <div className="space-y-1">
                     {section.items.map((item) => {
-                      const isActive = isItemActive(item.href)
+                      const isActive = isItemActive(item)
                       return (
                         <Tooltip key={item.name}>
                           <TooltipTrigger asChild>
-                            <Link href={item.href}>
+                            <Link
+                              href={item.href}
+                              target={item.external ? '_blank' : undefined}
+                              rel={item.external ? 'noopener noreferrer' : undefined}
+                            >
                               <Button
                                 variant={isActive ? 'secondary' : 'ghost'}
                                 className={cn(
@@ -211,9 +215,14 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-1 pt-1">
                       {section.items.map((item) => {
-                        const isActive = isItemActive(item.href)
+                        const isActive = isItemActive(item)
                         return (
-                          <Link key={item.name} href={item.href}>
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            target={item.external ? '_blank' : undefined}
+                            rel={item.external ? 'noopener noreferrer' : undefined}
+                          >
                             <Button
                               variant={isActive ? 'secondary' : 'ghost'}
                               className={cn(
