@@ -1,8 +1,14 @@
-# Implemented Changes (E20)
+# Implemented Changes (E20 + Deploy Session)
 
-## Commit
+## Commits
 
+### E20 Integration (previous session)
 - `893c70f` — `feat(web): link marketing and app navigation with Vercel domain contract`
+
+### Deploy Session (2026-02-23)
+- `27ff481` — `Merge remote-tracking branch 'origin/release' into release` (conflict resolution: sprint-status.yaml, E18+E19+E20 merged)
+- `78c537c` — `feat(web): add marketing-site source files and v2 integration docs` (84 files — full marketing-site Next.js project committed to git)
+- `1bc26b5` — `chore: add shadcn to root devDependencies`
 
 ## Code Changes
 
@@ -35,10 +41,29 @@ Behavior:
 
 - `.env.example`
 - `docs/marketing-site/deployment.md`
+- `marketing-site/.gitignore` (added `.source/` and `!.env.local.example` rules)
 
 Added/updated:
 - Cross-site URL env contract.
 - Vercel two-project setup (`marketing-site` + `frontend`) and domain mapping.
+
+## Vercel Configuration (completed 2026-02-23 via API)
+
+### Project A: `acm-marketing-site`
+- **Vercel ID**: `prj_pM0jSF8SLL6xheNPTqt0TWmAasYU`
+- **Root Directory**: `marketing-site`
+- **Framework**: Next.js
+- **Git repo**: `CoralShades/acm-ai` → branch `release`
+- **Domain**: `vaea.coralshades.ai` ✅ assigned
+- **Env vars**: `NEXT_PUBLIC_APP_URL=https://demo.vaea.coralshades.ai` ✅
+
+### Project B: `frontend`
+- **Vercel ID**: `prj_7uWhAMwVWvnKte9HfhxkKBNlbMRz`
+- **Root Directory**: `frontend`
+- **Framework**: Next.js
+- **Git repo**: `CoralShades/acm-ai` → branch `release`
+- **Domain**: `demo.vaea.coralshades.ai` ✅ assigned
+- **Env vars**: `NEXT_PUBLIC_MARKETING_URL=https://vaea.coralshades.ai` ✅
 
 ## BMAD Artifact Updates
 
@@ -46,7 +71,7 @@ Added/updated:
 - `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md` (v1.3, multi-project topology)
 - `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md` (Epic 20 added)
 - `_bmad-output/project-planning-artifacts/acm-ai/bmm-workflow-status.yaml` (updated)
-- `docs/sprint-artifacts/sprint-status.yaml` (Epic 20 done)
+- `docs/sprint-artifacts/sprint-status.yaml` (E18 done, E19 done, E20 done — merged conflict)
 - `docs/sprint-artifacts/e20-s1-marketing-to-app-linking.md` (new)
 - `docs/sprint-artifacts/e20-s2-app-to-marketing-navigation-cutover.md` (new)
 - `task_plan.md`, `findings.md`, `progress.md` (planning-with-files logs)
@@ -55,16 +80,22 @@ Added/updated:
 
 ### Passed
 
-- `marketing-site`: `npm run lint`
-- `frontend`: `npm run lint`
+- `marketing-site`: `npm run lint` (previous session)
+- `frontend`: `npm run lint` (previous session)
+- `git push origin release`: ✅ pushed (3 new commits on 2026-02-23)
+- `demo.vaea.coralshades.ai` (frontend): ✅ **LIVE** — sidebar shows "Visit Landing" → `https://vaea.coralshades.ai`
+- `vaea.coralshades.ai` (marketing): ⏳ build in progress (commit `1bc26b5`)
 
-### Blocked in Environment
+### Blocked in Previous Session (now resolved)
 
-- `marketing-site`: `npm run build` failed with `spawn EPERM`.
-- `frontend`: `npm run build` failed with `spawn EPERM`.
-- `git push` failed due network connectivity to GitHub (`Could not connect to server`).
-- `vercel deploy --prod --yes` failed due network to `vercel.com` and local `spawn EPERM`.
+- `git push` was blocked by non-fast-forward (remote had new commits) → fixed by `git merge origin/release` + conflict resolution.
+- `marketing-site` files were never committed to git → fixed in `78c537c` (84 files).
+- `vercel deploy --prod --yes` was blocked by `spawn EPERM` → replaced with Vercel REST API calls.
 
 ## Notes
 
-- This repo has many unrelated modified/untracked files. Commit `893c70f` intentionally includes only the E20 integration and BMAD updates listed above.
+- Vercel projects were created/configured entirely via the Vercel REST API (token from `.env`).
+- `vaea.coralshades.ai` was previously on the `frontend` project and was migrated to `acm-marketing-site`.
+- `demo.vaea.coralshades.ai` is newly assigned to the `frontend` project.
+- The `release` branch is the source of truth for both Vercel projects.
+- `marketing-site/.gitignore` excludes `.source/` (Fumadocs cache), `.next/`, `.env*` and allows `.env.local.example`.
