@@ -1,0 +1,2 @@
+-- Migration 31 down: Clear extraction model default
+UPDATE open_notebook:default_models SET default_extraction_model = NONE;

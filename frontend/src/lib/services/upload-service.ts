@@ -41,7 +41,7 @@ export async function uploadFile(
     const formData = new FormData();
     formData.append('type', 'upload');
     formData.append('file', file.file);
-    formData.append('title', file.name);
+    formData.append('title', file.title || file.name);
     formData.append('notebooks', JSON.stringify(options.notebookIds));
     formData.append('transformations', JSON.stringify(options.transformations));
     formData.append('embed', String(options.enableEmbeddings));

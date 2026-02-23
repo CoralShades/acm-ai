@@ -22,7 +22,7 @@ const ACM_PATTERNS = [
 ];
 
 // File type to document type mapping
-const MEDIA_TYPES = ['image/', 'audio/', 'video/'];
+const MEDIA_TYPES = ['image/'];
 
 export function detectDocumentType(file: UploadFile): DetectionResult {
   const { name, type } = file;
@@ -54,12 +54,12 @@ export function detectDocumentType(file: UploadFile): DetectionResult {
     }
   }
 
-  // PDF files without ACM patterns
+  // PDF files without explicit ACM patterns — default to ACM for this app
   if (type === 'application/pdf') {
     return {
-      type: 'general',
+      type: 'acm',
       confidence: 'medium',
-      reason: 'PDF document',
+      reason: 'PDF document (default ACM)',
     };
   }
 
@@ -123,8 +123,8 @@ export const DOCUMENT_TYPE_CONFIG: Record<DocumentType, {
     bgColor: 'bg-gray-100',
   },
   media: {
-    label: 'Media File',
-    description: 'Image, audio, or video file',
+    label: 'Image File',
+    description: 'Image or photo file',
     color: 'text-purple-600',
     bgColor: 'bg-purple-100',
   },

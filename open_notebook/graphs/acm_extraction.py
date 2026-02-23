@@ -1057,16 +1057,16 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
 
     # Get the model
     try:
-        # Dynamic max_tokens: look up model capabilities; fall back to 8192 if unavailable
-        _max_tokens = 8192  # safe fallback
+        # Dynamic max_tokens: look up model capabilities; fall back to 16384 if unavailable
+        _max_tokens = 16384  # safe fallback (8192 too small for registers with 30+ records)
         if model_id:
             try:
                 _domain_model = await Model.get(model_id)
-                _max_tokens = _domain_model.get_max_output_tokens(fallback=8192)
+                _max_tokens = _domain_model.get_max_output_tokens(fallback=16384)
             except Exception:
                 logger.debug(
                     f"Could not fetch Model capabilities for {model_id}; "
-                    "using fallback max_tokens=8192"
+                    "using fallback max_tokens=16384"
                 )
         model = await provision_langchain_model(
             chunk_content,
@@ -1107,7 +1107,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             _json.dumps({"chunk_index": current_index, "total_chunks": len(chunks), "page": page_number, "content_length": len(chunk_content)}),
         )
 
-    # Use structured output
+    # Use structured output (with manual JSON fallback for OpenRouter compatibility)
     try:
         chain = model.with_structured_output(ACMExtractionResult)
         result: ACMExtractionResult = await chain.ainvoke(messages)
@@ -1204,8 +1204,111 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             "retry_count": 0,  # Reset retry count on success
         }
 
-    except ValidationError as e:
-        logger.warning(f"Structured output validation failed: {e}")
+    except (ValidationError, Exception) as e:
+        error_type = "validation" if isinstance(e, ValidationError) else "extraction"
+        logger.warning(f"Structured output {error_type} failed: {e}")
+
+        # Fallback: try direct model invocation with manual JSON extraction
+        # (handles OpenRouter/provider incompatibility with function calling)
+        if retry_count == 0:
+            logger.info("Attempting fallback: direct model invocation with manual JSON parsing")
+            try:
+                import json as _json_fallback
+                import re as _re_fallback
+
+                raw_response = await model.ainvoke(messages)
+                response_text = (
+                    raw_response.content
+                    if hasattr(raw_response, "content")
+                    else str(raw_response)
+                )
+
+                # Extract JSON from markdown code blocks or raw text
+                json_str = None
+                # Try ```json ... ``` blocks first
+                json_match = _re_fallback.search(
+                    r"```(?:json)?\s*\n?(\{.*?\})\s*\n?```",
+                    response_text,
+                    _re_fallback.DOTALL,
+                )
+                if json_match:
+                    json_str = json_match.group(1)
+                else:
+                    # Try to find raw JSON object
+                    brace_start = response_text.find("{")
+                    if brace_start >= 0:
+                        # Find the matching closing brace
+                        depth = 0
+                        for idx_c, c in enumerate(response_text[brace_start:]):
+                            if c == "{":
+                                depth += 1
+                            elif c == "}":
+                                depth -= 1
+                                if depth == 0:
+                                    json_str = response_text[brace_start:brace_start + idx_c + 1]
+                                    break
+
+                if json_str:
+                    parsed = _json_fallback.loads(json_str)
+                    result = ACMExtractionResult.model_validate(parsed)
+                    logger.info(
+                        f"Fallback JSON parsing succeeded: {len(result.records)} records"
+                    )
+                    # Continue with normal processing (jump to success path below)
+                    # We need to duplicate the post-processing here
+                    result.update_stats()
+                    new_records = result.records
+                    page_markers = chunk.get("page_markers", {})
+                    search_positions_fb: Dict[str, int] = {}
+                    for record in new_records:
+                        if record.page_number is None:
+                            product_key = (record.product or "").lower()
+                            search_start = search_positions_fb.get(product_key, 0)
+                            page, pos = _assign_record_page(
+                                record.product,
+                                chunk_content,
+                                page_markers,
+                                page_number,
+                                search_start,
+                            )
+                            record.page_number = page
+                            if record.product and pos >= 0:
+                                search_positions_fb[product_key] = pos + len(record.product)
+                    if new_records:
+                        last_record = new_records[-1]
+                        if last_record.building_id:
+                            context.building_id = last_record.building_id
+                            context.building_name = last_record.building_name
+                        if last_record.room_id:
+                            context.room_id = last_record.room_id
+                            context.room_name = last_record.room_name
+                    logger.info(
+                        f"Extracted {len(new_records)} records from chunk "
+                        f"{current_index + 1}/{len(chunks)} (fallback parser)"
+                    )
+                    if pl:
+                        total_so_far = len(existing_records) + len(new_records)
+                        progress = (current_index + 1) / len(chunks) if chunks else 1.0
+                        pl.stage_progress(
+                            StageId.EXTRACT,
+                            f"Chunk {current_index + 1}/{len(chunks)} | pages {page_number}+ | "
+                            f"{len(new_records)} records | {total_so_far} total (fallback)",
+                            progress=progress,
+                            records_so_far=total_so_far,
+                            chunk=f"{current_index + 1}/{len(chunks)}",
+                        )
+                    return {
+                        "records": existing_records + new_records,
+                        "context": context,
+                        "current_chunk_index": current_index + 1,
+                        "extraction_result": result,
+                        "retry_count": 0,
+                    }
+                else:
+                    logger.warning("Fallback: no JSON found in response text")
+            except Exception as fallback_err:
+                logger.warning(f"Fallback JSON parsing failed: {fallback_err}")
+
         if retry_count < MAX_RETRIES:
             # Apply exponential backoff delay before retry
             delay = (
@@ -1222,27 +1325,8 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
                 "error": None,  # Clear error to allow retry
             }
         return {
-            "error": f"Extraction validation failed after {MAX_RETRIES} retries: {e}"
+            "error": f"Extraction {error_type} failed after {MAX_RETRIES} retries: {e}"
         }
-
-    except Exception as e:
-        logger.error(f"Extraction failed: {e}")
-        if retry_count < MAX_RETRIES:
-            # Apply exponential backoff delay before retry
-            delay = (
-                RETRY_DELAYS[retry_count]
-                if retry_count < len(RETRY_DELAYS)
-                else RETRY_DELAYS[-1]
-            )
-            logger.info(
-                f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})"
-            )
-            await asyncio.sleep(delay)
-            return {
-                "retry_count": retry_count + 1,
-                "error": None,
-            }
-        return {"error": f"Extraction failed after {MAX_RETRIES} retries: {e}"}
 
 
 async def validate_records(state: dict, config: RunnableConfig) -> dict:

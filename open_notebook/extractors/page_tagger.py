@@ -64,16 +64,16 @@ class SubSectionTag(BaseModel):
 
     subsection_number: str
     title: str
-    section_id: int = Field(ge=0, le=7)
+    section_id: int = Field(description="Section ID (0-7)")
 
 
 class PageTag(BaseModel):
     """Tag metadata for a single page (Task 1.4)."""
 
     page_number: int
-    section_id: int = Field(ge=0, le=7)
+    section_id: int = Field(description="Section ID (0-7)")
     section_title: str
-    confidence: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(description="Confidence score 0.0-1.0")
     page_type: PageType
     subsection: Optional[SubSectionTag] = None
     content_summary: Optional[str] = None

@@ -23,6 +23,15 @@ RISK_STATUS_VALUES = {"Low", "Medium", "High"}
 MATERIAL_CONDITION_VALUES = {"Good", "Fair", "Poor", "Damaged"}
 AREA_TYPE_VALUES = {"Interior", "Exterior", "Grounds"}
 
+# N/A patterns — LLMs return these for fields not applicable to negative results
+_NA_PATTERNS = {"n/a", "na", "not applicable", "-", "none", ""}
+
+
+def _is_na(value: str) -> bool:
+    """Check if a value represents N/A (not applicable)."""
+    stripped = value.strip().lower()
+    return stripped in _NA_PATTERNS or "n/a" in stripped
+
 
 class ExtractionStatus(str, Enum):
     """Status of extraction result."""
@@ -218,6 +227,8 @@ class ACMExtractionRecord(BaseModel):
     def validate_friable(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
+        if _is_na(v):
+            return None
         stripped = v.strip()
         for valid in FRIABLE_VALUES:
             if stripped.lower() == valid.lower():
@@ -232,6 +243,8 @@ class ACMExtractionRecord(BaseModel):
     def validate_risk_status(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
+        if _is_na(v):
+            return None
         normalized = v.strip().title()
         if normalized in RISK_STATUS_VALUES:
             return normalized
@@ -242,6 +255,8 @@ class ACMExtractionRecord(BaseModel):
     def validate_material_condition(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
+        if _is_na(v):
+            return None
         normalized = v.strip().title()
         if normalized in MATERIAL_CONDITION_VALUES:
             return normalized
@@ -254,6 +269,8 @@ class ACMExtractionRecord(BaseModel):
     def validate_area_type(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
+        if _is_na(v):
+            return None
         normalized = v.strip().title()
         if normalized in AREA_TYPE_VALUES:
             return normalized
