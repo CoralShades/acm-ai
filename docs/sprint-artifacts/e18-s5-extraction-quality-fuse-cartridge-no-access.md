@@ -1,6 +1,6 @@
 # Story 18.5: Extraction Quality — Fuse Cartridge & No-Access Records
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -41,6 +41,16 @@ so that the extracted data matches the original register with 100% completeness.
   - [x] 6.1: `ruff check .` — PASSED
   - [x] 6.2: `pytest tests/test_preprocess_samp.py` — 14 passed (9 NO ACCESS + 5 normalization)
   - [ ] 6.3: Full test suite — pending (long-running)
+
+### Review Follow-ups (AI) — Code Review 2026-02-23
+
+- [ ] [AI-Review][HIGH] H1: Run E2E test to validate Fixes B+C achieve 31/31 (AC #1 not met — still 27/31) [tests/test_broadmeadows_e2e.py]
+- [ ] [AI-Review][HIGH] H2: Run full test suite or document hang as known limitation (AC #5 unverified) [Task 6.3]
+- [ ] [AI-Review][MEDIUM] M1: Fix double NO ACCESS marker injection — add deduplication or skip shorter phrase when longer already matched [open_notebook/graphs/acm_extraction.py:366-385]
+- [ ] [AI-Review][MEDIUM] M2: Extract shared prompt sections into Jinja2 include to eliminate duplication [prompts/acm/extraction.jinja, prompts/acm/building_extraction.jinja]
+- [ ] [AI-Review][MEDIUM] M3: Pre-compute synonym reverse lookup dict instead of rebuilding per call [tests/test_broadmeadows_e2e.py:117-119]
+- [ ] [AI-Review][LOW] L1: Use feature branches per story to avoid interleaved commits on main
+- [ ] [AI-Review][LOW] L2: Pin OpenRouter model to specific version for E2E reproducibility [tests/test_broadmeadows_e2e.py:43]
 
 ## Dev Notes
 
@@ -193,3 +203,4 @@ All 4 missing records now have deterministic preprocessor fixes (Fixes A, B) and
 - 2026-02-23: Fix A implemented — NO ACCESS marker injection in `_preprocess_samp_format()`. Added `NO_ACCESS_PHRASES` list (10 phrases) with `>>> NO ACCESS ENTRY:` marker. Updated both extraction prompt templates with CLASSIFY rule. 9 unit tests added in `tests/test_preprocess_samp.py`.
 - 2026-02-23: Fix B implemented — PRODUCT_NORMALIZATIONS in `_preprocess_samp_format()`: "Fuses"→"Fuse cartridge", "Fuse"(standalone)→"Fuse cartridge", "Flange mastic"→"Flange joints". Vocabulary mapping table added to both prompt templates. 5 unit tests added.
 - 2026-02-23: Fix C implemented — PRODUCT_SYNONYMS + synonym-normalized Tier 2.5 matching in `test_broadmeadows_e2e.py`. Covers flange joints/mastic, fuse cartridge/fuses, internal lining variants.
+- 2026-02-23: **Code Review** — 2 HIGH, 3 MEDIUM, 2 LOW findings. AC #1 not met (E2E not re-run after Fixes B+C). Double marker injection accepted but not prevented. Prompt duplication across templates flagged. 7 action items added to Review Follow-ups.

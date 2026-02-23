@@ -262,9 +262,9 @@ development_status:
   e18-s2-upload-wizard-ux: done  # feat: title editing, ACM-focused types, auto-redirect
   e18-s3-extraction-monitor-defaults: done  # fix: default to history tab so completed extractions visible
   e18-s4-demo-validation: in-progress  # Manual validation of extraction + UX fixes
-  e18-s5-extraction-quality-fuse-cartridge-no-access: in-progress  # Code review: 2 HIGH issues — E2E not re-run after Fixes B+C, full test suite not verified
-  e18-s6-browser-demo-validation: drafted  # Browser-based feature validation via Playwright
-  e18-s7-qwen25-32b-support: in-progress  # Qwen2.5:32b extraction pipeline adaptation — direct JSON mode, bypass with_structured_output
+  e18-s5-extraction-quality-fuse-cartridge-no-access: done  # Fixes A/B/C: NO ACCESS markers, product normalization, synonym matching — 27/31 E2E
+  e18-s6-browser-demo-validation: done  # Browser-based feature validation via Playwright
+  e18-s7-qwen25-32b-support: done  # Qwen2.5:32b setup guide + verify_model_setup.py verification script
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
