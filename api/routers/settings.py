@@ -181,7 +181,7 @@ class StageModelAssignment(BaseModel):
     corrective_validation: Optional[str] = None
 
 
-STAGE_RECORD_ID = "extraction_stage_models:active"
+STAGE_RECORD_ID = "extraction_stage_models:⟨active⟩"
 
 
 @router.get(
@@ -190,10 +190,7 @@ STAGE_RECORD_ID = "extraction_stage_models:active"
 async def get_extraction_stage_models():
     """Get per-stage model assignments for extraction pipeline."""
     try:
-        result = await repo_query(
-            "SELECT * FROM ONLY $id",
-            {"id": STAGE_RECORD_ID},
-        )
+        result = await repo_query(f"SELECT * FROM ONLY {STAGE_RECORD_ID}")
         if result:
             data = result[0] if isinstance(result, list) else result
             return StageModelAssignment(
@@ -218,7 +215,7 @@ async def update_extraction_stage_models(update: StageModelAssignment):
     try:
         data = update.model_dump(exclude_none=True)
         await repo_query(
-            "UPSERT $id SET "
+            f"UPSERT {STAGE_RECORD_ID} SET "
             "structure_analysis = $structure_analysis, "
             "building_inventory = $building_inventory, "
             "acm_extraction = $acm_extraction, "
@@ -227,7 +224,6 @@ async def update_extraction_stage_models(update: StageModelAssignment):
             "corrective_validation = $corrective_validation, "
             "updated = time::now()",
             {
-                "id": STAGE_RECORD_ID,
                 "structure_analysis": data.get("structure_analysis"),
                 "building_inventory": data.get("building_inventory"),
                 "acm_extraction": data.get("acm_extraction"),
@@ -246,7 +242,7 @@ async def update_extraction_stage_models(update: StageModelAssignment):
 async def reset_extraction_stage_models():
     """Reset all stage model assignments to use default extraction model."""
     try:
-        await repo_query("DELETE $id", {"id": STAGE_RECORD_ID})
+        await repo_query(f"DELETE {STAGE_RECORD_ID}")
         return {"message": "Stage model assignments reset to defaults"}
     except Exception as e:
         logger.error(f"Error resetting stage models: {e}")
