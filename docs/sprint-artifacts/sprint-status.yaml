@@ -287,6 +287,15 @@ development_status:
   bug-cleanup-mock-tests: done  # Remove self-referential mock tests
   bug-embedding-ollama-connection: done  # Fix A: RuntimeError logging + type/repr; Fix B: .env.example 3-scenario docs. Validated 2026-02-23: Ollama mxbai-embed-large returns 1024 floats ✓
   bug-zero-pages-extraction: done  # Fix: replace broken inline regex with _extract_total_pages() + warning log. Validated 2026-02-23: pipeline logs "(19 pages)" for Broadmeadows PDF ✓
+  # Integration Validation: All 6 steps passed 2026-02-23
+  # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
+  # STEP 2: Ollama mxbai-embed-large health → 1024 floats ✓
+  # STEP 3: Broadmeadows PDF extraction → logs "(19 pages)" ✓
+  # STEP 4: Extraction complete, 24+ records extracted ✓
+  # STEP 5: GET /api/acm/records → ≥ 20 records ✓
+  # STEP 6: pytest test_broadmeadows_e2e.py → 28/31 records (90%) PASSED ✓
+  #   Schema fix: material_description → Optional[str] in ACMExtractionRecord (acm_schemas.py)
+  #   Test threshold: 80% (25/31) — baseline 28/31 (90%) in validation run
 
 # SUMMARY:
 # ========
@@ -300,7 +309,7 @@ development_status:
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-23  # PR#55 code-review bug fixes applied: C1 (NO_ACCESS cascade→single-pass regex), C2 (model_family pre-init), C3 (CancelledError re-raise+warning), C4 (Qwen orchestrator try/except), H1 (temp at provision), H2 (_is_qwen_model→utils.py+isinstance guard), H3 (split except clauses), H5 (fallback logging with context), H6 (JSONDecodeError→ValueError), V1 (return type). 974/974 pass, ruff clean.
+# Last Updated: 2026-02-23  # Integration validation complete: all 6 steps passed. E2E test: 28/31 records (90%). Schema fix: material_description Optional in ACMExtractionRecord. Also: PR#55 code-review bug fixes C1-C4, H1-H6, V1. 974/974 pass, ruff clean.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17
 # IN-PROGRESS EPICS: E18
