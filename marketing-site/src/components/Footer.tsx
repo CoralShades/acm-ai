@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Shield } from "lucide-react";
 import { APP_URL } from "@/lib/site-urls";
 
-const footerLinks = {
+const footerLinks: Record<string, Array<{ label: string; href: string; external?: boolean }>> = {
   Product: [
     { label: "Open App", href: APP_URL, external: true },
     { label: "Demo", href: "/demo" },
