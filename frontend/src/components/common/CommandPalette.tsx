@@ -28,7 +28,10 @@ import {
   Sparkles,
   LayoutDashboard,
   FileWarning,
+  House,
+  BookText,
 } from 'lucide-react'
+import { MARKETING_DOCS_URL, MARKETING_URL } from '@/lib/site-urls'
 
 const navigationItems = [
   { name: 'Sources', href: '/sources', icon: FileText, keywords: ['files', 'documents', 'upload'] },
@@ -36,6 +39,8 @@ const navigationItems = [
   { name: 'Models', href: '/models', icon: Bot, keywords: ['ai', 'llm', 'providers', 'openai', 'anthropic'] },
   { name: 'Settings', href: '/settings', icon: Settings, keywords: ['preferences', 'config', 'options'] },
   { name: 'Advanced', href: '/advanced', icon: Wrench, keywords: ['debug', 'system', 'tools'] },
+  { name: 'Visit Landing', href: MARKETING_URL, icon: House, keywords: ['landing', 'website', 'marketing'], external: true },
+  { name: 'Documentation', href: MARKETING_DOCS_URL, icon: BookText, keywords: ['docs', 'help', 'guides'], external: true },
 ]
 
 const createItems = [
@@ -107,8 +112,14 @@ export function CommandPalette() {
     setTimeout(callback, 0)
   }, [])
 
-  const handleNavigate = useCallback((href: string) => {
-    handleSelect(() => router.push(href))
+  const handleNavigate = useCallback((href: string, external?: boolean) => {
+    handleSelect(() => {
+      if (external) {
+        window.open(href, '_blank', 'noopener,noreferrer')
+        return
+      }
+      router.push(href)
+    })
   }, [handleSelect, router])
 
   const handleSearch = useCallback(() => {
@@ -210,7 +221,7 @@ export function CommandPalette() {
             <CommandItem
               key={item.href}
               value={`${item.name} ${item.keywords.join(' ')}`}
-              onSelect={() => handleNavigate(item.href)}
+              onSelect={() => handleNavigate(item.href, item.external)}
             >
               <item.icon className="h-4 w-4" />
               <span>{item.name}</span>

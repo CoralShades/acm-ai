@@ -1,0 +1,136 @@
+---
+title: Epic Overview
+description: All 17 implementation epics for ACM-AI with story counts, priorities, and completion status
+---
+
+# Epic Overview
+
+ACM-AI was implemented across 17 epics covering 122 user stories. As of 2026-02-22, all feature epics are complete (feature-complete status).
+
+## Epic Summary Table
+
+| Epic | Title | Priority | Stories | Status |
+|------|-------|----------|---------|--------|
+| E1 | ACM Data Extraction Pipeline | P0 | 31 | Done |
+| E2 | AG Grid Spreadsheet Integration | P0 | 12 | Done |
+| E3 | Cell Citations and PDF Viewer | P0 | 4 | Done |
+| E4 | Chat with ACM Context | P0 | 4 | Done |
+| E5 | Export Functionality | P0 | 4 | Done |
+| E6 | Rebranding to ACM-AI | P1 | 4 | Done |
+| E7 | Upload Wizard | P0 | 7 | Done |
+| E8 | UI Refresh (Bento Grid) | P1 | 10 | Archived |
+| E9 | Document Library Management | P0 | 3 | Done |
+| E10 | ACM-AI UI Simplification | P0 | 1 | Done |
+| E11 | Search and Retrieval Enhancement | P0/P1 | 2 | Done |
+| E12 | Extraction Settings and Configuration UI | P1 | 4 | Done |
+| E13 | Knowledge Graph Visualisation | P1 | 3 | Done |
+| E14 | UX and Enterprise Readiness | P0/P1 | 11 | Done |
+| E15 | Extraction Monitor and Live Logging UI | P0 | 2 | Done |
+| E16 | UX Enhancement Sprint | P0/P1 | 3 | Done |
+| E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | Done |
+
+**Total: 112 stories completed (92%) — all feature epics complete**
+
+## Epic Descriptions
+
+### E1 — ACM Data Extraction Pipeline (31 stories)
+
+The largest and most complex epic. Covers the complete 7-stage extraction pipeline from document structure analysis through to SurrealDB storage. Key milestones:
+
+- E1-S1 through E1-S7: Core data model, domain objects, API endpoints, and source processing integration
+- E1-S8: Site configuration data entry for non-extractable fields
+- E1-S9: ACM product taxonomy classification (pattern-based + LLM fallback)
+- E1-S10: MinerU table extraction with merged cell handling
+- E1-S11: Generic configurable parser driven by BAR field schema (replaced 3 consultant parsers)
+- E1-S12: Consultant wording normalisation to BAR enum vocabulary
+- E1-S13 through E1-S15: Corrective RAG validation, contextual embedding enrichment
+- E1-S16 through E1-S19: Document structure analysis, building inventory, page-level section tagging, metadata extraction
+- E1-S20 through E1-S21: Agentic orchestrator, pipeline visualisation UI
+- E1-S22 through E1-S31: BAR schema expansion, Victorian Government hierarchy, removal tracking
+
+### E2 — AG Grid Spreadsheet Integration (12 stories)
+
+Full AG Grid implementation with 47+ BAR columns organised into 7 column groups (Organisation, Building, Location, ACM Details, Assessment, Documentation, Removal). Includes:
+
+- Virtual scrolling for 1,000+ rows
+- Column visibility presets (Essential, Full BAR, Assessment Focus, Removal Tracking)
+- Row grouping by Building and Room
+- Risk status colour coding (Low=green, Medium=yellow, High=red)
+- Dynamic column definitions from the `field_schema` API (E2-S8)
+- AG-UI incremental record streaming during extraction (E2-S12)
+
+### E3 — Cell Citations and PDF Viewer (4 stories)
+
+Click any cell in the AG Grid to open the source PDF at the exact page. The citation format `[acm:record_id:field_name]` extends the existing source reference system. Bounding box highlighting (FR-403) is implemented when MinerU provides coordinate data.
+
+### E4 — Chat with ACM Context (4 stories)
+
+Supervisor agent pattern using LangGraph and CopilotKit. The ACM context toggle dynamically enables or disables ACM-specific tools (record queries, building search, compliance checks) per message. Chat responses include `[acm:...]` citations that are clickable in the frontend.
+
+### E5 — Export Functionality (4 stories, promoted to P0)
+
+BAR-compliant Excel export (`.xlsx`) with all 47 columns in the official BAR column order (A–AU). Also includes CSV export, column order configuration, and building-level filter for selective export.
+
+### E6 — Rebranding to ACM-AI (4 stories)
+
+VAEA government branding applied across the application: teal/coral/navy colour palette in OKLCH colour space, updated logo and favicon, navigation renamed to WORKSPACE/CONFIGURE taxonomy.
+
+### E7 — Upload Wizard (7 stories)
+
+Multi-step upload workflow: file selection → site configuration (Department, Agency, Building Type) → extraction trigger → progress monitoring → register view. Supports batch uploads and configuration templates.
+
+### E8 — UI Refresh (Bento Grid) — ARCHIVED
+
+Originally planned bento-grid layout redesign. Archived in favour of the VAEA government branding approach implemented in E14. Code preserved but inaccessible from navigation.
+
+### E9 — Document Library Management (3 stories)
+
+Unified Documents view at `/documents` merging the previous Sources and Documents pages. Includes bulk operations (select multiple → delete/re-extract/export), inline extraction log expansion, and document status badges.
+
+### E10 — ACM-AI UI Simplification (1 story)
+
+Removed brownfield features (Podcasts, Transformations, Notebooks) from navigation while preserving code. Features remain accessible via direct URL for backward compatibility.
+
+### E11 — Search and Retrieval Enhancement (2 stories)
+
+Parent document retrieval using `acm_table_section` records as parent context for extracted ACM records. Enables provenance-aware RAG where chat answers can cite the raw table HTML alongside the structured record.
+
+### E12 — Extraction Settings and Configuration UI (4 stories)
+
+Settings pages under the CONFIGURE section: parser configuration, field schema management (E12-S4 — BAR Field Schema Configuration UI), model selection, and processing options.
+
+### E13 — Knowledge Graph Visualisation (3 stories)
+
+Graph view showing relationships between buildings, rooms, and ACM items. Uses a force-directed layout to visualise the Victorian Government hierarchy (Department → Agency → Site → Building → Room → ACM Item).
+
+### E14 — UX and Enterprise Readiness (11 stories)
+
+All 11 stories implemented and merged via PR #7 (2026-02-08). Covers:
+- VAEA design token system (3-tier cascade: Brand → Semantic → Component)
+- Skeleton loading placeholders (zero CLS, shimmer animation, `aria-busy`)
+- Toast notification system (Sonner, promise-based for long operations)
+- WCAG 2.1 AA compliance audit and remediation
+- Breadcrumb navigation on deep pages
+- TypeScript type generation from Pydantic models
+
+### E15 — Extraction Monitor and Live Logging UI (2 stories)
+
+- E15-S1: Inline `ExtractionProgressPanel` in Document Library (chevron expand, historical/live SSE)
+- E15-S2: Dedicated `/extraction-monitor` page with Active and History tabs, status filter, retry capability
+
+### E16 — UX Enhancement Sprint (3 stories)
+
+- E16-S1: Statistics dashboard home page (4 summary cards, risk donut chart, top-10 buildings bar chart, recent extractions list)
+- E16-S2: Slide-out record detail panel (380 px right drawer, 8 field sections, keyboard navigation, edit mode)
+- E16-S3: Empty state screens with onboarding hints on first visit
+
+### E17 — Live Extraction Intelligence — AG-UI + A2A + Observability (6 stories)
+
+The final feature epic (2026-02-22):
+
+- E17-S1: AG-UI extraction SSE endpoint using SurrealDB relay (`agui_events` table, migration 21)
+- E17-S2: Incremental record streaming to AG Grid via `StateDelta` events (preview rows with italic/pulsing border)
+- E17-S3: Reasoning token display panel for thinking models (DeepSeek R1, Claude extended thinking)
+- E17-S4: Live tool call feed showing step names, arguments, results, and durations
+- E17-S5: A2A agent card at `/.well-known/agent.json` with task lifecycle endpoints
+- E17-S6: 6 new frontier AI models via OpenRouter (auto-provisioned when `OPENROUTER_API_KEY` is set)

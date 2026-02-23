@@ -1,0 +1,217 @@
+---
+title: Data Model
+description: ACM record schema, Victorian BAR 47-column format, entity relationships, and SurrealDB table definitions
+---
+
+# Data Model
+
+## Overview
+
+The ACM-AI data model is aligned with the official Victorian Government Building Asbestos Register (BAR) template. The primary entity is `acm_record`, which stores up to 50 fields covering the full 47-column BAR format plus extraction metadata.
+
+## Entity Relationships
+
+```
+source (PDF document)
+  │
+  ├── 1:N ──► acm_record (extracted ACM items)
+  │               │
+  │               └── N:1 ──► acm_table_section (raw HTML table for provenance)
+  │
+  └── 1:1 ──► site_config (non-extractable metadata: department, agency, etc.)
+
+extraction_progress  (keyed by command_id — one per extraction job)
+field_schema         (keyed by version — drives parser, grid columns, and export)
+agui_events          (AG-UI SSE events keyed by command_id and sequence)
+```
+
+## Victorian BAR Column Order (47 Columns)
+
+The export follows this column order (BAR columns A–AU):
+
+| # | Field | BAR Column | Group |
+|---|-------|------------|-------|
+| 1 | Department | A | Organisation |
+| 2 | Agency | B | Organisation |
+| 3 | Sub Agency | C | Organisation |
+| 4 | Site Name | D | Organisation |
+| 5 | Building Name | E | Building |
+| 6 | Building Type | F | Building |
+| 7 | Building Address | G | Building |
+| 8 | Suburb | H | Building |
+| 9 | Postcode | I | Building |
+| 10 | Owned or Leased | J | Building |
+| 11 | Building Unique ID | K | Building |
+| 12 | Frequency of Use | L | Building |
+| 13 | Public Access? | M | Building |
+| 14 | Date of Inspection | N | Building |
+| 15 | Estimated Year Built | O | Building |
+| 16 | Est. Building Size (m²) | P | Building |
+| 17 | Number of Levels | Q | Building |
+| 18 | Construction Type | R | Building |
+| 19 | Roof Type | S | Building |
+| 20 | Internal / External | T | Location |
+| 21 | Level | U | Location |
+| 22 | Room or Area | V | Location |
+| 23 | Location in Room | W | Location |
+| 24 | Specific Item/ACM Name | X | ACM Details |
+| 25 | Friability of Material | Y | ACM Details |
+| 26 | ACM Product Group | Z | ACM Details |
+| 27 | ACM Product Type | AA | ACM Details |
+| 28 | NATA Endorsed Sample Number | AB | ACM Details |
+| 29 | Sample Result | AC | ACM Details |
+| 30 | Identifying Hygiene Company | AD | ACM Details |
+| 31 | Condition | AE | Assessment |
+| 32 | Disturbance Potential | AF | Assessment |
+| 33 | Quantity | AG | Assessment |
+| 34 | Labelled | AH | Documentation |
+| 35 | Label Details | AI | Documentation |
+| 36 | Hygienist Recommendations | AJ | Documentation |
+| 37 | Additional Comments | AK | Documentation |
+| 38 | PSB Supplied ACM ID | AL | Removal |
+| 39 | Assumed Removed? | AM | Removal |
+| 40 | Date of Removal | AN | Removal |
+| 41 | Quantity Removed | AO | Removal |
+| 42 | Asbestos Removal Notification No | AP | Removal |
+| 43 | EPA Waste Transport Certificate No | AQ | Removal |
+| 44 | Removal Comments | AR | Removal |
+| 45 | Photo Reference Number | AU | Documentation |
+
+## SurrealDB Schema: `acm_record`
+
+```sql
+DEFINE TABLE acm_record SCHEMAFULL;
+
+-- Core identification
+DEFINE FIELD source_id ON acm_record TYPE record<source>;
+
+-- Organisation Hierarchy
+DEFINE FIELD department     ON acm_record TYPE option<string>;
+DEFINE FIELD agency         ON acm_record TYPE option<string>;
+DEFINE FIELD sub_agency     ON acm_record TYPE option<string>;
+DEFINE FIELD site_name      ON acm_record TYPE option<string>;
+
+-- Building Information (15 fields)
+DEFINE FIELD building_id            ON acm_record TYPE string;
+DEFINE FIELD building_name          ON acm_record TYPE string;
+DEFINE FIELD building_type          ON acm_record TYPE option<string>;
+DEFINE FIELD building_address       ON acm_record TYPE option<string>;
+DEFINE FIELD suburb                 ON acm_record TYPE option<string>;
+DEFINE FIELD postcode               ON acm_record TYPE option<string>;
+DEFINE FIELD owned_or_leased        ON acm_record TYPE option<string>;
+DEFINE FIELD building_unique_id     ON acm_record TYPE option<string>;
+DEFINE FIELD frequency_of_use       ON acm_record TYPE option<string>;
+DEFINE FIELD public_access          ON acm_record TYPE option<string>;
+DEFINE FIELD date_of_inspection     ON acm_record TYPE option<datetime>;
+DEFINE FIELD building_year          ON acm_record TYPE option<int>;
+DEFINE FIELD building_size_m2       ON acm_record TYPE option<float>;
+DEFINE FIELD number_of_levels       ON acm_record TYPE option<int>;
+DEFINE FIELD building_construction  ON acm_record TYPE option<string>;
+DEFINE FIELD roof_type              ON acm_record TYPE option<string>;
+
+-- Location
+DEFINE FIELD area_type   ON acm_record TYPE string;
+DEFINE FIELD level       ON acm_record TYPE option<string>;
+DEFINE FIELD room_id     ON acm_record TYPE option<string>;
+DEFINE FIELD room_name   ON acm_record TYPE option<string>;
+DEFINE FIELD room_area   ON acm_record TYPE option<float>;
+DEFINE FIELD location    ON acm_record TYPE string;
+
+-- ACM Item Details
+DEFINE FIELD product              ON acm_record TYPE string;
+DEFINE FIELD material_description ON acm_record TYPE option<string>;
+DEFINE FIELD friable              ON acm_record TYPE option<string>;
+DEFINE FIELD acm_product_group    ON acm_record TYPE option<string>;
+DEFINE FIELD acm_product_type     ON acm_record TYPE option<string>;
+DEFINE FIELD nata_sample_number   ON acm_record TYPE option<string>;
+DEFINE FIELD sample_result        ON acm_record TYPE option<string>;
+DEFINE FIELD hygiene_company      ON acm_record TYPE option<string>;
+
+-- Assessment
+DEFINE FIELD material_condition    ON acm_record TYPE option<string>;
+DEFINE FIELD disturbance_potential ON acm_record TYPE option<string>;
+DEFINE FIELD extent                ON acm_record TYPE option<string>;
+DEFINE FIELD risk_status           ON acm_record TYPE option<string>;
+
+-- Documentation
+DEFINE FIELD labelled                  ON acm_record TYPE option<string>;
+DEFINE FIELD label_details             ON acm_record TYPE option<string>;
+DEFINE FIELD hygienist_recommendations ON acm_record TYPE option<string>;
+DEFINE FIELD additional_comments       ON acm_record TYPE option<string>;
+DEFINE FIELD photo_reference           ON acm_record TYPE option<string>;
+
+-- Removal Tracking
+DEFINE FIELD psb_acm_id              ON acm_record TYPE option<string>;
+DEFINE FIELD assumed_removed         ON acm_record TYPE option<string>;
+DEFINE FIELD date_of_removal         ON acm_record TYPE option<datetime>;
+DEFINE FIELD quantity_removed        ON acm_record TYPE option<string>;
+DEFINE FIELD removal_notification_no ON acm_record TYPE option<string>;
+DEFINE FIELD epa_certificate_no      ON acm_record TYPE option<string>;
+DEFINE FIELD removal_comments        ON acm_record TYPE option<string>;
+
+-- BAR Compliance fields (added E1-S12 / E1-S14)
+DEFINE FIELD quantity           ON acm_record TYPE option<string>;
+DEFINE FIELD acm_labelled       ON acm_record TYPE option<bool>;
+DEFINE FIELD acm_label_details  ON acm_record TYPE option<string>;
+DEFINE FIELD identifying_company ON acm_record TYPE option<string>;
+DEFINE FIELD floor_level        ON acm_record TYPE option<string>;
+DEFINE FIELD normalized_action  ON acm_record TYPE option<string>;
+DEFINE FIELD enriched_text      ON acm_record TYPE option<string>;
+
+-- Parent Document Retrieval (E11-S1)
+DEFINE FIELD parent_table_id ON acm_record TYPE option<record<acm_table_section>>;
+
+-- Metadata
+DEFINE FIELD page_number           ON acm_record TYPE option<int>;
+DEFINE FIELD extraction_confidence ON acm_record TYPE option<float>;
+DEFINE FIELD created_at            ON acm_record TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at            ON acm_record TYPE datetime DEFAULT time::now();
+
+-- Indexes
+DEFINE INDEX acm_source       ON acm_record FIELDS source_id;
+DEFINE INDEX acm_building     ON acm_record FIELDS building_id;
+DEFINE INDEX acm_risk         ON acm_record FIELDS risk_status;
+DEFINE INDEX acm_department   ON acm_record FIELDS department;
+DEFINE INDEX acm_agency       ON acm_record FIELDS agency;
+DEFINE INDEX acm_suburb       ON acm_record FIELDS suburb;
+DEFINE INDEX acm_sample_result ON acm_record FIELDS sample_result;
+```
+
+## Controlled Vocabularies (Enums)
+
+| Field | Allowed Values |
+|-------|----------------|
+| Sample Result | `Positive`, `Assumed Positive`, `Negative`, `Assumed Negative` |
+| Material Condition | `Poor`, `Fair`, `Good`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)` |
+| Disturbance Potential | `High`, `Moderate`, `Low`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)` |
+| Friability | `Non-friable`, `Friable` |
+| Internal/External | `Internal`, `External`, `External & Internal` |
+| Owned or Leased | `Owned`, `Leased` |
+| Yes/No fields | `YES`, `NO` |
+| Frequency of Use | `Every day`, `Every day with intermittent breaks`, `Once every 3–5 days`, `Every 2–3 weeks`, `Once every 2–3 months`, `Annually or less frequently` |
+
+**Business Rules:**
+- If Sample Result is `Negative` or `Assumed Negative`, set Condition to `N/A (negative)` or `N/A (assumed negative)` respectively
+- BAR uses `Moderate` not `Medium` for Disturbance Potential
+
+## Supporting Tables
+
+### `site_config`
+
+Stores non-extractable fields configured per source document (Department, Agency, Building Type, etc.).
+
+### `field_schema`
+
+Runtime field configuration store loaded from `config/field_schemas/bar_v4.json` at API startup. Drives the GenericParser, AG Grid column definitions, and BAR export column ordering.
+
+### `acm_table_section`
+
+Stores raw HTML table sections as parent documents for provenance and citation. Each `acm_record` may link to its parent section via `parent_table_id`.
+
+### `extraction_progress`
+
+Per-run pipeline state for SSE streaming and polling. Keyed by `command_id` (unique per extraction job). Fields: `command_id`, `run_id`, `source_id`, `status`, `state_json`, `log_entries`.
+
+### `agui_events`
+
+AG-UI protocol events persisted by the worker process for relay via the API SSE endpoint. Fields: `command_id`, `sequence`, `type`, `payload`, `timestamp`. Index on `(command_id, sequence)`.

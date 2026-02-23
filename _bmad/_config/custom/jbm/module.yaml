@@ -1,0 +1,17 @@
+code: jbm
+name: "JBM: Jira Bridge Module - BMAD to Jira Integration"
+default_selected: true
+type: module
+
+header: "JBM: Jira Bridge Module"
+subheader: "Bridge BMAD methodology artifacts with Jira project management"
+
+# Variables from Core Config inserted:
+## user_name
+## communication_language
+## output_folder
+
+jira_project_key:
+  prompt: "Default Jira project key (e.g., PROJ, ACM)?"
+  default: ""
+  result: "{value}"

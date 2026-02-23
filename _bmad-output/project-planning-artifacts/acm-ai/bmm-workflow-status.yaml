@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-21"
+updated: "2026-02-23"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -56,6 +56,11 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-02-23: E20 - Marketing-App Cross-Site Navigation & Domain Cutover
+#   - PRD updated to v1.6 with FR-1100 cross-site navigation requirements
+#   - Architecture updated to v1.3 with multi-project Vercel topology and env contract
+#   - Epics updated with Epic 20 (E20-S1, E20-S2)
+#   - Sprint status updated to include Epic 20 as done
 # 2026-02-20: SCP-20260220 - Extraction Monitor UI + UX Enhancement Sprint
 #   - Project state reconciliation: 11 stories found done that were listed as backlog in old docs
 #   - True completion: 72/99 stories done (73%, up from stale 50/74 in old planning docs)
@@ -70,7 +75,6 @@ workflow_status:
 #   - PROMOTED: E10-S1 drafted -> ready-for-dev
 #   - Stale _bmad-output/implementation-artifacts/sprint-status.yaml identified (use docs/sprint-artifacts/ instead)
 #   - Proposal: _bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md
-# ===========
 # 2026-02-20: PR Merge Blitz - PRs #31-41 merged to main
 #   - PR #31: Smart chat + document intelligence + BAR compliance (E1-S16..S19 extractors,
 #     ACM extraction progress panel, migration 19, BAR columns, comprehensive tests)
@@ -83,7 +87,7 @@ workflow_status:
 #   - E5-S4 downgraded: ready-for-dev -> drafted (no tech-spec, blocked by E5-S3)
 # 2025-12-10: Initial workflow status created
 # 2026-02-04: Course Correction completed - Victorian BAR Format Expansion
-#   - PRD updated: 20→50 fields schema, BAR export format
+#   - PRD updated: 20â†’50 fields schema, BAR export format
 #   - Architecture updated: Multi-format extraction, expanded API types
 #   - Epics updated: 6 new stories added (E1-S8, E1-S9, E2-S8, E5-S3, E5-S4, E7-S7)
 #   - E5 promoted from P1 to P0 (BAR Excel export critical)
@@ -94,7 +98,7 @@ workflow_status:
 #   - Performance: <30s for 20-page PDFs (validated via code analysis)
 #   - QA approved: 245/245 tests passing, zero regressions
 #   - E1-S11, E1-S12 added to backlog: Extensible parser framework, wording normalization
-#   - E1-S3 updated: Two-stage extraction pipeline (EXTRACT → INTERPRET)
+#   - E1-S3 updated: Two-stage extraction pipeline (EXTRACT â†’ INTERPRET)
 #   - Documentation: extraction-pipeline.md, product-taxonomy.md, bar-schema.md added
 #   - Tech-spec created: docs/sprint-artifacts/e1-s10-mineru-table-extraction.md
 #   - Sprint change proposal updated with research integration section
@@ -117,11 +121,12 @@ workflow_status:
 #   - Sprint status: 85 stories total (61 done, 24 remaining)
 #   - Merged to main via PR #7 (rebase and merge)
 # 2026-02-08: Course Correction - Generic Configurable Parser
-#   - 3 consultant parsers (Prensa, Greencap, Generic) → 1 configurable generic parser
+#   - 3 consultant parsers (Prensa, Greencap, Generic) â†’ 1 configurable generic parser
 #   - BAR Excel template as single source of truth for fields, enums, rules
-#   - E1-S11 redefined: Extensible Parser Framework → Generic Configurable Parser
-#   - E12-S4 redefined: Parser Config Management → BAR Field Schema Config UI
+#   - E1-S11 redefined: Extensible Parser Framework â†’ Generic Configurable Parser
+#   - E12-S4 redefined: Parser Config Management â†’ BAR Field Schema Config UI
 #   - E2-S8 enhanced: AG Grid columns from field config
 #   - Architecture 5.2 rewritten, PRD 5.7 + FR-107 updated
 #   - Change scope: Moderate | Risk: Low | Path: Direct Adjustment
 #   - Proposal: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
+

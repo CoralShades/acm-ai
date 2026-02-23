@@ -70,3 +70,77 @@ All 7 "remaining" stories were implemented in a prior Ralph sprint but tracking 
 ### Sprint Artifact Location (2026-02-21)
 - `docs/sprint-artifacts/` is canonical (not `_bmad-output/implementation-artifacts/`)
 - `_bmad/bmm/config.yaml` sets `implementation_artifacts` to `docs/sprint-artifacts`
+
+---
+
+## Cross-Site Navigation Findings (2026-02-23)
+
+- `frontend` is already linked to a Vercel project (`frontend/.vercel/project.json`).
+- `marketing-site` currently has no local `.vercel/project.json` binding in repo.
+- Best minimal-risk integration points:
+  - Marketing: `Navigation.tsx`, `Hero.tsx`, `Footer.tsx`
+  - App: `navigation.ts`, `AppSidebar.tsx`, `CommandPalette.tsx`
+- Environment-based URL contract implemented:
+  - Marketing reads `NEXT_PUBLIC_APP_URL`
+  - App reads `NEXT_PUBLIC_MARKETING_URL`
+- Chosen domain topology:
+  - Marketing canonical root: `vaea.coralshades.ai`
+  - App workspace: `demo.vaea.coralshades.ai`
+
+## Railway API Connection Failure (2026-02-23)
+
+**Symptom:** `demo.vaea.coralshades.ai` shows "Unable to Connect to API Server" — attempted URL: `/api/config`
+
+**Investigation:**
+- Railway backend healthy: `GET https://acm-ai-production.up.railway.app/health` → `{"status":"healthy"}`
+- CORS configured: `allow_origins=["*"]` in `api/main.py:154`
+- `/config` serverless endpoint returns wrong apiUrl: `https://frontend-two-alpha-37.vercel.app\n` (old alias + trailing newline)
+- `/api/*` rewrites to `INTERNAL_API_URL` defaulting to `http://localhost:5055` → 502 on Vercel (no local backend)
+
+**Vercel env vars found (frontend project `prj_7uWhAMwVWvnKte9HfhxkKBNlbMRz`):**
+- `API_URL` (id: `Iz5u0YCzlx5B56IN`) — encrypted, resolves to old alias with trailing newline
+- `INTERNAL_API_URL` (id: `4Nt9hezDYxDllvyU`) — encrypted, value unknown but not Railway URL
+- `NEXT_PUBLIC_MARKETING_URL` (id: `938hI6d1T0JB1Rym`) — `https://vaea.coralshades.ai` ✅
+- `NEXT_PUBLIC_APP_URL` (id: `wXChGiOBODOdVSGQ`) — encrypted
+
+**Root cause:** Vercel env vars for API_URL and INTERNAL_API_URL were never set to the Railway production URL (`https://acm-ai-production.up.railway.app`).
+
+**Config resolution chain (frontend/src/lib/config.ts):**
+1. `/config` serverless endpoint → reads `API_URL` env var → returns to browser
+2. Browser calls `{apiUrl}/api/config` to get backend config
+3. Next.js rewrites `/api/*` → `INTERNAL_API_URL` (build-time)
+
+**Fix:** Set both `API_URL` and `INTERNAL_API_URL` to `https://acm-ai-production.up.railway.app` on Vercel, then rebuild.
+
+## Railway 502 — Docs Push Triggering Backend Rebuild (2026-02-23)
+
+**Symptom:** Railway backend (`acm-ai-production.up.railway.app`) returning 502 for 10+ minutes after docs-only git push.
+
+**Root cause:** `railway.toml` had no `watchPatterns` — EVERY push to `release` triggered a full Docker rebuild:
+1. Push `a8b1e8b` (docs-only) hits Railway webhook
+2. Railway kills running container, starts new Docker build from `Dockerfile.api`
+3. Build takes 5-10 min (Python deps, ffmpeg, supervisor install)
+4. During build, all requests get 502
+
+**Fix:** Added `watchPatterns` to `railway.toml`:
+```toml
+watchPatterns = ["api/**", "commands/**", "migrations/**", "open_notebook/**", "prompts/**", "scripts/**", "pyproject.toml", "uv.lock", "Dockerfile.api", "supervisord.api.conf", "run_api.py", "run_worker.py", "railway.toml"]
+```
+
+This ensures only backend-relevant file changes trigger Railway rebuilds. Frontend, marketing-site, and docs changes are ignored.
+
+## Railway OOM Crash Loop (2026-02-23)
+
+**Symptom:** Railway deployment shows "Deployment successful" but API returns 502. Deploy logs show:
+```
+2026-02-23 05:39:38,088 WARN exited: api (exit status 137; not expected)
+```
+
+**Root cause:** Exit status 137 = SIGKILL (OOM killed). Both API and Worker processes start simultaneously, loading heavy Python libraries (LangChain, LangGraph, FastAPI, podcast_creator, etc.). Combined peak memory exceeds the 1GB container limit.
+
+**Fix (3-part):**
+1. **Increased memory** on Railway dashboard (user action)
+2. **Staggered supervisor startup:** Worker now waits 10s (`startsecs=3`, `startretries=5`, added `sleep 10` wrapper) after API, so they don't peak concurrently
+3. **Python malloc tuning** in Dockerfile.api: `MALLOC_TRIM_THRESHOLD_=65536`, `PYTHONMALLOC=malloc`, `MALLOC_MMAP_THRESHOLD_=131072` — more aggressive memory release back to OS
+
+**Result:** API starts, stabilizes, then worker starts — total memory stays within limits. All endpoints verified working.

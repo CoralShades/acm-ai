@@ -149,11 +149,11 @@ specs/
 .bmad/
 .github/agents
 nul
-.agent/
+# .agent/ - Removed from gitignore so Antigravity can detect workflows
 .codex/
 .opencode/
-_bmad/
-.gemini/
+# _bmad/ - Removed from gitignore so Antigravity can detect configs
+# .gemini/ - Removed from gitignore so Antigravity can detect custom commands
 
 
 #node modules
@@ -197,3 +197,5 @@ test-results/
 playwright-report/trace/
 .last-run.json
 nul*
+
+.vercel

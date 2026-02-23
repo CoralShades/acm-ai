@@ -1,0 +1,75 @@
+# Issue Cache
+
+## Purpose
+
+This file caches recently accessed Jira issues for quick reference and context.
+Updated automatically after operations.
+
+## Active Issues
+
+### Epics
+
+| Key | Summary | Status |
+|-----|---------|--------|
+| ARPP-205 | E1: ACM Data Extraction Pipeline | In Progress |
+| ARPP-206 | E2: AG Grid Spreadsheet Integration | In Progress |
+| ARPP-207 | E3: Cell Citations & PDF Viewer | Done |
+| ARPP-208 | E4: Chat with ACM Context | Done |
+| ARPP-209 | E5: Export Functionality | In Progress |
+| ARPP-210 | E6: Rebranding to ACM-AI | Done |
+| ARPP-211 | E7: Upload Wizard | In Progress |
+| ARPP-212 | E8: UI Refresh (Bento Grid Design) | In Progress |
+| ARPP-213 | E9: Document Library Management | To Do |
+| ARPP-214 | E10: ACM-AI UI Simplification | To Do |
+
+### Open Stories (Not Done)
+
+| Key | Summary | Epic |
+|-----|---------|------|
+| ARPP-222 | E1-S8: Site Configuration Data Entry | ARPP-205 |
+| ARPP-228 | E1-S9: ACM Product Classification | ARPP-205 |
+| ARPP-230 | E1-S10: MinerU Table Extraction Integration | ARPP-205 |
+| ARPP-232 | E1-S11: Extensible Consultant Parser Framework | ARPP-205 |
+| ARPP-234 | E1-S12: Consultant Wording Normalization | ARPP-205 |
+| ARPP-233 | E2-S8: Column Visibility Management | ARPP-206 |
+| ARPP-243 | E5-S3: BAR Template Management | ARPP-209 |
+| ARPP-245 | E5-S4: Export Field Mapping Configuration | ARPP-209 |
+| ARPP-262 | E7-S7: Site Configuration During Upload | ARPP-211 |
+| ARPP-254 | E8-S1: Install UI/UX Pro Max Skill | ARPP-212 |
+| ARPP-256 | E8-S2: Define ACM-AI Design Tokens | ARPP-212 |
+| ARPP-257 | E8-S3: Create Bento Card Component | ARPP-212 |
+| ARPP-259 | E8-S4: Create Bento Grid Layout Component | ARPP-212 |
+| ARPP-261 | E8-S5: Redesign Dashboard/Home Page | ARPP-212 |
+| ARPP-263 | E8-S6: Redesign Sources List Page | ARPP-212 |
+| ARPP-264 | E8-S7: Redesign Source Detail Page | ARPP-212 |
+| ARPP-265 | E8-S8: Update Navigation & Sidebar | ARPP-212 |
+| ARPP-266 | E8-S9: Typography & Font Updates | ARPP-212 |
+| ARPP-267 | E8-S10: Dark Mode Refinement | ARPP-212 |
+| ARPP-268 | E9-S1: Create Document Library View | ARPP-213 |
+| ARPP-269 | E9-S2: Document Processing Status Dashboard | ARPP-213 |
+| ARPP-270 | E9-S3: Document Actions and Bulk Operations | ARPP-213 |
+| ARPP-271 | E10-S1: Simplify Navigation for ACM-AI Focus | ARPP-214 |
+
+## Recent Operations
+
+| Date | Operation | Issue | Result |
+|------|-----------|-------|--------|
+| 2026-02-05 | Full project mapping | 10 Epics + 57 Stories | Success |
+
+## Quick Reference
+
+### Frequently Used Issue Keys
+- E1 Epic: ARPP-205
+- E2 Epic: ARPP-206
+- E5 Epic: ARPP-209 (Export - BAR compliance)
+- E8 Epic: ARPP-212 (UI Refresh - active work)
+
+### Project Keys
+- ARPP (ACM-Ai) - Primary project
+
+## Cache Management
+
+- Cache last refreshed: 2026-02-05
+- Maximum 50 issues cached
+- Oldest entries removed first
+- Manual refresh: use `find-issues` command

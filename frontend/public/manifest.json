@@ -8,14 +8,14 @@
   "theme_color": "#53A69D",
   "icons": [
     {
-      "src": "/icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/acm-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     },
     {
-      "src": "/icon.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/acm-logo-bg.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }

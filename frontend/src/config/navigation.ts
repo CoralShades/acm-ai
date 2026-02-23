@@ -15,13 +15,17 @@ import {
   Wand2,
   Layers,
   ListChecks,
+  House,
+  BookText,
 } from 'lucide-react'
+import { MARKETING_DOCS_URL, MARKETING_URL } from '@/lib/site-urls'
 
 export interface NavItem {
   name: string
   href: string
   icon: React.ElementType
   badge?: string
+  external?: boolean
   /** Hide this item when ACM mode is active */
   hideInAcm?: boolean
   /** Only show this item when ACM mode is active */
@@ -48,6 +52,8 @@ export const navigationConfig: NavGroup[] = [
       { name: 'Podcasts', href: '/podcasts', icon: Podcast, hideInAcm: true },
       { name: 'Transformations', href: '/transformations', icon: Wand2, hideInAcm: true },
       { name: 'Search', href: '/search', icon: Search },
+      { name: 'Visit Landing', href: MARKETING_URL, icon: House, external: true },
+      { name: 'Documentation', href: MARKETING_DOCS_URL, icon: BookText, external: true },
     ],
   },
   {

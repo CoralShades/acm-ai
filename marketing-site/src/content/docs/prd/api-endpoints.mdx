@@ -1,0 +1,202 @@
+---
+title: API Endpoints
+description: REST API reference for ACM-AI backend — records, extraction, export, chat, and AG-UI endpoints
+---
+
+# API Endpoints
+
+The ACM-AI backend exposes a FastAPI REST API on port 5055. The Next.js frontend proxies all `/api/*` requests to this backend. All endpoints return JSON unless otherwise noted.
+
+## ACM Records
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/acm/records` | List ACM records with optional filters |
+| `GET` | `/api/acm/records/{id}` | Get a single ACM record by ID |
+| `PUT` | `/api/acm/records/{id}` | Update an ACM record (e.g. site config fields) |
+
+### `GET /api/acm/records`
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source_id` | string | Yes | Filter records by source document |
+| `building_id` | string | No | Filter by building |
+| `room_id` | string | No | Filter by room |
+| `risk_status` | `Low \| Medium \| High` | No | Filter by risk level |
+| `search` | string | No | Full-text search across all fields |
+| `page` | int | No | Page number (default: 1) |
+| `limit` | int | No | Records per page (default: 100, max: 1000) |
+
+**Response:**
+```json
+{
+  "records": [ /* ACMRecord[] */ ],
+  "total": 533,
+  "page": 1,
+  "pages": 6
+}
+```
+
+## Extraction
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/acm/extract` | Trigger ACM extraction for a source document |
+| `GET` | `/api/acm/extraction-progress/{command_id}/stream` | SSE stream of real-time pipeline events |
+| `GET` | `/api/acm/extraction-progress/{command_id}` | REST polling fallback for current extraction state |
+
+### `POST /api/acm/extract`
+
+**Request Body:**
+```json
+{
+  "source_id": "source:abc123"
+}
+```
+
+**Response:**
+```json
+{
+  "command_id": "cmd_xyz789",
+  "status": "queued"
+}
+```
+
+### `GET /api/acm/extraction-progress/{command_id}/stream`
+
+Returns a `text/event-stream` SSE stream. Events follow the AG-UI protocol:
+
+| Event Type | When Emitted |
+|------------|--------------|
+| `RunStarted` | Pipeline begins |
+| `StepStarted` | A pipeline stage begins |
+| `StateDelta` | State update (e.g. new records extracted) |
+| `ToolCallStart` | A tool call begins (e.g. MinerU extraction) |
+| `ToolCallArgs` | Tool call arguments |
+| `ToolCallEnd` | Tool call completes |
+| `StepFinished` | A pipeline stage completes |
+| `RunFinished` | Pipeline completes successfully |
+| `RunError` | Pipeline failed |
+
+## Export
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/acm/export/csv` | Export records as CSV with all BAR columns |
+| `GET` | `/api/acm/export/excel` | Export records as BAR-compliant `.xlsx` |
+
+**Query Parameters for export:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source_id` | string | Yes | Source document to export |
+| `building_filter` | string[] | No | Limit export to specific buildings |
+
+## Statistics
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/acm/stats` | Summary statistics for dashboard |
+
+**Response:**
+```json
+{
+  "total_records": 533,
+  "by_risk_status": {
+    "Low": 412,
+    "Medium": 89,
+    "High": 32,
+    "Very High": 0
+  },
+  "by_building": [
+    { "building_id": "B00A", "building_name": "Admin Block", "count": 87 }
+  ],
+  "by_department": [
+    { "department": "DHHS", "count": 533 }
+  ]
+}
+```
+
+## Site Configuration
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/acm/config` | Get site configuration for a source |
+| `POST` | `/api/acm/config` | Create or update site configuration |
+
+## Field Schema
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/acm/field-schema` | Active field schema config for dynamic AG Grid column definitions |
+| `GET` | `/api/acm/mappings` | Get field mapping configuration |
+| `PUT` | `/api/acm/mappings` | Update field mapping configuration |
+
+## BAR Templates
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/acm/templates` | List available BAR templates |
+| `GET` | `/api/acm/templates/{id}` | Get a specific BAR template |
+
+## AI Classification
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/acm/classify` | AI classification for Product Group/Type |
+
+## Chat (AG-UI)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/agui/chat` | AG-UI SSE endpoint for supervisor agent chat |
+
+The chat endpoint accepts `RunAgentInput` and returns an AG-UI compatible SSE event stream. It is consumed by the CopilotKit frontend components.
+
+## A2A (Agent-to-Agent)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/.well-known/agent.json` | A2A agent card — machine-readable agent capabilities |
+| `POST` | `/api/a2a/tasks` | Create an extraction task via A2A protocol |
+| `GET` | `/api/a2a/tasks/{id}` | Get task status |
+
+## TypeScript Response Types
+
+```typescript
+interface ACMRecord {
+  id: string;
+  source_id: string;
+  department?: string;
+  agency?: string;
+  sub_agency?: string;
+  site_name?: string;
+  building_id: string;
+  building_name: string;
+  building_type?: string;
+  building_address?: string;
+  suburb?: string;
+  postcode?: string;
+  area_type: 'Internal' | 'External';
+  level?: string;
+  room_name?: string;
+  location: string;
+  product: string;
+  friable?: 'Friable' | 'Non-friable';
+  acm_product_group?: string;
+  acm_product_type?: string;
+  sample_result?: 'Negative' | 'Positive' | 'Assumed Positive' | 'Assumed Negative';
+  material_condition?: string;
+  disturbance_potential?: 'Low' | 'Moderate' | 'High';
+  risk_status?: 'Low' | 'Medium' | 'High' | 'Very High';
+  hygienist_recommendations?: string;
+  assumed_removed?: string;
+  date_of_removal?: string;
+  page_number?: number;
+  extraction_confidence?: number;
+  created_at: string;
+  updated_at: string;
+}
+```
