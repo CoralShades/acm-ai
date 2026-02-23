@@ -15,13 +15,15 @@ This folder contains the handoff package for the marketing-app integration and V
 | `27ff481` | `Merge remote-tracking branch 'origin/release' into release` (sprint-status conflict resolved) |
 | `78c537c` | `feat(web): add marketing-site source files and v2 integration docs` (84 files) |
 | `1bc26b5` | `chore: add shadcn to root devDependencies` |
+| `b8cb4a3` | `docs(v2-integration): update handoff docs with deploy session results` |
+| `0c6cbbd` | `fix(marketing): add explicit type annotation to footerLinks to fix TS union error` |
 
 ## Current Live State
 
 | URL | Status | Project |
 |-----|--------|---------|
 | `https://demo.vaea.coralshades.ai` | ✅ **LIVE** | `frontend` (`prj_7uWhAMwVWvnKte9HfhxkKBNlbMRz`) |
-| `https://vaea.coralshades.ai` | ⏳ Build in progress | `acm-marketing-site` (`prj_pM0jSF8SLL6xheNPTqt0TWmAasYU`) |
+| `https://vaea.coralshades.ai` | ⏳ TS fix pushed, build queued | `acm-marketing-site` (`prj_pM0jSF8SLL6xheNPTqt0TWmAasYU`) |
 
 ## Scope Covered
 

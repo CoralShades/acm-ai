@@ -9,6 +9,8 @@
 - `27ff481` — `Merge remote-tracking branch 'origin/release' into release` (conflict resolution: sprint-status.yaml, E18+E19+E20 merged)
 - `78c537c` — `feat(web): add marketing-site source files and v2 integration docs` (84 files — full marketing-site Next.js project committed to git)
 - `1bc26b5` — `chore: add shadcn to root devDependencies`
+- `b8cb4a3` — `docs(v2-integration): update handoff docs with deploy session results`
+- `0c6cbbd` — `fix(marketing): add explicit type annotation to footerLinks to fix TS union error`
 
 ## Code Changes
 
@@ -84,7 +86,7 @@ Added/updated:
 - `frontend`: `npm run lint` (previous session)
 - `git push origin release`: ✅ pushed (3 new commits on 2026-02-23)
 - `demo.vaea.coralshades.ai` (frontend): ✅ **LIVE** — sidebar shows "Visit Landing" → `https://vaea.coralshades.ai`
-- `vaea.coralshades.ai` (marketing): ⏳ build in progress (commit `1bc26b5`)
+- `vaea.coralshades.ai` (marketing): ⏳ TS fix pushed (`0c6cbbd`), new build queued
 
 ### Blocked in Previous Session (now resolved)
 
