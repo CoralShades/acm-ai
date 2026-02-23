@@ -88,17 +88,23 @@
 - Both sites verified LIVE with cross-links
 - 301 redirects set: `frontend-two-alpha-37.vercel.app` → demo, `acm-marketing-site.vercel.app` → marketing
 
-### 2026-02-23 — Hotfix: Frontend → Railway API Connection (IN PROGRESS)
+### 2026-02-23 — Hotfix: Frontend → Railway API Connection (RESOLVED)
 - **Problem:** `demo.vaea.coralshades.ai` shows "Unable to Connect to API Server"
-- **Root cause:** Vercel `API_URL` set to old alias with trailing newline; `INTERNAL_API_URL` not pointing to Railway
-- **Railway URL:** `https://acm-ai-production.up.railway.app` (healthy, CORS `*`)
-- **Fix applied:**
+- **Root causes (3 failures):**
+  1. Vercel `API_URL` set to old alias with trailing newline
+  2. `INTERNAL_API_URL` not pointing to Railway (defaulted to localhost)
+  3. Railway OOM crash loop — API + Worker peak memory exceeded 1GB container limit
+- **Fixes applied:**
   - Deleted wrong `API_URL` and `INTERNAL_API_URL` from Vercel frontend project ✅
   - Set both to `https://acm-ai-production.up.railway.app` ✅
   - Triggered Vercel rebuild → `dpl_85ypYezPpK8r3z85BdymJoc9BYJf` → READY ✅
-  - `/config` returns `{"apiUrl":"https://acm-ai-production.up.railway.app"}` ✅
-  - `/api/config` proxy returns 200 with backend config (when Railway is up) ✅
-- **Secondary issue:** Railway backend went 502 during our session
-  - Root cause: docs-only git pushes trigger full Railway Docker rebuild (no `watchPatterns` in `railway.toml`)
-  - Fix: Added `watchPatterns` to `railway.toml` — only backend-relevant files trigger rebuilds
-  - Railway should recover after current build completes (5-10 min cold build)
+  - Added `watchPatterns` to `railway.toml` — docs/frontend pushes no longer trigger rebuilds ✅
+  - Increased Railway memory allocation (dashboard) ✅
+  - Staggered supervisor startup: worker delayed 10s after API to reduce peak memory ✅
+  - Added Python malloc tuning (`MALLOC_TRIM_THRESHOLD_`, `PYTHONMALLOC=malloc`) in Dockerfile.api ✅
+- **E2E Verification (all passed):**
+  - Railway `/health` → `{"status":"healthy"}` ✅
+  - Railway `/api/config` → `{"dbStatus":"online"}` ✅
+  - Vercel `/config` → `{"apiUrl":"https://acm-ai-production.up.railway.app"}` ✅
+  - Vercel `/api/config` (proxy) → 200 with backend config ✅
+  - Vercel `/api/notebooks` (proxy) → returns notebook data ✅

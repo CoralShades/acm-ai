@@ -52,11 +52,17 @@ Source of truth: `docs/sprint-artifacts/sprint-status.yaml`
 - [x] Trigger Vercel rebuild (rewrites baked at build time) → `dpl_85ypYezPpK8r3z85BdymJoc9BYJf` → READY
 - [x] Verify: `curl https://demo.vaea.coralshades.ai/config` returns Railway URL
 - [x] Verify: `curl https://demo.vaea.coralshades.ai/api/config` returns 200 (when Railway up)
-- [ ] Verify: browser loads app without connection error (blocked by Railway 502)
+- [x] Verify: browser loads app without connection error
 
 **Secondary fix — Railway watch patterns:**
 - [x] Added `watchPatterns` to `railway.toml` — docs/frontend pushes no longer trigger backend rebuilds
-- [ ] Verify Railway recovers after current build cycle
+- [x] Verify Railway recovers after current build cycle
+
+**Tertiary fix — OOM crash loop:**
+- [x] Increased Railway memory allocation (dashboard)
+- [x] Staggered supervisor startup: worker waits 10s after API (reduces peak memory)
+- [x] Added Python malloc tuning env vars in Dockerfile.api
+- [x] Full E2E verification passed — all 5 endpoints return correct data
 
 ---
 

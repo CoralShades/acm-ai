@@ -128,3 +128,19 @@ watchPatterns = ["api/**", "commands/**", "migrations/**", "open_notebook/**", "
 ```
 
 This ensures only backend-relevant file changes trigger Railway rebuilds. Frontend, marketing-site, and docs changes are ignored.
+
+## Railway OOM Crash Loop (2026-02-23)
+
+**Symptom:** Railway deployment shows "Deployment successful" but API returns 502. Deploy logs show:
+```
+2026-02-23 05:39:38,088 WARN exited: api (exit status 137; not expected)
+```
+
+**Root cause:** Exit status 137 = SIGKILL (OOM killed). Both API and Worker processes start simultaneously, loading heavy Python libraries (LangChain, LangGraph, FastAPI, podcast_creator, etc.). Combined peak memory exceeds the 1GB container limit.
+
+**Fix (3-part):**
+1. **Increased memory** on Railway dashboard (user action)
+2. **Staggered supervisor startup:** Worker now waits 10s (`startsecs=3`, `startretries=5`, added `sleep 10` wrapper) after API, so they don't peak concurrently
+3. **Python malloc tuning** in Dockerfile.api: `MALLOC_TRIM_THRESHOLD_=65536`, `PYTHONMALLOC=malloc`, `MALLOC_MMAP_THRESHOLD_=131072` — more aggressive memory release back to OS
+
+**Result:** API starts, stabilizes, then worker starts — total memory stays within limits. All endpoints verified working.
