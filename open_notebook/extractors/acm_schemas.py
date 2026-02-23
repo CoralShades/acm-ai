@@ -119,8 +119,9 @@ class ACMExtractionRecord(BaseModel):
     product: str = Field(
         description="Type of product containing asbestos (e.g., 'Ceiling Tiles', 'Pipe Insulation'). REQUIRED."
     )
-    material_description: str = Field(
-        description="Detailed description of the material (e.g., 'Vinyl floor tiles, grey/white mottled pattern'). REQUIRED."
+    material_description: Optional[str] = Field(
+        default=None,
+        description="Detailed description of the material (e.g., 'Vinyl floor tiles, grey/white mottled pattern').",
     )
     result: str = Field(
         description="Asbestos test result using BAR vocabulary: 'Positive', 'Assumed Positive', 'Negative', 'Assumed Negative', 'Unknown'. REQUIRED."

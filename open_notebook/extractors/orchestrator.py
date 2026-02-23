@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_core.runnables import RunnableConfig
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_schemas import (
@@ -39,6 +39,7 @@ from open_notebook.extractors.page_tagger import (
     SectionTaxonomy,
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
+from open_notebook.graphs.utils import _is_qwen_model, parse_json_response
 
 # ---------------------------------------------------------------------------
 # Task 1: Pydantic Models (AC #3, #5, #7)
@@ -371,15 +372,7 @@ async def _llm_extract_building(
     for chunk_idx, chunk_content in enumerate(sub_chunks):
         prompt_ctx = _create_building_prompt_context(plan, doc_meta)
 
-        prompter = Prompter(prompt_template="acm/building_extraction")
-        system_prompt = prompter.render(
-            data={
-                "building_context": prompt_ctx,
-                "content": chunk_content,
-            }
-        )
-
-        # TODO: Use model.get_max_output_tokens() when Model domain object is available here
+        # Provision model BEFORE prompt rendering so we can detect model family
         model = await provision_langchain_model(
             chunk_content,
             model_id,
@@ -388,15 +381,49 @@ async def _llm_extract_building(
             max_tokens=32768,
         )
 
+        is_qwen = _is_qwen_model(model)
+        model_family = "qwen" if is_qwen else "default"
+
+        prompter = Prompter(prompt_template="acm/building_extraction")
+        system_prompt = prompter.render(
+            data={
+                "building_context": prompt_ctx,
+                "content": chunk_content,
+                "model_family": model_family,
+            }
+        )
+
         from langchain_core.messages import HumanMessage, SystemMessage
 
-        chain = model.with_structured_output(ACMExtractionResult)
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content="Extract ACM records from the building content provided."),
         ]
 
-        result: ACMExtractionResult = await chain.ainvoke(messages)
+        if is_qwen:
+            try:
+                raw_response = await model.ainvoke(messages)
+                response_text = (
+                    raw_response.content
+                    if hasattr(raw_response, "content")
+                    else str(raw_response)
+                )
+                parsed = parse_json_response(response_text)
+                result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
+                logger.info(
+                    f"Building {plan.building_id} Qwen direct JSON: "
+                    f"{len(result.records)} records"
+                )
+            except (ValueError, ValidationError) as qwen_err:
+                logger.error(
+                    f"Building {plan.building_id} Qwen JSON parsing failed: {qwen_err}. "
+                    f"Response preview: "
+                    f"{response_text[:200] if 'response_text' in dir() else 'N/A'}"
+                )
+                raise
+        else:
+            chain = model.with_structured_output(ACMExtractionResult)
+            result = await chain.ainvoke(messages)
 
         if len(sub_chunks) > 1:
             logger.info(

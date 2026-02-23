@@ -177,10 +177,11 @@ async def embed_single_item_command(
 
     except Exception as e:
         processing_time = time.time() - start_time
+        logger.exception("Embedding failed for chunk — full traceback:")
         logger.error(
-            f"Embedding failed for {input_data.item_type} {input_data.item_id}: {e}"
+            f"Embedding failed for {input_data.item_type} {input_data.item_id}: "
+            f"{type(e).__name__}: {e!r}"
         )
-        logger.exception(e)
 
         return EmbedSingleItemOutput(
             success=False,
@@ -277,16 +278,19 @@ async def embed_chunk_command(
 
     except RuntimeError as e:
         # Re-raise RuntimeError to allow retry mechanism to handle transient failures
+        logger.exception(f"Embedding RuntimeError for chunk {input_data.chunk_index} — full traceback:")
         if "All connection attempts failed" in str(e) or "Connection refused" in str(e):
             logger.warning(
                 f"Embedding provider unreachable for chunk {input_data.chunk_index} - "
-                f"check if Ollama/embedding service is running at configured endpoint. Error: {e}"
+                f"check if Ollama/embedding service is running at configured endpoint. "
+                f"Error: {type(e).__name__}: {e!r}"
             )
         else:
             logger.warning(
-                f"Transaction conflict for chunk {input_data.chunk_index} - will be retried by retry mechanism"
+                f"Retryable error for chunk {input_data.chunk_index}: "
+                f"{type(e).__name__}: {e!r}"
             )
-        raise
+        raise RuntimeError(f"Failed to get embeddings: {type(e).__name__}: {e!r}") from e
     except (ConnectionError, TimeoutError) as e:
         # Re-raise network/timeout errors to allow retry mechanism to handle transient provider failures
         logger.warning(

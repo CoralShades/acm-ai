@@ -104,7 +104,7 @@ FALLBACK_MODELS = {
         "chat": "qwen/qwen3-next-80b-a3b-instruct:free",
         "transformation": "qwen/qwen3-next-80b-a3b-instruct:free",
         "tools": "qwen/qwen3-235b-a22b-thinking-2507",
-        "large_context": "qwen/qwen3-235b-a22b-thinking-2507",
+        "large_context": "qwen/qwen2.5-32b-instruct",
         "extraction": "deepseek/deepseek-r1-0528:free",
         "embedding": None,
     },
@@ -146,6 +146,7 @@ MODEL_CATALOG: list[tuple[str, str, str]] = [
     ("openai", "text-embedding-3-small", "embedding"),
     ("openai", "text-embedding-3-large", "embedding"),
     # OpenRouter (free + paid)
+    ("openrouter", "qwen/qwen2.5-32b-instruct", "language"),
     ("openrouter", "qwen/qwen3-14b", "language"),
     ("openrouter", "qwen/qwen3-30b-a3b", "language"),
     ("openrouter", "qwen/qwen3-235b-a22b", "language"),
@@ -236,7 +237,7 @@ async def find_or_create_model(
                 k in name_lower
                 for k in [
                     "claude", "gpt-4", "gpt-5",
-                    "qwen3", "qwen2.5",
+                    "qwen3",
                     "deepseek", "llama-3",
                     "mistral", "gemini-2.5",
                     "kimi-k2",

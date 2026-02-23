@@ -219,6 +219,7 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
    - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"
    - Assumed/Presumed ACM → result: "Assumed Positive"
    - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` or `Negative` → result: "Negative"
+   - `>>> NO ACCESS ENTRY:` or "No access" or "Height restriction" or "Restricted Access" or "Presumed ACM" → result: "Assumed Positive", sample_no: "Not Sampled"
    - Assumed/Presumed no asbestos → result: "Assumed Negative"
 4. **For Negative/Assumed Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
 5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
@@ -298,6 +299,14 @@ Use these canonical product names when they match the register entry. This helps
 
 When the register entry uses one of these terms (or a close variant), prefer the canonical name above.
 
+#### Common PDF Abbreviations
+
+| PDF Text | Canonical BAR Name |
+|----------|-------------------|
+| "Fuses" or "Fuse" (standalone) | "Fuse cartridge" |
+| "Flange mastic" | "Flange joints" |
+| "Mastic" (on ductwork) | "Mastic / Flange joints" |
+
 ## Content to Extract
 
 ```
@@ -332,3 +341,37 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `risk_status`: Risk level (Low/Moderate/High)
 - `extent`: Extent of material (e.g., "20m2", "50%")
 - `hygienist_recommendations`: Control/management recommendations
+{%- if model_family is defined and model_family == "qwen" %}
+
+## STRICT OUTPUT REQUIREMENTS
+
+Output ONLY a valid JSON object matching this exact schema. No explanation, no markdown fences, no preamble.
+
+Required JSON schema:
+{
+  "records": [{
+    "building_id": "string (required)",
+    "product": "string (required)",
+    "material_description": "string (required)",
+    "result": "Positive | Assumed Positive | Negative | Assumed Negative",
+    "extraction_confidence": "high | medium | low",
+    "room_id": "string | null",
+    "room_name": "string | null",
+    "area_type": "Interior | Exterior | Grounds | null",
+    "location": "string | null",
+    "friable": "Non Friable | Friable | null",
+    "material_condition": "Good | Fair | Poor | Damaged | null",
+    "risk_status": "Low | Medium | High | null",
+    "disturbance_potential": "Low | Moderate | High | null",
+    "sample_no": "string | null",
+    "quantity": "string | null",
+    "page_number": "integer | null",
+    "data_issues": []
+  }],
+  "status": "valid | no_acm_data",
+  "extraction_notes": "string | null"
+}
+
+Think through each register row carefully before including it.
+The response must start with { and end with }.
+{%- endif %}

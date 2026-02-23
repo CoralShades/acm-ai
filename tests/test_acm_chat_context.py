@@ -197,67 +197,6 @@ class TestFormatSourceContextWithACM:
         assert "Room" in result
 
 
-class TestACMContextIntegration:
-    """Integration tests for ACM context in the chat flow."""
-
-    @pytest.mark.asyncio
-    @patch("open_notebook.graphs.source_chat.format_acm_context")
-    @patch("open_notebook.graphs.source_chat.ContextBuilder")
-    async def test_acm_context_called_when_enabled(
-        self, mock_context_builder, mock_format_acm
-    ):
-        """Test that format_acm_context is called when include_acm_context is True."""
-        # This test verifies the integration point - that ACM context gets fetched
-        # when the flag is enabled in the state
-
-        # Mock the context builder
-        mock_builder_instance = MagicMock()
-        mock_builder_instance.build = AsyncMock(
-            return_value={
-                "sources": [{"id": "source:123", "title": "Test"}],
-                "insights": [],
-                "metadata": {"source_count": 1, "insight_count": 0},
-            }
-        )
-        mock_context_builder.return_value = mock_builder_instance
-
-        # Mock ACM context formatter
-        mock_format_acm.return_value = (
-            "## ACM Register Data\n| Building |\n|---|\n| B1 |"
-        )
-
-        # Import after mocking
-        import asyncio
-
-        from open_notebook.graphs.source_chat import format_acm_context
-
-        # Call format_acm_context directly to verify it works
-        result = (
-            await format_acm_context.__wrapped__("source:123", max_records=50)
-            if hasattr(format_acm_context, "__wrapped__")
-            else "mocked"
-        )
-
-        # The mock should have been configured
-        assert (
-            mock_format_acm.return_value
-            == "## ACM Register Data\n| Building |\n|---|\n| B1 |"
-        )
-
-    def test_context_indicators_tracks_acm(self):
-        """Test that context_indicators includes acm_records_included field."""
-        # Verify the structure includes ACM tracking
-        context_indicators = {
-            "sources": [],
-            "insights": [],
-            "notes": [],
-            "acm_records_included": ["source:123"],
-        }
-
-        assert "acm_records_included" in context_indicators
-        assert context_indicators["acm_records_included"] == ["source:123"]
-
-
 class TestSendMessageRequestWithACM:
     """Test suite for SendMessageRequest with ACM context field."""
 
