@@ -34,6 +34,30 @@ Source of truth: `docs/sprint-artifacts/sprint-status.yaml`
 - [x] Update deployment docs with two-project Vercel domain mapping
 - [x] Update BMAD planning artifacts (PRD, architecture, epics/stories, sprint status, workflow status)
 
+## 2026-02-23 Hotfix: Frontend → Railway API Connection
+
+**Problem:** `demo.vaea.coralshades.ai` shows "Unable to Connect to API Server"
+
+**Root Cause (2 failures):**
+1. `/config` endpoint returns `{"apiUrl":"https://frontend-two-alpha-37.vercel.app\n"}` — old alias (now 301) with trailing newline
+2. Next.js rewrites proxy `/api/*` to `INTERNAL_API_URL` (default `http://localhost:5055`) — no backend on Vercel serverless → 502
+
+**Railway backend is healthy:** `https://acm-ai-production.up.railway.app/health` → `{"status":"healthy"}`
+
+**Fix (Option B — complete):**
+- [x] Delete wrong `API_URL` env var (id: `Iz5u0YCzlx5B56IN`) from Vercel frontend project
+- [x] Set `API_URL=https://acm-ai-production.up.railway.app` (production target)
+- [x] Delete wrong `INTERNAL_API_URL` env var (id: `4Nt9hezDYxDllvyU`)
+- [x] Set `INTERNAL_API_URL=https://acm-ai-production.up.railway.app` (build-time rewrite target)
+- [x] Trigger Vercel rebuild (rewrites baked at build time) → `dpl_85ypYezPpK8r3z85BdymJoc9BYJf` → READY
+- [x] Verify: `curl https://demo.vaea.coralshades.ai/config` returns Railway URL
+- [x] Verify: `curl https://demo.vaea.coralshades.ai/api/config` returns 200 (when Railway up)
+- [ ] Verify: browser loads app without connection error (blocked by Railway 502)
+
+**Secondary fix — Railway watch patterns:**
+- [x] Added `watchPatterns` to `railway.toml` — docs/frontend pushes no longer trigger backend rebuilds
+- [ ] Verify Railway recovers after current build cycle
+
 ---
 
 ## Sprint History

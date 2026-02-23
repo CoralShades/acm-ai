@@ -86,3 +86,45 @@ All 7 "remaining" stories were implemented in a prior Ralph sprint but tracking 
 - Chosen domain topology:
   - Marketing canonical root: `vaea.coralshades.ai`
   - App workspace: `demo.vaea.coralshades.ai`
+
+## Railway API Connection Failure (2026-02-23)
+
+**Symptom:** `demo.vaea.coralshades.ai` shows "Unable to Connect to API Server" — attempted URL: `/api/config`
+
+**Investigation:**
+- Railway backend healthy: `GET https://acm-ai-production.up.railway.app/health` → `{"status":"healthy"}`
+- CORS configured: `allow_origins=["*"]` in `api/main.py:154`
+- `/config` serverless endpoint returns wrong apiUrl: `https://frontend-two-alpha-37.vercel.app\n` (old alias + trailing newline)
+- `/api/*` rewrites to `INTERNAL_API_URL` defaulting to `http://localhost:5055` → 502 on Vercel (no local backend)
+
+**Vercel env vars found (frontend project `prj_7uWhAMwVWvnKte9HfhxkKBNlbMRz`):**
+- `API_URL` (id: `Iz5u0YCzlx5B56IN`) — encrypted, resolves to old alias with trailing newline
+- `INTERNAL_API_URL` (id: `4Nt9hezDYxDllvyU`) — encrypted, value unknown but not Railway URL
+- `NEXT_PUBLIC_MARKETING_URL` (id: `938hI6d1T0JB1Rym`) — `https://vaea.coralshades.ai` ✅
+- `NEXT_PUBLIC_APP_URL` (id: `wXChGiOBODOdVSGQ`) — encrypted
+
+**Root cause:** Vercel env vars for API_URL and INTERNAL_API_URL were never set to the Railway production URL (`https://acm-ai-production.up.railway.app`).
+
+**Config resolution chain (frontend/src/lib/config.ts):**
+1. `/config` serverless endpoint → reads `API_URL` env var → returns to browser
+2. Browser calls `{apiUrl}/api/config` to get backend config
+3. Next.js rewrites `/api/*` → `INTERNAL_API_URL` (build-time)
+
+**Fix:** Set both `API_URL` and `INTERNAL_API_URL` to `https://acm-ai-production.up.railway.app` on Vercel, then rebuild.
+
+## Railway 502 — Docs Push Triggering Backend Rebuild (2026-02-23)
+
+**Symptom:** Railway backend (`acm-ai-production.up.railway.app`) returning 502 for 10+ minutes after docs-only git push.
+
+**Root cause:** `railway.toml` had no `watchPatterns` — EVERY push to `release` triggered a full Docker rebuild:
+1. Push `a8b1e8b` (docs-only) hits Railway webhook
+2. Railway kills running container, starts new Docker build from `Dockerfile.api`
+3. Build takes 5-10 min (Python deps, ffmpeg, supervisor install)
+4. During build, all requests get 502
+
+**Fix:** Added `watchPatterns` to `railway.toml`:
+```toml
+watchPatterns = ["api/**", "commands/**", "migrations/**", "open_notebook/**", "prompts/**", "scripts/**", "pyproject.toml", "uv.lock", "Dockerfile.api", "supervisord.api.conf", "run_api.py", "run_worker.py", "railway.toml"]
+```
+
+This ensures only backend-relevant file changes trigger Railway rebuilds. Frontend, marketing-site, and docs changes are ignored.

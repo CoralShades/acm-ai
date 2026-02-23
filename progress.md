@@ -78,3 +78,27 @@
   - Architecture (`04-architecture.md`) to v1.3 with multi-project topology
   - Epics (`05-epics-and-stories.md`) with Epic 20
   - Sprint/workflow status YAML updates
+
+### 2026-02-23 — Vercel Deploy + Domain Cutover
+- Resolved git merge conflict (`sprint-status.yaml`) → `27ff481`
+- Committed marketing-site source (84 files) → `78c537c`
+- Fixed `Footer.tsx` TypeScript union error → `0c6cbbd`
+- Created Vercel project `acm-marketing-site` (`prj_pM0jSF8SLL6xheNPTqt0TWmAasYU`)
+- Domains assigned: `vaea.coralshades.ai` → marketing, `demo.vaea.coralshades.ai` → frontend
+- Both sites verified LIVE with cross-links
+- 301 redirects set: `frontend-two-alpha-37.vercel.app` → demo, `acm-marketing-site.vercel.app` → marketing
+
+### 2026-02-23 — Hotfix: Frontend → Railway API Connection (IN PROGRESS)
+- **Problem:** `demo.vaea.coralshades.ai` shows "Unable to Connect to API Server"
+- **Root cause:** Vercel `API_URL` set to old alias with trailing newline; `INTERNAL_API_URL` not pointing to Railway
+- **Railway URL:** `https://acm-ai-production.up.railway.app` (healthy, CORS `*`)
+- **Fix applied:**
+  - Deleted wrong `API_URL` and `INTERNAL_API_URL` from Vercel frontend project ✅
+  - Set both to `https://acm-ai-production.up.railway.app` ✅
+  - Triggered Vercel rebuild → `dpl_85ypYezPpK8r3z85BdymJoc9BYJf` → READY ✅
+  - `/config` returns `{"apiUrl":"https://acm-ai-production.up.railway.app"}` ✅
+  - `/api/config` proxy returns 200 with backend config (when Railway is up) ✅
+- **Secondary issue:** Railway backend went 502 during our session
+  - Root cause: docs-only git pushes trigger full Railway Docker rebuild (no `watchPatterns` in `railway.toml`)
+  - Fix: Added `watchPatterns` to `railway.toml` — only backend-relevant files trigger rebuilds
+  - Railway should recover after current build completes (5-10 min cold build)

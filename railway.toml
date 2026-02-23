@@ -1,5 +1,21 @@
 [build]
 dockerfilePath = "Dockerfile.api"
+# Only rebuild when backend-relevant files change (not docs, frontend, marketing-site)
+watchPatterns = [
+    "api/**",
+    "commands/**",
+    "migrations/**",
+    "open_notebook/**",
+    "prompts/**",
+    "scripts/**",
+    "pyproject.toml",
+    "uv.lock",
+    "Dockerfile.api",
+    "supervisord.api.conf",
+    "run_api.py",
+    "run_worker.py",
+    "railway.toml"
+]
 
 [deploy]
 healthcheckPath = "/health"
