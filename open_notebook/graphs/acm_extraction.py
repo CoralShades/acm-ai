@@ -303,6 +303,16 @@ def _preprocess_samp_format(
 
     processed = content
 
+    # Normalize abbreviated product names to canonical BAR vocabulary
+    # Applied BEFORE marker injection so normalized text feeds into markers
+    PRODUCT_NORMALIZATIONS = {
+        r"\bFuses\b": "Fuse cartridge",
+        r"\bFuse\b(?!\s+cartridge)": "Fuse cartridge",
+        r"\bFlange\s+mastic\b": "Flange joints",
+    }
+    for pattern, replacement in PRODUCT_NORMALIZATIONS.items():
+        processed = re.sub(pattern, replacement, processed, flags=re.IGNORECASE)
+
     # Mark building headers clearly
     for building in buildings:
         marker = f"\n\n=== BUILDING: {building} ===\n"
@@ -349,6 +359,30 @@ def _preprocess_samp_format(
     double_neg = f"{no_acm_marker} {no_acm_marker}"
     while double_neg in processed:
         processed = processed.replace(double_neg, no_acm_marker)
+
+    # Mark "No access" / restricted access patterns as valid entries
+    # These phrases come from consultant_wording_rules.json patterns
+    # and common SAMP report wording — order: longer phrases first
+    NO_ACCESS_PHRASES = [
+        "No access at the time of the Assessment",
+        "No access due to locked door",
+        "No access due to",
+        "No access at time of",
+        "Height restriction",
+        "Height or access restriction",
+        "Restricted Access",
+        "Live Electrical Hazard",
+        "Presumed ACM",
+        "No access",
+    ]
+    NO_ACCESS_MARKER = ">>> NO ACCESS ENTRY: Sample Result = Assumed Positive — MUST be extracted as a separate ACM record <<<"
+    for phrase in NO_ACCESS_PHRASES:
+        processed = re.sub(
+            re.escape(phrase),
+            NO_ACCESS_MARKER + "\n" + phrase,
+            processed,
+            flags=re.IGNORECASE,
+        )
 
     metadata["processed_length"] = len(processed)
 
@@ -1001,6 +1035,18 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     }
 
 
+def _is_qwen_model(model) -> bool:
+    """Check if a LangChain model instance is a Qwen2.5 model.
+
+    Matches both Ollama (qwen2.5:32b) and OpenRouter (qwen/qwen2.5-32b-instruct).
+    Qwen3+ models are NOT matched — they support tool calling.
+    """
+    model_name = (
+        getattr(model, "model_name", "") or getattr(model, "model", "") or ""
+    ).lower()
+    return "qwen2.5" in model_name
+
+
 async def extract_records(state: dict, config: RunnableConfig) -> dict:
     """Extract ACM records from the current chunk using LLM."""
     chunks = state.get("chunks", [])
@@ -1032,7 +1078,51 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     # Update context with chunk info
     context.current_page = page_number
 
-    # Render the extraction prompt
+    acm_debug(f"Chunk {current_index + 1}/{len(chunks)}: {len(chunk_content)} chars")
+
+    # Provision model BEFORE prompt rendering so we can detect model family
+    try:
+        # Dynamic max_tokens: look up model capabilities; fall back to 16384 if unavailable
+        _max_tokens = 16384  # safe fallback (8192 too small for registers with 30+ records)
+        _early_qwen = False
+        if model_id:
+            try:
+                _domain_model = await Model.get(model_id)
+                _max_tokens = _domain_model.get_max_output_tokens(fallback=16384)
+                _early_qwen = "qwen2.5" in (_domain_model.name or "").lower()
+            except Exception:
+                logger.debug(
+                    f"Could not fetch Model capabilities for {model_id}; "
+                    "using fallback max_tokens=16384"
+                )
+        # Qwen2.5: use temperature=0.0 for deterministic extraction
+        _temperature = 0.0 if _early_qwen else (0.1 if retry_count > 0 else 0.3)
+        model = await provision_langchain_model(
+            chunk_content,
+            model_id,
+            "extraction",  # Uses default_extraction_model or falls back to chat
+            temperature=_temperature,
+            max_tokens=_max_tokens,
+        )
+        is_qwen = _is_qwen_model(model)
+        model_family = "qwen" if is_qwen else "default"
+        # Track model ID and prompt template for observability (E1-S21, AC #4)
+        if pl:
+            actual_model = (
+                getattr(model, "model_name", None)
+                or getattr(model, "model", None)
+                or model_id
+                or "default_extraction_model"
+            )
+            pl.log_model(str(actual_model), "extraction")
+            logger.info("[PIPELINE] Prompt template: acm/extraction")
+        if is_qwen:
+            logger.info(f"Qwen2.5 model detected — using direct JSON mode (temp={_temperature})")
+    except Exception as e:
+        logger.error(f"Failed to provision model: {e}")
+        return {"error": f"Model provisioning failed: {e}"}
+
+    # Render the extraction prompt (after provisioning so model_family is known)
     prompter = Prompter(prompt_template="acm/extraction")
     system_prompt = prompter.render(
         data={
@@ -1044,6 +1134,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
                 "total_chunks": len(chunks),
             },
             "content": chunk_content,
+            "model_family": model_family,
         }
     )
 
@@ -1052,42 +1143,6 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     source_id = str(source.id) if source.id else "unknown"
     log_prompt_preview(system_prompt, source_id)
     dump_prompt_to_file(system_prompt, source_id, current_index)
-
-    acm_debug(f"Chunk {current_index + 1}/{len(chunks)}: {len(chunk_content)} chars")
-
-    # Get the model
-    try:
-        # Dynamic max_tokens: look up model capabilities; fall back to 16384 if unavailable
-        _max_tokens = 16384  # safe fallback (8192 too small for registers with 30+ records)
-        if model_id:
-            try:
-                _domain_model = await Model.get(model_id)
-                _max_tokens = _domain_model.get_max_output_tokens(fallback=16384)
-            except Exception:
-                logger.debug(
-                    f"Could not fetch Model capabilities for {model_id}; "
-                    "using fallback max_tokens=16384"
-                )
-        model = await provision_langchain_model(
-            chunk_content,
-            model_id,
-            "extraction",  # Uses default_extraction_model or falls back to chat
-            temperature=0.1 if retry_count > 0 else 0.3,  # Lower temp on retry
-            max_tokens=_max_tokens,
-        )
-        # Track model ID and prompt template for observability (E1-S21, AC #4)
-        if pl:
-            actual_model = (
-                getattr(model, "model_name", None)
-                or getattr(model, "model", None)
-                or model_id
-                or "default_extraction_model"
-            )
-            pl.log_model(str(actual_model), "extraction")
-            logger.info("[PIPELINE] Prompt template: acm/extraction")
-    except Exception as e:
-        logger.error(f"Failed to provision model: {e}")
-        return {"error": f"Model provisioning failed: {e}"}
 
     # Create messages
     messages = [
@@ -1108,9 +1163,25 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         )
 
     # Use structured output (with manual JSON fallback for OpenRouter compatibility)
+    # Qwen2.5: bypass with_structured_output() — use direct ainvoke + JSON parsing
     try:
-        chain = model.with_structured_output(ACMExtractionResult)
-        result: ACMExtractionResult = await chain.ainvoke(messages)
+        if is_qwen:
+            from open_notebook.graphs.utils import parse_json_response
+
+            raw_response = await model.ainvoke(messages)
+            response_text = (
+                raw_response.content
+                if hasattr(raw_response, "content")
+                else str(raw_response)
+            )
+            parsed = parse_json_response(response_text)
+            result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
+            logger.info(
+                f"Qwen direct JSON extraction: {len(result.records)} records"
+            )
+        else:
+            chain = model.with_structured_output(ACMExtractionResult)
+            result = await chain.ainvoke(messages)
 
         # Debug: Log raw result before processing
         logger.debug(
@@ -1213,8 +1284,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         if retry_count == 0:
             logger.info("Attempting fallback: direct model invocation with manual JSON parsing")
             try:
-                import json as _json_fallback
-                import re as _re_fallback
+                from open_notebook.graphs.utils import parse_json_response
 
                 raw_response = await model.ainvoke(messages)
                 response_text = (
@@ -1223,89 +1293,61 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
                     else str(raw_response)
                 )
 
-                # Extract JSON from markdown code blocks or raw text
-                json_str = None
-                # Try ```json ... ``` blocks first
-                json_match = _re_fallback.search(
-                    r"```(?:json)?\s*\n?(\{.*?\})\s*\n?```",
-                    response_text,
-                    _re_fallback.DOTALL,
+                parsed = parse_json_response(response_text)
+                result = ACMExtractionResult.model_validate(parsed)
+                logger.info(
+                    f"Fallback JSON parsing succeeded: {len(result.records)} records"
                 )
-                if json_match:
-                    json_str = json_match.group(1)
-                else:
-                    # Try to find raw JSON object
-                    brace_start = response_text.find("{")
-                    if brace_start >= 0:
-                        # Find the matching closing brace
-                        depth = 0
-                        for idx_c, c in enumerate(response_text[brace_start:]):
-                            if c == "{":
-                                depth += 1
-                            elif c == "}":
-                                depth -= 1
-                                if depth == 0:
-                                    json_str = response_text[brace_start:brace_start + idx_c + 1]
-                                    break
-
-                if json_str:
-                    parsed = _json_fallback.loads(json_str)
-                    result = ACMExtractionResult.model_validate(parsed)
-                    logger.info(
-                        f"Fallback JSON parsing succeeded: {len(result.records)} records"
-                    )
-                    # Continue with normal processing (jump to success path below)
-                    # We need to duplicate the post-processing here
-                    result.update_stats()
-                    new_records = result.records
-                    page_markers = chunk.get("page_markers", {})
-                    search_positions_fb: Dict[str, int] = {}
-                    for record in new_records:
-                        if record.page_number is None:
-                            product_key = (record.product or "").lower()
-                            search_start = search_positions_fb.get(product_key, 0)
-                            page, pos = _assign_record_page(
-                                record.product,
-                                chunk_content,
-                                page_markers,
-                                page_number,
-                                search_start,
-                            )
-                            record.page_number = page
-                            if record.product and pos >= 0:
-                                search_positions_fb[product_key] = pos + len(record.product)
-                    if new_records:
-                        last_record = new_records[-1]
-                        if last_record.building_id:
-                            context.building_id = last_record.building_id
-                            context.building_name = last_record.building_name
-                        if last_record.room_id:
-                            context.room_id = last_record.room_id
-                            context.room_name = last_record.room_name
-                    logger.info(
-                        f"Extracted {len(new_records)} records from chunk "
-                        f"{current_index + 1}/{len(chunks)} (fallback parser)"
-                    )
-                    if pl:
-                        total_so_far = len(existing_records) + len(new_records)
-                        progress = (current_index + 1) / len(chunks) if chunks else 1.0
-                        pl.stage_progress(
-                            StageId.EXTRACT,
-                            f"Chunk {current_index + 1}/{len(chunks)} | pages {page_number}+ | "
-                            f"{len(new_records)} records | {total_so_far} total (fallback)",
-                            progress=progress,
-                            records_so_far=total_so_far,
-                            chunk=f"{current_index + 1}/{len(chunks)}",
+                # Continue with normal processing (jump to success path below)
+                # We need to duplicate the post-processing here
+                result.update_stats()
+                new_records = result.records
+                page_markers = chunk.get("page_markers", {})
+                search_positions_fb: Dict[str, int] = {}
+                for record in new_records:
+                    if record.page_number is None:
+                        product_key = (record.product or "").lower()
+                        search_start = search_positions_fb.get(product_key, 0)
+                        page, pos = _assign_record_page(
+                            record.product,
+                            chunk_content,
+                            page_markers,
+                            page_number,
+                            search_start,
                         )
-                    return {
-                        "records": existing_records + new_records,
-                        "context": context,
-                        "current_chunk_index": current_index + 1,
-                        "extraction_result": result,
-                        "retry_count": 0,
-                    }
-                else:
-                    logger.warning("Fallback: no JSON found in response text")
+                        record.page_number = page
+                        if record.product and pos >= 0:
+                            search_positions_fb[product_key] = pos + len(record.product)
+                if new_records:
+                    last_record = new_records[-1]
+                    if last_record.building_id:
+                        context.building_id = last_record.building_id
+                        context.building_name = last_record.building_name
+                    if last_record.room_id:
+                        context.room_id = last_record.room_id
+                        context.room_name = last_record.room_name
+                logger.info(
+                    f"Extracted {len(new_records)} records from chunk "
+                    f"{current_index + 1}/{len(chunks)} (fallback parser)"
+                )
+                if pl:
+                    total_so_far = len(existing_records) + len(new_records)
+                    progress = (current_index + 1) / len(chunks) if chunks else 1.0
+                    pl.stage_progress(
+                        StageId.EXTRACT,
+                        f"Chunk {current_index + 1}/{len(chunks)} | pages {page_number}+ | "
+                        f"{len(new_records)} records | {total_so_far} total (fallback)",
+                        progress=progress,
+                        records_so_far=total_so_far,
+                        chunk=f"{current_index + 1}/{len(chunks)}",
+                    )
+                return {
+                    "records": existing_records + new_records,
+                    "context": context,
+                    "current_chunk_index": current_index + 1,
+                    "extraction_result": result,
+                    "retry_count": 0,
+                }
             except Exception as fallback_err:
                 logger.warning(f"Fallback JSON parsing failed: {fallback_err}")
 
@@ -1795,6 +1837,9 @@ async def _llm_correct_records(
                 temperature=0.1,
                 max_tokens=1024,
             )
+            # Qwen2.5: override to temperature=0.0 for deterministic correction
+            if _is_qwen_model(model) and hasattr(model, "temperature"):
+                model.temperature = 0.0
             # Track resolved model for observability (E1-S21, AC #4)
             if pl:
                 actual_model = (
