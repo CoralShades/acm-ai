@@ -182,6 +182,18 @@ body {
   75% { transform: translateY(-30px) translateX(15px); }
 }
 
+/* Animated blueprint grid drift */
+@keyframes gridDrift {
+  0%   { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+}
+
+/* Scroll indicator chevron bounce */
+@keyframes bounceY {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(8px); }
+}
+
 /* Smooth scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

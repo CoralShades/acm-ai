@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { AnimatedCounter } from "@/components/AnimatedCounter";
-import { projectStats } from "@/lib/sprint-data";
+import { ExternalLink, ChevronDown } from "lucide-react";
+import { useTypewriter } from "@/hooks/useTypewriter";
+import { useCounter } from "@/hooks/useCounter";
+import { useInView } from "@/hooks/useInView";
 import { fadeUp, staggerContainer } from "@/lib/animations";
 import { cn } from "@/lib/cn";
 import { APP_URL } from "@/lib/site-urls";
@@ -19,17 +22,128 @@ const particles = [
   { top: "50%", left: "45%", size: 5, delay: "0.4s", duration: "10s" },
 ];
 
+const wordContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0 } },
+};
+
+const wordVariant = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
+    },
+  },
+};
+
+const STATS = [
+  { end: 87, label: "Extraction Accuracy", suffix: "%" },
+  { end: 47, label: "BAR Columns", suffix: "" },
+  { end: 122, label: "Stories Shipped", suffix: "" },
+  { end: 18, label: "Seconds Per PDF", suffix: "s" },
+];
+
+const heroGridStyle: React.CSSProperties = {
+  backgroundImage: [
+    "linear-gradient(rgba(58, 143, 138, 0.08) 1px, transparent 1px)",
+    "linear-gradient(90deg, rgba(58, 143, 138, 0.08) 1px, transparent 1px)",
+  ].join(", "),
+  backgroundSize: "40px 40px",
+  animation: "gridDrift 20s linear infinite",
+};
+
+const magneticProps = {
+  onMouseMove(e: React.MouseEvent<HTMLAnchorElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - r.left - r.width / 2) * 0.15;
+    const y = (e.clientY - r.top - r.height / 2) * 0.15;
+    e.currentTarget.style.transform = `translate(${x}px, ${y}px)`;
+  },
+  onMouseLeave(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.currentTarget.style.transform = "translate(0, 0)";
+  },
+  style: { transition: "transform 0.2s ease" } as React.CSSProperties,
+};
+
+const SUBTITLE =
+  "ACM-AI converts Victorian Government SAMP/BAR PDF registers into " +
+  "submission-ready spreadsheets using a 7-stage AI extraction pipeline.";
+
+interface StatItemProps {
+  end: number;
+  label: string;
+  suffix: string;
+  enabled: boolean;
+}
+
+function StatItem({ end, label, suffix, enabled }: StatItemProps) {
+  const count = useCounter({ end, duration: 2000, enabled });
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span
+        style={{
+          fontFamily: "var(--font-dm-serif)",
+          fontSize: "56px",
+          color: "var(--vaea-teal-300)",
+          lineHeight: 1,
+        }}
+      >
+        {count}
+        {suffix}
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-dm-sans)",
+          fontSize: "13px",
+          color: "var(--muted-foreground)",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export function Hero() {
+  const { displayed, isComplete } = useTypewriter({
+    text: SUBTITLE,
+    speed: 30,
+    delay: 1200,
+    enabled: true,
+  });
+
+  const { ref: statsRef, isInView } = useInView({ threshold: 0.3, once: true });
+  const [countersEnabled, setCountersEnabled] = useState([
+    false,
+    false,
+    false,
+    false,
+  ]);
+
+  useEffect(() => {
+    if (!isInView) return;
+    STATS.forEach((_, i) => {
+      setTimeout(() => {
+        setCountersEnabled((prev) => {
+          const n = [...prev];
+          n[i] = true;
+          return n;
+        });
+      }, i * 150);
+    });
+  }, [isInView]);
+
   return (
     <section
       className={cn(
         "relative min-h-screen overflow-hidden",
-        "bg-vaea-navy flex flex-col justify-center"
+        "bg-vaea-navy-light flex flex-col justify-center"
       )}
+      style={heroGridStyle}
     >
-      {/* Grid overlay */}
-      <div className="hero-grid absolute inset-0 pointer-events-none" />
-
       {/* Radial gradient glow */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -79,28 +193,56 @@ export function Hero() {
             </span>
           </motion.div>
 
-          {/* Main headline */}
+          {/* Main headline — word-by-word stagger */}
           <motion.h1
-            variants={fadeUp}
-            className={cn(
-              "font-[family-name:var(--font-dm-serif)]",
-              "text-4xl leading-tight text-white sm:text-5xl md:text-6xl lg:text-7xl",
-              "max-w-4xl tracking-tight"
-            )}
+            variants={wordContainer}
+            initial="hidden"
+            animate="visible"
+            className="font-[family-name:var(--font-dm-serif)] text-[40px] lg:text-[72px] leading-[1.1] tracking-tight"
           >
-            Asbestos Compliance{" "}
-            <span className="text-vaea-teal-100">Intelligence</span>
+            {/* Line 1 — white */}
+            <span className="block">
+              {["Asbestos", "Compliance,"].map((word, i) => (
+                <motion.span
+                  key={i}
+                  variants={wordVariant}
+                  style={{
+                    display: "inline-block",
+                    marginRight: "0.25em",
+                    color: "white",
+                  }}
+                >
+                  {word}
+                </motion.span>
+              ))}
+            </span>
+            {/* Line 2 — teal */}
+            <span className="block">
+              {["Reinvented", "with", "AI"].map((word, i) => (
+                <motion.span
+                  key={i}
+                  variants={wordVariant}
+                  style={{
+                    display: "inline-block",
+                    marginRight: "0.25em",
+                    color: "#3a8f8a",
+                  }}
+                >
+                  {word}
+                </motion.span>
+              ))}
+            </span>
           </motion.h1>
 
-          {/* Subtitle */}
-          <motion.p
-            variants={fadeUp}
-            className="mt-6 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl"
-          >
-            Transform PDF registers into BAR-compliant data.{" "}
-            <span className="font-semibold text-white/90">96% accuracy.</span>{" "}
-            <span className="font-semibold text-vaea-teal-100">18 seconds.</span>
-          </motion.p>
+          {/* Typewriter subtitle */}
+          <p className="mt-6 font-[family-name:var(--font-dm-sans)] text-lg text-white/60 max-w-2xl">
+            {displayed}
+            {!isComplete && (
+              <span className="typing-cursor" aria-hidden="true">
+                |
+              </span>
+            )}
+          </p>
 
           {/* CTA buttons */}
           <motion.div
@@ -118,21 +260,10 @@ export function Hero() {
                 "hover:brightness-110 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-vaea-coral/30",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vaea-coral focus-visible:ring-offset-2 focus-visible:ring-offset-vaea-navy"
               )}
+              {...magneticProps}
             >
               Open App
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M14.25 9v6m-4.5 0V9M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                />
-              </svg>
+              <ExternalLink size={16} />
             </Link>
 
             <Link
@@ -144,6 +275,7 @@ export function Hero() {
                 "hover:bg-white/10 hover:-translate-y-0.5",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-vaea-navy"
               )}
+              {...magneticProps}
             >
               Read Docs
               <svg
@@ -162,49 +294,43 @@ export function Hero() {
             </Link>
           </motion.div>
 
-          {/* Counter row */}
-          <motion.div
-            variants={fadeUp}
+          {/* Counter row — product metrics with staggered animation */}
+          <div
+            ref={statsRef}
             className={cn(
               "mt-20 w-full rounded-2xl glass border border-white/10 px-6 py-8",
               "grid grid-cols-2 gap-8 sm:grid-cols-4"
             )}
           >
-            <div className="flex flex-col items-center">
-              <AnimatedCounter
-                end={projectStats.storiesDelivered}
-                label="Stories Delivered"
-                className="text-center"
+            {STATS.map((stat, i) => (
+              <StatItem
+                key={stat.label}
+                end={stat.end}
+                label={stat.label}
+                suffix={stat.suffix}
+                enabled={countersEnabled[i]}
               />
-            </div>
-            <div className="flex flex-col items-center">
-              <AnimatedCounter
-                end={projectStats.epicsComplete}
-                label="Epics Complete"
-                className="text-center"
-              />
-            </div>
-            <div className="flex flex-col items-center">
-              <AnimatedCounter
-                end={projectStats.commits}
-                label="Commits"
-                className="text-center"
-              />
-            </div>
-            <div className="flex flex-col items-center">
-              <AnimatedCounter
-                end={projectStats.completionRate}
-                suffix="%"
-                label="Feature Complete"
-                className="text-center"
-              />
-            </div>
-          </motion.div>
+            ))}
+          </div>
         </motion.div>
       </div>
 
+      {/* Scroll indicator */}
+      <button
+        onClick={() =>
+          document
+            .getElementById("how-it-works")
+            ?.scrollIntoView({ behavior: "smooth" })
+        }
+        aria-label="Scroll to How It Works"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 p-2 rounded-full text-white/40 hover:text-white/80 transition-opacity duration-200"
+        style={{ animation: "bounceY 1.5s ease-in-out infinite" }}
+      >
+        <ChevronDown size={24} />
+      </button>
+
       {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-vaea-navy to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-vaea-navy-light to-transparent pointer-events-none" />
     </section>
   );
 }

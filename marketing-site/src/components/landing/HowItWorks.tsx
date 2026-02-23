@@ -37,7 +37,7 @@ export function HowItWorks() {
   const { ref, isInView } = useInView({ threshold: 0.15 });
 
   return (
-    <section className="bg-background py-24">
+    <section id="how-it-works" className="bg-background py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         {/* Section header */}
         <div className="mx-auto mb-16 max-w-2xl text-center">
