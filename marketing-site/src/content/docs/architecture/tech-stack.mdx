@@ -1,0 +1,135 @@
+---
+title: Technology Stack
+description: Technology decisions, dependency list, and rationale for ACM-AI
+---
+
+# Technology Stack
+
+## Core Technologies
+
+| Layer | Technology | Version | Purpose |
+|-------|------------|---------|---------|
+| **Frontend** | Next.js | 15 (App Router) | React framework with /api proxy |
+| **Frontend** | React | 19 | UI component library |
+| **Frontend** | Tailwind CSS | 4 | Utility-first styling |
+| **Frontend** | Radix UI | Latest | Accessible primitive components |
+| **Frontend** | AG Grid | ^31.x | Spreadsheet component for ACM data |
+| **Frontend** | CopilotKit | Latest | AG-UI protocol chat client |
+| **Frontend** | Zustand | Latest | Client state management |
+| **Frontend** | React Query | Latest | Server state and caching |
+| **Frontend** | Recharts | ^3 | Dashboard charts |
+| **Backend** | Python | 3.11+ | Runtime |
+| **Backend** | FastAPI | Latest | REST API and SSE endpoints |
+| **Backend** | LangGraph | Latest | AI workflow orchestration |
+| **Backend** | LangChain | Latest | LLM abstraction |
+| **Backend** | Pydantic | v2 | Data models and validation |
+| **Backend** | MinerU (magic-pdf) | Latest | Primary table extraction |
+| **Backend** | Docling | Latest | Fallback PDF text/layout extraction |
+| **Backend** | openpyxl | ^3.1 | BAR-compliant Excel export |
+| **Backend** | uv | Latest | Python package management |
+| **Database** | SurrealDB | Latest | Multi-model database with vector support |
+| **Jobs** | surreal-commands | Latest | Background job queue |
+
+## Key Technology Decisions
+
+### Why SurrealDB?
+
+SurrealDB was chosen as the primary datastore because it combines:
+- **Relational queries** via a SQL-like query language (for record filtering and grouping)
+- **Graph relationships** (source → acm_record → acm_table_section)
+- **Native vector fields** (for semantic embedding search without a separate vector database)
+- **Real-time live queries** (used for the `agui_events` SSE relay pattern)
+
+### Why AG Grid?
+
+| Alternative | Reason Not Chosen |
+|-------------|-------------------|
+| React Table (TanStack) | Missing built-in row grouping and filtering UI |
+| Handsontable | Less performant with large datasets (1,000+ rows) |
+| SheetJS | Spreadsheet rendering engine, not a display component |
+| Custom implementation | Feature set (grouping, virtual scroll, cell renderers) too large |
+
+AG Grid provides virtual scrolling (handles 1,000+ records), enterprise-grade column filtering, built-in row grouping by Building and Room, and a customisable cell renderer API used for the risk badge component.
+
+### Why MinerU (magic-pdf)?
+
+MinerU provides superior table extraction compared to Docling for the specific challenges in asbestos register PDFs:
+- **Merged cells** — `colspan` and `rowspan` are correctly parsed into expanded HTML tables
+- **Multi-page table continuity** — tables spanning multiple pages are automatically stitched
+- **Bounding box tracking** — coordinates are captured for cell-level PDF provenance
+
+Docling is retained as a fallback for text-based PDFs where MinerU is not optimal.
+
+### Why LangGraph?
+
+LangGraph provides a structured graph execution model for the 7-stage pipeline, with:
+- Conditional edges for corrective re-extraction loops (Stage 2.5)
+- Native async execution compatible with FastAPI
+- State management that maps directly to the `PipelineRunState` SSE event structure
+- First-class support for the AG-UI protocol via `ag-ui-langgraph` adapter
+
+### Why CopilotKit / AG-UI?
+
+AG-UI (Agent-User Interaction) is an open protocol for agents to communicate state, tool calls, and reasoning to frontend UIs. CopilotKit implements this protocol client-side:
+- Handles SSE event parsing automatically
+- Provides `useCoAgent` hook for extraction progress (incremental record streaming)
+- Enables custom tool result renderers (ACM record tables, stats cards)
+- Works with any AG-UI-compatible backend — the same protocol is used for both chat and extraction
+
+### Why the Generic Configurable Parser?
+
+The original design called for separate parser classes per consultant (Prensa, Greencap). This was replaced with a single `GenericParser` driven by `FieldSchemaConfig` (a declarative JSON schema derived from the official BAR Excel template).
+
+**Benefits:**
+- Zero code changes for new consultant formats — only JSON configuration
+- AG Grid column definitions and BAR export column order are derived from the same config, eliminating drift
+- Enum validation uses the same config, ensuring consistency across extraction, UI, and export
+
+## Design System
+
+VAEA (Victorian Asbestos Eradication Agency) brand tokens are implemented as CSS custom properties in OKLCH colour space, mapped through a 3-tier cascade:
+
+```
+Brand Layer  (--vaea-teal, --vaea-coral, --vaea-navy)
+     ↓
+Semantic Layer  (--primary, --accent, --destructive, --background)
+     ↓
+Component Layer  (shadcn/ui variants, AG Grid theme overrides, risk badge tokens)
+```
+
+**Brand Colours:**
+- Primary: VAEA Teal — `oklch(0.52 0.09 185)` (#0D7377)
+- Accent: Coral — `oklch(0.65 0.14 15)` (#EB787A)
+- Navy: `oklch(0.27 0.04 260)` (#1B2B4B)
+
+## Environment Variables
+
+```bash
+# SurrealDB connection
+SURREAL_URL=ws://localhost:8000/rpc
+SURREAL_USER=root
+SURREAL_PASSWORD=root
+SURREAL_NAMESPACE=open_notebook
+SURREAL_DATABASE=development
+
+# At least one AI provider required
+OPENAI_API_KEY=sk-...
+# Optional additional providers
+ANTHROPIC_API_KEY=...
+OPENROUTER_API_KEY=...  # Enables 6 additional frontier models
+```
+
+## New Frontier Models (E17)
+
+When `OPENROUTER_API_KEY` is set, the following models are auto-provisioned at startup:
+
+| Model | Provider | Notable Capability |
+|-------|----------|-------------------|
+| MiniMax M2.1 | MiniMax | Large context, efficient |
+| Kimi K2.5 | Moonshot AI | Long context |
+| DeepSeek V3.2 | DeepSeek | Strong coding and extraction |
+| Claude Sonnet 4.6 | Anthropic via OpenRouter | Extended thinking support |
+| GPT 5.2 | OpenAI via OpenRouter | General purpose |
+| Gemini 2.5 Pro | Google via OpenRouter | Multimodal, large context |
+
+Models with extended thinking (DeepSeek R1, Claude) stream reasoning tokens visible in the "Agent Thinking" panel during extraction.

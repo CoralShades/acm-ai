@@ -1,0 +1,144 @@
+---
+title: 7-Stage Extraction Pipeline
+description: Detailed specification of the ACM-AI extraction pipeline from document structure analysis through to storage
+---
+
+# 7-Stage Extraction Pipeline
+
+The ACM-AI extraction pipeline processes PDF documents through seven sequential stages. Each stage emits real-time AG-UI protocol events visible in the Extraction Monitor and the live extraction panel.
+
+## Pipeline Overview
+
+```
+Stage -1   Document Structure Analysis
+Stage 0    Preflight — Format Detection
+Stage 0.5  Agentic Orchestrator — Content Routing
+Stage 1    Extract — Verbatim with Provenance
+Stage 2    Interpret — Normalise to BAR Schema
+Stage 2.5  Corrective Validation — LLM Re-extraction
+Stage 3    Enrich and Store
+```
+
+## Stage -1: Document Structure Analysis
+
+**Purpose:** Understand the document before any extraction begins.
+
+**Operations:**
+- Extract Table of Contents (TOC) if present
+- Build a building inventory (building codes, names, page ranges)
+- Tag page-level sections by content type (cover page, register table, policy text)
+- Extract document metadata (consultant name, inspection date, property address)
+
+**Output:** Document structure map — a JSON object describing the document's sections, buildings, and estimated ACM table locations.
+
+## Stage 0: Preflight
+
+**Purpose:** Detect the document format and select the appropriate parser configuration.
+
+**Operations:**
+- Identify consultant format (Prensa, Greencap, NSW SAMP, or generic BAR)
+- Load the matching `FieldSchemaConfig` from the `field_schema` SurrealDB table
+- Validate that the document contains recognisable ACM register tables
+
+**Output:** Parser selection — the `FieldSchemaConfig` version to use for extraction.
+
+## Stage 0.5: Agentic Orchestrator
+
+**Purpose:** Route each page range or section to the optimal extraction tool.
+
+**Operations:**
+- Analyse content type per page range (digital text, scanned image, mixed)
+- Route digital tables to MinerU for HTML table extraction
+- Route text-heavy sections to Docling for layout analysis
+- Produce an extraction plan: list of (page_range, tool, priority) tuples
+
+**Output:** Per-section extraction plan.
+
+## Stage 1: Extract (Verbatim with Provenance)
+
+**Purpose:** Extract raw values from the PDF tables, preserving the original consultant wording.
+
+**Key Principle:** Do NOT normalise at this stage. Keep original text exactly as printed.
+
+**Operations:**
+- MinerU extracts tables as HTML (primary — superior merged cell handling)
+- Docling provides fallback layout extraction for text-based PDFs
+- Each extracted value is tagged with: page number, table ID, row, column, bounding box, confidence score
+- Output stored in `acm_table_section` records for provenance
+
+**Output Schema:**
+```python
+@dataclass
+class RawExtraction:
+    document_meta: DocumentMeta      # Site info from cover/header
+    items: list[RawACMItem]          # Raw table rows with verbatim values
+    extraction_timestamp: datetime
+    parser_version: str
+```
+
+## Stage 2: Interpret (Normalise to BAR Schema)
+
+**Purpose:** Transform raw extraction output into validated, BAR-compliant `ACMRecord` objects.
+
+**Processing Steps:**
+
+1. **Field Mapping** — Map consultant column headers to BAR internal field names using `FieldSchemaConfig`
+2. **Value Normalisation** — Map synonyms to controlled enum values (e.g. "ACB" → "Asbestos Cement Board", "Low Risk" → "Low")
+3. **Taxonomy Classification** — Classify each item into Product Group and Product Type using:
+   - Pattern-based rules (regex against the official ACM product taxonomy)
+   - LLM fallback for ambiguous items with confidence score
+4. **Business Rules** — Apply BAR logic:
+   - If Sample Result is Negative → set Condition to `N/A (negative)`
+   - If Sample Result is Assumed Negative → set Condition to `N/A (assumed negative)`
+   - BAR uses `Moderate` (not `Medium`) for Disturbance Potential
+5. **Schema Validation** — Validate enum fields against `FieldSchemaConfig.enums`
+
+**Output:** Array of validated `ACMRecord` Pydantic objects.
+
+## Stage 2.5: Corrective Validation
+
+**Purpose:** Catch and correct extraction errors before storage.
+
+**Operations:**
+- Re-validate each record against the BAR schema
+- For records with validation failures: attempt LLM re-extraction using the raw table HTML as context
+- Maximum 3 re-extraction attempts per record
+- Records that cannot be corrected are flagged with `extraction_confidence < 0.5`
+
+**Observability:** Each re-extraction attempt emits a `ToolCallStart`/`ToolCallEnd` AG-UI event pair visible in the Extraction Monitor.
+
+## Stage 3: Enrich and Store
+
+**Operations:**
+- Generate vector embeddings for each `ACMRecord` (using the configured embedding model)
+- Store records in SurrealDB `acm_record` table with all BAR fields
+- Link records to their parent `acm_table_section` via `parent_table_id`
+- Update `extraction_progress` status to `completed`
+- Emit `RunFinished` AG-UI event
+
+**Output:** Fully queryable `acm_record` entries in SurrealDB, ready for the AG Grid and chat.
+
+## Pipeline Observability
+
+The pipeline emits the following SSE events accessible at `GET /api/agui/extraction/{command_id}/stream`:
+
+| Event | Payload | When |
+|-------|---------|------|
+| `RunStarted` | run_id, source_id | Pipeline begins |
+| `StepStarted` | stage_id, stage_name | Stage begins |
+| `StateDelta` | Partial record data | Record extracted |
+| `ToolCallStart` | tool name, arguments | MinerU/LLM call begins |
+| `ToolCallEnd` | result summary, duration_ms | Tool call completes |
+| `StepFinished` | stage_id, records_extracted, duration_ms | Stage completes |
+| `RunFinished` | total_records, confidence_distribution | All stages done |
+| `RunError` | error, last_successful_stage | Pipeline failed |
+
+Events are persisted to the `agui_events` SurrealDB table by the worker process and relayed via the FastAPI SSE endpoint, allowing multiple browser clients to observe the same extraction run.
+
+## Error Recovery
+
+If a stage fails:
+- The pipeline records the failure in `extraction_progress.status = "failed"`
+- A `RunError` AG-UI event is emitted
+- The user can trigger a retry from the Extraction Monitor page (`/extraction-monitor`)
+- Successful stages are not re-run; the pipeline resumes from the failed stage

@@ -1,0 +1,67 @@
+---
+title: ACM-AI Documentation
+description: AI-powered asbestos compliance management for Victorian Government agencies
+---
+
+# ACM-AI — Asbestos Compliance Intelligence
+
+ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management platform that transforms SAMP (School Asbestos Management Plan) documents and Victorian Building Asbestos Register (BAR) PDFs into structured, queryable, BAR-compliant data.
+
+## What is ACM-AI?
+
+Victorian Government agencies are required to maintain Building Asbestos Registers in a standardised format mandated by VAEA (Victorian Asbestos Eradication Agency). In practice, these registers arrive as consultant-produced PDF documents in varying layouts and formats. ACM-AI bridges that gap by:
+
+- Ingesting PDF asbestos assessment documents (up to 50 MB)
+- Extracting tabular ACM data using a seven-stage AI pipeline powered by MinerU and LangGraph
+- Normalising extracted records to the 47-column Victorian BAR schema
+- Presenting data in an interactive spreadsheet view with filtering, grouping, and risk colour-coding
+- Exporting BAR-compliant Excel or CSV files ready for submission
+- Answering natural-language questions about the register via an AI chat interface
+
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **7-Stage Extraction Pipeline** | Document structure analysis → preflight → orchestration → verbatim extraction → BAR normalisation → corrective validation → store and index |
+| **Victorian BAR Format** | Full support for all 47 BAR columns (columns A–AU) including organisation hierarchy, building metadata, location, ACM details, assessment, and removal tracking |
+| **AG Grid Spreadsheet** | Sortable, filterable, groupable grid with 7 column groups; virtual scrolling for 1,000+ rows |
+| **Cell-Level Citations** | Click any cell to open the source PDF at the exact page; bounding box highlights when available |
+| **AI Chat** | Supervisor agent pattern with ACM context toggle; answers questions like "What asbestos is in Building B003?" with record-level citations |
+| **BAR Excel Export** | One-click export to BAR-compliant `.xlsx` or `.csv` with all 47 columns in the required order |
+| **Live Extraction Monitor** | Real-time AG-UI SSE stream shows pipeline stage progress, tool calls, and reasoning tokens |
+| **A2A Agent Card** | Machine-readable agent card at `/.well-known/agent.json` for agent-to-agent integration |
+
+## Document Formats Supported
+
+| Format | Description |
+|--------|-------------|
+| Victorian BAR | Building Asbestos Register (43–47 columns) — **primary format** |
+| NSW SAMP | School Asbestos Management Plan |
+| Prensa PDF | Prensa Pty Ltd asbestos assessment format |
+| Greencap PDF | Greencap asbestos assessment format |
+
+All consultant formats are handled by a single **generic configurable parser** driven by BAR field schema configuration stored in SurrealDB. New formats require only JSON configuration, not code changes.
+
+## Documentation Sections
+
+- [Product Requirements](/docs/prd) — Full PRD including functional requirements (FR-100 through FR-1000 series), data model, and API endpoints
+- [Architecture](/docs/architecture) — System design, 7-stage pipeline, tech stack decisions
+- [Epic Overview](/docs/epics) — All 17 implementation epics with story counts and completion status
+- [Guides](/docs/guides) — Getting started walkthrough and Victorian BAR compliance reference
+
+## Glossary
+
+| Term | Definition |
+|------|------------|
+| ACM | Asbestos Containing Material |
+| BAR | Building Asbestos Register (Victorian Government format) |
+| SAMP | School Asbestos Management Plan (NSW format) |
+| VAEA | Victorian Asbestos Eradication Agency |
+| Friable | ACM that can be crumbled by hand pressure (higher risk) |
+| Non-Friable | ACM with fibres bound in a matrix (lower risk when intact) |
+| DJCS | Department of Justice and Community Safety |
+| DHHS | Department of Health and Human Services |
+| DET | Department of Education and Training |
+| NATA | National Association of Testing Authorities |
+| MinerU | ML-based table extraction library (primary extraction engine) |
+| AG-UI | Agent-User Interaction protocol for real-time agent observability |

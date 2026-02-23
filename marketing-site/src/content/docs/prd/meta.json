@@ -1,0 +1,4 @@
+{
+  "title": "Product Requirements",
+  "pages": ["index", "functional-requirements", "data-model", "api-endpoints"]
+}

@@ -1,0 +1,132 @@
+---
+title: Functional Requirements
+description: Complete functional requirements from FR-100 through FR-1000 series
+---
+
+# Functional Requirements
+
+Requirements are organised by functional area using FR series numbering. Priority levels: **P0** (must-have for MVP), **P1** (important), **P2** (nice-to-have).
+
+## FR-100 Series: Document Processing
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-101 | System shall accept PDF uploads up to 50 MB | P0 |
+| FR-102 | System shall extract text and tables using MinerU (primary) with Docling as fallback | P0 |
+| FR-103 | System shall identify ACM Register tables within SAMP/BAR documents with >90% accuracy | P0 |
+| FR-104 | System shall parse hierarchical structure: Department → Agency → Site → Building → Room → ACM Item | P0 |
+| FR-105 | System shall store page numbers for each extracted data row | P0 |
+| FR-106 | System shall handle multi-page tables (merged across pages) | P1 |
+| FR-107 | System shall use configurable field definitions to parse any ACM PDF format via a single generic parser | P0 |
+| FR-108 | System shall allow configuration of non-extractable fields (Department, Building Type, etc.) | P0 |
+| FR-109 | System shall analyse document structure before extraction (TOC and inventory in Stage -1) | P0 |
+| FR-110 | System shall detect format and select parser configuration dynamically (preflight Stage 0) | P0 |
+| FR-111 | System shall route sections to optimal tool via orchestrator (Stage 0.5) | P0 |
+| FR-112 | System shall perform corrective re-extraction on validation failure (maximum 3 LLM refinement attempts) | P1 |
+
+## FR-200 Series: Data Model
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-201 | System shall store ACM records with expanded Victorian BAR schema (~50 fields) | P0 |
+| FR-202 | System shall link ACM records to source document via `source_id` foreign key | P0 |
+| FR-203 | System shall support vector embeddings for ACM records (semantic search) | P1 |
+| FR-204 | System shall track extraction metadata: timestamp, confidence score | P1 |
+| FR-205 | System shall store organisation hierarchy (Department, Agency, Sub Agency) | P0 |
+| FR-206 | System shall store location metadata (Address, Suburb, Postcode) | P0 |
+| FR-207 | System shall store ACM classification (Product Group, Product Type) | P0 |
+| FR-208 | System shall store removal tracking data (removal dates, quantities, EPA certificates) | P1 |
+
+## FR-300 Series: Spreadsheet View
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-301 | System shall display ACM data in AG Grid component with all BAR columns | P0 |
+| FR-302 | System shall support column sorting (ascending/descending) via column header click | P0 |
+| FR-303 | System shall support column filtering with dropdowns for enum columns | P0 |
+| FR-304 | System shall support text search within the grid | P0 |
+| FR-305 | System shall support row grouping by Building and Room | P0 |
+| FR-306 | System shall highlight rows by risk status: Low=green, Medium=yellow, High=red | P1 |
+| FR-307 | System shall support column pinning (Building/Room columns pinnable to left) | P1 |
+| FR-308 | System shall support CSV export with all 47 BAR columns | P0 |
+| FR-309 | System shall support BAR-compliant Excel (.xlsx) export | P0 |
+| FR-310 | System shall support BAR template configuration | P1 |
+| FR-311 | System shall support column visibility management (show/hide columns, save presets) | P1 |
+| FR-312 | System shall support field mapping configuration (map ACM-AI fields to BAR columns) | P1 |
+
+## FR-400 Series: Citations and Provenance
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-401 | System shall make each spreadsheet cell clickable | P0 |
+| FR-402 | System shall display PDF viewer showing the source page when a cell is clicked | P0 |
+| FR-403 | System shall highlight the relevant region in the PDF when bounding box data is available | P2 |
+| FR-404 | Chat citations shall include cell-level references to ACM records | P0 |
+| FR-405 | Citation format shall be `[acm:record_id:field_name]` parseable by the frontend | P0 |
+
+## FR-500 Series: Chat Integration
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-501 | Chat shall include ACM spreadsheet data in context when ACM toggle is enabled | P0 |
+| FR-502 | Chat shall cite specific ACM records in responses using clickable citations | P0 |
+| FR-503 | Chat shall understand ACM domain terminology (friable, risk levels, NATA, etc.) | P1 |
+| FR-504 | Chat shall answer questions about policy sections in the document | P0 |
+| FR-505 | Chat context selector shall include an "ACM Data" toggle option | P0 |
+| FR-506 | Chat shall use CopilotKit framework implementing the AG-UI protocol | P0 |
+| FR-507 | Chat shall expose the supervisor agent via AG-UI SSE endpoint at `/api/agui/chat` | P0 |
+| FR-508 | Chat shall render tool call results with custom React components (tables, stats) | P0 |
+| FR-509 | Chat shall support real-time streaming responses (partial tokens visible) | P0 |
+| FR-510 | Chat shall handle ACM context toggle dynamically per message | P0 |
+
+## FR-600 Series: Rebranding
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-601 | Application title shall be "ACM-AI" in browser title and header | P0 |
+| FR-602 | Logo shall reflect ACM-AI branding | P1 |
+| FR-603 | Colour scheme shall use VAEA government branding (teal palette) | P1 |
+| FR-604 | Landing page shall describe ACM-AI purpose and value proposition | P1 |
+
+## FR-700 Series: UX and Enterprise Readiness
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-701 | System shall use VAEA government branding (teal palette, Coral accent, Navy) | P0 |
+| FR-702 | Navigation shall use WORKSPACE and CONFIGURE taxonomy | P0 |
+| FR-703 | Brownfield features (Podcasts, Transformations, Notebooks) shall be hidden from navigation | P0 |
+| FR-704 | All pages shall display skeleton loading placeholders during data fetch (zero CLS) | P1 |
+| FR-705 | Toast notifications shall provide promise-based feedback for long operations | P1 |
+| FR-706 | Application shall meet WCAG 2.1 AA accessibility standards | P1 |
+| FR-707 | Sources and Documents pages shall be merged into a unified Documents view | P1 |
+| FR-708 | Application shall gracefully handle connection drops and session timeouts | P2 |
+| FR-709 | Keyboard navigation shall support all primary workflows via command palette | P2 |
+| FR-710 | Deep pages shall display breadcrumb navigation | P2 |
+| FR-711 | TypeScript types shall be auto-generated from Python Pydantic models | P2 |
+
+## FR-800 Series: Extraction Monitor
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-801 | System shall display extraction logs for any document inline in the Document Library (historical and live SSE) | P0 |
+| FR-802 | System shall provide a dedicated `/extraction-monitor` page with Active and History tabs, status filtering, and retry capability | P0 |
+
+## FR-900 Series: UX Enhancement
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-901 | System shall display a statistics dashboard home page with ACM metrics, charts, and recent extractions | P1 |
+| FR-902 | System shall provide a slide-out record detail panel showing all 47 ACM fields on row click | P0 |
+| FR-903 | System shall display empty state screens with appropriate CTAs when no documents or records exist | P1 |
+| FR-904 | System shall support bulk document operations (select multiple → delete/re-extract/export) | P1 |
+
+## FR-1000 Series: Live Extraction Intelligence
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-1001 | System shall emit AG-UI protocol events during extraction via SurrealDB relay (AGUIEventEmitter → `agui_events` table → SSE endpoint) | P0 |
+| FR-1002 | System shall stream extracted records incrementally to the AG Grid during extraction via AG-UI `StateDelta` events | P0 |
+| FR-1003 | System shall display reasoning tokens from thinking models (DeepSeek R1, Claude extended thinking) in a collapsible panel | P1 |
+| FR-1004 | System shall display extraction tool call operations in a live feed (step names, arguments, results, durations) | P1 |
+| FR-1005 | System shall expose an A2A agent card at `/.well-known/agent.json` with task lifecycle endpoints | P1 |
+| FR-1006 | System shall support 6 additional frontier AI models via OpenRouter (MiniMax M2.1, Kimi K2.5, DeepSeek V3.2, Claude Sonnet 4.6, GPT 5.2, Gemini 2.5 Pro) | P1 |

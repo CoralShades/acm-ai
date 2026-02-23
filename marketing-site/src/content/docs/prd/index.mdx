@@ -1,0 +1,96 @@
+---
+title: Product Requirements Overview
+description: Vision, target users, problem statement, and scope for ACM-AI v1.5
+---
+
+# Product Requirements Document
+
+> **Version:** v1.5
+> **Last Updated:** 2026-02-22
+> **Status:** Feature Complete
+
+## Purpose
+
+This document defines the requirements for ACM-AI — a specialised platform for processing Asbestos Containing Material (ACM) compliance documents with intelligent extraction, spreadsheet visualisation, and AI-powered querying.
+
+ACM-AI transforms the Open Notebook document intelligence platform into a compliance-grade tool purpose-built for Victorian Government asbestos management obligations.
+
+## Problem Statement
+
+Victorian Government agencies must maintain Building Asbestos Registers (BAR) in a standardised 47-column format. In practice:
+
+- Asbestos registers are delivered as PDF documents by consultants (Prensa, Greencap, and others) in inconsistent layouts
+- Manual re-entry of data from PDFs into the BAR template is time-consuming and error-prone
+- The existing data cannot be easily queried, filtered, or analysed
+- Cross-agency reporting is difficult because registers are not in a common structured format
+
+ACM-AI solves this by automating extraction, normalisation, and export of BAR-compliant data from any consultant PDF format.
+
+## Target Users
+
+| User | Role | Primary Need |
+|------|------|--------------|
+| **Compliance Officer** | Victorian Government agency | Upload PDFs, review extracted data, export BAR Excel |
+| **Asbestos Coordinator** | VAEA or agency level | Query register data, answer stakeholder questions |
+| **Health and Safety Manager** | Departmental | Identify high-risk items, monitor removal tracking |
+| **ICT Administrator** | Agency IT | Deploy and configure the system |
+
+## Product Vision
+
+ACM-AI is the single source of truth for asbestos register data across Victorian Government buildings. It eliminates manual data entry by extracting structured data from any consultant PDF format and producing BAR-compliant exports at the click of a button.
+
+## Document Formats Supported
+
+| Format | Description | Status |
+|--------|-------------|--------|
+| Victorian BAR | Building Asbestos Register (43–47 columns) | Primary |
+| NSW SAMP | School Asbestos Management Plan | Supported |
+| Prensa PDF | Prensa Pty Ltd asbestos assessment format | Supported via generic parser |
+| Greencap PDF | Greencap asbestos assessment format | Supported via generic parser |
+
+All consultant formats are handled by a **single generic configurable parser** driven by `field_schema` configuration in SurrealDB. Format-specific differences are expressed as JSON configuration, not code.
+
+## Scope
+
+### In Scope (MVP)
+
+- PDF upload and processing (up to 50 MB)
+- Seven-stage ACM extraction pipeline with MinerU primary extraction
+- Victorian BAR data model (47 columns)
+- AG Grid spreadsheet view with sorting, filtering, and grouping
+- Cell-level PDF citations with page navigation
+- AI chat with ACM context toggle
+- BAR-compliant CSV and Excel export
+- Organisation and building metadata configuration
+- Real-time extraction monitoring via AG-UI SSE
+- A2A agent card for external agent integration
+
+### Out of Scope (MVP)
+
+- Mobile browser support (desktop 1024px+ only)
+- User authentication and multi-tenancy
+- Integration with external government systems
+- Automated scheduled re-extraction
+
+## Non-Functional Requirements Summary
+
+| Category | Requirement |
+|----------|-------------|
+| Performance | 50-page PDF processed in under 60 seconds |
+| Performance | Spreadsheet renders 1,000+ rows without lag (virtual scrolling) |
+| Performance | Chat first token within 3 seconds |
+| Privacy | All document processing occurs locally — no external API calls for extraction |
+| Usability | Upload to ACM data view in fewer than 5 clicks |
+| Compatibility | Chrome, Firefox, Edge (latest 2 versions); desktop only |
+| Accessibility | WCAG 2.1 AA standards |
+
+## Change Log
+
+| Date | Version | Summary |
+|------|---------|---------|
+| 2025-12-07 | 1.0 | Initial PRD |
+| 2026-02-04 | 1.1 | Victorian BAR format expansion |
+| 2026-02-08 | 1.2 | UX Audit and Enterprise Readiness (FR-700 series) |
+| 2026-02-08 | 1.3 | Course correction: single generic configurable parser |
+| 2026-02-20 | 1.4 | SCP-20260220: Extraction Monitor (FR-800), UX Enhancement (FR-900), MinerU primary |
+| 2026-02-22 | 1.5 | E17: Live Extraction Intelligence — AG-UI, A2A, incremental streaming, new models |

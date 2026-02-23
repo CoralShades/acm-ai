@@ -1,0 +1,146 @@
+---
+title: Architecture Overview
+description: High-level system architecture, service topology, data flow, and component structure for ACM-AI
+---
+
+# Architecture Overview
+
+ACM-AI is a monorepo with three runtime processes — a Next.js frontend, a FastAPI backend, and a background worker — backed by SurrealDB. All services communicate over localhost or Docker networks; no data leaves the deployment boundary during document processing.
+
+## Service Topology
+
+```
+Browser (port 8502)
+    │
+    ▼
+Next.js Frontend (port 8502)
+    │  /api/* proxy
+    ▼
+FastAPI Backend (port 5055)
+    │
+    ├──► SurrealDB (port 8000)       — primary datastore
+    ├──► Background Worker           — async extraction jobs
+    └──► MinerU / Docling            — local PDF processing
+```
+
+## Data Flow
+
+```
+PDF Upload ──► MinerU (tables) + Docling (text) ──► 7-Stage Pipeline
+                                                          │
+                                                          ▼
+                                               Normalised ACMRecord[]
+                                                          │
+                                              ┌───────────┴───────────┐
+                                              ▼                       ▼
+                                         SurrealDB               AG Grid
+                                        acm_record               (display)
+                                              │
+                                    ┌─────────┴─────────┐
+                                    ▼                   ▼
+                               Vector Store          Chat Context
+                             (embeddings)          (supervisor agent)
+```
+
+## Backend Structure
+
+```
+api/
+  routers/              # REST endpoints by domain
+    acm.py              # /api/acm/* — records, extraction, export, stats
+    agui_chat.py        # /api/agui/chat — AG-UI supervisor agent SSE
+    agui_extraction.py  # /api/agui/extraction/{cmd}/stream — extraction SSE
+    extraction_events.py # /api/acm/extraction-progress/*
+    a2a.py              # /api/a2a/* — Agent-to-Agent protocol
+  *_service.py          # Business logic layer
+
+open_notebook/
+  domain/
+    acm.py              # ACMRecord Pydantic model + CRUD
+  extractors/
+    acm_extractor.py    # Main extraction entry point
+    mineru_table_extractor.py  # MinerU table parsing
+    agui_event_emitter.py      # AG-UI event persistence to SurrealDB
+  graphs/
+    supervisor_agent.py # LangGraph supervisor with ACM tools
+  database/             # Repository pattern for SurrealDB
+
+commands/               # Background job handlers (surreal-commands)
+  acm_commands.py       # process_source, acm_extract, acm_classify
+
+migrations/             # SurrealDB schema migrations (auto-run on API start)
+  10.surrealql          # acm_record table (initial)
+  14.surrealql through 19.surrealql  # BAR expansion, field_schema, agui_events
+```
+
+## Frontend Structure
+
+```
+frontend/src/
+  app/
+    layout.tsx              # ACM-AI branding, VAEA design tokens
+    page.tsx                # Dashboard home (stats, charts)
+    docs/                   # Fumadocs documentation
+    sources/[id]/           # Document detail with ACM register view
+
+  components/
+    acm/
+      ACMSpreadsheet.tsx    # AG Grid wrapper (47+ columns, 7 groups)
+      ACMCellViewer.tsx     # PDF modal for cell citations
+      ACMToolbar.tsx        # Search, filter, export controls
+      RiskBadge.tsx         # Risk status cell renderer
+      SiteConfigForm.tsx    # Site configuration form
+      BARExportDialog.tsx   # BAR Excel export options
+      ExtractionProgressPanel.tsx  # Stage pills + live log panel
+      ACMRecordDetailPanel.tsx     # Slide-out 47-field detail panel
+    chat/
+      SmartChatPanel.tsx    # CopilotKit chat with ACM context toggle
+      ACMAssistantMessage.tsx
+      SmartChatInput.tsx
+      ToolResultRenderers.tsx
+    dashboard/
+      DashboardPage.tsx     # Stats dashboard home
+      RiskDonutChart.tsx
+      BuildingsBarChart.tsx
+    extraction/
+      ExtractionMonitorPage.tsx
+
+  hooks/
+    useACMRecords.ts        # React Query hook for ACM data
+    use-extraction-progress.ts  # SSE hook for pipeline status
+
+  stores/
+    pipeline-progress-store.ts  # Zustand — multi-stage extraction tracking
+    notification-store.ts       # Zustand — toast notifications
+    feature-flags-store.ts      # Zustand — UI feature toggles
+```
+
+## Key Design Decisions
+
+### Generic Configurable Parser
+
+Rather than implementing a separate parser class per consultant format (Prensa, Greencap, etc.), ACM-AI uses a single `GenericParser` driven by a declarative `FieldSchemaConfig`. New consultant formats require only JSON configuration, not code changes.
+
+```
+BAR Excel Template → JSON config files → SurrealDB field_schema → GenericParser
+                                                                 → AG Grid columns
+                                                                 → BAR export
+```
+
+### Supervisor Agent Pattern
+
+The chat uses a ReAct loop supervisor agent that has direct tool access rather than delegating through sub-agents. This eliminates inter-agent communication overhead and provides real-time streaming via the AG-UI protocol.
+
+### AG-UI Extraction Relay
+
+The extraction pipeline runs in the background worker process. AG-UI SSE events are relayed through SurrealDB:
+
+```
+Worker ──► agui_events table ──► API SSE endpoint ──► Frontend (CopilotKit)
+```
+
+This allows the FastAPI process to serve real-time extraction progress without requiring a shared in-process message queue.
+
+### Privacy by Design
+
+All PDF processing occurs locally. MinerU and Docling run as local Python libraries. No document content is transmitted to external APIs unless the user explicitly configures a cloud LLM provider for the interpretation stage.

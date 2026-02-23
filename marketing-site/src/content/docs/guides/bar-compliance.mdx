@@ -1,0 +1,181 @@
+---
+title: Victorian BAR Compliance Guide
+description: Understanding the Building Asbestos Register requirements under Victorian law and how ACM-AI supports compliance
+---
+
+# Victorian BAR Compliance Guide
+
+## Legislative Context
+
+Victorian Government agencies have obligations under the following legislation to identify, assess, and manage asbestos-containing materials (ACM) in buildings they own or occupy:
+
+- **Occupational Health and Safety Act 2004** — primary duty of care for workplace safety
+- **Occupational Health and Safety Regulations 2017** — specific requirements for managing ACM
+- **VAEA Act 2016** — establishes the Victorian Asbestos Eradication Agency and its functions
+
+WorkSafe Victoria provides guidance on asbestos management obligations. The Victorian Asbestos Eradication Agency (VAEA) administers the Building Asbestos Register (BAR) format as the standard recording template for government buildings.
+
+## What is the BAR?
+
+The Building Asbestos Register (BAR) is a standardised Excel spreadsheet maintained by VAEA that government agencies use to record all known or suspected ACM in their buildings. The BAR template has 47 columns (A–AU) organised into functional groups:
+
+| Group | Columns | Purpose |
+|-------|---------|---------|
+| Organisation | A–D | Victorian Government hierarchy |
+| Building Information | E–S | Building metadata (15 fields) |
+| Location | T–W | Internal/external area, level, room |
+| ACM Details | X–AD | Product identification and testing |
+| Assessment | AE–AG | Condition, disturbance potential, quantity |
+| Documentation | AH–AK | Labelling, recommendations, comments |
+| Removal Tracking | AL–AR | Removal dates, EPA certificates |
+| Photo Reference | AU | Photo documentation |
+
+## ACM Classification
+
+### Friability
+
+All ACM must be classified by friability:
+
+| Classification | Definition | Risk Profile |
+|----------------|------------|--------------|
+| **Friable** | ACM that can be crumbled or reduced to powder by hand pressure (e.g. sprayed insulation, lagging, loose-fill) | Higher risk — fibres can become airborne more readily |
+| **Non-Friable** | ACM where fibres are bound in a matrix and cannot be crumbled by hand (e.g. cement sheeting, vinyl floor tiles) | Lower risk when in good condition, but can become friable if damaged |
+
+### Product Taxonomy
+
+The BAR uses a controlled taxonomy for ACM products, organised by friability:
+
+**Non-Friable Products (8 Groups):**
+
+| Code | Product Group | Common Products |
+|------|---------------|----------------|
+| T1 | Cement products | Flat sheeting, corrugated roof sheeting, weatherboards |
+| T2 | Bitumen products | Mastic, bituminous membrane, Malthoid |
+| T3 | Vinyl products | Vinyl sheet flooring, vinyl tiles, hessian-backed vinyl |
+| T4 | Gasket and friction products | Flange gaskets, caulking, mastic sealant |
+| T5 | Coatings | Textured paint, spray-on coatings |
+| T6 | Reinforced plastics and resins | Electrical components, toilet cisterns |
+| T7 | Other | Mortar, grout, plaster, render |
+| T8 | Insulation | Millboard, fire door core |
+
+**Friable Products (6 Groups):**
+
+| Code | Product Group | Common Products |
+|------|---------------|----------------|
+| T1 | Cement products (friable) | Degraded or damaged cement products |
+| T2 | Vinyl products (friable) | Paper-backed vinyl |
+| T3 | Insulation products (friable) | AIB (asbestos insulation board), lagging, sprayed insulation, vermiculite |
+| T4 | Gasket products (friable) | Rope gasket, braided gasket |
+| T5 | Textiles (friable) | Fire blanket, protective cloth, gloves |
+| T6 | Other (friable) | Plaster and lath, mortar |
+
+### Sample Results
+
+Testing results must use the following controlled vocabulary:
+
+| Value | Meaning |
+|-------|---------|
+| `Positive` | Laboratory confirmed asbestos present |
+| `Assumed Positive` | Asbestos assumed present based on visual inspection (not lab tested) |
+| `Negative` | Laboratory confirmed asbestos not present |
+| `Assumed Negative` | Asbestos assumed absent based on visual inspection (not lab tested) |
+
+**BAR Business Rule:** If Sample Result is Negative or Assumed Negative, the Condition and Disturbance Potential fields must be set to the corresponding `N/A` value.
+
+### Condition Assessment
+
+| Value | Description |
+|-------|-------------|
+| `Good` | ACM is in good condition with no visible damage or deterioration |
+| `Fair` | ACM shows minor damage or deterioration |
+| `Poor` | ACM is significantly damaged or deteriorating |
+| `Unknown` | Condition could not be assessed |
+| `N/A (negative)` | Used when Sample Result is Negative |
+| `N/A (assumed negative)` | Used when Sample Result is Assumed Negative |
+
+### Disturbance Potential
+
+| Value | Description |
+|-------|-------------|
+| `High` | ACM is in a location or condition where disturbance is likely |
+| `Moderate` | Some possibility of disturbance (note: BAR uses "Moderate", not "Medium") |
+| `Low` | Disturbance is unlikely under normal use |
+| `Unknown` | Disturbance potential could not be assessed |
+| `N/A (negative)` | Used when Sample Result is Negative |
+| `N/A (assumed negative)` | Used when Sample Result is Assumed Negative |
+
+## How ACM-AI Supports BAR Compliance
+
+### Automated Field Population
+
+ACM-AI extracts and populates all 47 BAR columns from consultant PDF reports. Fields that cannot be extracted (Department, Agency, Building Type, Ownership) are configured via the Upload Wizard site configuration step.
+
+### Enum Normalisation
+
+Consultant PDFs often use non-standard wording for controlled fields. For example:
+- "Low Risk" → normalised to `Low` (Risk Status)
+- "ACM cement" → classified as Product Group T1 (Cement products), Product Type Flat Sheeting
+- "N/A Neg" → normalised to `N/A (negative)` (Condition)
+
+ACM-AI's Stage 2 Interpret pipeline applies a comprehensive normalisation mapping from the `register_enums.json` configuration file.
+
+### BAR-Compliant Export
+
+The Excel export produces a file matching the official BAR template structure:
+- All 47 columns in the correct order (A–AU)
+- Column headers matching the BAR template exactly
+- Controlled vocabulary values for all enum fields
+- Optional reference sheets (Building Types, Product Types, Suburbs)
+
+### Provenance and Auditability
+
+Every extracted record is linked to:
+- The source PDF document (`source_id`)
+- The specific page in the PDF (`page_number`)
+- The raw HTML table from which it was extracted (`parent_table_id` → `acm_table_section`)
+
+This audit trail supports compliance audits where the source data must be traceable to the original consultant report.
+
+### Organisation Hierarchy
+
+The BAR requires recording the full Victorian Government hierarchy:
+
+```
+Department (e.g. DHHS)
+    └── Agency (e.g. Alexandra District Health)
+        └── Sub Agency (e.g. specific ward or facility)
+            └── Site Name
+                └── Building Name
+                    └── Room or Area
+                        └── ACM Item
+```
+
+Common Victorian Government departments in BAR data:
+
+| Code | Department |
+|------|------------|
+| DJCS | Department of Justice and Community Safety |
+| DHHS | Department of Health and Human Services |
+| DET | Department of Education and Training |
+| DOT | Department of Transport |
+| DJPR | Department of Jobs, Precincts and Regions |
+
+## Removal Tracking
+
+When ACM is removed, the BAR requires documenting:
+
+- **PSB Supplied ACM ID** — Property Services Branch reference number
+- **Assumed Removed?** — YES/NO flag
+- **Date of Removal** — Date the ACM was removed
+- **Quantity Removed** — Amount removed (e.g. "25 m²")
+- **Asbestos Removal Notification No** — WorkSafe notification reference
+- **EPA Waste Transport Certificate No** — EPA waste disposal certificate number
+- **Removal Comments** — Free text notes
+
+ACM-AI stores all removal tracking fields and includes them in BAR exports. These fields can be updated via the Record Detail Panel or via `PUT /api/acm/records/{id}`.
+
+## Further Reading
+
+- [WorkSafe Victoria — Asbestos](https://www.worksafe.vic.gov.au/asbestos)
+- [VAEA — Victorian Asbestos Eradication Agency](https://www.vaea.com.au/)
+- [OHS Regulations 2017 — Asbestos provisions](https://www.legislation.vic.gov.au/)

@@ -1,0 +1,468 @@
+You are building a fully interactive, single-file React artifact (.jsx) 
+that serves as an executive and client demo for ACM-AI — a Victorian 
+Government compliance system that converts Asbestos Register PDFs into 
+BAR-compliant spreadsheets using AI.
+
+This artifact is a DEMO PRESENTATION for: Directors, CTO, CEO, and Clients.
+It must be visually stunning, technically accurate, and fully interactive.
+
+---
+
+## BRANDING (VAEA Government)
+
+Primary teal:   #3a8f8a   (approx oklch 0.52 0.09 185)
+Accent coral:   #d4614a   (approx oklch 0.65 0.14 15)
+Navy:           #2a2f45   (approx oklch 0.27 0.04 260)
+Background:     #f4f7f9
+Card bg:        #ffffff
+Success:        #4caf82
+Warning:        #f59e0b
+Risk High:      #ef4444
+Risk Medium:    #f97316
+Risk Low:       #22c55e
+
+Use Tailwind utility classes only. No custom CSS. Use inline styles 
+only for oklch values where Tailwind doesn't cover them.
+
+---
+
+## TECHNOLOGY STACK (use these imports only)
+
+import { useState, useEffect, useRef } from "react"
+import { 
+  Upload, FileText, Database, Table, MessageSquare, Download, 
+  CheckCircle, AlertTriangle, TrendingUp, Building, Search, 
+  ChevronRight, ChevronDown, Zap, Shield, BarChart3, Eye,
+  ArrowRight, Play, Loader, Settings, Users, Award
+} from "lucide-react"
+import { 
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from "recharts"
+
+---
+
+## STRUCTURE
+
+Build a single-page application with a LEFT SIDEBAR navigation and 
+a MAIN CONTENT area. The sidebar has these nav sections:
+
+1. 🏠 Overview          — Hero + project summary
+2. 🔄 Pipeline          — 7-Stage extraction flow (animated)
+3. 📊 Spreadsheet       — AG Grid demo mockup
+4. 💬 Chat              — AI chat demo with ACM citations
+5. 📤 Export            — BAR export preview
+6. 📈 Progress          — Sprint/epic/story progress dashboard
+7. 🏗️ Architecture      — Technical system diagram
+8. 👥 Stakeholders      — Audience-specific value summaries
+
+The active section renders in the main content area. Default to Overview.
+
+---
+
+## SECTION 1: OVERVIEW
+
+Show:
+- Large hero headline: "ACM-AI — Asbestos Compliance Intelligence"
+- Subheadline: "Transforming PDF Asbestos Registers into Victorian Government BAR-compliant data with AI"
+- 4 stat cards in a row:
+  • "112 Stories Delivered" (teal)
+  • "16 Epics Complete" (coral)  
+  • "281 Commits" (navy)
+  • "92% Completion Rate" (success green)
+
+- A "What ACM-AI Does" section with 3 columns:
+  1. 📄 Upload PDF → AI extracts asbestos data
+  2. 📊 View in interactive spreadsheet → 47 BAR columns
+  3. 📤 Export BAR-compliant Excel → ready for Victorian Government
+
+- A "Key Compliance Facts" callout box (teal border):
+  • Targets Victorian Government BAR (Building Asbestos Register) format
+  • 47-column schema matching the official VAEA template
+  • Department → Agency → Site → Building → Room → ACM Item hierarchy
+  • Supports Friable and Non-friable ACM taxonomy (T1–T8)
+
+---
+
+## SECTION 2: PIPELINE
+
+Title: "7-Stage Extraction Pipeline"
+Subtitle: "From raw PDF to structured compliance data"
+
+Show an ANIMATED pipeline diagram. Each stage is a pill/card that 
+lights up in sequence when the user clicks "Run Demo".
+
+The 7 stages are:
+
+Stage -1: PRE-ANALYSIS
+  Icon: Search
+  Color: navy
+  Description: "TOC extraction, building inventory compilation, 
+                page-level section tagging, document metadata enhancement"
+  Tools: "LangGraph agentic orchestrator"
+
+Stage 0: PREFLIGHT  
+  Icon: FileText
+  Color: teal
+  Description: "PDF classifier detects digital vs scanned. 
+                Parser router selects MinerU or Docling based on content type."
+  Tools: "PDF Classifier → Parser Router"
+
+Stage 0.5: ORCHESTRATION
+  Icon: Zap
+  Color: coral
+  Description: "Agentic orchestrator routes each page section to 
+                optimal extraction tool. MinerU for complex tables, 
+                Docling for text/layout."
+  Tools: "MinerU (primary) | Docling (fallback)"
+
+Stage 1: EXTRACT (Verbatim with Provenance)
+  Icon: Database
+  Color: teal
+  Description: "Raw table extraction preserving bounding boxes, 
+                page numbers, merged cells, and multi-page stitching."
+  Tools: "MineruTableExtractor | Docling | Generic Configurable Parser"
+
+Stage 2: INTERPRET
+  Icon: BarChart3
+  Color: navy
+  Description: "AI maps raw extracted cells to 47 BAR field schema. 
+                Wording normalisation, enum validation, product classification 
+                (T1–T8 taxonomy)."
+  Tools: "LLM + register_row.schema.json + register_enums.json"
+
+Stage 2.5: VALIDATE (Corrective RAG Loop)
+  Icon: Shield
+  Color: coral
+  Description: "Validates enum fields against BAR controlled vocabulary. 
+                Up to 3 LLM correction attempts for invalid values. 
+                Tracks correction stats."
+  Tools: "ValidationIssue → CorrectionStats → LLM re-extraction"
+
+Stage 3: SAVE & INDEX
+  Icon: CheckCircle
+  Color: success
+  Description: "Deduplication with SHA-256 composite keys. 
+                Contextual embeddings for vector search. 
+                ACMRecord + ACMTableSection persisted to SurrealDB."
+  Tools: "SurrealDB | Vector embeddings | Parent Document Retrieval"
+
+Below the pipeline, show a DATA FLOW diagram as a horizontal arrow chain:
+PDF Upload → MinerU/Docling → ACM Parser → SurrealDB acm_record → AG Grid → BAR Export
+Each box is a rounded card with icon. Arrows between them.
+
+Below that, show a LIVE LOG SIMULATION panel (dark terminal style):
+When "Run Demo" is clicked, show scrolling log lines appearing one by one:
+  [Stage -1] Extracting TOC... found 3 sections
+  [Stage 0]  PDF classified as: digital (non-scanned)
+  [Stage 0.5] Routing page 1-4 → MinerU (complex tables detected)
+  [Stage 1]  Extracted 3 tables, 47 rows, 12 merged cells
+  [Stage 2]  Mapped 47 fields. Product classification: 31 non-friable, 16 friable
+  [Stage 2.5] Validation: 3 enum errors corrected via RAG loop
+  [Stage 3]  Saved 44 ACM records to SurrealDB. Embeddings indexed.
+  ✅ Extraction complete in 18.3s
+Use setTimeout/setInterval for the animation. Green text on dark bg.
+
+---
+
+## SECTION 3: SPREADSHEET
+
+Title: "AG Grid — Victorian BAR Spreadsheet"
+Subtitle: "47-column interactive register with risk colour-coding"
+
+Show a MOCKUP of the AG Grid spreadsheet. Use an HTML table styled 
+to look like AG Grid Enterprise. Include:
+
+TOOLBAR row:
+  [Search...] [Filter: All Buildings ▼] [Columns ▼] [Export CSV] [Export BAR Excel ▼]
+
+COLUMN GROUPS (show headers spanning columns):
+  "Organisation" spans: Department | Agency | Site Name
+  "Building"     spans: Building Name | Building Code | Building Type
+  "Location"     spans: Level | Room/Area | Internal/External
+  "ACM Item"     spans: ACM Product Type | Friable? | Condition
+  "Assessment"   spans: Risk Priority | Sample Result | Hygienist Recommendations
+  "Removal"      spans: Assumed Removed | Date of Removal
+
+Show 6-8 SAMPLE DATA ROWS with realistic data:
+  Row 1: DJCS | VicPol | Rathdowne St HQ | B001 | Police Station | Level 1 | Corridor | Internal | Cement Sheet | No | Good | Low | Not Detected | Monitor
+  Row 2: DJCS | VicPol | Rathdowne St HQ | B001 | Police Station | Level 2 | Server Room | Internal | Vinyl Floor Tiles | No | Fair | Medium | Positive | Encapsulate
+  Row 3: DHHS | Health VIC | Royal Melbourne | B003 | Hospital | Roof | Plant Room | External | Pipe Lagging | YES | Poor | High | Friable | Remove Immediately
+  (Add 3-4 more varied rows)
+
+Risk colour coding:
+  Low = green left border + light green bg
+  Medium = orange left border + light orange bg  
+  High = red left border + light red bg + bold text
+
+When a row is clicked, show a CITATION PANEL slide in from right:
+  "📄 Source: Rathdowne_ACM_Register.pdf"
+  "📍 Page 12, Table 3, Row 7"
+  "🔗 [acm:acm_record:abc123:risk_status]"
+  A small grey rectangle representing the PDF with a highlighted yellow box
+
+Below the grid, show 3 COLUMN PRESET buttons:
+  [Essential View] [Full BAR View] [Assessment Focus] [Removal Tracking]
+
+---
+
+## SECTION 4: CHAT
+
+Title: "Smart Chat — AI-Powered ACM Queries"
+Subtitle: "Natural language queries against structured register data"
+
+Show a chat interface mockup. Left panel: toggle badge "ACM Data ON".
+Chat window with these pre-loaded messages:
+
+USER: "Show me all high-risk asbestos items in Building B003"
+
+ASSISTANT (streaming animation on load):
+"I found **3 high-risk ACM items** in Building B003 (Royal Melbourne Hospital):
+
+1. **Pipe Lagging** — Plant Room (Roof level)
+   - Condition: Poor | Friable | Positive result
+   - Citation: [acm:acm_record:a1b2:risk_status] → **HIGH RISK**
+   - Recommendation: Remove Immediately
+
+2. **Ceiling Tiles** — Ward 4B
+   - Condition: Damaged | Non-friable | Suspected
+   - Citation: [acm:acm_record:c3d4:material_condition] → **HIGH RISK**
+
+3. **Boiler Insulation** — Basement Mechanical
+   - Condition: Deteriorating | Friable | Positive
+   - Citation: [acm:acm_record:e5f6:sample_result] → **HIGH RISK**
+
+⚠️ Immediate attention required. All 3 items exceed acceptable risk threshold."
+
+USER: "What does 'friable' mean and why is it more dangerous?"
+
+ASSISTANT: "**Friable** ACM can be crumbled by hand pressure, releasing fibres 
+into the air. This makes it significantly more hazardous than non-friable ACM, 
+which has fibres bound in a matrix.
+
+Under the Victorian BAR taxonomy:
+- Friable uses codes T1–T6 (e.g. T3 = Friable Insulation)
+- Non-friable uses T1–T8 (e.g. T1 = Cement, T3 = Vinyl)
+
+Friable items require specialist licensed removal contractors."
+
+Below the chat show a "HOW IT WORKS" mini diagram:
+  User Message → Supervisor Agent (LangGraph ReAct) → ACM Tools (if toggle ON) 
+  → SurrealDB query → Citation generation → Streamed response via AG-UI SSE
+
+Show the ACM tools list as pills:
+  [🔍 query_by_building] [⚠️ query_by_risk] [🏢 building_search] [✅ compliance_check]
+
+---
+
+## SECTION 5: EXPORT
+
+Title: "BAR-Compliant Export"
+Subtitle: "Victorian Government submission-ready in one click"
+
+Show TWO export format cards side by side:
+
+LEFT CARD — CSV Export:
+  Icon: FileText, teal border
+  Title: "CSV Export"
+  Features:
+  • All 47 BAR columns included
+  • Column order matches BAR specification
+  • UTF-8 encoded
+  • Filter by building before export
+  • Named: [SiteName]_ACM_[Date].csv
+  [⬇ Download CSV] button
+
+RIGHT CARD — BAR Excel Export:
+  Icon: Table, coral border
+  Title: "BAR Excel (.xlsx)"
+  Features:
+  • ✅ Exact BAR column headers from VAEA template
+  • ✅ Column order matches official BAR spec (47 columns)
+  • ✅ Risk status cells colour-coded
+  • ✅ Header row frozen, columns auto-sized
+  • ✅ Data validation dropdowns for enum fields
+  • ✅ Optional reference sheets (Building Types, Product Types)
+  • ✅ Template versioning — upload new VAEA template without code changes
+  [⬇ Export BAR Excel] button (coral)
+
+Below show THE 47-COLUMN ORDER as a numbered scrollable list in 3 columns:
+  1. Department          2. Agency              3. Sub Agency
+  4. Site Name           5. Building Name       6. Building Type
+  7. Building Address    8. Suburb              9. Postcode
+  10. Owned or Leased    11. Building Unique ID 12. Frequency of Use
+  13. Public Access?     14. Date of Inspection 15. Est. Year Built
+  16. Est. Building Size 17. Number of Levels   18. Construction Type
+  19. Roof Type          20. Internal/External  21. Level
+  22. Room/Area          23. Item No.           24. ACM Present?
+  25. Product            26. Material Desc.     27. Friable?
+  28. Material Condition 29. Disturbance Potential 30. Accessibility
+  31. ACM Product Group  32. ACM Group Name     33. ACM Product Type
+  34. Quantity           35. UOM                36. Sample Result
+  37. Hygienist Recs     38. Risk Priority      39. Action Required
+  40. Action By Date     41. Assumed Removed?   42. Date Confirmed Removed
+  43. Qty Removed        44. Removed By         45. Removal Cert No.
+  46. Removal Notif No.  47. Notes
+
+Show a SITE CONFIGURATION callout:
+  "Non-extractable fields (Department, Agency, Building Type, etc.) are 
+   configured via the Site Config form before export — ensuring 100% 
+   BAR field coverage."
+
+---
+
+## SECTION 6: PROGRESS
+
+Title: "Project Delivery Dashboard"
+Subtitle: "ACM-AI v1.0 — Feature Complete as of 22 Feb 2026"
+
+Show:
+
+ROW 1 — 4 big metric cards:
+  • 112/122 Stories Done (92%)
+  • 16/17 Epics Complete (1 archived)
+  • 281 Commits
+  • 5 Change Proposals Navigated
+
+ROW 2 — Recharts BarChart showing stories per epic:
+  Data: [
+    { epic: 'E1 Pipeline', stories: 31 },
+    { epic: 'E2 AG Grid', stories: 12 },
+    { epic: 'E3 Citations', stories: 4 },
+    { epic: 'E4 Chat', stories: 4 },
+    { epic: 'E5 Export', stories: 4 },
+    { epic: 'E6 Brand', stories: 4 },
+    { epic: 'E7 Upload', stories: 7 },
+    { epic: 'E9 Library', stories: 3 },
+    { epic: 'E10 Nav', stories: 1 },
+    { epic: 'E11 Search', stories: 2 },
+    { epic: 'E12 Settings', stories: 4 },
+    { epic: 'E13 Graph', stories: 3 },
+    { epic: 'E14 UX', stories: 11 },
+    { epic: 'E15 Monitor', stories: 2 },
+    { epic: 'E16 UX+', stories: 3 },
+    { epic: 'E17 Live AI', stories: 6 },
+  ]
+  Bar fill: teal. X-axis angled labels.
+
+ROW 3 — Epic status table:
+  All 16 epics as rows with columns: Epic | Title | Stories | Status
+  Status shown as a green "✅ DONE" badge or "📦 ARCHIVED"
+  Include highlights column with 1 key achievement per epic.
+
+ROW 4 — Timeline (Recharts LineChart):
+  Show a simulated sprint velocity line over 12 sprint periods.
+  Y-axis: stories completed. X-axis: Sprint 1–12.
+  Data showing ramp-up then plateau at high velocity.
+  Also show a "Target" dashed line.
+
+---
+
+## SECTION 7: ARCHITECTURE
+
+Title: "Technical Architecture"
+Subtitle: "FastAPI + SurrealDB + LangGraph + Next.js"
+
+Show FOUR architecture diagrams stacked vertically:
+
+DIAGRAM 1 — System Architecture:
+  Render as SVG or styled divs with arrows.
+  Boxes: Browser → Next.js :8502 → FastAPI :5055 → [SurrealDB :8000, Background Worker, MinerU/Docling]
+  Arrows labelled with protocols: /api/* proxy, REST/SSE, SurrealQL, Python subprocess
+
+DIAGRAM 2 — Chat Architecture:
+  User → CopilotKit (AG-UI) → SSE /api/agui/chat → LangGraph supervisor_agent
+  → [get_acm_tools() if ACM ON, get_search_tools()] → SurrealDB → streamed response
+
+DIAGRAM 3 — 7-Stage Pipeline Flow (simplified):
+  Horizontal flow with 7 coloured boxes matching Section 2
+
+DIAGRAM 4 — Data Model:
+  Show key tables as entity cards:
+  source | acm_record | acm_table_section | site_config | bar_template | field_schema
+  Show relationships with arrows.
+
+Below, show a TECH STACK GRID:
+  | Layer       | Technology         | Purpose                  |
+  | Frontend    | Next.js 15 + React | Web UI                   |
+  | Backend     | FastAPI (Python)   | REST API + SSE           |
+  | Database    | SurrealDB          | Document + vector store  |
+  | AI Pipeline | LangGraph          | Agentic orchestration    |
+  | Extraction  | MinerU + Docling   | PDF table extraction     |
+  | AI/LLM      | Esperanto          | Multi-provider LLM       |
+  | Grid        | AG Grid v33        | Enterprise spreadsheet   |
+  | Chat        | CopilotKit + AG-UI | Streaming agent UI       |
+  | Export      | openpyxl           | BAR Excel generation     |
+
+---
+
+## SECTION 8: STAKEHOLDERS
+
+Title: "Value by Audience"
+
+Show 4 AUDIENCE TABS: [Director] [CTO] [CEO] [Client]
+
+DIRECTOR tab:
+  Headline: "Risk Mitigation + Operational Efficiency"
+  Cards:
+  • "Hours saved per document: 8–12 hours of manual data entry eliminated"
+  • "Accuracy: 90%+ extraction accuracy vs error-prone manual entry"
+  • "Compliance: 100% BAR field coverage — no submission gaps"
+  • "Traceability: Every data point linked back to source PDF page"
+  Callout: "Reduces liability exposure from incomplete asbestos registers"
+
+CTO tab:
+  Headline: "Enterprise-Grade Architecture"
+  Cards:
+  • "Stack: FastAPI + SurrealDB + LangGraph + Next.js 15"
+  • "AI: Multi-provider LLM (OpenAI, Anthropic, Ollama) via Esperanto"
+  • "Extraction: MinerU (ML-based) + Docling fallback — handles merged cells, multi-page tables"
+  • "Protocol: AG-UI + CopilotKit for real-time SSE agent streaming"
+  • "Testing: 245+ tests, E2E CI via GitHub Actions"
+  • "Schema: Config-driven (JSON), no code changes for new BAR fields"
+  Callout: "All processing is local-first — zero external API calls for document extraction"
+
+CEO tab:
+  Headline: "Strategic Compliance Platform"
+  Cards:
+  • "Market: Victorian Government mandatory BAR submissions"
+  • "Delivery: 92% of 122 stories completed, feature complete"
+  • "Velocity: 281 commits across 12 development days (autonomous sprints)"
+  • "Scale: Multi-document, multi-school/site support"
+  Callout: "ACM-AI positions VAEA as the leading compliance intelligence platform for the Victorian public sector"
+
+CLIENT tab:
+  Headline: "What This Means For You"
+  Step-by-step journey:
+  1. 📤 "Upload your PDF asbestos register — drag and drop, any format"
+  2. ⚙️ "Configure site details (Department, Agency, Building Type) once"
+  3. ⏱️ "Wait ~18 seconds — AI extracts all tables automatically"
+  4. 📊 "Review your data in the interactive spreadsheet — sort, filter, search"
+  5. 💬 "Ask questions in plain English: 'What's high risk in Building B?'"
+  6. 📄 "Click to see exactly which PDF page each data row came from"
+  7. 📤 "Export BAR-compliant Excel — ready for government submission"
+  Callout box: "No training needed. No manual data entry. No compliance gaps."
+
+---
+
+## IMPLEMENTATION NOTES
+
+1. Build as a SINGLE React component with default export.
+2. Use useState for: activeSection, pipelineRunning, pipelineStage, 
+   clickedRow, activeAudience, activeExportTab.
+3. The pipeline animation uses setInterval to increment pipelineStage 
+   from 0 to 6, with 800ms per stage. Show log lines appearing with 
+   staggered setTimeout calls.
+4. The spreadsheet row click shows a simple slide-in panel using 
+   conditional rendering and Tailwind transition classes.
+5. All charts use ResponsiveContainer with a fixed height (300px).
+6. The sidebar is fixed-width (220px), content area takes remaining width.
+7. Each section renders as a scrollable div.
+8. Do NOT use localStorage or sessionStorage.
+9. Do NOT use external images — use Lucide icons and coloured div blocks only.
+10. Keep the file under 1000 lines by being concise in JSX. 
+    Use helper functions for repeated patterns (StatCard, StageCard, etc.)
+
+Make this beautiful, professional, and impressive for a government 
+compliance demo. VAEA teal dominant, coral accents for CTAs, 
+navy for technical depth sections.

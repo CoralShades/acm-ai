@@ -1,0 +1,178 @@
+---
+title: Quick Start Guide
+description: Set up ACM-AI and process your first asbestos register PDF in under 10 minutes
+---
+
+# Quick Start Guide
+
+This guide walks through setting up ACM-AI for local development and processing your first asbestos register PDF from upload to BAR export.
+
+## Prerequisites
+
+- Docker Desktop (running)
+- Python 3.11+ with `uv` installed
+- Node.js 18+
+- A Victorian BAR format PDF (Prensa, Greencap, or any consultant format)
+
+## Step 1: Start the Services
+
+**Windows:**
+```batch
+start-all.bat
+```
+
+**macOS/Linux:**
+```bash
+make start-all
+```
+
+This starts:
+- SurrealDB on port 8000
+- FastAPI backend on port 5055
+- Background worker (surreal-commands)
+- Next.js frontend on port 8502
+
+Verify services are running:
+```bash
+make status
+# or on Windows:
+# Open http://localhost:8502 in your browser
+```
+
+## Step 2: Configure AI Models
+
+ACM-AI requires at least one AI provider for the interpretation stage (Stage 2) and chat.
+
+1. Open the application at `http://localhost:8502`
+2. Navigate to **CONFIGURE → AI Models** in the sidebar
+3. Add your API key for at least one provider:
+   - OpenAI (`OPENAI_API_KEY`)
+   - Anthropic (`ANTHROPIC_API_KEY`)
+   - OpenRouter (`OPENROUTER_API_KEY`) — unlocks 6 additional frontier models
+
+**Recommended for extraction:** DeepSeek V3 or Claude Sonnet — strong structured data extraction with tool calling support.
+
+## Step 3: Upload a Document
+
+1. Navigate to **WORKSPACE → Documents** in the sidebar
+2. Click **Upload Document** (or use the CTA button at the top of the sidebar)
+3. Select your PDF file (up to 50 MB)
+4. The Upload Wizard opens — complete the three steps:
+
+### Wizard Step 1: File Selection
+- Drag and drop or click to browse for your PDF
+- Review the detected file size and page count
+
+### Wizard Step 2: Site Configuration
+Enter the metadata that cannot be extracted from the PDF:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| Department | Victorian Government department | DHHS |
+| Agency | Agency within the department | Alexandra District Health |
+| Building Type | Primary use of the building | Hospital |
+| Owned or Leased | Ownership status | Owned |
+| Frequency of Use | How often the building is occupied | Every day |
+| Public Access | Whether the public can access the building | YES |
+| Building Unique ID | Government-assigned building identifier | VIC-DHHS-0042 |
+
+### Wizard Step 3: Extraction Trigger
+- Review the site configuration summary
+- Click **Start Extraction** to begin the 7-stage pipeline
+
+## Step 4: Monitor Extraction Progress
+
+The Extraction Progress Panel appears below the document row in the Document Library.
+
+**Stages you will see:**
+1. Document Structure Analysis — TOC and building inventory
+2. Preflight — format detection and parser selection
+3. Orchestrator — content routing to MinerU/Docling
+4. Extract — verbatim table extraction with provenance
+5. Interpret — BAR normalisation and taxonomy classification
+6. Validate — corrective re-extraction if needed
+7. Enrich and Store — embeddings and SurrealDB write
+
+A typical 20-page PDF completes in approximately 30–60 seconds.
+
+You can also view full pipeline details on the dedicated **CONFIGURE → Extraction Monitor** page.
+
+## Step 5: Review the ACM Register
+
+Once extraction completes:
+
+1. Click on the document row to open the document detail view
+2. Select the **ACM Register** tab
+3. The AG Grid displays all extracted records
+
+**Key grid interactions:**
+
+| Action | How |
+|--------|-----|
+| Sort by column | Click any column header |
+| Filter by risk status | Click the filter icon on the Risk column |
+| Group by building | Click the row group panel (top-left of grid) |
+| Search all fields | Type in the search box in the toolbar |
+| View source PDF page | Click any cell in the grid |
+| Toggle column groups | Use the Columns panel (sidebar icon on the right) |
+
+## Step 6: Verify and Edit Records
+
+Click any row to open the **Record Detail Panel** (slide-out drawer on the right). This shows all 47 BAR fields organised into 8 sections:
+
+1. Organisation Hierarchy
+2. Building Information
+3. Location
+4. ACM Details
+5. Assessment
+6. Documentation
+7. Removal Tracking
+8. Extraction Metadata
+
+Click **Edit** in the panel to correct any extraction errors. Changes are saved immediately to SurrealDB.
+
+## Step 7: Export BAR Data
+
+In the ACM Register toolbar, click **Export**:
+
+- **Export CSV** — All 47 BAR columns in the correct column order (A–AU)
+- **Export Excel** — BAR-compliant `.xlsx` file with the DATA ENTRY sheet
+
+The exported file is ready for submission to VAEA or your agency's compliance management system.
+
+## Step 8: Chat with Your Data
+
+1. Navigate to the **Chat** tab on the document detail view
+2. The ACM Data badge in the chat input indicates that ACM context is enabled
+3. Ask natural-language questions:
+
+**Example questions:**
+- "How many ACM items are in this building?"
+- "Show me all High risk items"
+- "What friable ACM is in the roof space?"
+- "Are there any items with a Poor condition rating?"
+- "Which buildings have the most asbestos?"
+
+The AI responds with cited references — click any `[acm:...]` citation to jump to the record in the spreadsheet.
+
+## Troubleshooting
+
+**Extraction fails at Stage 1 (Extract):**
+- Check that MinerU dependencies are installed (`magic-pdf`, `opencv-python`)
+- The system will automatically fall back to Docling for text-based PDFs
+- Check extraction logs in the Extraction Monitor for specific errors
+
+**No records extracted:**
+- Verify the PDF contains tabular ACM data (not just a text report)
+- Try a different AI model for the interpretation stage (CONFIGURE → AI Models)
+- Check that the site configuration was completed (Department and Agency are required for BAR export)
+
+**Build errors after setup:**
+```bash
+# Backend
+uv sync
+uv run ruff check .
+
+# Frontend
+cd frontend && npm install && npm run build
+```
