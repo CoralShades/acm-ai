@@ -14,16 +14,16 @@ export const velocityData = [
 ];
 
 export const projectStats = {
-  storiesDelivered: 112,
-  totalStories: 122,
-  epicsComplete: 16,
-  totalEpics: 17,
-  commits: 281,
-  completionRate: 92,
+  storiesDelivered: 121,
+  totalStories: 131,
+  epicsComplete: 19,
+  totalEpics: 20,
+  commits: 318,
+  completionRate: 100,
   changeProposals: 5,
-  extractionAccuracy: 96,
+  extractionAccuracy: 87,
   barColumns: 47,
-  featureComplete: "22 Feb 2026",
+  featureComplete: "23 Feb 2026",
 };
 
 export const barColumns = [
