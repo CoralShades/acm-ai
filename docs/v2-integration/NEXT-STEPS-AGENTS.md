@@ -6,15 +6,17 @@ This file is the session-start runbook for follow-on agents.
 
 | Item | Status |
 |------|--------|
-| `git push origin release` | ✅ Done — HEAD is `1bc26b5` |
-| Vercel project A (`acm-marketing-site`) | ✅ Created — `prj_pM0jSF8SLL6xheNPTqt0TWmAasYU` |
-| Vercel project B (`frontend`) | ✅ Exists — `prj_7uWhAMwVWvnKte9HfhxkKBNlbMRz` |
+| `git push origin release` | ✅ Done — HEAD is `f730640` |
+| Vercel project A (`acm-marketing-site`) | ✅ `prj_pM0jSF8SLL6xheNPTqt0TWmAasYU` |
+| Vercel project B (`frontend`) | ✅ `prj_7uWhAMwVWvnKte9HfhxkKBNlbMRz` |
 | Domain `vaea.coralshades.ai` → marketing | ✅ Assigned |
 | Domain `demo.vaea.coralshades.ai` → frontend | ✅ Assigned |
 | `NEXT_PUBLIC_APP_URL` on marketing | ✅ Set |
 | `NEXT_PUBLIC_MARKETING_URL` on frontend | ✅ Set |
 | Frontend deploy to production | ✅ **LIVE** at `demo.vaea.coralshades.ai` |
-| Marketing deploy to production | ⏳ Build in progress / verify complete |
+| Marketing deploy to production | ✅ **LIVE** at `vaea.coralshades.ai` |
+| Cross-link verification | ✅ "Open App" ↔ "Visit Landing" both correct |
+| Legacy alias 301 redirects | ✅ Done (verified 2026-02-23) |
 
 ## Session Start Checklist
 
@@ -37,28 +39,21 @@ curl -sI https://vaea.coralshades.ai | head -5         # should be 200 when buil
 
 ## Priority Work Queue
 
-### P0: Verify Marketing-Site Build ⏳
+### ✅ DONE: Production Routing Verified
 
-Check if the latest Vercel build succeeded:
-```bash
-python3 _debug/check_deploys.py  # state should be READY
-```
+Both sites live and cross-linked:
+- `https://vaea.coralshades.ai` — marketing landing page ✅
+- Marketing `Open App` button → `https://demo.vaea.coralshades.ai` ✅
+- Frontend sidebar `Visit Landing` → `https://vaea.coralshades.ai` ✅
+- Frontend sidebar `Documentation` → `https://vaea.coralshades.ai/docs` ✅
 
-If still ERROR — check build logs on Vercel dashboard:
-- `https://vercel.com/coralshades-projects/acm-marketing-site`
-- Common issue: TypeScript errors or missing peer deps in `marketing-site/package.json`
+### ✅ DONE: Legacy Alias 301 Redirects
 
-### P0: Verify Production Routing ⏳
+Both Vercel auto-generated aliases now redirect to canonical domains (verified with HTTP 301):
+- `frontend-two-alpha-37.vercel.app` → `https://demo.vaea.coralshades.ai/`
+- `acm-marketing-site.vercel.app` → `https://vaea.coralshades.ai/`
 
-1. `https://vaea.coralshades.ai` — should serve the marketing landing page
-2. Marketing `Open App` button → should navigate to `https://demo.vaea.coralshades.ai`
-3. `https://demo.vaea.coralshades.ai` — app sidebar `Visit Landing` link → `https://vaea.coralshades.ai`
-4. `https://demo.vaea.coralshades.ai` — app sidebar `Documentation` link → `https://vaea.coralshades.ai/docs`
-
-### P1: Legacy Alias 301 Redirects
-
-Add 301 redirects from legacy app aliases (e.g. `frontend-two-alpha-37.vercel.app`) to `demo.vaea.coralshades.ai`.
-Can be done in `marketing-site/vercel.json` or Vercel dashboard redirects.
+Set via `PATCH /v9/projects/{id}/domains/{alias}` Vercel API with `{redirect, redirectStatusCode: 301}`.
 
 ### P1: Canonical URL Metadata
 

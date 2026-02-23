@@ -23,7 +23,7 @@ This folder contains the handoff package for the marketing-app integration and V
 | URL | Status | Project |
 |-----|--------|---------|
 | `https://demo.vaea.coralshades.ai` | ✅ **LIVE** | `frontend` (`prj_7uWhAMwVWvnKte9HfhxkKBNlbMRz`) |
-| `https://vaea.coralshades.ai` | ⏳ TS fix pushed, build queued | `acm-marketing-site` (`prj_pM0jSF8SLL6xheNPTqt0TWmAasYU`) |
+| `https://vaea.coralshades.ai` | ✅ **LIVE** | `acm-marketing-site` (`prj_pM0jSF8SLL6xheNPTqt0TWmAasYU`) |
 
 ## Scope Covered
 

@@ -86,7 +86,11 @@ Added/updated:
 - `frontend`: `npm run lint` (previous session)
 - `git push origin release`: ✅ pushed (3 new commits on 2026-02-23)
 - `demo.vaea.coralshades.ai` (frontend): ✅ **LIVE** — sidebar shows "Visit Landing" → `https://vaea.coralshades.ai`
-- `vaea.coralshades.ai` (marketing): ⏳ TS fix pushed (`0c6cbbd`), new build queued
+- `vaea.coralshades.ai` (marketing): ✅ **LIVE** — "Open App" CTA links to `https://demo.vaea.coralshades.ai`
+- Cross-link verification: `demo.vaea.coralshades.ai` sidebar → "Visit Landing" → `https://vaea.coralshades.ai` ✅
+- Verified: 2026-02-23 14:22 UTC
+- `frontend-two-alpha-37.vercel.app` → 301 → `https://demo.vaea.coralshades.ai/` ✅
+- `acm-marketing-site.vercel.app` → 301 → `https://vaea.coralshades.ai/` ✅
 
 ### Blocked in Previous Session (now resolved)
 
