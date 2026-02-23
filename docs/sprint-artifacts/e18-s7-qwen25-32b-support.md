@@ -2,7 +2,7 @@
 
 ## Story Info
 - **Epic**: E18 — Production Hardening & Demo Stability
-- **Status**: review
+- **Status**: in-progress
 - **Priority**: P0
 - **Size**: M (Medium)
 - **Created**: 2026-02-23
@@ -75,6 +75,25 @@ The model is already partially registered:
 - [ ] 6.3 Compare results against `Clutch_Broadmeadows.csv` expected records
 - [ ] 6.4 Document accuracy in Dev Agent Record below
 
+### Task 7: Extraction Pipeline Adaptation — Direct JSON Mode (AC6 prerequisite)
+- [x] 7.1 Add `parse_json_response()` shared helper to `open_notebook/graphs/utils.py`
+- [x] 7.2 Add `_is_qwen_model()` helper to `open_notebook/graphs/acm_extraction.py`
+- [x] 7.3 Reorder `extract_records()` — provision model BEFORE prompt rendering for family detection
+- [x] 7.4 Set temperature=0.0 for Qwen2.5 extraction (deterministic output)
+- [x] 7.5 Add Qwen-aware extraction branch: `ainvoke()` + `parse_json_response()` bypasses `with_structured_output()`
+- [x] 7.6 Refactor existing fallback parser to use shared `parse_json_response()`
+
+### Task 8: Prompt Template Qwen Conditionals
+- [x] 8.1 Add `{%- if model_family == "qwen" %}` JSON schema block to `extraction.jinja`
+- [x] 8.2 Add same conditional block to `building_extraction.jinja`
+
+### Task 9: Orchestrator Qwen Support
+- [x] 9.1 Add Qwen detection + direct JSON path to `orchestrator.py:_llm_extract_building()`
+- [x] 9.2 Pass `model_family` to building_extraction prompt template
+
+### Task 10: Correction Temperature
+- [x] 10.1 Detect Qwen in `_llm_correct_records()` and override temperature to 0.0
+
 ## Technical Notes
 
 ### Existing Infrastructure (No Changes Needed)
@@ -116,8 +135,14 @@ Qwen2.5:32b supports JSON mode natively. LangChain's `with_structured_output()` 
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `api/model_provisioning.py` | MODIFY | Add OpenRouter Qwen2.5 entry to `MODEL_CATALOG`; optionally update `FALLBACK_MODELS` |
+| `api/model_provisioning.py` | MODIFY | Add OpenRouter Qwen2.5 entry to `MODEL_CATALOG`; update `FALLBACK_MODELS` |
 | `.env.example` | MODIFY | Document Qwen2.5:32b as extraction model option |
+| `open_notebook/graphs/utils.py` | MODIFY | Add `parse_json_response()` shared helper |
+| `open_notebook/graphs/acm_extraction.py` | MODIFY | Add `_is_qwen_model()`, reorder provisioning, Qwen branch, refactor fallback |
+| `open_notebook/extractors/orchestrator.py` | MODIFY | Add Qwen detection + JSON-mode path in `_llm_extract_building()` |
+| `prompts/acm/extraction.jinja` | MODIFY | Add Qwen conditional JSON schema block |
+| `prompts/acm/building_extraction.jinja` | MODIFY | Add Qwen conditional JSON schema block |
+| `tests/test_qwen_extraction.py` | CREATE | Unit tests for `_is_qwen_model()` and `parse_json_response()` |
 
 ## Dev Agent Record
 

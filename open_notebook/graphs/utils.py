@@ -1,3 +1,5 @@
+import json
+import re
 from typing import List, Optional
 
 from esperanto import LanguageModel
@@ -85,7 +87,8 @@ def supports_tool_calling(model: BaseChatModel) -> bool:
     """Check if a LangChain model supports tool calling.
 
     Checks the model's supports_tool_calling capability field when available,
-    then falls back to checking for the bind_tools method.
+    then falls back to checking for the bind_tools method.  Models on the
+    blocklist have bind_tools but produce unreliable tool-call output.
 
     Note: For domain-level Model objects use model.supports_tool_calling directly.
     This function operates on LangChain BaseChatModel instances returned by
@@ -94,5 +97,43 @@ def supports_tool_calling(model: BaseChatModel) -> bool:
     if not hasattr(model, "bind_tools"):
         return False
 
+    # Models that technically expose bind_tools but don't reliably produce
+    # well-formed tool_use output (JSON mode works, function calling does not).
+    TOOL_CALLING_BLOCKLIST = ["qwen2.5", "phi4", "gemma-3"]
+    model_name = getattr(model, "model_name", "") or getattr(model, "model", "") or ""
+    if any(blocked in model_name.lower() for blocked in TOOL_CALLING_BLOCKLIST):
+        return False
+
     # Most modern LangChain chat model wrappers support bind_tools
     return callable(model.bind_tools)
+
+
+def parse_json_response(response_text: str):
+    """Extract and parse a JSON object from LLM response text.
+
+    Tries fenced ```json blocks first, then falls back to raw brace-depth
+    matching. Returns the parsed dict. Raises ValueError if no JSON found.
+    """
+    # Try ```json ... ``` blocks first
+    json_match = re.search(
+        r"```(?:json)?\s*\n?(\{.*?\})\s*\n?```",
+        response_text,
+        re.DOTALL,
+    )
+    if json_match:
+        return json.loads(json_match.group(1))
+
+    # Fall back to raw brace-depth matching
+    brace_start = response_text.find("{")
+    if brace_start >= 0:
+        depth = 0
+        for idx, c in enumerate(response_text[brace_start:]):
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    json_str = response_text[brace_start : brace_start + idx + 1]
+                    return json.loads(json_str)
+
+    raise ValueError("No JSON object found in response text")
