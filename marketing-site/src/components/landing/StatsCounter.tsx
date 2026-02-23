@@ -8,19 +8,19 @@ import { cn } from "@/lib/cn";
 
 const stats = [
   {
-    end: 112,
+    end: 121,
     suffix: "",
     label: "Stories Delivered",
     sublabel: "Across 12 active sprints",
   },
   {
-    end: 16,
+    end: 19,
     suffix: "",
     label: "Epics Complete",
     sublabel: "Full feature coverage",
   },
   {
-    end: 281,
+    end: 318,
     suffix: "",
     label: "Commits",
     sublabel: "Autonomous development velocity",
@@ -32,7 +32,7 @@ const stats = [
     sublabel: "Full Victorian Government schema",
   },
   {
-    end: 96,
+    end: 87,
     suffix: "%",
     label: "Extraction Accuracy",
     sublabel: "Against manual ground truth",

@@ -44,12 +44,12 @@ const PHASES: Phase[] = [
   {
     name: "Phase 3",
     label: "Polish",
-    epicIds: ["E13", "E14", "E15", "E16", "E17"],
+    epicIds: ["E13", "E14", "E15", "E16", "E17", "E18", "E19", "E20"],
     color: "text-vaea-green-500",
     bgColor: "bg-vaea-green-500/10",
     borderColor: "border-vaea-green-500/30",
     date: "Feb 2026",
-    achievement: "Knowledge graph visualisation, WCAG 2.1 AA accessibility, real-time SSE extraction monitor, and live AI reasoning with AG-UI.",
+    achievement: "Knowledge graph visualisation, WCAG 2.1 AA accessibility, real-time SSE extraction monitor, live AI reasoning with AG-UI, 87% extraction accuracy, marketing site, and cross-site navigation.",
   },
 ];
 
@@ -72,7 +72,7 @@ const MILESTONES: Milestone[] = [
   {
     date: "Feb 2026",
     title: "Feature Complete",
-    description: "112 / 122 stories delivered across 17 epics. 281 commits. BAR-compliant data pipeline production-ready.",
+    description: "121 / 131 stories delivered across 19 epics. 318 commits. BAR-compliant data pipeline production-ready.",
   },
   {
     date: "Feb 2026",
@@ -82,7 +82,7 @@ const MILESTONES: Milestone[] = [
   {
     date: "Q2 2026",
     title: "Knowledge Graph Intelligence",
-    description: "E20: Cross-document entity resolution, relationship inference, and portfolio-level analytics.",
+    description: "Cross-document entity resolution, relationship inference, and portfolio-level analytics.",
   },
 ];
 
@@ -370,15 +370,15 @@ export default function RoadmapPage() {
               From first commit to feature-complete — and beyond
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
-              17 epics delivered in under 8 weeks of autonomous development. 3 more on the horizon.
+              19 epics delivered in under 8 weeks of autonomous development. More innovation ahead.
             </p>
 
             {/* Quick stats strip */}
             <div className="mt-8 flex flex-wrap gap-6">
               {[
-                { value: "17", label: "Epics complete" },
-                { value: "112", label: "Stories delivered" },
-                { value: "281", label: "Commits" },
+                { value: "19", label: "Epics complete" },
+                { value: "121", label: "Stories delivered" },
+                { value: "318", label: "Commits" },
                 { value: "3", label: "Planned next" },
               ].map((stat) => (
                 <div key={stat.label}>
@@ -659,7 +659,7 @@ export default function RoadmapPage() {
             </h3>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
               ACM-AI went from concept to a feature-complete compliance intelligence platform in under 8 weeks of autonomous AI development.
-              112 stories. 17 epics. 281 commits. Zero manual data entry.
+              121 stories. 19 epics. 318 commits. Zero manual data entry.
             </p>
           </motion.div>
         </section>

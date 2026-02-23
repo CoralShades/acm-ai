@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     template: "%s | ACM-AI",
   },
   description:
-    "AI-powered asbestos compliance management for Victorian Government. Transform PDF registers into BAR-compliant data with 96% accuracy.",
+    "AI-powered asbestos compliance management for Victorian Government. Transform PDF registers into BAR-compliant data with 87% accuracy.",
   keywords: [
     "asbestos",
     "compliance",
@@ -61,8 +61,14 @@ export default function RootLayout({
         className={`${dmSans.variable} ${dmSerif.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-vaea-teal-500 focus:px-4 focus:py-2 focus:text-white focus:outline-none"
+          >
+            Skip to content
+          </a>
           <Navigation />
-          <main>{children}</main>
+          <main id="main-content">{children}</main>
           <Footer />
         </ThemeProvider>
       </body>

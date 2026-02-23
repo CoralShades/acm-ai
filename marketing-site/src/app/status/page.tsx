@@ -8,6 +8,7 @@ import { velocityData, projectStats } from "@/lib/sprint-data";
 import { epics } from "@/lib/epic-data";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { LiveStatusWidget } from "@/components/LiveStatusWidget";
+import { ExtractionAccuracyWidget } from "@/components/ExtractionAccuracyWidget";
 import { useInView } from "@/hooks/useInView";
 
 // ---------------------------------------------------------------------------
@@ -441,9 +442,9 @@ export default function StatusPage() {
   const { ref: epicRef, isInView: epicInView } = useInView({ threshold: 0.1 });
 
   const testSuites = [
-    { label: "Unit Tests", pass: 142, total: 156, pct: 91 },
-    { label: "Integration Tests", pass: 38, total: 42, pct: 90 },
-    { label: "E2E Tests", pass: 24, total: 28, pct: 86 },
+    { label: "Total Tests", pass: 642, total: 813, pct: 79 },
+    { label: "Active Tests", pass: 642, total: 642, pct: 100 },
+    { label: "Pre-existing Failures", pass: 0, total: 171, pct: 0 },
   ];
 
   return (
@@ -517,14 +518,14 @@ export default function StatusPage() {
                 enabled={healthInView}
               />
               <CircularRing
-                percent={94}
+                percent={95}
                 label="Epic completion"
                 color="text-vaea-teal-300"
                 enabled={healthInView}
               />
               <CircularRing
-                percent={87}
-                label="Test coverage"
+                percent={79}
+                label="Test pass rate (642/813)"
                 color="text-vaea-green-500"
                 enabled={healthInView}
               />
@@ -538,6 +539,9 @@ export default function StatusPage() {
               <AnimatedCounter end={projectStats.extractionAccuracy} suffix="%" label="Extraction accuracy" />
             </div>
           </div>
+
+          {/* Extraction Accuracy Widget */}
+          <ExtractionAccuracyWidget className="mt-8" />
         </section>
 
         {/* ── D. Epic Progress Bars ── */}
@@ -623,10 +627,13 @@ export default function StatusPage() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="mb-6 text-xl font-semibold text-foreground"
+            className="mb-2 text-xl font-semibold text-foreground"
           >
             Test Suite
           </motion.h2>
+          <p className="mb-6 text-sm text-muted-foreground">
+            642 passing / 813 total — 171 pre-existing import failures from upstream dependencies
+          </p>
           <motion.div
             variants={staggerContainer}
             initial="hidden"

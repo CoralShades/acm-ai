@@ -42,7 +42,7 @@ const wordVariant = {
 const STATS = [
   { end: 87, label: "Extraction Accuracy", suffix: "%" },
   { end: 47, label: "BAR Columns", suffix: "" },
-  { end: 122, label: "Stories Shipped", suffix: "" },
+  { end: 131, label: "Stories Shipped", suffix: "" },
   { end: 18, label: "Seconds Per PDF", suffix: "s" },
 ];
 

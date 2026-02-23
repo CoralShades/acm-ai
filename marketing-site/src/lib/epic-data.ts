@@ -25,12 +25,15 @@ export const epics: Epic[] = [
   { id: "E15", code: "E15 Monitor", title: "Extraction Monitor & Logging", stories: 2, status: "done", highlight: "Real-time SSE pipeline progress UI", category: "infra" },
   { id: "E16", code: "E16 UX+", title: "UX Enhancement Sprint", stories: 3, status: "done", highlight: "Dashboard home, record detail panel", category: "ux" },
   { id: "E17", code: "E17 Live AI", title: "Live Extraction Intelligence", stories: 6, status: "done", highlight: "AG-UI + A2A agent card + reasoning display", category: "ai" },
+  { id: "E18", code: "E18 Quality", title: "Extraction Quality & Edge Cases", stories: 6, status: "done", highlight: "87% accuracy (27/31 records)", category: "extraction" },
+  { id: "E19", code: "E19 Marketing", title: "Marketing Site & Documentation", stories: 1, status: "done", highlight: "Public-facing marketing site + documentation hub", category: "infra" },
+  { id: "E20", code: "E20 Nav", title: "Cross-Site Navigation", stories: 2, status: "done", highlight: "Domain cutover + cross-site navigation", category: "infra" },
 ];
 
-export const futureEpics = [
-  { id: "E18", title: "Extraction Quality & Edge Cases", status: "planned" as const, description: "Handling edge cases in complex PDFs, improving accuracy to 98%+" },
-  { id: "E19", title: "Marketing Site & Documentation", status: "in-progress" as const, description: "Public-facing marketing site, executive demo, and documentation hub" },
-  { id: "E20", title: "Knowledge Graph Intelligence", status: "planned" as const, description: "Cross-document entity resolution, relationship inference, portfolio analytics" },
+export const futureEpics: Array<{ id: string; title: string; status: "planned" | "in-progress"; description: string }> = [
+  { id: "F1", title: "Extraction 100% Accuracy", status: "planned" as const, description: "Resolve 4 remaining missing records to achieve 100% extraction accuracy" },
+  { id: "F2", title: "Knowledge Graph Intelligence", status: "planned" as const, description: "Cross-document entity resolution, relationship inference, portfolio analytics" },
+  { id: "F3", title: "Production Monitoring & Alerting", status: "planned" as const, description: "Operational dashboards, health checks, and automated alerting for production deployment" },
 ];
 
 export const audienceData: Record<string, { headline: string; cards: string[]; callout: string }> = {
@@ -59,8 +62,8 @@ export const audienceData: Record<string, { headline: string; cards: string[]; c
     headline: "Strategic Compliance Platform",
     cards: [
       "Market: Victorian Government mandatory BAR submissions",
-      "Delivery: 92% of 122 stories completed, feature complete",
-      "Velocity: 281 commits across autonomous development sprints",
+      "Delivery: 100% of 121 active stories completed, feature complete",
+      "Velocity: 318 commits across autonomous development sprints",
       "Scale: Multi-document, multi-site portfolio support",
     ],
     callout: "ACM-AI positions VAEA as the leading compliance intelligence platform for the Victorian public sector",
