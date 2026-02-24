@@ -1,0 +1,23 @@
+# Building Data Schema - 21 Records
+
+{'Building_Data': ['Organisation',
+  'Site Name (if applicable)',
+  'Building Name',
+  'Building Type',
+  'Building Address',
+  'Suburb',
+  'Postcode',
+  'Owned or Leased',
+  'Building Unique ID',
+  'Frequency of use',
+  'Public Access?',
+  'Date of Audit Report',
+  'Estimated Year Built',
+  'Estimated Building Size (m2)',
+  'Number of Levels',
+  'Construction Type',
+  'Roof Type',
+  ' PSB District/Region',
+  'Building Out of Scope',
+  'Building Out of Scope Comments',
+  'Additional Comments']}

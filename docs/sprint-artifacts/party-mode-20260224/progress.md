@@ -1,0 +1,28 @@
+# E19/E20 Sprint Progress Log
+# SCP: sprint-change-proposal-20260224-stakeholder-ux-redesign.md
+# Started: 2026-02-24
+
+## Stories
+
+| Story | Status | Completed | Notes |
+|-------|--------|-----------|-------|
+| E19-S1 | ready-for-dev | — | Migration 032, destructive |
+| E19-S2 | backlog | — | Jobs dashboard |
+| E19-S3 | backlog | — | Feature gating |
+| E19-S4 | backlog | — | Raw extraction table |
+| E19-S5 | backlog | — | Building review wizard |
+| E19-S6 | backlog | — | ACM schema mapping wizard |
+| E19-S7 | backlog | — | Job detail page |
+| E19-S8 | backlog | — | CRUD chat (P1) |
+| E20-S1 | backlog | — | Page boundary fix |
+| E20-S2 | backlog | — | REGEX yield check |
+| E20-S3 | backlog | — | Not sampled capture |
+| E20-S4 | backlog | — | E2E validation (gate: S1+S2+S3 tests must pass first) |
+
+## Session Log
+
+### 2026-02-24
+- Party mode session created all 12 story specs
+- SCP approved and merged into sprint-status.yaml
+- Ralph loop configured: .ralph/PROMPT.md + .ralph/@fix_plan.md
+- E19-S1 advanced to ready-for-dev, loop ready to run
