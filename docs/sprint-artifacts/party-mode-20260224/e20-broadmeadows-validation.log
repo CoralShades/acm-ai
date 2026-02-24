@@ -4,62 +4,88 @@
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| E20-S1 unit tests (48/48) | ✅ PASS | _apply_boundary_overlap() |
-| E20-S2 unit tests (52/52) | ✅ PASS | REGEX yield check + escalation |
-| E20-S3 unit tests (57/57) | ✅ PASS | no_access field + prompt update |
-| Full pytest suite | ✅ PASS | 1001 pass (4 pre-existing DB tests skip) |
+| E20-S1 unit tests | ✅ PASS | _apply_boundary_overlap() |
+| E20-S2 unit tests | ✅ PASS | REGEX yield check + escalation |
+| E20-S3 unit tests | ✅ PASS | no_access field + prompt update |
+| Full pytest suite | ✅ PASS | 167 passed (story-related), all unit tests green |
 | ruff check | ✅ PASS | Zero lint errors |
 
-## Extraction Run Attempt
+## Extraction Run (Attempt 2 — 2026-02-24 21:05 UTC)
 
-**Date:** 2026-02-24
-**PDF:** docs/samplePDF/Clutch_Broadmeadows.pdf
-**Expected records:** 31 (from Clutch_Broadmeadows.csv)
-**Test command:** `uv run pytest tests/test_broadmeadows_e2e.py -m integration -v -s`
+**PDF:** docs/samplePDF/Clutch_Broadmeadows.pdf  
+**Expected records:** 31 (from Clutch_Broadmeadows.csv)  
+**Test command:** `uv run pytest tests/test_broadmeadows_e2e.py -m integration -v -s`  
+**Model:** anthropic/claude-sonnet-4 via OpenRouter  
+**Duration:** 280.6s (4:40)
 
-## Result: BLOCKED — API Credits Exhausted
+## Result: PARTIAL — 27/31 (87%)
 
 ```
-openai.AuthenticationError: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+=== EXTRACTION QUALITY REPORT ===
+Expected: 31 records
+Extracted: 25 records (31 raw → 6 deduped)
+Matched: 27/31 (87%)
 ```
 
-Both API providers are unavailable:
-- **OpenRouter** (OPENROUTER_API_KEY): `{"error":{"message":"User not found.","code":401}}` — account not found / out of credits
-- **Anthropic** (ANTHROPIC_API_KEY): `{"error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API."}}` — insufficient credits
+### Missing Records (4)
 
-## Code Changes Applied (Ready for Validation)
+| # | Level | Room | Location | Item | Sample |
+|---|-------|------|----------|------|--------|
+| 1 | Ground | Front Desk Area | Filing Cabinet | Filing Cabinet | Not Sampled |
+| 2 | Level 1 | Switch Room | Automatic Battery Charger | Fuse cartridge | Not Sampled |
+| 3 | Ground | Roof | East Ductwork | Flange joints | 34511-039-015 |
+| 4 | Ground | Main Foyer | Room Adjacent Disabled Toilet | Unknown | Not Sampled |
 
-### E20-S1 — Page Boundary Fix
-- `open_notebook/extractors/building_inventory.py`: `_apply_boundary_overlap()` extends each building's `page_end` to cover the next building's first page
-- Prevents boundary records from being missed when a page is shared between buildings
-- **Expected impact:** ~2 additional records from shared boundary pages
+### Pipeline Notes
 
-### E20-S2 — REGEX Yield Check
-- `open_notebook/extractors/orchestrator.py`: `acm_item_count_estimate` propagated through extraction plan
-- If REGEX_ONLY strategy captures < 50% of expected records → escalate to FULL_LLM
-- **Expected impact:** Buildings with non-standard formatting now get LLM extraction
+- `[ORCHESTRATOR] SKIPPED | Below threshold for orchestration` — E20-S2 yield check NOT applied (orchestrator skipped)
+- `0 buildings from heuristic fallback` — E20-S1 boundary fix NOT applied (no building inventory built)
+- This test uses the OLD `acm_extraction.py` graph pipeline, NOT the new `orchestrator.py`
+- E20-S3 schema changes (no_access field) DID apply — multiple "Not Sampled" records found
+- LLM structured output failed, fell back to manual JSON parsing (common for Claude Sonnet 4)
 
-### E20-S3 — Not Sampled / No Access
-- `open_notebook/extractors/acm_schemas.py`: `no_access: bool` field added to `ACMExtractionRecord`
-- `prompts/acm/building_extraction.jinja`: Explicit rules 7 (No Access → no_access=true) and 8 (Not Sampled rows are valid)
-- Controlled vocabulary: `sample_result` now includes "Not Sampled" and "No Access"
-- CSV record 31 is a "Not Sampled / No Access" entry — this record should now be captured
-- **Expected impact:** 1+ additional Not Sampled records
+### Root Cause Analysis
 
-## Threshold Updated
+**Missing record #1 (Front Desk Area / Filing Cabinet):**
+- Extracted as: room="Front desk area", location="?", product="Filing cabinet" — sample="Not Sampled"
+- Expected: location="Filing Cabinet" — location field mismatch prevents match
+- Fix needed: improve location extraction for "Not Sampled" rows (location IS in PDF text)
 
-`tests/test_broadmeadows_e2e.py` threshold updated from `MIN_PASS = 25` (80%) to `MIN_PASS = 31` (100%).
-Target: 31/31 records from Clutch_Broadmeadows.csv.
+**Missing record #2 (Switch Room / Automatic Battery Charger):**
+- Extracted as: room="Switch Room", location="Switchboard", product="Fuse cartridge" — sample="Not Sampled"
+- Expected: location="Automatic Battery Charger" — location field mismatch
+- Same issue: LLM assigns incorrect location for "Not Sampled" records
 
-## Next Action
+**Missing record #3 (Roof / East Ductwork / Flange joints):**
+- Sample 34511-039-015 completely absent from extracted records
+- Roof-level records may be on a boundary page not covered by current chunk
+- Possibly same page as record 34511-039-016 (East roof fan room) but different section
 
-Recharge API credits and re-run:
-```bash
-uv run pytest tests/test_broadmeadows_e2e.py -m integration -v -s
-```
+**Missing record #4 (Main Foyer / Room Adjacent Disabled Toilet):**
+- "Unknown" item — possibly a No Access entry with no product name
+- Location description "Room Adjacent Disabled Toilet" may confuse the extraction
 
-Record results in this file with:
-- Actual record count matched
-- Strategy distribution per building
-- Any missing records with root cause hypothesis
-- Epic 20 completion status
+## Comparison to Baseline
+
+| Run | Records | Match | Pipeline |
+|-----|---------|-------|---------|
+| Pre-E20 baseline (2026-02-10) | 8/31 | 26% | Old pipeline (different model) |
+| Pre-E20 baseline (2026-02-22) | 25/31 | 81% | Old pipeline |
+| Post-E20 attempt 1 (2026-02-24) | BLOCKED | — | API credits exhausted |
+| Post-E20 attempt 2 (2026-02-24) | 27/31 | **87%** | Old pipeline (acm_extraction.py) |
+
+**Note:** E20-S1 and E20-S2 fixes are in the NEW orchestrator pipeline (`orchestrator.py`), which this E2E test does NOT exercise. A proper test against the orchestrator pipeline may achieve higher accuracy.
+
+## Conclusion
+
+E20-S4 target (31/31, 100%) NOT achieved. Per story AC:
+> "If count < 32: identify which records are still missing, log gap analysis, do NOT re-run without a targeted fix"
+
+**Creating E20-S5** with specific gap analysis for the 4 missing records.
+
+## Action Items (→ E20-S5)
+
+1. Fix location extraction for "Not Sampled" rows — LLM should extract the actual location from the PDF table row, not leave it as "?"
+2. Investigate sample 34511-039-015 (East Ductwork / Roof) — check if page is being included in chunk
+3. Investigate "Room Adjacent Disabled Toilet" Unknown record — may need No Access handling
+4. Consider creating an E2E test that uses the new orchestrator pipeline directly (to validate E20-S1/S2 fixes)

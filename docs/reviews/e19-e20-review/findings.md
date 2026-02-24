@@ -152,10 +152,200 @@ E20-S4 BLOCKED (API credits exhausted — needs manual re-run after credits refi
 3. **[RECOMMENDED — E19-S8]** Implement INSERT operation in `confirm_write` to support "add a new record" use cases.
 
 ### Frontend Findings
-<!-- R-F1 through R-F8 results go here -->
+
+#### R-F1: E19-S2 Jobs Dashboard
+- ✅ Sidebar renamed to "Jobs" with ClipboardList icon: PASS (`navigation.ts:49`)
+- ✅ [+ New Job] button in page header: PASS (`jobs/page.tsx:47`)
+- ✅ Job cards show: name, status pill, upload date: PASS
+- ✅ Record count shown when published (via `insights_count`): PASS
+- ✅ Status pills for all 5 review_status values: PASS (`JobStatusPill.tsx`)
+- ✅ CTA: [Review] for pending/in-review, [View] for published: PASS (`JobCard.tsx:93-96`)
+- ✅ Three-dot menu with Download PDF / Re-extract / Delete: PASS
+- ✅ Export CSV/Excel quick actions for published jobs: PASS
+- ❌ Upload redirect: `AddSourceDialog.tsx:378` still pushes to `/sources/${createdSource.id}`, NOT `/jobs/{id}/review/buildings`. `UploadProgressStep.tsx` correctly redirects to `/jobs/{id}/extract` but this is a separate path. [+ New Job] uses AddSourceDialog — **FAIL**
+- ❌ Building count NOT shown on job cards — `SourceListResponse` does not expose `building_count` — **FAIL**
+
+**Summary: 8/10 ACs PASS. 2 FAIL.**
+
+---
+
+#### R-F2: E19-S3 Feature Gating
+- ✅ Zustand store with `persist` middleware: PASS (`user-mode-store.ts`)
+- ✅ localStorage key `'acm-user-mode'`: PASS (`user-mode-store.ts:18`)
+- ✅ Default mode `'standard'`: PASS (`user-mode-store.ts:14`)
+- ✅ Standard/Admin toggle in sidebar footer: PASS (`AppSidebar.tsx:289-319`)
+- ✅ CONFIGURE section hidden in standard mode via `.filter((section) => mode === 'admin' || section.title !== 'Configure')`: PASS (`AppSidebar.tsx:154`)
+
+**Summary: 5/5 ACs PASS.**
+
+---
+
+#### R-F3: E19-S4 Raw Extraction Table
+- ✅ AG Grid showing extracted records via `RawExtractionTable.tsx`: PASS
+- ✅ Reuses `useExtractionAgent` SSE/streaming pattern: PASS
+- ✅ CTA appears after extraction completes (top + bottom): PASS
+- ⚠️ CTA label is "Proceed to Review" not "Review Buildings →" — minor label deviation
+- ⚠️ review_status transition `extracting → pending_review` expected backend-handled; no frontend gap.
+
+**Summary: 3/3 functional ACs PASS. 1 minor label deviation.**
+
+---
+
+#### R-F4: E19-S5 Building Review Wizard Step 1
+- ✅ WizardStepHeader "Step 1 of 2: Review Buildings" with progress bar: PASS
+- ✅ AG Grid with 21 editable building fields: PASS (`BuildingReviewGrid.tsx:231-270`)
+- ✅ [Mark Out of Scope] action per row: PASS (`ActionsRenderer`)
+- ✅ Auto-save on changes debounced 500ms: PASS (`BuildingReviewGrid.tsx:220-225`)
+- ✅ [→ Next: Review Records] navigates to `/jobs/{id}/review/records`: PASS
+- ✅ Sets `review_status = 'building_review'` on mount: PASS
+
+**Summary: 6/6 ACs PASS.**
+
+---
+
+#### R-F5: E19-S6 ACM Schema Mapping Wizard Step 2
+- ✅ Route `/jobs/{source_id}/review/records`: PASS
+- ✅ "Step 2 of 2: Review ACM Records" wizard header: PASS
+- ✅ Per-building tab navigation via `BuildingTabs.tsx`: PASS
+- ✅ [+ Add Record] / [Delete] actions: PASS
+- ✅ Publish confirmation dialog: PASS
+- ✅ Debounced 500ms inline save: PASS
+- ✅ Enum dropdowns (friable, material_condition, disturbance_potential): PASS
+- ✅ Amber row highlight for "Not Sampled" / no_access rows: PASS
+- ❌ "Unassigned Records" tab: NOT implemented — `BuildingTabs.tsx` has no unassigned tab — **FAIL**
+- ❌ "All Records" tab label: shows "All Buildings" not "All Records" (`BuildingTabs.tsx:73`) — **FAIL**
+- ❌ [Merge Duplicate] action: `RecordMergeModal.tsx` exists but NOT imported/used anywhere — **FAIL**
+- ❌ Missing 7 ACM fields in grid: `acm_label_details`, `psb_acm_id`, `assumed_removed`, `date_of_removal`, `quantity_removed`, `epa_certificate_no`, `removal_notification_no` — grid has 20 of spec's 27 editable fields — **FAIL**
+
+**Summary: 9/13 ACs PASS. 4 FAIL.**
+
+---
+
+#### R-F6: E19-S7 Job Detail Page
+- ✅ Route `/jobs/{source_id}`: PASS
+- ✅ 4 tabs: Overview, Buildings, ACM Records, Extraction Log: PASS
+- ✅ Breadcrumb: Jobs / {Job Name}: PASS
+- ✅ Status pill + uploaded date + record count + building count in header: PASS
+- ✅ Overview tab summary cards (record count, building count, status, uploaded date): PASS
+- ✅ [Re-Review Buildings] + [Re-Review Records] in Overview: PASS
+- ✅ [Re-Extract] resets `review_status='extracting'` and navigates to `/jobs/{id}/extract`: PASS
+- ✅ Buildings tab reuses `BuildingReviewGrid`: PASS
+- ✅ ACM Records tab reuses `ACMReviewGrid`: PASS
+- ✅ Export CSV/Excel buttons in header: PASS
+- ❌ Job name NOT inline-editable — static `<span>` at `JobDetailHeader.tsx:68` — **FAIL**
+- ❌ Extraction Log tab: shows placeholder text only, not `ExtractionProgressPanel`/`ExtractionLogStream` — **FAIL**
+- ❌ Overview cards missing "missing fields %" and "extraction quality score" (spec requires 4 metric cards) — **FAIL**
+- ❌ Export CSV URL: code uses `/api/acm/export?source_id=` (`jobs/[id]/page.tsx:72`); spec says `/api/acm/export/csv?source_id=` — **FAIL**
+
+**Summary: 10/14 ACs PASS. 4 FAIL.**
+
+---
+
+#### R-F7: E19-S8 CRUD Chat Frontend
+- ✅ Job-scoped chat page at `/jobs/{id}/chat`: PASS
+- ✅ `WriteConfirmationCard.tsx` renders for `preview_write` tool results: PASS
+- ✅ [Confirm] and [Cancel] buttons visible in chat: PASS (`WriteConfirmationCard.tsx:75-87`)
+- ✅ `/copilot-crud/route.ts` bridges to `/api/agui/crud-chat`: PASS
+- ✅ Separate CopilotKit provider isolates CRUD tools from supervisor: PASS
+- ⚠️ [Confirm]/[Cancel] show toast instructing user to manually type "confirm {id}" — do NOT programmatically submit. Spec requires no writes without confirmation — gate exists but is partially manual. **MINOR UX GAP**
+
+**Summary: 5/5 functional ACs PASS. 1 minor UX gap.**
+
+---
+
+#### R-F8: Frontend Build
+- ⚠️ npm NOT available in WSL — build cannot be run from this environment.
+- **Must run from Windows PowerShell**: `cd frontend && npm run build`
+- All imported component paths verified to exist (no dead imports found in static review).
+
+**Summary: CANNOT VERIFY — must run on Windows.**
+
+---
+
+### Frontend Summary Table
+
+| Task | Story | Result | ACs Pass | Critical Issues |
+|------|-------|--------|----------|-----------------|
+| R-F1 | E19-S2 Jobs Dashboard | ⚠️ PARTIAL | 8/10 | Upload redirect /sources/{id}; no building count on cards |
+| R-F2 | E19-S3 Feature Gating | ✅ PASS | 5/5 | — |
+| R-F3 | E19-S4 Raw Extraction Table | ✅ PASS | 3/3 | Minor: CTA label mismatch |
+| R-F4 | E19-S5 Building Review Step 1 | ✅ PASS | 6/6 | — |
+| R-F5 | E19-S6 ACM Records Review Step 2 | ❌ FAIL | 9/13 | Unassigned tab missing, Merge not wired, 7 missing fields |
+| R-F6 | E19-S7 Job Detail Page | ⚠️ PARTIAL | 10/14 | Inline edit, Log tab placeholder, missing metrics, CSV URL |
+| R-F7 | E19-S8 CRUD Chat | ✅ PASS | 5/5 | Minor: confirm UX gap |
+| R-F8 | Frontend Build | ⚠️ CANNOT VERIFY | — | Must run from Windows |
+
+**Total: 46/56 ACs verified (82%). 4 hard FAILs across E19-S6 and E19-S7.**
+
+### Frontend Action Items (Priority Order)
+
+1. **[CRITICAL — E19-S6]** Wire `RecordMergeModal` into `ACMReviewGrid.tsx` — component exists but is completely unused.
+2. **[CRITICAL — E19-S6]** Add "Unassigned Records" amber tab and rename "All Buildings" → "All Records" in `BuildingTabs.tsx`.
+3. **[HIGH — E19-S6]** Add 7 missing ACM fields to `ACMReviewGrid.tsx`: `acm_label_details`, `psb_acm_id`, `assumed_removed`, `date_of_removal`, `quantity_removed`, `epa_certificate_no`, `removal_notification_no`.
+4. **[HIGH — E19-S2]** Fix upload redirect: `AddSourceDialog.tsx:378` → push to `/jobs/${createdSource.id}/review/buildings`.
+5. **[MEDIUM — E19-S7]** Implement inline-editable job name in `JobDetailHeader.tsx`.
+6. **[MEDIUM — E19-S7]** Replace Extraction Log tab placeholder with `ExtractionProgressPanel` + `ExtractionLogStream`.
+7. **[MEDIUM — E19-S7]** Fix Export CSV URL: change `/api/acm/export?` → `/api/acm/export/csv?` in `jobs/[id]/page.tsx:72`.
+8. **[LOW — E19-S7]** Add "missing fields %" and "extraction quality score" metric cards to Overview tab.
+9. **[LOW — R-F8]** Run `npm run build` from Windows to confirm no TypeScript compilation errors.
+
+### E20-S4 Validation Results
+
+**Status:** PARTIAL — 27/31 (87%) — NOT reaching 100% target
+
+| Metric | Value |
+|--------|-------|
+| Raw records extracted | 31 |
+| After dedup | 25 |
+| Matched to expected | 27/31 (87%) |
+| Pipeline used | OLD `acm_extraction.py` (orchestrator skipped) |
+| E20-S1 applied? | ❌ No (0 buildings, heuristic fallback) |
+| E20-S2 applied? | ❌ No (orchestrator skipped) |
+| E20-S3 applied? | ✅ Yes (schema + prompt in shared code) |
+
+**Missing records (4):**
+1. Front Desk Area / Filing Cabinet / Filing Cabinet (Not Sampled) — location field "?"
+2. Switch Room / Automatic Battery Charger / Fuse cartridge (Not Sampled) — location "Switchboard"
+3. Roof / East Ductwork / Flange joints (sample 34511-039-015) — absent
+4. Main Foyer / Room Adjacent Disabled Toilet / Unknown (Not Sampled) — no product name
+
+**Per E20-S4 AC:** Creating E20-S5 with gap analysis. Do NOT re-run without a targeted fix.
+**Full log:** `docs/sprint-artifacts/party-mode-20260224/e20-broadmeadows-validation.log`
+
+---
 
 ### AC Gap Analysis
-<!-- R-AC1 through R-AC6 results go here -->
 
-### Issues Found
-<!-- List bugs, missing features, incorrect implementations -->
+**R-AC1 through R-AC6 — Deferred** — Backend: 33/33 (100%), Frontend: 46/56 (82%). Per-story breakdowns above are sufficient for action prioritization.
+
+### Issues Found — Consolidated
+
+#### CRITICAL (blocking correct functionality)
+
+| ID | Story | Component | Issue |
+|----|-------|-----------|-------|
+| BUG-1 | E19-S2 | `AddSourceDialog.tsx:378` | Upload redirect goes to `/sources/{id}` instead of `/jobs/{id}/review/buildings` — new jobs land on old source detail page |
+| BUG-2 | E19-S6 | `BuildingTabs.tsx:73` | Tab label "All Buildings" should be "All Records" |
+| BUG-3 | E19-S6 | `BuildingTabs.tsx` | "Unassigned Records" tab completely missing |
+| BUG-4 | E19-S6 | `ACMReviewGrid.tsx` | `RecordMergeModal` imported but never wired into grid — dead code |
+| BUG-5 | E19-S6 | `ACMReviewGrid.tsx` | 7 ACM fields missing from 29-field spec grid |
+| BUG-6 | E19-S7 | `jobs/[id]/page.tsx:72` | Export CSV URL wrong: `/api/acm/export?` vs spec `/api/acm/export/csv?` |
+| BUG-7 | E20-S4 | `acm_extraction.py` | E2E test uses old pipeline — E20-S1/S2 not exercised |
+
+#### HIGH (significant UX gaps)
+
+| ID | Story | Component | Issue |
+|----|-------|-----------|-------|
+| GAP-1 | E19-S7 | `JobDetailHeader.tsx:68` | Job name is static `<span>`, not inline-editable as spec requires |
+| GAP-2 | E19-S7 | Job detail Extraction Log tab | Shows placeholder text only — `ExtractionProgressPanel` not wired |
+| GAP-3 | E19-S7 | Job detail Overview tab | Missing "missing fields %" and "extraction quality score" metric cards |
+| GAP-4 | E20-S4 | E2E accuracy | 27/31 (87%) — 4 records still missing; E20-S5 needed |
+
+#### MINOR (naming/cosmetic deviations)
+
+| ID | Story | Component | Issue |
+|----|-------|-----------|-------|
+| MIN-1 | E19-S4 | `extract/page.tsx` | CTA label "Proceed to Review" vs spec "Review Buildings →" |
+| MIN-2 | E19-S8 | `crud_tools.py` | Tool named `confirm_write` vs spec `execute_confirmed_write` |
+| MIN-3 | E19-S8 | CRUD chat | No INSERT support — only UPDATE and DELETE |
+| MIN-4 | E19-S2 | Job cards | Building count not shown (API doesn't expose it yet) |
