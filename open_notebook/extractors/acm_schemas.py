@@ -17,7 +17,13 @@ from pydantic import BaseModel, Field, field_validator
 from open_notebook.domain.acm import ExtractionConfidence
 
 # BAR field enums — canonical allowed values
-RESULT_VALUES = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+RESULT_VALUES = {
+    "Positive",
+    "Assumed Positive",
+    "Negative",
+    "Assumed Negative",
+    "Unknown",
+}
 FRIABLE_VALUES = {"Friable", "Non Friable"}
 RISK_STATUS_VALUES = {"Low", "Medium", "High"}
 MATERIAL_CONDITION_VALUES = {"Good", "Fair", "Poor", "Damaged"}
@@ -176,7 +182,12 @@ class ACMExtractionRecord(BaseModel):
         default=None, description="Sample identification number"
     )
     sample_result: Optional[str] = Field(
-        default=None, description="Laboratory analysis result"
+        default=None,
+        description="Laboratory analysis result or sampling status: 'Positive', 'Assumed Positive', 'Negative', 'Assumed Negative', 'Not Sampled', 'No Access'",
+    )
+    no_access: bool = Field(
+        default=False,
+        description="True if the room/area was inaccessible and could not be sampled (e.g., 'No Access', 'Height Restriction', 'Restricted Access' entries)",
     )
     identifying_company: Optional[str] = Field(
         default=None, description="Hygiene consulting company name"
@@ -220,7 +231,9 @@ class ACMExtractionRecord(BaseModel):
             for valid in RESULT_VALUES:
                 if v.strip().lower() == valid.lower():
                     return valid
-            raise ValueError(f"result must be one of {sorted(RESULT_VALUES)}, got '{v}'")
+            raise ValueError(
+                f"result must be one of {sorted(RESULT_VALUES)}, got '{v}'"
+            )
         return normalized
 
     @field_validator("friable", mode="before")
@@ -249,7 +262,9 @@ class ACMExtractionRecord(BaseModel):
         normalized = v.strip().title()
         if normalized in RISK_STATUS_VALUES:
             return normalized
-        raise ValueError(f"risk_status must be one of {sorted(RISK_STATUS_VALUES)}, got '{v}'")
+        raise ValueError(
+            f"risk_status must be one of {sorted(RISK_STATUS_VALUES)}, got '{v}'"
+        )
 
     @field_validator("material_condition", mode="before")
     @classmethod
@@ -275,7 +290,9 @@ class ACMExtractionRecord(BaseModel):
         normalized = v.strip().title()
         if normalized in AREA_TYPE_VALUES:
             return normalized
-        raise ValueError(f"area_type must be one of {sorted(AREA_TYPE_VALUES)}, got '{v}'")
+        raise ValueError(
+            f"area_type must be one of {sorted(AREA_TYPE_VALUES)}, got '{v}'"
+        )
 
     @field_validator("quantity", mode="before")
     @classmethod

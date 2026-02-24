@@ -16,7 +16,7 @@
 | E19-S8 | done | 2026-02-24 | CRUD chat — crud_tools.py, crud_agent.py, /api/agui/crud-chat, WriteConfirmationCard, /jobs/[id]/chat, copilot-crud runtime |
 | E20-S1 | done | 2026-02-24 | Page boundary fix — _apply_boundary_overlap(), 5 new unit tests, 48/48 pass |
 | E20-S2 | done | 2026-02-24 | REGEX yield check — acm_item_count_estimate on plan, escalation logic, 5 new tests, 52/52 pass |
-| E20-S3 | backlog | — | Not sampled capture |
+| E20-S3 | done | 2026-02-24 | Not Sampled / No Access — no_access field on ACMExtractionRecord, prompt updated (rules 7-8, controlled vocab, output fields), 5 new tests, 1001/1001 pass |
 | E20-S4 | backlog | — | E2E validation (gate: S1+S2+S3 tests must pass first) |
 
 ## Session Log

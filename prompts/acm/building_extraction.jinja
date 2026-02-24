@@ -219,17 +219,24 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
    - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"
    - Assumed/Presumed ACM → result: "Assumed Positive"
    - `>>> NO ASBESTOS:` or `No Asbestos` or `Not Detected` or `NAD` or `Negative` → result: "Negative"
-   - `>>> NO ACCESS ENTRY:` or "No access" or "Height restriction" or "Restricted Access" or "Presumed ACM" → result: "Assumed Positive", sample_no: "Not Sampled"
+   - `>>> NO ACCESS ENTRY:` or "No access" or "Height restriction" or "Restricted Access" → result: "Assumed Positive", sample_result: "Not Sampled", no_access: true, sample_no: "Not Sampled"
+   - "Presumed ACM" (without explicit no-access note) → result: "Assumed Positive", sample_result: "Assumed Positive"
    - Assumed/Presumed no asbestos → result: "Assumed Negative"
 4. **For Negative/Assumed Negative records**: set friable to "N/A (negative)", material_condition to "N/A (negative)", disturbance_potential to "N/A (negative)"
 5. **For Assumed Negative records**: use "N/A (assumed negative)" instead
 6. **SKIP** page headers, footers, legends, and methodology text
 7. **"No Access" / "Restricted Access" / "Height Restriction" entries are VALID register rows — do NOT skip them.**
    - These indicate areas where sampling could not be performed due to physical access constraints
-   - Extract them as normal ACM records with result: "Assumed Positive" and sample_result: "Assumed Positive"
+   - Extract them as normal ACM records with result: "Assumed Positive", sample_result: "Not Sampled", **no_access: true**
    - Set sample_no to "Not Sampled" if no sample number is given
    - Add a note to `data_issues` describing the access restriction (e.g., "No access — unable to sample")
    - These items are presumed to contain asbestos until proven otherwise by future sampling
+8. **"Not Sampled" entries are VALID register rows — do NOT skip them.**
+   - Some items are in the register but sampling was not performed (e.g., inaccessible material, safety restrictions, cost constraints)
+   - Extract these as ACM records with sample_result: "Not Sampled"
+   - Set result to "Assumed Positive" if no test result is recorded
+   - **Do NOT skip rows just because `sample_no` is empty or absent** — a missing sample number does NOT mean the item should be excluded
+   - Include rows where `sample_result` is "Not Sampled" or "No Access": these are valid ACM records even if no sample number exists
 
 **WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL. This includes "No access" and "Restricted Access" entries.
 
@@ -237,7 +244,7 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 
 The following fields MUST use values from the Victorian BAR controlled vocabulary:
 
-- **sample_result**: `Positive`, `Assumed Positive`, `Negative`, `Assumed Negative`
+- **sample_result**: `Positive`, `Assumed Positive`, `Negative`, `Assumed Negative`, `Not Sampled`, `No Access`
 - **material_condition**: `Poor`, `Fair`, `Good`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)`
 - **friable**: `Non-friable`, `Friable`
 - **disturbance_potential**: `High`, `Moderate`, `Low`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)`
@@ -330,8 +337,9 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 
 ### Highly Recommended Fields (extract if available)
 
-- `sample_result`: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
-- `sample_no`: Sample identification number (e.g., "J169642-001-001")
+- `sample_result`: "Positive", "Assumed Positive", "Negative", "Assumed Negative", "Not Sampled", or "No Access" — **include "Not Sampled" / "No Access" rows even when no sample_no exists**
+- `sample_no`: Sample identification number (e.g., "J169642-001-001") — optional; leave null if not sampled
+- `no_access`: true if the room/area was inaccessible (No Access, Height Restriction, Restricted Access entries)
 - `room_name`: Room or area name (e.g., "Boiler Room", "External", "Ward 12")
 - `area_type`: "Interior" or "Exterior"
 - `location`: Location within room (e.g., "Throughout", "Under sink", "Above ceiling")
