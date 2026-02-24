@@ -9,7 +9,7 @@
 - [x] E19-S2: Jobs Dashboard — replace Documents library with Jobs dashboard, review_status pills — spec: docs/sprint-artifacts/e19-s2-jobs-dashboard.md
 - [x] E19-S3: Feature Gating — Standard/Admin mode toggle, hide CONFIGURE for standard users — spec: docs/sprint-artifacts/e19-s3-feature-gating.md
 - [x] E19-S4: Raw Extraction Table — live AG Grid during and after extraction — spec: docs/sprint-artifacts/e19-s4-raw-extraction-table.md
-- [ ] E19-S5: Building Review Wizard Step 1 — 21-field building mapping AG Grid — spec: docs/sprint-artifacts/e19-s5-building-review-wizard.md
+- [x] E19-S5: Building Review Wizard Step 1 — 21-field building mapping AG Grid — spec: docs/sprint-artifacts/e19-s5-building-review-wizard.md
 - [ ] E19-S6: ACM Schema Mapping Wizard Step 2 — 29-field ACM grid, publish endpoint — spec: docs/sprint-artifacts/e19-s6-acm-schema-mapping-wizard.md
 - [ ] E19-S7: Job Detail Page — 4-tab permanent job page (Overview, Buildings, ACM Records, Extraction Log) — spec: docs/sprint-artifacts/e19-s7-job-detail-page.md
 - [ ] E19-S8 (P1): Conversational CRUD Chat — job-scoped CRUD chat with preview_write confirmation — spec: docs/sprint-artifacts/e19-s8-conversational-crud-chat.md

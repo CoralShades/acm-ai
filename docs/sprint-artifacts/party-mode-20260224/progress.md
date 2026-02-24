@@ -10,7 +10,7 @@
 | E19-S2 | done | 2026-02-24 | Jobs dashboard — JobCard, JobStatusPill, /jobs route, redirect from /documents |
 | E19-S3 | done | 2026-02-24 | Feature gating — user-mode-store, sidebar Standard/Admin toggle |
 | E19-S4 | done | 2026-02-24 | Raw extraction table — RawExtractionTable AG Grid, /jobs/[id]/extract page |
-| E19-S5 | backlog | — | Building review wizard |
+| E19-S5 | done | 2026-02-24 | Building review wizard — WizardStepHeader, BuildingReviewGrid (21-field AG Grid), /jobs/[id]/review/buildings, GET+PUT /api/acm/jobs/{id}/buildings, site_config extended |
 | E19-S6 | backlog | — | ACM schema mapping wizard |
 | E19-S7 | backlog | — | Job detail page |
 | E19-S8 | backlog | — | CRUD chat (P1) |

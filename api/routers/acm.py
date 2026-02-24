@@ -35,6 +35,8 @@ from api.models import (
     BackfillParentsResponse,
     BatchClassifyRequest,
     BatchClassifyResponse,
+    BuildingResponse,
+    BuildingUpdateRequest,
     BusinessRuleResponse,
     ClassifyRequest,
     ClassifyResponse,
@@ -287,20 +289,50 @@ async def _get_export_mapping() -> tuple[list[str], list[str | None]]:
 
     # Fallback to hardcoded defaults
     headers = [
-        "Building Code", "Building Name", "Room ID", "Room Name",
-        "Floor Level", "Product", "Material Description", "Extent",
-        "Location", "Friable", "Condition", "Risk Status", "Result",
-        "Sample No", "Sample Result", "Quantity", "ACM Labelled",
-        "Disturbance Potential", "Identifying Company",
-        "Hygienist Recommendations", "Page Number",
+        "Building Code",
+        "Building Name",
+        "Room ID",
+        "Room Name",
+        "Floor Level",
+        "Product",
+        "Material Description",
+        "Extent",
+        "Location",
+        "Friable",
+        "Condition",
+        "Risk Status",
+        "Result",
+        "Sample No",
+        "Sample Result",
+        "Quantity",
+        "ACM Labelled",
+        "Disturbance Potential",
+        "Identifying Company",
+        "Hygienist Recommendations",
+        "Page Number",
     ]
     fields: list[str | None] = [
-        "building_id", "building_name", "room_id", "room_name",
-        "floor_level", "product", "material_description", "extent",
-        "location", "friable", "material_condition", "risk_status", "result",
-        "sample_no", "sample_result", "quantity", "acm_labelled",
-        "disturbance_potential", "identifying_company",
-        "hygienist_recommendations", "page_number",
+        "building_id",
+        "building_name",
+        "room_id",
+        "room_name",
+        "floor_level",
+        "product",
+        "material_description",
+        "extent",
+        "location",
+        "friable",
+        "material_condition",
+        "risk_status",
+        "result",
+        "sample_no",
+        "sample_result",
+        "quantity",
+        "acm_labelled",
+        "disturbance_potential",
+        "identifying_company",
+        "hygienist_recommendations",
+        "page_number",
     ]
     return headers, fields
 
@@ -423,8 +455,7 @@ async def export_acm_excel(
         # Get columns from active field mapping
         export_headers, export_fields = await _get_export_mapping()
         columns = [
-            (h, f, max(12, len(h) + 2))
-            for h, f in zip(export_headers, export_fields)
+            (h, f, max(12, len(h) + 2)) for h, f in zip(export_headers, export_fields)
         ]
 
         # Header styles
@@ -656,7 +687,9 @@ async def semantic_search_acm(
                 """
 
                 results = await repo_query(search_query, params)
-                filtered_results = [r for r in results if r.get("score", 0) >= threshold]
+                filtered_results = [
+                    r for r in results if r.get("score", 0) >= threshold
+                ]
 
         # Batch-fetch parent sections if requested (avoids N+1 queries)
         parent_section_map: dict[str, ACMTableSection] = {}
@@ -674,7 +707,9 @@ async def semantic_search_acm(
                         if s.id:
                             parent_section_map[str(s.id)] = s
                 except Exception as e:
-                    logger.warning(f"Failed to batch-fetch parent sections for {sid}: {e}")
+                    logger.warning(
+                        f"Failed to batch-fetch parent sections for {sid}: {e}"
+                    )
 
         # Convert to response objects
         search_results = []
@@ -1200,6 +1235,224 @@ async def list_agencies(
 
     except Exception as e:
         logger.error(f"Error fetching agencies: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Building Review Endpoints (E19-S5 — Wizard Step 1)
+# =============================================================================
+
+# ACM record fields that live on individual acm_record rows (not site_config)
+_ACM_RECORD_BUILDING_FIELDS = {
+    "building_name",
+    "building_address",
+    "building_year",
+    "building_size_m2",
+    "number_of_levels",
+    "building_construction",
+    "roof_type",
+    "date_of_inspection",
+    "suburb",
+    "postcode",
+}
+
+# site_config fields managed at the source level
+_SITE_CONFIG_BUILDING_FIELDS = {
+    "department",
+    "agency",
+    "sub_agency",
+    "site_name",
+    "building_type",
+    "owned_or_leased",
+    "building_unique_id",
+    "frequency_of_use",
+    "public_access",
+    "building_out_of_scope",
+    "building_out_of_scope_comments",
+    "additional_comments",
+}
+
+
+def _build_building_response(
+    row: dict, site_config: Optional[SiteConfig]
+) -> BuildingResponse:
+    """Merge a grouped acm_record row with site_config data into a BuildingResponse."""
+    sc = site_config
+
+    return BuildingResponse(
+        building_id=row.get("building_id", ""),
+        building_name=row.get("building_name"),
+        building_address=row.get("building_address"),
+        building_year=row.get("building_year"),
+        building_size_m2=row.get("building_size_m2"),
+        number_of_levels=row.get("number_of_levels"),
+        building_construction=row.get("building_construction"),
+        roof_type=row.get("roof_type"),
+        date_of_inspection=row.get("date_of_inspection"),
+        record_count=row.get("record_count", 0),
+        suburb=row.get("suburb"),
+        postcode=row.get("postcode"),
+        # site_config fields (shared across all buildings for this source)
+        department=sc.department if sc else None,
+        agency=sc.agency if sc else None,
+        sub_agency=sc.sub_agency if sc else None,
+        site_name=sc.site_name if sc else None,
+        building_type=sc.building_type if sc else None,
+        owned_or_leased=sc.owned_or_leased if sc else None,
+        building_unique_id=sc.building_unique_id if sc else None,
+        frequency_of_use=sc.frequency_of_use if sc else None,
+        public_access=sc.public_access if sc else None,
+        building_out_of_scope=sc.building_out_of_scope if sc else False,
+        building_out_of_scope_comments=sc.building_out_of_scope_comments
+        if sc
+        else None,
+        additional_comments=sc.additional_comments if sc else None,
+    )
+
+
+@router.get("/jobs/{source_id}/buildings", response_model=list[BuildingResponse])
+async def list_buildings_for_job(source_id: str):
+    """
+    List all buildings detected for a source, merging acm_record and site_config data.
+    Used by the Building Review Wizard Step 1.
+    """
+    try:
+        sid = ensure_record_id(source_id)
+
+        # Query distinct buildings grouped from acm_record
+        query = """
+            SELECT
+                building_id,
+                building_name,
+                building_address,
+                building_year,
+                building_size_m2,
+                number_of_levels,
+                building_construction,
+                roof_type,
+                date_of_inspection,
+                suburb,
+                postcode,
+                count() as record_count
+            FROM acm_record
+            WHERE source_id = $source_id
+            GROUP BY
+                building_id,
+                building_name,
+                building_address,
+                building_year,
+                building_size_m2,
+                number_of_levels,
+                building_construction,
+                roof_type,
+                date_of_inspection,
+                suburb,
+                postcode
+            ORDER BY building_id;
+        """
+        rows = await repo_query(query, {"source_id": sid})
+
+        if not rows:
+            return []
+
+        # Fetch site_config once — shared across all buildings for this source
+        site_config = await SiteConfig.get_by_source(source_id)
+
+        return [_build_building_response(row, site_config) for row in rows]
+
+    except Exception as e:
+        logger.error(f"Error listing buildings for job {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put(
+    "/jobs/{source_id}/buildings/{building_id}", response_model=BuildingResponse
+)
+async def update_building(
+    source_id: str, building_id: str, request: BuildingUpdateRequest
+):
+    """
+    Update building metadata during review.
+
+    - site_config fields are saved to the site_config record for this source.
+    - acm_record fields (building_name, building_year, etc.) update ALL acm_record
+      rows that share this building_id within the source.
+    """
+    try:
+        sid = ensure_record_id(source_id)
+        update_data = request.model_dump(exclude_none=True)
+
+        # Separate fields by destination table
+        acm_updates = {
+            k: v for k, v in update_data.items() if k in _ACM_RECORD_BUILDING_FIELDS
+        }
+        sc_updates = {
+            k: v for k, v in update_data.items() if k in _SITE_CONFIG_BUILDING_FIELDS
+        }
+
+        # Apply acm_record field updates to all rows for this building
+        if acm_updates:
+            set_clause = ", ".join(f"{k} = ${k}" for k in acm_updates)
+            acm_params = {"source_id": sid, "building_id": building_id, **acm_updates}
+            update_query = f"""
+                UPDATE acm_record
+                SET {set_clause}
+                WHERE source_id = $source_id AND building_id = $building_id;
+            """
+            await repo_query(update_query, acm_params)
+
+        # Apply site_config field updates
+        if sc_updates:
+            await SiteConfig.upsert(source_id=source_id, **sc_updates)
+
+        # Re-fetch the updated building row to return current state
+        fetch_query = """
+            SELECT
+                building_id,
+                building_name,
+                building_address,
+                building_year,
+                building_size_m2,
+                number_of_levels,
+                building_construction,
+                roof_type,
+                date_of_inspection,
+                suburb,
+                postcode,
+                count() as record_count
+            FROM acm_record
+            WHERE source_id = $source_id AND building_id = $building_id
+            GROUP BY
+                building_id,
+                building_name,
+                building_address,
+                building_year,
+                building_size_m2,
+                number_of_levels,
+                building_construction,
+                roof_type,
+                date_of_inspection,
+                suburb,
+                postcode
+            LIMIT 1;
+        """
+        rows = await repo_query(
+            fetch_query, {"source_id": sid, "building_id": building_id}
+        )
+
+        if not rows:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Building '{building_id}' not found for source '{source_id}'",
+            )
+
+        site_config = await SiteConfig.get_by_source(source_id)
+        return _build_building_response(rows[0], site_config)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating building {building_id} for job {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

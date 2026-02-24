@@ -9,3 +9,7 @@ DEFINE INDEX idx_source_review_status ON source FIELDS review_status;
 UPDATE source SET review_status = 'pending_review';
 
 DELETE acm_record;
+
+-- E19-S5: Building out-of-scope flag for wizard step 1
+DEFINE FIELD building_out_of_scope ON site_config TYPE option<bool> DEFAULT false;
+DEFINE FIELD building_out_of_scope_comments ON site_config TYPE option<string>;

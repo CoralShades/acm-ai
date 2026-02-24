@@ -97,6 +97,16 @@ class SiteConfig(ObjectModel):
         default=None,
         description="Agency within department (e.g., Victoria Police, District Health)",
     )
+    sub_agency: Optional[str] = Field(
+        default=None,
+        description="Sub-agency within the agency",
+    )
+
+    # Site identification fields
+    site_name: Optional[str] = Field(
+        default=None,
+        description="Name of the site or facility",
+    )
 
     # Building classification fields
     building_type: Optional[str] = Field(
@@ -114,6 +124,18 @@ class SiteConfig(ObjectModel):
     )
     building_unique_id: Optional[str] = Field(
         default=None, description="Unique identifier for the building"
+    )
+    building_out_of_scope: Optional[bool] = Field(
+        default=False,
+        description="Flag for buildings excluded from the ACM register",
+    )
+    building_out_of_scope_comments: Optional[str] = Field(
+        default=None,
+        description="Comments explaining why building is out of scope",
+    )
+    additional_comments: Optional[str] = Field(
+        default=None,
+        description="Additional comments about the site or building",
     )
 
     @classmethod

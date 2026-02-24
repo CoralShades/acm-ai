@@ -492,7 +492,9 @@ class ACMExtractRequest(BaseModel):
     """Request to trigger ACM extraction."""
 
     source_id: str = Field(..., description="Source ID to extract ACM data from")
-    force: bool = Field(default=False, description="Delete existing records before re-extraction")
+    force: bool = Field(
+        default=False, description="Delete existing records before re-extraction"
+    )
 
 
 class ACMExtractResponse(BaseModel):
@@ -549,7 +551,13 @@ class ACMRecordCreateRequest(BaseModel):
         if v is None:
             return v
         normalized = v.strip().title()
-        valid = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+        valid = {
+            "Positive",
+            "Assumed Positive",
+            "Negative",
+            "Assumed Negative",
+            "Unknown",
+        }
         if normalized not in valid:
             for val in valid:
                 if val.lower() == normalized.lower():
@@ -590,7 +598,9 @@ class ACMRecordCreateRequest(BaseModel):
         normalized = v.strip().title()
         valid = {"Good", "Fair", "Poor", "Damaged"}
         if normalized not in valid:
-            raise ValueError(f"material_condition must be one of {sorted(valid)}, got '{v}'")
+            raise ValueError(
+                f"material_condition must be one of {sorted(valid)}, got '{v}'"
+            )
         return normalized
 
     @field_validator("area_type", mode="before")
@@ -692,7 +702,13 @@ class ACMRecordUpdateRequest(BaseModel):
         if v is None:
             return v
         normalized = v.strip().title()
-        valid = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+        valid = {
+            "Positive",
+            "Assumed Positive",
+            "Negative",
+            "Assumed Negative",
+            "Unknown",
+        }
         if normalized not in valid:
             for val in valid:
                 if val.lower() == normalized.lower():
@@ -733,7 +749,9 @@ class ACMRecordUpdateRequest(BaseModel):
         normalized = v.strip().title()
         valid = {"Good", "Fair", "Poor", "Damaged"}
         if normalized not in valid:
-            raise ValueError(f"material_condition must be one of {sorted(valid)}, got '{v}'")
+            raise ValueError(
+                f"material_condition must be one of {sorted(valid)}, got '{v}'"
+            )
         return normalized
 
     @field_validator("area_type", mode="before")
@@ -790,6 +808,64 @@ class SiteConfigResponse(BaseModel):
     )
     created: Optional[str] = None
     updated: Optional[str] = None
+
+
+class BuildingResponse(BaseModel):
+    """Combined building data from acm_record + site_config for the review wizard."""
+
+    building_id: str
+    building_name: Optional[str] = None
+    building_address: Optional[str] = None
+    building_year: Optional[int] = None
+    building_size_m2: Optional[float] = None
+    number_of_levels: Optional[int] = None
+    building_construction: Optional[str] = None
+    roof_type: Optional[str] = None
+    date_of_inspection: Optional[str] = None
+    record_count: int = 0
+    # site_config fields
+    department: Optional[str] = None
+    agency: Optional[str] = None
+    sub_agency: Optional[str] = None
+    site_name: Optional[str] = None
+    building_type: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    building_unique_id: Optional[str] = None
+    frequency_of_use: Optional[str] = None
+    public_access: Optional[str] = None
+    building_out_of_scope: Optional[bool] = False
+    building_out_of_scope_comments: Optional[str] = None
+    additional_comments: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+
+
+class BuildingUpdateRequest(BaseModel):
+    """Fields that can be updated on a building during review."""
+
+    building_name: Optional[str] = None
+    building_address: Optional[str] = None
+    building_year: Optional[int] = None
+    building_size_m2: Optional[float] = None
+    number_of_levels: Optional[int] = None
+    building_construction: Optional[str] = None
+    roof_type: Optional[str] = None
+    date_of_inspection: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    # site_config fields
+    department: Optional[str] = None
+    agency: Optional[str] = None
+    sub_agency: Optional[str] = None
+    site_name: Optional[str] = None
+    building_type: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    building_unique_id: Optional[str] = None
+    frequency_of_use: Optional[str] = None
+    public_access: Optional[str] = None
+    building_out_of_scope: Optional[bool] = None
+    building_out_of_scope_comments: Optional[str] = None
+    additional_comments: Optional[str] = None
 
 
 class SiteConfigTemplateResponse(BaseModel):
