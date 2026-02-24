@@ -75,7 +75,9 @@ def parse_model_arg(model_str: str) -> tuple[str, str]:
     """Parse provider/model_name from CLI argument."""
     parts = model_str.split("/", 1)
     if len(parts) != 2:
-        print(f"Error: Invalid model format '{model_str}'. Expected 'provider/model_name'")
+        print(
+            f"Error: Invalid model format '{model_str}'. Expected 'provider/model_name'"
+        )
         sys.exit(1)
     return parts[0], parts[1]
 
@@ -134,7 +136,9 @@ def check_context_window(model_name: str) -> bool:
         check_pass(f"Context window: {ctx:,} tokens")
         # Check if Broadmeadows PDF fits (~45k tokens)
         if ctx >= 45000:
-            check_pass(f"Token estimate for Broadmeadows PDF: ~45,000 tokens (fits in {ctx:,})")
+            check_pass(
+                f"Token estimate for Broadmeadows PDF: ~45,000 tokens (fits in {ctx:,})"
+            )
         else:
             check_fail(
                 "Broadmeadows PDF fit",
@@ -142,20 +146,25 @@ def check_context_window(model_name: str) -> bool:
             )
         return True
     else:
-        check_skip("Context window", f"No specs for '{lookup_name}' — check docs/development/qwen25-setup-guide.md")
+        check_skip(
+            "Context window",
+            f"No specs for '{lookup_name}' — check docs/development/qwen25-setup-guide.md",
+        )
         return True  # Not a failure, just unknown
 
 
 def check_json_mode_ollama(base_url: str, model_name: str) -> bool:
     """Test JSON mode extraction with Ollama."""
     prompt = EXTRACTION_PROMPT.format(register=SAMPLE_REGISTER)
-    payload = json.dumps({
-        "model": model_name,
-        "prompt": prompt,
-        "stream": False,
-        "format": "json",
-        "options": {"temperature": 0.0, "num_predict": 2048},
-    }).encode()
+    payload = json.dumps(
+        {
+            "model": model_name,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": 0.0, "num_predict": 2048},
+        }
+    ).encode()
 
     try:
         req = urllib.request.Request(
@@ -200,13 +209,15 @@ def check_json_mode_ollama(base_url: str, model_name: str) -> bool:
 def check_json_mode_openrouter(api_key: str, model_name: str) -> bool:
     """Test JSON mode extraction with OpenRouter."""
     prompt = EXTRACTION_PROMPT.format(register=SAMPLE_REGISTER)
-    payload = json.dumps({
-        "model": model_name,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.0,
-        "max_tokens": 2048,
-        "response_format": {"type": "json_object"},
-    }).encode()
+    payload = json.dumps(
+        {
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.0,
+            "max_tokens": 2048,
+            "response_format": {"type": "json_object"},
+        }
+    ).encode()
 
     try:
         req = urllib.request.Request(
@@ -290,7 +301,9 @@ def main() -> None:
     results: list[bool] = []
 
     if provider == "ollama":
-        base_url = os.getenv("OLLAMA_API_BASE", os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+        base_url = os.getenv(
+            "OLLAMA_API_BASE", os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        )
         results.append(check_reachability_ollama(base_url, model_name))
         results.append(check_context_window(model_name))
         if not args.skip_extraction and results[0]:
@@ -302,7 +315,9 @@ def main() -> None:
     elif provider == "openrouter":
         api_key = os.getenv("OPENROUTER_API_KEY", "")
         if not api_key:
-            check_fail("OpenRouter API key", "OPENROUTER_API_KEY not set in environment")
+            check_fail(
+                "OpenRouter API key", "OPENROUTER_API_KEY not set in environment"
+            )
             results.append(False)
         else:
             results.append(check_reachability_openrouter(api_key))
@@ -314,7 +329,9 @@ def main() -> None:
                 check_skip("Sample extraction", "skipped via --skip-extraction")
 
     else:
-        check_fail("Provider", f"Unknown provider '{provider}'. Supported: ollama, openrouter")
+        check_fail(
+            "Provider", f"Unknown provider '{provider}'. Supported: ollama, openrouter"
+        )
         results.append(False)
 
     # Summary

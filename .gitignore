@@ -72,7 +72,6 @@ ipython_config.py
 # Environments
 .env
 .venv
-.venv-wsl/
 env/
 venv/
 ENV/
@@ -200,3 +199,4 @@ playwright-report/trace/
 nul*
 
 .vercel
+/.venv-wsl
