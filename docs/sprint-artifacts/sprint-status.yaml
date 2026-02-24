@@ -271,8 +271,8 @@ development_status:
   # 0/8 stories complete — EPIC IN PROGRESS
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260224-stakeholder-ux-redesign.md
   epic-19: in-progress
-  e19-s1-migration-32-review-status: ready-for-dev  # docs/sprint-artifacts/e19-s1-migration-32-review-status.md — Migration 032: add review_status to source, delete all acm_records
-  e19-s2-jobs-dashboard: backlog  # docs/sprint-artifacts/e19-s2-jobs-dashboard.md — Replace Documents library with Jobs dashboard (UI rename, job cards, status pills)
+  e19-s1-migration-32-review-status: done  # docs/sprint-artifacts/e19-s1-migration-32-review-status.md — Migration 032: add review_status to source, delete all acm_records
+  e19-s2-jobs-dashboard: ready-for-dev  # docs/sprint-artifacts/e19-s2-jobs-dashboard.md — Replace Documents library with Jobs dashboard (UI rename, job cards, status pills)
   e19-s3-feature-gating: backlog  # docs/sprint-artifacts/e19-s3-feature-gating.md — Standard/Admin user mode toggle, hide CONFIGURE section for standard users
   e19-s4-raw-extraction-table: backlog  # docs/sprint-artifacts/e19-s4-raw-extraction-table.md — Live raw records AG Grid during and after extraction
   e19-s5-building-review-wizard: backlog  # docs/sprint-artifacts/e19-s5-building-review-wizard.md — Step 1: 21-field building mapping wizard (building_data-schema.md)

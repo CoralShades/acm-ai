@@ -6,7 +6,7 @@
 
 | Story | Status | Completed | Notes |
 |-------|--------|-----------|-------|
-| E19-S1 | ready-for-dev | — | Migration 032, destructive |
+| E19-S1 | done | 2026-02-24 | Migration 032, destructive — 16 tests pass, ruff clean |
 | E19-S2 | backlog | — | Jobs dashboard |
 | E19-S3 | backlog | — | Feature gating |
 | E19-S4 | backlog | — | Raw extraction table |
@@ -26,3 +26,4 @@
 - SCP approved and merged into sprint-status.yaml
 - Ralph loop configured: .ralph/PROMPT.md + .ralph/@fix_plan.md
 - E19-S1 advanced to ready-for-dev, loop ready to run
+- E19-S1 DONE: migrations/32.surrealql, async_migrate.py updated (28-32), Source model + API models updated, 16 unit tests pass

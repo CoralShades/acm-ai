@@ -106,4 +106,21 @@ S (Small) — Standard migration + Pydantic model update. No frontend changes.
 
 ---
 
-**Story Status:** ⬜ BACKLOG
+**Story Status:** ✅ DONE
+
+---
+
+## Dev Agent Record
+
+**Implemented:** 2026-02-24
+**Files changed:**
+- `migrations/32.surrealql` (new — adds review_status field, clears acm_record)
+- `migrations/32_down.surrealql` (new — rollback)
+- `open_notebook/database/async_migrate.py` (registered migrations 28–32)
+- `open_notebook/domain/notebook.py` (added review_status to Source model)
+- `api/models.py` (added review_status to SourceResponse, SourceListResponse, SourceUpdate)
+- `api/routers/sources.py` (PUT endpoint passes review_status through to DB)
+- `tests/test_migration_32.py` (new — 16 unit tests)
+
+**Tests added:** `tests/test_migration_32.py` (16 tests, all passing)
+**Verification:** ruff ✓ | pytest 979 passed ✓ (excluding pre-existing live-DB tests)

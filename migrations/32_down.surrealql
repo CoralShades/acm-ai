@@ -1,0 +1,3 @@
+-- Migration 32 down: Remove review_status from source
+REMOVE INDEX idx_source_review_status ON source;
+REMOVE FIELD review_status ON source;

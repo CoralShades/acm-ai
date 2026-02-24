@@ -811,6 +811,8 @@ async def update_source(source_id: str, source_update: SourceUpdate):
             source.title = source_update.title
         if source_update.topics is not None:
             source.topics = source_update.topics
+        if source_update.review_status is not None:
+            source.review_status = source_update.review_status
 
         await source.save()
 
@@ -830,6 +832,7 @@ async def update_source(source_id: str, source_update: SourceUpdate):
             embedded_chunks=embedded_chunks,
             created=str(source.created),
             updated=str(source.updated),
+            review_status=source.review_status,
         )
     except HTTPException:
         raise

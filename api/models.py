@@ -324,6 +324,7 @@ class SourceCreate(BaseModel):
 class SourceUpdate(BaseModel):
     title: Optional[str] = Field(None, description="Source title")
     topics: Optional[List[str]] = Field(None, description="Source topics")
+    review_status: Optional[str] = Field(None, description="Review workflow status")
 
 
 class SourceResponse(BaseModel):
@@ -343,6 +344,8 @@ class SourceResponse(BaseModel):
     processing_info: Optional[Dict] = None
     # Notebook associations
     notebooks: Optional[List[str]] = None
+    # Review workflow
+    review_status: Optional[str] = None
 
 
 class SourceListResponse(BaseModel):
@@ -360,6 +363,8 @@ class SourceListResponse(BaseModel):
     command_id: Optional[str] = None
     status: Optional[str] = None
     processing_info: Optional[Dict[str, Any]] = None
+    # Review workflow
+    review_status: Optional[str] = None
 
 
 # Context API models
