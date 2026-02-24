@@ -200,3 +200,4 @@ nul*
 
 .vercel
 /.venv-wsl
+opencode.json
