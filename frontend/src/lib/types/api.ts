@@ -36,6 +36,10 @@ export interface SourceListResponse {
   command_id?: string
   status?: string
   processing_info?: Record<string, unknown>
+  // ADD: Review workflow status (E19-S1 migration)
+  // 'extracting' | 'pending_review' | 'building_review' | 'acm_review' | 'published'
+  // null/undefined means legacy data — treat as 'published' in UI
+  review_status?: string
 }
 
 export interface SourceDetailResponse extends SourceListResponse {

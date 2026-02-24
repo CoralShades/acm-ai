@@ -3,7 +3,7 @@ import {
   Search,
   Bot,
   FileWarning,
-  Library,
+  ClipboardList,
   FlaskConical,
   FileCode,
   Cog,
@@ -46,7 +46,7 @@ export const navigationConfig: NavGroup[] = [
     title: 'Workspace',
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Documents', href: '/documents', icon: Library },
+      { name: 'Jobs', href: '/jobs', icon: ClipboardList },
       { name: 'ACM Register', href: '/acm', icon: FileWarning, acmOnly: true },
       { name: 'Notebooks', href: '/notebooks', icon: BookOpen, hideInAcm: true },
       { name: 'Podcasts', href: '/podcasts', icon: Podcast, hideInAcm: true },

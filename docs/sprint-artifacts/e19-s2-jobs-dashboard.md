@@ -117,3 +117,19 @@ S (Small) — Primarily UI rename + new JobCard component. No new APIs.
 ---
 
 **Story Status:** ⬜ BACKLOG
+
+---
+
+## Dev Agent Record
+
+**Implemented:** 2026-02-24
+**Files changed:**
+- `frontend/src/lib/types/api.ts` (added review_status to SourceListResponse)
+- `frontend/src/components/jobs/JobStatusPill.tsx` (new — status badge component)
+- `frontend/src/components/jobs/JobCard.tsx` (new — job card with CTA and actions)
+- `frontend/src/app/(dashboard)/jobs/page.tsx` (new — Jobs dashboard page)
+- `frontend/src/app/(dashboard)/documents/page.tsx` (redirect → /jobs)
+- `frontend/src/config/navigation.ts` (Documents → Jobs, ClipboardList icon)
+
+**Tests added:** None (frontend-only, verified via build)
+**Verification:** ruff ✓ | lint ✓ | build ✓ (27 static pages compiled)
