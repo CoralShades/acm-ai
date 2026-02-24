@@ -286,8 +286,9 @@ development_status:
   epic-20: in-progress
   e20-s1-page-boundary-fix: done  # _apply_boundary_overlap(): extend building page_end to next building's page_start; 48 tests pass  # docs/sprint-artifacts/e20-s1-page-boundary-fix.md — Fix building page_end with +1 overlap to capture boundary page records
   e20-s2-regex-yield-check: done  # acm_item_count_estimate on BuildingExtractionPlan; yield check + escalation in extract_building; 5 new tests; 52/52 pass  # docs/sprint-artifacts/e20-s2-regex-yield-check.md — REGEX_ONLY yield check: escalate to FULL_LLM if < 50% of estimate
-  e20-s3-not-sampled-capture: ready-for-dev  # docs/sprint-artifacts/e20-s3-not-sampled-capture.md — Update extraction prompt to explicitly capture Not Sampled / No Access records
-  e20-s4-e2e-accuracy-validation: backlog  # docs/sprint-artifacts/e20-s4-e2e-accuracy-validation.md — E2E validation: confirm 32/32 records on Broadmeadows PDF
+  e20-s3-not-sampled-capture: done  # no_access field + prompt update; 57 tests pass; register_enums.json fixed post-review
+  e20-s4-e2e-accuracy-validation: review  # 27/31 (87%) — E2E test uses old pipeline; E20-S1/S2 not exercised; E20-S5 created
+  e20-s5-extraction-accuracy-gap-analysis: backlog  # docs/sprint-artifacts/e20-s5-extraction-accuracy-gap-analysis.md — Fix 4 missing records: Not Sampled location + East Ductwork page coverage
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
