@@ -47,8 +47,7 @@ ANTHROPIC_DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 def _has_api_key() -> bool:
     """Check if any supported LLM API key is available."""
     return bool(
-        os.environ.get("OPENROUTER_API_KEY")
-        or os.environ.get("ANTHROPIC_API_KEY")
+        os.environ.get("OPENROUTER_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
     )
 
 
@@ -247,7 +246,9 @@ def _create_llm_model(**kwargs):
         model_name = os.environ.get("TEST_MODEL", ANTHROPIC_DEFAULT_MODEL)
         return ChatAnthropic(model=model_name, **allowed_kwargs)
 
-    raise RuntimeError("No LLM API key available (need OPENROUTER_API_KEY or ANTHROPIC_API_KEY)")
+    raise RuntimeError(
+        "No LLM API key available (need OPENROUTER_API_KEY or ANTHROPIC_API_KEY)"
+    )
 
 
 @pytest.mark.skipif(
@@ -345,7 +346,9 @@ async def test_broadmeadows_all_records_extracted():
     print(f"\n=== EXTRACTION QUALITY REPORT ===")
     print(f"Expected: {len(expected)} records")
     print(f"Extracted: {len(extracted_records)} records")
-    print(f"Matched: {len(found)}/{len(expected)} ({100 * len(found) // len(expected)}%)")
+    print(
+        f"Matched: {len(found)}/{len(expected)} ({100 * len(found) // len(expected)}%)"
+    )
 
     if missing:
         print(f"\nMISSING RECORDS ({len(missing)}):")
@@ -364,13 +367,15 @@ async def test_broadmeadows_all_records_extracted():
             f"(sample: {r.sample_no or 'N/A'})"
         )
 
-    # 7. Assert ≥ 80% of records were found (25/31 threshold)
-    # Note: Real LLM via OpenRouter uses fallback JSON parsing (markdown stripping)
-    # rather than structured output. 80% threshold gives buffer for model variability
-    # while still proving end-to-end extraction works. Baseline: 26/31 (84%).
-    MIN_PASS = 25  # 80% of 31
+    # 7. Assert 100% of records are found (31/31 target — E20 completeness goal)
+    # E20 fixes applied:
+    #   E20-S1: Page boundary overlap (_apply_boundary_overlap)
+    #   E20-S2: REGEX yield check — escalate to FULL_LLM if < 50% capture
+    #   E20-S3: Not Sampled / No Access explicit capture (no_access field + prompt)
+    # Baseline pre-fix: ~25/31 (80%). Target after E20: 31/31 (100%).
+    MIN_PASS = 31  # 100% of 31
     assert len(found) >= MIN_PASS, (
-        f"Only {len(found)}/{len(expected)} records matched (required ≥ {MIN_PASS}/{len(expected)}, i.e. 80%).\n"
+        f"Only {len(found)}/{len(expected)} records matched (required {MIN_PASS}/{len(expected)}, i.e. 100%).\n"
         f"Missing ({len(missing)}):\n"
         + "\n".join(
             f"  - [{r['level']}] {r['room']} / {r['location']} / {r['item']} (sample: {r['sample_no']})"
@@ -378,4 +383,6 @@ async def test_broadmeadows_all_records_extracted():
         )
     )
 
-    print(f"\n{len(found)}/{len(expected)} records successfully extracted ({100 * len(found) // len(expected)}%)!")
+    print(
+        f"\n{len(found)}/{len(expected)} records successfully extracted ({100 * len(found) // len(expected)}%)!"
+    )
