@@ -474,6 +474,8 @@ class ACMRecordResponse(BaseModel):
     normalized_action: Optional[str] = None
     data_issues: Optional[List[str]] = None
     floor_level: Optional[str] = None
+    no_access: Optional[bool] = None
+    smf_present: Optional[str] = None
     created: Optional[str] = None
     updated: Optional[str] = None
 
@@ -694,6 +696,12 @@ class ACMRecordUpdateRequest(BaseModel):
     classification_override: Optional[bool] = Field(
         None,
         description="Mark as manual override (set to True when user corrects classification)",
+    )
+    no_access: Optional[bool] = Field(
+        None, description="Record has no access to the location"
+    )
+    smf_present: Optional[str] = Field(
+        None, description="Synthetic Mineral Fibre present (Yes/No/Unknown)"
     )
 
     @field_validator("result", mode="before")

@@ -164,6 +164,8 @@ async def list_acm_records(
                     normalized_action=r.get("normalized_action"),
                     data_issues=r.get("data_issues"),
                     floor_level=r.get("floor_level"),
+                    no_access=r.get("no_access"),
+                    smf_present=r.get("smf_present"),
                     created=str(r.get("created", "")) if r.get("created") else None,
                     updated=str(r.get("updated", "")) if r.get("updated") else None,
                 )
@@ -229,6 +231,8 @@ async def get_acm_record(record_id: str):
             normalized_action=record.normalized_action,
             data_issues=record.data_issues,
             floor_level=record.floor_level,
+            no_access=record.no_access,
+            smf_present=record.smf_present,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -940,6 +944,8 @@ async def create_acm_record(request: ACMRecordCreateRequest):
             normalized_action=record.normalized_action,
             data_issues=record.data_issues,
             floor_level=record.floor_level,
+            no_access=None,
+            smf_present=None,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -1011,6 +1017,8 @@ async def update_acm_record(record_id: str, request: ACMRecordUpdateRequest):
             normalized_action=record.normalized_action,
             data_issues=record.data_issues,
             floor_level=record.floor_level,
+            no_access=record.no_access,
+            smf_present=record.smf_present,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -1453,6 +1461,35 @@ async def update_building(
         raise
     except Exception as e:
         logger.error(f"Error updating building {building_id} for job {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/jobs/{source_id}/publish")
+async def publish_job(source_id: str):
+    """
+    Publish a job to the ACM Register.
+    Sets source.review_status = 'published'.
+    After this, records appear in the global register.
+    """
+    try:
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        if not source:
+            raise HTTPException(status_code=404, detail="Source not found")
+
+        source.review_status = "published"
+        await source.save()
+
+        return {
+            "source_id": source_id,
+            "review_status": "published",
+            "message": "Job published to ACM Register",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error publishing job {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

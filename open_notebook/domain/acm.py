@@ -145,6 +145,12 @@ class ACMRecord(ObjectModel):
     date_of_removal: Optional[str] = Field(
         default=None, description="Date when the material was removed (if applicable)"
     )
+    no_access: Optional[bool] = Field(
+        default=False, description="Record has no access to the location"
+    )
+    smf_present: Optional[str] = Field(
+        default=None, description="Synthetic Mineral Fibre present (Yes/No/Unknown)"
+    )
 
     # Extraction metadata
     extraction_confidence: Optional[str] = Field(

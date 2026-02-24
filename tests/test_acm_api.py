@@ -159,6 +159,8 @@ class TestGetACMRecord:
         mock_record.normalized_action = None
         mock_record.data_issues = None
         mock_record.floor_level = None
+        mock_record.no_access = None
+        mock_record.smf_present = None
         mock_record.created = "2024-01-01T00:00:00Z"
         mock_record.updated = "2024-01-01T00:00:00Z"
 
@@ -650,6 +652,8 @@ class TestACMRecordResponseClassificationFields:
         mock_record.normalized_action = None
         mock_record.data_issues = None
         mock_record.floor_level = None
+        mock_record.no_access = None
+        mock_record.smf_present = None
         mock_record.created = "2024-01-01T00:00:00Z"
         mock_record.updated = "2024-01-01T00:00:00Z"
 

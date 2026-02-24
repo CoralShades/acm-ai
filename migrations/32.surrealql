@@ -13,3 +13,7 @@ DELETE acm_record;
 -- E19-S5: Building out-of-scope flag for wizard step 1
 DEFINE FIELD building_out_of_scope ON site_config TYPE option<bool> DEFAULT false;
 DEFINE FIELD building_out_of_scope_comments ON site_config TYPE option<string>;
+
+-- E19-S6: Additional ACM record fields for wizard step 2
+DEFINE FIELD no_access ON acm_record TYPE option<bool> DEFAULT false;
+DEFINE FIELD smf_present ON acm_record TYPE option<string>;
