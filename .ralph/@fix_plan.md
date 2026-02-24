@@ -17,6 +17,6 @@
 ## Epic 20: Extraction Completeness & 100% Record Capture (P0)
 
 - [x] E20-S1: Page Boundary Fix — page_end +1 overlap to capture boundary page records — spec: docs/sprint-artifacts/e20-s1-page-boundary-fix.md
-- [ ] E20-S2: REGEX_ONLY Yield Check — escalate to FULL_LLM if <50% yield — spec: docs/sprint-artifacts/e20-s2-regex-yield-check.md
+- [x] E20-S2: REGEX_ONLY Yield Check — escalate to FULL_LLM if <50% yield — spec: docs/sprint-artifacts/e20-s2-regex-yield-check.md
 - [ ] E20-S3: Not Sampled / No Access Capture — update prompt + confirm no_access schema field — spec: docs/sprint-artifacts/e20-s3-not-sampled-capture.md
 - [ ] E20-S4: E2E Accuracy Validation — 32/32 Broadmeadows PDF (ONE real extraction, after S1+S2+S3 pass) — spec: docs/sprint-artifacts/e20-s4-e2e-accuracy-validation.md

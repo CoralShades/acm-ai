@@ -63,6 +63,7 @@ class BuildingExtractionPlan(BaseModel):
     strategy: ExtractionStrategy
     complexity: str = "complex"
     context_summary: Optional[str] = None
+    acm_item_count_estimate: Optional[int] = None
 
 
 class ExtractionPlan(BaseModel):
@@ -132,7 +133,9 @@ def _select_strategy(
     ]
 
     if not register_pages:
-        return ExtractionStrategy.FULL_LLM  # Use LLM when page tagging can't confirm register location
+        return (
+            ExtractionStrategy.FULL_LLM
+        )  # Use LLM when page tagging can't confirm register location
 
     if building.complexity == BuildingComplexity.SIMPLE:
         return ExtractionStrategy.REGEX_ONLY
@@ -181,6 +184,7 @@ def plan_extraction(
                 if isinstance(building.complexity, BuildingComplexity)
                 else str(building.complexity),
                 context_summary=_build_context_summary(building, document_meta),
+                acm_item_count_estimate=building.acm_item_count_estimate,
             )
         )
 
@@ -337,7 +341,11 @@ def _split_building_by_rooms(
         start = room_matches[i].start()
         # End at the start of the next group (or end of content)
         end_idx = i + max_rooms
-        end = room_matches[end_idx].start() if end_idx < len(room_matches) else len(content)
+        end = (
+            room_matches[end_idx].start()
+            if end_idx < len(room_matches)
+            else len(content)
+        )
         chunks.append(content[start:end])
 
     logger.info(
@@ -397,7 +405,9 @@ async def _llm_extract_building(
 
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content="Extract ACM records from the building content provided."),
+            HumanMessage(
+                content="Extract ACM records from the building content provided."
+            ),
         ]
 
         if is_qwen:
@@ -466,6 +476,45 @@ async def extract_building(
                 plan.building_name,
                 page_start=plan.page_range[0],
             )
+
+            # E20-S2: Yield check — escalate to FULL_LLM if regex yield is too low
+            estimate = plan.acm_item_count_estimate or 0
+            should_escalate = False
+            if estimate > 0 and len(records) < estimate * 0.5:
+                should_escalate = True
+                logger.warning(
+                    f"Building {plan.building_id}: REGEX_ONLY yield "
+                    f"{len(records)}/{estimate} < 50% — escalating to FULL_LLM"
+                )
+            elif estimate == 0 and len(records) == 0 and building_content.strip():
+                should_escalate = True
+                logger.warning(
+                    f"Building {plan.building_id}: REGEX_ONLY yield 0 records "
+                    f"(no estimate) with non-empty content — escalating to FULL_LLM"
+                )
+
+            if should_escalate:
+                try:
+                    records = await _llm_extract_building(building_content, plan, state)
+                    for rec in records:
+                        if not rec.building_name and plan.building_name:
+                            rec.building_name = plan.building_name
+                        if not rec.page_number:
+                            rec.page_number = plan.page_range[0]
+                    elapsed = int((time.time() - start) * 1000)
+                    return records, BuildingExtractionStats(
+                        building_id=plan.building_id,
+                        records_extracted=len(records),
+                        pages_processed=pages_processed,
+                        strategy_used="regex_escalated_to_llm",
+                        time_ms=elapsed,
+                    )
+                except Exception as llm_err:
+                    logger.error(
+                        f"Building {plan.building_id} LLM escalation failed: {llm_err}"
+                    )
+                    # Fall through to return the (empty) regex records
+
             elapsed = int((time.time() - start) * 1000)
             return records, BuildingExtractionStats(
                 building_id=plan.building_id,
