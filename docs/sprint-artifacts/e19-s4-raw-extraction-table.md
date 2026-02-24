@@ -104,3 +104,16 @@ M (Medium) — New page + new component + wiring AG-UI events. Redirect change t
 ---
 
 **Story Status:** ⬜ BACKLOG
+
+---
+
+## Dev Agent Record
+
+**Implemented:** 2026-02-24
+**Files changed:**
+- `frontend/src/components/acm/RawExtractionTable.tsx` (new — live AG Grid with streaming records)
+- `frontend/src/app/(dashboard)/jobs/[id]/extract/page.tsx` (new — extraction + raw table page)
+- `frontend/src/components/upload/UploadProgressStep.tsx` (redirect → /jobs/{id}/extract, "View Jobs" button)
+
+**Tests added:** None (frontend-only, verified via build)
+**Verification:** ruff ✓ | lint ✓ | build ✓

@@ -197,15 +197,15 @@ export function UploadProgressStep({ onReset }: UploadProgressStepProps) {
     await session.start();
   };
 
-  // Navigate to source detail (if single file) or sources list (if batch)
+  // Navigate to extract page (if single file) or jobs list (if batch)
   const handleDone = useCallback(() => {
-    // If only one file was uploaded successfully, navigate to its detail page
+    // If only one file was uploaded successfully, navigate to its extract page
     const successEntries = Array.from(fileStatuses.entries()).filter(
       ([, s]) => s.status === 'success' && s.sourceId
     );
     const targetPath = successEntries.length === 1
-      ? `/sources/${successEntries[0][1].sourceId}`
-      : '/sources';
+      ? `/jobs/${successEntries[0][1].sourceId}/extract`
+      : '/jobs';
 
     clearFiles();
     resetOptions();
@@ -369,8 +369,8 @@ export function UploadProgressStep({ onReset }: UploadProgressStepProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => router.push(`/sources/${status.sourceId}`)}
-                  title="View Source"
+                  onClick={() => router.push(`/jobs/${status.sourceId}/extract`)}
+                  title="View Job"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </Button>
@@ -413,7 +413,7 @@ export function UploadProgressStep({ onReset }: UploadProgressStepProps) {
             </Button>
             <Button onClick={handleDone} disabled={isRetrying}>
               <FolderOpen className="w-4 h-4 mr-2" />
-              View Sources
+              View Jobs
             </Button>
           </div>
         </Card>
