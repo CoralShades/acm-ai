@@ -231,12 +231,12 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
    - Set sample_no to "Not Sampled" if no sample number is given
    - Add a note to `data_issues` describing the access restriction (e.g., "No access — unable to sample")
    - These items are presumed to contain asbestos until proven otherwise by future sampling
-8. **"Not Sampled" entries are VALID register rows — do NOT skip them.**
-   - Some items are in the register but sampling was not performed (e.g., inaccessible material, safety restrictions, cost constraints)
-   - Extract these as ACM records with sample_result: "Not Sampled"
-   - Set result to "Assumed Positive" if no test result is recorded
-   - **Do NOT skip rows just because `sample_no` is empty or absent** — a missing sample number does NOT mean the item should be excluded
-   - Include rows where `sample_result` is "Not Sampled" or "No Access": these are valid ACM records even if no sample number exists
+8. **EVERY row in the register table is a separate ACM record — including "Not Sampled" rows.**
+   - If a row exists in the register, it MUST appear in your output — even if it has no sample number, no lab result, or says "Not Sampled".
+   - Common "Not Sampled" items that MUST be extracted: **fuse cartridges** (in switchboards), **filing cabinets**, **lift internal linings**, **no-access rooms/areas**, pipe insulation in locked rooms, gaskets/flanges that could not be reached.
+   - Extract these with sample_result: "Not Sampled", result: "Assumed Positive" (unless another result is stated).
+   - Set sample_no to "Not Sampled" if no sample number is given.
+   - **A missing sample number does NOT mean the row should be excluded** — it means the item was not sampled.
 
 **WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL. This includes "No access" and "Restricted Access" entries.
 
@@ -244,8 +244,17 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 
 9. **Items in utility/service areas** (Boiler Room, Switch Room, Substation, Plant Room, Meter Room) are some of the MOST important ACM items. Do NOT skip them.
 10. **Small items matter** — Expansion joints, gaskets, flange joints, mastic, pipe insulation, and similar small items in utility areas are VALID ACM entries and MUST be extracted, regardless of whether they are positive or negative.
-11. **"Similar To" / "As Per" references** — When a register entry references another sample (e.g., "Similar To: 34511-039-014" or "As Per 34511-039-014"), the REFERENCED item (34511-039-014) must ALSO be extracted as its own record. Both the original and the referencing item are separate ACM records.
+11. **"Similar To" / "As Per" references — EACH is its OWN separate record.**
+    - When a register row says "As Per 34511-039-014" or "Similar To 34511-039-014", that row is a DISTINCT ACM record with its own room, location, and product.
+    - It is NOT a duplicate of the referenced item — it is a DIFFERENT item in a DIFFERENT room that was assessed as similar.
+    - Extract it as its own record. Set `sample_no` to the literal reference string (e.g., "As Per 34511-039-014").
+    - Set `sample_result` to the result stated for that row (often "Assumed Positive" or matching the referenced sample's result).
+    - The room_id, floor_level, product, and location must come from THIS row, not the referenced row.
 12. **Negative items with sample numbers** — If an item has a sample number AND a negative result, it is a VALID sampled entry. Extract it with result: "Negative", sample_result: "Negative", and the sample number.
+
+### COMPLETENESS CHECK — COUNT BEFORE EXTRACTING
+
+**Before you begin extracting, count the total number of data rows in the register table(s) above.** Each row (whether sampled, "Not Sampled", "As Per", "No Access", or any other status) is one record. Your output MUST contain exactly that many records. If your count does not match, re-read the table and find the rows you missed.
 
 ### Controlled Vocabulary (BAR Enum Values)
 

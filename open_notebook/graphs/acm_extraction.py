@@ -447,9 +447,11 @@ def _get_agui_emitter(state: dict) -> Optional[AGUIEventEmitter]:
 def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str]) -> str:
     """Generate a deduplication key for a record.
 
-    Key format: {school_code}_{building_id}_{area_type}_{room_id}_{product}_{hash(description)}
+    Key format: {school_code}_{building_id}_{area_type}_{room_id}_{product}_{sample_no}_{hash(description)}
     - Includes area_type to distinguish Interior vs Exterior locations (E1-S25)
     - Includes product to distinguish different items in same room (E1-S27)
+    - Includes sample_no to distinguish records with different sample numbers
+      in the same room (e.g., gaskets 034511-039-012 vs 013)
     Uses SHA-256 for cryptographic security (truncated to 8 chars for readability).
     """
     school = school_code or "unknown"
@@ -457,13 +459,14 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
     area = (record.area_type or "Interior").lower()  # Default to Interior
     room = record.room_id or "none"
     product = (record.product or "unknown").lower()
+    sample = (record.sample_no or "no_sample").lower()
 
     # Create hash of product description (first 50 chars) using SHA-256
     desc_hash = hashlib.sha256(
         (record.material_description or "")[:50].encode()
     ).hexdigest()[:8]
 
-    return f"{school}_{building}_{area}_{room}_{product}_{desc_hash}"
+    return f"{school}_{building}_{area}_{room}_{product}_{sample}_{desc_hash}"
 
 
 def _merge_records(

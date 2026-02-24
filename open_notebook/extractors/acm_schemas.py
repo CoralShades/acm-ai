@@ -22,11 +22,21 @@ RESULT_VALUES = {
     "Assumed Positive",
     "Negative",
     "Assumed Negative",
+    "Not Sampled",
+    "No Access",
     "Unknown",
 }
 FRIABLE_VALUES = {"Friable", "Non Friable"}
 RISK_STATUS_VALUES = {"Low", "Medium", "High"}
-MATERIAL_CONDITION_VALUES = {"Good", "Fair", "Poor", "Damaged"}
+MATERIAL_CONDITION_VALUES = {
+    "Good",
+    "Fair",
+    "Poor",
+    "Damaged",
+    "Unknown",
+    "N/A (negative)",
+    "N/A (assumed negative)",
+}
 AREA_TYPE_VALUES = {"Interior", "Exterior", "Grounds"}
 
 # N/A patterns — LLMs return these for fields not applicable to negative results
@@ -290,9 +300,18 @@ class ACMExtractionRecord(BaseModel):
     def validate_material_condition(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
+        stripped = v.strip()
+        # Check for specific N/A enum values BEFORE generic _is_na() check
+        # (otherwise "N/A (negative)" would be stripped to None)
+        na_condition_values = {
+            "n/a (negative)": "N/A (negative)",
+            "n/a (assumed negative)": "N/A (assumed negative)",
+        }
+        if stripped.lower() in na_condition_values:
+            return na_condition_values[stripped.lower()]
         if _is_na(v):
             return None
-        normalized = v.strip().title()
+        normalized = stripped.title()
         if normalized in MATERIAL_CONDITION_VALUES:
             return normalized
         raise ValueError(

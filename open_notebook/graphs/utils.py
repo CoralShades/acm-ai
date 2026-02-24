@@ -39,17 +39,43 @@ def _apply_openrouter_preferences(lc_model: BaseChatModel) -> BaseChatModel:
     Only applies when the model's base_url points to OpenRouter.
     Adds ``provider.ignore``, ``provider.order``, and the
     ``middle-out`` transform for response healing.
+
+    Model-aware routing: Anthropic/Claude models are restricted to the
+    Anthropic provider only, because other providers (e.g. Google) reject
+    the ``anthropic-beta: structured-outputs-*`` header that LangChain
+    sends with ``with_structured_output()``.
     """
-    base_url = getattr(lc_model, "openai_api_base", None) or getattr(
-        lc_model, "base_url", None
-    ) or ""
+    base_url = (
+        getattr(lc_model, "openai_api_base", None)
+        or getattr(lc_model, "base_url", None)
+        or ""
+    )
     if "openrouter.ai" not in str(base_url).lower():
         return lc_model
 
+    # Detect model family from LangChain model attributes
+    model_name = (
+        getattr(lc_model, "model_name", None) or getattr(lc_model, "model", None) or ""
+    )
+    model_name_lower = str(model_name).lower()
+    is_anthropic = "claude" in model_name_lower or model_name_lower.startswith(
+        "anthropic/"
+    )
+
+    if is_anthropic:
+        # Anthropic models MUST only route to the Anthropic provider.
+        # Other providers (Google, etc.) reject the anthropic-beta header
+        # that LangChain injects for structured output.
+        ignore_list = OPENROUTER_IGNORED_PROVIDERS + ["Google"]
+        order_list = ["Anthropic"]
+    else:
+        ignore_list = OPENROUTER_IGNORED_PROVIDERS
+        order_list = OPENROUTER_PROVIDER_ORDER
+
     openrouter_body = {
         "provider": {
-            "ignore": OPENROUTER_IGNORED_PROVIDERS,
-            "order": OPENROUTER_PROVIDER_ORDER,
+            "ignore": ignore_list,
+            "order": order_list,
             "require_parameters": True,
         },
         "transforms": ["middle-out"],
@@ -58,14 +84,18 @@ def _apply_openrouter_preferences(lc_model: BaseChatModel) -> BaseChatModel:
     # Merge into extra_body so the OpenAI SDK passes these in the HTTP
     # request body (not as create() kwargs which it would reject).
     prev_extra = existing.get("extra_body", {})
-    object.__setattr__(lc_model, "model_kwargs", {
-        **existing,
-        "extra_body": {**prev_extra, **openrouter_body},
-    })
+    object.__setattr__(
+        lc_model,
+        "model_kwargs",
+        {
+            **existing,
+            "extra_body": {**prev_extra, **openrouter_body},
+        },
+    )
     logger.info(
         f"Applied OpenRouter provider preferences: "
-        f"ignore={OPENROUTER_IGNORED_PROVIDERS}, "
-        f"order={OPENROUTER_PROVIDER_ORDER}"
+        f"ignore={ignore_list}, "
+        f"order={order_list}"
     )
     return lc_model
 
