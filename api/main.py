@@ -144,6 +144,7 @@ app.add_middleware(
         "/api/auth/status",
         "/api/config",
         "/api/agui/chat",
+        "/api/agui/crud-chat",
         "/.well-known/agent.json",
     ],
 )
@@ -194,7 +195,11 @@ from fastapi.staticfiles import StaticFiles
 
 _static_dir = _Path(__file__).parent / "static"
 if _static_dir.exists():
-    app.mount("/.well-known", StaticFiles(directory=str(_static_dir / ".well-known")), name="well-known")
+    app.mount(
+        "/.well-known",
+        StaticFiles(directory=str(_static_dir / ".well-known")),
+        name="well-known",
+    )
 
 # Register AG-UI endpoint for CopilotKit integration
 try:
@@ -203,6 +208,14 @@ try:
     register_agui_endpoints(app)
 except Exception as e:
     logger.warning(f"AG-UI endpoint registration failed (non-fatal): {e}")
+
+# Register AG-UI CRUD chat endpoint (E19-S8)
+try:
+    from api.routers.agui_chat import register_crud_agui_endpoint
+
+    register_crud_agui_endpoint(app)
+except Exception as e:
+    logger.warning(f"AG-UI CRUD endpoint registration failed (non-fatal): {e}")
 
 
 @app.get("/")

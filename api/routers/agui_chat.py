@@ -47,3 +47,28 @@ def register_agui_endpoints(app):
         logger.warning(
             "AG-UI chat will not be available. Falling back to existing chat endpoints."
         )
+
+
+def register_crud_agui_endpoint(app) -> None:
+    """Register the CRUD agent AG-UI endpoint.
+
+    Exposes the crud_graph as an AG-UI SSE endpoint at /api/agui/crud-chat.
+    This endpoint is consumed by the CopilotKit-based CRUD chat panel in the
+    job detail page (E19-S8).
+    """
+    try:
+        from open_notebook.graphs.crud_agent import crud_graph
+
+        crud_agent = LangGraphAgent(
+            name="crud_agent",
+            graph=crud_graph,
+            description="ACM-AI CRUD agent for job-scoped record modification",
+        )
+        add_langgraph_fastapi_endpoint(
+            app,
+            crud_agent,
+            "/api/agui/crud-chat",
+        )
+        logger.info("AG-UI CRUD chat endpoint registered at /api/agui/crud-chat")
+    except Exception as e:
+        logger.error(f"Failed to register CRUD AG-UI endpoint: {e}")

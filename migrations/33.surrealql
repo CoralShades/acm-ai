@@ -1,0 +1,9 @@
+-- Migration 33: CRUD audit log for conversational CRUD chat (E19-S8)
+DEFINE TABLE crud_audit SCHEMAFULL;
+DEFINE FIELD job_id ON crud_audit TYPE record<source>;
+DEFINE FIELD timestamp ON crud_audit TYPE datetime DEFAULT time::now();
+DEFINE FIELD natural_language ON crud_audit TYPE string;
+DEFINE FIELD generated_surql ON crud_audit TYPE option<string>;
+DEFINE FIELD operation ON crud_audit TYPE string;
+DEFINE FIELD confirmed_by ON crud_audit TYPE string DEFAULT 'user';
+DEFINE FIELD fields_changed ON crud_audit TYPE option<array>;

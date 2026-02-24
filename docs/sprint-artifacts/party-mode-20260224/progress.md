@@ -13,7 +13,7 @@
 | E19-S5 | done | 2026-02-24 | Building review wizard — WizardStepHeader, BuildingReviewGrid (21-field AG Grid), /jobs/[id]/review/buildings, GET+PUT /api/acm/jobs/{id}/buildings, site_config extended |
 | E19-S6 | done | 2026-02-24 | ACM schema mapping wizard — ACMReviewGrid (29-field AG Grid), RecordMergeModal, /jobs/[id]/review/records, POST /api/acm/jobs/{id}/publish, no_access+smf_present fields |
 | E19-S7 | done | 2026-02-24 | Job detail page — /jobs/[id] with 4 tabs (Overview, Buildings, ACM Records, Extraction Log), JobDetailHeader, JobOverviewTab, re-extract + export actions |
-| E19-S8 | backlog | — | CRUD chat (P1) |
+| E19-S8 | done | 2026-02-24 | CRUD chat — crud_tools.py, crud_agent.py, /api/agui/crud-chat, WriteConfirmationCard, /jobs/[id]/chat, copilot-crud runtime |
 | E20-S1 | backlog | — | Page boundary fix |
 | E20-S2 | backlog | — | REGEX yield check |
 | E20-S3 | backlog | — | Not sampled capture |

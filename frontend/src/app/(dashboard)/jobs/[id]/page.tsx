@@ -2,6 +2,7 @@
 
 import { use, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -11,6 +12,7 @@ import { BuildingReviewGrid } from '@/components/acm/BuildingReviewGrid'
 import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
+import { MessageSquare } from 'lucide-react'
 
 /**
  * Fetch source details from the API.
@@ -94,13 +96,20 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <div className="px-4 pt-3 pb-0 flex-shrink-0">
+          <div className="px-4 pt-3 pb-0 flex-shrink-0 flex items-center gap-4">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="buildings">Buildings</TabsTrigger>
               <TabsTrigger value="records">ACM Records</TabsTrigger>
               <TabsTrigger value="log">Extraction Log</TabsTrigger>
             </TabsList>
+            <Link
+              href={`/jobs/${sourceId}/chat`}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors ml-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              CRUD Chat
+            </Link>
           </div>
 
           <div className="flex-1 overflow-auto">

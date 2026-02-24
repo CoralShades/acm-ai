@@ -268,9 +268,9 @@ development_status:
   e18-s7-qwen25-32b-support: done  # Qwen2.5:32b setup guide + verify_model_setup.py verification script
 
   # Epic 19: Standard User UX Redesign (P0)
-  # 0/8 stories complete — EPIC IN PROGRESS
+  # 8/8 stories complete — EPIC COMPLETE
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260224-stakeholder-ux-redesign.md
-  epic-19: in-progress
+  epic-19: done
   e19-s1-migration-32-review-status: done  # docs/sprint-artifacts/e19-s1-migration-32-review-status.md — Migration 032: add review_status to source, delete all acm_records
   e19-s2-jobs-dashboard: done  # docs/sprint-artifacts/e19-s2-jobs-dashboard.md — Replace Documents library with Jobs dashboard (UI rename, job cards, status pills)
   e19-s3-feature-gating: done  # docs/sprint-artifacts/e19-s3-feature-gating.md — Standard/Admin user mode toggle, hide CONFIGURE section for standard users
@@ -278,13 +278,13 @@ development_status:
   e19-s5-building-review-wizard: done  # docs/sprint-artifacts/e19-s5-building-review-wizard.md — Step 1: 21-field building mapping wizard, /jobs/{id}/review/buildings, BuildingReviewGrid, WizardStepHeader, GET+PUT /api/acm/jobs/{id}/buildings
   e19-s6-acm-schema-mapping-wizard: done  # docs/sprint-artifacts/e19-s6-acm-schema-mapping-wizard.md — Step 2: ACMReviewGrid (29-field), per-building tabs, RecordMergeModal, POST /api/acm/jobs/{id}/publish, no_access+smf_present fields
   e19-s7-job-detail-page: done  # docs/sprint-artifacts/e19-s7-job-detail-page.md — /jobs/{id} tabbed detail page: JobDetailHeader, JobOverviewTab, BuildingReviewGrid+ACMReviewGrid+log tabs, re-extract+export actions
-  e19-s8-conversational-crud-chat: ready-for-dev  # docs/sprint-artifacts/e19-s8-conversational-crud-chat.md — P1: CRUD chat scoped to job detail (preview_write confirmation protocol)
+  e19-s8-conversational-crud-chat: done  # docs/sprint-artifacts/e19-s8-conversational-crud-chat.md — P1: CRUD agent (crud_tools.py, crud_agent.py), /api/agui/crud-chat, WriteConfirmationCard, /jobs/{id}/chat, copilot-crud runtime
 
   # Epic 20: Extraction Completeness & 100% Record Capture (P0)
-  # 0/4 stories complete — EPIC BACKLOG
+  # 0/4 stories complete — EPIC IN PROGRESS
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260224-stakeholder-ux-redesign.md
-  epic-20: backlog
-  e20-s1-page-boundary-fix: backlog  # docs/sprint-artifacts/e20-s1-page-boundary-fix.md — Fix building page_end with +1 overlap to capture boundary page records
+  epic-20: in-progress
+  e20-s1-page-boundary-fix: ready-for-dev  # docs/sprint-artifacts/e20-s1-page-boundary-fix.md — Fix building page_end with +1 overlap to capture boundary page records
   e20-s2-regex-yield-check: backlog  # docs/sprint-artifacts/e20-s2-regex-yield-check.md — REGEX_ONLY yield check: escalate to FULL_LLM if < 50% of estimate
   e20-s3-not-sampled-capture: backlog  # docs/sprint-artifacts/e20-s3-not-sampled-capture.md — Update extraction prompt to explicitly capture Not Sampled / No Access records
   e20-s4-e2e-accuracy-validation: backlog  # docs/sprint-artifacts/e20-s4-e2e-accuracy-validation.md — E2E validation: confirm 32/32 records on Broadmeadows PDF
@@ -321,14 +321,14 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 20 (16 done, 1 in-progress, 2 backlog, 1 archived)
+# Total Epics: 20 (17 done, 1 in-progress, 1 backlog, 1 archived)
 # Total Stories: 142  # +12 from SCP-20260224 (8 E19 stories + 4 E20 stories)
-# Stories Done: 116 (82%)
+# Stories Done: 124 (87%)
 # Stories Review: 0
 # Stories In-Progress: 1 (E18-S4)
-# Stories Ready-for-dev: 0
+# Stories Ready-for-dev: 1 (E20-S1)
 # Stories Drafted: 0
-# Stories Backlog: 12 (E19-S1..S8, E20-S1..S4)
+# Stories Backlog: 3 (E20-S2..S4)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
 # Last Updated: 2026-02-24  # SCP-20260224: Added E19 (8 stories, Standard User UX Redesign) + E20 (4 stories, Extraction Completeness). Story files drafted. Implementation order: E19-S1..S8 sequential, then E20-S1..S4 sequential.
