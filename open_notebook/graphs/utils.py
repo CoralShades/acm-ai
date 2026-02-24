@@ -1,14 +1,73 @@
 import json
+import os
 import re
 from typing import Any, List, Optional
 
-from esperanto import LanguageModel
+from esperanto import AIFactory, LanguageModel
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from loguru import logger
 
 from open_notebook.domain.models import model_manager
 from open_notebook.utils import token_count
+
+# ---------------------------------------------------------------------------
+# OpenRouter provider routing preferences
+# ---------------------------------------------------------------------------
+
+# Providers that reject complex structured-output schemas or have
+# incompatible beta-header requirements.  Excluding these forces
+# OpenRouter to route to direct-API providers (Anthropic, OpenAI, etc.)
+# that reliably support tool-calling / JSON-mode extraction.
+OPENROUTER_IGNORED_PROVIDERS = [
+    "Amazon Bedrock",
+    "Azure",
+]
+
+# Preferred provider order — direct providers first.
+# OpenRouter selects from top to bottom based on availability.
+OPENROUTER_PROVIDER_ORDER = [
+    "Anthropic",
+    "Google",
+    "OpenAI",
+]
+
+
+def _apply_openrouter_preferences(lc_model: BaseChatModel) -> BaseChatModel:
+    """Inject OpenRouter provider routing into a LangChain model.
+
+    Only applies when the model's base_url points to OpenRouter.
+    Adds ``provider.ignore``, ``provider.order``, and the
+    ``middle-out`` transform for response healing.
+    """
+    base_url = getattr(lc_model, "openai_api_base", None) or getattr(
+        lc_model, "base_url", None
+    ) or ""
+    if "openrouter.ai" not in str(base_url).lower():
+        return lc_model
+
+    openrouter_body = {
+        "provider": {
+            "ignore": OPENROUTER_IGNORED_PROVIDERS,
+            "order": OPENROUTER_PROVIDER_ORDER,
+            "require_parameters": True,
+        },
+        "transforms": ["middle-out"],
+    }
+    existing = getattr(lc_model, "model_kwargs", {}) or {}
+    # Merge into extra_body so the OpenAI SDK passes these in the HTTP
+    # request body (not as create() kwargs which it would reject).
+    prev_extra = existing.get("extra_body", {})
+    object.__setattr__(lc_model, "model_kwargs", {
+        **existing,
+        "extra_body": {**prev_extra, **openrouter_body},
+    })
+    logger.info(
+        f"Applied OpenRouter provider preferences: "
+        f"ignore={OPENROUTER_IGNORED_PROVIDERS}, "
+        f"order={OPENROUTER_PROVIDER_ORDER}"
+    )
+    return lc_model
 
 
 async def provision_langchain_model(
@@ -41,7 +100,8 @@ async def provision_langchain_model(
 
     logger.debug(f"Using model: {model}")
     assert isinstance(model, LanguageModel), f"Model is not a LanguageModel: {model}"
-    return model.to_langchain()
+    lc_model = model.to_langchain()
+    return _apply_openrouter_preferences(lc_model)
 
 
 async def provision_langchain_model_with_tools(
@@ -137,7 +197,9 @@ def parse_json_response(response_text: str) -> dict[str, Any]:
         try:
             return json.loads(json_match.group(1))
         except json.JSONDecodeError as e:
-            raise ValueError(f"Found JSON-like structure but failed to parse: {e}") from e
+            raise ValueError(
+                f"Found JSON-like structure but failed to parse: {e}"
+            ) from e
 
     # Fall back to raw brace-depth matching
     brace_start = response_text.find("{")
@@ -158,3 +220,143 @@ def parse_json_response(response_text: str) -> dict[str, Any]:
                         ) from e
 
     raise ValueError("No JSON object found in response text")
+
+
+def is_auth_error(error: Exception) -> bool:
+    """Best-effort detection for provider authentication errors."""
+    error_text = str(error).lower()
+    error_type = type(error).__name__.lower()
+    auth_markers = [
+        "authenticationerror",
+        "unauthorized",
+        "invalid api key",
+        "user not found",
+        "error code: 401",
+        "status code: 401",
+        "access denied",
+    ]
+    return any(marker in error_text or marker in error_type for marker in auth_markers)
+
+
+def is_provider_schema_error(error: Exception) -> bool:
+    """Detect provider-specific structured output / schema rejection errors.
+
+    These occur when an OpenRouter provider backend (e.g. Amazon Bedrock,
+    Google Vertex AI) cannot handle the structured output request — either
+    the JSON grammar is too complex, or the provider doesn't support the
+    required beta headers/features.
+
+    Unlike auth errors (401/403), these are 400-class errors that can be
+    recovered from by falling back to manual JSON parsing
+    (free-text + parse_json_response).
+    """
+    error_text = str(error).lower()
+
+    # Direct schema/grammar complexity markers
+    schema_markers = [
+        "compiled grammar is too large",
+        "grammar too large",
+        "simplify your tool schemas",
+        "properties maximum, minimum are not supported",
+        "properties are not supported",
+        "schema is too complex",
+        "tool schema",
+        "json schema",
+        "structured output",
+        "constrained decoding",
+    ]
+
+    # Provider incompatibility markers (e.g., Google Vertex AI rejecting
+    # Anthropic beta headers, or Bedrock not supporting certain features)
+    provider_compat_markers = [
+        "provider returned error",
+        "anthropic-beta",
+        "unexpected value",
+        "unsupported header",
+        "not supported by this provider",
+        "invalid_request_error",
+    ]
+
+    status_400 = "status code: 400" in error_text or "error code: 400" in error_text
+    has_schema_keyword = any(marker in error_text for marker in schema_markers[:6])
+
+    # Match if any direct schema marker hit
+    if has_schema_keyword:
+        return True
+
+    # Match 400 errors with schema or provider compatibility markers
+    if status_400:
+        all_markers = schema_markers + provider_compat_markers
+        if any(marker in error_text for marker in all_markers):
+            return True
+
+    return False
+
+
+async def provision_extraction_fallback_model(
+    failed_model_name: str,
+    *,
+    temperature: float,
+    max_tokens: int,
+) -> Optional[BaseChatModel]:
+    """Provision a fallback extraction model when primary auth fails.
+
+    Priority:
+    1) Anthropic direct (preferred — native structured output support)
+    2) OpenAI direct (fallback — reliable JSON mode)
+    3) Ollama Qwen local fallbacks
+    """
+    lower_name = (failed_model_name or "").lower()
+    candidates: list[tuple[str, str]] = []
+
+    # Always try Anthropic direct first — most reliable for extraction
+    if os.getenv("ANTHROPIC_API_KEY"):
+        candidates.append(("anthropic", "claude-sonnet-4-20250514"))
+
+    # OpenAI direct second
+    if os.getenv("OPENAI_API_KEY"):
+        candidates.append(("openai", "gpt-4o"))
+
+    # Ollama local fallbacks
+    if os.getenv("OLLAMA_API_BASE"):
+        candidates.extend(
+            [
+                ("ollama", "qwen2.5:32b"),
+                ("ollama", "qwen3:32b"),
+            ]
+        )
+
+    seen: set[str] = set()
+    unique_candidates: list[tuple[str, str]] = []
+    for provider, model_name in candidates:
+        key = f"{provider}/{model_name}".lower()
+        if key in seen or model_name.lower() == lower_name:
+            continue
+        seen.add(key)
+        unique_candidates.append((provider, model_name))
+
+    for provider, model_name in unique_candidates:
+        try:
+            logger.warning(
+                "Attempting extraction fallback model after auth failure: "
+                f"{provider}/{model_name}"
+            )
+            model = AIFactory.create_language(
+                model_name=model_name,
+                provider=provider,
+                config={
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                },
+            )
+            assert isinstance(model, LanguageModel), (
+                f"Fallback model is not a LanguageModel: {model}"
+            )
+            lc_model = model.to_langchain()
+            return _apply_openrouter_preferences(lc_model)
+        except Exception as fallback_error:
+            logger.warning(
+                f"Fallback candidate {provider}/{model_name} failed: {fallback_error}"
+            )
+
+    return None

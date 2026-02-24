@@ -71,7 +71,12 @@ from open_notebook.extractors.validators.acm_validator import (
     CorrectionStats,
     validate_acm_record,
 )
-from open_notebook.graphs.utils import _is_qwen_model, provision_langchain_model
+from open_notebook.graphs.utils import (
+    _is_qwen_model,
+    is_auth_error,
+    provision_extraction_fallback_model,
+    provision_langchain_model,
+)
 from open_notebook.utils import token_count
 
 # Constants
@@ -739,10 +744,18 @@ async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
                 )
             if agui:
                 await agui.emit_state_delta(
-                    [{"op": "replace", "path": "/metadata", "value": {"consultant": consultant, "fields": fields_count}}]
+                    [
+                        {
+                            "op": "replace",
+                            "path": "/metadata",
+                            "value": {"consultant": consultant, "fields": fields_count},
+                        }
+                    ]
                 )
         if agui:
-            await agui.emit_step_finished("extract_metadata", fields=fields_count if metadata else 0)
+            await agui.emit_step_finished(
+                "extract_metadata", fields=fields_count if metadata else 0
+            )
         return {"document_metadata": metadata}
     except Exception as e:
         logger.warning(f"Metadata extraction failed for source {source.id}: {e}")
@@ -790,9 +803,20 @@ async def extract_structure(state: dict, config: RunnableConfig) -> dict:
             )
         if agui:
             await agui.emit_state_delta(
-                [{"op": "replace", "path": "/toc", "value": {"type": structure.document_type, "buildings": len(structure.building_ids)}}]
+                [
+                    {
+                        "op": "replace",
+                        "path": "/toc",
+                        "value": {
+                            "type": structure.document_type,
+                            "buildings": len(structure.building_ids),
+                        },
+                    }
+                ]
             )
-            await agui.emit_step_finished("structure", buildings=len(structure.building_ids))
+            await agui.emit_step_finished(
+                "structure", buildings=len(structure.building_ids)
+            )
         return {"document_structure": structure}
     except Exception as e:
         logger.warning(f"Structure extraction failed for source {source.id}: {e}")
@@ -848,9 +872,17 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
             )
         if agui:
             await agui.emit_state_delta(
-                [{"op": "replace", "path": "/buildings", "value": inventory.total_buildings}]
+                [
+                    {
+                        "op": "replace",
+                        "path": "/buildings",
+                        "value": inventory.total_buildings,
+                    }
+                ]
             )
-            await agui.emit_step_finished("inventory", buildings=inventory.total_buildings)
+            await agui.emit_step_finished(
+                "inventory", buildings=inventory.total_buildings
+            )
         return {"building_inventory": inventory}
     except Exception as e:
         logger.warning(
@@ -938,8 +970,40 @@ async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
             orch_stats = result.get("orchestrator_stats")
             summary = ""
             if orch_stats:
-                n_plans = len(getattr(orch_stats, "building_plans", []))
-                summary = f"{n_plans} building plans"
+                n_plans = len(orch_stats.plan.plans) if orch_stats.plan else 0
+                n_records = orch_stats.total_records
+                n_extracted = orch_stats.buildings_extracted
+                parts = [f"{n_plans} building plans"]
+                if n_extracted > 0:
+                    parts.append(f"{n_extracted} extracted")
+                if n_records > 0:
+                    parts.append(f"{n_records} records")
+                if orch_stats.buildings_skipped > 0:
+                    parts.append(f"{orch_stats.buildings_skipped} skipped")
+                # Surface strategy distribution for debugging
+                if orch_stats.strategy_distribution:
+                    strats = ", ".join(
+                        f"{k}={v}" for k, v in orch_stats.strategy_distribution.items()
+                    )
+                    parts.append(f"strategies: {strats}")
+                summary = " | ".join(parts)
+
+                # Surface per-building errors/warnings to pipeline log
+                if orch_stats.plan and orch_stats.plan.plans:
+                    for bp in orch_stats.plan.plans:
+                        pl._log(
+                            f"  Building plan: {bp.building_name} | "
+                            f"strategy={bp.strategy.value} | "
+                            f"pages={bp.page_range}"
+                        )
+                # Check building stats from result for errors
+                raw_records = result.get("records", [])
+                if n_plans > 0 and n_records == 0:
+                    pl._log(
+                        f"  WARNING: {n_plans} plans but 0 records — "
+                        f"check LLM response or auth errors",
+                        level="warning"
+                    )
             pl.stage_complete(StageId.ORCHESTRATOR, summary)
         return result
     except Exception as e:
@@ -1077,7 +1141,9 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     model_family = "default"
     try:
         # Dynamic max_tokens: look up model capabilities; fall back to 16384 if unavailable
-        _max_tokens = 16384  # safe fallback (8192 too small for registers with 30+ records)
+        _max_tokens = (
+            16384  # safe fallback (8192 too small for registers with 30+ records)
+        )
         _early_qwen = False
         if model_id:
             try:
@@ -1113,7 +1179,9 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             pl.log_model(str(actual_model), "extraction")
             logger.info("[PIPELINE] Prompt template: acm/extraction")
         if is_qwen:
-            logger.info(f"Qwen2.5 model detected — using direct JSON mode (temp={_temperature})")
+            logger.info(
+                f"Qwen2.5 model detected — using direct JSON mode (temp={_temperature})"
+            )
     except Exception as e:
         logger.error(f"Failed to provision model: {e}")
         return {"error": f"Model provisioning failed: {e}"}
@@ -1155,7 +1223,14 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         await agui.emit_tool_call_start(tool_call_id, "extract_records")
         await agui.emit_tool_call_args(
             tool_call_id,
-            _json.dumps({"chunk_index": current_index, "total_chunks": len(chunks), "page": page_number, "content_length": len(chunk_content)}),
+            _json.dumps(
+                {
+                    "chunk_index": current_index,
+                    "total_chunks": len(chunks),
+                    "page": page_number,
+                    "content_length": len(chunk_content),
+                }
+            ),
         )
 
     # Use structured output (with manual JSON fallback for OpenRouter compatibility)
@@ -1172,9 +1247,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             )
             parsed = parse_json_response(response_text)
             result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
-            logger.info(
-                f"Qwen direct JSON extraction: {len(result.records)} records"
-            )
+            logger.info(f"Qwen direct JSON extraction: {len(result.records)} records")
         else:
             chain = model.with_structured_output(ACMExtractionResult)
             result = await chain.ainvoke(messages)
@@ -1248,13 +1321,19 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             # Emit StateDelta for each new record (incremental streaming)
             for rec in new_records:
                 await agui.emit_state_delta(
-                    [{"op": "add", "path": "/records/-", "value": {
-                        "building_id": rec.building_id,
-                        "room_name": rec.room_name,
-                        "product": rec.product,
-                        "result": rec.result,
-                        "page_number": rec.page_number,
-                    }}]
+                    [
+                        {
+                            "op": "add",
+                            "path": "/records/-",
+                            "value": {
+                                "building_id": rec.building_id,
+                                "room_name": rec.room_name,
+                                "product": rec.product,
+                                "result": rec.result,
+                                "page_number": rec.page_number,
+                            },
+                        }
+                    ]
                 )
             await agui.emit_tool_call_end(
                 tool_call_id,
@@ -1282,10 +1361,32 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     # The success path above always returns, so _exc_info is always set here.
     _error_type, _exc = _exc_info  # type: ignore[possibly-undefined]
 
+    if is_auth_error(_exc):
+        failed_model_name = (
+            getattr(model, "model_name", None)
+            or getattr(model, "model", None)
+            or str(model_id or "unknown")
+        )
+        fallback_model = await provision_extraction_fallback_model(
+            str(failed_model_name),
+            temperature=0.0 if is_qwen else 0.1,
+            max_tokens=_max_tokens,
+        )
+        if fallback_model is not None:
+            model = fallback_model
+            is_qwen = _is_qwen_model(model)
+            logger.warning(
+                "Authentication failure detected for extraction model "
+                f"'{failed_model_name}', switched to fallback model "
+                f"'{getattr(model, 'model_name', getattr(model, 'model', 'unknown'))}'"
+            )
+
     # Fallback: try direct model invocation with manual JSON extraction
     # (handles OpenRouter/provider incompatibility with function calling)
     if retry_count == 0:
-        logger.info("Attempting fallback: direct model invocation with manual JSON parsing")
+        logger.info(
+            "Attempting fallback: direct model invocation with manual JSON parsing"
+        )
         response_text = ""
         try:
             from open_notebook.graphs.utils import parse_json_response
@@ -1366,9 +1467,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             if retry_count < len(RETRY_DELAYS)
             else RETRY_DELAYS[-1]
         )
-        logger.info(
-            f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})"
-        )
+        logger.info(f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})")
         await asyncio.sleep(delay)
         return {
             "retry_count": retry_count + 1,
@@ -1634,11 +1733,20 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
 
     if agui:
         await agui.emit_state_delta(
-            [{"op": "replace", "path": "/validation_result", "value": {
-                "accepted": len(validated_records), "rejected": rejected_count,
-            }}]
+            [
+                {
+                    "op": "replace",
+                    "path": "/validation_result",
+                    "value": {
+                        "accepted": len(validated_records),
+                        "rejected": rejected_count,
+                    },
+                }
+            ]
         )
-        await agui.emit_step_finished("validate", accepted=len(validated_records), rejected=rejected_count)
+        await agui.emit_step_finished(
+            "validate", accepted=len(validated_records), rejected=rejected_count
+        )
 
     return {
         "records": validated_records,
@@ -1843,9 +1951,9 @@ async def _llm_correct_records(
         if model_id:
             try:
                 _correction_domain_model = await Model.get(model_id)
-                _correction_qwen = "qwen2.5" in (
-                    _correction_domain_model.name or ""
-                ).lower()
+                _correction_qwen = (
+                    "qwen2.5" in (_correction_domain_model.name or "").lower()
+                )
             except Exception:
                 pass  # fallback: temperature=0.1 is safe default
 
@@ -2001,7 +2109,9 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
         await agui.emit_state_delta(
             [{"op": "replace", "path": "/final_count", "value": len(deduplicated)}]
         )
-        await agui.emit_step_finished("deduplicate", unique=len(deduplicated), merged=duplicates_merged)
+        await agui.emit_step_finished(
+            "deduplicate", unique=len(deduplicated), merged=duplicates_merged
+        )
 
     return {"records": deduplicated}
 
