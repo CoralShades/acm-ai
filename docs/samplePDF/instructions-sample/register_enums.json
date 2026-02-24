@@ -16,7 +16,9 @@
     "Positive",
     "Assumed Positive",
     "Negative",
-    "Assumed Negative"
+    "Assumed Negative",
+    "Not Sampled",
+    "No Access"
   ],
   "Condition": [
     "Poor",
