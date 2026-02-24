@@ -104,7 +104,9 @@ class TestProductNormalization:
 
     def test_fuses_normalized_to_fuse_cartridge(self):
         """'Fuses' (plural) is normalized to 'Fuse cartridge'."""
-        text = "B001 - R0001 - Switch Room - 5.00 m2\nFuses\nAsbestos-containing material"
+        text = (
+            "B001 - R0001 - Switch Room - 5.00 m2\nFuses\nAsbestos-containing material"
+        )
         result = _preprocess(text)
         assert "Fuse cartridge" in result
         # "Fuses" as a standalone word should be replaced

@@ -345,7 +345,9 @@ class TestSearchWithParentContext:
         mock_section.id = "acm_table_section:sec1"
         mock_get_by_source.return_value = [mock_section]
 
-        response = client.get("/api/acm/search?query=ceiling+tiles&include_parent=true&search_mode=vector")
+        response = client.get(
+            "/api/acm/search?query=ceiling+tiles&include_parent=true&search_mode=vector"
+        )
 
         assert response.status_code == 200
         data = response.json()

@@ -94,7 +94,9 @@ class TestParseJsonResponse:
     def test_nested_json(self):
         from open_notebook.graphs.utils import parse_json_response
 
-        text = '{"records": [{"building_id": "B1", "data_issues": []}], "status": "valid"}'
+        text = (
+            '{"records": [{"building_id": "B1", "data_issues": []}], "status": "valid"}'
+        )
         result = parse_json_response(text)
         assert len(result["records"]) == 1
 
