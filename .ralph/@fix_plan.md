@@ -7,7 +7,7 @@
 
 - [x] E19-S1: Migration 032 — add review_status to source, delete all acm_records — spec: docs/sprint-artifacts/e19-s1-migration-32-review-status.md
 - [x] E19-S2: Jobs Dashboard — replace Documents library with Jobs dashboard, review_status pills — spec: docs/sprint-artifacts/e19-s2-jobs-dashboard.md
-- [ ] E19-S3: Feature Gating — Standard/Admin mode toggle, hide CONFIGURE for standard users — spec: docs/sprint-artifacts/e19-s3-feature-gating.md
+- [x] E19-S3: Feature Gating — Standard/Admin mode toggle, hide CONFIGURE for standard users — spec: docs/sprint-artifacts/e19-s3-feature-gating.md
 - [ ] E19-S4: Raw Extraction Table — live AG Grid during and after extraction — spec: docs/sprint-artifacts/e19-s4-raw-extraction-table.md
 - [ ] E19-S5: Building Review Wizard Step 1 — 21-field building mapping AG Grid — spec: docs/sprint-artifacts/e19-s5-building-review-wizard.md
 - [ ] E19-S6: ACM Schema Mapping Wizard Step 2 — 29-field ACM grid, publish endpoint — spec: docs/sprint-artifacts/e19-s6-acm-schema-mapping-wizard.md

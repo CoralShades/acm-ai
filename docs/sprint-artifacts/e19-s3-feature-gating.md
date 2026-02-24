@@ -94,3 +94,15 @@ XS (Extra Small) — One Zustand store + one conditional render in sidebar.
 ---
 
 **Story Status:** ⬜ BACKLOG
+
+---
+
+## Dev Agent Record
+
+**Implemented:** 2026-02-24
+**Files changed:**
+- `frontend/src/lib/stores/user-mode-store.ts` (new — Zustand user mode store, persisted to localStorage 'acm-user-mode')
+- `frontend/src/components/layout/AppSidebar.tsx` (mode toggle UI in footer, Configure section hidden in standard mode)
+
+**Tests added:** None (frontend-only, verified via build)
+**Verification:** ruff ✓ | lint ✓ | build ✓
