@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-23"
+updated: "2026-02-25"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -56,6 +56,12 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-02-25: E19/E20 Post-Review Stabilization
+#   - Implemented E19-S2 fixes: upload redirect to /jobs/{id}/review/buildings, Jobs detail route alignment
+#   - Implemented E19-S6 fixes: Unassigned tab, All Records label, merge modal integration, missing ACM fields
+#   - Implemented E19-S7 fixes: inline title edit, extraction log tab integration, CSV endpoint alignment
+#   - Implemented extraction reliability fix: auth-failure model fallback routing (Sonnet/OpenRouter + Ollama/Qwen compatibility)
+#   - Added jobs route loading + prefetching for improved perceived navigation responsiveness
 # 2026-02-23: E20 - Marketing-App Cross-Site Navigation & Domain Cutover
 #   - PRD updated to v1.6 with FR-1100 cross-site navigation requirements
 #   - Architecture updated to v1.3 with multi-project Vercel topology and env contract

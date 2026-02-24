@@ -2,7 +2,7 @@
 
 **Epic:** E20 — Extraction Completeness & 100% Record Capture
 **Priority:** P0
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260224 (2026-02-24)
 **Depends on:** E20-S1, E20-S2, E20-S3
 

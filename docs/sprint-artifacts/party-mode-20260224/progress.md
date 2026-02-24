@@ -29,3 +29,12 @@
 - E19-S1 DONE: migrations/32.surrealql, async_migrate.py updated (28-32), Source model + API models updated, 16 unit tests pass
 - E19-S2 DONE: JobCard, JobStatusPill, /jobs page, /documents → redirect, nav updated
 - E19-S3 DONE: user-mode-store.ts, sidebar Standard/Admin toggle, Configure hidden in standard mode
+
+### 2026-02-25
+- Post-review stabilization started from `docs/reviews/e19-e20-review/findings.md` priority list.
+- E19-S2 fixed: upload completion redirect now goes to `/jobs/{id}/review/buildings`; Jobs cards now route to `/jobs/{id}` and include building counts.
+- E19-S6 fixed: `BuildingTabs` now includes `Unassigned` + `All Records`; `RecordMergeModal` wired into `ACMReviewGrid`; missing ACM fields added.
+- E19-S7 fixed: job title inline-edit added; Extraction Log tab now renders `ExtractionProgressPanel`; CSV export URL aligned to `/api/acm/export/csv`.
+- Extraction reliability fix implemented: runtime auth-failure fallback model routing in extraction/orchestrator paths while preserving Sonnet/OpenRouter and Ollama/Qwen compatibility.
+- Perceived navigation freeze mitigations added: jobs route loading UI + route prefetching.
+- Verification status: static diagnostics clean on changed files; full frontend/backend command verification partially constrained by shell/runtime environment (WSL service instability and UV environment re-sync).

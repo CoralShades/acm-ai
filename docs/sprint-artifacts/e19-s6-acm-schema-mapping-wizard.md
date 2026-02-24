@@ -2,7 +2,7 @@
 
 **Epic:** E19 — Standard User UX Redesign
 **Priority:** P0
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260224 (2026-02-24)
 **Depends on:** E19-S5
 
@@ -143,4 +143,31 @@ L (Large) — New wizard page, adapted AG Grid for 29 fields, per-building tab i
 
 ---
 
-**Story Status:** ⬜ BACKLOG
+**Story Status:** ✅ DONE
+
+---
+
+## Dev Agent Record
+
+**Implemented:** 2026-02-24
+**Post-review fixes applied:** 2026-02-25
+
+**Files changed (post-review):**
+- `frontend/src/components/acm/BuildingTabs.tsx`
+- `frontend/src/components/acm/ACMReviewGrid.tsx`
+
+**Post-review fixes delivered:**
+- Added `All Records` tab label and `Unassigned` tab (amber highlight behavior).
+- Wired `RecordMergeModal` into `ACMReviewGrid` with two-row merge action.
+- Added missing ACM fields to grid columns:
+	- `acm_label_details`
+	- `psb_acm_id`
+	- `assumed_removed`
+	- `date_of_removal`
+	- `quantity_removed`
+	- `epa_certificate_no`
+	- `removal_notification_no`
+
+**Verification status:**
+- Static diagnostics on changed files: no errors.
+- Functional closure reflected in `party-mode-20260224/findings.md` and sprint-status comments.

@@ -27,3 +27,14 @@ Waiting for: frontend-reviewer (still running) and E20-S4 e2e test (running in b
 ## Session Log
 - 2026-02-24: Sprint implemented by ralph loop. Review team spawned.
 - 2026-02-24 21:xx: Backend review complete (32→33/33 ACs). register_enums.json fixed. E20-S4 test re-run initiated.
+
+## Post-Review Implementation Log (2026-02-25)
+- Applied E19-S2 fixes: upload redirect target, jobs detail routing, building count surfaced on cards.
+- Applied E19-S6 fixes: Unassigned tab + All Records label, RecordMergeModal wiring, missing ACM fields.
+- Applied E19-S7 fixes: inline job title editing, extraction log integration, CSV export URL alignment.
+- Added extraction runtime auth fallback routing to reduce extraction startup failures while preserving Ollama/Qwen support.
+- Added jobs loading/prefetch responsiveness improvements for Next.js route transitions.
+
+## Verification Snapshot (2026-02-25)
+- Static diagnostics for changed files: clean.
+- Frontend/backend command-level verification: partially constrained by local shell/runtime instability (WSL task runner + UV resync path).

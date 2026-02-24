@@ -26,3 +26,12 @@
 - [ ] File 5: sprint-status.yaml (append new epics)
 - [ ] File 6: e18-e19-implementation-prompts.md
 - [ ] File 7: prd-update-notes-20260224.md
+
+## Post-Review Stabilization — 2026-02-25
+- [x] Apply E19-S2 review fixes (redirect + jobs routing + building count)
+- [x] Apply E19-S6 review fixes (Unassigned tab + merge modal + missing fields)
+- [x] Apply E19-S7 review fixes (inline edit + log tab + CSV URL)
+- [x] Add extraction runtime auth/model fallback routing with Ollama/Qwen compatibility preserved
+- [x] Add route loading/prefetch improvements for perceived Next.js compile stalls
+- [ ] Complete full command-level validation run (environment dependent)
+- [x] Update sprint/workflow/progress/findings artifacts

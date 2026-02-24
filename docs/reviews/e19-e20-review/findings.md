@@ -314,6 +314,28 @@ E20-S4 BLOCKED (API credits exhausted — needs manual re-run after credits refi
 
 ---
 
+## Post-Review Fix Closure (2026-02-25)
+
+### Implemented fixes
+- E19-S2: upload completion redirect to `/jobs/{id}/review/buildings` and jobs detail routing alignment.
+- E19-S2: `building_count` added to source list API response and surfaced on Jobs cards.
+- E19-S6: `Unassigned` tab + `All Records` label fixed in `BuildingTabs`.
+- E19-S6: `RecordMergeModal` wired into `ACMReviewGrid` merge action flow.
+- E19-S6: missing ACM fields added to editable grid columns.
+- E19-S7: inline job name editing implemented in `JobDetailHeader`.
+- E19-S7: Extraction Log tab now renders `ExtractionProgressPanel` with extraction-progress data.
+- E19-S7: CSV export URL aligned to `/api/acm/export/csv` with backend alias route.
+
+### Critical extraction reliability fix
+- Added runtime authentication-failure fallback routing in both legacy extraction graph and orchestrator extraction paths.
+- Added provider/name normalization to route OpenRouter-style model names safely while preserving Ollama/Qwen behavior.
+
+### Remaining
+- Full command-level verification in this environment remains partially constrained by runtime shell instability.
+- E20-S5 still requires targeted validation rerun for 31/31 closure.
+
+---
+
 ### AC Gap Analysis
 
 **R-AC1 through R-AC6 — Deferred** — Backend: 33/33 (100%), Frontend: 46/56 (82%). Per-story breakdowns above are sufficient for action prioritization.

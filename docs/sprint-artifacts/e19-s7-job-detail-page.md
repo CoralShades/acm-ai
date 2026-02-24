@@ -2,7 +2,7 @@
 
 **Epic:** E19 — Standard User UX Redesign
 **Priority:** P0
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260224 (2026-02-24)
 **Depends on:** E19-S6
 
@@ -112,4 +112,28 @@ M (Medium) — Tabbed page with reused wizard components. Primary new work is th
 
 ---
 
-**Story Status:** ⬜ BACKLOG
+**Story Status:** ✅ DONE
+
+---
+
+## Dev Agent Record
+
+**Implemented:** 2026-02-24
+**Post-review fixes applied:** 2026-02-25
+
+**Files changed (post-review):**
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx`
+- `frontend/src/components/jobs/JobDetailHeader.tsx`
+- `frontend/src/components/jobs/JobOverviewTab.tsx`
+- `api/routers/acm.py`
+
+**Post-review fixes delivered:**
+- Added inline job title editing in `JobDetailHeader`.
+- Replaced Extraction Log placeholder with `ExtractionProgressPanel` backed by extraction-progress API data.
+- Aligned CSV export path to `/api/acm/export/csv`.
+- Added `/api/acm/export/csv` route alias to backend export endpoint.
+- Updated overview cards to include required quality/missing-field metric slots.
+
+**Verification status:**
+- Static diagnostics on changed files: no errors.
+- Command-level build/test verification attempts logged in sprint progress with environment constraints noted.

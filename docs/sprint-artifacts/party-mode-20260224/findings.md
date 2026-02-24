@@ -84,3 +84,29 @@ Root cause B: REGEX_ONLY applied to SAMP buildings even when multi-page
 Fix A: Extend page_end to cover all content until next building header OR EOF
 Fix B: Add minimum-records-per-page heuristic; flag low-yield REGEX_ONLY extractions for retry
 Fix C: ARA building header detection improvement (name-based not just SAMP pattern)
+
+## Post-Review Fixes Applied — 2026-02-25
+
+### Frontend closures
+- E19-S2: upload flow now redirects to `/jobs/{id}/review/buildings`; Jobs detail CTA and card routing aligned to `/jobs/{id}`.
+- E19-S2: `building_count` surfaced from API and shown on published job cards.
+- E19-S6: `BuildingTabs` now renders `All Records` + amber `Unassigned` tab.
+- E19-S6: `RecordMergeModal` is now connected in `ACMReviewGrid` with two-row merge flow.
+- E19-S6: missing ACM fields added to editable grid columns.
+- E19-S7: inline job title editing implemented in header.
+- E19-S7: Extraction Log tab now renders `ExtractionProgressPanel` using extraction-progress API.
+- E19-S7: CSV export endpoint aligned to `/api/acm/export/csv` (added backend alias route).
+
+### Backend reliability closure
+- Added extraction runtime auth-fallback routing in both legacy graph extraction and orchestrator extraction:
+  - Detect provider authentication failures.
+  - Attempt fallback routing without breaking configured Sonnet path.
+  - Preserve Ollama/Qwen fallback support.
+
+### UX responsiveness closure
+- Added `jobs/loading.tsx` route loading UI.
+- Added route prefetching for frequently visited job pages from the Jobs dashboard.
+
+### Remaining follow-up
+- Full end-to-end command validation (frontend build + targeted extraction pytest) is partially blocked by local shell/runtime constraints; static diagnostics on changed files are clean.
+- E20-S5 still requires targeted 31/31 re-validation and final closure.

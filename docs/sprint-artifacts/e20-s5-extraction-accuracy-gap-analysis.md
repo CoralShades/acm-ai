@@ -2,7 +2,7 @@
 
 **Epic:** E20 — Extraction Completeness & 100% Record Capture
 **Priority:** P1
-**Status:** backlog
+**Status:** in-progress
 **Depends on:** E20-S1, E20-S2, E20-S3, E20-S4
 **Created:** 2026-02-24 — per E20-S4 AC: "If < 100%: create E20-S5 with gap analysis"
 
@@ -107,4 +107,60 @@ These show exactly what the LLM received and responded with.
 
 ## Dev Agent Record
 
-*(to be filled in upon implementation)*
+**Updated:** 2026-02-25
+
+### E2E Validation Results (2026-02-25)
+
+**Extraction Attempt #7** — First successful extraction after OpenRouter provider routing fix.
+
+| Metric | Value |
+|--------|-------|
+| Records extracted | 16 unique (32 total — worker race condition) |
+| Core sample coverage | 15/16 (93.75%) |
+| Missing sample | 34511-039-014 (Boiler Room, Walls, Expansion joint, Negative) |
+| Extra sample | 34511-039-005 (valid from PDF, not in CSV) |
+| Execution time | 87.9s |
+| Model | anthropic/claude-sonnet-4.6 via OpenRouter → Anthropic direct |
+| Strategy | full_llm (1 building, pages 1-3) |
+| Confidence | 100% high |
+
+### Field Coverage Gap Analysis (CSV vs Extraction Schema)
+
+**24 of 43 CSV columns mapped (56%)**. Key gaps:
+
+| Gap ID | Severity | CSV Fields | Impact |
+|--------|----------|-----------|--------|
+| G-02 | **HIGH** | date_of_inspection | No schema field — critical for compliance |
+| G-01 | MEDIUM | address, suburb, postcode | Needed for BAR register exports |
+| G-04 | MEDIUM | quantity_removed, removal_notification_no, epa_certificate_no | Removal compliance tracking |
+| G-05 | MEDIUM | additional_comments | Free-text observations lost |
+| G-06 | MEDIUM | floor_level | In extraction schema but NOT in domain ACMRecord — data lost at persistence |
+| G-08 | INFO | acm_product_group, acm_product_type | CSV has natively; extraction re-classifies post-hoc |
+| G-09 | LOW | room_area, location_detail, item_name | UI naming mismatch — phantom fields; data in location/product |
+
+### OpenRouter Provider Routing Fix
+
+Implemented in `open_notebook/graphs/utils.py`:
+- `OPENROUTER_IGNORED_PROVIDERS = ["Amazon Bedrock", "Azure"]`
+- `OPENROUTER_PROVIDER_ORDER = ["Anthropic", "Google", "OpenAI"]`
+- `_apply_openrouter_preferences()` injects `extra_body` with provider routing + `transforms: ["middle-out"]`
+- `provision_extraction_fallback_model()` priority: Anthropic direct → OpenAI direct → Ollama Qwen
+
+Schema error fallback in `open_notebook/extractors/orchestrator.py`:
+- `is_provider_schema_error()` detects grammar/schema rejection
+- Falls back to direct `model.ainvoke()` + `parse_json_response()`
+
+### Issues Discovered
+1. **Worker race condition** (CRITICAL): Two workers picked up same command → 32 records. Need at-most-once delivery in surreal-commands.
+2. **Missing sample 34511-039-014** (DATA): Boiler Room / Walls / Expansion joint. Needs investigation — may be lost during dedup or extraction.
+3. **Provider error latency** (PERF): `extra_body` provider routing may not flow through structured output calls, causing initial failure + ~40s fallback delay.
+4. **floor_level data loss** (SCHEMA): Extraction captures floor_level but ACMRecord domain model doesn't persist it.
+
+### Remaining for closure
+- [ ] Fix worker race condition (new story: bug-worker-race-condition)
+- [ ] Investigate missing sample 34511-039-014
+- [ ] Add missing high-priority CSV fields to extraction schema (date_of_inspection, address, suburb, postcode)
+- [ ] Fix floor_level persistence gap (extraction → domain model)
+- [ ] Eliminate provider error initial failure (extra_body through structured output)
+- [ ] Re-run E2E validation targeting 31/31 (16/16 core samples + 15 non-core rows)
+- [ ] Clean up 16 duplicate records from worker race condition

@@ -1,6 +1,6 @@
 # Epic 20: Extraction Completeness & 100% Record Capture
 
-**Status:** backlog
+**Status:** in-progress
 **Priority:** P0
 **Change Proposal:** SCP-20260224 (2026-02-24)
 **Trigger:** Post-demo stakeholder feedback — Issue 4 (missing records)
@@ -15,9 +15,12 @@ Fix the extraction pipeline to achieve 100% record capture on the Broadmeadows P
 
 ## Current State
 
-- **Broadmeadows E2E test:** 28/31 matched records (90%), threshold at 80%
-- **Missing records:** 2 "Not Sampled" edge cases + 1 sampled item (roof ductwork)
-- **Root causes:** Identified in PR #55 post-review and party-mode session 2026-02-24
+- **Broadmeadows E2E test (orchestrator):** 16/16 core samples (93.75% vs CSV) — 2026-02-25
+- **Broadmeadows E2E test (legacy):** 28/31 matched records (90%), threshold at 80%
+- **Missing records:** 1 sampled item (34511-039-014, Boiler Room expansion joint)
+- **Field coverage:** 24/43 CSV columns mapped in extraction schema (56%)
+- **Root causes:** Provider routing (FIXED), field schema gaps (IDENTIFIED), worker race condition (IDENTIFIED)
+- **Report:** [docs/reviews/e2e-test-report-20260225.md](../reviews/e2e-test-report-20260225.md)
 
 ## Target State
 
@@ -31,10 +34,11 @@ Fix the extraction pipeline to achieve 100% record capture on the Broadmeadows P
 
 | Story | Title | Priority | Size | Status |
 |-------|-------|----------|------|--------|
-| E20-S1 | Fix Page Boundary Truncation | P0 | M | backlog |
-| E20-S2 | REGEX_ONLY Yield Check + FULL_LLM Escalation | P0 | M | backlog |
-| E20-S3 | "Not Sampled" / No Access Record Capture | P0 | M | backlog |
-| E20-S4 | E2E Accuracy Validation — 100% Broadmeadows | P0 | S | backlog |
+| E20-S1 | Fix Page Boundary Truncation | P0 | M | done |
+| E20-S2 | REGEX_ONLY Yield Check + FULL_LLM Escalation | P0 | M | done |
+| E20-S3 | "Not Sampled" / No Access Record Capture | P0 | M | done |
+| E20-S4 | E2E Accuracy Validation — 100% Broadmeadows | P0 | S | done |
+| E20-S5 | Extraction Accuracy Gap Analysis | P1 | L | in-progress |
 
 ---
 

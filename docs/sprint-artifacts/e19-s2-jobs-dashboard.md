@@ -2,7 +2,7 @@
 
 **Epic:** E19 — Standard User UX Redesign
 **Priority:** P0
-**Status:** backlog
+**Status:** done
 **Change Proposal:** SCP-20260224 (2026-02-24)
 **Depends on:** E19-S1
 
@@ -133,3 +133,23 @@ S (Small) — Primarily UI rename + new JobCard component. No new APIs.
 
 **Tests added:** None (frontend-only, verified via build)
 **Verification:** ruff ✓ | lint ✓ | build ✓ (27 static pages compiled)
+
+### Post-Review Fix Record (2026-02-25)
+
+**Reason:** Frontend review flagged 2 gaps (upload redirect target and missing building count on cards).
+
+**Additional files changed:**
+- `frontend/src/components/sources/AddSourceDialog.tsx`
+- `frontend/src/components/jobs/JobCard.tsx`
+- `frontend/src/lib/types/api.ts`
+- `api/models.py`
+- `api/routers/sources.py`
+
+**Fixes applied:**
+- Upload completion route now pushes to `/jobs/{id}/review/buildings`.
+- Jobs card primary published CTA now routes to `/jobs/{id}`.
+- Added `building_count` to source list API response and displayed on published job cards.
+
+**Verification status:**
+- Static diagnostics on changed files: no errors.
+- Command-level build verification attempted; environment-level shell/runtime instability recorded in sprint progress.
