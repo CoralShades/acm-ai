@@ -89,6 +89,4 @@ class BARTemplate(ObjectModel):
             return None
         except Exception as e:
             logger.error(f"Failed to get BAR template {template_id}: {e}")
-            raise DatabaseOperationError(
-                f"Failed to get template: {e}"
-            ) from e
+            raise DatabaseOperationError(f"Failed to get template: {e}") from e

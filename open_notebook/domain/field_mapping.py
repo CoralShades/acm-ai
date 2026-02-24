@@ -92,6 +92,4 @@ class FieldMapping(ObjectModel):
             return mapping
         except Exception as e:
             logger.error(f"Failed to reset field mapping: {e}")
-            raise DatabaseOperationError(
-                f"Failed to reset field mapping: {e}"
-            ) from e
+            raise DatabaseOperationError(f"Failed to reset field mapping: {e}") from e

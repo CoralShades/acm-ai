@@ -91,9 +91,7 @@ class HybridSearchService:
 
         try:
             results = await repo_query(surql, params)
-            return [
-                r for r in (results or []) if r.get("similarity", 0) >= threshold
-            ]
+            return [r for r in (results or []) if r.get("similarity", 0) >= threshold]
         except Exception as e:
             logger.error(f"Vector search failed: {e}")
             return []

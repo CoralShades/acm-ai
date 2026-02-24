@@ -224,24 +224,37 @@ async def find_or_create_model(
             new_model.supports_structured_output = any(
                 k in name_lower
                 for k in [
-                    "claude", "gpt-4", "gpt-5",
-                    "qwen3", "qwen2.5",
-                    "llama3", "llama-3",
-                    "mistral", "deepseek",
-                    "gemma-3", "gemini",
-                    "phi4", "kimi-k2",
-                    "minimax-m2", "glm-5",
+                    "claude",
+                    "gpt-4",
+                    "gpt-5",
+                    "qwen3",
+                    "qwen2.5",
+                    "llama3",
+                    "llama-3",
+                    "mistral",
+                    "deepseek",
+                    "gemma-3",
+                    "gemini",
+                    "phi4",
+                    "kimi-k2",
+                    "minimax-m2",
+                    "glm-5",
                 ]
             )
             new_model.supports_tool_calling = any(
                 k in name_lower
                 for k in [
-                    "claude", "gpt-4", "gpt-5",
+                    "claude",
+                    "gpt-4",
+                    "gpt-5",
                     "qwen3",
-                    "deepseek", "llama-3",
-                    "mistral", "gemini-2.5",
+                    "deepseek",
+                    "llama-3",
+                    "mistral",
+                    "gemini-2.5",
                     "kimi-k2",
-                    "minimax-m2", "glm-5",
+                    "minimax-m2",
+                    "glm-5",
                 ]
             )
         await new_model.save()
@@ -413,9 +426,7 @@ async def run_model_provisioning() -> None:
         ]
 
         if not any(os.getenv(var) for var in env_vars):
-            logger.info(
-                "No DEFAULT_*_MODEL env vars set, skipping default assignment"
-            )
+            logger.info("No DEFAULT_*_MODEL env vars set, skipping default assignment")
             return
 
         provisioned = await provision_default_models()

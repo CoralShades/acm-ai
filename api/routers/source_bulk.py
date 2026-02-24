@@ -68,7 +68,9 @@ async def bulk_undo_delete(request: BulkOperationRequest):
                     "SELECT deleted_at FROM ONLY $id",
                     {"id": record_id},
                 )
-                if check and (check[0] if isinstance(check, list) else check).get("deleted_at"):
+                if check and (check[0] if isinstance(check, list) else check).get(
+                    "deleted_at"
+                ):
                     errors[source_id] = "Grace period expired"
                 else:
                     errors[source_id] = "Not found or not deleted"
@@ -104,7 +106,10 @@ async def bulk_reprocess(request: BulkOperationRequest):
             content_state = {}
             if source.asset:
                 if source.asset.file_path:
-                    content_state = {"file_path": source.asset.file_path, "delete_source": False}
+                    content_state = {
+                        "file_path": source.asset.file_path,
+                        "delete_source": False,
+                    }
                 elif source.asset.url:
                     content_state = {"url": source.asset.url}
             elif source.full_text:

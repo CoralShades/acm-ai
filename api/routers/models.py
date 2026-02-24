@@ -328,9 +328,7 @@ async def get_model(model_id: str):
         raise
     except Exception as e:
         logger.error(f"Error fetching model {model_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Error fetching model: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error fetching model: {str(e)}")
 
 
 @router.delete("/models/{model_id}")

@@ -185,7 +185,7 @@ async def get_sources(
 
             # Query sources for specific notebook - include command field
             query = f"""
-                SELECT id, asset, created, title, updated, topics, command,
+                SELECT id, asset, created, title, updated, topics, command, review_status,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
                 ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded
                 FROM (select value in from reference where out=$notebook_id)
@@ -203,7 +203,7 @@ async def get_sources(
         else:
             # Query all sources - include command field
             query = f"""
-                SELECT id, asset, created, title, updated, topics, command,
+                SELECT id, asset, created, title, updated, topics, command, review_status,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
                 ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded
                 FROM source
@@ -211,6 +211,33 @@ async def get_sources(
                 LIMIT $limit START $offset
             """
             result = await repo_query(query, {"limit": limit, "offset": offset})
+
+        source_ids = [str(row["id"]) for row in result if row.get("id")]
+        building_counts: dict[str, int] = {}
+        if source_ids:
+            try:
+                building_rows = await repo_query(
+                    """
+                    SELECT source_id, array::distinct(building_id) AS buildings
+                    FROM acm_record
+                    WHERE source_id INSIDE $source_ids
+                    GROUP BY source_id
+                    """,
+                    {"source_ids": source_ids},
+                )
+
+                for row in building_rows or []:
+                    sid = str(row.get("source_id", ""))
+                    raw_buildings = row.get("buildings", []) or []
+                    filtered = [
+                        b
+                        for b in raw_buildings
+                        if isinstance(b, str) and b.strip() and b.lower() != "unknown"
+                    ]
+                    if sid:
+                        building_counts[sid] = len(filtered)
+            except Exception as e:
+                logger.warning(f"Failed to fetch building counts for source list: {e}")
 
         # Extract command IDs for batch status fetching
         command_ids = []
@@ -320,6 +347,8 @@ async def get_sources(
                     command_id=command_id,
                     status=status,
                     processing_info=processing_info,
+                    review_status=row.get("review_status"),
+                    building_count=building_counts.get(str(row["id"]), 0),
                 )
             )
 
@@ -698,6 +727,7 @@ async def get_source(source_id: str):
             processing_info=processing_info,
             # Notebook associations
             notebooks=notebook_ids,
+            review_status=source.review_status,
         )
     except HTTPException:
         raise

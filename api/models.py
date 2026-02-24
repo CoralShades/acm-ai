@@ -365,6 +365,8 @@ class SourceListResponse(BaseModel):
     processing_info: Optional[Dict[str, Any]] = None
     # Review workflow
     review_status: Optional[str] = None
+    # Jobs dashboard enrichment
+    building_count: Optional[int] = None
 
 
 # Context API models

@@ -20,7 +20,9 @@ from open_notebook.database.repository import db_connection, repo_query
 router = APIRouter()
 
 # Load agent card from static file
-_AGENT_CARD_PATH = Path(__file__).parent.parent / "static" / ".well-known" / "agent.json"
+_AGENT_CARD_PATH = (
+    Path(__file__).parent.parent / "static" / ".well-known" / "agent.json"
+)
 _agent_card: Optional[dict] = None
 
 

@@ -363,6 +363,7 @@ def _get_record_value(record: ACMRecord, field: str | None) -> str:
 
 
 @router.get("/export")
+@router.get("/export/csv")
 async def export_acm_records(
     source_id: str = Query(..., description="Source ID to export"),
 ):

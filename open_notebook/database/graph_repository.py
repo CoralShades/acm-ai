@@ -35,9 +35,7 @@ async def get_buildings_for_school(school_code: str) -> list[Building]:
     return [Building.model_validate(r) for r in results]
 
 
-async def get_rooms_for_building(
-    school_code: str, building_code: str
-) -> list[Room]:
+async def get_rooms_for_building(school_code: str, building_code: str) -> list[Room]:
     """Get all rooms for a building."""
     results = await repo_query(
         "SELECT * FROM room WHERE school_code = $scode AND building_code = $bcode ORDER BY room_code",
