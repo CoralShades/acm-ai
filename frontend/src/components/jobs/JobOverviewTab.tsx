@@ -3,30 +3,7 @@
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ClipboardList, Building2, Activity, Calendar, ArrowRight, RefreshCw } from 'lucide-react'
-
-function formatRelativeDate(dateStr: string | null): string {
-  if (!dateStr) return 'Unknown'
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffDays > 30) {
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-  if (diffDays > 0) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
-  if (diffHours > 0) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
-  if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`
-  return 'just now'
-}
+import { ClipboardList, Building2, Percent, Gauge, ArrowRight, RefreshCw } from 'lucide-react'
 
 const STATUS_LABELS: Record<string, string> = {
   extracting: 'Extracting',
@@ -41,7 +18,8 @@ interface JobOverviewTabProps {
   recordCount: number
   buildingCount: number
   reviewStatus: string | undefined
-  createdAt: string | null
+  missingFieldsPercent?: number | null
+  extractionQualityScore?: number | null
   onReExtract?: () => void
 }
 
@@ -50,7 +28,8 @@ export function JobOverviewTab({
   recordCount,
   buildingCount,
   reviewStatus,
-  createdAt,
+  missingFieldsPercent,
+  extractionQualityScore,
   onReExtract,
 }: JobOverviewTabProps) {
   const statusLabel = reviewStatus ? (STATUS_LABELS[reviewStatus] ?? reviewStatus) : 'Published'
@@ -86,24 +65,32 @@ export function JobOverviewTab({
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5" />
-              Status
+              <Percent className="h-3.5 w-3.5" />
+              Missing Fields %
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <p className="text-sm font-semibold">{statusLabel}</p>
+            <p className="text-sm font-semibold">
+              {typeof missingFieldsPercent === 'number'
+                ? `${missingFieldsPercent.toFixed(1)}%`
+                : 'N/A'}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              Uploaded
+              <Gauge className="h-3.5 w-3.5" />
+              Extraction Quality
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <p className="text-sm font-semibold">{formatRelativeDate(createdAt)}</p>
+            <p className="text-sm font-semibold">
+              {typeof extractionQualityScore === 'number'
+                ? `${extractionQualityScore.toFixed(0)}/100`
+                : statusLabel}
+            </p>
           </CardContent>
         </Card>
       </div>

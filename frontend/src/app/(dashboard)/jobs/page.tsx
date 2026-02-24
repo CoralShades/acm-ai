@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
@@ -13,6 +14,7 @@ import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 import { ClipboardList, Plus } from 'lucide-react'
 
 function JobsPageContent() {
+  const router = useRouter()
   const { sources, loading, fetchMore } = useSourcesPaginated({
     limit: 30,
     sortBy: 'updated',
@@ -20,6 +22,14 @@ function JobsPageContent() {
   })
 
   const { openSourceDialog } = useCreateDialogs()
+
+  useEffect(() => {
+    sources.slice(0, 6).forEach((source) => {
+      router.prefetch(`/jobs/${source.id}`)
+      router.prefetch(`/jobs/${source.id}/review/buildings`)
+      router.prefetch(`/jobs/${source.id}/review/records`)
+    })
+  }, [router, sources])
 
   const handleRefetch = useCallback(() => {
     fetchMore(true)

@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, RefreshCw, FileSpreadsheet, Download } from 'lucide-react'
+import { ChevronRight, RefreshCw, FileSpreadsheet, Download, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { JobStatusPill } from './JobStatusPill'
 
 function formatRelativeDate(dateStr: string | null): string {
@@ -33,6 +35,7 @@ interface JobDetailHeaderProps {
   createdAt: string | null
   recordCount?: number
   buildingCount?: number
+  onRename: (newTitle: string) => Promise<void>
   onReExtract: () => void
   onExportCsv: () => void
   onExportExcel: () => void
@@ -44,11 +47,36 @@ export function JobDetailHeader({
   createdAt,
   recordCount,
   buildingCount,
+  onRename,
   onReExtract,
   onExportCsv,
   onExportExcel,
 }: JobDetailHeaderProps) {
   const displayTitle = title || 'Untitled Job'
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(displayTitle)
+  const [isSavingTitle, setIsSavingTitle] = useState(false)
+
+  useEffect(() => {
+    setDraftTitle(displayTitle)
+  }, [displayTitle])
+
+  const handleSaveTitle = async () => {
+    const trimmed = draftTitle.trim()
+    if (!trimmed || trimmed === displayTitle) {
+      setIsEditingTitle(false)
+      setDraftTitle(displayTitle)
+      return
+    }
+
+    setIsSavingTitle(true)
+    try {
+      await onRename(trimmed)
+      setIsEditingTitle(false)
+    } finally {
+      setIsSavingTitle(false)
+    }
+  }
 
   return (
     <div className="border-b bg-background px-4 py-4 flex-shrink-0">
@@ -91,7 +119,49 @@ export function JobDetailHeader({
 
       {/* Title + meta row */}
       <div className="mt-3 flex items-center flex-wrap gap-x-3 gap-y-1.5">
-        <h1 className="text-xl font-bold leading-tight">{displayTitle}</h1>
+        {isEditingTitle ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              className="h-8 w-72"
+              disabled={isSavingTitle}
+              aria-label="Edit job title"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveTitle}
+              disabled={isSavingTitle}
+            >
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsEditingTitle(false)
+                setDraftTitle(displayTitle)
+              }}
+              disabled={isSavingTitle}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold leading-tight">{displayTitle}</h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setIsEditingTitle(true)}
+              aria-label="Edit job title"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
         <JobStatusPill review_status={reviewStatus} />
         {createdAt && (
           <span className="text-sm text-muted-foreground">

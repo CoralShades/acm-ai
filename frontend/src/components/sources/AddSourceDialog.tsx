@@ -373,9 +373,9 @@ export function AddSourceDialog({
       }
     }
 
-    // Navigate to the newly created source's detail page
+    // Navigate to the job review flow
     if (createdSource?.id) {
-      router.push(`/sources/${createdSource.id}`)
+      router.push(`/jobs/${createdSource.id}/review/buildings`)
     }
   }
 

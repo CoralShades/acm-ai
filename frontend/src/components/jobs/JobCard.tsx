@@ -91,13 +91,13 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
   }
 
   const primaryHref = isPublished
-    ? `/sources/${source.id}`
+    ? `/jobs/${source.id}`
     : `/jobs/${source.id}/review/buildings`
 
   // Extract bare ID for URL (strip 'source:' prefix if present)
   const rawId = source.id.replace(/^source:/, '')
   const exportCsvHref = `/api/acm/export/csv?source_id=${rawId}`
-  const exportXlsxHref = `/api/acm/export/xlsx?source_id=${rawId}`
+  const exportXlsxHref = `/api/acm/export/excel?source_id=${rawId}`
 
   return (
     <Card className="relative transition-shadow hover:shadow-md flex flex-col gap-0 py-0">
@@ -124,7 +124,7 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/sources/${source.id}`)}>
+              <DropdownMenuItem onClick={() => router.push(`/jobs/${source.id}`)}>
                 <Eye className="w-4 h-4 mr-2" />
                 View Details
               </DropdownMenuItem>
@@ -164,6 +164,12 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
         {isPublished && source.insights_count > 0 && (
           <p className="text-xs text-muted-foreground">
             {source.insights_count} record{source.insights_count !== 1 ? 's' : ''}
+          </p>
+        )}
+
+        {isPublished && typeof source.building_count === 'number' && source.building_count > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {source.building_count} building{source.building_count !== 1 ? 's' : ''}
           </p>
         )}
       </CardContent>

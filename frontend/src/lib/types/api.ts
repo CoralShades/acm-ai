@@ -40,6 +40,8 @@ export interface SourceListResponse {
   // 'extracting' | 'pending_review' | 'building_review' | 'acm_review' | 'published'
   // null/undefined means legacy data — treat as 'published' in UI
   review_status?: string
+  // Optional ACM building count for Jobs dashboard cards
+  building_count?: number
 }
 
 export interface SourceDetailResponse extends SourceListResponse {

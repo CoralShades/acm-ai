@@ -13,6 +13,8 @@ interface BuildingTab {
   hasHighRisk: boolean
 }
 
+export const UNASSIGNED_TAB_ID = '__unassigned__'
+
 interface BuildingTabsProps {
   records: ACMRecord[]
   selectedBuilding: string | null
@@ -25,11 +27,21 @@ export function BuildingTabs({
   onBuildingChange,
 }: BuildingTabsProps) {
   // Extract unique buildings with counts and risk indicators
-  const buildings = useMemo(() => {
+  const { buildings, unassignedCount, unassignedHasHighRisk } = useMemo(() => {
     const buildingMap = new Map<string, BuildingTab>()
+    let localUnassignedCount = 0
+    let localUnassignedHighRisk = false
 
     records.forEach((record) => {
-      const buildingId = record.building_id || 'unknown'
+      const buildingId = record.building_id?.trim()
+      if (!buildingId || buildingId.toLowerCase() === 'unknown') {
+        localUnassignedCount++
+        if (record.risk_status === 'High') {
+          localUnassignedHighRisk = true
+        }
+        return
+      }
+
       const existing = buildingMap.get(buildingId)
       const isHighRisk = record.risk_status === 'High'
 
@@ -51,9 +63,13 @@ export function BuildingTabs({
     })
 
     // Sort alphabetically by building code
-    return Array.from(buildingMap.values()).sort((a, b) =>
-      a.building_code.localeCompare(b.building_code)
-    )
+    return {
+      buildings: Array.from(buildingMap.values()).sort((a, b) =>
+        a.building_code.localeCompare(b.building_code)
+      ),
+      unassignedCount: localUnassignedCount,
+      unassignedHasHighRisk: localUnassignedHighRisk,
+    }
   }, [records])
 
   // Don't render tabs if no records
@@ -69,10 +85,26 @@ export function BuildingTabs({
       }
     >
       <TabsList className="flex flex-wrap h-auto gap-1">
-        {/* All Buildings tab */}
+        {/* All Records tab */}
         <TabsTrigger value="all">
-          All Buildings ({records.length})
+          All Records ({records.length})
         </TabsTrigger>
+
+        {/* Unassigned Records tab */}
+        {unassignedCount > 0 && (
+          <TabsTrigger
+            value={UNASSIGNED_TAB_ID}
+            className={cn(
+              'border-l-2 border-l-amber-500',
+              unassignedHasHighRisk && 'border-r-2 border-r-destructive'
+            )}
+          >
+            Unassigned ({unassignedCount})
+            {unassignedHasHighRisk && (
+              <AlertTriangle className="w-3 h-3 ml-1 text-destructive" />
+            )}
+          </TabsTrigger>
+        )}
 
         {/* Individual building tabs */}
         {buildings.map((building) => (

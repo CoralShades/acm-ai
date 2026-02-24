@@ -4,10 +4,16 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AgGridReact } from 'ag-grid-react'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
-import type { ColDef, CellValueChangedEvent } from 'ag-grid-community'
+import type {
+  ColDef,
+  CellValueChangedEvent,
+  SelectionChangedEvent,
+} from 'ag-grid-community'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2 } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
+import { RecordMergeModal } from './RecordMergeModal'
+import { UNASSIGNED_TAB_ID } from './BuildingTabs'
 
 // Register AG Grid modules (safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -20,6 +26,13 @@ interface ACMReviewRecord extends ACMRecord {
   no_access?: boolean | null
   smf_present?: string | null
   additional_comments?: string | null
+  acm_label_details?: string | null
+  psb_acm_id?: string | null
+  assumed_removed?: string | null
+  date_of_removal?: string | null
+  quantity_removed?: string | null
+  epa_certificate_no?: string | null
+  removal_notification_no?: string | null
   // Local-only flag for optimistic removes
   _removed?: boolean
 }
@@ -40,7 +53,7 @@ async function fetchRecords(
   const url = new URL('/api/acm/records', window.location.origin)
   url.searchParams.set('source_id', sourceId)
   url.searchParams.set('limit', '500')
-  if (buildingId) {
+  if (buildingId && buildingId !== UNASSIGNED_TAB_ID) {
     url.searchParams.set('building_id', buildingId)
   }
   const res = await fetch(url.toString())
@@ -147,6 +160,9 @@ export function ACMReviewGrid({
 
   // Local state for rows — supports optimistic adds/removes
   const [localRows, setLocalRows] = useState<ACMReviewRecord[] | null>(null)
+  const [selectedRows, setSelectedRows] = useState<ACMReviewRecord[]>([])
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const gridRef = useRef<AgGridReact<ACMReviewRecord> | null>(null)
 
   const { data: fetchedRecords, isLoading, error } = useQuery<ACMReviewRecord[]>({
     queryKey: ['acm-review-records', sourceId, buildingId ?? 'all'],
@@ -161,9 +177,13 @@ export function ACMReviewGrid({
     setLocalRows(fetchedRecords)
   }
 
-  const displayRows = (localRows ?? fetchedRecords ?? []).filter(
-    (r) => !r._removed
-  )
+  const displayRows = (localRows ?? fetchedRecords ?? [])
+    .filter((r) => !r._removed)
+    .filter((r) => {
+      if (buildingId !== UNASSIGNED_TAB_ID) return true
+      const bid = r.building_id?.trim().toLowerCase()
+      return !bid || bid === 'unknown'
+    })
 
   // Debounce ref for cell-edit saves
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -204,7 +224,12 @@ export function ACMReviewGrid({
   // Mutation for creating a new record
   const createMutation = useMutation({
     mutationFn: () =>
-      createRecord(sourceId, buildingId || 'Unassigned'),
+      createRecord(
+        sourceId,
+        !buildingId || buildingId === UNASSIGNED_TAB_ID
+          ? 'Unassigned'
+          : buildingId
+      ),
     onSuccess: (newRecord) => {
       setLocalRows((prev) => [...(prev ?? []), newRecord])
       queryClient.invalidateQueries({
@@ -225,6 +250,72 @@ export function ACMReviewGrid({
   const handleAddRecord = useCallback(() => {
     createMutation.mutate()
   }, [createMutation])
+
+  const handleSelectionChanged = useCallback(
+    (event: SelectionChangedEvent<ACMReviewRecord>) => {
+      setSelectedRows(event.api.getSelectedRows())
+    },
+    []
+  )
+
+  const handleMergeSelected = useCallback(() => {
+    if (selectedRows.length !== 2) return
+    setMergeOpen(true)
+  }, [selectedRows])
+
+  const handleMerge = useCallback(
+    async (keepId: string, deleteId: string) => {
+      const rows = localRows ?? fetchedRecords ?? []
+      const keepRecord = rows.find((r) => r.id === keepId)
+      const deleteRecordRow = rows.find((r) => r.id === deleteId)
+      if (!keepRecord || !deleteRecordRow) return
+
+      const mergedPayload: Partial<ACMReviewRecord> = {}
+      const fieldsToMerge: Array<keyof ACMReviewRecord> = [
+        'location',
+        'material_description',
+        'sample_no',
+        'sample_result',
+        'material_condition',
+        'disturbance_potential',
+        'quantity',
+        'hygienist_recommendations',
+        'additional_comments',
+        'acm_label_details',
+        'psb_acm_id',
+        'assumed_removed',
+        'date_of_removal',
+        'quantity_removed',
+        'epa_certificate_no',
+        'removal_notification_no',
+      ]
+
+      fieldsToMerge.forEach((field) => {
+        const keepValue = keepRecord[field]
+        const deleteValue = deleteRecordRow[field]
+        const keepEmpty =
+          keepValue === null ||
+          keepValue === undefined ||
+          (typeof keepValue === 'string' && keepValue.trim() === '')
+        if (keepEmpty && deleteValue !== null && deleteValue !== undefined) {
+          ;(mergedPayload as Record<string, unknown>)[field] = deleteValue
+        }
+      })
+
+      if (Object.keys(mergedPayload).length > 0) {
+        await saveMutation.mutateAsync({
+          recordId: keepId,
+          payload: mergedPayload,
+        })
+      }
+
+      await deleteMutation.mutateAsync(deleteId)
+      setMergeOpen(false)
+      setSelectedRows([])
+      gridRef.current?.api?.deselectAll()
+    },
+    [deleteMutation, fetchedRecords, localRows, saveMutation]
+  )
 
   const onCellValueChanged = useCallback(
     (event: CellValueChangedEvent<ACMReviewRecord>) => {
@@ -396,9 +487,65 @@ export function ACMReviewGrid({
         ),
       },
       {
+        field: 'acm_label_details',
+        headerName: 'Label Details',
+        width: 180,
+        editable: true,
+        sortable: true,
+        filter: true,
+      },
+      {
         field: 'identifying_company',
         headerName: 'Identifying Company',
         width: 180,
+        editable: true,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'psb_acm_id',
+        headerName: 'PSB ACM ID',
+        width: 140,
+        editable: true,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'assumed_removed',
+        headerName: 'Removal Status',
+        width: 150,
+        editable: true,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'date_of_removal',
+        headerName: 'Date Of Removal',
+        width: 150,
+        editable: true,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'quantity_removed',
+        headerName: 'Quantity Removed',
+        width: 150,
+        editable: true,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'epa_certificate_no',
+        headerName: 'EPA Certificate No',
+        width: 170,
+        editable: true,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'removal_notification_no',
+        headerName: 'Removal Notification No',
+        width: 190,
         editable: true,
         sortable: true,
         filter: true,
@@ -493,16 +640,27 @@ export function ACMReviewGrid({
         <div className="text-sm text-muted-foreground">
           {displayRows.length} record{displayRows.length !== 1 ? 's' : ''}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleAddRecord}
-          disabled={createMutation.isPending}
-          className="flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          Add Record
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMergeSelected}
+            disabled={selectedRows.length !== 2}
+            className="flex items-center gap-1.5"
+          >
+            Merge Duplicate
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddRecord}
+            disabled={createMutation.isPending}
+            className="flex items-center gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            Add Record
+          </Button>
+        </div>
       </div>
 
       {/* AG Grid */}
@@ -535,10 +693,14 @@ export function ACMReviewGrid({
           }
         `}</style>
         <AgGridReact<ACMReviewRecord>
+          ref={gridRef}
           rowData={displayRows}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           onCellValueChanged={onCellValueChanged}
+          rowSelection="multiple"
+          rowMultiSelectWithClick={true}
+          onSelectionChanged={handleSelectionChanged}
           animateRows={true}
           pagination={true}
           paginationPageSize={50}
@@ -558,6 +720,14 @@ export function ACMReviewGrid({
           overlayNoRowsTemplate='<span class="text-muted-foreground text-sm">No records found. Click "+ Add Record" to add one.</span>'
         />
       </div>
+
+      <RecordMergeModal
+        open={mergeOpen}
+        onClose={() => setMergeOpen(false)}
+        record1={selectedRows[0] ?? null}
+        record2={selectedRows[1] ?? null}
+        onMerge={handleMerge}
+      />
     </div>
   )
 }
