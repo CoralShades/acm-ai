@@ -57,8 +57,8 @@ the orchestrator should be created.
 - [ ] Identify WHY each was missed (prompt gap, location extraction, page coverage)
 
 ### Fix A — "Not Sampled" location extraction
-- [ ] Update `prompts/acm/building_extraction.jinja` to guide location extraction for Not Sampled rows
-- [ ] Instructions: "For Not Sampled/No Access rows, extract the location from the table column — do not use '?' if a value exists in the source"
+- [x] Update `prompts/acm/building_extraction.jinja` to guide location extraction for Not Sampled rows
+- [x] Instructions: "For Not Sampled/No Access rows, extract the location from the table column — do not use '?' if a value exists in the source"
 - [ ] Unit test: verify extracted records for Not Sampled rows have correct location
 
 ### Fix B — East Ductwork page coverage
@@ -157,10 +157,17 @@ Schema error fallback in `open_notebook/extractors/orchestrator.py`:
 4. **floor_level data loss** (SCHEMA): Extraction captures floor_level but ACMRecord domain model doesn't persist it.
 
 ### Remaining for closure
-- [ ] Fix worker race condition (new story: bug-worker-race-condition)
-- [ ] Investigate missing sample 34511-039-014
-- [ ] Add missing high-priority CSV fields to extraction schema (date_of_inspection, address, suburb, postcode)
-- [ ] Fix floor_level persistence gap (extraction → domain model)
+- [x] Fix worker race condition (new story: bug-worker-race-condition)
+- [x] Investigate missing sample 34511-039-014 — prompt rules 9-12 added to extract utility areas, small items, and cross-references
+- [x] Add missing high-priority CSV fields to extraction schema (date_of_inspection, address, suburb, postcode)
+- [x] Fix floor_level persistence gap (extraction → domain model)
 - [ ] Eliminate provider error initial failure (extra_body through structured output)
 - [ ] Re-run E2E validation targeting 31/31 (16/16 core samples + 15 non-core rows)
 - [ ] Clean up 16 duplicate records from worker race condition
+
+### Prompt Fix Implementation (2026-02-25)
+Added rules 9-12 to `prompts/acm/building_extraction.jinja`:
+- **Rule 9**: Items in utility/service areas (Boiler Room, Switch Room, Plant Room, etc.) must not be skipped
+- **Rule 10**: Small items (expansion joints, gaskets, mastic, caulking) are valid ACM items and must be extracted
+- **Rule 11**: "Similar To"/"As Per" references — both the original sample and the referencing item must be extracted as separate records
+- **Rule 12**: Negative/Not Detected items with sample numbers are valid sampled entries and must be extracted

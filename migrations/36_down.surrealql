@@ -1,0 +1,10 @@
+-- Migration 36 rollback: Remove building-level, removal tracking, and comments fields
+
+REMOVE FIELD building_address ON acm_record;
+REMOVE FIELD suburb ON acm_record;
+REMOVE FIELD postcode ON acm_record;
+REMOVE FIELD building_type ON acm_record;
+REMOVE FIELD quantity_removed ON acm_record;
+REMOVE FIELD removal_notification_no ON acm_record;
+REMOVE FIELD epa_certificate_no ON acm_record;
+REMOVE FIELD additional_comments ON acm_record;

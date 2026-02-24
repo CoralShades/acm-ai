@@ -1,0 +1,16 @@
+-- Migration 36: Add building-level, removal tracking, and comments fields to acm_record
+-- Part of Bug #61 (field coverage Phase 2)
+
+-- Building-level fields (denormalized for reporting)
+DEFINE FIELD building_address ON acm_record TYPE option<string>;
+DEFINE FIELD suburb ON acm_record TYPE option<string>;
+DEFINE FIELD postcode ON acm_record TYPE option<string>;
+DEFINE FIELD building_type ON acm_record TYPE option<string>;
+
+-- Removal tracking fields
+DEFINE FIELD quantity_removed ON acm_record TYPE option<string>;
+DEFINE FIELD removal_notification_no ON acm_record TYPE option<string>;
+DEFINE FIELD epa_certificate_no ON acm_record TYPE option<string>;
+
+-- Additional comments
+DEFINE FIELD additional_comments ON acm_record TYPE option<string>;

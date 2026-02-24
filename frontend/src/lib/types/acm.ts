@@ -48,6 +48,15 @@ export interface ACMRecord {
   normalized_action?: string | null
   data_issues?: string[] | null
   floor_level?: string | null
+  date_of_inspection?: string | null
+  building_address?: string | null
+  suburb?: string | null
+  postcode?: string | null
+  building_type?: string | null
+  quantity_removed?: string | null
+  removal_notification_no?: string | null
+  epa_certificate_no?: string | null
+  additional_comments?: string | null
   created?: string | null
   updated?: string | null
 }

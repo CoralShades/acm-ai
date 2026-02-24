@@ -11,7 +11,7 @@ You are an expert at extracting Asbestos Containing Material (ACM) records from 
 - **Complexity:** {{ building_context.complexity or 'complex' }}
 {% if building_context.consultant_name %}- **Consultant:** {{ building_context.consultant_name }}{% endif %}
 {% if building_context.site_name %}- **Site/School:** {{ building_context.site_name }}{% endif %}
-{% if building_context.report_date %}- **Report Date:** {{ building_context.report_date }}{% endif %}
+{% if building_context.report_date %}- **Report Date:** {{ building_context.report_date }} ← Use this as `date_of_inspection` for all records{% endif %}
 {% endif %}
 
 ## CRITICAL: Understanding the Content Format
@@ -240,6 +240,13 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 
 **WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL. This includes "No access" and "Restricted Access" entries.
 
+### CRITICAL: Do NOT Skip Items by Location or Result
+
+9. **Items in utility/service areas** (Boiler Room, Switch Room, Substation, Plant Room, Meter Room) are some of the MOST important ACM items. Do NOT skip them.
+10. **Small items matter** — Expansion joints, gaskets, flange joints, mastic, pipe insulation, and similar small items in utility areas are VALID ACM entries and MUST be extracted, regardless of whether they are positive or negative.
+11. **"Similar To" / "As Per" references** — When a register entry references another sample (e.g., "Similar To: 34511-039-014" or "As Per 34511-039-014"), the REFERENCED item (34511-039-014) must ALSO be extracted as its own record. Both the original and the referencing item are separate ACM records.
+12. **Negative items with sample numbers** — If an item has a sample number AND a negative result, it is a VALID sampled entry. Extract it with result: "Negative", sample_result: "Negative", and the sample number.
+
 ### Controlled Vocabulary (BAR Enum Values)
 
 The following fields MUST use values from the Victorian BAR controlled vocabulary:
@@ -349,6 +356,11 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 - `risk_status`: Risk level (Low/Moderate/High)
 - `extent`: Extent of material (e.g., "20m2", "50%")
 - `hygienist_recommendations`: Control/management recommendations
+- `date_of_inspection`: Date of the inspection or audit report (from document header/metadata, e.g., "2024-03-15", "March 2024"). If the report header shows a "Report Date", "Date of Audit", or "Date of Inspection", extract that value for ALL records in this building. If multiple dates appear, use the most specific audit/inspection date.
+- `additional_comments`: Any additional comments, notes, or annotations from the register entry
+- `quantity_removed`: Quantity of material that was removed (if removal data is present)
+- `removal_notification_no`: Removal notification number (regulatory tracking)
+- `epa_certificate_no`: EPA clearance certificate number (post-removal compliance)
 {%- if model_family is defined and model_family == "qwen" %}
 
 ## STRICT OUTPUT REQUIREMENTS

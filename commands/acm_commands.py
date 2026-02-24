@@ -5,18 +5,64 @@ Handles async ACM data extraction from processed source documents.
 Uses AI-powered LangGraph extraction for accurate parsing of Docling output.
 
 Story: E1-S7 AI-Powered ACM Extraction
+Fix: Bug #60 — Atomic claim prevents worker race condition (duplicate processing)
 """
 
 import asyncio
+import os
 import time
 from typing import Optional
 
 from loguru import logger
 from surreal_commands import CommandInput, CommandOutput, command
 
+from open_notebook.database.repository import repo_query
 from open_notebook.domain.acm import ACMRecord
 from open_notebook.domain.notebook import Source
 from open_notebook.graphs.acm_extraction import extract_acm_from_source
+
+
+def _generate_worker_id() -> str:
+    """Generate a unique worker identifier from hostname + PID.
+
+    Returns:
+        A string like 'DESKTOP-ABC:12345' uniquely identifying this worker process.
+    """
+    import socket
+
+    hostname = socket.gethostname()
+    pid = os.getpid()
+    return f"{hostname}:{pid}"
+
+
+async def _try_claim_command(command_id: str, worker_id: str) -> bool:
+    """Atomically claim a command record to prevent duplicate processing.
+
+    Uses SurrealDB UPDATE with WHERE clause for at-most-once delivery.
+    Only succeeds if `claimed_by` is not already set on the record.
+
+    Args:
+        command_id: The SurrealDB command record ID (e.g., 'command:abc123').
+        worker_id: Unique identifier for this worker process.
+
+    Returns:
+        True if the claim succeeded (this worker should process), False if
+        already claimed by another worker.
+    """
+    result = await repo_query(
+        "UPDATE type::thing($cmd_id) SET claimed_by = $worker_id, "
+        "claimed_at = time::now() "
+        "WHERE claimed_by IS NONE "
+        "RETURN AFTER;",
+        {"cmd_id": command_id, "worker_id": worker_id},
+    )
+    # UPDATE ... WHERE returns empty list if the WHERE clause didn't match
+    if isinstance(result, list) and len(result) > 0:
+        # Check if any result actually has our worker_id (claim succeeded)
+        for row in result:
+            if isinstance(row, dict) and row.get("claimed_by") == worker_id:
+                return True
+    return False
 
 
 class ACMExtractionInput(CommandInput):
@@ -76,6 +122,29 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
     model_id = input_data.model_id
     force = input_data.force
 
+    # --- Atomic claim: prevent worker race condition (Bug #60) ---
+    command_id = None
+    if input_data.execution_context:
+        command_id = input_data.execution_context.command_id
+
+    if command_id:
+        worker_id = _generate_worker_id()
+        claimed = await _try_claim_command(command_id, worker_id)
+        if not claimed:
+            logger.warning(
+                f"Command {command_id} already claimed by another worker, "
+                f"skipping (this worker: {worker_id})"
+            )
+            return ACMExtractionOutput(
+                success=False,
+                source_id=source_id,
+                processing_time=time.time() - start_time,
+                error_message="Command already claimed by another worker",
+                extraction_method="ai",
+            )
+        logger.info(f"Command {command_id} claimed by worker {worker_id}")
+    # --- End atomic claim ---
+
     try:
         logger.info(f"Starting AI-powered ACM extraction for source: {source_id}")
 
@@ -121,9 +190,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 )
 
         # Extract command_id from execution context for progress tracking
-        command_id = None
-        if input_data.execution_context:
-            command_id = input_data.execution_context.command_id
+        # (command_id already set above during atomic claim)
 
         # 3. Run AI extraction (deletion already handled above, so pass force=False)
         result = await extract_acm_from_source(

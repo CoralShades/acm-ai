@@ -1,8 +1,9 @@
 # Bug: Worker Race Condition — Duplicate Command Processing
 
-**Status:** drafted
+**Status:** done
 **Priority:** P0 (Critical)
 **Discovered:** 2026-02-25 (E2E Test Report)
+**Completed:** 2026-02-25
 **Report:** [docs/reviews/e2e-test-report-20260225.md](../reviews/e2e-test-report-20260225.md)
 
 ---
@@ -35,9 +36,9 @@ Fingerprint analysis confirmed 12 duplicate pairs + 8 unique content fingerprint
 
 ## Acceptance Criteria
 
-1. [ ] Only ONE worker processes a given command, even with multiple workers running
-2. [ ] Add command-level locking (e.g., `UPDATE command SET status='processing', worker_id=$id WHERE status='pending' AND id=$cmd_id`)
-3. [ ] Second worker that finds the command already claimed should skip it
+1. [x] Only ONE worker processes a given command, even with multiple workers running
+2. [x] Add command-level locking (e.g., `UPDATE command SET status='processing', worker_id=$id WHERE status='pending' AND id=$cmd_id`)
+3. [x] Second worker that finds the command already claimed should skip it
 4. [ ] Add dedup script or migration to clean up existing duplicate records
 5. [ ] Test: start 2 workers, submit 1 command, verify exactly 1 execution
 
@@ -70,3 +71,21 @@ uv run run_worker.py --import-modules commands
 # WSL
 setsid uv run run_worker.py --import-modules commands < /dev/null &
 ```
+
+---
+
+## Implementation (2026-02-25)
+
+**Approach:** Option A — Atomic claim in our command handler (not the library).
+
+### Changes
+- **`commands/acm_commands.py`**: Added `_generate_worker_id()` (hostname:PID) and `_try_claim_command()` using `UPDATE ... WHERE claimed_by IS NONE` atomic claim. Early-exit before extraction if claim fails.
+- **`migrations/34.surrealql`**: Adds `claimed_by` (string) and `claimed_at` (datetime) fields to command table.
+- **`migrations/34_down.surrealql`**: Rollback migration.
+- **`open_notebook/database/async_migrate.py`**: Migration 34 registered in both up/down lists.
+
+### How It Works
+1. When a command handler is invoked, `_try_claim_command()` runs an atomic SurrealQL UPDATE that sets `claimed_by` and `claimed_at` ONLY if `claimed_by IS NONE`.
+2. If the UPDATE returns a result, the claim succeeded — proceed with extraction.
+3. If the UPDATE returns no result (another worker already claimed), log a warning and return `success=False` immediately.
+4. The worker ID is `hostname:PID` for easy debugging in multi-worker setups.

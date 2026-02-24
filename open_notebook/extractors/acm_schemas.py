@@ -205,6 +205,10 @@ class ACMExtractionRecord(BaseModel):
     floor_level: Optional[str] = Field(
         default=None, description="Floor level (e.g., 'Ground', 'Level 1', 'Roof')"
     )
+    date_of_inspection: Optional[str] = Field(
+        default=None,
+        description="Date of inspection/audit from report header or metadata (e.g., '2024-03-15', 'March 2024')",
+    )
     hygienist_recommendations: Optional[str] = Field(
         default=None, description="Expert recommendations for this material"
     )
@@ -217,6 +221,21 @@ class ACMExtractionRecord(BaseModel):
     )
     date_of_removal: Optional[str] = Field(
         default=None, description="Date of removal if applicable"
+    )
+    quantity_removed: Optional[str] = Field(
+        default=None,
+        description="Quantity of material removed (e.g., '10 m²', '5 linear meters')",
+    )
+    removal_notification_no: Optional[str] = Field(
+        default=None,
+        description="Removal notification number for regulatory compliance",
+    )
+    epa_certificate_no: Optional[str] = Field(
+        default=None, description="EPA clearance certificate number after removal"
+    )
+    additional_comments: Optional[str] = Field(
+        default=None,
+        description="Additional comments or notes about the ACM item from the register",
     )
 
     @field_validator("result", mode="before")

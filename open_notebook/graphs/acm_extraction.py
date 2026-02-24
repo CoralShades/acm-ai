@@ -1002,7 +1002,7 @@ async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
                     pl._log(
                         f"  WARNING: {n_plans} plans but 0 records — "
                         f"check LLM response or auth errors",
-                        level="warning"
+                        level="warning",
                     )
             pl.stage_complete(StageId.ORCHESTRATOR, summary)
         return result
@@ -2203,6 +2203,8 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 room_name=record.room_name,
                 room_area=record.room_area,
                 area_type=record.area_type or "Interior",
+                floor_level=record.floor_level,
+                date_of_inspection=record.date_of_inspection,
                 product=record.product,
                 material_description=record.material_description,
                 extent=record.extent,
@@ -2225,6 +2227,10 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 psb_supplied_acm_id=record.psb_supplied_acm_id,
                 removal_status=record.removal_status,
                 date_of_removal=record.date_of_removal,
+                quantity_removed=record.quantity_removed,
+                removal_notification_no=record.removal_notification_no,
+                epa_certificate_no=record.epa_certificate_no,
+                additional_comments=record.additional_comments,
                 extraction_confidence=record.extraction_confidence,
                 data_issues=record.data_issues if record.data_issues else None,
             )

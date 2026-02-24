@@ -12,6 +12,10 @@ export type ACMExtractionRecord = {
      */
     acm_labelled?: boolean | null;
     /**
+     * Additional comments or notes about the ACM item from the register
+     */
+    additional_comments?: null | string;
+    /**
      * Area type: 'Interior', 'Exterior', or 'Grounds'
      */
     area_type?: null | string;
@@ -36,6 +40,10 @@ export type ACMExtractionRecord = {
      */
     data_issues?: string[];
     /**
+     * Date of inspection/audit from report header or metadata (e.g., '2024-03-15', 'March 2024')
+     */
+    date_of_inspection?: null | string;
+    /**
      * Date of removal if applicable
      */
     date_of_removal?: null | string;
@@ -44,6 +52,10 @@ export type ACMExtractionRecord = {
      */
     disturbance_potential?: null | string;
     /**
+     * EPA clearance certificate number after removal
+     */
+    epa_certificate_no?: null | string;
+    /**
      * Extent/coverage of the material (e.g., 'Whole ceiling', 'Partial wall')
      */
     extent?: null | string;
@@ -51,6 +63,10 @@ export type ACMExtractionRecord = {
      * Confidence level: 'high', 'medium', 'low'
      */
     extraction_confidence?: string;
+    /**
+     * Floor level (e.g., 'Ground', 'Level 1', 'Roof')
+     */
+    floor_level?: null | string;
     /**
      * Friability: 'Friable' or 'Non Friable'
      */
@@ -73,9 +89,14 @@ export type ACMExtractionRecord = {
     material_condition?: null | string;
     /**
      * Detailed description of the material (e.g., 'Vinyl floor tiles, grey/white mottled
-     * pattern'). REQUIRED.
+     * pattern').
      */
-    material_description: string;
+    material_description?: null | string;
+    /**
+     * True if the room/area was inaccessible and could not be sampled (e.g., 'No Access',
+     * 'Height Restriction', 'Restricted Access' entries)
+     */
+    no_access?: boolean;
     /**
      * Page number where this record was found
      */
@@ -93,11 +114,20 @@ export type ACMExtractionRecord = {
      */
     quantity?: null | string;
     /**
+     * Quantity of material removed (e.g., '10 m²', '5 linear meters')
+     */
+    quantity_removed?: null | string;
+    /**
+     * Removal notification number for regulatory compliance
+     */
+    removal_notification_no?: null | string;
+    /**
      * Removal status: 'N/A', 'Pending', 'Complete', 'Encapsulated'
      */
     removal_status?: null | string;
     /**
-     * Asbestos test result: 'Detected', 'Not Detected', 'Presumed', 'Unknown'. REQUIRED.
+     * Asbestos test result using BAR vocabulary: 'Positive', 'Assumed Positive', 'Negative',
+     * 'Assumed Negative', 'Unknown'. REQUIRED.
      */
     result: string;
     /**
@@ -121,7 +151,8 @@ export type ACMExtractionRecord = {
      */
     sample_no?: null | string;
     /**
-     * Laboratory analysis result
+     * Laboratory analysis result or sampling status: 'Positive', 'Assumed Positive',
+     * 'Negative', 'Assumed Negative', 'Not Sampled', 'No Access'
      */
     sample_result?: null | string;
     [property: string]: any;

@@ -18,6 +18,7 @@ Adding new models:
 """
 
 import json
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -68,6 +69,7 @@ def check_quicktype_installed() -> bool:
             capture_output=True,
             check=True,
             cwd=Path("frontend"),
+            shell=platform.system() == "Windows",
         )
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -109,6 +111,7 @@ def generate_typescript(schema_path: Path, output_path: Path, type_name: str) ->
             text=True,
             check=True,
             cwd=Path("frontend"),
+            shell=platform.system() == "Windows",
         )
         logger.info(f"Generated TypeScript: {type_name} -> {output_path}")
     except subprocess.CalledProcessError as e:
@@ -178,6 +181,7 @@ def main() -> int:
     TS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Process Pydantic models
+    failures: List[str] = []
     for model in MODELS_TO_CONVERT:
         try:
             schema_path = SCHEMA_DIR / f"{model.__name__}.json"
@@ -187,7 +191,7 @@ def main() -> int:
             generate_typescript(schema_path, ts_path, model.__name__)
         except Exception as e:
             logger.error(f"Failed to process {model.__name__}: {e}")
-            return 1
+            failures.append(model.__name__)
 
     # Process enums
     for enum_cls in ENUMS_TO_CONVERT:
@@ -196,12 +200,18 @@ def main() -> int:
             generate_enum_file(enum_cls, ts_path)
         except Exception as e:
             logger.error(f"Failed to process enum {enum_cls.__name__}: {e}")
-            return 1
+            failures.append(enum_cls.__name__)
 
     # Generate index file
     generate_index_file(TS_OUTPUT_DIR, MODELS_TO_CONVERT, ENUMS_TO_CONVERT)
 
     total = len(MODELS_TO_CONVERT) + len(ENUMS_TO_CONVERT)
+    if failures:
+        logger.warning(
+            f"Generated {total - len(failures)}/{total} types "
+            f"({len(failures)} failed: {', '.join(failures)})"
+        )
+        return 1
     logger.success(f"Generated {total} TypeScript types")
     logger.info(f"Output directory: {TS_OUTPUT_DIR}")
 

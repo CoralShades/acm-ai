@@ -1,0 +1,3 @@
+-- Rollback Migration 34: Remove claim fields from command table
+REMOVE FIELD claimed_by ON TABLE command;
+REMOVE FIELD claimed_at ON TABLE command;

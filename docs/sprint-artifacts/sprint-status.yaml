@@ -43,7 +43,7 @@ story_location: docs/sprint-artifacts
 reconciliation:
   last_reconciled: 2026-02-25
   reconciled_branches: [main]
-  notes: "Sprint reconciliation 2026-02-25: E2E validation complete. E18-S1 expanded with OpenRouter provider routing. E18-S4 done (full E2E report). E20-S4 done (93.75% core sample coverage). E20-S5 in-progress with field gap analysis. 2 new bugs drafted: worker-race-condition (P0), extraction-field-coverage (P1). Story count: 145 total, 130 done (90%)."
+  notes: "Sprint reconciliation 2026-02-25: Fix sprint complete. CG1: worker race condition (atomic claim). CG2: date_of_inspection + floor_level. CG3: 8 medium-priority fields. CG4: prompt rules 9-12. 2 bug stories done (worker-race-condition, extraction-field-coverage). Story count: 145 total, 132 done (91%)."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -288,12 +288,12 @@ development_status:
   e20-s2-regex-yield-check: done  # acm_item_count_estimate on BuildingExtractionPlan; yield check + escalation in extract_building; 5 new tests; 52/52 pass  # docs/sprint-artifacts/e20-s2-regex-yield-check.md — REGEX_ONLY yield check: escalate to FULL_LLM if < 50% of estimate
   e20-s3-not-sampled-capture: done  # no_access field + prompt update; 57 tests pass; register_enums.json fixed post-review
   e20-s4-e2e-accuracy-validation: done  # 27/31 (87%) via old pipeline → 2026-02-25 E2E: 16/16 core samples (93.75%) via orchestrator; E20-S5 created for remaining gaps
-  e20-s5-extraction-accuracy-gap-analysis: in-progress  # docs/sprint-artifacts/e20-s5-extraction-accuracy-gap-analysis.md — 2026-02-25: OpenRouter provider routing fixed, 16/16 core samples extracted. Field quality gaps identified: 19/43 CSV columns unmapped (56% field coverage). Missing: 34511-039-014, date_of_inspection, address/suburb/postcode, removal tracking. Worker race condition causing duplicate records.
+  e20-s5-extraction-accuracy-gap-analysis: in-progress  # docs/sprint-artifacts/e20-s5-extraction-accuracy-gap-analysis.md — 2026-02-25: Prompt fix (rules 9-12) for missing sample 34511-039-014. Worker race condition fixed (bug-worker-race-condition done). Field coverage fixed (bug-extraction-field-coverage done). Remaining: E2E re-validation, provider error fix, duplicate cleanup.
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
-  bug-worker-race-condition: drafted  # 2026-02-25: Two workers pick up same command → duplicate records. Need at-most-once delivery in surreal-commands. Discovered during E2E test: command:w7keurrrpsc6f6lk79ig processed twice → 32 records instead of 16
-  bug-extraction-field-coverage: drafted  # 2026-02-25: Only 24/43 CSV columns mapped in extraction schema (56%). Missing: date_of_inspection (HIGH), address/suburb/postcode (MEDIUM), removal compliance fields (MEDIUM). See docs/reviews/e2e-test-report-20260225.md
+  bug-worker-race-condition: done  # 2026-02-25: Atomic claim pattern (_try_claim_command + _generate_worker_id) in acm_commands.py. Migration 34: claimed_by/claimed_at fields. Prevents duplicate command processing.
+  bug-extraction-field-coverage: done  # 2026-02-25: Phase 1: date_of_inspection + floor_level (migration 35). Phase 2: building_address, suburb, postcode, building_type, quantity_removed, removal_notification_no, epa_certificate_no, additional_comments (migration 36). TypeScript types regenerated.
   # E2E TEST INFRASTRUCTURE 2026-02-16 (Phase 4 - completed by PR #30):
   e2e-ci-github-actions-setup: done  # PR #30 added .github/workflows/e2e-tests.yml
 
@@ -326,14 +326,14 @@ development_status:
 # ========
 # Total Epics: 20 (18 done, 2 in-progress, 0 backlog, 1 archived)
 # Total Stories: 145  # +12 from SCP-20260224, +2 bug stories (worker-race, field-coverage), +1 E20-S5
-# Stories Done: 130 (90%)
+# Stories Done: 132 (91%)
 # Stories Review: 0
 # Stories In-Progress: 1 (E20-S5)
-# Stories Drafted: 2 (bug-worker-race-condition, bug-extraction-field-coverage)
+# Stories Drafted: 0
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-25  # E2E validation: extraction 16/16 core samples (93.75%), full frontend pass. OpenRouter provider routing fixed. Field coverage gap analysis: 24/43 CSV columns mapped (56%). 2 new bug stories drafted.
+# Last Updated: 2026-02-25  # Fix sprint: CG1 (worker race condition), CG2 (date_of_inspection + floor_level), CG3 (8 medium-priority fields), CG4 (prompt rules 9-12 for missing sample). 2 bug stories done. TypeScript types regenerated.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E19
 # IN-PROGRESS EPICS: E18, E20
