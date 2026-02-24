@@ -11,7 +11,7 @@
 - [x] E19-S4: Raw Extraction Table — live AG Grid during and after extraction — spec: docs/sprint-artifacts/e19-s4-raw-extraction-table.md
 - [x] E19-S5: Building Review Wizard Step 1 — 21-field building mapping AG Grid — spec: docs/sprint-artifacts/e19-s5-building-review-wizard.md
 - [x] E19-S6: ACM Schema Mapping Wizard Step 2 — 29-field ACM grid, publish endpoint — spec: docs/sprint-artifacts/e19-s6-acm-schema-mapping-wizard.md
-- [ ] E19-S7: Job Detail Page — 4-tab permanent job page (Overview, Buildings, ACM Records, Extraction Log) — spec: docs/sprint-artifacts/e19-s7-job-detail-page.md
+- [x] E19-S7: Job Detail Page — 4-tab permanent job page (Overview, Buildings, ACM Records, Extraction Log) — spec: docs/sprint-artifacts/e19-s7-job-detail-page.md
 - [ ] E19-S8 (P1): Conversational CRUD Chat — job-scoped CRUD chat with preview_write confirmation — spec: docs/sprint-artifacts/e19-s8-conversational-crud-chat.md
 
 ## Epic 20: Extraction Completeness & 100% Record Capture (P0)

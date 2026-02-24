@@ -277,8 +277,8 @@ development_status:
   e19-s4-raw-extraction-table: done  # docs/sprint-artifacts/e19-s4-raw-extraction-table.md — Live raw records AG Grid during and after extraction
   e19-s5-building-review-wizard: done  # docs/sprint-artifacts/e19-s5-building-review-wizard.md — Step 1: 21-field building mapping wizard, /jobs/{id}/review/buildings, BuildingReviewGrid, WizardStepHeader, GET+PUT /api/acm/jobs/{id}/buildings
   e19-s6-acm-schema-mapping-wizard: done  # docs/sprint-artifacts/e19-s6-acm-schema-mapping-wizard.md — Step 2: ACMReviewGrid (29-field), per-building tabs, RecordMergeModal, POST /api/acm/jobs/{id}/publish, no_access+smf_present fields
-  e19-s7-job-detail-page: ready-for-dev  # docs/sprint-artifacts/e19-s7-job-detail-page.md — Permanent job detail page with tabs (Overview, Buildings, ACM Records, Extraction Log)
-  e19-s8-conversational-crud-chat: backlog  # docs/sprint-artifacts/e19-s8-conversational-crud-chat.md — P1: CRUD chat scoped to job detail (preview_write confirmation protocol)
+  e19-s7-job-detail-page: done  # docs/sprint-artifacts/e19-s7-job-detail-page.md — /jobs/{id} tabbed detail page: JobDetailHeader, JobOverviewTab, BuildingReviewGrid+ACMReviewGrid+log tabs, re-extract+export actions
+  e19-s8-conversational-crud-chat: ready-for-dev  # docs/sprint-artifacts/e19-s8-conversational-crud-chat.md — P1: CRUD chat scoped to job detail (preview_write confirmation protocol)
 
   # Epic 20: Extraction Completeness & 100% Record Capture (P0)
   # 0/4 stories complete — EPIC BACKLOG
