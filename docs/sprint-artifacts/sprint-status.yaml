@@ -300,7 +300,7 @@ development_status:
 
   # Bug Fixes — Post-Audit (2026-02-26)
   bug-frontend-build-lightning-css: done  # 2026-02-26: Removed lightningcss-linux-x64-gnu explicit dep from package-lock.json; lightningcss-win32-x64-msvc now resolved as optional dep via @tailwindcss/node; pdfjs-dist webpack alias added. npm run build ✓ lint ✓ HTTP 200. Commit 7ea7544
-  bug-stale-commands-cleanup: drafted
+  bug-stale-commands-cleanup: done  # 2026-02-26: 11 running → failed (null claimed_by, pre-atomic-claim residue). 0 duplicate acm_records found. extraction_progress clean (2 failed, 0 running).
   bug-agui-path-alignment: drafted
 
   # Bug Fixes & Infrastructure (standalone)
@@ -339,14 +339,14 @@ development_status:
 # ========
 # Total Epics: 21
 # Total Stories: 151  # Add 3 new E21 stories + 3 bug stories to counts
-# Stories Done: 133 (88%)
+# Stories Done: 134 (89%)
 # Stories Review: 0
 # Stories In-Progress: 1 (E20-S5)
-# Stories Drafted: 5 (E21-S1, E21-S2, E21-S3, bug-stale-commands-cleanup, bug-agui-path-alignment)
+# Stories Drafted: 4 (E21-S1, E21-S2, E21-S3, bug-agui-path-alignment)
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-26  # Phase 1 fix: bug-frontend-build-lightning-css done. Removed lightningcss-linux-x64-gnu explicit dep, build restored.
+# Last Updated: 2026-02-26  # Phase 2 fix: bug-stale-commands-cleanup done. 11 stale running → failed, 0 duplicates in acm_record.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E19
 # IN-PROGRESS EPICS: E18, E20
@@ -578,6 +578,16 @@ development_status:
 #   - E17-S6: New OpenRouter Models (6 frontier models in MODEL_CATALOG)
 # Epic 17 marked DONE. Sprint: 104/122 stories done (85%), 7 remaining across E9/E10/E12/E13
 # Remaining stories promoted to ready-for-dev. Dependency matrix established.
+#
+# KEY CHANGES (2026-02-26 - Phase 2: Stale Command Cleanup):
+# ============================================================
+# bug-stale-commands-cleanup: done
+#   - Discovered: 11 commands stuck in 'running' with claimed_by=null (pre-migration-34 residue)
+#   - Fix: UPDATE command SET status='failed' WHERE status='running' (DB-only, no code changes)
+#   - Result: 0 running commands; failed count 27→38 (+11); completed 605 unchanged
+#   - Duplicate check: 50 acm_records, 0 duplicates (cnt=1 per source_id+sample_no)
+#   - extraction_progress: 2 failed, 0 running — clean
+#   - Story: docs/sprint-artifacts/bug-stale-commands-cleanup.md
 #
 # KEY CHANGES (2026-02-26 - Phase 1: Frontend Build Fix):
 # =========================================================
