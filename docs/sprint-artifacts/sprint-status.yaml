@@ -290,6 +290,19 @@ development_status:
   e20-s4-e2e-accuracy-validation: done  # 27/31 (87%) via old pipeline → 2026-02-25 E2E: 16/16 core samples (93.75%) via orchestrator; E20-S5 created for remaining gaps
   e20-s5-extraction-accuracy-gap-analysis: in-progress  # docs/sprint-artifacts/e20-s5-extraction-accuracy-gap-analysis.md — 2026-02-25: Prompt fix (rules 9-12) for missing sample 34511-039-014. Worker race condition fixed (bug-worker-race-condition done). Field coverage fixed (bug-extraction-field-coverage done). Remaining: E2E re-validation, provider error fix, duplicate cleanup.
 
+  # Epic 21: UX Loading States & Layout Consistency (P1)
+  # 0/3 stories — EPIC NEW
+  # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260226-post-audit-fixes.md
+  epic-21: in-progress
+  e21-s1-loading-states-transitions: drafted
+  e21-s2-jobs-layout-consistency: drafted
+  e21-s3-extraction-progress-feedback: drafted
+
+  # Bug Fixes — Post-Audit (2026-02-26)
+  bug-frontend-build-lightning-css: drafted
+  bug-stale-commands-cleanup: drafted
+  bug-agui-path-alignment: drafted
+
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
   bug-worker-race-condition: done  # 2026-02-25: Atomic claim pattern (_try_claim_command + _generate_worker_id) in acm_commands.py. Migration 34: claimed_by/claimed_at fields. Prevents duplicate command processing.
@@ -324,9 +337,9 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 20 (18 done, 2 in-progress, 0 backlog, 1 archived)
-# Total Stories: 145  # +12 from SCP-20260224, +2 bug stories (worker-race, field-coverage), +1 E20-S5
-# Stories Done: 132 (91%)
+# Total Epics: 21
+# Total Stories: 151  # Add 3 new E21 stories + 3 bug stories to counts
+# Stories Done: 132 (87%)
 # Stories Review: 0
 # Stories In-Progress: 1 (E20-S5)
 # Stories Drafted: 0
@@ -565,3 +578,14 @@ development_status:
 #   - E17-S6: New OpenRouter Models (6 frontier models in MODEL_CATALOG)
 # Epic 17 marked DONE. Sprint: 104/122 stories done (85%), 7 remaining across E9/E10/E12/E13
 # Remaining stories promoted to ready-for-dev. Dependency matrix established.
+#
+# KEY CHANGES (2026-02-25 - Pipeline Audit Reconciliation):
+# ==========================================================
+# Audit artifact created: docs/temp/pipeline-audit-report-20260225.md
+# Evidence-based status during audit run:
+#   - Frontend runtime routes (/, /jobs, /jobs/{id}/extract) returned HTTP 500 in local environment
+#   - Frontend checks: npm run build PASS, npm run lint PASS, npm run generate:types PARTIAL (7/9)
+#   - Runtime checks: API/worker running; SurrealDB healthy; Ollama container unhealthy but /api/tags responds
+#   - Queue snapshot: command totals 591 (553 completed, 27 failed, 11 running), extraction_progress=2, agui_events=0
+# Story tracking decision:
+#   - Keep E20-S5 as in-progress until 31/31 closure evidence and healthy browser UX re-validation are complete.
