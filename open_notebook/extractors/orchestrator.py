@@ -67,6 +67,10 @@ def _normalize_extraction_json(parsed: dict) -> dict:
         di = record.get("data_issues")
         if isinstance(di, str):
             record["data_issues"] = [di] if di.strip() else []
+        elif di is None:
+            # LLM often returns "data_issues": null — coerce to empty list so
+            # ACMExtractionRecord(List[str]) validation does not fail.
+            record["data_issues"] = []
     return parsed
 
 
@@ -439,9 +443,7 @@ async def _llm_extract_building(
             ),
         ]
 
-        async def _invoke(
-            active_model, active_is_qwen: bool
-        ) -> ACMExtractionResult:
+        async def _invoke(active_model, active_is_qwen: bool) -> ACMExtractionResult:
             if active_is_qwen:
                 response_text = ""
                 try:
@@ -453,8 +455,8 @@ async def _llm_extract_building(
                     )
                     parsed = parse_json_response(response_text)
                     _normalize_extraction_json(parsed)
-                    result_local: ACMExtractionResult = ACMExtractionResult.model_validate(
-                        parsed
+                    result_local: ACMExtractionResult = (
+                        ACMExtractionResult.model_validate(parsed)
                     )
                     logger.info(
                         f"Building {plan.building_id} Qwen direct JSON: "
@@ -510,7 +512,7 @@ async def _llm_extract_building(
                     pl._log(
                         f"  Provider error detected — falling back to direct "
                         f"JSON parsing for {plan.building_id}",
-                        level="warning"
+                        level="warning",
                     )
                 try:
                     raw_response = await model.ainvoke(messages)
@@ -539,7 +541,7 @@ async def _llm_extract_building(
                     if pl:
                         pl._log(
                             f"  Fallback JSON parsing FAILED: {fallback_err}",
-                            level="error"
+                            level="error",
                         )
                     raise
             else:
@@ -678,7 +680,7 @@ async def extract_building(
         if pl:
             pl._log(
                 f"  FULL_LLM ERROR: Building {plan.building_id} failed: {e}",
-                level="error"
+                level="error",
             )
         elapsed = int((time.time() - start) * 1000)
         return [], BuildingExtractionStats(
@@ -846,9 +848,12 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
             if pl:
                 pl._log(
                     f"  ERROR: Building {stats.building_id} errors: {stats.errors}",
-                    level="error"
+                    level="error",
                 )
-        elif stats.records_extracted == 0 and stats.strategy_used != ExtractionStrategy.SKIP.value:
+        elif (
+            stats.records_extracted == 0
+            and stats.strategy_used != ExtractionStrategy.SKIP.value
+        ):
             logger.warning(
                 f"Building {stats.building_id} returned 0 records "
                 f"(strategy={stats.strategy_used}, pages={stats.pages_processed}, "
@@ -859,7 +864,7 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
                     f"  WARNING: Building {stats.building_id} returned 0 records "
                     f"(strategy={stats.strategy_used}, pages={stats.pages_processed}, "
                     f"time={stats.time_ms}ms)",
-                    level="warning"
+                    level="warning",
                 )
 
     logger.info(

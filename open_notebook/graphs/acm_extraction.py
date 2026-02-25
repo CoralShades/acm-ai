@@ -484,8 +484,11 @@ def _merge_records(
     else:
         base = existing.model_copy()
 
-    # Merge data_issues
-    all_issues = list(set(existing.data_issues + new.data_issues))
+    # Merge data_issues — guard against None on either side (old DB records or
+    # rare cases where the coercion validator was not run).
+    existing_issues = existing.data_issues or []
+    new_issues = new.data_issues or []
+    all_issues = list(set(existing_issues + new_issues))
     base.data_issues = all_issues
 
     return base

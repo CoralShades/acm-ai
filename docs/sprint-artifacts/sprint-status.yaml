@@ -288,7 +288,7 @@ development_status:
   e20-s2-regex-yield-check: done  # acm_item_count_estimate on BuildingExtractionPlan; yield check + escalation in extract_building; 5 new tests; 52/52 pass  # docs/sprint-artifacts/e20-s2-regex-yield-check.md — REGEX_ONLY yield check: escalate to FULL_LLM if < 50% of estimate
   e20-s3-not-sampled-capture: done  # no_access field + prompt update; 57 tests pass; register_enums.json fixed post-review
   e20-s4-e2e-accuracy-validation: done  # 27/31 (87%) via old pipeline → 2026-02-25 E2E: 16/16 core samples (93.75%) via orchestrator; E20-S5 created for remaining gaps
-  e20-s5-extraction-accuracy-gap-analysis: in-progress  # docs/sprint-artifacts/e20-s5-extraction-accuracy-gap-analysis.md — 2026-02-25: Prompt fix (rules 9-12) for missing sample 34511-039-014. Worker race condition fixed (bug-worker-race-condition done). Field coverage fixed (bug-extraction-field-coverage done). Remaining: E2E re-validation, provider error fix, duplicate cleanup.
+  e20-s5-extraction-accuracy-gap-analysis: in-progress  # docs/sprint-artifacts/e20-s5-extraction-accuracy-gap-analysis.md — 2026-02-26 Phase 3B: Schema fix (data_issues null→[]). Re-validation: 17/31 (55%). Blocker resolved (0→17 records). Gap: 9 "As Per" reference rows + 6 "Not Sampled" rows not captured — pre-existing extraction coverage gap, not schema bug. Report: docs/reviews/e2e-validation-20260226.md. Target ≥28/31 requires extraction coverage improvement for reference/assumed-positive rows.
 
   # Epic 21: UX Loading States & Layout Consistency (P1)
   # 0/3 stories — EPIC NEW
@@ -301,6 +301,7 @@ development_status:
   # Bug Fixes — Post-Audit (2026-02-26)
   bug-frontend-build-lightning-css: done  # 2026-02-26: Removed lightningcss-linux-x64-gnu explicit dep from package-lock.json; lightningcss-win32-x64-msvc now resolved as optional dep via @tailwindcss/node; pdfjs-dist webpack alias added. npm run build ✓ lint ✓ HTTP 200. Commit 7ea7544
   bug-stale-commands-cleanup: done  # 2026-02-26: 11 running → failed (null claimed_by, pre-atomic-claim residue). 0 duplicate acm_records found. extraction_progress clean (2 failed, 0 running).
+  bug-data-issues-schema-validation: done  # 2026-02-26: data_issues List[str] → field_validator coerces null→[] in ACMExtractionRecord. Also: _normalize_extraction_json None branch + null-safe _merge_records. 18 tests added (tests/test_acm_schemas.py). 194 tests pass. Was blocking 100% record loss (0/31).
   bug-agui-path-alignment: drafted
 
   # Bug Fixes & Infrastructure (standalone)
@@ -346,7 +347,7 @@ development_status:
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-26  # Phase 2 fix: bug-stale-commands-cleanup done. 11 stale running → failed, 0 duplicates in acm_record.
+# Last Updated: 2026-02-26  # Phase 3B: bug-data-issues-schema-validation done. data_issues null→[] fix. 17/31 records now persisted (was 0). Coverage gap documented in docs/reviews/e2e-validation-20260226.md.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E19
 # IN-PROGRESS EPICS: E18, E20

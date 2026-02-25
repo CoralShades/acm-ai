@@ -357,6 +357,14 @@ class ACMExtractionRecord(BaseModel):
     )
     # Note: table_bbox is added post-extraction by MinerU, not by LLM
 
+    @field_validator("data_issues", mode="before")
+    @classmethod
+    def coerce_data_issues(cls, v: object) -> List[str]:
+        """Coerce None → [] so LLMs returning ``"data_issues": null`` pass validation."""
+        if v is None:
+            return []
+        return v  # type: ignore[return-value]
+
 
 class ACMExtractionResult(BaseModel):
     """
