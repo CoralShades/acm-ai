@@ -34,16 +34,16 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-25
+updated: 2026-02-26
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-02-25
+  last_reconciled: 2026-02-26
   reconciled_branches: [main]
-  notes: "Sprint reconciliation 2026-02-25: Fix sprint complete. CG1: worker race condition (atomic claim). CG2: date_of_inspection + floor_level. CG3: 8 medium-priority fields. CG4: prompt rules 9-12. 2 bug stories done (worker-race-condition, extraction-field-coverage). Story count: 145 total, 132 done (91%)."
+  notes: "Sprint reconciliation 2026-02-26: bug-frontend-build-lightning-css done (removed lightningcss-linux-x64-gnu explicit dep from package-lock.json; npm run build ✓). Story count: 151 total, 133 done (88%)."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -299,7 +299,7 @@ development_status:
   e21-s3-extraction-progress-feedback: drafted
 
   # Bug Fixes — Post-Audit (2026-02-26)
-  bug-frontend-build-lightning-css: drafted
+  bug-frontend-build-lightning-css: done  # 2026-02-26: Removed lightningcss-linux-x64-gnu explicit dep from package-lock.json; lightningcss-win32-x64-msvc now resolved as optional dep via @tailwindcss/node; pdfjs-dist webpack alias added. npm run build ✓ lint ✓ HTTP 200. Commit 7ea7544
   bug-stale-commands-cleanup: drafted
   bug-agui-path-alignment: drafted
 
@@ -339,14 +339,14 @@ development_status:
 # ========
 # Total Epics: 21
 # Total Stories: 151  # Add 3 new E21 stories + 3 bug stories to counts
-# Stories Done: 132 (87%)
+# Stories Done: 133 (88%)
 # Stories Review: 0
 # Stories In-Progress: 1 (E20-S5)
-# Stories Drafted: 0
+# Stories Drafted: 5 (E21-S1, E21-S2, E21-S3, bug-stale-commands-cleanup, bug-agui-path-alignment)
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-25  # Fix sprint: CG1 (worker race condition), CG2 (date_of_inspection + floor_level), CG3 (8 medium-priority fields), CG4 (prompt rules 9-12 for missing sample). 2 bug stories done. TypeScript types regenerated.
+# Last Updated: 2026-02-26  # Phase 1 fix: bug-frontend-build-lightning-css done. Removed lightningcss-linux-x64-gnu explicit dep, build restored.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E19
 # IN-PROGRESS EPICS: E18, E20
@@ -578,6 +578,17 @@ development_status:
 #   - E17-S6: New OpenRouter Models (6 frontier models in MODEL_CATALOG)
 # Epic 17 marked DONE. Sprint: 104/122 stories done (85%), 7 remaining across E9/E10/E12/E13
 # Remaining stories promoted to ready-for-dev. Dependency matrix established.
+#
+# KEY CHANGES (2026-02-26 - Phase 1: Frontend Build Fix):
+# =========================================================
+# bug-frontend-build-lightning-css: done
+#   - Root cause: lightningcss-linux-x64-gnu was pinned as explicit dep in package-lock.json
+#     causing the Linux native binary path to be required on Windows x64
+#   - Fix: removed explicit platform entries from package-lock.json; lightningcss-win32-x64-msvc
+#     now resolves correctly as optional dep of @tailwindcss/node at install time
+#   - Also added pdfjs-dist webpack alias (legacy build path) in next.config.ts
+#   - Verified: npm run build ✓ (12.7s, 27 pages), npm run lint ✓, HTTP 200 via Playwright
+#   - Commit: 7ea7544
 #
 # KEY CHANGES (2026-02-25 - Pipeline Audit Reconciliation):
 # ==========================================================

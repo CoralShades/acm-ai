@@ -163,6 +163,7 @@ uv run run_api.py                     # API on port 5055
 uv run surreal-commands-worker --import-modules commands  # Background worker
 cd frontend && npm run dev            # Frontend on port 8502
 ```
+uv run run_api.py --import-modules commands
 
 #### Docker-Only Development
 ```bash
