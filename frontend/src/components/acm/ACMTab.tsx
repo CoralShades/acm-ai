@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FileWarning, AlertCircle } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ACMGrid, type ACMGridRef, type CellSelectionDetails } from './ACMGrid'
-import { ACMCellViewer } from './ACMCellViewer'
 import { ACMRecordDialog } from './ACMRecordDialog'
 import { ACMRecordDetailPanel } from './ACMRecordDetailPanel'
 import { ACMExtractionBanner } from './ACMExtractionBanner'
@@ -34,6 +34,11 @@ import type { ACMRecord } from '@/lib/types/acm'
 interface ACMTabProps {
   sourceId: string
 }
+
+const ACMCellViewer = dynamic(
+  () => import('./ACMCellViewer').then((module) => module.ACMCellViewer),
+  { ssr: false }
+)
 
 export function ACMTab({ sourceId }: ACMTabProps) {
   // Hooks
@@ -465,12 +470,14 @@ export function ACMTab({ sourceId }: ACMTabProps) {
       />
 
       {/* Cell Citation Viewer */}
-      <ACMCellViewer
-        sourceId={sourceId}
-        selection={selectedCell}
-        pdfUrl={pdfUrl}
-        onClose={handleCellViewerClose}
-      />
+      {selectedCell && (
+        <ACMCellViewer
+          sourceId={sourceId}
+          selection={selectedCell}
+          pdfUrl={pdfUrl}
+          onClose={handleCellViewerClose}
+        />
+      )}
     </div>
   )
 }
