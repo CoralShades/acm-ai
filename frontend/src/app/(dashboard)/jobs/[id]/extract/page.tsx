@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -9,11 +9,14 @@ import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import { RawExtractionTable } from '@/components/acm/RawExtractionTable'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useExtractionProgress } from '@/lib/hooks/use-extraction-progress'
-import { ArrowRight, FileWarning } from 'lucide-react'
+import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
+import { acmApi } from '@/lib/api/acm'
+import { FileWarning } from 'lucide-react'
 
 /**
  * Extract page — shows the ExtractionProgressPanel (stage pills + log) alongside
@@ -26,33 +29,69 @@ function ExtractPageContent() {
   const params = useParams()
   const router = useRouter()
   const sourceId = decodeURIComponent(params.id as string)
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
 
   const { data: source, isLoading: isLoadingSource } = useSource(sourceId)
 
   // Wire extraction progress for the ExtractionProgressPanel
   const extractionProgress = useExtractionProgress(sourceId)
+  const extractionStatus = useExtractionStatus(sourceId)
 
   // Restore in-progress extraction from sessionStorage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const sessionKey = `acm-extraction-progress-${sourceId}`
-    const stored = sessionStorage.getItem(sessionKey)
-    if (stored) {
+    const progressSessionKey = `acm-extraction-progress-${sourceId}`
+    const statusSessionKey = `acm-extraction-${sourceId}`
+    let commandId: string | null = null
+
+    const storedProgress = sessionStorage.getItem(progressSessionKey)
+    if (storedProgress) {
       try {
-        const parsed = JSON.parse(stored)
+        const parsed = JSON.parse(storedProgress)
         if (parsed.commandId && parsed.phase === 'extracting') {
-          extractionProgress.startTracking(parsed.commandId)
+          commandId = parsed.commandId
         }
       } catch {
         // Ignore malformed session data
       }
     }
+
+    if (!commandId) {
+      commandId = sessionStorage.getItem(statusSessionKey)
+    }
+
+    if (!commandId && source?.command_id) {
+      commandId = source.command_id
+    }
+
+    if (commandId) {
+      extractionProgress.startTracking(commandId)
+      extractionStatus.startTracking(commandId)
+    }
+
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceId])
+  }, [source?.command_id, sourceId])
 
   const handleProceedToReview = () => {
     router.push(`/jobs/${sourceId}/review/buildings`)
+  }
+
+  const handleRetry = async () => {
+    setIsRetrying(true)
+    setRetryError(null)
+    try {
+      const response = await acmApi.extract(sourceId)
+      if (response.command_id) {
+        extractionProgress.startTracking(response.command_id)
+        extractionStatus.startTracking(response.command_id)
+      }
+    } catch {
+      setRetryError('Retry failed. Please try again.')
+    } finally {
+      setIsRetrying(false)
+    }
   }
 
   const handleTableComplete = () => {
@@ -60,8 +99,13 @@ function ExtractPageContent() {
     // The user proceeds manually via the button
   }
 
-  const isExtractionDone =
-    extractionProgress.phase === 'completed' || extractionProgress.phase === 'failed'
+  const isExtractionComplete = extractionStatus.phase === 'completed'
+  const isExtractionFailed = extractionStatus.phase === 'failed'
+  const extractionFailureMessage =
+    retryError ||
+    extractionStatus.errorMessage ||
+    extractionProgress.errorMessage ||
+    'Extraction failed. Please retry.'
 
   if (isLoadingSource) {
     return (
@@ -102,10 +146,9 @@ function ExtractPageContent() {
           </div>
 
           {/* Proceed to Review button — shown when extraction is complete */}
-          {isExtractionDone && extractionProgress.phase === 'completed' && (
+          {isExtractionComplete && (
             <Button onClick={handleProceedToReview} className="flex-shrink-0">
-              Proceed to Review
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Proceed to Building Review &rarr;
             </Button>
           )}
         </div>
@@ -121,6 +164,22 @@ function ExtractPageContent() {
             onDismiss={extractionProgress.dismiss}
           />
 
+          {isExtractionFailed && (
+            <Alert variant="destructive" className="border-destructive/50">
+              <AlertTitle>Extraction failed</AlertTitle>
+              <AlertDescription className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>{extractionFailureMessage}</span>
+                <Button
+                  variant="outline"
+                  onClick={handleRetry}
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? 'Retrying...' : 'Retry'}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Raw Records Table */}
           <Card>
             <CardHeader>
@@ -129,17 +188,18 @@ function ExtractPageContent() {
             <CardContent>
               <RawExtractionTable
                 sourceId={sourceId}
+                phase={extractionProgress.phase}
+                pipelineState={extractionProgress.pipelineState}
                 onComplete={handleTableComplete}
               />
             </CardContent>
           </Card>
 
           {/* Bottom CTA — shown when complete so user can proceed without scrolling back up */}
-          {isExtractionDone && extractionProgress.phase === 'completed' && (
+          {isExtractionComplete && (
             <div className="flex justify-end pb-4">
               <Button onClick={handleProceedToReview} size="lg">
-                Proceed to Review
-                <ArrowRight className="ml-2 h-4 w-4" />
+                Proceed to Building Review &rarr;
               </Button>
             </div>
           )}

@@ -6,7 +6,9 @@ import { AgGridReact } from 'ag-grid-react'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import type { ColDef, CellValueChangedEvent } from 'ag-grid-community'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+import { Plus, RefreshCw, Search } from 'lucide-react'
 
 // Register AG Grid modules (safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -45,6 +47,8 @@ interface BuildingReviewGridProps {
   sourceId: string
   onDataChanged?: () => void
 }
+
+type ScopeFilter = 'all' | 'in_scope' | 'out_of_scope'
 
 /**
  * Fetch buildings from the API.
@@ -130,11 +134,18 @@ function ActionsRenderer({
  */
 export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGridProps) {
   const queryClient = useQueryClient()
+  const [searchText, setSearchText] = useState('')
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
 
   // Local state for rows — starts from query data, allows optimistic adds/removes
   const [localRows, setLocalRows] = useState<BuildingRecord[] | null>(null)
 
-  const { data: fetchedBuildings, isLoading, error } = useQuery<BuildingRecord[]>({
+  const {
+    data: fetchedBuildings,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<BuildingRecord[]>({
     queryKey: ['buildings', sourceId],
     queryFn: () => fetchBuildings(sourceId),
     staleTime: 30_000,
@@ -147,7 +158,29 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
     setLocalRows(fetchedBuildings)
   }
 
-  const displayRows = (localRows ?? fetchedBuildings ?? []).filter((r) => !r._removed)
+  const baseRows = (localRows ?? fetchedBuildings ?? []).filter((row) => !row._removed)
+  const displayRows = baseRows.filter((row) => {
+    if (scopeFilter === 'in_scope' && row.building_out_of_scope) {
+      return false
+    }
+    if (scopeFilter === 'out_of_scope' && !row.building_out_of_scope) {
+      return false
+    }
+
+    const normalizedSearch = searchText.trim().toLowerCase()
+    if (!normalizedSearch) return true
+
+    return [
+      row.building_id,
+      row.building_name,
+      row.building_type,
+      row.building_address,
+      row.suburb,
+      row.postcode,
+    ]
+      .map((value) => String(value ?? '').toLowerCase())
+      .some((value) => value.includes(normalizedSearch))
+  })
 
   // Debounce ref for cell-edit saves
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -201,6 +234,10 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
     }
     setLocalRows((prev) => [...(prev ?? []), newRow])
   }, [])
+
+  const handleRefresh = useCallback(() => {
+    void refetch()
+  }, [refetch])
 
   const onCellValueChanged = useCallback(
     (event: CellValueChangedEvent<BuildingRecord>) => {
@@ -299,19 +336,78 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
   return (
     <div className="space-y-3">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {displayRows.length} building{displayRows.length !== 1 ? 's' : ''}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Search buildings"
+              className="pl-9"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={scopeFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className={cn(
+                'rounded-full',
+                scopeFilter === 'all' &&
+                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
+              )}
+              onClick={() => setScopeFilter('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={scopeFilter === 'in_scope' ? 'default' : 'outline'}
+              size="sm"
+              className={cn(
+                'rounded-full',
+                scopeFilter === 'in_scope' &&
+                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
+              )}
+              onClick={() => setScopeFilter('in_scope')}
+            >
+              In Scope
+            </Button>
+            <Button
+              variant={scopeFilter === 'out_of_scope' ? 'default' : 'outline'}
+              size="sm"
+              className={cn(
+                'rounded-full',
+                scopeFilter === 'out_of_scope' &&
+                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
+              )}
+              onClick={() => setScopeFilter('out_of_scope')}
+            >
+              Out of Scope
+            </Button>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddBuilding}
+              className="flex items-center gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Add Building
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleAddBuilding}
-          className="flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          Add Building
-        </Button>
+
+        <div className="text-sm text-muted-foreground">
+          Showing {displayRows.length} of {baseRows.length} building
+          {baseRows.length !== 1 ? 's' : ''}
+        </div>
       </div>
 
       {/* AG Grid */}
@@ -323,6 +419,9 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
       >
         <style jsx global>{`
           .ag-theme-alpine {
+            --ag-row-height: 40px;
+            --ag-header-height: 44px;
+            --ag-font-size: 14px;
             --ag-header-background-color: hsl(var(--muted));
             --ag-odd-row-background-color: hsl(var(--muted) / 0.3);
             --ag-row-hover-color: hsl(var(--muted));

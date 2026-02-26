@@ -10,7 +10,7 @@ import { ExtractionLogStream } from './ExtractionLogStream'
 import { ExtractionThinkingPanel } from './ExtractionThinkingPanel'
 import { ExtractionToolCallFeed, type ToolCallEntry } from './ExtractionToolCallFeed'
 import type { ExtractionPhase } from '@/lib/hooks/use-extraction-progress'
-import type { PipelineRunState, StageId } from '@/lib/types/pipeline'
+import { PIPELINE_STAGE_ORDER, type PipelineRunState } from '@/lib/types/pipeline'
 
 interface ExtractionProgressPanelProps {
   phase: ExtractionPhase
@@ -23,16 +23,6 @@ interface ExtractionProgressPanelProps {
   reasoningText?: string
   toolCalls?: ToolCallEntry[]
 }
-
-const STAGE_ORDER: StageId[] = [
-  'STRUCTURE',
-  'PREFLIGHT',
-  'ORCHESTRATOR',
-  'EXTRACT',
-  'VALIDATE',
-  'CORRECT',
-  'STORE',
-]
 
 export function ExtractionProgressPanel({
   phase,
@@ -52,7 +42,7 @@ export function ExtractionProgressPanel({
   const completedStages = stages
     ? Object.values(stages).filter((s) => s.status === 'complete').length
     : 0
-  const totalStages = STAGE_ORDER.length
+  const totalStages = PIPELINE_STAGE_ORDER.length
   const progressPercent = (completedStages / totalStages) * 100
 
   // Extracting phase
@@ -68,7 +58,7 @@ export function ExtractionProgressPanel({
           {/* Stage Pills */}
           {stages && (
             <div className="flex flex-wrap gap-2">
-              {STAGE_ORDER.map((stageId) => {
+              {PIPELINE_STAGE_ORDER.map((stageId) => {
                 const stage = stages[stageId]
                 return stage ? <StageProgressPill key={stageId} stage={stage} /> : null
               })}
@@ -159,7 +149,7 @@ export function ExtractionProgressPanel({
           {/* Stage Pills for completed extraction */}
           {stages && (
             <div className="flex flex-wrap gap-2">
-              {STAGE_ORDER.map((stageId) => {
+              {PIPELINE_STAGE_ORDER.map((stageId) => {
                 const stage = stages[stageId]
                 return stage ? <StageProgressPill key={stageId} stage={stage} /> : null
               })}
@@ -211,7 +201,7 @@ export function ExtractionProgressPanel({
         {/* Stage Pills for failed extraction */}
         {stages && (
           <div className="flex flex-wrap gap-2">
-            {STAGE_ORDER.map((stageId) => {
+            {PIPELINE_STAGE_ORDER.map((stageId) => {
               const stage = stages[stageId]
               return stage ? <StageProgressPill key={stageId} stage={stage} /> : null
             })}

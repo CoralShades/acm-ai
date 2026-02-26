@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent } from '@/components/ui/card'
 import { JobDetailHeader } from '@/components/jobs/JobDetailHeader'
 import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
 import { BuildingReviewGrid } from '@/components/acm/BuildingReviewGrid'
@@ -120,85 +121,101 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-full overflow-hidden">
-        <JobDetailHeader
-          sourceId={sourceId}
-          title={source?.title ?? null}
-          reviewStatus={source?.review_status}
-          createdAt={source?.created ?? null}
-          recordCount={stats?.total_records}
-          buildingCount={stats?.building_count}
-          onRename={handleRename}
-          onReExtract={handleReExtract}
-          onExportCsv={handleExportCsv}
-          onExportExcel={handleExportExcel}
-        />
+      <div className="flex h-full w-full flex-col overflow-y-auto p-6">
+        <div className="space-y-4">
+          <JobDetailHeader
+            sourceId={sourceId}
+            title={source?.title ?? null}
+            reviewStatus={source?.review_status}
+            createdAt={source?.created ?? null}
+            recordCount={stats?.total_records}
+            buildingCount={stats?.building_count}
+            onRename={handleRename}
+            onReExtract={handleReExtract}
+            onExportCsv={handleExportCsv}
+            onExportExcel={handleExportExcel}
+          />
 
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          <div className="px-4 pt-3 pb-0 flex-shrink-0 flex items-center gap-4">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="buildings">Buildings</TabsTrigger>
-              <TabsTrigger value="records">ACM Records</TabsTrigger>
-              <TabsTrigger value="log">Extraction Log</TabsTrigger>
-            </TabsList>
-            <Link
-              href={`/jobs/${sourceId}/chat`}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors ml-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              CRUD Chat
-            </Link>
-          </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="space-y-4"
+          >
+            <div className="flex items-center gap-4 rounded-xl border bg-card p-2 shadow-sm">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="buildings">Buildings</TabsTrigger>
+                <TabsTrigger value="records">ACM Records</TabsTrigger>
+                <TabsTrigger value="log">Extraction Log</TabsTrigger>
+              </TabsList>
+              <Link
+                href={`/jobs/${sourceId}/chat`}
+                className="ml-2 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <MessageSquare className="h-4 w-4" />
+                CRUD Chat
+              </Link>
+            </div>
 
-          <div className="flex-1 overflow-auto">
-            <TabsContent value="overview" className="p-4 m-0">
-              <JobOverviewTab
-                sourceId={sourceId}
-                recordCount={stats?.total_records ?? 0}
-                buildingCount={stats?.building_count ?? 0}
-                reviewStatus={source?.review_status}
-                missingFieldsPercent={null}
-                extractionQualityScore={null}
-                onReExtract={handleReExtract}
-              />
+            <TabsContent value="overview" className="m-0">
+              <Card className="rounded-xl shadow-sm">
+                <CardContent className="p-6">
+                  <JobOverviewTab
+                    sourceId={sourceId}
+                    recordCount={stats?.total_records ?? 0}
+                    buildingCount={stats?.building_count ?? 0}
+                    reviewStatus={source?.review_status}
+                    missingFieldsPercent={null}
+                    extractionQualityScore={null}
+                    onReExtract={handleReExtract}
+                  />
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            <TabsContent value="buildings" className="p-4 m-0 h-full">
-              <BuildingReviewGrid sourceId={sourceId} />
+            <TabsContent value="buildings" className="m-0">
+              <Card className="rounded-xl shadow-sm">
+                <CardContent className="p-4 sm:p-6">
+                  <BuildingReviewGrid sourceId={sourceId} />
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            <TabsContent value="records" className="p-4 m-0 h-full">
-              <ACMReviewGrid sourceId={sourceId} />
+            <TabsContent value="records" className="m-0">
+              <Card className="rounded-xl shadow-sm">
+                <CardContent className="p-4 sm:p-6">
+                  <ACMReviewGrid sourceId={sourceId} />
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            <TabsContent value="log" className="p-4 m-0">
-              {source?.command_id ? (
-                <ExtractionProgressPanel
-                  phase={panelPhase}
-                  pipelineState={extractionProgress?.state ?? null}
-                  logEntries={extractionProgress?.log_entries ?? []}
-                  recordsCreated={extractionProgress?.state?.total_records}
-                  errorMessage={
-                    extractionProgress?.state?.error ??
-                    (extractionProgress?.status === 'failed'
-                      ? 'Extraction failed'
-                      : undefined)
-                  }
-                  onDismiss={() => {}}
-                />
-              ) : (
-                <div className="text-muted-foreground text-sm">
-                  No extraction log available yet for this job.
-                </div>
-              )}
+            <TabsContent value="log" className="m-0">
+              <Card className="rounded-xl shadow-sm">
+                <CardContent className="p-4 sm:p-6">
+                  {source?.command_id ? (
+                    <ExtractionProgressPanel
+                      phase={panelPhase}
+                      pipelineState={extractionProgress?.state ?? null}
+                      logEntries={extractionProgress?.log_entries ?? []}
+                      recordsCreated={extractionProgress?.state?.total_records}
+                      errorMessage={
+                        extractionProgress?.state?.error ??
+                        (extractionProgress?.status === 'failed'
+                          ? 'Extraction failed'
+                          : undefined)
+                      }
+                      onDismiss={() => {}}
+                    />
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      No extraction log available yet for this job.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
-          </div>
-        </Tabs>
+          </Tabs>
+        </div>
       </div>
     </AppShell>
   )

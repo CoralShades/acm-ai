@@ -10,7 +10,9 @@ import type {
   SelectionChangedEvent,
 } from 'ag-grid-community'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+import { Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
 import { RecordMergeModal } from './RecordMergeModal'
 import { UNASSIGNED_TAB_ID } from './BuildingTabs'
@@ -42,6 +44,8 @@ interface ACMReviewGridProps {
   buildingId?: string | null
   onDataChanged?: () => void
 }
+
+type RecordFilter = 'all' | 'attention'
 
 /**
  * Fetch ACM records from the API, optionally filtered by building.
@@ -157,6 +161,8 @@ export function ACMReviewGrid({
   onDataChanged,
 }: ACMReviewGridProps) {
   const queryClient = useQueryClient()
+  const [searchText, setSearchText] = useState('')
+  const [recordFilter, setRecordFilter] = useState<RecordFilter>('all')
 
   // Local state for rows — supports optimistic adds/removes
   const [localRows, setLocalRows] = useState<ACMReviewRecord[] | null>(null)
@@ -164,7 +170,12 @@ export function ACMReviewGrid({
   const [mergeOpen, setMergeOpen] = useState(false)
   const gridRef = useRef<AgGridReact<ACMReviewRecord> | null>(null)
 
-  const { data: fetchedRecords, isLoading, error } = useQuery<ACMReviewRecord[]>({
+  const {
+    data: fetchedRecords,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<ACMReviewRecord[]>({
     queryKey: ['acm-review-records', sourceId, buildingId ?? 'all'],
     queryFn: () => fetchRecords(sourceId, buildingId),
     staleTime: 30_000,
@@ -177,13 +188,37 @@ export function ACMReviewGrid({
     setLocalRows(fetchedRecords)
   }
 
-  const displayRows = (localRows ?? fetchedRecords ?? [])
+  const baseRows = (localRows ?? fetchedRecords ?? [])
     .filter((r) => !r._removed)
     .filter((r) => {
       if (buildingId !== UNASSIGNED_TAB_ID) return true
       const bid = r.building_id?.trim().toLowerCase()
       return !bid || bid === 'unknown'
     })
+
+  const displayRows = baseRows.filter((row) => {
+    const requiresAttention =
+      !!row.no_access || row.sample_result?.toLowerCase() === 'not sampled'
+
+    if (recordFilter === 'attention' && !requiresAttention) {
+      return false
+    }
+
+    const normalizedSearch = searchText.trim().toLowerCase()
+    if (!normalizedSearch) return true
+
+    return [
+      row.building_id,
+      row.room_name,
+      row.location,
+      row.product,
+      row.sample_no,
+      row.sample_result,
+      row.material_condition,
+    ]
+      .map((value) => String(value ?? '').toLowerCase())
+      .some((value) => value.includes(normalizedSearch))
+  })
 
   // Debounce ref for cell-edit saves
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -250,6 +285,10 @@ export function ACMReviewGrid({
   const handleAddRecord = useCallback(() => {
     createMutation.mutate()
   }, [createMutation])
+
+  const handleRefresh = useCallback(() => {
+    void refetch()
+  }, [refetch])
 
   const handleSelectionChanged = useCallback(
     (event: SelectionChangedEvent<ACMReviewRecord>) => {
@@ -636,30 +675,75 @@ export function ACMReviewGrid({
   return (
     <div className="space-y-3">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {displayRows.length} record{displayRows.length !== 1 ? 's' : ''}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Search records"
+              className="pl-9"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant={recordFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className={cn(
+                'rounded-full',
+                recordFilter === 'all' &&
+                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
+              )}
+              onClick={() => setRecordFilter('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={recordFilter === 'attention' ? 'default' : 'outline'}
+              size="sm"
+              className={cn(
+                'rounded-full',
+                recordFilter === 'attention' &&
+                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
+              )}
+              onClick={() => setRecordFilter('attention')}
+            >
+              Needs Attention
+            </Button>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMergeSelected}
+              disabled={selectedRows.length !== 2}
+              className="flex items-center gap-1.5"
+            >
+              Merge Duplicate
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddRecord}
+              disabled={createMutation.isPending}
+              className="flex items-center gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Add Record
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMergeSelected}
-            disabled={selectedRows.length !== 2}
-            className="flex items-center gap-1.5"
-          >
-            Merge Duplicate
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAddRecord}
-            disabled={createMutation.isPending}
-            className="flex items-center gap-1.5"
-          >
-            <Plus className="h-4 w-4" />
-            Add Record
-          </Button>
+
+        <div className="text-sm text-muted-foreground">
+          Showing {displayRows.length} of {baseRows.length} record
+          {baseRows.length !== 1 ? 's' : ''}
         </div>
       </div>
 
@@ -672,6 +756,9 @@ export function ACMReviewGrid({
       >
         <style jsx global>{`
           .ag-theme-alpine {
+            --ag-row-height: 40px;
+            --ag-header-height: 44px;
+            --ag-font-size: 14px;
             --ag-header-background-color: hsl(var(--muted));
             --ag-odd-row-background-color: hsl(var(--muted) / 0.3);
             --ag-row-hover-color: hsl(var(--muted));
