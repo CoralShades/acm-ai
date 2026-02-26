@@ -179,7 +179,7 @@ function DashboardPageContent() {
           </BentoCardContent>
           <BentoCardFooter>
             <Link href="/acm" className="text-sm text-primary hover:underline">
-              View all ACM data &rarr;
+              View all ACM data →
             </Link>
           </BentoCardFooter>
         </BentoCard>
@@ -197,7 +197,7 @@ function DashboardPageContent() {
           </BentoCardContent>
           <BentoCardFooter>
             <Link href="/sources" className="text-sm text-primary hover:underline">
-              View all sources &rarr;
+              View all sources →
             </Link>
           </BentoCardFooter>
         </BentoCard>

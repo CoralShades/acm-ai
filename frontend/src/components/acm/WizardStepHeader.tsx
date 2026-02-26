@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft } from 'lucide-react'
+import { ArrowRight, ChevronLeft } from 'lucide-react'
 
 interface WizardStepHeaderProps {
   currentStep: number
@@ -29,7 +29,7 @@ export function WizardStepHeader({
   stepTitle,
   onCancel,
   onNext,
-  nextLabel = 'Next \u2192',
+  nextLabel = 'Next',
   nextDisabled = false,
   unassignedCount,
 }: WizardStepHeaderProps) {
@@ -82,9 +82,10 @@ export function WizardStepHeader({
             size="sm"
             onClick={onNext}
             disabled={nextDisabled}
-            className="flex-shrink-0"
+            className="flex-shrink-0 gap-1.5"
           >
             {nextLabel}
+            <ArrowRight className="h-4 w-4" />
           </Button>
         )}
       </div>

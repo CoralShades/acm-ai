@@ -16,7 +16,7 @@ import { useSource } from '@/lib/hooks/use-sources'
 import { useExtractionProgress } from '@/lib/hooks/use-extraction-progress'
 import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
 import { acmApi } from '@/lib/api/acm'
-import { FileWarning } from 'lucide-react'
+import { ArrowRight, FileWarning } from 'lucide-react'
 
 /**
  * Extract page — shows the ExtractionProgressPanel (stage pills + log) alongside
@@ -148,7 +148,8 @@ function ExtractPageContent() {
           {/* Proceed to Review button — shown when extraction is complete */}
           {isExtractionComplete && (
             <Button onClick={handleProceedToReview} className="flex-shrink-0">
-              Proceed to Building Review &rarr;
+              Proceed to Building Review
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}
         </div>
@@ -199,7 +200,8 @@ function ExtractPageContent() {
           {isExtractionComplete && (
             <div className="flex justify-end pb-4">
               <Button onClick={handleProceedToReview} size="lg">
-                Proceed to Building Review &rarr;
+                Proceed to Building Review
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           )}

@@ -2,42 +2,33 @@
 
 import { use, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { JobDetailHeader } from '@/components/jobs/JobDetailHeader'
 import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
+import { JobContentPanel } from '@/components/jobs/JobContentPanel'
+import { JobCrudChatPanel } from '@/components/jobs/JobCrudChatPanel'
 import { BuildingReviewGrid } from '@/components/acm/BuildingReviewGrid'
 import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
-import { MessageSquare } from 'lucide-react'
-
-/**
- * Fetch source details from the API.
- */
-async function fetchSource(sourceId: string) {
-  const res = await fetch(`/api/sources/${encodeURIComponent(sourceId)}`)
-  if (!res.ok) throw new Error(`Failed to fetch source: ${res.statusText}`)
-  return res.json()
-}
-
-/**
- * Fetch ACM stats for record and building counts.
- */
-async function fetchAcmStats(sourceId: string) {
-  const res = await fetch(`/api/acm/stats?source_id=${encodeURIComponent(sourceId)}`)
-  if (!res.ok) throw new Error(`Failed to fetch ACM stats: ${res.statusText}`)
-  return res.json()
-}
+import { useSource } from '@/lib/hooks/use-sources'
+import { useACMStats } from '@/lib/hooks/use-acm'
+import { sourcesApi } from '@/lib/api/sources'
+import { cn } from '@/lib/utils'
+import { ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 
 /**
  * JobDetailPageContent — inner content for the job detail page.
  *
- * Displays a 4-tab view: Overview, Buildings, ACM Records, and Extraction Log.
+ * Displays a two-column layout:
+ * - Left: Overview, Buildings, ACM Records, Content, Extraction Log tabs
+ * - Right: Inline CRUD chat panel
  *
  * URL: /jobs/{source_id}
  * Story: E19-S7 Job Detail Page
@@ -46,23 +37,20 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
+  const [chatExpanded, setChatExpanded] = useState(true)
+  const [mobileChatOpen, setMobileChatOpen] = useState(false)
 
-  const { data: source } = useQuery({
-    queryKey: ['source', sourceId],
-    queryFn: () => fetchSource(sourceId),
-  })
-
-  const { data: stats } = useQuery({
-    queryKey: ['acm-stats', sourceId],
-    queryFn: () => fetchAcmStats(sourceId),
-  })
+  const { data: source } = useSource(sourceId)
+  const { data: stats } = useACMStats(sourceId)
 
   const { data: extractionProgress } = useQuery({
     queryKey: ['extraction-progress', source?.command_id],
     queryFn: async () => {
       const commandId = source?.command_id
       if (!commandId) return null
-      const res = await fetch(`/api/acm/extraction-progress/${encodeURIComponent(commandId)}`)
+      const res = await fetch(
+        `/api/acm/extraction-progress/${encodeURIComponent(commandId)}`
+      )
       if (!res.ok) return null
       return res.json()
     },
@@ -90,21 +78,23 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   }, [sourceId, router])
 
   const handleExportCsv = useCallback(() => {
-    window.open(`/api/acm/export/csv?source_id=${encodeURIComponent(sourceId)}`, '_blank')
+    window.open(
+      `/api/acm/export/csv?source_id=${encodeURIComponent(sourceId)}`,
+      '_blank'
+    )
   }, [sourceId])
 
   const handleExportExcel = useCallback(() => {
-    window.open(`/api/acm/export/excel?source_id=${encodeURIComponent(sourceId)}`, '_blank')
+    window.open(
+      `/api/acm/export/excel?source_id=${encodeURIComponent(sourceId)}`,
+      '_blank'
+    )
   }, [sourceId])
 
   const handleRename = useCallback(
     async (newTitle: string) => {
-      await fetch(`/api/sources/${encodeURIComponent(sourceId)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle }),
-      })
-      await queryClient.invalidateQueries({ queryKey: ['source', sourceId] })
+      await sourcesApi.update(sourceId, { title: newTitle })
+      await queryClient.invalidateQueries({ queryKey: ['sources', sourceId] })
       await queryClient.invalidateQueries({ queryKey: ['sources'] })
     },
     [queryClient, sourceId]
@@ -121,8 +111,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
   return (
     <AppShell>
-      <div className="flex h-full w-full flex-col overflow-y-auto p-6">
-        <div className="space-y-4">
+      <div className="flex h-full w-full min-h-0 flex-col">
+        <div className="flex-shrink-0 px-6 pb-4 pt-6">
           <JobDetailHeader
             sourceId={sourceId}
             title={source?.title ?? null}
@@ -135,31 +125,30 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
             onExportCsv={handleExportCsv}
             onExportExcel={handleExportExcel}
           />
+        </div>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-4"
-          >
-            <div className="flex items-center gap-4 rounded-xl border bg-card p-2 shadow-sm">
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="buildings">Buildings</TabsTrigger>
-                <TabsTrigger value="records">ACM Records</TabsTrigger>
-                <TabsTrigger value="log">Extraction Log</TabsTrigger>
-              </TabsList>
-              <Link
-                href={`/jobs/${sourceId}/chat`}
-                className="ml-2 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <MessageSquare className="h-4 w-4" />
-                CRUD Chat
-              </Link>
-            </div>
+        <div className="flex min-h-0 flex-1 px-6 pb-6">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex h-full min-h-0 flex-col"
+            >
+              <div className="flex-shrink-0 border-b p-2">
+                <TabsList className="w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="buildings">Buildings</TabsTrigger>
+                  <TabsTrigger value="records">ACM Records</TabsTrigger>
+                  <TabsTrigger value="content">Content</TabsTrigger>
+                  <TabsTrigger value="log">Extraction Log</TabsTrigger>
+                </TabsList>
+              </div>
 
-            <TabsContent value="overview" className="m-0">
-              <Card className="rounded-xl shadow-sm">
-                <CardContent className="p-6">
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <TabsContent
+                  value="overview"
+                  className="m-0 h-full overflow-auto p-4 sm:p-6"
+                >
                   <JobOverviewTab
                     sourceId={sourceId}
                     recordCount={stats?.total_records ?? 0}
@@ -169,53 +158,131 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                     extractionQualityScore={null}
                     onReExtract={handleReExtract}
                   />
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </TabsContent>
 
-            <TabsContent value="buildings" className="m-0">
-              <Card className="rounded-xl shadow-sm">
-                <CardContent className="p-4 sm:p-6">
-                  <BuildingReviewGrid sourceId={sourceId} />
-                </CardContent>
-              </Card>
-            </TabsContent>
+                <TabsContent
+                  value="buildings"
+                  className="m-0 h-full overflow-auto p-4 sm:p-6"
+                >
+                  <Card className="rounded-xl shadow-sm">
+                    <CardContent className="p-4 sm:p-6">
+                      <BuildingReviewGrid sourceId={sourceId} />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-            <TabsContent value="records" className="m-0">
-              <Card className="rounded-xl shadow-sm">
-                <CardContent className="p-4 sm:p-6">
-                  <ACMReviewGrid sourceId={sourceId} />
-                </CardContent>
-              </Card>
-            </TabsContent>
+                <TabsContent
+                  value="records"
+                  className="m-0 h-full overflow-auto p-4 sm:p-6"
+                >
+                  <Card className="rounded-xl shadow-sm">
+                    <CardContent className="p-4 sm:p-6">
+                      <ACMReviewGrid sourceId={sourceId} />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-            <TabsContent value="log" className="m-0">
-              <Card className="rounded-xl shadow-sm">
-                <CardContent className="p-4 sm:p-6">
-                  {source?.command_id ? (
-                    <ExtractionProgressPanel
-                      phase={panelPhase}
-                      pipelineState={extractionProgress?.state ?? null}
-                      logEntries={extractionProgress?.log_entries ?? []}
-                      recordsCreated={extractionProgress?.state?.total_records}
-                      errorMessage={
-                        extractionProgress?.state?.error ??
-                        (extractionProgress?.status === 'failed'
-                          ? 'Extraction failed'
-                          : undefined)
-                      }
-                      onDismiss={() => {}}
-                    />
-                  ) : (
-                    <div className="text-sm text-muted-foreground">
-                      No extraction log available yet for this job.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                <TabsContent value="content" className="m-0 h-full p-4 sm:p-6">
+                  <JobContentPanel sourceId={sourceId} />
+                </TabsContent>
+
+                <TabsContent
+                  value="log"
+                  className="m-0 h-full overflow-auto p-4 sm:p-6"
+                >
+                  <Card className="rounded-xl shadow-sm">
+                    <CardContent className="p-4 sm:p-6">
+                      {source?.command_id ? (
+                        <ExtractionProgressPanel
+                          phase={panelPhase}
+                          pipelineState={extractionProgress?.state ?? null}
+                          logEntries={extractionProgress?.log_entries ?? []}
+                          recordsCreated={extractionProgress?.state?.total_records}
+                          errorMessage={
+                            extractionProgress?.state?.error ??
+                            (extractionProgress?.status === 'failed'
+                              ? 'Extraction failed'
+                              : undefined)
+                          }
+                          onDismiss={() => {}}
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          No extraction log available yet for this job.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+
+          <div
+            className={cn(
+              'ml-4 hidden min-h-0 rounded-xl border bg-card shadow-sm transition-[width] duration-200 lg:flex lg:flex-col',
+              chatExpanded ? 'w-[380px]' : 'w-14'
+            )}
+          >
+            <div
+              className={cn(
+                'flex items-center border-b py-2',
+                chatExpanded ? 'justify-between px-3' : 'justify-center px-2'
+              )}
+            >
+              {chatExpanded && (
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <MessageSquare className="h-4 w-4" />
+                  CRUD Chat
+                </div>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setChatExpanded((prev) => !prev)}
+                aria-label={chatExpanded ? 'Collapse chat panel' : 'Expand chat panel'}
+              >
+                {chatExpanded ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            {chatExpanded && (
+              <div className="min-h-0 flex-1">
+                <JobCrudChatPanel sourceId={sourceId} className="h-full" />
+              </div>
+            )}
+          </div>
         </div>
+
+        <Button
+          type="button"
+          size="icon"
+          className="fixed bottom-6 right-6 z-40 h-12 w-12 rounded-full shadow-lg lg:hidden"
+          aria-label="Open CRUD chat"
+          onClick={() => setMobileChatOpen(true)}
+        >
+          <MessageSquare className="h-5 w-5" />
+        </Button>
+
+        <Sheet open={mobileChatOpen} onOpenChange={setMobileChatOpen}>
+          <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+            <div className="flex h-full min-h-0 flex-col pt-10">
+              <div className="border-b px-4 py-3">
+                <h2 className="text-sm font-semibold">CRUD Chat</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Create, update, and delete ACM records with explicit confirmation.
+                </p>
+              </div>
+              <div className="min-h-0 flex-1">
+                <JobCrudChatPanel sourceId={sourceId} className="h-full" />
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </AppShell>
   )

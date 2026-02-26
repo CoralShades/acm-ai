@@ -78,7 +78,7 @@ function BuildingReviewPageContent({ sourceId }: { sourceId: string }) {
           stepTitle="Review Buildings"
           onCancel={handleCancel}
           onNext={handleNext}
-          nextLabel="Next: Review Records \u2192"
+          nextLabel="Next: Review Records"
         />
 
         <div className="flex-1 overflow-y-auto p-6">
