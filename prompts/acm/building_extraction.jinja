@@ -2,6 +2,153 @@
 
 You are an expert at extracting Asbestos Containing Material (ACM) records from building inspection documents. Your task is to extract structured ACM records from a **single building's** section of the document.
 
+## ⚠️ CRITICAL EXTRACTION RULES — READ BEFORE ANYTHING ELSE
+
+**Every single row in the register table MUST become one JSON record in your output. No exceptions.**
+
+This includes rows that many extractors incorrectly skip:
+
+1. **"Same as" / "As Per" / "Similar To" reference rows** — When a row's sample number field says "Same as 34511-039001", "As Per 34511-039-001", or "Similar To 34511-039-001", that row is a **SEPARATE, DISTINCT record** with its own room, location, and product. It is NOT a duplicate of the referenced sample. Extract it as its own record with `sample_no` set to the literal reference string (e.g., "Same as 34511-039001"). These references mean "this item was assessed as similar to the referenced sample" — they are separate physical items in different rooms.
+
+2. **"Not Sampled" / "Assumed Positive" rows** — Items that were observed but not lab-tested are VALID register entries. Common examples: fuse cartridges in switchboards, filing cabinets, lift internal linings, items behind locked doors. Extract them with `sample_result: "Assumed Positive"` or `sample_result: "Not Sampled"`.
+
+3. **"No Access" rows** — Areas the assessor could not enter. Extract with `result: "Assumed Positive"`, `no_access: true`.
+
+**DO NOT skip, merge, or omit ANY table row.** Count the rows in the register. Your output count MUST match.
+
+### CRITICAL: PDF Text Formatting
+
+**The content below was extracted from a PDF.** Multi-word values are often split across multiple lines. You MUST recognize these split patterns:
+- `Same as\n34511-039001` = one value: "Same as 34511-039001" (a sample reference)
+- `Assumed\npositive` = one value: "Assumed positive" (a result status)
+- `Non-friable` may appear as `Non-friable` or `Non friable`
+
+When the Sample Number field shows `Same as\n34511-039XXX`, this is a **separate register entry** that references a previous sample. It is NOT a duplicate — it is a different item in a different room.
+
+### Worked Example 1 — "Same as" Reference Row (THIS IS A SEPARATE RECORD!)
+
+**INPUT** (exactly as it appears in the vertical PDF text — note the line breaks):
+```
+Ground
+floor
+Corridor adjacent
+cells and custody
+counter
+Floor
+Vinyl sheet
+(cream)
+Asbestos
+Negative
+Same as
+34511-039001
+-
+-
+-
+-
+```
+
+This entry's Sample Number field contains `Same as 34511-039001`. This is a SEPARATE register entry — not a duplicate of sample 34511-039-001.
+
+**CORRECT OUTPUT:**
+```json
+{
+  "room_name": "Corridor adjacent cells and custody counter",
+  "location": "Floor",
+  "product": "Floor covering",
+  "material_description": "Vinyl sheet",
+  "sample_no": "Same as 34511-039001",
+  "sample_result": "Negative",
+  "result": "Negative",
+  "extraction_confidence": "high"
+}
+```
+
+❌ **WRONG:** Skipping this entry because "Same as" references another sample
+❌ **WRONG:** Treating "Same as" as meaning "this is the same record" — it means "assessed as same material type"
+✅ **CORRECT:** This is its own record. "Same as" references are SEPARATE register entries.
+
+### Worked Example 2 — "Assumed positive" with No Sample Number
+
+**INPUT** (exactly as it appears — note "Assumed" and "positive" on separate lines, "-" for sample number):
+```
+First
+floor
+Switch Room
+Switchboard
+Fuses
+Asbestos
+Assumed
+positive
+-
+Non-friable
+Yes
+-
+None under
+normal
+occupation
+and use
+Low
+Good
+Low
+60
+```
+
+The Sample Number field shows `-` (dash) and the status is `Assumed positive`. This is a valid register entry for an unsanpled item.
+
+**CORRECT OUTPUT:**
+```json
+{
+  "room_name": "Switch Room",
+  "location": "Switchboard",
+  "product": "Fuse cartridge",
+  "material_description": "Electrical Components",
+  "sample_no": null,
+  "sample_result": "Assumed Positive",
+  "result": "Assumed Positive",
+  "friable": "Non-friable",
+  "extraction_confidence": "high"
+}
+```
+
+❌ **WRONG:** Skipping this row because Sample Number is "-" (dash)
+❌ **WRONG:** Only extracting rows that have a numeric sample number like 34511-039-XXX
+✅ **CORRECT:** Rows with "-" sample number and "Assumed positive" status are valid ACM records
+
+### Worked Example 3 — "No Access" Item
+
+**INPUT** (minimal data — "No access." appears in the comments/recommendations area):
+```
+Ground
+floor
+Main Foyer
+Room adjacent
+disabled toilet
+Unknown
+Asbestos
+Assumed
+positive
+-
+Non-friable
+No access.
+```
+
+**CORRECT OUTPUT:**
+```json
+{
+  "room_name": "Main Foyer",
+  "location": "Room adjacent disabled toilet",
+  "product": "Unknown",
+  "sample_no": "Not Sampled",
+  "sample_result": "Assumed Positive",
+  "result": "Assumed Positive",
+  "no_access": true,
+  "data_issues": ["No access — unable to sample"],
+  "extraction_confidence": "high"
+}
+```
+
+---
+
 ## Building Context
 
 {% if building_context %}
@@ -231,12 +378,13 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
    - Set sample_no to "Not Sampled" if no sample number is given
    - Add a note to `data_issues` describing the access restriction (e.g., "No access — unable to sample")
    - These items are presumed to contain asbestos until proven otherwise by future sampling
-8. **EVERY row in the register table is a separate ACM record — including "Not Sampled" rows.**
-   - If a row exists in the register, it MUST appear in your output — even if it has no sample number, no lab result, or says "Not Sampled".
-   - Common "Not Sampled" items that MUST be extracted: **fuse cartridges** (in switchboards), **filing cabinets**, **lift internal linings**, **no-access rooms/areas**, pipe insulation in locked rooms, gaskets/flanges that could not be reached.
-   - Extract these with sample_result: "Not Sampled", result: "Assumed Positive" (unless another result is stated).
-   - Set sample_no to "Not Sampled" if no sample number is given.
-   - **A missing sample number does NOT mean the row should be excluded** — it means the item was not sampled.
+8. **EVERY row in the register table is a separate ACM record — including "Assumed positive" rows with no sample number.**
+   - If a row exists in the register, it MUST appear in your output — even if its sample number field shows "-" (a dash), or there is no sample number at all.
+   - **A "-" or blank in the sample number field means the item was not lab-tested** — it does NOT mean "skip this row". These are "Assumed positive" items that must be extracted.
+   - Common items with no sample number that MUST be extracted: **fuse cartridges** (listed as "Fuses" in switchboards), **filing cabinets**, **lift internal linings**, **no-access rooms/areas**, pipe insulation in locked rooms, gaskets/flanges that could not be reached.
+   - Extract these with sample_result: "Assumed Positive", result: "Assumed Positive" (or whatever result the row states).
+   - Set sample_no to null if the field shows "-" or is blank.
+   - **A "-" in the sample number field does NOT mean the row should be excluded** — it means the item was not sampled.
 
 **WARNING:** If you extract fewer records than entries visible in the content, you are missing records. Go back and extract them ALL. This includes "No access" and "Restricted Access" entries.
 
@@ -244,17 +392,18 @@ A complete BAR (Building Asbestos Register) requires BOTH positive AND negative 
 
 9. **Items in utility/service areas** (Boiler Room, Switch Room, Substation, Plant Room, Meter Room) are some of the MOST important ACM items. Do NOT skip them.
 10. **Small items matter** — Expansion joints, gaskets, flange joints, mastic, pipe insulation, and similar small items in utility areas are VALID ACM entries and MUST be extracted, regardless of whether they are positive or negative.
-11. **"Similar To" / "As Per" references — EACH is its OWN separate record.**
-    - When a register row says "As Per 34511-039-014" or "Similar To 34511-039-014", that row is a DISTINCT ACM record with its own room, location, and product.
-    - It is NOT a duplicate of the referenced item — it is a DIFFERENT item in a DIFFERENT room that was assessed as similar.
-    - Extract it as its own record. Set `sample_no` to the literal reference string (e.g., "As Per 34511-039-014").
-    - Set `sample_result` to the result stated for that row (often "Assumed Positive" or matching the referenced sample's result).
-    - The room_id, floor_level, product, and location must come from THIS row, not the referenced row.
+11. **"Same as" / "Similar To" / "As Per" references — EACH is its OWN separate record.**
+    - When a register row's sample number field says **"Same as 34511-039001"**, "As Per 34511-039-014", or "Similar To 34511-039-014", that row is a DISTINCT ACM record with its own room, location, and product.
+    - **"Same as" is the most common wording** in Prensa/Division 5 reports. It means "assessed as similar to the referenced sample" — it does NOT mean "this is the same record".
+    - It is NOT a duplicate of the referenced item — it is a DIFFERENT item in a DIFFERENT room.
+    - Extract it as its own record. Set `sample_no` to the literal reference string exactly as it appears (e.g., "Same as 34511-039001").
+    - Set `sample_result` to the result stated for that row (often "Negative" or matching the referenced sample's result).
+    - The room_name, floor_level, product, and location must come from THIS row, not the referenced row.
 12. **Negative items with sample numbers** — If an item has a sample number AND a negative result, it is a VALID sampled entry. Extract it with result: "Negative", sample_result: "Negative", and the sample number.
 
 ### COMPLETENESS CHECK — COUNT BEFORE EXTRACTING
 
-**Before you begin extracting, count the total number of data rows in the register table(s) above.** Each row (whether sampled, "Not Sampled", "As Per", "No Access", or any other status) is one record. Your output MUST contain exactly that many records. If your count does not match, re-read the table and find the rows you missed.
+**Before you begin extracting, count the total number of data rows in the register table(s) above.** Each row (whether sampled, "Same as", "As Per", "Assumed positive", "-" sample number, "No Access", or any other status) is one record. Your output MUST contain exactly that many records. If your count does not match, re-read the table and find the rows you missed — especially "Same as" reference rows and "Assumed positive" rows with "-" sample numbers.
 
 ### Controlled Vocabulary (BAR Enum Values)
 
@@ -335,6 +484,20 @@ When the register entry uses one of these terms (or a close variant), prefer the
 ```
 {{ content }}
 ```
+
+## ⚠️ FINAL VERIFICATION — DO THIS BEFORE RETURNING YOUR JSON
+
+1. **COUNT** the total number of data rows in the register table above (every row, including "As Per", "Not Sampled", "No Access", and sparse rows)
+2. **COUNT** the records in your JSON output
+3. **IF** your output count is LESS than the table row count, you have MISSED records — go back and find them
+4. **COMMON MISSES** to check for:
+   - **"Same as\n34511-039XXX"** reference rows (the text "Same as" appears on one line and the number on the next) — these are SEPARATE records, not duplicates!
+   - **"Assumed\npositive"** rows with "-" for sample number — fuse cartridges (listed as "Fuses"), filing cabinets, lift internal linings
+   - Utility rooms: Switch Room, Boiler Room, Fan Room, Comms Area
+   - **"No access"** rows — rooms the assessor could not enter
+   - Sparse rows with minimal data
+5. **EVERY table row = ONE JSON record.** No exceptions. Do not merge "Same as" / "As Per" rows into other records.
+6. **EXPECTED COUNT**: A typical Division 5 register has 25-35 rows. If your output has significantly fewer (e.g., only 15-20), you are almost certainly missing "Same as" reference rows and "Assumed positive" items.
 
 ## Output Format
 

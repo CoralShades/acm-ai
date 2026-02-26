@@ -257,8 +257,8 @@ development_status:
   epic-17-retrospective: done  # Consolidated project retrospective 2026-02-22
 
   # Epic 18: Production Hardening & Demo Stability (P1)
-  # 1/4 stories complete — EPIC IN PROGRESS
-  epic-18: in-progress
+  # 7/7 stories complete — EPIC COMPLETE
+  epic-18: done
   e18-s1-extraction-provider-compatibility: done  # fix: remove ge/le constraints, increase max_tokens, ARA sub-chunking, migration 31. 2026-02-25: OpenRouter provider routing via extra_body (provider.ignore, provider.order), schema error fallback, Anthropic direct preference. E2E validated: 16/16 records extracted
   e18-s2-upload-wizard-ux: done  # feat: title editing, ACM-focused types, auto-redirect
   e18-s3-extraction-monitor-defaults: done  # fix: default to history tab so completed extractions visible
@@ -281,15 +281,15 @@ development_status:
   e19-s8-conversational-crud-chat: done  # docs/sprint-artifacts/e19-s8-conversational-crud-chat.md — P1: CRUD agent (crud_tools.py, crud_agent.py), /api/agui/crud-chat, WriteConfirmationCard, /jobs/{id}/chat, copilot-crud runtime
 
   # Epic 20: Extraction Completeness & 100% Record Capture (P0)
-  # 5/5 stories complete — EPIC COMPLETE
+  # 5/6 stories complete (S6 blocked) — EPIC IN PROGRESS
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260224-stakeholder-ux-redesign.md
-  epic-20: done
+  epic-20: in-progress
   e20-s1-page-boundary-fix: done  # _apply_boundary_overlap(): extend building page_end to next building's page_start; 48 tests pass  # docs/sprint-artifacts/e20-s1-page-boundary-fix.md — Fix building page_end with +1 overlap to capture boundary page records
   e20-s2-regex-yield-check: done  # acm_item_count_estimate on BuildingExtractionPlan; yield check + escalation in extract_building; 5 new tests; 52/52 pass  # docs/sprint-artifacts/e20-s2-regex-yield-check.md — REGEX_ONLY yield check: escalate to FULL_LLM if < 50% of estimate
   e20-s3-not-sampled-capture: done  # no_access field + prompt update; 57 tests pass; register_enums.json fixed post-review
   e20-s4-e2e-accuracy-validation: done  # 27/31 (87%) via old pipeline → 2026-02-25 E2E: 16/16 core samples (93.75%) via orchestrator; E20-S5 created for remaining gaps
   e20-s5-extraction-accuracy-gap-analysis: done  # 2026-02-26: Schema fix (data_issues null→[]). Re-validation: 17/31 (55%). Schema blocker resolved. 14 missing = As Per (9) + Not Sampled (5). Prompt coverage for these categories needs E20-S6. Report: docs/reviews/e2e-validation-20260226.md. INVESTIGATION: Prompt rules ARE present (E20-S3/E18-S5 fixes intact). Model used: Anthropic (capable). 17/31 represents current model baseline under real-world conditions, not missing prompt fixes.
-  e20-s6-restore-extraction-prompt-coverage: drafted  # Restore/enhance prompt rules for As Per + Not Sampled rows. Investigation shows existing rules present but ineffective under real conditions. Need prompt engineering improvements to achieve 28/31 target accuracy.
+  e20-s6-restore-extraction-prompt-coverage: blocked  # 2026-02-26: BLOCKED — Prompt-only approach exhausted (3 extraction attempts). Enhanced prompt with primacy/recency rules, "Same as" terminology fix, vertical-format examples, verification counter. Result: 17/31 all 3 iterations. Root cause: model behavioral ceiling (claude-sonnet-4.6 via OpenRouter). Model only extracts NATA-sampled rows, ignores "Same as" references + "Assumed Positive" unsampled items regardless of prompt instructions. Requires CODE-LEVEL changes: two-pass extraction, content pre-processing, or model switching. Validation report: docs/reviews/e20-s6-validation-results.md
 
   # Epic 21: UX Loading States & Layout Consistency (P1)
   # 3/3 stories complete — EPIC COMPLETE
@@ -352,19 +352,20 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 21
-# Total Stories: 152  # Add E20-S6 to count (+1)
-# Stories Done: 139 (91%)  # E21-S1/S2/S3 marked done in story artifacts
+# Total Epics: 22
+# Total Stories: 152
+# Stories Done: 139 (91%)
 # Stories Review: 0
 # Stories In-Progress: 0
-# Stories Drafted: 1 (E20-S6)
+# Stories Blocked: 1 (E20-S6 — prompt-only approach hit model ceiling, needs code-level changes)
+# Stories Drafted: 0
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-26  # PR #64 review follow-up: resolved extraction-progress/accessibility comments and reconciled E21 story artifacts.
+# Last Updated: 2026-02-26  # E20-S6 marked blocked after 3 extraction attempts (17/31 all 3). E18 epic completed (7/7). E20 reverted to in-progress.
 #
-# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E19, E20, E21
-# IN-PROGRESS EPICS: E18
+# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E18, E19, E21, E22
+# IN-PROGRESS EPICS: E20 (S6 blocked — needs code-level extraction changes)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # KEY CHANGES (2026-02-22 - Ralph Sprint: 11 Stories Completed):

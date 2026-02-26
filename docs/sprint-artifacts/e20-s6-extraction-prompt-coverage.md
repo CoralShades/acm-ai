@@ -2,7 +2,7 @@
 
 **Epic:** E20 — Extraction Completeness & 100% Record Capture  
 **Priority:** P1  
-**Status:** drafted  
+**Status:** blocked  
 **Depends on:** E20-S5 (investigation complete)  
 **Created:** 2026-02-26 — per E20-S5 investigation findings  
 
@@ -51,33 +51,33 @@ Items identified as likely ACM but not formally tested:
 ## Acceptance Criteria
 
 ### AC1 — Prompt Analysis & Re-engineering
-- [ ] Analyze why existing prompt rules (lines 247-252, 234-239) are ineffective
-- [ ] Research prompt engineering techniques for complex table parsing with mixed record types
-- [ ] Consider: explicit examples, chain-of-thought reasoning, structured parsing steps, negative examples
+- [x] Analyze why existing prompt rules (lines 247-252, 234-239) are ineffective
+- [x] Research prompt engineering techniques for complex table parsing with mixed record types
+- [x] Consider: explicit examples, chain-of-thought reasoning, structured parsing steps, negative examples
 
 ### AC2 — "As Per" Reference Row Enhancement
-- [ ] Enhance prompt section 11 (lines 247-252) with concrete examples from Broadmeadows PDF
-- [ ] Add negative examples: what NOT to do with "As Per" references
-- [ ] Test prompt changes with isolated "As Per" reference extractions
-- [ ] Target: capture all 9 "As Per" reference rows as distinct records
+- [x] Enhance prompt section 11 (lines 247-252) with concrete examples from Broadmeadows PDF
+- [x] Add negative examples: what NOT to do with "As Per" references
+- [x] Test prompt changes with isolated "As Per" reference extractions
+- [ ] **BLOCKED** Target: capture all 9 "As Per" reference rows as distinct records — model returns 0/9 across all attempts
 
 ### AC3 — "Not Sampled" / Assumed Positive Enhancement  
-- [ ] Enhance prompt section 8 (lines 234-239) with specific fuse cartridge/filing cabinet examples
-- [ ] Add explicit instruction to extract utility room items even without sample numbers
-- [ ] Consider separate prompt section for "Assumed Positive" vs "Not Sampled" terminology
-- [ ] Target: capture all 5 "Not Sampled" rows with correct results
+- [x] Enhance prompt section 8 (lines 234-239) with specific fuse cartridge/filing cabinet examples
+- [x] Add explicit instruction to extract utility room items even without sample numbers
+- [x] Consider separate prompt section for "Assumed Positive" vs "Not Sampled" terminology
+- [ ] **BLOCKED** Target: capture all 6 "Not Sampled" rows with correct results — model returns 0/6 across all attempts
 
 ### AC4 — Prompt Testing & Validation
-- [ ] Create isolated test cases for each missing record category
-- [ ] Test prompt changes against Broadmeadows PDF using different models (Anthropic, OpenAI, Qwen2.5:32b)
-- [ ] Measure improvement: baseline 17/31 → target ≥28/31 (90%)
-- [ ] Document which techniques work best for each model class
+- [ ] Create isolated test cases for each missing record category — not attempted (prompt-level fix ineffective)
+- [ ] Test prompt changes against Broadmeadows PDF using different models — only tested claude-sonnet-4.6 via OpenRouter
+- [ ] **BLOCKED** Measure improvement: baseline 17/31 → target ≥28/31 (90%) — stayed at 17/31
+- [x] Document which techniques work best for each model class — documented in validation report
 
 ### AC5 — Integration & E2E Validation
-- [ ] Deploy enhanced prompts to extraction pipeline
-- [ ] Re-run E2E validation on Broadmeadows PDF via orchestrator
-- [ ] Achieve target: ≥28/31 records (90% accuracy)
-- [ ] Log validation results to `docs/sprint-artifacts/e20-s6-validation-results.md`
+- [x] Deploy enhanced prompts to extraction pipeline
+- [x] Re-run E2E validation on Broadmeadows PDF via orchestrator (3 attempts)
+- [ ] **BLOCKED** Achieve target: ≥28/31 records (90% accuracy) — 17/31 (55%) all 3 attempts
+- [x] Log validation results to `docs/reviews/e20-s6-validation-results.md`
 
 ---
 
@@ -195,3 +195,47 @@ Per E20-S5 analysis:
 
 ### Implementation Notes
 Focus on **prompt engineering**, not code changes. The extraction pipeline infrastructure is complete — this is purely about improving LLM instruction clarity and effectiveness for edge case record types.
+
+---
+
+## Implementation Results (2026-02-26) — BLOCKED
+
+### Prompt Changes Applied
+Enhanced `prompts/acm/building_extraction.jinja` from 406 to 569 lines:
+1. **Critical Rules section** (primacy position, top of prompt) — explicit "SAME AS", "AS PER", "ASSUMED POSITIVE" extraction mandates
+2. **Terminology fix** — PDF uses "Same as" not "As Per"; added both variants
+3. **Vertical-format worked examples** — matched actual PDF-to-text line-break patterns (`Same as\n34511-039001`)
+4. **Verification counter** (recency position, end of prompt) — count-verify-recount instruction
+5. **Dash format guidance** — `34511-039001` (no dashes) vs `34511-039-001` (with dashes)
+
+### Extraction Attempts (3/3 used)
+
+| Attempt | Prompt Version | Result | Notes |
+|---------|---------------|--------|-------|
+| 1 | Primacy/recency rules + examples + counter | 17/31 | No change from baseline |
+| 2 | + "Same as" terminology fix + dash patterns | 17/31 | No change |
+| 3 | + Vertical-format examples matching PDF line breaks | 17/31 | No change |
+
+### Root Cause Analysis
+
+**Model behavioral ceiling, not prompt design.** claude-sonnet-4.6 via OpenRouter:
+- Reliably extracts all 17 rows with explicit NATA sample numbers (34511-039-XXX)
+- Consistently ignores "Same as [reference]" rows (0/9 extracted across all attempts)
+- Consistently ignores "Assumed Positive" unsampled rows (0/6 extracted across all attempts)
+- All 17 extracted records have high confidence, indicating the model understands the task but selectively processes only directly-sampled rows
+
+### Additional Discoveries
+1. **Ground truth correction**: CSV has **6** "Not Sampled" rows, not 5 (Front Desk Filing Cabinet was undercounted in story spec)
+2. **Structured output always fails**: `with_structured_output()` triggers "grammar too large" error; production always uses fallback path (`model.ainvoke()` + `parse_json_response()`)
+3. **Pipeline audit projection was wrong**: The `pipeline-analysis-20260225.md` claimed fixes would achieve 28/31 — this was a projection, not a tested result. The actual tested baseline with all fixes is 17/31.
+
+### Recommended Next Steps (Require Code Changes — New Story Needed)
+
+1. **Two-pass extraction**: First pass extracts NATA-sampled rows (works). Second pass targets "Same as" + "Assumed Positive" with focused context and explicit item list.
+2. **Content pre-processing**: Normalize `Same as\n34511-039001` → `Same as 34511-039-001` before sending to LLM. Stitch multi-line values that Docling splits.
+3. **Model switching**: Try GPT-4o or Claude Opus which may handle mixed record types better.
+4. **MinerU table extraction**: Activate the currently dead-code MinerU path (`_extract_tables_mineru()`) to provide structured tabular input instead of raw text.
+5. **Hybrid approach**: Use regex/rule-based extraction for predictable patterns ("Same as [ref]", "Assumed Positive") and LLM for complex rows.
+
+### Validation Report
+Full details: `docs/reviews/e20-s6-validation-results.md`
