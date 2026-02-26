@@ -6,7 +6,12 @@ import { acmApi } from '@/lib/api/acm'
 import { ACM_QUERY_KEYS } from './use-acm'
 import { useToast } from './use-toast'
 import type { ProgressToastController } from '@/lib/toast-patterns'
-import type { PipelineRunState, StageId } from '@/lib/types/pipeline'
+import {
+  PIPELINE_STAGE_LABELS,
+  PIPELINE_STAGE_ORDER,
+  type PipelineRunState,
+  type StageId,
+} from '@/lib/types/pipeline'
 
 export type ExtractionPhase = 'idle' | 'extracting' | 'completed' | 'failed'
 
@@ -24,24 +29,6 @@ interface ExtractionStatus {
 }
 
 const SESSION_KEY_PREFIX = 'acm-extraction-'
-const STAGE_ORDER: StageId[] = [
-  'STRUCTURE',
-  'PREFLIGHT',
-  'ORCHESTRATOR',
-  'EXTRACT',
-  'VALIDATE',
-  'CORRECT',
-  'STORE',
-]
-const STAGE_LABELS: Record<StageId, string> = {
-  STRUCTURE: 'Document Structure',
-  PREFLIGHT: 'Preflight',
-  ORCHESTRATOR: 'Orchestrator',
-  EXTRACT: 'Extract',
-  VALIDATE: 'Validate',
-  CORRECT: 'Correct',
-  STORE: 'Store',
-}
 
 interface StageSnapshot {
   stageId: StageId | undefined
@@ -58,47 +45,53 @@ function getStageSnapshot(state: PipelineRunState | undefined): StageSnapshot {
     }
   }
 
-  const runningStageId = STAGE_ORDER.find(
+  const runningStageId = PIPELINE_STAGE_ORDER.find(
     (stageId) => state.stages[stageId]?.status === 'running'
   )
   if (runningStageId) {
-    const runningIndex = STAGE_ORDER.indexOf(runningStageId)
+    const runningIndex = PIPELINE_STAGE_ORDER.indexOf(runningStageId)
     const runningProgress = state.stages[runningStageId]?.progress ?? 0
+    const normalizedProgress =
+      runningProgress > 1 ? runningProgress / 100 : runningProgress
+    const boundedProgress = Math.min(1, Math.max(0, normalizedProgress))
+    const stageFraction =
+      (runningIndex + boundedProgress) / PIPELINE_STAGE_ORDER.length
+    const progressPercent = Math.min(100, Math.max(0, Math.round(stageFraction * 100)))
     return {
       stageId: runningStageId,
       stageIndex: runningIndex + 1,
-      progressPercent: Math.round(
-        ((runningIndex + Math.max(0, runningProgress)) / STAGE_ORDER.length) * 100
-      ),
+      progressPercent,
     }
   }
 
-  const failedStageId = STAGE_ORDER.find(
+  const failedStageId = PIPELINE_STAGE_ORDER.find(
     (stageId) => state.stages[stageId]?.status === 'failed'
   )
   if (failedStageId) {
-    const failedIndex = STAGE_ORDER.indexOf(failedStageId)
+    const failedIndex = PIPELINE_STAGE_ORDER.indexOf(failedStageId)
     return {
       stageId: failedStageId,
       stageIndex: failedIndex + 1,
-      progressPercent: Math.round((failedIndex / STAGE_ORDER.length) * 100),
+      progressPercent: Math.round((failedIndex / PIPELINE_STAGE_ORDER.length) * 100),
     }
   }
 
-  const completedStages = STAGE_ORDER.filter(
+  const completedStages = PIPELINE_STAGE_ORDER.filter(
     (stageId) => state.stages[stageId]?.status === 'complete'
   )
   if (completedStages.length > 0) {
     const lastCompleted = completedStages[completedStages.length - 1]
     return {
       stageId: lastCompleted,
-      stageIndex: STAGE_ORDER.indexOf(lastCompleted) + 1,
-      progressPercent: Math.round((completedStages.length / STAGE_ORDER.length) * 100),
+      stageIndex: PIPELINE_STAGE_ORDER.indexOf(lastCompleted) + 1,
+      progressPercent: Math.round(
+        (completedStages.length / PIPELINE_STAGE_ORDER.length) * 100
+      ),
     }
   }
 
   return {
-    stageId: STAGE_ORDER[0],
+    stageId: PIPELINE_STAGE_ORDER[0],
     stageIndex: 1,
     progressPercent: 0,
   }
@@ -243,9 +236,11 @@ export function useExtractionStatus(
     recordsCreated,
     errorMessage,
     currentStageId,
-    currentStageLabel: currentStageId ? STAGE_LABELS[currentStageId] : undefined,
+    currentStageLabel: currentStageId
+      ? PIPELINE_STAGE_LABELS[currentStageId]
+      : undefined,
     currentStageIndex,
-    totalStages: STAGE_ORDER.length,
+    totalStages: PIPELINE_STAGE_ORDER.length,
     progressPercent,
     startTracking,
     dismiss,

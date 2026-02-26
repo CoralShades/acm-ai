@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-25"
+updated: "2026-02-26"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -56,6 +56,11 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-02-26: PR #64 review follow-up — unresolved comments resolved
+#   - Consolidated duplicated STAGE_ORDER/STAGE_LABELS into shared pipeline constants
+#   - Clamped extraction progress math in use-extraction-status for 0-100 safety
+#   - Added ARIA progressbar semantics to Jobs card extraction progress indicator
+#   - Reconciled E21 story artifacts (S1/S2/S3) to done in docs/sprint-artifacts
 # 2026-02-26: Epic 21 UX Loading States & Layout Consistency — COMPLETE
 #   - E21-S1: loading.tsx Suspense boundaries for all routes, shimmer skeletons
 #   - E21-S2: Jobs pages aligned to ACM Register layout patterns

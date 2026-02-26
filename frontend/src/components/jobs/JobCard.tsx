@@ -177,7 +177,14 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
                 Extracting... Stage {stageIndex}/{totalStages} ({stageLabel})
               </span>
             </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--vaea-teal-100)] dark:bg-[color:var(--vaea-teal-900)]/50">
+            <div
+              className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--vaea-teal-100)] dark:bg-[color:var(--vaea-teal-900)]/50"
+              role="progressbar"
+              aria-label="Extraction progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressValue}
+            >
               <div
                 className="h-full bg-[color:var(--vaea-teal-500)] transition-all duration-500"
                 style={{ width: `${progressValue}%` }}

@@ -344,17 +344,17 @@ development_status:
 # ========
 # Total Epics: 21
 # Total Stories: 152  # Add E20-S6 to count (+1)
-# Stories Done: 136 (89%)  # bug-agui-path-alignment done (+1)
+# Stories Done: 139 (91%)  # E21-S1/S2/S3 marked done in story artifacts
 # Stories Review: 0
 # Stories In-Progress: 0
-# Stories Drafted: 4 (E21-S1, E21-S2, E21-S3, E20-S6)
+# Stories Drafted: 1 (E20-S6)
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-26  # Phase 3B: E20-S5 done (schema blocker resolved). Investigation confirmed prompt rules present; 17/31 represents baseline model capability, not regression. E20-S6 drafted for prompt engineering improvements to reach 28/31 target.
+# Last Updated: 2026-02-26  # PR #64 review follow-up: resolved extraction-progress/accessibility comments and reconciled E21 story artifacts.
 #
-# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E19, E20
-# IN-PROGRESS EPICS: E18, E21
+# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E19, E20, E21
+# IN-PROGRESS EPICS: E18
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # KEY CHANGES (2026-02-22 - Ralph Sprint: 11 Stories Completed):

@@ -2,7 +2,7 @@
 epic: Epic 21
 story_id: E21-S1
 title: Global Loading States & Transition Feedback
-status: drafted
+status: done
 ---
 
 As a compliance officer,
@@ -10,15 +10,15 @@ I want visual feedback when pages load, buttons process, and extraction runs,
 So that the app doesn't feel broken or unresponsive.
 
 Acceptance Criteria:
-- [ ] Button click states: all primary action buttons show spinner/disabled during API calls
-- [ ] Page transitions: shimmer skeleton appears immediately when navigating between routes
+- [x] Button click states: all primary action buttons show spinner/disabled during API calls
+- [x] Page transitions: shimmer skeleton appears immediately when navigating between routes
   (Dashboard, Jobs, Buildings Review, Records Review, ACM Register, Settings)
-- [ ] Extraction feedback: when extraction is running, show animated progress indicator
+- [x] Extraction feedback: when extraction is running, show animated progress indicator
   on the job card AND on the extraction tab (not just empty space)
-- [ ] Upload feedback: after file upload, show processing state before redirect
-- [ ] API loading: all data-fetching components show skeleton (reuse E14-S4 patterns)
-- [ ] Empty → Loading → Content → Error state machine for every page
-- [ ] No blank white screens during any navigation
+- [x] Upload feedback: after file upload, show processing state before redirect
+- [x] API loading: all data-fetching components show skeleton (reuse E14-S4 patterns)
+- [x] Empty → Loading → Content → Error state machine for every page
+- [x] No blank white screens during any navigation
 
 Technical Notes:
 - Reuse existing Skeleton components from E14-S4 (frontend/src/components/skeletons/)

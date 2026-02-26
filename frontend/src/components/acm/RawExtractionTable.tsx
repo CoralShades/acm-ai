@@ -7,7 +7,7 @@ import type { ColDef } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { PreviewRecordBadge } from './PreviewRecordBadge'
 import type { ExtractionPhase } from '@/lib/hooks/use-extraction-progress'
-import type { PipelineRunState, StageId } from '@/lib/types/pipeline'
+import { PIPELINE_STAGE_ORDER, type PipelineRunState } from '@/lib/types/pipeline'
 
 // Register AG Grid modules (safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -40,16 +40,6 @@ interface RawExtractionTableProps {
   pipelineState: PipelineRunState | null
   onComplete?: () => void
 }
-
-const STAGE_ORDER: StageId[] = [
-  'STRUCTURE',
-  'PREFLIGHT',
-  'ORCHESTRATOR',
-  'EXTRACT',
-  'VALIDATE',
-  'CORRECT',
-  'STORE',
-]
 
 async function fetchRawRecords(sourceId: string): Promise<RawRecord[]> {
   const response = await fetch(
@@ -88,22 +78,22 @@ export function RawExtractionTable({
 
   const stageIndex = useMemo(() => {
     if (!pipelineState) return 1
-    const runningStage = STAGE_ORDER.find(
+    const runningStage = PIPELINE_STAGE_ORDER.find(
       (stageId) => pipelineState.stages[stageId]?.status === 'running'
     )
     if (runningStage) {
-      return STAGE_ORDER.indexOf(runningStage) + 1
+      return PIPELINE_STAGE_ORDER.indexOf(runningStage) + 1
     }
-    const completedStages = STAGE_ORDER.filter(
+    const completedStages = PIPELINE_STAGE_ORDER.filter(
       (stageId) => pipelineState.stages[stageId]?.status === 'complete'
     )
     if (completedStages.length > 0) {
-      return Math.min(completedStages.length + 1, STAGE_ORDER.length)
+      return Math.min(completedStages.length + 1, PIPELINE_STAGE_ORDER.length)
     }
     return 1
   }, [pipelineState])
 
-  const stageTotal = STAGE_ORDER.length
+  const stageTotal = PIPELINE_STAGE_ORDER.length
 
   // Call onComplete once when streaming finishes and records exist
   useEffect(() => {
