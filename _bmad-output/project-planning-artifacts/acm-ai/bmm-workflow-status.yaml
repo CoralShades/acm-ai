@@ -56,6 +56,11 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-02-26: SCP-20260226B — Epic 22 Post Phase 6+7 Remediation
+#   - 5 stories drafted for schema resilience, dashboard layout, job detail redesign,
+#     building tabs, and extraction streaming polish
+#   - Triggered by: user testing screenshots showing 10 remaining issues
+#   - Dependencies: E22-S1 (backend) runs first, S2-S4 (frontend) in parallel, S5 last
 # 2026-02-26: PR #64 review follow-up — unresolved comments resolved
 #   - Consolidated duplicated STAGE_ORDER/STAGE_LABELS into shared pipeline constants
 #   - Clamped extraction progress math in use-extraction-status for 0-100 safety
