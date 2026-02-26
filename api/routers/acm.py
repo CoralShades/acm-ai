@@ -8,6 +8,7 @@ listing, filtering, extraction, and export.
 import csv
 import io
 import math
+import re
 from datetime import date
 from typing import Optional
 
@@ -47,6 +48,7 @@ from api.models import (
     NormalizeRequest,
     NormalizeResponse,
     ParentContextResponse,
+    RawTableResponse,
     ReEmbedRequest,
     ReEmbedResponse,
     SiteConfigRequest,
@@ -1265,6 +1267,83 @@ _ACM_RECORD_BUILDING_FIELDS = {
     "postcode",
 }
 
+_PAGE_MARKER_PATTERNS = (
+    re.compile(r"<!--\s*Page\s+(\d+)\s*-->", re.IGNORECASE),
+    re.compile(r"[-—]+\s*Page\s+(\d+)\s*[-—]+", re.IGNORECASE),
+    re.compile(r"PAGE\s+(\d+)\s+OF\s+\d+", re.IGNORECASE),
+)
+
+
+def _extract_page_marker(line: str) -> Optional[int]:
+    """Extract page number from a Docling page marker line."""
+    for pattern in _PAGE_MARKER_PATTERNS:
+        match = pattern.search(line)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _is_markdown_table_line(line: str) -> bool:
+    """Return True when a line resembles a markdown table row."""
+    stripped = line.strip()
+    return stripped.count("|") >= 2 and not stripped.startswith("```")
+
+
+def _extract_docling_markdown_tables(
+    full_text: str,
+    source_id: str,
+) -> list[RawTableResponse]:
+    """Extract markdown table blocks from Docling text grouped by page markers."""
+    if not full_text.strip():
+        return []
+
+    tables: list[RawTableResponse] = []
+    current_page = 1
+    table_start_page = 1
+    table_lines: list[str] = []
+
+    def flush_table(page_end: int) -> None:
+        nonlocal table_lines, table_start_page
+        if not table_lines:
+            return
+
+        raw_text = "\n".join(table_lines).strip()
+        table_lines = []
+        if not raw_text:
+            return
+
+        table_index = len(tables) + 1
+        tables.append(
+            RawTableResponse(
+                id=f"docling_table:{source_id}:{table_index}",
+                source_id=source_id,
+                page_start=table_start_page,
+                page_end=page_end,
+                table_type="docling_markdown",
+                raw_text=raw_text,
+            )
+        )
+
+    for line in full_text.splitlines():
+        page_marker = _extract_page_marker(line)
+        if page_marker is not None:
+            flush_table(current_page)
+            current_page = page_marker
+            continue
+
+        if _is_markdown_table_line(line):
+            if not table_lines:
+                table_start_page = current_page
+            table_lines.append(line.rstrip())
+            continue
+
+        if table_lines:
+            flush_table(current_page)
+
+    flush_table(current_page)
+    return tables
+
+
 # site_config fields managed at the source level
 _SITE_CONFIG_BUILDING_FIELDS = {
     "department",
@@ -1317,6 +1396,63 @@ def _build_building_response(
         else None,
         additional_comments=sc.additional_comments if sc else None,
     )
+
+
+@router.get("/jobs/{source_id}/raw-tables", response_model=list[RawTableResponse])
+async def list_raw_tables_for_job(source_id: str):
+    """Return raw table blocks for a job, preferring MinerU HTML when available."""
+    try:
+        normalized_source_id = ensure_record_id(source_id)
+
+        sections = await ACMTableSection.get_by_source(source_id)
+        mineru_sections = [section for section in sections if section.raw_html]
+
+        if mineru_sections:
+            return [
+                RawTableResponse(
+                    id=str(section.id) if section.id else "",
+                    source_id=str(section.source_id),
+                    page_start=section.page_start,
+                    page_end=section.page_end,
+                    table_type=section.table_type or "mineru_html",
+                    raw_html=section.raw_html,
+                    raw_text=section.raw_text,
+                    building_name=section.building_name,
+                )
+                for section in mineru_sections
+            ]
+
+        section_text_rows = [section for section in sections if section.raw_text]
+        if section_text_rows:
+            return [
+                RawTableResponse(
+                    id=str(section.id) if section.id else "",
+                    source_id=str(section.source_id),
+                    page_start=section.page_start,
+                    page_end=section.page_end,
+                    table_type=section.table_type or "register_raw_text",
+                    raw_text=section.raw_text,
+                    building_name=section.building_name,
+                )
+                for section in section_text_rows
+            ]
+
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        if not source:
+            raise HTTPException(status_code=404, detail="Source not found")
+
+        return _extract_docling_markdown_tables(
+            source.full_text or "",
+            str(normalized_source_id),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading raw tables for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/jobs/{source_id}/buildings", response_model=list[BuildingResponse])

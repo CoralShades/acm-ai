@@ -706,3 +706,104 @@ class TestACMRecordResponseClassificationFields:
         assert record["classification_confidence"] == 0.9
         assert record["classification_method"] == "pattern"
         assert record["classification_override"] is False
+
+
+class TestRawTableEndpoint:
+    """Test suite for GET /api/acm/jobs/{source_id}/raw-tables endpoint."""
+
+    @patch("api.routers.acm.ACMTableSection.get_by_source", new_callable=AsyncMock)
+    @patch("open_notebook.domain.notebook.Source.get", new_callable=AsyncMock)
+    def test_raw_table_prefers_mineru_sections(
+        self,
+        mock_get_source,
+        mock_get_sections,
+        client,
+    ):
+        """Endpoint should return MinerU table rows when raw_html is present."""
+        section = MagicMock()
+        section.id = "acm_table_section:1"
+        section.source_id = "source:abc"
+        section.page_start = 4
+        section.page_end = 4
+        section.table_type = "mineru_html"
+        section.raw_html = "<table><tr><td>Sample</td></tr></table>"
+        section.raw_text = "Sample"
+        section.building_name = "B001 Main Building"
+
+        mock_get_sections.return_value = [section]
+
+        response = client.get("/api/acm/jobs/source:abc/raw-tables")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert len(payload) == 1
+        assert payload[0]["table_type"] == "mineru_html"
+        assert payload[0]["raw_html"] == "<table><tr><td>Sample</td></tr></table>"
+        mock_get_source.assert_not_awaited()
+
+    @patch("api.routers.acm.ACMTableSection.get_by_source", new_callable=AsyncMock)
+    @patch("open_notebook.domain.notebook.Source.get", new_callable=AsyncMock)
+    def test_raw_table_returns_section_raw_text_rows(
+        self,
+        mock_get_source,
+        mock_get_sections,
+        client,
+    ):
+        """Endpoint should return existing acm_table_section raw_text rows."""
+        section = MagicMock()
+        section.id = "acm_table_section:2"
+        section.source_id = "source:abc"
+        section.page_start = 2
+        section.page_end = 3
+        section.table_type = "register"
+        section.raw_html = None
+        section.raw_text = "--- Page 2 ---\n| Col1 | Col2 |"
+        section.building_name = "B001 Main Building"
+
+        mock_get_sections.return_value = [section]
+
+        response = client.get("/api/acm/jobs/source:abc/raw-tables")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert len(payload) == 1
+        assert payload[0]["table_type"] == "register"
+        assert "| Col1 | Col2 |" in payload[0]["raw_text"]
+        mock_get_source.assert_not_awaited()
+
+    @patch("api.routers.acm.ACMTableSection.get_by_source", new_callable=AsyncMock)
+    @patch("open_notebook.domain.notebook.Source.get", new_callable=AsyncMock)
+    def test_raw_table_falls_back_to_docling_markdown(
+        self,
+        mock_get_source,
+        mock_get_sections,
+        client,
+    ):
+        """Endpoint should parse markdown table blocks when MinerU data is absent."""
+        section_without_html = MagicMock()
+        section_without_html.raw_html = None
+        section_without_html.raw_text = None
+        mock_get_sections.return_value = [section_without_html]
+
+        source = MagicMock()
+        source.full_text = (
+            "<!-- Page 1 -->\n"
+            "| Sample No | Result |\n"
+            "| --- | --- |\n"
+            "| 34511-039001 | Positive |\n\n"
+            "<!-- Page 2 -->\n"
+            "| Sample No | Result |\n"
+            "| --- | --- |\n"
+            "| - | Assumed positive |\n"
+        )
+        mock_get_source.return_value = source
+
+        response = client.get("/api/acm/jobs/source:abc/raw-tables")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert len(payload) == 2
+        assert payload[0]["table_type"] == "docling_markdown"
+        assert payload[0]["page_start"] == 1
+        assert payload[1]["page_start"] == 2
+        assert "| 34511-039001 | Positive |" in payload[0]["raw_text"]

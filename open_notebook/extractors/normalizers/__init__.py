@@ -10,6 +10,7 @@ Modules:
 - enums: Enum value normalization for SampleResult, Condition, etc. (E1-S12)
 """
 
+from .content import normalize_docling_text
 from .enums import normalize_enum_value
 from .recommendations import (
     CANONICAL_ACTIONS,
@@ -37,6 +38,8 @@ __all__ = [
     "CANONICAL_ACTIONS",
     "NormalizationResult",
     "normalize_recommendation",
+    # Content normalization (E21-S4)
+    "normalize_docling_text",
     # Enums (E1-S12)
     "normalize_enum_value",
 ]

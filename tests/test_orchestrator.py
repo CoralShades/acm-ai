@@ -618,6 +618,47 @@ class TestOrchestrateExtraction:
         assert ctx.school_name == "Springfield Primary School"
 
     @pytest.mark.asyncio
+    async def test_orchestrator_normalize_content_before_extraction(self):
+        """Orchestrator should normalize Docling content before building extraction."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.full_text = "Same as\n34511-039001"
+
+        inventory = _make_inventory(
+            [
+                _make_building(
+                    "B00A", "Storage Shed", 10, 10, BuildingComplexity.SIMPLE
+                ),
+            ]
+        )
+        tags = _make_page_tags([(10, 4, 0.9)])
+
+        state = {
+            "source": source,
+            "building_inventory": inventory,
+            "page_tags": tags,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator.normalize_docling_text",
+                return_value="Same as 34511-039001",
+            ) as mock_normalize,
+            patch(
+                "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+                new_callable=AsyncMock,
+                return_value=[],
+            ) as mock_parallel,
+        ):
+            result = await orchestrate_extraction(state, MagicMock())
+
+        mock_normalize.assert_called_once_with("Same as\n34511-039001")
+        assert mock_parallel.await_args.args[1] == "Same as 34511-039001"
+        assert result["content"] == "Same as 34511-039001"
+
+    @pytest.mark.asyncio
     async def test_legacy_fallback_not_triggered(self):
         """When inventory is present, orchestrator should be used (not legacy)."""
         state = {"building_inventory": _make_inventory()}
@@ -991,15 +1032,20 @@ class TestRegexYieldCheck:
             )
         ]
 
-        with patch(
-            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
-            return_value=[],
-        ), patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-            return_value=mock_records,
-        ) as mock_llm:
-            records, stats = await extract_building(plan, "Some building content here", {})
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+                return_value=[],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+                return_value=mock_records,
+            ) as mock_llm,
+        ):
+            records, stats = await extract_building(
+                plan, "Some building content here", {}
+            )
 
         mock_llm.assert_awaited_once()
         assert stats.strategy_used == "regex_escalated_to_llm"
@@ -1022,13 +1068,16 @@ class TestRegexYieldCheck:
             for i in range(3)
         ]
 
-        with patch(
-            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
-            return_value=regex_records,
-        ), patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-        ) as mock_llm:
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+                return_value=regex_records,
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+            ) as mock_llm,
+        ):
             records, stats = await extract_building(plan, "content", {})
 
         mock_llm.assert_not_awaited()
@@ -1051,14 +1100,17 @@ class TestRegexYieldCheck:
             )
         ]
 
-        with patch(
-            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
-            return_value=[],
-        ), patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-            return_value=mock_records,
-        ) as mock_llm:
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+                return_value=[],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+                return_value=mock_records,
+            ) as mock_llm,
+        ):
             records, stats = await extract_building(plan, "Non-empty content here", {})
 
         mock_llm.assert_awaited_once()
@@ -1071,13 +1123,16 @@ class TestRegexYieldCheck:
 
         plan = self._make_plan(estimate=None)
 
-        with patch(
-            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
-            return_value=[],
-        ), patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-        ) as mock_llm:
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+                return_value=[],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+            ) as mock_llm,
+        ):
             records, stats = await extract_building(plan, "   ", {})
 
         mock_llm.assert_not_awaited()
