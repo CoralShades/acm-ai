@@ -250,3 +250,48 @@ class TestMergeRecordsDataIssuesNullSafe:
         merged = _merge_records(existing, new)
         assert set(merged.data_issues) == {"dup", "unique_a", "unique_b"}
         assert len(merged.data_issues) == 3  # no duplicates
+
+
+class TestSchemaEnumResilience:
+    """Schema validators should normalize/pass through instead of rejecting records."""
+
+    _BASE = {
+        "building_id": "B01",
+        "product": "Vinyl Tiles",
+        "result": "Positive",
+    }
+
+    def _make(self, **kwargs):
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        return ACMExtractionRecord(**{**self._BASE, **kwargs})
+
+    def test_risk_status_moderate_normalizes_to_medium(self):
+        record = self._make(risk_status="Moderate")
+        assert record.risk_status == "Medium"
+
+    def test_unknown_risk_status_passes_through(self):
+        record = self._make(risk_status="Critical")
+        assert record.risk_status == "Critical"
+
+    def test_unknown_friable_passes_through(self):
+        record = self._make(friable="Sometimes")
+        assert record.friable == "Sometimes"
+
+    def test_unknown_material_condition_passes_through(self):
+        record = self._make(material_condition="Excellent")
+        assert record.material_condition == "Excellent"
+
+    def test_unknown_area_type_passes_through(self):
+        record = self._make(area_type="Roof")
+        assert record.area_type == "Roof"
+
+    def test_unknown_result_passes_through(self):
+        record = self._make(result="Maybe")
+        assert record.result == "Maybe"
+
+    def test_quantity_negative_still_rejected(self):
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        with pytest.raises(ValidationError, match="quantity cannot be negative"):
+            ACMExtractionRecord(**{**self._BASE, "quantity": "-5 m2"})
