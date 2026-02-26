@@ -1,12 +1,11 @@
 """
-ACM Register Extraction from Docling Markdown Output
+DEPRECATED: Legacy regex-based ACM extractor.
 
-Parses markdown content produced by Docling to extract structured
-ACM (Asbestos Containing Material) records with hierarchical
-Building > Room > Item relationships.
+This module is NOT used by the LangGraph extraction pipeline (acm_extraction.py).
+It is retained for backward-compatible test infrastructure. Scheduled for removal
+in a future cleanup sprint.
 
-Supports fallback from MinerU table extraction to regex-based markdown parsing.
-Uses the config-driven GenericParser (E1-S11) for all formats.
+See ADR-001: docs/architecture/adr-tableformer-integration.md
 """
 
 import re
@@ -16,18 +15,6 @@ from typing import Dict, List, Optional, Tuple
 from loguru import logger
 
 from open_notebook.extractors.parsers import get_parser
-
-# Optional MinerU support - graceful degradation if not available
-try:
-    from open_notebook.extractors.mineru_table_extractor import (
-        ExtractedTable,
-        MineruTableExtractor,
-    )
-
-    MINERU_AVAILABLE = True
-except ImportError:
-    MINERU_AVAILABLE = False
-    logger.debug("MinerU not available - will use regex-based extraction only")
 
 
 @dataclass
@@ -210,58 +197,23 @@ def extract_acm_records(
     markdown_content: Optional[str],
     source_id: str,
     pdf_path: Optional[str] = None,
-    use_mineru: bool = True,
+    use_mineru: bool = False,
     classify: bool = True,
 ) -> List[dict]:
     """
-    Extract ACM records from PDF or Docling markdown output.
-
-    Extraction strategy:
-    1. If use_mineru=True and pdf_path provided: Try MinerU table extraction
-    2. If MinerU fails or unavailable: Fall back to regex-based markdown parsing
-    3. Log which extraction method was used
-    4. Optionally classify each record using Victorian BAR taxonomy
+    Extract ACM records from Docling markdown output using regex-based parsing.
 
     Args:
-        markdown_content: Markdown text from Docling (used as fallback)
+        markdown_content: Markdown text from Docling
         source_id: ID of the source document
-        pdf_path: Path to source PDF file (optional, required for MinerU)
-        use_mineru: Whether to attempt MinerU extraction (default: True)
+        pdf_path: Unused, retained for backward compatibility
+        use_mineru: Unused, retained for backward compatibility
         classify: Whether to run product classification (default: True)
 
     Returns:
         List of dicts ready for ACMRecord creation
     """
-    # Try MinerU extraction first if enabled and PDF path provided
-    if use_mineru and pdf_path and MINERU_AVAILABLE:
-        try:
-            logger.info(f"Attempting MinerU extraction for {pdf_path}")
-            records = _extract_with_mineru(pdf_path, source_id)
-            if records:
-                logger.info(
-                    f"Successfully extracted {len(records)} records using MinerU"
-                )
-                return records
-            else:
-                logger.warning(
-                    "MinerU extraction returned no records, falling back to markdown parser"
-                )
-        except Exception as e:
-            logger.warning(
-                f"MinerU extraction failed: {e}. Falling back to markdown parser"
-            )
-    elif use_mineru and pdf_path and not MINERU_AVAILABLE:
-        logger.warning(
-            "MinerU extraction requested but not available. "
-            "Falling back to markdown parser"
-        )
-    elif use_mineru and not pdf_path:
-        logger.debug(
-            "MinerU extraction enabled but no PDF path provided, using markdown parser"
-        )
-
-    # Fall back to regex-based markdown parsing
-    # Single config-driven parser (E1-S11)
+    # Regex-based markdown parsing via config-driven parser (E1-S11)
     selected_parser = get_parser()
     logger.info(
         f"Using regex-based markdown extraction for source {source_id} "
@@ -380,46 +332,6 @@ def _extract_from_markdown(
 
     logger.info(f"Extracted {len(result)} ACM records from source {source_id}")
     return result
-
-
-def _extract_with_mineru(pdf_path: str, source_id: str) -> List[dict]:
-    """
-    Extract ACM records using MinerU table extraction.
-
-    Args:
-        pdf_path: Path to the PDF file
-        source_id: ID of the source document
-
-    Returns:
-        List of dicts ready for ACMRecord creation
-
-    Raises:
-        Exception: If extraction fails
-    """
-    # Initialize MinerU extractor
-    extractor = MineruTableExtractor(parse_method="auto")
-
-    # Extract tables from PDF
-    tables: List[ExtractedTable] = extractor.extract_tables_from_pdf(
-        pdf_path=pdf_path, stitch_multipage=True
-    )
-
-    if not tables:
-        logger.warning(f"No tables found in PDF: {pdf_path}")
-        return []
-
-    # Convert extracted tables to ACM records
-    # Note: For now, we'll extract table structure but still rely on
-    # the markdown content for full ACM record parsing. This is a
-    # foundation for future HTML table parsing enhancement.
-    logger.info(
-        f"MinerU extracted {len(tables)} tables. "
-        "Full HTML parsing not yet implemented - falling back to markdown."
-    )
-
-    # Return empty to trigger fallback
-    # TODO: Implement HTML table parsing to ACM records in future iteration
-    return []
 
 
 def _looks_like_table_header(

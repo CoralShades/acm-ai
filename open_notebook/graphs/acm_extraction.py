@@ -1025,36 +1025,6 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     content = normalize_docling_text(source.full_text or "")
     input_format = "markdown"
 
-    if source.id:
-        try:
-            table_sections = await ACMTableSection.get_by_source(str(source.id))
-            html_sections = [section for section in table_sections if section.raw_html]
-            if html_sections:
-                content = "\n\n".join(
-                    "\n".join(
-                        [
-                            f"<!-- MinerU table pages {section.page_start}-{section.page_end} -->",
-                            section.raw_html or "",
-                        ]
-                    )
-                    for section in sorted(
-                        html_sections,
-                        key=lambda section: (section.page_start, section.page_end),
-                    )
-                )
-                input_format = "html"
-                logger.info(
-                    "prepare_context using MinerU HTML content for source {source_id} "
-                    "({count} table sections)",
-                    source_id=source.id,
-                    count=len(html_sections),
-                )
-        except Exception as e:
-            logger.warning(
-                "Failed to load MinerU HTML table sections for source {source_id}: {error}",
-                source_id=source.id,
-                error=e,
-            )
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
 
@@ -2197,7 +2167,6 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
         }
 
     # Create parent table sections from building inventory (E11-S1)
-    from open_notebook.domain.acm import ACMTableSection
 
     section_map: Dict[str, str] = {}  # building_id -> section_id
     inventory: Optional[BuildingInventory] = state.get("building_inventory")

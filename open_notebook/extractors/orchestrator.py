@@ -19,7 +19,6 @@ from langchain_core.runnables import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 
-from open_notebook.domain.acm import ACMTableSection
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_schemas import (
     ACMExtractionRecord,
@@ -390,55 +389,6 @@ def _split_building_by_rooms(
     return chunks
 
 
-def _format_html_tables_for_llm(tables: List[ACMTableSection]) -> str:
-    """Format MinerU HTML table sections into a deterministic LLM payload."""
-    formatted_parts: List[str] = []
-    for idx, table in enumerate(
-        sorted(tables, key=lambda t: (t.page_start, t.page_end)), start=1
-    ):
-        formatted_parts.append(
-            "\n".join(
-                [
-                    f"<!-- MinerU table {idx} | pages {table.page_start}-{table.page_end} -->",
-                    table.raw_html or "",
-                ]
-            )
-        )
-
-    return "\n\n".join(part for part in formatted_parts if part.strip())
-
-
-async def _get_mineru_tables_for_building(
-    state: dict,
-    source_id: str,
-    page_start: int,
-    page_end: int,
-) -> List[ACMTableSection]:
-    """Get MinerU HTML table sections for a building page range."""
-    cache_key = "_mineru_html_sections"
-
-    try:
-        sections: Optional[List[ACMTableSection]] = state.get(cache_key)
-        if sections is None:
-            sections = await ACMTableSection.get_by_source(source_id)
-            state[cache_key] = sections
-
-        return [
-            section
-            for section in sections
-            if section.raw_html
-            and section.page_start <= page_end
-            and section.page_end >= page_start
-        ]
-    except Exception as e:
-        logger.warning(
-            "Failed to load MinerU table sections for source {source_id}: {error}",
-            source_id=source_id,
-            error=e,
-        )
-        return []
-
-
 async def _llm_extract_building(
     building_content: str,
     plan: BuildingExtractionPlan,
@@ -628,26 +578,6 @@ async def extract_building(
 
     llm_input_content = building_content
     llm_input_format = "markdown"
-
-    source: Optional[Source] = state.get("source")
-    if source and source.id:
-        mineru_sections = await _get_mineru_tables_for_building(
-            state,
-            str(source.id),
-            plan.page_range[0],
-            plan.page_range[1],
-        )
-        if mineru_sections:
-            formatted_html = _format_html_tables_for_llm(mineru_sections)
-            if formatted_html.strip():
-                llm_input_content = formatted_html
-                llm_input_format = "html"
-                logger.info(
-                    "Building {building_id} using MinerU HTML input "
-                    "({table_count} tables)",
-                    building_id=plan.building_id,
-                    table_count=len(mineru_sections),
-                )
 
     pages_processed = plan.page_range[1] - plan.page_range[0] + 1
 
