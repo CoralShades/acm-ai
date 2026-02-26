@@ -281,7 +281,7 @@ development_status:
   e19-s8-conversational-crud-chat: done  # docs/sprint-artifacts/e19-s8-conversational-crud-chat.md — P1: CRUD agent (crud_tools.py, crud_agent.py), /api/agui/crud-chat, WriteConfirmationCard, /jobs/{id}/chat, copilot-crud runtime
 
   # Epic 20: Extraction Completeness & 100% Record Capture (P0)
-  # 5/6 stories complete (S6 blocked) — EPIC IN PROGRESS
+  # 6/6 stories complete — EPIC IN PROGRESS (follow-up implementation moved to Epic 23)
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260224-stakeholder-ux-redesign.md
   epic-20: in-progress
   e20-s1-page-boundary-fix: done  # _apply_boundary_overlap(): extend building page_end to next building's page_start; 48 tests pass  # docs/sprint-artifacts/e20-s1-page-boundary-fix.md — Fix building page_end with +1 overlap to capture boundary page records
@@ -289,7 +289,7 @@ development_status:
   e20-s3-not-sampled-capture: done  # no_access field + prompt update; 57 tests pass; register_enums.json fixed post-review
   e20-s4-e2e-accuracy-validation: done  # 27/31 (87%) via old pipeline → 2026-02-25 E2E: 16/16 core samples (93.75%) via orchestrator; E20-S5 created for remaining gaps
   e20-s5-extraction-accuracy-gap-analysis: done  # 2026-02-26: Schema fix (data_issues null→[]). Re-validation: 17/31 (55%). Schema blocker resolved. 14 missing = As Per (9) + Not Sampled (5). Prompt coverage for these categories needs E20-S6. Report: docs/reviews/e2e-validation-20260226.md. INVESTIGATION: Prompt rules ARE present (E20-S3/E18-S5 fixes intact). Model used: Anthropic (capable). 17/31 represents current model baseline under real-world conditions, not missing prompt fixes.
-  e20-s6-restore-extraction-prompt-coverage: blocked  # 2026-02-26: BLOCKED — Prompt-only approach exhausted (3 extraction attempts). Enhanced prompt with primacy/recency rules, "Same as" terminology fix, vertical-format examples, verification counter. Result: 17/31 all 3 iterations. Root cause: model behavioral ceiling (claude-sonnet-4.6 via OpenRouter). Model only extracts NATA-sampled rows, ignores "Same as" references + "Assumed Positive" unsampled items regardless of prompt instructions. Requires CODE-LEVEL changes: two-pass extraction, content pre-processing, or model switching. Validation report: docs/reviews/e20-s6-validation-results.md
+  e20-s6-restore-extraction-prompt-coverage: done  # Investigation complete: proved 17/31 is Docling input quality ceiling. 3 prompt iterations all returned 17/31. Requires code-level fix (MinerU activation). See docs/reviews/e20-s6-validation-results.md
 
   # Epic 21: UX Loading States & Layout Consistency (P1)
   # 3/3 stories complete — EPIC COMPLETE
@@ -309,6 +309,15 @@ development_status:
   e22-s3-job-detail-source-layout: done  # 2026-02-26: Two-column layout with Content tab (markdown), inline CRUD chat panel, unicode arrow fix
   e22-s4-building-tabs-everywhere: done  # 2026-02-26: Reusable BuildingTabFilter component, wired into ACM Register + Job Detail ACM Records + review records. Horizontal scroll, no overlap.
   e22-s5-extraction-streaming-polish: done  # 2026-02-26: Enhanced stage progress, removed misleading Streaming badge, auto-fetch on completion, navigation progress bar, error display
+
+  # Epic 23: MinerU Structured Table Extraction & Accuracy Fix (P0)
+  # 0/4 stories — IN PROGRESS
+  # GitHub: issue #70
+  epic-23: in-progress
+  e23-s1-mineru-activation: in-progress  # Activate MinerU in source processing, store HTML tables in acm_table_section
+  e23-s2-html-to-llm: drafted  # Feed MinerU HTML to extraction LLM instead of Docling markdown
+  e23-s3-raw-table-frontend: drafted  # Raw MinerU table preview tab on Job Detail
+  e23-s4-accuracy-validation: drafted  # Target >=28/31 Broadmeadows
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
@@ -353,20 +362,20 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 22
-# Total Stories: 152
-# Stories Done: 139 (91%)
+# Total Epics: 23
+# Total Stories: 156
+# Stories Done: 140 (90%)
 # Stories Review: 0
-# Stories In-Progress: 0
-# Stories Blocked: 1 (E20-S6 — prompt-only approach hit model ceiling, needs code-level changes)
-# Stories Drafted: 0
+# Stories In-Progress: 1 (E23-S1)
+# Stories Blocked: 0
+# Stories Drafted: 3 (E23-S2, E23-S3, E23-S4)
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-26  # E20-S6 marked blocked after 3 extraction attempts (17/31 all 3). E18 epic completed (7/7). E20 reverted to in-progress.
+# Last Updated: 2026-02-26  # E20-S6 closed as investigation complete; Epic 23 opened for MinerU activation and accuracy recovery.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E18, E19, E21, E22
-# IN-PROGRESS EPICS: E20 (S6 blocked — needs code-level extraction changes)
+# IN-PROGRESS EPICS: E20 (follow-up implementation moved to E23), E23 (MinerU activation + validation)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # KEY CHANGES (2026-02-22 - Ralph Sprint: 11 Stories Completed):
