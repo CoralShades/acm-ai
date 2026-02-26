@@ -87,13 +87,44 @@ class TestValidateEnumFields:
             "sample_result": "Positive",
             "material_condition": "Excellent",  # Invalid
             "friable": "Non-friable",
-            "disturbance_potential": "Medium",  # Invalid — BAR uses "Moderate"
+            "disturbance_potential": "Medium",  # Normalized to "Moderate"
         }
         issues = validate_enum_fields(record)
-        assert len(issues) == 2
+        assert len(issues) == 1
         fields_flagged = {i.field_name for i in issues}
         assert "material_condition" in fields_flagged
-        assert "disturbance_potential" in fields_flagged
+
+    def test_disturbance_medium_is_normalized_not_flagged(self):
+        """'Medium' disturbance value should normalize to BAR 'Moderate'."""
+        record = {
+            "disturbance_potential": "Medium",
+            "data_issues": [],
+        }
+
+        issues = validate_enum_fields(record)
+
+        assert len(issues) == 0
+        assert record["disturbance_potential"] == "Moderate"
+        assert any(
+            issue == "Normalized disturbance_potential: Medium -> Moderate"
+            for issue in record["data_issues"]
+        )
+
+    def test_invalid_enum_is_recorded_in_data_issues(self):
+        """Unrecognized enum values should be tracked in data_issues."""
+        record = {
+            "sample_result": "Bonded",
+            "data_issues": [],
+        }
+
+        issues = validate_enum_fields(record)
+
+        assert len(issues) == 1
+        assert issues[0].field_name == "sample_result"
+        assert any(
+            issue == "Unrecognized sample_result: Bonded"
+            for issue in record["data_issues"]
+        )
 
     def test_issue_contains_valid_values(self):
         """Validation issue should include valid enum values for correction guidance."""
@@ -229,11 +260,11 @@ class TestValidateACMRecord:
             "sample_result": "Positive",
             "material_condition": "Excellent",  # Invalid
             "friable": "Non-friable",
-            "disturbance_potential": "Medium",  # Invalid
+            "disturbance_potential": "Medium",  # Normalized to "Moderate"
         }
         result = validate_acm_record(record)
         assert result.is_valid is False
-        assert len(result.issues) == 2
+        assert len(result.issues) == 1
 
     def test_record_with_business_rule_violations(self):
         """Record violating business rules should have is_valid=False."""

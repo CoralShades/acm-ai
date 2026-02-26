@@ -227,3 +227,25 @@ class TestEdgeCases:
         assert normalize_enum_value("friable", "friability") == "Friable"
         assert normalize_enum_value("NF", "friability") == "Non-friable"
         assert normalize_enum_value("F", "friability") == "Friable"
+
+
+class TestRiskStatusNormalization:
+    """Tests for risk_status normalization (E22-S1)."""
+
+    def test_moderate_maps_to_medium(self):
+        from open_notebook.extractors.normalizers.enums import normalize_enum_value
+
+        assert normalize_enum_value("Moderate", "risk_status") == "Medium"
+
+    def test_shorthand_maps_to_canonical(self):
+        from open_notebook.extractors.normalizers.enums import normalize_enum_value
+
+        assert normalize_enum_value("h", "risk_status") == "High"
+        assert normalize_enum_value("med", "risk_status") == "Medium"
+        assert normalize_enum_value("l", "risk_status") == "Low"
+
+    def test_na_values_map_to_none(self):
+        from open_notebook.extractors.normalizers.enums import normalize_enum_value
+
+        assert normalize_enum_value("n/a", "risk_status") is None
+        assert normalize_enum_value("unknown", "risk_status") is None
