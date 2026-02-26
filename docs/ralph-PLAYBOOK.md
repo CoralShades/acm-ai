@@ -785,7 +785,7 @@ See `docs/SUPERPOWERS-INTEGRATION.md` for full multi-platform setup.
 
 ### Bridge Skill
 
-The BMAD bridge skill (`~/.claude/skills/acm-ai/bmad-bridge/SKILL.md`) teaches agents how to route between BMAD planning and Superpowers implementation. It activates for any project with `_bmad/` directories.
+The BMAD bridge skill (`.claude/skills/bmad-bridge/SKILL.md` in the project, or `~/.claude/skills/acm-ai/bmad-bridge/SKILL.md` for cross-project use) teaches agents how to route between BMAD planning and Superpowers implementation. It activates for any project with `_bmad/` directories.
 
 ### Implementation Plans
 

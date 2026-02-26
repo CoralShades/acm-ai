@@ -65,9 +65,9 @@ git clone https://github.com/obra/superpowers.git ~/.claude/superpowers
 mkdir -p ~/.claude/skills
 ln -sf ~/.claude/superpowers/skills ~/.claude/skills/superpowers
 
-# 3. (Optional) Create project-specific bridge skill
+# 3. (Optional) Copy bridge skill for cross-project use
 mkdir -p ~/.claude/skills/acm-ai/bmad-bridge
-# Copy SKILL.md from the template (see below)
+cp .claude/skills/bmad-bridge/SKILL.md ~/.claude/skills/acm-ai/bmad-bridge/SKILL.md
 
 # 4. Verify
 ls -la ~/.claude/skills/superpowers
@@ -84,7 +84,7 @@ git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
 
 # 2. Symlink skills
 mkdir -p ~/.agents/skills
-ln -s ~/.codex/superpowers/skills ~/.agents/skills/superpowers
+ln -sf ~/.codex/superpowers/skills ~/.agents/skills/superpowers
 
 # 3. Restart Codex for skill discovery
 ```
@@ -101,12 +101,12 @@ git clone https://github.com/obra/superpowers.git ~/.config/opencode/superpowers
 
 # 2. Plugin symlink
 mkdir -p ~/.config/opencode/plugins
-ln -s ~/.config/opencode/superpowers/.opencode/plugins/superpowers.js \
+ln -sf ~/.config/opencode/superpowers/.opencode/plugins/superpowers.js \
   ~/.config/opencode/plugins/superpowers.js
 
 # 3. Skills symlink
 mkdir -p ~/.config/opencode/skills
-ln -s ~/.config/opencode/superpowers/skills \
+ln -sf ~/.config/opencode/superpowers/skills \
   ~/.config/opencode/skills/superpowers
 
 # 4. Restart OpenCode
@@ -125,7 +125,12 @@ The Ralph autonomous loop includes superpowers skill invocations in `.ralph/PROM
 
 ## Bridge Skill
 
-The BMAD bridge skill at `~/.claude/skills/acm-ai/bmad-bridge/SKILL.md` teaches agents how to route between BMAD and Superpowers. It activates automatically for any project with `_bmad/` or `_bmad-output/` directories.
+The BMAD bridge skill teaches agents how to route between BMAD and Superpowers. It activates automatically for any project with `_bmad/` or `_bmad-output/` directories.
+
+**Project-level** (tracked in repo): `.claude/skills/bmad-bridge/SKILL.md`
+**User-level** (optional, for cross-project use): `~/.claude/skills/acm-ai/bmad-bridge/SKILL.md`
+
+The project-level bridge skill is included in this repo and available to all collaborators automatically. To also use it across other BMAD projects, copy it to `~/.claude/skills/acm-ai/bmad-bridge/SKILL.md`.
 
 ## Updating Superpowers
 
