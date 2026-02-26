@@ -1,4 +1,5 @@
 import operator
+import os
 from typing import Any, Dict, List, Optional
 
 from content_core import extract_content
@@ -54,9 +55,28 @@ async def content_process(state: SourceState) -> dict:
     content_state["url_engine"] = (
         content_settings.default_content_processing_engine_url or "auto"
     )
-    content_state["document_engine"] = (
-        content_settings.default_content_processing_engine_doc or "auto"
+    # TableFormer activation (ADR-001)
+    # When enabled, forces Docling engine and activates table structure recognition.
+    # Controlled via environment variable for gradual rollout.
+    table_structure_enabled = (
+        os.environ.get("DOCLING_TABLE_STRUCTURE", "false").lower() == "true"
     )
+
+    if table_structure_enabled:
+        content_state["document_engine"] = "docling"
+        content_state["docling_table_structure"] = True
+        content_state["docling_table_mode"] = os.environ.get(
+            "DOCLING_TABLE_MODE", "accurate"
+        )
+        logger.info(
+            f"TableFormer enabled: docling_table_structure=True, "
+            f"mode={content_state['docling_table_mode']}"
+        )
+    else:
+        content_state["document_engine"] = (
+            content_settings.default_content_processing_engine_doc or "auto"
+        )
+
     content_state["output_format"] = "markdown"
 
     # Add speech-to-text model configuration from Default Models
