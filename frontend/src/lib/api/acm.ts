@@ -15,6 +15,7 @@ import type {
   SiteConfigRequest,
   SiteConfigTemplate,
   CommandJobStatusResponse,
+  ACMRawTable,
 } from '@/lib/types/acm'
 
 export const acmApi = {
@@ -103,6 +104,16 @@ export const acmApi = {
    */
   getJobStatus: async (jobId: string): Promise<CommandJobStatusResponse> => {
     const response = await apiClient.get<CommandJobStatusResponse>(`/commands/jobs/${jobId}`)
+    return response.data
+  },
+
+  /**
+   * Fetch raw table sections for a job.
+   */
+  getRawTables: async (sourceId: string): Promise<ACMRawTable[]> => {
+    const response = await apiClient.get<ACMRawTable[]>(
+      `/acm/jobs/${encodeURIComponent(sourceId)}/raw-tables`
+    )
     return response.data
   },
 

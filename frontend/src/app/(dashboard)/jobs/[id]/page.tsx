@@ -18,6 +18,7 @@ import {
   getRecordBuildingTabId,
 } from '@/components/acm/BuildingTabFilter'
 import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
+import { RawTableViewer } from '@/components/acm/RawTableViewer'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
@@ -175,6 +176,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                   <TabsTrigger value="buildings">Buildings</TabsTrigger>
                   <TabsTrigger value="records">ACM Records</TabsTrigger>
                   <TabsTrigger value="content">Content</TabsTrigger>
+                  <TabsTrigger value="raw-tables">Raw Tables</TabsTrigger>
                   <TabsTrigger value="log">Extraction Log</TabsTrigger>
                 </TabsList>
               </div>
@@ -228,6 +230,17 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
                 <TabsContent value="content" className="m-0 h-full p-4 sm:p-6">
                   <JobContentPanel sourceId={sourceId} />
+                </TabsContent>
+
+                <TabsContent
+                  value="raw-tables"
+                  className="m-0 h-full overflow-auto p-4 sm:p-6"
+                >
+                  <Card className="rounded-xl shadow-sm">
+                    <CardContent className="p-4 sm:p-6">
+                      <RawTableViewer sourceId={sourceId} />
+                    </CardContent>
+                  </Card>
                 </TabsContent>
 
                 <TabsContent
