@@ -32,11 +32,34 @@ try:
         except ImportError:
             UNIPipe = None
             DiskReaderWriter = None
+
+    # Newer magic-pdf API (v1+) components
+    try:
+        from magic_pdf.config.enums import SupportedPdfParseMethod
+        from magic_pdf.config.make_content_config import DropMode, MakeMode
+        from magic_pdf.data.data_reader_writer import FileBasedDataWriter
+        from magic_pdf.data.dataset import PymuDocDataset
+
+        MODERN_MINERU_API_AVAILABLE = True
+    except ImportError:
+        SupportedPdfParseMethod = None
+        DropMode = None
+        MakeMode = None
+        FileBasedDataWriter = None
+        PymuDocDataset = None
+        MODERN_MINERU_API_AVAILABLE = False
+
     MINERU_AVAILABLE = magic_pdf is not None
 except ImportError:
     MINERU_AVAILABLE = False
     UNIPipe = None
     DiskReaderWriter = None
+    SupportedPdfParseMethod = None
+    DropMode = None
+    MakeMode = None
+    FileBasedDataWriter = None
+    PymuDocDataset = None
+    MODERN_MINERU_API_AVAILABLE = False
     logger.warning("MinerU (magic-pdf) not available. Table extraction will fail.")
 
 
@@ -134,11 +157,11 @@ class MineruTableExtractor:
             FileNotFoundError: If PDF file doesn't exist
             Exception: If extraction fails
         """
-        pdf_path = Path(pdf_path)
-        if not pdf_path.exists():
-            raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+        pdf_file = Path(pdf_path)
+        if not pdf_file.exists():
+            raise FileNotFoundError(f"PDF file not found: {pdf_file}")
 
-        logger.info(f"Starting table extraction from: {pdf_path}")
+        logger.info(f"Starting table extraction from: {pdf_file}")
 
         try:
             # Create temporary directory for MinerU output
@@ -147,9 +170,9 @@ class MineruTableExtractor:
                 output_dir.mkdir(parents=True, exist_ok=True)
 
                 # Extract tables using MinerU
-                tables = self._run_mineru_extraction(str(pdf_path), str(output_dir))
+                tables = self._run_mineru_extraction(str(pdf_file), str(output_dir))
 
-                logger.info(f"Extracted {len(tables)} tables from {pdf_path}")
+                logger.info(f"Extracted {len(tables)} tables from {pdf_file}")
 
                 # Optionally stitch multi-page tables
                 if stitch_multipage and len(tables) > 1:
@@ -159,7 +182,7 @@ class MineruTableExtractor:
                 return tables
 
         except Exception as e:
-            logger.error(f"Failed to extract tables from {pdf_path}: {e}")
+            logger.error(f"Failed to extract tables from {pdf_file}: {e}")
             raise
 
     def _run_mineru_extraction(
@@ -175,33 +198,103 @@ class MineruTableExtractor:
         Returns:
             List of ExtractedTable objects
         """
-        try:
-            # Initialize MinerU reader/writer
-            pdf_bytes = open(pdf_path, "rb").read()
+        pdf_bytes = open(pdf_path, "rb").read()
+        image_dir = os.path.join(output_dir, "images")
+        os.makedirs(image_dir, exist_ok=True)
 
-            # Create output writer
-            image_dir = os.path.join(output_dir, "images")
-            os.makedirs(image_dir, exist_ok=True)
-            image_writer = DiskReaderWriter(image_dir)
+        # Legacy API path (magic_pdf.pipe.UNIPipe)
+        if UNIPipe is not None and DiskReaderWriter is not None:
+            legacy_pipe_cls = UNIPipe
+            legacy_writer_cls = DiskReaderWriter
+            try:
+                image_writer = legacy_writer_cls(image_dir)
+                pipe = legacy_pipe_cls(pdf_bytes, {"_pdf_type": ""}, image_writer)
+                pipe.pipe_classify()
+                pipe.pipe_analyze()
+                pipe.pipe_parse()
 
-            # Run MinerU pipeline
-            pipe = UNIPipe(pdf_bytes, {"_pdf_type": ""}, image_writer)
-            pipe.pipe_classify()
-            pipe.pipe_analyze()
-            pipe.pipe_parse()
+                content_list = pipe.pipe_mk_uni_format(image_dir, drop_mode="none")
+                md_content = pipe.pipe_mk_markdown(image_dir, drop_mode="none")
+                return self._parse_tables_from_content(
+                    content_list, md_content, pdf_path
+                )
+            except Exception as e:
+                logger.warning(
+                    "Legacy MinerU API failed, falling back to modern API: {error}",
+                    error=e,
+                )
 
-            # Get content data with tables
-            content_list = pipe.pipe_mk_uni_format(image_dir, drop_mode="none")
-            md_content = pipe.pipe_mk_markdown(image_dir, drop_mode="none")
+        # Modern API path (magic_pdf.data.dataset + operators)
+        if MODERN_MINERU_API_AVAILABLE:
+            dataset_cls = PymuDocDataset
+            writer_cls = FileBasedDataWriter
+            parse_method_enum = SupportedPdfParseMethod
+            drop_mode_enum = DropMode
+            make_mode_enum = MakeMode
 
-            # Parse tables from content
-            tables = self._parse_tables_from_content(content_list, md_content, pdf_path)
+            if (
+                dataset_cls is None
+                or writer_cls is None
+                or parse_method_enum is None
+                or drop_mode_enum is None
+                or make_mode_enum is None
+            ):
+                raise ImportError("Modern MinerU API modules are not available")
 
-            return tables
+            try:
+                from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
+            except Exception as e:
+                raise ImportError(
+                    "Modern MinerU API requires optional model dependencies "
+                    "(for example paddle)."
+                ) from e
 
-        except Exception as e:
-            logger.error(f"MinerU extraction failed: {e}")
-            raise
+            try:
+                dataset = dataset_cls(pdf_bytes)
+                image_writer = writer_cls(image_dir)
+
+                should_use_ocr = self.parse_method == "ocr"
+                if self.parse_method == "auto":
+                    should_use_ocr = dataset.classify() != parse_method_enum.TXT
+
+                infer_result = dataset.apply(
+                    doc_analyze,
+                    ocr=should_use_ocr,
+                    lang=getattr(dataset, "_lang", None),
+                    table_enable=True,
+                )
+                if should_use_ocr:
+                    pipe_result = infer_result.pipe_ocr_mode(
+                        image_writer,
+                        debug_mode=False,
+                        lang=getattr(dataset, "_lang", None),
+                    )
+                else:
+                    pipe_result = infer_result.pipe_txt_mode(
+                        image_writer,
+                        debug_mode=False,
+                        lang=getattr(dataset, "_lang", None),
+                    )
+
+                content_list = pipe_result.get_content_list(
+                    image_dir,
+                    drop_mode=drop_mode_enum.NONE,
+                )
+                md_content = pipe_result.get_markdown(
+                    image_dir,
+                    drop_mode=drop_mode_enum.NONE,
+                    md_make_mode=make_mode_enum.MM_MD,
+                )
+                return self._parse_tables_from_content(
+                    content_list, md_content, pdf_path
+                )
+            except Exception as e:
+                logger.error(f"MinerU extraction failed: {e}")
+                raise
+
+        raise ImportError(
+            "No compatible MinerU extraction API found in installed magic-pdf package"
+        )
 
     def _parse_tables_from_content(
         self, content_list: List[dict], md_content: str, pdf_path: str

@@ -4,7 +4,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from open_notebook.extractors.normalizers.content import normalize_docling_text
+from open_notebook.extractors.normalizers.content import (
+    normalize_docling_text,
+    reconstruct_markdown_table_rows,
+)
 
 
 class TestNormalizeContent:
@@ -41,6 +44,40 @@ class TestNormalizeContent:
         normalized = normalize_docling_text(raw_text)
 
         assert "34511-039-001" in normalized
+
+    def test_normalize_content_collapses_sample_suffix_break(self):
+        """Sample numbers split after suffix dash should be normalized."""
+        raw_text = "Sample: 34511-039-\n001"
+
+        normalized = normalize_docling_text(raw_text)
+
+        assert "34511-039-001" in normalized
+
+    def test_normalize_content_joins_split_room_names(self):
+        """Known room-name line breaks should be normalized."""
+        raw_text = "Front Desk\nArea\nMain\nFoyer\nSwitch\nRoom"
+
+        normalized = normalize_docling_text(raw_text)
+
+        assert "Front Desk Area" in normalized
+        assert "Main Foyer" in normalized
+        assert "Switch Room" in normalized
+
+    def test_reconstruct_markdown_table_rows_merges_split_pairs(self):
+        """Adjacent split markdown rows should be reconstructed into one row."""
+        raw_text = (
+            "| Room | Product | Result |\n"
+            "| --- | --- | --- |\n"
+            "| Front Desk | Filing cabinet | Assumed |\n"
+            "| Area | Top panel | Positive |"
+        )
+
+        reconstructed = reconstruct_markdown_table_rows(raw_text)
+
+        assert (
+            "| Front Desk Area | Filing cabinet Top panel | Assumed Positive |"
+            in reconstructed
+        )
 
     def test_normalize_content_keeps_clean_text_unchanged(self):
         """Already clean text should be returned as-is."""
