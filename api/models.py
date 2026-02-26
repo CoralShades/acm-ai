@@ -630,6 +630,19 @@ class ParentContextResponse(BaseModel):
     raw_text: Optional[str] = None
 
 
+class RawTableResponse(BaseModel):
+    """Raw table preview payload for job extraction diagnostics."""
+
+    id: str
+    source_id: str
+    page_start: int
+    page_end: int
+    table_type: Optional[str] = None
+    raw_html: Optional[str] = None
+    raw_text: Optional[str] = None
+    building_name: Optional[str] = None
+
+
 class ACMSearchResultResponse(BaseModel):
     """Single ACM search result with similarity score."""
 

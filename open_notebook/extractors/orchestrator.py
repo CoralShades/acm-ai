@@ -34,6 +34,7 @@ from open_notebook.extractors.document_structure import (
     _PAGE_PATTERN,
     _page_num_from_match,
 )
+from open_notebook.extractors.normalizers.content import normalize_docling_text
 from open_notebook.extractors.page_tagger import (
     PageTaggingResult,
     SectionTaxonomy,
@@ -784,7 +785,7 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
     building inventory is available.
     """
     source: Source = state["source"]
-    content = source.full_text or ""
+    content = normalize_docling_text(source.full_text or "")
     inventory: BuildingInventory = state["building_inventory"]
     page_tags: Optional[PageTaggingResult] = state.get("page_tags")
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")

@@ -53,6 +53,7 @@ from open_notebook.extractors.metadata_extractor import (
     auto_populate_site_config,
     extract_document_metadata,
 )
+from open_notebook.extractors.normalizers.content import normalize_docling_text
 from open_notebook.extractors.normalizers.enums import normalize_enum_value
 from open_notebook.extractors.orchestrator import (
     OrchestratorStats,
@@ -1021,7 +1022,7 @@ async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
 async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     """Prepare extraction context and chunk content if needed."""
     source: Source = state["source"]
-    content = source.full_text or ""
+    content = normalize_docling_text(source.full_text or "")
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
 

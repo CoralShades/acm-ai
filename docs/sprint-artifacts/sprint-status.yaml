@@ -298,6 +298,7 @@ development_status:
   e21-s1-loading-states-transitions: done  # 2026-02-26: loading.tsx for all job routes, shimmer skeletons, state machine
   e21-s2-jobs-layout-consistency: done  # 2026-02-26: ACM Register layout patterns applied to all jobs pages
   e21-s3-extraction-progress-feedback: done  # 2026-02-26: Upload→extract redirect, SSE wiring, job card progress, building review banner
+  e21-s4-raw-table-preview-extraction-input-quality-fix: done  # 2026-02-26: Backend-only raw table preview endpoint + Docling split-value normalizer wired into extraction paths. Broadmeadows remains 17/31 (target >=28 pending follow-up).
 
   # Epic 22: Post-Audit Remediation & Feature Completion (P0/P1)
   # 5/5 stories complete — EPIC COMPLETE
