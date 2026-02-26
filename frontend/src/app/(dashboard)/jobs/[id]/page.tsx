@@ -48,7 +48,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
-  const { data: records = [] } = useQuery<ACMRecord[]>({
+  const { data: records = [], refetch: refetchRecords } = useQuery<ACMRecord[]>({
     queryKey: ['acm-records', sourceId],
     queryFn: () =>
       fetch(`/api/acm/records?source_id=${encodeURIComponent(sourceId)}&limit=500`)
@@ -122,6 +122,10 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
         : extractionProgress?.status === 'failed'
           ? 'failed'
           : 'idle'
+
+  const handleRecordsDataChanged = useCallback(() => {
+    void refetchRecords()
+  }, [refetchRecords])
 
   useEffect(() => {
     setSelectedBuilding(null)
@@ -216,6 +220,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                       <ACMReviewGrid
                         sourceId={sourceId}
                         buildingId={selectedBuilding}
+                        onDataChanged={handleRecordsDataChanged}
                       />
                     </CardContent>
                   </Card>

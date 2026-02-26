@@ -29,7 +29,7 @@ function RecordsReviewPageContent({ sourceId }: { sourceId: string }) {
   const [isPublishing, setIsPublishing] = useState(false)
 
   // Fetch records to drive building tab filters
-  const { data: records = [] } = useQuery<ACMRecord[]>({
+  const { data: records = [], refetch: refetchRecords } = useQuery<ACMRecord[]>({
     queryKey: ['acm-records', sourceId],
     queryFn: () =>
       fetch(`/api/acm/records?source_id=${encodeURIComponent(sourceId)}&limit=500`)
@@ -56,6 +56,10 @@ function RecordsReviewPageContent({ sourceId }: { sourceId: string }) {
       router.push('/jobs')
     }
   }, [router, sourceId])
+
+  const handleRecordsDataChanged = useCallback(() => {
+    void refetchRecords()
+  }, [refetchRecords])
 
   return (
     <AppShell>
@@ -86,6 +90,7 @@ function RecordsReviewPageContent({ sourceId }: { sourceId: string }) {
                 <ACMReviewGrid
                   sourceId={sourceId}
                   buildingId={selectedBuilding}
+                  onDataChanged={handleRecordsDataChanged}
                 />
               </CardContent>
             </Card>
