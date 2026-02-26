@@ -109,7 +109,9 @@ async def get_extraction_progress(command_id: str):
     """
     progress = await _get_progress(command_id)
     if not progress:
-        raise HTTPException(status_code=404, detail="No progress found for this command")
+        raise HTTPException(
+            status_code=404, detail="No progress found for this command"
+        )
 
     state = None
     if progress.get("state_json"):
@@ -129,7 +131,9 @@ async def get_extraction_progress(command_id: str):
 
 @router.get("/acm/extraction-progress")
 async def list_extraction_progress(
-    status: Optional[str] = Query(None, description="Filter by status: running, completed, failed"),
+    status: Optional[str] = Query(
+        None, description="Filter by status: running, completed, failed"
+    ),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):

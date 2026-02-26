@@ -301,7 +301,8 @@ class TestHeuristicFallback:
         result = _heuristic_fallback(SAMPLE_REGISTER_CONTENT)
         b00a = next(b for b in result.buildings if b.building_id == "B00A")
         assert b00a.page_start == 10
-        assert b00a.page_end == 11
+        # E20-S1: page_end extended to next building's page_start (12) for boundary overlap
+        assert b00a.page_end == 12
 
     def test_page_range_single_page_building(self):
         from open_notebook.extractors.building_inventory import _heuristic_fallback
@@ -309,7 +310,8 @@ class TestHeuristicFallback:
         result = _heuristic_fallback(SAMPLE_REGISTER_CONTENT)
         b00b = next(b for b in result.buildings if b.building_id == "B00B")
         assert b00b.page_start == 12
-        assert b00b.page_end == 12
+        # E20-S1: page_end extended to next building's page_start (13) for boundary overlap
+        assert b00b.page_end == 13
 
     def test_complexity_simple_no_asbestos(self):
         from open_notebook.extractors.building_inventory import _heuristic_fallback
@@ -694,3 +696,108 @@ class TestLangGraphIntegration:
             '"building_inventory": None' in source_code
             or "'building_inventory': None" in source_code
         )
+
+
+class TestBoundaryOverlap:
+    """E20-S1: Page boundary overlap tests for _apply_boundary_overlap."""
+
+    def test_non_last_building_extended_to_next_page_start(self):
+        """Building A's page_end is extended to include next building's start page."""
+        from open_notebook.extractors.building_inventory import _apply_boundary_overlap
+
+        buildings = [
+            BuildingMeta(
+                building_id="B00A",
+                page_start=1,
+                page_end=11,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B00B",
+                page_start=12,
+                page_end=15,
+                complexity=BuildingComplexity.SIMPLE,
+            ),
+        ]
+        _apply_boundary_overlap(buildings)
+        b00a = next(b for b in buildings if b.building_id == "B00A")
+        # page_end must include the boundary page (B00B starts at 12)
+        assert b00a.page_end == 12
+
+    def test_last_building_page_end_unchanged(self):
+        """Last building's page_end is never modified."""
+        from open_notebook.extractors.building_inventory import _apply_boundary_overlap
+
+        buildings = [
+            BuildingMeta(
+                building_id="B00A",
+                page_start=1,
+                page_end=11,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B00B",
+                page_start=12,
+                page_end=15,
+                complexity=BuildingComplexity.SIMPLE,
+            ),
+        ]
+        _apply_boundary_overlap(buildings)
+        b00b = next(b for b in buildings if b.building_id == "B00B")
+        # Last building page_end stays at original value
+        assert b00b.page_end == 15
+
+    def test_already_past_boundary_page_end_preserved(self):
+        """If page_end already >= next.page_start, it is not reduced."""
+        from open_notebook.extractors.building_inventory import _apply_boundary_overlap
+
+        buildings = [
+            BuildingMeta(
+                building_id="B00A",
+                page_start=1,
+                page_end=13,  # already past next building's start
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+            BuildingMeta(
+                building_id="B00B",
+                page_start=12,
+                page_end=15,
+                complexity=BuildingComplexity.SIMPLE,
+            ),
+        ]
+        _apply_boundary_overlap(buildings)
+        b00a = next(b for b in buildings if b.building_id == "B00A")
+        assert b00a.page_end == 13  # max(13, 12) — not reduced
+
+    def test_single_building_no_change(self):
+        """With only one building, page_end is unchanged."""
+        from open_notebook.extractors.building_inventory import _apply_boundary_overlap
+
+        buildings = [
+            BuildingMeta(
+                building_id="B00A",
+                page_start=1,
+                page_end=10,
+                complexity=BuildingComplexity.COMPLEX,
+            ),
+        ]
+        _apply_boundary_overlap(buildings)
+        assert buildings[0].page_end == 10
+
+    def test_heuristic_includes_boundary_page(self):
+        """After _heuristic_fallback, each building's page_end reaches next building's start."""
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+
+        result = _heuristic_fallback(SAMPLE_REGISTER_CONTENT)
+        buildings_by_id = {b.building_id: b for b in result.buildings}
+
+        # B00A (page_start=10) → next is B00B (page_start=12)
+        assert buildings_by_id["B00A"].page_end >= 12
+
+        # B00B (page_start=12) → next is D01 (page_start=13)
+        assert buildings_by_id["B00B"].page_end >= 13
+
+        # B009 is the last building — page_end unchanged (not extended further)
+        b009 = buildings_by_id["B009"]
+        b009_original_end = 14  # from rooms on page 14
+        assert b009.page_end == b009_original_end

@@ -603,7 +603,9 @@ class TestSemanticSearchEndpoint:
             }
         ]
 
-        response = client.get("/api/acm/search?query=high+risk+asbestos&search_mode=vector")
+        response = client.get(
+            "/api/acm/search?query=high+risk+asbestos&search_mode=vector"
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -686,7 +688,9 @@ class TestSemanticSearchEndpoint:
 
         mock_repo_query.return_value = []
 
-        response = client.get("/api/acm/search?query=test&source_id=source:specific&search_mode=vector")
+        response = client.get(
+            "/api/acm/search?query=test&source_id=source:specific&search_mode=vector"
+        )
 
         assert response.status_code == 200
 

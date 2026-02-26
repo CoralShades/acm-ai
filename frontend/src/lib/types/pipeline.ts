@@ -4,6 +4,26 @@
 
 export type StageId = 'STRUCTURE' | 'PREFLIGHT' | 'ORCHESTRATOR' | 'EXTRACT' | 'VALIDATE' | 'CORRECT' | 'STORE'
 
+export const PIPELINE_STAGE_ORDER: StageId[] = [
+  'STRUCTURE',
+  'PREFLIGHT',
+  'ORCHESTRATOR',
+  'EXTRACT',
+  'VALIDATE',
+  'CORRECT',
+  'STORE',
+]
+
+export const PIPELINE_STAGE_LABELS: Record<StageId, string> = {
+  STRUCTURE: 'Document Structure',
+  PREFLIGHT: 'Preflight',
+  ORCHESTRATOR: 'Orchestrator',
+  EXTRACT: 'Extract',
+  VALIDATE: 'Validate',
+  CORRECT: 'Correct',
+  STORE: 'Store',
+}
+
 export type StageStatus = 'pending' | 'running' | 'complete' | 'failed' | 'skipped'
 
 export type PipelineStatus = 'idle' | 'running' | 'completed' | 'failed' | 'partial'

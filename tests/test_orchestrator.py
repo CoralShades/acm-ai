@@ -951,3 +951,162 @@ class TestACMExtractionOutputOrchestratorStats:
         assert output.orchestrator_stats["total_buildings"] == 2
         assert output.orchestrator_stats["strategy_distribution"]["full_llm"] == 1
         assert output.orchestrator_stats["plan"]["total_buildings"] == 2
+
+
+class TestRegexYieldCheck:
+    """E20-S2: REGEX_ONLY yield check + FULL_LLM escalation tests."""
+
+    def _make_plan(
+        self,
+        estimate: int | None = None,
+        strategy=None,
+    ):
+        from open_notebook.extractors.orchestrator import (
+            BuildingExtractionPlan,
+            ExtractionStrategy,
+        )
+
+        return BuildingExtractionPlan(
+            building_id="B00B",
+            building_name="Gymnasium",
+            page_range=(12, 13),
+            strategy=strategy or ExtractionStrategy.REGEX_ONLY,
+            complexity="simple",
+            acm_item_count_estimate=estimate,
+        )
+
+    @pytest.mark.asyncio
+    async def test_escalates_when_regex_returns_zero_with_estimate(self):
+        """REGEX_ONLY returning 0 records for estimate=5 escalates to FULL_LLM."""
+        from open_notebook.extractors.orchestrator import extract_building
+
+        plan = self._make_plan(estimate=5)
+        mock_records = [
+            ACMExtractionRecord(
+                building_id="B00B",
+                room_id="B00B-R0001",
+                room_name="Gym",
+                product="Floor Tiles",
+                result="Positive",
+            )
+        ]
+
+        with patch(
+            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+            return_value=[],
+        ), patch(
+            "open_notebook.extractors.orchestrator._llm_extract_building",
+            new_callable=AsyncMock,
+            return_value=mock_records,
+        ) as mock_llm:
+            records, stats = await extract_building(plan, "Some building content here", {})
+
+        mock_llm.assert_awaited_once()
+        assert stats.strategy_used == "regex_escalated_to_llm"
+        assert stats.records_extracted == 1
+
+    @pytest.mark.asyncio
+    async def test_no_escalation_when_yield_above_50_percent(self):
+        """REGEX_ONLY returning 3 records for estimate=4 (75%) does NOT escalate."""
+        from open_notebook.extractors.orchestrator import extract_building
+
+        plan = self._make_plan(estimate=4)
+        regex_records = [
+            ACMExtractionRecord(
+                building_id="B00B",
+                room_id=f"B00B-R000{i}",
+                room_name=f"Room {i}",
+                product="Eaves",
+                result="Negative",
+            )
+            for i in range(3)
+        ]
+
+        with patch(
+            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+            return_value=regex_records,
+        ), patch(
+            "open_notebook.extractors.orchestrator._llm_extract_building",
+            new_callable=AsyncMock,
+        ) as mock_llm:
+            records, stats = await extract_building(plan, "content", {})
+
+        mock_llm.assert_not_awaited()
+        assert stats.strategy_used == "regex_only"
+        assert stats.records_extracted == 3
+
+    @pytest.mark.asyncio
+    async def test_escalates_when_no_estimate_and_zero_records_with_content(self):
+        """estimate=None + 0 regex records + non-empty content triggers escalation."""
+        from open_notebook.extractors.orchestrator import extract_building
+
+        plan = self._make_plan(estimate=None)
+        mock_records = [
+            ACMExtractionRecord(
+                building_id="B00B",
+                room_id="B00B-R0001",
+                room_name="Hall",
+                product="Wall Lining",
+                result="Positive",
+            )
+        ]
+
+        with patch(
+            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+            return_value=[],
+        ), patch(
+            "open_notebook.extractors.orchestrator._llm_extract_building",
+            new_callable=AsyncMock,
+            return_value=mock_records,
+        ) as mock_llm:
+            records, stats = await extract_building(plan, "Non-empty content here", {})
+
+        mock_llm.assert_awaited_once()
+        assert stats.strategy_used == "regex_escalated_to_llm"
+
+    @pytest.mark.asyncio
+    async def test_no_escalation_when_empty_content(self):
+        """Empty building content does not trigger escalation even with 0 records."""
+        from open_notebook.extractors.orchestrator import extract_building
+
+        plan = self._make_plan(estimate=None)
+
+        with patch(
+            "open_notebook.extractors.orchestrator._regex_extract_simple_building",
+            return_value=[],
+        ), patch(
+            "open_notebook.extractors.orchestrator._llm_extract_building",
+            new_callable=AsyncMock,
+        ) as mock_llm:
+            records, stats = await extract_building(plan, "   ", {})
+
+        mock_llm.assert_not_awaited()
+        assert stats.strategy_used == "regex_only"
+
+    def test_plan_carries_estimate(self):
+        """BuildingExtractionPlan includes acm_item_count_estimate from inventory."""
+        from open_notebook.extractors.orchestrator import (
+            ExtractionStrategy,
+            plan_extraction,
+        )
+
+        buildings = [
+            BuildingMeta(
+                building_id="B00B",
+                page_start=12,
+                page_end=13,
+                complexity=BuildingComplexity.SIMPLE,
+                acm_item_count_estimate=5,
+            )
+        ]
+        inventory = BuildingInventory(
+            buildings=buildings, processing_groups=[], total_buildings=1
+        )
+        # Use existing helper to create valid PageTaggingResult
+        page_tags = _make_page_tags(
+            [(12, 4, 0.9), (13, 4, 0.9)]  # section_id=4 = ASBESTOS_REGISTER
+        )
+        plan_result = plan_extraction(inventory, page_tags)
+        b00b_plan = next(p for p in plan_result.plans if p.building_id == "B00B")
+        assert b00b_plan.acm_item_count_estimate == 5
+        assert b00b_plan.strategy == ExtractionStrategy.REGEX_ONLY

@@ -92,7 +92,9 @@ async def upload_template(file: UploadFile = File(...)):
             )
         template = parse_bar_template(content, file.filename)
         await template.save()
-        logger.info(f"Uploaded BAR template: {template.filename} ({template.column_count} columns)")
+        logger.info(
+            f"Uploaded BAR template: {template.filename} ({template.column_count} columns)"
+        )
         return _to_response(template)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

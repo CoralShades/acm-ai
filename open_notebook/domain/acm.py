@@ -79,12 +79,38 @@ class ACMRecord(ObjectModel):
     building_name: Optional[str] = None
     building_year: Optional[int] = None
     building_construction: Optional[str] = None
+    building_address: Optional[str] = Field(
+        default=None,
+        description="Street address of the building (from report header/metadata)",
+    )
+    suburb: Optional[str] = Field(
+        default=None,
+        description="Suburb or locality of the building",
+    )
+    postcode: Optional[str] = Field(
+        default=None,
+        description="Postcode of the building location",
+    )
+    building_type: Optional[str] = Field(
+        default=None,
+        description="Type of building (e.g., 'Permanent', 'Demountable', 'Heritage')",
+    )
 
     # Room hierarchy
     room_id: Optional[str] = None
     room_name: Optional[str] = None
     room_area: Optional[float] = None
     area_type: Optional[str] = None  # "Interior", "Exterior", "Grounds"
+    floor_level: Optional[str] = Field(
+        default=None,
+        description="Floor level (e.g., 'Ground', 'Level 1', 'Roof')",
+    )
+
+    # Inspection metadata
+    date_of_inspection: Optional[str] = Field(
+        default=None,
+        description="Date of the inspection/audit (from report header or metadata)",
+    )
 
     # ACM item data
     product: str
@@ -144,6 +170,28 @@ class ACMRecord(ObjectModel):
     )
     date_of_removal: Optional[str] = Field(
         default=None, description="Date when the material was removed (if applicable)"
+    )
+    quantity_removed: Optional[str] = Field(
+        default=None,
+        description="Quantity of material removed (e.g., '10 m²', '5 linear meters')",
+    )
+    removal_notification_no: Optional[str] = Field(
+        default=None,
+        description="Removal notification number for regulatory compliance",
+    )
+    epa_certificate_no: Optional[str] = Field(
+        default=None,
+        description="EPA clearance certificate number after removal",
+    )
+    no_access: Optional[bool] = Field(
+        default=False, description="Record has no access to the location"
+    )
+    smf_present: Optional[str] = Field(
+        default=None, description="Synthetic Mineral Fibre present (Yes/No/Unknown)"
+    )
+    additional_comments: Optional[str] = Field(
+        default=None,
+        description="Additional comments or notes about the ACM item",
     )
 
     # Extraction metadata

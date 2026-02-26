@@ -4,7 +4,8 @@
   "description": "ACM-AI Frontend - Asbestos Containing Material Register Management",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 8503",
+    "dev": "next dev -p 8503",
+    "dev:turbo": "next dev --turbopack -p 8503",
     "build": "next build",
     "start": "next start -p ${PORT:-8502}",
     "lint": "next lint",
@@ -46,8 +47,6 @@
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
     "graphql": "^16.12.0",
-    "lightningcss-linux-x64-gnu": "^1.31.1",
-    "lightningcss-win32-x64-msvc": "^1.31.1",
     "lucide-react": "^0.525.0",
     "nanoid": "^5.1.6",
     "next": "^15.5.9",

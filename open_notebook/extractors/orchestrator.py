@@ -39,7 +39,40 @@ from open_notebook.extractors.page_tagger import (
     SectionTaxonomy,
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
-from open_notebook.graphs.utils import _is_qwen_model, parse_json_response
+from open_notebook.graphs.utils import (
+    _is_qwen_model,
+    is_auth_error,
+    is_provider_schema_error,
+    parse_json_response,
+    provision_extraction_fallback_model,
+)
+
+# ---------------------------------------------------------------------------
+# Free-form JSON normalization helpers
+# ---------------------------------------------------------------------------
+
+
+def _normalize_extraction_json(parsed: dict) -> dict:
+    """Normalize LLM-generated JSON to match ACMExtractionResult schema.
+
+    When using direct ainvoke() (no structured output grammar), the LLM
+    may return fields with the wrong type.  Common mismatches:
+      - ``data_issues`` as a plain string instead of ``List[str]``.
+
+    This function mutates *parsed* in-place and returns it.
+    """
+    for record in parsed.get("records", []):
+        if not isinstance(record, dict):
+            continue
+        di = record.get("data_issues")
+        if isinstance(di, str):
+            record["data_issues"] = [di] if di.strip() else []
+        elif di is None:
+            # LLM often returns "data_issues": null — coerce to empty list so
+            # ACMExtractionRecord(List[str]) validation does not fail.
+            record["data_issues"] = []
+    return parsed
+
 
 # ---------------------------------------------------------------------------
 # Task 1: Pydantic Models (AC #3, #5, #7)
@@ -63,6 +96,7 @@ class BuildingExtractionPlan(BaseModel):
     strategy: ExtractionStrategy
     complexity: str = "complex"
     context_summary: Optional[str] = None
+    acm_item_count_estimate: Optional[int] = None
 
 
 class ExtractionPlan(BaseModel):
@@ -132,7 +166,9 @@ def _select_strategy(
     ]
 
     if not register_pages:
-        return ExtractionStrategy.FULL_LLM  # Use LLM when page tagging can't confirm register location
+        return (
+            ExtractionStrategy.FULL_LLM
+        )  # Use LLM when page tagging can't confirm register location
 
     if building.complexity == BuildingComplexity.SIMPLE:
         return ExtractionStrategy.REGEX_ONLY
@@ -181,6 +217,7 @@ def plan_extraction(
                 if isinstance(building.complexity, BuildingComplexity)
                 else str(building.complexity),
                 context_summary=_build_context_summary(building, document_meta),
+                acm_item_count_estimate=building.acm_item_count_estimate,
             )
         )
 
@@ -337,7 +374,11 @@ def _split_building_by_rooms(
         start = room_matches[i].start()
         # End at the start of the next group (or end of content)
         end_idx = i + max_rooms
-        end = room_matches[end_idx].start() if end_idx < len(room_matches) else len(content)
+        end = (
+            room_matches[end_idx].start()
+            if end_idx < len(room_matches)
+            else len(content)
+        )
         chunks.append(content[start:end])
 
     logger.info(
@@ -397,33 +438,114 @@ async def _llm_extract_building(
 
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content="Extract ACM records from the building content provided."),
+            HumanMessage(
+                content="Extract ACM records from the building content provided."
+            ),
         ]
 
-        if is_qwen:
-            try:
-                raw_response = await model.ainvoke(messages)
-                response_text = (
-                    raw_response.content
-                    if hasattr(raw_response, "content")
-                    else str(raw_response)
+        async def _invoke(active_model, active_is_qwen: bool) -> ACMExtractionResult:
+            if active_is_qwen:
+                response_text = ""
+                try:
+                    raw_response = await active_model.ainvoke(messages)
+                    response_text = (
+                        raw_response.content
+                        if hasattr(raw_response, "content")
+                        else str(raw_response)
+                    )
+                    parsed = parse_json_response(response_text)
+                    _normalize_extraction_json(parsed)
+                    result_local: ACMExtractionResult = (
+                        ACMExtractionResult.model_validate(parsed)
+                    )
+                    logger.info(
+                        f"Building {plan.building_id} Qwen direct JSON: "
+                        f"{len(result_local.records)} records"
+                    )
+                    return result_local
+                except (ValueError, ValidationError) as qwen_err:
+                    logger.error(
+                        f"Building {plan.building_id} Qwen JSON parsing failed: {qwen_err}. "
+                        f"Response preview: {response_text[:200] if response_text else 'N/A'}"
+                    )
+                    raise
+
+            chain = active_model.with_structured_output(ACMExtractionResult)
+            return await chain.ainvoke(messages)
+
+        try:
+            result = await _invoke(model, is_qwen)
+        except Exception as invoke_err:
+            if is_auth_error(invoke_err):
+                failed_model_name = (
+                    getattr(model, "model_name", None)
+                    or getattr(model, "model", None)
+                    or str(model_id or "unknown")
                 )
-                parsed = parse_json_response(response_text)
-                result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
-                logger.info(
-                    f"Building {plan.building_id} Qwen direct JSON: "
-                    f"{len(result.records)} records"
+                fallback_model = await provision_extraction_fallback_model(
+                    str(failed_model_name),
+                    temperature=0.1,
+                    max_tokens=32768,
                 )
-            except (ValueError, ValidationError) as qwen_err:
-                logger.error(
-                    f"Building {plan.building_id} Qwen JSON parsing failed: {qwen_err}. "
-                    f"Response preview: "
-                    f"{response_text[:200] if 'response_text' in dir() else 'N/A'}"
+                if fallback_model is None:
+                    raise
+
+                model = fallback_model
+                is_qwen = _is_qwen_model(model)
+                logger.warning(
+                    "Building extraction auth failure for model "
+                    f"'{failed_model_name}', switched to fallback model "
+                    f"'{getattr(model, 'model_name', getattr(model, 'model', 'unknown'))}'"
                 )
+                result = await _invoke(model, is_qwen)
+            elif is_provider_schema_error(invoke_err):
+                # Provider (e.g. Amazon Bedrock, Google Vertex AI) rejected
+                # the structured output request. Fall back to direct invocation
+                # with manual JSON parsing, mirroring the Qwen pattern.
+                logger.warning(
+                    f"Building {plan.building_id}: Provider schema/compat error "
+                    f"detected ({invoke_err}). Falling back to direct "
+                    "invocation with manual JSON parsing."
+                )
+                pl = state.get("pipeline_logger")
+                if pl:
+                    pl._log(
+                        f"  Provider error detected — falling back to direct "
+                        f"JSON parsing for {plan.building_id}",
+                        level="warning",
+                    )
+                try:
+                    raw_response = await model.ainvoke(messages)
+                    response_text = (
+                        raw_response.content
+                        if hasattr(raw_response, "content")
+                        else str(raw_response)
+                    )
+                    parsed = parse_json_response(response_text)
+                    _normalize_extraction_json(parsed)
+                    result = ACMExtractionResult.model_validate(parsed)
+                    logger.info(
+                        f"Building {plan.building_id} schema-error fallback "
+                        f"succeeded: {len(result.records)} records"
+                    )
+                    if pl:
+                        pl._log(
+                            f"  Fallback succeeded: {len(result.records)} records "
+                            f"from {plan.building_id}"
+                        )
+                except (ValueError, ValidationError) as fallback_err:
+                    logger.error(
+                        f"Building {plan.building_id} schema-error fallback "
+                        f"JSON parsing failed: {fallback_err}"
+                    )
+                    if pl:
+                        pl._log(
+                            f"  Fallback JSON parsing FAILED: {fallback_err}",
+                            level="error",
+                        )
+                    raise
+            else:
                 raise
-        else:
-            chain = model.with_structured_output(ACMExtractionResult)
-            result = await chain.ainvoke(messages)
 
         if len(sub_chunks) > 1:
             logger.info(
@@ -466,6 +588,45 @@ async def extract_building(
                 plan.building_name,
                 page_start=plan.page_range[0],
             )
+
+            # E20-S2: Yield check — escalate to FULL_LLM if regex yield is too low
+            estimate = plan.acm_item_count_estimate or 0
+            should_escalate = False
+            if estimate > 0 and len(records) < estimate * 0.5:
+                should_escalate = True
+                logger.warning(
+                    f"Building {plan.building_id}: REGEX_ONLY yield "
+                    f"{len(records)}/{estimate} < 50% — escalating to FULL_LLM"
+                )
+            elif estimate == 0 and len(records) == 0 and building_content.strip():
+                should_escalate = True
+                logger.warning(
+                    f"Building {plan.building_id}: REGEX_ONLY yield 0 records "
+                    f"(no estimate) with non-empty content — escalating to FULL_LLM"
+                )
+
+            if should_escalate:
+                try:
+                    records = await _llm_extract_building(building_content, plan, state)
+                    for rec in records:
+                        if not rec.building_name and plan.building_name:
+                            rec.building_name = plan.building_name
+                        if not rec.page_number:
+                            rec.page_number = plan.page_range[0]
+                    elapsed = int((time.time() - start) * 1000)
+                    return records, BuildingExtractionStats(
+                        building_id=plan.building_id,
+                        records_extracted=len(records),
+                        pages_processed=pages_processed,
+                        strategy_used="regex_escalated_to_llm",
+                        time_ms=elapsed,
+                    )
+                except Exception as llm_err:
+                    logger.error(
+                        f"Building {plan.building_id} LLM escalation failed: {llm_err}"
+                    )
+                    # Fall through to return the (empty) regex records
+
             elapsed = int((time.time() - start) * 1000)
             return records, BuildingExtractionStats(
                 building_id=plan.building_id,
@@ -488,7 +649,17 @@ async def extract_building(
 
     # FULL_LLM path
     try:
+        pl = state.get("pipeline_logger")
+        if pl:
+            pl._log(
+                f"  FULL_LLM: Building {plan.building_id} ({plan.building_name}) | "
+                f"content_len={len(building_content)} | pages={pages_processed}"
+            )
         records = await _llm_extract_building(building_content, plan, state)
+        if pl:
+            pl._log(
+                f"  FULL_LLM result: {len(records)} records from {plan.building_id}"
+            )
         # Ensure building context propagates to all records
         for rec in records:
             if not rec.building_name and plan.building_name:
@@ -505,6 +676,12 @@ async def extract_building(
         )
     except Exception as e:
         logger.error(f"Building {plan.building_id} extraction failed: {e}")
+        pl = state.get("pipeline_logger")
+        if pl:
+            pl._log(
+                f"  FULL_LLM ERROR: Building {plan.building_id} failed: {e}",
+                level="error",
+            )
         elapsed = int((time.time() - start) * 1000)
         return [], BuildingExtractionStats(
             building_id=plan.building_id,
@@ -659,6 +836,36 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
         extraction_plan,
         total_start,
     )
+
+    # Log per-building errors for debugging zero-record extractions
+    # Also surface to pipeline log (acm-extraction.log) since loguru may not persist
+    pl = state.get("pipeline_logger")
+    for records, stats in results:
+        if stats.errors:
+            logger.error(
+                f"Building {stats.building_id} extraction errors: {stats.errors}"
+            )
+            if pl:
+                pl._log(
+                    f"  ERROR: Building {stats.building_id} errors: {stats.errors}",
+                    level="error",
+                )
+        elif (
+            stats.records_extracted == 0
+            and stats.strategy_used != ExtractionStrategy.SKIP.value
+        ):
+            logger.warning(
+                f"Building {stats.building_id} returned 0 records "
+                f"(strategy={stats.strategy_used}, pages={stats.pages_processed}, "
+                f"time={stats.time_ms}ms) — check content or LLM response"
+            )
+            if pl:
+                pl._log(
+                    f"  WARNING: Building {stats.building_id} returned 0 records "
+                    f"(strategy={stats.strategy_used}, pages={stats.pages_processed}, "
+                    f"time={stats.time_ms}ms)",
+                    level="warning",
+                )
 
     logger.info(
         f"Orchestrator complete for source {source.id}: "

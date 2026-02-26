@@ -10,25 +10,43 @@ from api.models import ACMRecordCreateRequest, ACMRecordUpdateRequest
 
 class TestResultValidator:
     def test_valid_values(self):
-        for val in ["Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"]:
+        for val in [
+            "Positive",
+            "Assumed Positive",
+            "Negative",
+            "Assumed Negative",
+            "Unknown",
+        ]:
             req = ACMRecordCreateRequest(
-                source_id="s:1", school_name="Test", building_id="B1",
-                product="Tiles", material_description="Vinyl", result=val,
+                source_id="s:1",
+                school_name="Test",
+                building_id="B1",
+                product="Tiles",
+                material_description="Vinyl",
+                result=val,
             )
             assert req.result == val
 
     def test_case_insensitive(self):
         req = ACMRecordCreateRequest(
-            source_id="s:1", school_name="Test", building_id="B1",
-            product="Tiles", material_description="Vinyl", result="positive",
+            source_id="s:1",
+            school_name="Test",
+            building_id="B1",
+            product="Tiles",
+            material_description="Vinyl",
+            result="positive",
         )
         assert req.result == "Positive"
 
     def test_invalid_raises(self):
         with pytest.raises(ValidationError, match="result must be one of"):
             ACMRecordCreateRequest(
-                source_id="s:1", school_name="Test", building_id="B1",
-                product="Tiles", material_description="Vinyl", result="Maybe",
+                source_id="s:1",
+                school_name="Test",
+                building_id="B1",
+                product="Tiles",
+                material_description="Vinyl",
+                result="Maybe",
             )
 
 

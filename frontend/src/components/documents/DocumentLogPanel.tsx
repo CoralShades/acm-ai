@@ -6,17 +6,7 @@ import { Button } from '@/components/ui/button'
 import { StageProgressPill } from '@/components/acm/StageProgressPill'
 import { ExtractionLogStream } from '@/components/acm/ExtractionLogStream'
 import { useDocumentLogPanel } from '@/lib/hooks/use-document-log-panel'
-import type { StageId } from '@/lib/types/pipeline'
-
-const STAGE_ORDER: StageId[] = [
-  'STRUCTURE',
-  'PREFLIGHT',
-  'ORCHESTRATOR',
-  'EXTRACT',
-  'VALIDATE',
-  'CORRECT',
-  'STORE',
-]
+import { PIPELINE_STAGE_ORDER } from '@/lib/types/pipeline'
 
 const ACTIVE_STATUSES = ['running', 'queued', 'new']
 
@@ -97,7 +87,7 @@ export function DocumentLogPanel(props: DocumentLogPanelProps) {
       {/* Stage pills */}
       {stages && (
         <div className="flex flex-wrap gap-2">
-          {STAGE_ORDER.map((stageId) => {
+          {PIPELINE_STAGE_ORDER.map((stageId) => {
             const stage = stages[stageId]
             return stage ? <StageProgressPill key={stageId} stage={stage} /> : null
           })}

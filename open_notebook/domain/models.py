@@ -1,3 +1,4 @@
+import os
 from typing import ClassVar, Dict, Optional, Union
 
 from esperanto import (
@@ -198,6 +199,67 @@ class ModelManager:
     def __init__(self):
         pass  # No caching needed
 
+    @staticmethod
+    def _looks_like_openrouter_model_name(model_name: str) -> bool:
+        prefixes = (
+            "anthropic/",
+            "openai/",
+            "google/",
+            "qwen/",
+            "deepseek/",
+            "meta-llama/",
+            "mistralai/",
+            "moonshotai/",
+            "minimax/",
+            "zhipuai/",
+            "microsoft/",
+        )
+        lower = model_name.lower()
+        return any(lower.startswith(prefix) for prefix in prefixes)
+
+    @staticmethod
+    def _normalize_anthropic_model_name(model_name: str) -> str:
+        lower = model_name.lower().strip()
+        mapping = {
+            "claude-sonnet-4.6": "claude-sonnet-4-20250514",
+            "claude-sonnet-4": "claude-sonnet-4-20250514",
+        }
+        return mapping.get(lower, model_name)
+
+    @classmethod
+    def _route_provider_and_name(
+        cls, provider: str, model_name: str
+    ) -> tuple[str, str]:
+        provider_lower = provider.lower().strip()
+        routed_name = model_name.strip()
+
+        if (
+            provider_lower != "openrouter"
+            and cls._looks_like_openrouter_model_name(routed_name)
+            and os.getenv("OPENROUTER_API_KEY")
+        ):
+            logger.info(
+                f"Routing model '{provider}/{model_name}' via openrouter provider"
+            )
+            return "openrouter", routed_name
+
+        if provider_lower == "openrouter" and routed_name.lower().startswith(
+            "anthropic/"
+        ):
+            if not os.getenv("OPENROUTER_API_KEY") and os.getenv("ANTHROPIC_API_KEY"):
+                stripped = routed_name.split("/", 1)[1]
+                normalized = cls._normalize_anthropic_model_name(stripped)
+                logger.info(
+                    f"OpenRouter unavailable for '{model_name}', "
+                    f"routing to anthropic/{normalized}"
+                )
+                return "anthropic", normalized
+
+        if provider_lower == "anthropic":
+            routed_name = cls._normalize_anthropic_model_name(routed_name)
+
+        return provider_lower, routed_name
+
     async def get_model(self, model_id: str, **kwargs) -> Optional[ModelType]:
         """Get a model by ID. Esperanto will cache the actual model instance."""
         if not model_id:
@@ -216,29 +278,33 @@ class ModelManager:
         ]:
             raise ValueError(f"Invalid model type: {model.type}")
 
+        routed_provider, routed_name = self._route_provider_and_name(
+            model.provider, model.name
+        )
+
         # Create model based on type (Esperanto will cache the instance)
         if model.type == "language":
             return AIFactory.create_language(
-                model_name=model.name,
-                provider=model.provider,
+                model_name=routed_name,
+                provider=routed_provider,
                 config=kwargs,
             )
         elif model.type == "embedding":
             return AIFactory.create_embedding(
-                model_name=model.name,
-                provider=model.provider,
+                model_name=routed_name,
+                provider=routed_provider,
                 config=kwargs,
             )
         elif model.type == "speech_to_text":
             return AIFactory.create_speech_to_text(
-                model_name=model.name,
-                provider=model.provider,
+                model_name=routed_name,
+                provider=routed_provider,
                 config=kwargs,
             )
         elif model.type == "text_to_speech":
             return AIFactory.create_text_to_speech(
-                model_name=model.name,
-                provider=model.provider,
+                model_name=routed_name,
+                provider=routed_provider,
                 config=kwargs,
             )
         else:

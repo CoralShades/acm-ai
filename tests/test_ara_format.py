@@ -152,10 +152,7 @@ class TestFormatDetection:
         assert result in ("unknown", "ara")
 
         # Two indicators should match
-        two_indicators = (
-            "Building Name: Test\n"
-            "Presumed Positive\n"
-        )
+        two_indicators = "Building Name: Test\nPresumed Positive\n"
         result = _detect_document_format(two_indicators)
         assert result == "ara"
 
@@ -246,7 +243,9 @@ class TestRegisterSectionExtraction:
 
         # Content with Building Name but no "Asbestos Register" header
         boilerplate = "Some intro text\n" * 100
-        content = boilerplate + "\nBuilding Name:   Mortuary Buildings\n" + "Item data here"
+        content = (
+            boilerplate + "\nBuilding Name:   Mortuary Buildings\n" + "Item data here"
+        )
 
         extracted, was_extracted = _extract_acm_register_section(content)
         assert was_extracted is True
@@ -389,7 +388,12 @@ class TestBuildingInventoryPrompt:
     def test_prompt_has_ara_format(self):
         from pathlib import Path
 
-        prompt_path = Path(__file__).parent.parent / "prompts" / "acm" / "building_inventory.jinja"
+        prompt_path = (
+            Path(__file__).parent.parent
+            / "prompts"
+            / "acm"
+            / "building_inventory.jinja"
+        )
         content = prompt_path.read_text(encoding="utf-8")
 
         assert "FORMAT B:" in content or "ARA Format" in content
@@ -399,7 +403,12 @@ class TestBuildingInventoryPrompt:
     def test_building_extraction_prompt_has_ara_format(self):
         from pathlib import Path
 
-        prompt_path = Path(__file__).parent.parent / "prompts" / "acm" / "building_extraction.jinja"
+        prompt_path = (
+            Path(__file__).parent.parent
+            / "prompts"
+            / "acm"
+            / "building_extraction.jinja"
+        )
         content = prompt_path.read_text(encoding="utf-8")
 
         assert "FORMAT B:" in content or "ARA Format" in content
@@ -409,7 +418,9 @@ class TestBuildingInventoryPrompt:
     def test_extraction_prompt_has_ara_format(self):
         from pathlib import Path
 
-        prompt_path = Path(__file__).parent.parent / "prompts" / "acm" / "extraction.jinja"
+        prompt_path = (
+            Path(__file__).parent.parent / "prompts" / "acm" / "extraction.jinja"
+        )
         content = prompt_path.read_text(encoding="utf-8")
 
         assert "FORMAT B:" in content or "ARA Format" in content

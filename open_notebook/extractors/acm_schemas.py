@@ -11,16 +11,37 @@ import re
 from enum import Enum
 from typing import List, Optional
 
+from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 # Import ExtractionConfidence from domain to avoid duplication
 from open_notebook.domain.acm import ExtractionConfidence
+from open_notebook.extractors.normalizers.enums import (
+    RISK_STATUS_SYNONYMS,
+    normalize_enum_value,
+)
 
 # BAR field enums — canonical allowed values
-RESULT_VALUES = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+RESULT_VALUES = {
+    "Positive",
+    "Assumed Positive",
+    "Negative",
+    "Assumed Negative",
+    "Not Sampled",
+    "No Access",
+    "Unknown",
+}
 FRIABLE_VALUES = {"Friable", "Non Friable"}
 RISK_STATUS_VALUES = {"Low", "Medium", "High"}
-MATERIAL_CONDITION_VALUES = {"Good", "Fair", "Poor", "Damaged"}
+MATERIAL_CONDITION_VALUES = {
+    "Good",
+    "Fair",
+    "Poor",
+    "Damaged",
+    "Unknown",
+    "N/A (negative)",
+    "N/A (assumed negative)",
+}
 AREA_TYPE_VALUES = {"Interior", "Exterior", "Grounds"}
 
 # N/A patterns — LLMs return these for fields not applicable to negative results
@@ -176,7 +197,12 @@ class ACMExtractionRecord(BaseModel):
         default=None, description="Sample identification number"
     )
     sample_result: Optional[str] = Field(
-        default=None, description="Laboratory analysis result"
+        default=None,
+        description="Laboratory analysis result or sampling status: 'Positive', 'Assumed Positive', 'Negative', 'Assumed Negative', 'Not Sampled', 'No Access'",
+    )
+    no_access: bool = Field(
+        default=False,
+        description="True if the room/area was inaccessible and could not be sampled (e.g., 'No Access', 'Height Restriction', 'Restricted Access' entries)",
     )
     identifying_company: Optional[str] = Field(
         default=None, description="Hygiene consulting company name"
@@ -194,6 +220,10 @@ class ACMExtractionRecord(BaseModel):
     floor_level: Optional[str] = Field(
         default=None, description="Floor level (e.g., 'Ground', 'Level 1', 'Roof')"
     )
+    date_of_inspection: Optional[str] = Field(
+        default=None,
+        description="Date of inspection/audit from report header or metadata (e.g., '2024-03-15', 'March 2024')",
+    )
     hygienist_recommendations: Optional[str] = Field(
         default=None, description="Expert recommendations for this material"
     )
@@ -207,21 +237,36 @@ class ACMExtractionRecord(BaseModel):
     date_of_removal: Optional[str] = Field(
         default=None, description="Date of removal if applicable"
     )
+    quantity_removed: Optional[str] = Field(
+        default=None,
+        description="Quantity of material removed (e.g., '10 m²', '5 linear meters')",
+    )
+    removal_notification_no: Optional[str] = Field(
+        default=None,
+        description="Removal notification number for regulatory compliance",
+    )
+    epa_certificate_no: Optional[str] = Field(
+        default=None, description="EPA clearance certificate number after removal"
+    )
+    additional_comments: Optional[str] = Field(
+        default=None,
+        description="Additional comments or notes about the ACM item from the register",
+    )
 
     @field_validator("result", mode="before")
     @classmethod
     def validate_result(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        normalized = v.strip().title()
-        # Handle "Assumed positive" -> "Assumed Positive" etc.
-        if normalized not in RESULT_VALUES:
-            # Try case-insensitive match
-            for valid in RESULT_VALUES:
-                if v.strip().lower() == valid.lower():
-                    return valid
-            raise ValueError(f"result must be one of {sorted(RESULT_VALUES)}, got '{v}'")
-        return normalized
+        stripped = str(v).strip()
+
+        # Case-insensitive canonical match
+        for valid in RESULT_VALUES:
+            if stripped.lower() == valid.lower():
+                return valid
+
+        logger.warning(f"Unknown result value: '{v}' - passing through")
+        return stripped
 
     @field_validator("friable", mode="before")
     @classmethod
@@ -230,14 +275,20 @@ class ACMExtractionRecord(BaseModel):
             return v
         if _is_na(v):
             return None
-        stripped = v.strip()
-        for valid in FRIABLE_VALUES:
-            if stripped.lower() == valid.lower():
-                return valid
-        # Accept common variants
-        if stripped.lower() in ("non-friable", "nonfriable"):
+        stripped = str(v).strip()
+
+        lowered = stripped.lower().replace("-", " ")
+        if lowered in {"friable", "f"}:
+            return "Friable"
+        if lowered in {"non friable", "nonfriable", "nf"}:
             return "Non Friable"
-        raise ValueError(f"friable must be one of {sorted(FRIABLE_VALUES)}, got '{v}'")
+
+        for valid in FRIABLE_VALUES:
+            if lowered == valid.lower():
+                return valid
+
+        logger.warning(f"Unknown friable value: '{v}' - passing through")
+        return stripped
 
     @field_validator("risk_status", mode="before")
     @classmethod
@@ -246,24 +297,43 @@ class ACMExtractionRecord(BaseModel):
             return v
         if _is_na(v):
             return None
-        normalized = v.strip().title()
-        if normalized in RISK_STATUS_VALUES:
-            return normalized
-        raise ValueError(f"risk_status must be one of {sorted(RISK_STATUS_VALUES)}, got '{v}'")
+
+        lookup = str(v).strip().lower()
+        if lookup in RISK_STATUS_SYNONYMS:
+            return RISK_STATUS_SYNONYMS[lookup]
+
+        stripped = str(v).strip()
+        logger.warning(f"Unknown risk_status value: '{v}' - passing through")
+        return stripped
 
     @field_validator("material_condition", mode="before")
     @classmethod
     def validate_material_condition(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
+        stripped = str(v).strip()
+
+        # Check for specific N/A enum values BEFORE generic _is_na() check
+        # (otherwise "N/A (negative)" would be stripped to None)
+        na_condition_values = {
+            "n/a (negative)": "N/A (negative)",
+            "n/a (assumed negative)": "N/A (assumed negative)",
+        }
+        if stripped.lower() in na_condition_values:
+            return na_condition_values[stripped.lower()]
         if _is_na(v):
             return None
-        normalized = v.strip().title()
-        if normalized in MATERIAL_CONDITION_VALUES:
-            return normalized
-        raise ValueError(
-            f"material_condition must be one of {sorted(MATERIAL_CONDITION_VALUES)}, got '{v}'"
-        )
+
+        normalized = normalize_enum_value(stripped, "condition")
+        if normalized is None:
+            return None
+
+        for valid in MATERIAL_CONDITION_VALUES:
+            if normalized.lower() == valid.lower():
+                return valid
+
+        logger.warning(f"Unknown material_condition value: '{v}' - passing through")
+        return stripped
 
     @field_validator("area_type", mode="before")
     @classmethod
@@ -272,10 +342,13 @@ class ACMExtractionRecord(BaseModel):
             return v
         if _is_na(v):
             return None
-        normalized = v.strip().title()
-        if normalized in AREA_TYPE_VALUES:
-            return normalized
-        raise ValueError(f"area_type must be one of {sorted(AREA_TYPE_VALUES)}, got '{v}'")
+        stripped = str(v).strip()
+        for valid in AREA_TYPE_VALUES:
+            if stripped.lower() == valid.lower():
+                return valid
+
+        logger.warning(f"Unknown area_type value: '{v}' - passing through")
+        return stripped
 
     @field_validator("quantity", mode="before")
     @classmethod
@@ -301,6 +374,19 @@ class ACMExtractionRecord(BaseModel):
         default=None, description="Page number where this record was found"
     )
     # Note: table_bbox is added post-extraction by MinerU, not by LLM
+
+    @field_validator("data_issues", mode="before")
+    @classmethod
+    def coerce_data_issues(cls, v: object) -> List[str]:
+        """Coerce None → [] so LLMs returning ``"data_issues": null`` pass validation."""
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(item) for item in v]
+        if isinstance(v, str):
+            stripped = v.strip()
+            return [stripped] if stripped else []
+        return [str(v)]
 
 
 class ACMExtractionResult(BaseModel):

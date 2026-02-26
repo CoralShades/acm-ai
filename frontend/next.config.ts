@@ -30,6 +30,16 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      'pdfjs-dist/build/pdf.mjs$': 'pdfjs-dist/legacy/build/pdf.mjs',
+      'pdfjs-dist/build/pdf.worker.min.mjs$': 'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+    }
+
+    return config
+  },
 };
 
 export default nextConfig;

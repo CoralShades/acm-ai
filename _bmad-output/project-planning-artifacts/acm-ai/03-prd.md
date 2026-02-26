@@ -181,6 +181,16 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-1103 | Application workspace shall provide links back to landing and docs | P0 | App sidebar and command palette include links to landing and docs on marketing host |
 | FR-1104 | Cross-site URLs shall be environment-configurable per deployment | P0 | `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_MARKETING_URL` are documented and used by UI navigation |
 
+### 2.10 UX Loading States (FR-1000 Series)
+
+> **Added:** 2026-02-26 (SCP-20260226 — Post-Audit Fix Sprint)
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1001 | All page transitions shall show shimmer skeleton loading states | P1 | No blank screens during route navigation |
+| FR-1002 | All action buttons shall show loading/disabled state during API calls | P1 | Buttons show spinner during processing |
+| FR-1003 | Extraction progress shall be visible in real-time on job pages | P1 | SSE progress wired to jobs flow |
+| FR-1004 | Jobs pages shall use consistent layout matching ACM Register design | P1 | Same card/grid/toolbar patterns |
 
 
 ### 3.1 Performance (NFR-100 Series)

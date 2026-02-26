@@ -20,12 +20,24 @@ export type ACMRecord = {
     /**
      * BAR taxonomy product type (e.g., 'Vinyl Tiles')
      */
-    acm_product_type?:      null | string;
-    area_type?:             null | string;
+    acm_product_type?: null | string;
+    /**
+     * Additional comments or notes about the ACM item
+     */
+    additional_comments?: null | string;
+    area_type?:           null | string;
+    /**
+     * Street address of the building (from report header/metadata)
+     */
+    building_address?:      null | string;
     building_construction?: null | string;
     building_id:            string;
     building_name?:         null | string;
-    building_year?:         number | null;
+    /**
+     * Type of building (e.g., 'Permanent', 'Demountable', 'Heritage')
+     */
+    building_type?: null | string;
+    building_year?: number | null;
     /**
      * Confidence score for the classification (0.0-1.0)
      */
@@ -43,6 +55,10 @@ export type ACMRecord = {
      * List of data quality issues identified during extraction
      */
     data_issues?: string[] | null;
+    /**
+     * Date of the inspection/audit (from report header or metadata)
+     */
+    date_of_inspection?: null | string;
     /**
      * Date when the material was removed (if applicable)
      */
@@ -67,12 +83,24 @@ export type ACMRecord = {
      * Combined text used to generate the embedding
      */
     embedding_text?: null | string;
-    extent?:         null | string;
+    /**
+     * Contextually enriched text with hierarchical metadata for embedding (E1-S14)
+     */
+    enriched_text?: null | string;
+    /**
+     * EPA clearance certificate number after removal
+     */
+    epa_certificate_no?: null | string;
+    extent?:             null | string;
     /**
      * Confidence level of the extraction: 'high', 'medium', or 'low'
      */
     extraction_confidence?: null | string;
-    friable?:               null | string;
+    /**
+     * Floor level (e.g., 'Ground', 'Level 1', 'Roof')
+     */
+    floor_level?: null | string;
+    friable?:     null | string;
     /**
      * Recommendations from the hygienist for this material
      */
@@ -85,8 +113,24 @@ export type ACMRecord = {
     location?:            null | string;
     material_condition?:  null | string;
     material_description: string;
-    page_number?:         number | null;
-    product:              string;
+    /**
+     * Record has no access to the location
+     */
+    no_access?: boolean | null;
+    /**
+     * Canonical action from recommendation normalization (e.g., 'maintain_in_situ')
+     */
+    normalized_action?: null | string;
+    page_number?:       number | null;
+    /**
+     * Reference to parent ACMTableSection for table-level context
+     */
+    parent_table_id?: null | string;
+    /**
+     * Postcode of the building location
+     */
+    postcode?: null | string;
+    product:   string;
     /**
      * Unique identifier supplied by PSB (if applicable)
      */
@@ -95,6 +139,14 @@ export type ACMRecord = {
      * Amount or extent of the material (e.g., '10 m²', '5 linear meters')
      */
     quantity?: null | string;
+    /**
+     * Quantity of material removed (e.g., '10 m²', '5 linear meters')
+     */
+    quantity_removed?: null | string;
+    /**
+     * Removal notification number for regulatory compliance
+     */
+    removal_notification_no?: null | string;
     /**
      * Removal status (e.g., 'N/A', 'Pending', 'Complete', 'Encapsulated')
      */
@@ -114,7 +166,15 @@ export type ACMRecord = {
     sample_result?: null | string;
     school_code?:   null | string;
     school_name:    string;
-    source_id:      string;
+    /**
+     * Synthetic Mineral Fibre present (Yes/No/Unknown)
+     */
+    smf_present?: null | string;
+    source_id:    string;
+    /**
+     * Suburb or locality of the building
+     */
+    suburb?: null | string;
     /**
      * Table bounding box coordinates: {x, y, width, height, page}
      */

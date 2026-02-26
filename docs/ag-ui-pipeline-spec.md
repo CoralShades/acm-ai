@@ -187,38 +187,58 @@ The CopilotKit runtime acts as a proxy between the frontend React hooks and the 
 **Next.js API Route** (`frontend/src/app/api/copilotkit/route.ts`):
 
 ```typescript
-import { CopilotRuntime, LangGraphAdapter } from "@copilotkit/runtime";
-import { NextRequest } from "next/server";
+// Actual implementation uses HttpAgent from @ag-ui/client (not LangGraphAdapter)
+// to bridge to the FastAPI AG-UI endpoint via the AG-UI protocol.
+import { CopilotRuntime, copilotRuntimeNextJSAppRouterEndpoint, EmptyAdapter } from "@copilotkit/runtime";
+import { HttpAgent } from "@ag-ui/client";
 
-const runtime = new CopilotRuntime();
+export const dynamic = "force-dynamic";
+const BACKEND_URL = process.env.INTERNAL_API_URL || "http://localhost:5055";
 
-export async function POST(req: NextRequest) {
-  const { handleRequest } = runtime;
-  return handleRequest(req, {
-    adapter: new LangGraphAdapter({
-      // Points to the FastAPI backend LangGraph endpoint
-      url: process.env.BACKEND_URL + "/api/copilotkit/langgraph",
-    }),
+export const POST = async (req: Request) => {
+  const supervisorAgent = new HttpAgent({
+    url: `${BACKEND_URL}/api/agui/chat`,
   });
-}
+
+  const runtime = new CopilotRuntime({
+    agents: {
+      default: supervisorAgent.clone(),
+      supervisor: supervisorAgent,
+      // extraction: extractionAgent,  // TODO: wire when backend endpoint exists
+    },
+  });
+
+  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    serviceAdapter: new EmptyAdapter(),
+    endpoint: "/api/copilotkit",
+  });
+
+  return handleRequest(req);
+};
 ```
 
 ### Frontend Provider Setup
 
-Wrap the application (or the extraction-related pages) with `CopilotKitProvider`:
+The dashboard layout wraps all pages with a `CopilotProvider` that connects to `/api/copilotkit`. An error boundary ensures the rest of the app works even if CopilotKit fails to connect.
 
 ```tsx
-// In layout.tsx or a dedicated provider
+// frontend/src/components/providers/CopilotProvider.tsx
 import { CopilotKit } from "@copilotkit/react-core";
 
-export function ExtractionProviders({ children }: { children: React.ReactNode }) {
+export function CopilotProvider({ children }: { children: React.ReactNode }) {
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
+    <CopilotErrorBoundary runtimeUrl="/api/copilotkit">
       {children}
-    </CopilotKit>
+    </CopilotErrorBoundary>
   );
 }
+
+// Used in frontend/src/app/(dashboard)/layout.tsx:
+// <CopilotProvider>{children}</CopilotProvider>
 ```
+
+A separate CRUD chat runtime exists at `/copilot-crud` for write operations, mounted only on the `/jobs/[id]/chat` page to keep write-capable tools isolated from the read-only supervisor.
 
 ### useCopilotAction for Extraction
 
@@ -1369,31 +1389,37 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     return { ... }
 ```
 
-### 11.4 CopilotKit Backend Adapter (Optional)
+### 11.4 CopilotKit Backend Adapter (Implemented)
 
-If CopilotKit integration is pursued beyond SSE, add a LangGraph adapter endpoint:
+The backend AG-UI adapter is implemented in `api/routers/agui_chat.py` using the
+`ag-ui-langgraph` package. Endpoints are registered directly on the FastAPI app in `api/main.py`.
 
-**New file**: `api/routers/copilotkit.py`
+**Existing file**: `api/routers/agui_chat.py`
 
 ```python
-from copilotkit.integrations.fastapi import add_fastapi_endpoint
-from copilotkit import CopilotKitSDK, LangGraphAgent
+from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
 
-from open_notebook.graphs.acm_extraction import graph
+from open_notebook.graphs.supervisor_agent import supervisor_graph
 
-sdk = CopilotKitSDK(
-    agents=[
-        LangGraphAgent(
-            name="acm_extractor",
-            description="Extracts ACM records from PDF documents",
-            graph=graph,
-        )
-    ]
-)
+def register_agui_endpoints(app):
+    agent = LangGraphAgent(
+        name="supervisor",
+        graph=supervisor_graph,
+        description="ACM-AI supervisor agent for asbestos compliance queries",
+    )
+    add_langgraph_fastapi_endpoint(app, agent, "/api/agui/chat")
 
 # In main.py:
-# add_fastapi_endpoint(app, sdk, "/api/copilotkit")
+# register_agui_endpoints(app)        → /api/agui/chat (supervisor)
+# register_crud_agui_endpoint(app)    → /api/agui/crud-chat (CRUD agent)
 ```
+
+The frontend CopilotKit runtime at `/api/copilotkit` bridges to these backend endpoints
+via `HttpAgent` from `@ag-ui/client`. See Section 4 for the frontend route implementation.
+
+> **Note**: A dedicated extraction agent endpoint (for `useCoAgent({ name: 'extraction' })`)
+> is not yet implemented. The extraction pipeline runs via the worker command queue,
+> not through the AG-UI protocol. See Section 5 for the SSE-based extraction event streaming.
 
 ### 11.5 Pydantic Event Models
 
@@ -1701,8 +1727,9 @@ graph TD
 
 | File | Purpose |
 |------|---------|
-| `api/extraction_events.py` | PipelineEventEmitter + SSE infrastructure |
-| `api/routers/copilotkit.py` | CopilotKit LangGraph adapter |
+| `api/routers/extraction_events.py` | PipelineEventEmitter + SSE infrastructure |
+| `api/routers/agui_chat.py` | AG-UI LangGraph adapter (supervisor + CRUD agents) |
+| `api/routers/agui_extraction.py` | AG-UI SSE endpoint for extraction events |
 | `open_notebook/extractors/pipeline_events.py` | Pydantic event models |
 | `scripts/generate_types.py` | Pydantic-to-TypeScript build script |
 | `schemas/generated/` | Intermediate JSON Schema files |

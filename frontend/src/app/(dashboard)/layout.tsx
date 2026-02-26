@@ -10,6 +10,7 @@ import { CopilotProvider } from '@/components/providers/CopilotProvider'
 import { CommandPalette } from '@/components/common/CommandPalette'
 import { KeyboardShortcutSheet } from '@/components/common/KeyboardShortcutSheet'
 import { NavigationShortcuts } from '@/components/common/NavigationShortcuts'
+import { NavigationProgress } from '@/components/common/NavigationProgress'
 import { OfflineBanner } from '@/components/common/OfflineBanner'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { toast } from 'sonner'
@@ -130,17 +131,18 @@ export default function DashboardLayout({
 
   return (
     <ErrorBoundary>
+      <NavigationProgress />
       <OfflineBanner />
       <CopilotProvider>
-      <CreateDialogsProvider>
-        <main id="main-content">
-          {children}
-        </main>
-        <ModalProvider />
-        <CommandPalette />
-        <KeyboardShortcutSheet />
-        <NavigationShortcuts />
-      </CreateDialogsProvider>
+        <CreateDialogsProvider>
+          <main id="main-content">
+            {children}
+          </main>
+          <ModalProvider />
+          <CommandPalette />
+          <KeyboardShortcutSheet />
+          <NavigationShortcuts />
+        </CreateDialogsProvider>
       </CopilotProvider>
     </ErrorBoundary>
   )

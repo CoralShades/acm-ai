@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
+import { useUserModeStore } from '@/lib/stores/user-mode-store'
 import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 import { Logo } from '@/components/brand/Logo'
 import {
@@ -31,8 +32,10 @@ import {
   Menu,
   Upload,
   Command,
+  Shield,
 } from 'lucide-react'
 import { getFilteredNavigation, type NavGroup } from '@/config/navigation'
+import { toast } from 'sonner'
 
 const isAcmMode = process.env.NEXT_PUBLIC_ACM_MODE !== 'false'
 
@@ -41,6 +44,7 @@ export function AppSidebar() {
   const { logout } = useAuth()
   const { isCollapsed, expandedSections, toggleCollapse, toggleSection } =
     useSidebarStore()
+  const { mode, setMode } = useUserModeStore()
   const { openSourceDialog } = useCreateDialogs()
 
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
@@ -146,7 +150,9 @@ export function AppSidebar() {
           <Separator className="my-2" />
 
           {/* Navigation Sections with Collapsible Groups */}
-          {navigation.map((section, index) => {
+          {navigation
+            .filter((section) => mode === 'admin' || section.title !== 'Configure')
+            .map((section, index) => {
             const isExpanded = expandedSections[section.title] ?? true
             const hasActiveItem = isSectionActive(section)
 
@@ -277,6 +283,56 @@ export function AppSidebar() {
                 Navigation, search, ask, theme
               </p>
             </div>
+          )}
+
+          {/* User Mode Toggle */}
+          {!isCollapsed && (
+            <div className="flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-1">
+              <button
+                onClick={() => {
+                  setMode('standard')
+                  if (mode !== 'standard') {
+                    toast.info('Configure features hidden. Switch to Admin to access them.')
+                  }
+                }}
+                className={cn(
+                  'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                  mode === 'standard'
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                )}
+              >
+                Standard
+              </button>
+              <button
+                onClick={() => setMode('admin')}
+                className={cn(
+                  'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                  mode === 'admin'
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
+                )}
+              >
+                Admin
+              </button>
+            </div>
+          )}
+          {isCollapsed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center"
+                  onClick={() => setMode(mode === 'standard' ? 'admin' : 'standard')}
+                  aria-label={`Switch to ${mode === 'standard' ? 'Admin' : 'Standard'} mode`}
+                >
+                  <Shield className={cn('h-4 w-4', mode === 'admin' && 'text-primary')} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                Mode: {mode === 'standard' ? 'Standard' : 'Admin'}
+              </TooltipContent>
+            </Tooltip>
           )}
 
           <div

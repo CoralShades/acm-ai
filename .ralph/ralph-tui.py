@@ -7,6 +7,7 @@ Usage:
     # or shortcut:
     .ralph/ralph-tui.sh
 """
+
 from __future__ import annotations
 
 import os
@@ -40,6 +41,7 @@ from textual.widgets import (
 # ---------------------------------------------------------------------------
 # Data models
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class StoryProgress:
@@ -120,7 +122,11 @@ LOGS_DIR = PROJECT / ".ralph" / "logs"
 def _run(cmd: str, cwd: str | None = None) -> str:
     try:
         r = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=5,
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
             cwd=cwd or str(PROJECT),
         )
         return r.stdout.strip()
@@ -177,7 +183,11 @@ def collect_data() -> DashboardData:
     data.tasks_todo = sum(s.todo for s in data.stories)
 
     # Git
-    data.git_modified = len(_run("git diff --name-only").splitlines()) if _run("git diff --name-only") else 0
+    data.git_modified = (
+        len(_run("git diff --name-only").splitlines())
+        if _run("git diff --name-only")
+        else 0
+    )
     untracked = _run("git ls-files --others --exclude-standard")
     data.new_files = untracked.splitlines() if untracked else []
     data.git_untracked = len(data.new_files)
@@ -205,18 +215,22 @@ def collect_data() -> DashboardData:
     # Processes
     ps_out = _run("ps aux")
     for line in ps_out.splitlines():
-        if any(pat in line for pat in ["ralph_sprint", "claude.*-p", "dangerously-skip"]):
+        if any(
+            pat in line for pat in ["ralph_sprint", "claude.*-p", "dangerously-skip"]
+        ):
             if "grep" in line:
                 continue
             parts = line.split(None, 10)
             if len(parts) >= 11:
-                data.processes.append(ProcessInfo(
-                    pid=int(parts[1]),
-                    cpu=parts[2],
-                    mem=parts[3],
-                    uptime=parts[9],
-                    cmd=parts[10][:120],
-                ))
+                data.processes.append(
+                    ProcessInfo(
+                        pid=int(parts[1]),
+                        cpu=parts[2],
+                        mem=parts[3],
+                        uptime=parts[9],
+                        cmd=parts[10][:120],
+                    )
+                )
 
     # Status flags
     data.claude_running = bool(_run("pgrep -f 'claude.*dangerously-skip'"))
@@ -228,6 +242,7 @@ def collect_data() -> DashboardData:
 # ---------------------------------------------------------------------------
 # Custom widgets
 # ---------------------------------------------------------------------------
+
 
 class StatsBar(Static):
     """Top stats bar showing key metrics."""
@@ -245,8 +260,12 @@ class StatsBar(Static):
 
         # Phase color
         phase_colors = {
-            "init": "cyan", "dev": "green", "review": "yellow",
-            "fix": "dark_orange", "test": "magenta", "complete": "bright_green",
+            "init": "cyan",
+            "dev": "green",
+            "review": "yellow",
+            "fix": "dark_orange",
+            "test": "magenta",
+            "complete": "bright_green",
         }
         pc = phase_colors.get(d.sprint_state.phase, "white")
 
@@ -383,7 +402,9 @@ class RemainingView(Static):
         lines.append(f"[bold]{len(remaining)} tasks remaining:[/]\n")
         for story_id, task in remaining:
             task_short = task[:70] + ".." if len(task) > 70 else task
-            lines.append(f" [red]○[/] [bold yellow]{story_id:<8}[/] {escape(task_short)}")
+            lines.append(
+                f" [red]○[/] [bold yellow]{story_id:<8}[/] {escape(task_short)}"
+            )
 
         self.update("\n".join(lines))
 
@@ -482,9 +503,13 @@ class RalphTUI(App):
 
         # Update subtitle
         if d.claude_running:
-            self.sub_title = f"LIVE | {d.tasks_done}/{d.tasks_total} tasks | {d.last_updated}"
+            self.sub_title = (
+                f"LIVE | {d.tasks_done}/{d.tasks_total} tasks | {d.last_updated}"
+            )
         else:
-            self.sub_title = f"Idle | {d.tasks_done}/{d.tasks_total} tasks | {d.last_updated}"
+            self.sub_title = (
+                f"Idle | {d.tasks_done}/{d.tasks_total} tasks | {d.last_updated}"
+            )
 
     def action_refresh(self) -> None:
         self.refresh_data()

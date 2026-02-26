@@ -53,8 +53,19 @@ def main():
             sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
         )
 
-    # Configure file logging before starting the worker
-    _configure_file_logging()
+    # Patch surreal_commands' configure_logging to preserve our file sinks.
+    # surreal_commands.core.worker.configure_logging() calls logger.remove()
+    # which wipes ALL loguru handlers — including file sinks added earlier.
+    # By monkey-patching, we re-add file sinks AFTER the library's own setup.
+    from surreal_commands.core import worker as sc_worker
+
+    _original_configure_logging = sc_worker.configure_logging
+
+    def _patched_configure_logging(debug: bool = False):
+        _original_configure_logging(debug)
+        _configure_file_logging()  # Re-add file sinks after logger.remove()
+
+    sc_worker.configure_logging = _patched_configure_logging
 
     # Import and run the worker after encoding is configured
     from surreal_commands.cli.worker import main as worker_main

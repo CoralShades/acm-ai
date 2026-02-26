@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { ACMRegisterSkeleton } from '@/components/skeletons/ACMRegisterSkeleton'
@@ -26,6 +26,10 @@ import { ACMStatsCards } from '@/components/acm/ACMStatsCards'
 import { ACMToolbar } from '@/components/acm/ACMToolbar'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import {
+  BuildingTabFilter,
+  getRecordBuildingTabId,
+} from '@/components/acm/BuildingTabFilter'
+import {
   useACMRecords,
   useACMStats,
   useDeleteACMRecord,
@@ -41,6 +45,7 @@ function ACMPageContent() {
   // State
   const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(undefined)
   const [riskFilter, setRiskFilter] = useState<string | undefined>(undefined)
+  const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
   const [searchText, setSearchText] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
@@ -81,7 +86,33 @@ function ACMPageContent() {
 
   // Compute records
   const records = useMemo(() => recordsData?.records || [], [recordsData])
+  const filteredRecords = useMemo(() => {
+    if (!selectedBuilding) {
+      return records
+    }
+
+    return records.filter(
+      (record) => getRecordBuildingTabId(record) === selectedBuilding
+    )
+  }, [records, selectedBuilding])
   const hasRecords = records.length > 0
+
+  useEffect(() => {
+    setSelectedBuilding(null)
+  }, [selectedSourceId])
+
+  useEffect(() => {
+    if (!selectedBuilding) {
+      return
+    }
+
+    const buildingExists = records.some(
+      (record) => getRecordBuildingTabId(record) === selectedBuilding
+    )
+    if (!buildingExists) {
+      setSelectedBuilding(null)
+    }
+  }, [records, selectedBuilding])
 
   if (isLoadingSources) {
     return (
@@ -261,6 +292,14 @@ function ACMPageContent() {
                   onSearchChange={setSearchText}
                 />
 
+                {!isLoadingRecords && (
+                  <BuildingTabFilter
+                    records={records}
+                    selectedBuilding={selectedBuilding}
+                    onBuildingChange={setSelectedBuilding}
+                  />
+                )}
+
                 {/* Loading State */}
                 {isLoadingRecords && (
                   <div className="flex items-center justify-center py-8">
@@ -295,7 +334,7 @@ function ACMPageContent() {
                 {!isLoadingRecords && hasRecords && (
                   <ACMGrid
                     ref={gridRef}
-                    records={records}
+                    records={filteredRecords}
                     isLoading={isLoadingRecords}
                     onEdit={handleEdit}
                     onDelete={handleDelete}

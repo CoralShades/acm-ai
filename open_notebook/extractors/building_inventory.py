@@ -196,6 +196,26 @@ def _find_page_end(section_text: str, page_start: int, rooms: List[RoomMeta]) ->
     return page_start
 
 
+def _apply_boundary_overlap(buildings: List[BuildingMeta]) -> None:
+    """Extend each non-last building's page_end to include the boundary overlap page.
+
+    Setting building N's page_end to at least building N+1's page_start ensures that
+    records appearing on a page shared between two consecutive buildings are captured
+    in building N's extraction window. _extract_page_range_text uses an inclusive
+    page_end, so page_end = next.page_start includes the full boundary page. The last
+    building's page_end is unchanged.
+
+    Story: E20-S1 Page Boundary Fix.
+    """
+    sorted_buildings = sorted(buildings, key=lambda b: b.page_start)
+    for i, building in enumerate(sorted_buildings):
+        if i + 1 < len(sorted_buildings):
+            next_page_start = sorted_buildings[i + 1].page_start
+            building.page_end = max(
+                building.page_end or building.page_start, next_page_start
+            )
+
+
 def _create_processing_groups(buildings: List[BuildingMeta]) -> List[ProcessingGroup]:
     """Create processing groups targeting 3-5 pages per group (Task 3.6).
 
@@ -343,7 +363,9 @@ def _heuristic_fallback(
             page_start = _find_page_at_position(content, pos)
 
             # Get section text (up to next building)
-            next_pos = building_matches[i + 1][0] if i + 1 < len(building_matches) else None
+            next_pos = (
+                building_matches[i + 1][0] if i + 1 < len(building_matches) else None
+            )
             section_text = _get_building_section(content, pos, next_pos)
 
             # Extract rooms
@@ -378,8 +400,12 @@ def _heuristic_fallback(
             )
             for i, (name, pos) in enumerate(ara_buildings):
                 # Use building name as ID (ARA doesn't use coded IDs)
-                next_pos = ara_buildings[i + 1][1] if i + 1 < len(ara_buildings) else None
-                section_end = _find_ara_building_section_end(content, name, pos, next_pos)
+                next_pos = (
+                    ara_buildings[i + 1][1] if i + 1 < len(ara_buildings) else None
+                )
+                section_end = _find_ara_building_section_end(
+                    content, name, pos, next_pos
+                )
                 section_text = content[pos:section_end]
 
                 page_start = _find_page_at_position(content, pos)
@@ -399,6 +425,9 @@ def _heuristic_fallback(
                         acm_item_count_estimate=acm_count if acm_count > 0 else None,
                     )
                 )
+
+    # Extend boundary pages so records on shared pages are captured (E20-S1)
+    _apply_boundary_overlap(buildings)
 
     # Create processing groups
     processing_groups = _create_processing_groups(buildings)
@@ -532,6 +561,10 @@ async def compile_building_inventory(
                     f"Merged {added} heuristic buildings into LLM inventory "
                     f"(total: {inventory.total_buildings})"
                 )
+
+        # Extend boundary pages (E20-S1) and rebuild groups
+        _apply_boundary_overlap(inventory.buildings)
+        inventory.processing_groups = _create_processing_groups(inventory.buildings)
 
         logger.info(
             f"Building inventory compiled: {inventory.total_buildings} buildings, "

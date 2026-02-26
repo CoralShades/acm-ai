@@ -61,9 +61,7 @@ class ExtractionSettings(ObjectModel):
         Creates default settings if none exist.
         """
         try:
-            result = await repo_query(
-                "SELECT * FROM extraction_settings LIMIT 1"
-            )
+            result = await repo_query("SELECT * FROM extraction_settings LIMIT 1")
             if result:
                 return cls.model_validate(result[0])
             # Create default settings

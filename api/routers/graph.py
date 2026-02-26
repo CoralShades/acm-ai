@@ -166,8 +166,10 @@ def _build_graph_from_records(
                     "friable": record.get("friable"),
                     "condition": record.get("material_condition"),
                     "risk_color": (
-                        "#ef4444" if risk == "high"
-                        else "#eab308" if risk == "medium"
+                        "#ef4444"
+                        if risk == "high"
+                        else "#eab308"
+                        if risk == "medium"
                         else "#22c55e"
                     ),
                 },

@@ -6,6 +6,12 @@ import { acmApi } from '@/lib/api/acm'
 import { ACM_QUERY_KEYS } from './use-acm'
 import { useToast } from './use-toast'
 import type { ProgressToastController } from '@/lib/toast-patterns'
+import {
+  PIPELINE_STAGE_LABELS,
+  PIPELINE_STAGE_ORDER,
+  type PipelineRunState,
+  type StageId,
+} from '@/lib/types/pipeline'
 
 export type ExtractionPhase = 'idle' | 'extracting' | 'completed' | 'failed'
 
@@ -13,13 +19,88 @@ interface ExtractionStatus {
   phase: ExtractionPhase
   recordsCreated: number | undefined
   errorMessage: string | undefined
+  currentStageId: StageId | undefined
+  currentStageLabel: string | undefined
+  currentStageIndex: number | undefined
+  totalStages: number
+  progressPercent: number | undefined
   startTracking: (commandId: string, options?: { showToast?: boolean; sourceName?: string }) => void
   dismiss: () => void
 }
 
 const SESSION_KEY_PREFIX = 'acm-extraction-'
 
-export function useExtractionStatus(sourceId: string): ExtractionStatus {
+interface StageSnapshot {
+  stageId: StageId | undefined
+  stageIndex: number | undefined
+  progressPercent: number | undefined
+}
+
+function getStageSnapshot(state: PipelineRunState | undefined): StageSnapshot {
+  if (!state) {
+    return {
+      stageId: undefined,
+      stageIndex: undefined,
+      progressPercent: undefined,
+    }
+  }
+
+  const runningStageId = PIPELINE_STAGE_ORDER.find(
+    (stageId) => state.stages[stageId]?.status === 'running'
+  )
+  if (runningStageId) {
+    const runningIndex = PIPELINE_STAGE_ORDER.indexOf(runningStageId)
+    const runningProgress = state.stages[runningStageId]?.progress ?? 0
+    const normalizedProgress =
+      runningProgress > 1 ? runningProgress / 100 : runningProgress
+    const boundedProgress = Math.min(1, Math.max(0, normalizedProgress))
+    const stageFraction =
+      (runningIndex + boundedProgress) / PIPELINE_STAGE_ORDER.length
+    const progressPercent = Math.min(100, Math.max(0, Math.round(stageFraction * 100)))
+    return {
+      stageId: runningStageId,
+      stageIndex: runningIndex + 1,
+      progressPercent,
+    }
+  }
+
+  const failedStageId = PIPELINE_STAGE_ORDER.find(
+    (stageId) => state.stages[stageId]?.status === 'failed'
+  )
+  if (failedStageId) {
+    const failedIndex = PIPELINE_STAGE_ORDER.indexOf(failedStageId)
+    return {
+      stageId: failedStageId,
+      stageIndex: failedIndex + 1,
+      progressPercent: Math.round((failedIndex / PIPELINE_STAGE_ORDER.length) * 100),
+    }
+  }
+
+  const completedStages = PIPELINE_STAGE_ORDER.filter(
+    (stageId) => state.stages[stageId]?.status === 'complete'
+  )
+  if (completedStages.length > 0) {
+    const lastCompleted = completedStages[completedStages.length - 1]
+    return {
+      stageId: lastCompleted,
+      stageIndex: PIPELINE_STAGE_ORDER.indexOf(lastCompleted) + 1,
+      progressPercent: Math.round(
+        (completedStages.length / PIPELINE_STAGE_ORDER.length) * 100
+      ),
+    }
+  }
+
+  return {
+    stageId: PIPELINE_STAGE_ORDER[0],
+    stageIndex: 1,
+    progressPercent: 0,
+  }
+}
+
+export function useExtractionStatus(
+  sourceId: string,
+  initialCommandId?: string
+): ExtractionStatus {
   const queryClient = useQueryClient()
   const { createProgress } = useToast()
   const sessionKey = `${SESSION_KEY_PREFIX}${sourceId}`
@@ -37,6 +118,17 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
 
   const [recordsCreated, setRecordsCreated] = useState<number | undefined>(undefined)
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
+  const [currentStageId, setCurrentStageId] = useState<StageId | undefined>(undefined)
+  const [currentStageIndex, setCurrentStageIndex] = useState<number | undefined>(undefined)
+  const [progressPercent, setProgressPercent] = useState<number | undefined>(undefined)
+
+  useEffect(() => {
+    if (!initialCommandId || commandId || phase !== 'idle') return
+
+    setCommandId(initialCommandId)
+    setPhase('extracting')
+    sessionStorage.setItem(sessionKey, initialCommandId)
+  }, [commandId, initialCommandId, phase, sessionKey])
 
   const { data: jobStatus } = useQuery({
     queryKey: ['extraction-job', commandId],
@@ -56,6 +148,11 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
 
   useEffect(() => {
     if (!jobStatus || phase !== 'extracting') return
+
+    const stageSnapshot = getStageSnapshot(jobStatus.progress?.state)
+    setCurrentStageId(stageSnapshot.stageId)
+    setCurrentStageIndex(stageSnapshot.stageIndex)
+    setProgressPercent(stageSnapshot.progressPercent)
 
     if (jobStatus.status === 'completed') {
       setPhase('completed')
@@ -100,6 +197,9 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
       setPhase('extracting')
       setRecordsCreated(undefined)
       setErrorMessage(undefined)
+      setCurrentStageId(undefined)
+      setCurrentStageIndex(undefined)
+      setProgressPercent(undefined)
       sessionStorage.setItem(sessionKey, newCommandId)
 
       if (options?.showToast) {
@@ -120,6 +220,9 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
     setCommandId(null)
     setRecordsCreated(undefined)
     setErrorMessage(undefined)
+    setCurrentStageId(undefined)
+    setCurrentStageIndex(undefined)
+    setProgressPercent(undefined)
     sessionStorage.removeItem(sessionKey)
 
     if (toastControllerRef.current) {
@@ -128,5 +231,18 @@ export function useExtractionStatus(sourceId: string): ExtractionStatus {
     }
   }, [sessionKey])
 
-  return { phase, recordsCreated, errorMessage, startTracking, dismiss }
+  return {
+    phase,
+    recordsCreated,
+    errorMessage,
+    currentStageId,
+    currentStageLabel: currentStageId
+      ? PIPELINE_STAGE_LABELS[currentStageId]
+      : undefined,
+    currentStageIndex,
+    totalStages: PIPELINE_STAGE_ORDER.length,
+    progressPercent,
+    startTracking,
+    dismiss,
+  }
 }

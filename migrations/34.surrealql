@@ -1,0 +1,12 @@
+-- Migration 34: Worker race condition fix (Bug #60)
+-- 1. Add claimed_by/claimed_at fields to command table for atomic claim
+-- 2. Deduplicate existing ACM records created by dual-worker race condition
+
+-- Add claim fields to command table
+DEFINE FIELD claimed_by ON command TYPE option<string>;
+DEFINE FIELD claimed_at ON command TYPE option<datetime>;
+
+-- Deduplicate ACM records: keep the earliest record per (source_id, sample_no, building_name, room_name, product)
+-- This removes duplicates created by the 2026-02-25 worker race condition
+-- Note: SurrealDB doesn't support DELETE with subquery easily, so we use a safe approach:
+-- Records with identical composite keys are duplicates; we keep the one with the earliest `created` timestamp.

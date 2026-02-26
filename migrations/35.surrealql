@@ -1,0 +1,5 @@
+-- Migration 35: Add floor_level and date_of_inspection to acm_record
+-- Part of Bug #61 (field coverage Phase 1)
+
+DEFINE FIELD floor_level ON acm_record TYPE option<string>;
+DEFINE FIELD date_of_inspection ON acm_record TYPE option<string>;

@@ -1,0 +1,19 @@
+-- Migration 32: Add review_status to source, clean acm_record slate
+-- WARNING: DESTRUCTIVE -- deletes all acm_record rows
+-- Allowed values: 'extracting' | 'pending_review' | 'building_review' | 'acm_review' | 'published'
+
+DEFINE FIELD review_status ON TABLE source TYPE option<string> DEFAULT 'pending_review';
+
+DEFINE INDEX idx_source_review_status ON source FIELDS review_status;
+
+UPDATE source SET review_status = 'pending_review';
+
+DELETE acm_record;
+
+-- E19-S5: Building out-of-scope flag for wizard step 1
+DEFINE FIELD building_out_of_scope ON site_config TYPE option<bool> DEFAULT false;
+DEFINE FIELD building_out_of_scope_comments ON site_config TYPE option<string>;
+
+-- E19-S6: Additional ACM record fields for wizard step 2
+DEFINE FIELD no_access ON acm_record TYPE option<bool> DEFAULT false;
+DEFINE FIELD smf_present ON acm_record TYPE option<string>;

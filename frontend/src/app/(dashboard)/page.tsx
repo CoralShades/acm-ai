@@ -3,6 +3,7 @@
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
+import { AppShell } from '@/components/layout/AppShell'
 import { BentoGrid } from '@/components/ui/bento-grid';
 import {
   BentoCard,
@@ -63,7 +64,7 @@ function DashboardPageContent() {
   }
 
   return (
-    <div className="p-6">
+    <div className="flex h-full w-full max-w-none flex-col overflow-y-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
@@ -178,7 +179,7 @@ function DashboardPageContent() {
           </BentoCardContent>
           <BentoCardFooter>
             <Link href="/acm" className="text-sm text-primary hover:underline">
-              View all ACM data &rarr;
+              View all ACM data →
             </Link>
           </BentoCardFooter>
         </BentoCard>
@@ -196,7 +197,7 @@ function DashboardPageContent() {
           </BentoCardContent>
           <BentoCardFooter>
             <Link href="/sources" className="text-sm text-primary hover:underline">
-              View all sources &rarr;
+              View all sources →
             </Link>
           </BentoCardFooter>
         </BentoCard>
@@ -243,7 +244,9 @@ export default function DashboardPage() {
         />
       )}
     >
-      <DashboardPageContent />
+      <AppShell>
+        <DashboardPageContent />
+      </AppShell>
     </ErrorBoundary>
   )
 }

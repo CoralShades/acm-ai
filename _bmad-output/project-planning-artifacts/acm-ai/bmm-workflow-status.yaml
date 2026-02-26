@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-23"
+updated: "2026-02-26"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -56,6 +56,41 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-02-26: Epic 22 Post-Audit Remediation — COMPLETE
+#   - E22-S1: Schema resilience (normalize instead of reject)
+#   - E22-S2: Dashboard layout fix (sidebar restoration)
+#   - E22-S3: Job detail redesign (source layout with PDF + chat)
+#   - E22-S4: Building tabs everywhere (reusable component)
+#   - E22-S5: Extraction streaming polish (progress feedback + navigation)
+# 2026-02-26: SCP-20260226B — Epic 22 Post Phase 6+7 Remediation
+#   - 5 stories drafted for schema resilience, dashboard layout, job detail redesign,
+#     building tabs, and extraction streaming polish
+#   - Triggered by: user testing screenshots showing 10 remaining issues
+#   - Dependencies: E22-S1 (backend) runs first, S2-S4 (frontend) in parallel, S5 last
+# 2026-02-26: PR #64 review follow-up — unresolved comments resolved
+#   - Consolidated duplicated STAGE_ORDER/STAGE_LABELS into shared pipeline constants
+#   - Clamped extraction progress math in use-extraction-status for 0-100 safety
+#   - Added ARIA progressbar semantics to Jobs card extraction progress indicator
+#   - Reconciled E21 story artifacts (S1/S2/S3) to done in docs/sprint-artifacts
+# 2026-02-26: Epic 21 UX Loading States & Layout Consistency — COMPLETE
+#   - E21-S1: loading.tsx Suspense boundaries for all routes, shimmer skeletons
+#   - E21-S2: Jobs pages aligned to ACM Register layout patterns
+#   - E21-S3: Upload→extract redirect, SSE progress in job cards, building review extraction banner
+#   - Dead code: use-extraction-agent.ts removed (Phase 5 finding)
+#   - Upload flow: now routes to /extract page (shows live progress) instead of /review/buildings
+# 2026-02-26: Post-Audit Fix Sprint + UX Loading States
+#   - SCP-20260226: 3 bug fixes from audit + Epic 21 (3 stories)
+#   - E21-S1: Global loading states and transition feedback
+#   - E21-S2: Jobs pages layout consistency (match ACM Register design)
+#   - E21-S3: Extraction progress real-time feedback (wire existing SSE)
+#   - Bug fixes: Lightning CSS build, stale commands, AG-UI path alignment
+#   - Sprint status: 148 stories total, 132 done, 6 new (3 E21 + 3 bugs)
+# 2026-02-25: E19/E20 Post-Review Stabilization
+#   - Implemented E19-S2 fixes: upload redirect to /jobs/{id}/review/buildings, Jobs detail route alignment
+#   - Implemented E19-S6 fixes: Unassigned tab, All Records label, merge modal integration, missing ACM fields
+#   - Implemented E19-S7 fixes: inline title edit, extraction log tab integration, CSV endpoint alignment
+#   - Implemented extraction reliability fix: auth-failure model fallback routing (Sonnet/OpenRouter + Ollama/Qwen compatibility)
+#   - Added jobs route loading + prefetching for improved perceived navigation responsiveness
 # 2026-02-23: E20 - Marketing-App Cross-Site Navigation & Domain Cutover
 #   - PRD updated to v1.6 with FR-1100 cross-site navigation requirements
 #   - Architecture updated to v1.3 with multi-project Vercel topology and env contract
@@ -129,4 +164,3 @@ workflow_status:
 #   - Architecture 5.2 rewritten, PRD 5.7 + FR-107 updated
 #   - Change scope: Moderate | Risk: Low | Path: Direct Adjustment
 #   - Proposal: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
-

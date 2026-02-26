@@ -93,7 +93,11 @@ def find_port_owner(port: int) -> PortConflict | None:
                         if "pid=" in line:
                             pid_str = line.split("pid=")[1].split(",")[0]
                             pid = int(pid_str)
-                            name_part = line.split('(("')[1].split('"')[0] if '(("' in line else None
+                            name_part = (
+                                line.split('(("')[1].split('"')[0]
+                                if '(("' in line
+                                else None
+                            )
                             return PortConflict(
                                 port=port, pid=pid, process_name=name_part
                             )

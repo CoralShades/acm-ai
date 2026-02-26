@@ -32,6 +32,7 @@ class ExtractionSettingsUpdate(BaseModel):
     enable_corrective_rag: bool | None = None
     max_correction_attempts: int | None = Field(default=None, ge=1, le=10)
 
+
 router = APIRouter()
 
 
@@ -128,9 +129,7 @@ def _extraction_to_response(s: ExtractionSettings) -> ExtractionSettingsResponse
     )
 
 
-@router.get(
-    "/settings/extraction", response_model=ExtractionSettingsResponse
-)
+@router.get("/settings/extraction", response_model=ExtractionSettingsResponse)
 async def get_extraction_settings():
     """Get extraction pipeline settings."""
     try:
@@ -140,9 +139,7 @@ async def get_extraction_settings():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put(
-    "/settings/extraction", response_model=ExtractionSettingsResponse
-)
+@router.put("/settings/extraction", response_model=ExtractionSettingsResponse)
 async def update_extraction_settings(update: ExtractionSettingsUpdate):
     """Update extraction pipeline settings."""
     try:
@@ -155,9 +152,7 @@ async def update_extraction_settings(update: ExtractionSettingsUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post(
-    "/settings/extraction/reset", response_model=ExtractionSettingsResponse
-)
+@router.post("/settings/extraction/reset", response_model=ExtractionSettingsResponse)
 async def reset_extraction_settings():
     """Reset extraction settings to defaults."""
     try:
@@ -184,9 +179,7 @@ class StageModelAssignment(BaseModel):
 STAGE_RECORD_ID = "extraction_stage_models:⟨active⟩"
 
 
-@router.get(
-    "/settings/extraction/stage-models", response_model=StageModelAssignment
-)
+@router.get("/settings/extraction/stage-models", response_model=StageModelAssignment)
 async def get_extraction_stage_models():
     """Get per-stage model assignments for extraction pipeline."""
     try:
@@ -207,9 +200,7 @@ async def get_extraction_stage_models():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put(
-    "/settings/extraction/stage-models", response_model=StageModelAssignment
-)
+@router.put("/settings/extraction/stage-models", response_model=StageModelAssignment)
 async def update_extraction_stage_models(update: StageModelAssignment):
     """Update per-stage model assignments."""
     try:
@@ -325,9 +316,7 @@ class ProcessingConfigUpdate(BaseModel):
 PROCESSING_RECORD_ID = "processing_config:active"
 
 
-@router.get(
-    "/settings/processing", response_model=ProcessingConfigResponse
-)
+@router.get("/settings/processing", response_model=ProcessingConfigResponse)
 async def get_processing_config():
     """Get processing pipeline configuration."""
     try:
@@ -354,9 +343,7 @@ async def get_processing_config():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put(
-    "/settings/processing", response_model=ProcessingConfigResponse
-)
+@router.put("/settings/processing", response_model=ProcessingConfigResponse)
 async def update_processing_config(update: ProcessingConfigUpdate):
     """Update processing pipeline configuration (partial update)."""
     try:

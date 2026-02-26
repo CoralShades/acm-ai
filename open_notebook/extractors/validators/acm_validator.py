@@ -12,6 +12,7 @@ from typing import Optional
 from loguru import logger
 from pydantic import BaseModel
 
+from open_notebook.extractors.normalizers.enums import normalize_enum_value
 from open_notebook.extractors.parsers.config_loader import load_field_schema
 
 
@@ -49,6 +50,14 @@ _ENUM_FIELD_MAP: dict[str, str] = {
     "disturbance_potential": "DisturbancePotential",
 }
 
+# Enum field name → enum normalizer field mapping
+_ENUM_NORMALIZER_FIELD_MAP: dict[str, str] = {
+    "sample_result": "sample_result",
+    "material_condition": "condition",
+    "friable": "friability",
+    "disturbance_potential": "disturbance_potential",
+}
+
 
 _cached_enums: Optional[dict[str, list[str]]] = None
 
@@ -64,6 +73,43 @@ def _load_enum_values() -> dict[str, list[str]]:
     config = load_field_schema()
     _cached_enums = config.enums
     return _cached_enums
+
+
+def _append_data_issue(record: dict, message: str) -> None:
+    """Append a data issue to record without creating duplicates."""
+    raw_issues = record.get("data_issues")
+
+    if isinstance(raw_issues, list):
+        issues = raw_issues
+    elif raw_issues is None:
+        issues = []
+        record["data_issues"] = issues
+    elif isinstance(raw_issues, str):
+        stripped = raw_issues.strip()
+        issues = [stripped] if stripped else []
+        record["data_issues"] = issues
+    else:
+        issues = [str(raw_issues)]
+        record["data_issues"] = issues
+
+    if message not in issues:
+        issues.append(message)
+
+
+def _normalize_enum_for_validation(field_name: str, raw_value: str) -> Optional[str]:
+    """Normalize enum values while preserving passthrough for unknowns."""
+    if field_name == "friable":
+        lowered = raw_value.strip().lower().replace("-", " ")
+        if lowered in {"friable", "f"}:
+            return "Friable"
+        if lowered in {"non friable", "nonfriable", "nf"}:
+            return "Non Friable"
+        if lowered in {"none", "n/a", "na", "unknown", "-"}:
+            return None
+        return raw_value.strip()
+
+    normalizer_field = _ENUM_NORMALIZER_FIELD_MAP.get(field_name, field_name)
+    return normalize_enum_value(raw_value, normalizer_field)
 
 
 def validate_enum_fields(record: dict) -> list[ValidationIssue]:
@@ -86,6 +132,26 @@ def validate_enum_fields(record: dict) -> list[ValidationIssue]:
         if value is None or value == "":
             continue
 
+        raw_value = str(value).strip()
+        if not raw_value:
+            continue
+
+        normalized_value = _normalize_enum_for_validation(field_name, raw_value)
+
+        if normalized_value != raw_value:
+            record[field_name] = normalized_value
+            _append_data_issue(
+                record,
+                f"Normalized {field_name}: {raw_value} -> {normalized_value}",
+            )
+            logger.info(
+                f"Normalized enum field {field_name}: '{raw_value}' -> "
+                f"'{normalized_value}'"
+            )
+
+        if normalized_value is None:
+            continue
+
         valid_values = enums.get(enum_key, [])
         if not valid_values:
             continue
@@ -94,17 +160,39 @@ def validate_enum_fields(record: dict) -> list[ValidationIssue]:
         def _norm(s: str) -> str:
             return s.strip().lower().replace("-", " ")
 
-        value_norm = _norm(value)
-        if not any(_norm(v) == value_norm for v in valid_values):
-            issues.append(
-                ValidationIssue(
-                    field_name=field_name,
-                    current_value=value,
-                    expected_format="enum",
-                    valid_values=valid_values,
-                    issue_type="enum_mismatch",
-                )
+        value_norm = _norm(str(normalized_value))
+
+        canonical_value = None
+        for valid in valid_values:
+            if _norm(valid) == value_norm:
+                canonical_value = valid
+                break
+
+        if canonical_value is not None:
+            if field_name == "friable":
+                record[field_name] = normalized_value
+            else:
+                record[field_name] = canonical_value
+            continue
+
+        _append_data_issue(
+            record,
+            f"Unrecognized {field_name}: {normalized_value}",
+        )
+        logger.warning(
+            f"Unrecognized enum field {field_name}: '{normalized_value}' "
+            f"(raw='{raw_value}')"
+        )
+
+        issues.append(
+            ValidationIssue(
+                field_name=field_name,
+                current_value=str(normalized_value),
+                expected_format="enum",
+                valid_values=valid_values,
+                issue_type="enum_mismatch",
             )
+        )
 
     return issues
 

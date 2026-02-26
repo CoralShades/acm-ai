@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-23)
-> **Status:** Feature Complete + E20 Navigation/Domain Integration implemented
-> **Change Log:** 2026-02-23 — Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 — Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted
+> **Date:** 2025-12-07 (Updated: 2026-02-26)
+> **Status:** Feature Complete + E22 Post-Audit Remediation Planned
+> **Change Log:** 2026-02-26 — Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 — Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 — Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 — Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
 
@@ -27,7 +27,11 @@
 | E14 | UX & Enterprise Readiness | P0/P1 | 11 | Done |
 | E15 | Extraction Monitor & Live Logging UI | P0 | 2 | Done |
 | E16 | UX Enhancement Sprint | P0/P1 | 3 | Done |
-| E17 | Live Extraction Intelligence Ã¢â‚¬â€ AG-UI + A2A + Observability | P0/P1 | 6 | Done |`r`n| E19 | Marketing & Stakeholder Presentation | P1 | 1 | Done |`r`n| E20 | Marketing-App Cross-Site Navigation & Domain Cutover | P0 | 2 | Done |
+| E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | Done |
+| E19 | Marketing & Stakeholder Presentation | P1 | 1 | Done |
+| E20 | Marketing-App Cross-Site Navigation & Domain Cutover | P0 | 2 | Done |
+| E21 | UX Loading States & Layout Consistency | P1 | 3 | Drafted |
+| E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Drafted |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2187,3 +2191,197 @@ E10-S1 (independent)
 **Key Files:** `frontend/src/config/navigation.ts`, `frontend/src/components/layout/AppSidebar.tsx`, `frontend/src/components/common/CommandPalette.tsx`, `frontend/src/lib/site-urls.ts`, `docs/marketing-site/deployment.md`
 
 **Story File:** `docs/sprint-artifacts/e20-s2-app-to-marketing-navigation-cutover.md`
+
+---
+
+## Epic 21: UX Loading States & Layout Consistency
+
+> **Added:** 2026-02-26 (SCP-20260226)
+> **Priority:** P1
+> **Status:** Drafted (0/3 stories)
+
+### E21-S1: Global Loading States & Transition Feedback (P1)
+**As a** compliance officer,
+**I want** visual feedback when pages load, buttons process, and extraction runs,
+**So that** the app doesn't feel broken or unresponsive.
+
+**Acceptance Criteria:**
+- [ ] Button click states: all primary action buttons show spinner/disabled during API calls
+- [ ] Page transitions: shimmer skeleton appears immediately when navigating between routes
+- [ ] Extraction feedback: when extraction is running, show animated progress indicator
+- [ ] Upload feedback: after file upload, show processing state before redirect
+- [ ] API loading: all data-fetching components show skeleton
+- [ ] Empty → Loading → Content → Error state machine for every page
+- [ ] No blank white screens during any navigation
+
+**Specific Implementation:**
+- Reuse existing Skeleton components from E14-S4
+- Add React Suspense boundaries at route level in app/(dashboard)/layout.tsx
+- Add loading.tsx files for each route group
+
+**Story File:** `docs/sprint-artifacts/e21-s1-loading-states-transitions.md`
+
+---
+
+### E21-S2: Jobs Pages Layout Consistency (P1)
+**As a** compliance officer,
+**I want** the jobs/review pages to use the same professional layout as the ACM Register page,
+**So that** the UI feels consistent and polished throughout the workflow.
+
+**Acceptance Criteria:**
+- [ ] Jobs dashboard (`/jobs`) uses same card layout patterns as Dashboard home
+- [ ] Job detail page (`/jobs/[id]`) uses same panel layout as Source Detail page
+- [ ] Building review (`/jobs/[id]/review/buildings`) uses same toolbar pattern as ACM Register
+- [ ] Records review (`/jobs/[id]/review/records`) uses same tab pattern as Job Detail page
+- [ ] All pages use consistent spacing (p-6 outer, gap-4 between sections)
+- [ ] All pages use VAEA design tokens from E14-S1
+- [ ] Dark mode works consistently across all job pages
+
+**Specific Implementation:**
+- Adapt existing E19 components to match E14 patterns (do not rebuild from scratch)
+- Reference the ACM Register page (`/acm`) as the layout standard
+
+**Story File:** `docs/sprint-artifacts/e21-s2-jobs-layout-consistency.md`
+
+---
+
+### E21-S3: Extraction Progress Real-Time Feedback (P1)
+**As a** compliance officer,
+**I want** to see real-time progress when my document is being extracted,
+**So that** I know the system is working and how long it will take.
+
+**Acceptance Criteria:**
+- [ ] After upload + extraction trigger, user sees animated progress indicator
+- [ ] Progress indicator shows: current stage name, stage progress (x/7), elapsed time
+- [ ] Stages light up sequentially as extraction progresses through pipeline
+- [ ] When extraction completes, auto-transition to review page
+- [ ] If extraction fails, show clear error message with retry button
+- [ ] Extraction progress visible from Job Detail page (`/jobs/[id]`) extraction tab
+- [ ] Extraction progress visible from Jobs list (`/jobs`) as progress bar on job card
+
+**Specific Implementation:**
+- Wire existing SSE infrastructure (`ExtractionProgressPanel`) into Jobs flow
+- Use `use-extraction-progress` hook
+
+**Story File:** `docs/sprint-artifacts/e21-s3-extraction-progress-feedback.md`
+
+---
+
+## Epic 22: Post-Audit Remediation & Feature Completion
+
+> **Added:** 2026-02-26 (SCP-20260226B)
+> **Priority:** P0/P1
+> **Status:** Drafted (0/5 stories)
+
+### E22-S1: Schema Resilience - Normalize Instead of Reject (P0)
+**As a** system,
+**I want** field validators to normalize unexpected LLM values instead of rejecting entire buildings,
+**So that** extraction does not lose records due to minor enum mismatches.
+
+**Acceptance Criteria:**
+- [ ] `risk_status` validator normalizes `Moderate` -> `Medium` instead of raising `ValueError`
+- [ ] All `field_validator` logic in `ACMExtractionRecord` and `acm_validator.py` follows normalize-or-passthrough behavior
+- [ ] No field validator raises `ValueError` for close enum variants; it normalizes and logs
+- [ ] `data_issues` captures normalization events
+- [ ] Existing tests still pass
+
+**Specific Implementation:**
+- Apply shared normalization contract across schema-level and validator-level logic
+- Persist and log normalization decisions for auditability
+
+**Story File:** `docs/sprint-artifacts/e22-s1-schema-resilience.md`
+
+---
+
+### E22-S2: Dashboard Layout Regression Fix (P0)
+**As a** compliance officer,
+**I want** the dashboard to show the sidebar, header, and footer like all other pages,
+**So that** navigation and layout remain consistent.
+
+**Acceptance Criteria:**
+- [ ] Dashboard (`/`) renders through the `(dashboard)` layout wrapper
+- [ ] All `(dashboard)` pages show consistent sidebar + header + footer
+- [ ] `loading.tsx` files do not break layout wrapper rendering
+- [ ] No blank white screen during dashboard navigation
+
+**Specific Implementation:**
+- Align root dashboard route behavior with existing route-group shell behavior
+- Validate loading boundary interactions in App Router
+
+**Story File:** `docs/sprint-artifacts/e22-s2-dashboard-layout-fix.md`
+
+---
+
+### E22-S3: Job Detail = Source Detail Layout (PDF + Chat + Content) (P1)
+**As a** compliance officer,
+**I want** the job detail page to include PDF preview, extracted content, and inline chat in one layout,
+**So that** I can review everything in context.
+
+**Acceptance Criteria:**
+- [ ] Add `Content` tab with rendered markdown (`source.full_text`) and PDF download/preview link
+- [ ] Add right-side inline chat panel on job detail page (not separate route)
+- [ ] Reuse existing `CopilotProvider` and CRUD chat endpoint integration
+- [ ] Chat collapses on narrow screens to a floating button pattern
+- [ ] Unicode arrow labels render correctly and are not shown as escaped strings
+- [ ] Match Source Detail two-column layout (content left, chat right)
+
+**Specific Implementation:**
+- Use `sources/[id]` detail page layout as the implementation reference
+- Keep chat and content scoped to job detail route context
+
+**Story File:** `docs/sprint-artifacts/e22-s3-job-detail-source-layout.md`
+
+---
+
+### E22-S4: Building Tabs in ACM Register + Job ACM Records (P1)
+**As a** compliance officer,
+**I want** per-building tabs on records grids,
+**So that** I can filter by building without scrolling large combined datasets.
+
+**Acceptance Criteria:**
+- [ ] Extract reusable `BuildingTabFilter` from review-records implementation
+- [ ] Tabs show All Records and per-building counts
+- [ ] Tab selection filters AG Grid rows by building
+- [ ] Tabs scroll horizontally without overlap when many buildings exist
+- [ ] Spacing and labels are fixed (no overlap regression)
+- [ ] Building counts remain accurate as records change
+- [ ] Wire into `/acm`, `/jobs/[id]` ACM Records tab, and `/jobs/[id]/review/records`
+
+**Specific Implementation:**
+- Consolidate tab UI and count/filter logic into one shared component
+- Reuse existing review records behavior as baseline
+
+**Story File:** `docs/sprint-artifacts/e22-s4-building-tabs-everywhere.md`
+
+---
+
+### E22-S5: Extraction Streaming & Navigation Polish (P1)
+**As a** compliance officer,
+**I want** meaningful extraction progress and smooth page transitions,
+**So that** long-running operations feel responsive and transparent.
+
+**Acceptance Criteria:**
+- [ ] Show stage-by-stage extraction progress (stage names, X/7, elapsed time)
+- [ ] Auto-fetch and display records immediately when extraction completes
+- [ ] Show global navigation progress bar during page compilation/transitions
+- [ ] Show smooth loading indicator when navigating between pages
+- [ ] Surface provider schema/compatibility errors in extraction log UI
+- [ ] Optional backend path: per-building save + per-building SSE events
+
+**Specific Implementation:**
+- Enhance `extract/page.tsx` and `use-extraction-progress.ts` first
+- Keep backend Option B isolated and optional behind frontend-first polish delivery
+
+**Story File:** `docs/sprint-artifacts/e22-s5-extraction-streaming-polish.md`
+
+---
+
+## Technical Bug Fixes (Standalone)
+
+> **Added:** 2026-02-26 (SCP-20260226)
+> **Status:** Drafted
+
+### Post-Audit Fixes
+1. **bug-frontend-build-lightning-css**: Fix lighting CSS build issues in frontend
+2. **bug-stale-commands-cleanup**: Fix and clean up stale application and database commands
+3. **bug-agui-path-alignment**: Correct paths and naming for AG-UI tools to align with technical debt items

@@ -51,11 +51,30 @@ DISTURBANCE_SYNONYMS: dict[str, Optional[str]] = {
     "n/a": None,
 }
 
+# Risk Status synonyms → canonical extraction values
+# NOTE: risk_status uses "Medium" (not BAR disturbance "Moderate")
+RISK_STATUS_SYNONYMS: dict[str, Optional[str]] = {
+    "high": "High",
+    "h": "High",
+    "medium": "Medium",
+    "med": "Medium",
+    "m": "Medium",
+    "moderate": "Medium",
+    "low": "Low",
+    "l": "Low",
+    "none": None,
+    "n/a": None,
+    "na": None,
+    "unknown": None,
+    "-": None,
+}
+
 # Map field_name → synonym dictionary
 _SYNONYM_MAP: dict[str, dict] = {
     "sample_result": SAMPLE_RESULT_SYNONYMS,
     "condition": CONDITION_SYNONYMS,
     "disturbance_potential": DISTURBANCE_SYNONYMS,
+    "risk_status": RISK_STATUS_SYNONYMS,
 }
 
 

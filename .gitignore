@@ -199,3 +199,5 @@ playwright-report/trace/
 nul*
 
 .vercel
+/.venv-wsl
+opencode.json

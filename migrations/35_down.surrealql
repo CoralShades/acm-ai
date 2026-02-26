@@ -1,0 +1,4 @@
+-- Migration 35 rollback: Remove floor_level and date_of_inspection from acm_record
+
+REMOVE FIELD floor_level ON acm_record;
+REMOVE FIELD date_of_inspection ON acm_record;

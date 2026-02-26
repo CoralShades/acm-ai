@@ -997,5 +997,108 @@ class TestBARFieldPopulation:
         assert isinstance(getattr(record, field_name), field_type)
 
 
+class TestNotSampledNoAccess:
+    """Tests for E20-S3 — Not Sampled / No Access record capture.
+
+    Verifies that ACMExtractionRecord correctly represents rows where no sample
+    was taken (Not Sampled) or where the room was entirely inaccessible (No Access).
+    These are valid ACM register entries even without a sample number.
+    """
+
+    def test_not_sampled_record_includes_in_output(self):
+        """A 'Not Sampled' row must produce a valid record with correct sample_result."""
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        record = ACMExtractionRecord(
+            building_id="B001",
+            product="Ceiling Lining",
+            material_description="Asbestos cement sheet",
+            result="Assumed Positive",
+            sample_result="Not Sampled",
+            sample_no=None,  # no sample number — still a valid record
+        )
+
+        assert record.sample_result == "Not Sampled"
+        assert record.sample_no is None
+        assert record.result == "Assumed Positive"
+        # no_access defaults to False for "Not Sampled" (sampling possible but not done)
+        assert record.no_access is False
+
+    def test_no_access_room_sets_no_access_flag(self):
+        """A 'No Access' room entry must have no_access=True."""
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        record = ACMExtractionRecord(
+            building_id="B002",
+            room_name="Plant Room",
+            product="Pipe Insulation",
+            material_description="Lagging — asbestos suspect",
+            result="Assumed Positive",
+            sample_result="Not Sampled",
+            no_access=True,
+            sample_no="Not Sampled",
+            data_issues=["No access — height restriction prevented sampling"],
+        )
+
+        assert record.no_access is True
+        assert record.sample_result == "Not Sampled"
+        assert record.result == "Assumed Positive"
+        assert len(record.data_issues) == 1
+
+    def test_no_access_default_is_false(self):
+        """no_access defaults to False for normal sampled records."""
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        record = ACMExtractionRecord(
+            building_id="B003",
+            product="Floor Tiles",
+            material_description="Vinyl asbestos tiles",
+            result="Positive",
+            sample_no="S-001",
+            sample_result="Positive",
+        )
+
+        assert record.no_access is False
+        assert record.sample_no == "S-001"
+        assert record.result == "Positive"
+
+    def test_existing_sampled_records_unaffected(self):
+        """Records with sample numbers and results are not changed by the new field."""
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        record = ACMExtractionRecord(
+            building_id="B004",
+            product="Eaves",
+            material_description="Flat cement sheeting",
+            result="Negative",
+            sample_no="J169642-001-003",
+            sample_result="Negative",
+            friable=None,
+            material_condition=None,
+        )
+
+        assert record.result == "Negative"
+        assert record.sample_no == "J169642-001-003"
+        assert record.sample_result == "Negative"
+        assert record.no_access is False  # unaffected
+
+    def test_no_access_sample_result_value(self):
+        """sample_result='No Access' is also a valid value for the field."""
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+
+        record = ACMExtractionRecord(
+            building_id="B005",
+            room_name="Roof Void",
+            product="Roof Lining",
+            material_description="Asbestos cement sheeting",
+            result="Assumed Positive",
+            sample_result="No Access",
+            no_access=True,
+        )
+
+        assert record.sample_result == "No Access"
+        assert record.no_access is True
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

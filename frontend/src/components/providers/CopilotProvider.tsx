@@ -54,13 +54,16 @@ class CopilotErrorBoundary extends React.Component<
 /**
  * CopilotKit provider that wraps the application.
  *
- * Connects to the /copilot route which bridges to the FastAPI
- * AG-UI supervisor agent. Falls back gracefully if CopilotKit
- * fails to connect - the rest of the app remains functional.
+ * Connects to /api/copilotkit which bridges to the FastAPI
+ * AG-UI supervisor agent at /api/agui/chat. Falls back gracefully
+ * if CopilotKit fails to connect - the rest of the app remains functional.
+ *
+ * Path follows the CopilotKit convention (/api/copilotkit).
+ * @see docs/ag-ui-pipeline-spec.md Section 4
  */
 export function CopilotProvider({ children }: CopilotProviderProps) {
   return (
-    <CopilotErrorBoundary runtimeUrl="/copilot">
+    <CopilotErrorBoundary runtimeUrl="/api/copilotkit">
       {children}
     </CopilotErrorBoundary>
   );
