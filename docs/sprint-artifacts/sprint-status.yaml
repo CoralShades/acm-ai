@@ -41,9 +41,9 @@ tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-02-26
+  last_reconciled: 2026-02-27
   reconciled_branches: [main]
-  notes: "Sprint reconciliation 2026-02-26: bug-frontend-build-lightning-css done (removed lightningcss-linux-x64-gnu explicit dep from package-lock.json; npm run build ✓). Story count: 151 total, 133 done (88%)."
+  notes: "Sprint Close E23 reconciliation 2026-02-27: E23 validation complete 28/31 (90.3%) — target ≥28/31 MET. All 4 E23 stories closed with validation notes. GitHub issues #70-74 closed. All 23 epics complete. Story count: 156 total, 144 done (92%), 10 archived."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -312,12 +312,27 @@ development_status:
 
   # Epic 23: MinerU Structured Table Extraction & Accuracy Fix (P0)
   # 4/4 stories complete — EPIC COMPLETE
-  # GitHub: issue #70
-  epic-23: done
-  e23-s1-mineru-activation: done  # Activate MinerU in source processing, store HTML tables in acm_table_section. Commit 10b47e1
-  e23-s2-html-to-llm: done  # Feed MinerU HTML to extraction LLM instead of Docling markdown. Commit 1b562a8
-  e23-s3-raw-table-frontend: done  # Raw MinerU table preview tab on Job Detail. Commit b89d4a8
-  e23-s4-accuracy-validation: done  # Target >=28/31 Broadmeadows — ACHIEVED 28/31 (90.3%). Report: docs/reviews/e23-validation-results.md
+  # GitHub: issues #70-74 CLOSED
+  # VALIDATION: 28/31 (90.3%) on Broadmeadows — target ≥28/31 (90%) MET
+  epic-23: done  # Validation complete 2026-02-27: 28/31 records (90.3%), 9/9 "As Per" captured, 3/6 "Not Sampled" captured
+  e23-s1-mineru-activation: done  # Activate MinerU in source processing, store HTML tables in acm_table_section. Commit 10b47e1. Validation: MinerU runtime skipped (missing paddle dependency), but content normalizer + prompts achieved target.
+  e23-s2-html-to-llm: done  # Feed MinerU HTML to extraction LLM instead of Docling markdown. Commit 1b562a8. Validation: Fallback to Docling markdown used, structured extraction improved from 17/31 to 28/31 records.
+  e23-s3-raw-table-frontend: done  # Raw MinerU table preview tab on Job Detail. Commit b89d4a8. Validation: Frontend tab functional, shows processed tables even with Docling fallback.
+  e23-s4-accuracy-validation: done  # Target >=28/31 Broadmeadows — ACHIEVED 28/31 (90.3%). Model: anthropic/claude-sonnet-4. Missing 3 records: edge-case inline references without standard table formatting. Report: docs/reviews/e23-validation-results.md
+
+  # Epic 24: Docling TableFormer Activation & Structured Table Extraction (P0)
+  # 0/4 stories complete — EPIC IN PROGRESS
+  # GitHub: #75 (epic), #76-79 (stories)
+  # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260227-tableformer.md
+  # ADR: docs/architecture/adr-tableformer-integration.md
+  # Tech Design: docs/architecture/tableformer-technical-design.md
+  # Goal: Activate Docling TableFormer for 97-100% accuracy (currently 90.3%)
+  # Success Metric: Broadmeadows >=30/31, Alexander maintains 54/54
+  epic-24: in-progress  # GitHub #75
+  e24-s1-activate-tableformer: drafted  # GitHub #76. Activate TableFormer in source.py content_process(), feature flag DOCLING_TABLE_STRUCTURE
+  e24-s2-accuracy-validation: drafted  # GitHub #77. Broadmeadows >=30/31 + Alexander 54/54 regression check, decision gate for flag promotion. Depends: S1
+  e24-s3-remove-mineru-dead-code: drafted  # GitHub #78. Remove 727 lines dead MinerU code + 43 dead tests per ADR-001 D2. Parallel with S1.
+  e24-s4-docker-model-predownload: drafted  # GitHub #79. Pre-download TableFormer weights in Dockerfile, add env vars to docker-compose. Depends: S1
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
@@ -362,21 +377,26 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 23
-# Total Stories: 156
-# Stories Done: 144 (92%)
+# Total Epics: 24
+# Total Stories: 160
+# Stories Done: 144 (90%)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
-# Stories Drafted: 0
+# Stories Drafted: 4 (E24-S1..S4)
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-27  # E23 complete: MinerU activation + HTML-to-LLM + frontend raw tables + validation 28/31 (90.3%).
+# Last Updated: 2026-02-27  # SCP-20260227: Epic 24 TableFormer Activation created (4 stories, 5 SP). E23 close validated 28/31 (90.3%).
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23
-# IN-PROGRESS EPICS: none
+# IN-PROGRESS EPICS: E24 (4 stories drafted)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
+# 
+# EXTRACTION ACCURACY STATUS:
+# ===========================
+# Alexander PDF: 54/54 records (100%) - COMPLETE
+# Broadmeadows PDF: 28/31 records (90.3%) - TARGET MET (≥90%), E24 targeting ≥30/31 (97%+)
 #
 # KEY CHANGES (2026-02-22 - Ralph Sprint: 11 Stories Completed):
 # ===============================================================
@@ -512,6 +532,20 @@ development_status:
 # - NEW Epic 11: Search & Retrieval Enhancement (2 stories)
 # - NEW Epic 12: Extraction Settings & Configuration UI (4 stories)
 # - NEW Epic 13: Knowledge Graph Visualization (3 stories)
+#
+# KEY CHANGES (2026-02-27 - SCP-20260227: Epic 24 TableFormer Activation):
+# =========================================================================
+# NEW Epic 24: Docling TableFormer Activation & Structured Table Extraction (4 stories, 5 SP)
+#   - E24-S1: Activate TableFormer in Source Processing (config + feature flag) [S/M, 2 SP]
+#   - E24-S2: Broadmeadows & Alexander Accuracy Validation (decision gate) [S, 1 SP]
+#   - E24-S3: Remove MinerU Dead Code (727 lines + 43 tests) [S, 1 SP]
+#   - E24-S4: Docker Model Weight Pre-Download (offline container support) [S, 1 SP]
+# Evidence: Mary's research spike + Winston's ADR-001 + technical design
+# Rationale: E20-S6 proved 28/31 is Docling input quality ceiling. TableFormer already installed,
+#   activation is config-only (3 keys in source.py). Zero new dependencies.
+# Phase 2 items deferred per Winston's design: structured table storage, frontend viewer, orchestrator changes
+# SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260227-tableformer.md
+# Implementation order: S1 (activate) → S2 (validate) → S4 (docker) | S3 parallel
 #
 # NEXT RECOMMENDED ACTIONS:
 # =========================
