@@ -42,11 +42,6 @@ export const POST = async (req: Request) => {
     agents: {
       default: supervisorAgent.clone() as any,
       supervisor: supervisorAgent as any,
-      // NOTE: The 'extraction' agent is referenced by useExtractionAgent
-      // (useCoAgent with name: 'extraction') but there is no dedicated
-      // backend AG-UI endpoint for it yet. When the extraction AG-UI
-      // endpoint is implemented, register it here:
-      //   extraction: extractionAgent as any,
     },
     /* eslint-enable @typescript-eslint/no-explicit-any */
   });

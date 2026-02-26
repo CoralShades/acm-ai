@@ -11,13 +11,13 @@ const statusLabel: Record<string, string> = {
 
 const statusClassName: Record<string, string> = {
   extracting:
-    'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 animate-pulse',
+    'border-[color:var(--vaea-teal-300)] bg-[color:var(--vaea-teal-100)]/50 text-[color:var(--vaea-teal-900)] dark:border-[color:var(--vaea-teal-700)] dark:bg-[color:var(--vaea-teal-900)]/30 dark:text-[color:var(--vaea-teal-100)] animate-pulse',
   pending_review:
-    'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+    'border-[color:var(--vaea-gold)]/40 bg-[color:var(--vaea-gold)]/15 text-[color:var(--vaea-grey-700)] dark:text-[color:var(--vaea-gold)]',
   building_review:
-    'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+    'border-[color:var(--vaea-gold)]/40 bg-[color:var(--vaea-gold)]/15 text-[color:var(--vaea-grey-700)] dark:text-[color:var(--vaea-gold)]',
   acm_review:
-    'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+    'border-[color:var(--vaea-gold)]/40 bg-[color:var(--vaea-gold)]/15 text-[color:var(--vaea-grey-700)] dark:text-[color:var(--vaea-gold)]',
   published:
     'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
 }

@@ -79,7 +79,7 @@ export function JobDetailHeader({
   }
 
   return (
-    <div className="border-b bg-background px-4 py-4 flex-shrink-0">
+    <div className="rounded-xl border bg-card p-4 shadow-sm">
       {/* Breadcrumb row */}
       <div className="flex items-center justify-between gap-4">
         <nav aria-label="Breadcrumb">

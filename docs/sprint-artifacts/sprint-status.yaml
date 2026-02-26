@@ -292,12 +292,15 @@ development_status:
   e20-s6-restore-extraction-prompt-coverage: drafted  # Restore/enhance prompt rules for As Per + Not Sampled rows. Investigation shows existing rules present but ineffective under real conditions. Need prompt engineering improvements to achieve 28/31 target accuracy.
 
   # Epic 21: UX Loading States & Layout Consistency (P1)
-  # 0/3 stories — EPIC NEW
+  # 3/3 stories complete — EPIC COMPLETE
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260226-post-audit-fixes.md
-  epic-21: in-progress
-  e21-s1-loading-states-transitions: drafted
-  e21-s2-jobs-layout-consistency: drafted
-  e21-s3-extraction-progress-feedback: drafted
+  epic-21: done  # All stories complete
+  e21-s1-loading-states-transitions: done  # 2026-02-26: loading.tsx for all job routes, shimmer skeletons, state machine
+  e21-s2-jobs-layout-consistency: done  # 2026-02-26: ACM Register layout patterns applied to all jobs pages
+  e21-s3-extraction-progress-feedback: done  # 2026-02-26: Upload→extract redirect, SSE wiring, job card progress, building review banner
+
+  # Cleanup
+  cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
 
   # Bug Fixes — Post-Audit (2026-02-26)
   bug-frontend-build-lightning-css: done  # 2026-02-26: Removed lightningcss-linux-x64-gnu explicit dep from package-lock.json; lightningcss-win32-x64-msvc now resolved as optional dep via @tailwindcss/node; pdfjs-dist webpack alias added. npm run build ✓ lint ✓ HTTP 200. Commit 7ea7544

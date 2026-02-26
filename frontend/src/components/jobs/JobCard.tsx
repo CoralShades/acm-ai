@@ -19,11 +19,13 @@ import {
   Download,
   ClipboardList,
   FileSpreadsheet,
+  Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { JobStatusPill } from './JobStatusPill'
 import { sourcesApi } from '@/lib/api/sources'
 import type { SourceListResponse } from '@/lib/types/api'
+import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
 
 interface JobCardProps {
   source: SourceListResponse
@@ -55,6 +57,16 @@ function formatRelativeDate(dateStr: string): string {
 export function JobCard({ source, onRefetch }: JobCardProps) {
   const router = useRouter()
   const isPublished = !source.review_status || source.review_status === 'published'
+  const extractionStatus = useExtractionStatus(
+    source.id,
+    source.review_status === 'extracting' ? source.command_id : undefined
+  )
+  const isExtracting =
+    source.review_status === 'extracting' || extractionStatus.phase === 'extracting'
+  const stageIndex = extractionStatus.currentStageIndex ?? 1
+  const totalStages = extractionStatus.totalStages
+  const stageLabel = extractionStatus.currentStageLabel ?? 'Initializing'
+  const progressValue = extractionStatus.progressPercent ?? 0
 
   const handleDownload = async () => {
     try {
@@ -92,7 +104,9 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
 
   const primaryHref = isPublished
     ? `/jobs/${source.id}`
-    : `/jobs/${source.id}/review/buildings`
+    : isExtracting
+      ? `/jobs/${source.id}/extract`
+      : `/jobs/${source.id}/review/buildings`
 
   // Extract bare ID for URL (strip 'source:' prefix if present)
   const rawId = source.id.replace(/^source:/, '')
@@ -155,6 +169,23 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
         {/* Status pill */}
         <JobStatusPill review_status={source.review_status} />
 
+        {isExtracting && (
+          <div className="rounded-lg border border-[color:var(--vaea-teal-300)]/50 bg-[color:var(--vaea-teal-100)]/20 p-2 dark:bg-[color:var(--vaea-teal-900)]/20">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--vaea-teal-900)] dark:text-[color:var(--vaea-teal-100)]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>
+                Extracting... Stage {stageIndex}/{totalStages} ({stageLabel})
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--vaea-teal-100)] dark:bg-[color:var(--vaea-teal-900)]/50">
+              <div
+                className="h-full bg-[color:var(--vaea-teal-500)] transition-all duration-500"
+                style={{ width: `${progressValue}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Uploaded date */}
         <p className="text-xs text-muted-foreground">
           Uploaded {formatRelativeDate(source.created)}
@@ -189,7 +220,7 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
                 View
               </>
             ) : (
-              'Review'
+              isExtracting ? 'View Extraction' : 'Review'
             )}
           </Link>
         </Button>

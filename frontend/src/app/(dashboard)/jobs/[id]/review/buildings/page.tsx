@@ -1,12 +1,17 @@
 'use client'
 
-import { use, useEffect, useCallback } from 'react'
+import { use, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
 import { WizardStepHeader } from '@/components/acm/WizardStepHeader'
 import { BuildingReviewGrid } from '@/components/acm/BuildingReviewGrid'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { useSource } from '@/lib/hooks/use-sources'
+import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
+import { AlertTriangle } from 'lucide-react'
 
 /**
  * BuildingReviewPageContent — inner content for the building review wizard step.
@@ -20,6 +25,13 @@ import { PageErrorFallback } from '@/components/common/PageErrorFallback'
  */
 function BuildingReviewPageContent({ sourceId }: { sourceId: string }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data: source } = useSource(sourceId)
+  const extractionStatus = useExtractionStatus(
+    sourceId,
+    source?.review_status === 'extracting' ? source.command_id : undefined
+  )
+  const wasExtractingRef = useRef(false)
 
   // On mount: mark the review as started
   useEffect(() => {
@@ -31,6 +43,13 @@ function BuildingReviewPageContent({ sourceId }: { sourceId: string }) {
       // Non-critical: don't block the UI if the status update fails
     })
   }, [sourceId])
+
+  useEffect(() => {
+    if (wasExtractingRef.current && extractionStatus.phase === 'completed') {
+      queryClient.invalidateQueries({ queryKey: ['buildings', sourceId] })
+    }
+    wasExtractingRef.current = extractionStatus.phase === 'extracting'
+  }, [extractionStatus.phase, queryClient, sourceId])
 
   const handleCancel = useCallback(() => {
     router.push(`/jobs/${sourceId}/extract`)
@@ -62,8 +81,23 @@ function BuildingReviewPageContent({ sourceId }: { sourceId: string }) {
           nextLabel="Next: Review Records \u2192"
         />
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <BuildingReviewGrid sourceId={sourceId} />
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            {extractionStatus.phase === 'extracting' && (
+              <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Extraction in progress</AlertTitle>
+                <AlertDescription>
+                  Extraction in progress (Stage {extractionStatus.currentStageIndex ?? 1}/
+                  {extractionStatus.totalStages})... Buildings will appear as processed.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="rounded-xl border bg-card p-4 shadow-sm">
+              <BuildingReviewGrid sourceId={sourceId} />
+            </div>
+          </div>
         </div>
       </div>
     </AppShell>

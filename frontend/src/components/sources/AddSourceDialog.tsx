@@ -108,6 +108,19 @@ interface BatchProgress {
   currentItem?: string
 }
 
+function persistExtractionCommand(sourceId: string, commandId: string): void {
+  sessionStorage.setItem(`acm-extraction-${sourceId}`, commandId)
+  sessionStorage.setItem(
+    `acm-extraction-progress-${sourceId}`,
+    JSON.stringify({
+      commandId,
+      phase: 'extracting',
+      pipelineState: null,
+      logEntries: [],
+    })
+  )
+}
+
 export function AddSourceDialog({ 
   open, 
   onOpenChange, 
@@ -348,9 +361,9 @@ export function AddSourceDialog({
     if (data.enable_acm_extraction && createdSource?.id) {
       try {
         const extractResponse = await acmApi.extract(createdSource.id)
-        // Store command_id so useExtractionStatus picks it up on the source page
+        // Store command_id for extraction status + SSE progress tracking
         if (extractResponse.command_id) {
-          sessionStorage.setItem(`acm-extraction-${createdSource.id}`, extractResponse.command_id)
+          persistExtractionCommand(createdSource.id, extractResponse.command_id)
         }
         toast.success('ACM extraction started')
       } catch (error) {
@@ -375,7 +388,7 @@ export function AddSourceDialog({
 
     // Navigate to the job review flow
     if (createdSource?.id) {
-      router.push(`/jobs/${createdSource.id}/review/buildings`)
+      router.push(`/jobs/${createdSource.id}/extract`)
     }
   }
 
@@ -432,9 +445,9 @@ export function AddSourceDialog({
         if (data.enable_acm_extraction && createdSource?.id) {
           try {
             const extractResponse = await acmApi.extract(createdSource.id)
-            // Store command_id so useExtractionStatus picks it up on the source page
+            // Store command_id for extraction status + SSE progress tracking
             if (extractResponse.command_id) {
-              sessionStorage.setItem(`acm-extraction-${createdSource.id}`, extractResponse.command_id)
+              persistExtractionCommand(createdSource.id, extractResponse.command_id)
             }
           } catch (acmError) {
             console.error(`ACM extraction failed for ${itemLabel}:`, acmError)

@@ -56,6 +56,12 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-02-26: Epic 21 UX Loading States & Layout Consistency — COMPLETE
+#   - E21-S1: loading.tsx Suspense boundaries for all routes, shimmer skeletons
+#   - E21-S2: Jobs pages aligned to ACM Register layout patterns
+#   - E21-S3: Upload→extract redirect, SSE progress in job cards, building review extraction banner
+#   - Dead code: use-extraction-agent.ts removed (Phase 5 finding)
+#   - Upload flow: now routes to /extract page (shows live progress) instead of /review/buildings
 # 2026-02-26: Post-Audit Fix Sprint + UX Loading States
 #   - SCP-20260226: 3 bug fixes from audit + Epic 21 (3 stories)
 #   - E21-S1: Global loading states and transition feedback
@@ -142,4 +148,3 @@ workflow_status:
 #   - Architecture 5.2 rewritten, PRD 5.7 + FR-107 updated
 #   - Change scope: Moderate | Risk: Low | Path: Direct Adjustment
 #   - Proposal: _bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md
-

@@ -35,10 +35,10 @@ export function JobOverviewTab({
   const statusLabel = reviewStatus ? (STATUS_LABELS[reviewStatus] ?? reviewStatus) : 'Published'
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="max-w-4xl space-y-4">
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Card>
+        <Card className="rounded-xl shadow-sm">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <ClipboardList className="h-3.5 w-3.5" />
@@ -50,7 +50,7 @@ export function JobOverviewTab({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl shadow-sm">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5" />
@@ -62,7 +62,7 @@ export function JobOverviewTab({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl shadow-sm">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <Percent className="h-3.5 w-3.5" />
@@ -78,7 +78,7 @@ export function JobOverviewTab({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl shadow-sm">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
               <Gauge className="h-3.5 w-3.5" />

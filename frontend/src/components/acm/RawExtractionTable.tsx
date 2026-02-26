@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { AgGridReact } from 'ag-grid-react'
 import type { ColDef } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { PreviewRecordBadge } from './PreviewRecordBadge'
-import { useExtractionAgent } from '@/lib/hooks/use-extraction-agent'
+import type { ExtractionPhase } from '@/lib/hooks/use-extraction-progress'
+import type { PipelineRunState, StageId } from '@/lib/types/pipeline'
 
 // Register AG Grid modules (safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -34,7 +36,30 @@ type RawRecord = {
 
 interface RawExtractionTableProps {
   sourceId: string
+  phase: ExtractionPhase
+  pipelineState: PipelineRunState | null
   onComplete?: () => void
+}
+
+const STAGE_ORDER: StageId[] = [
+  'STRUCTURE',
+  'PREFLIGHT',
+  'ORCHESTRATOR',
+  'EXTRACT',
+  'VALIDATE',
+  'CORRECT',
+  'STORE',
+]
+
+async function fetchRawRecords(sourceId: string): Promise<RawRecord[]> {
+  const response = await fetch(
+    `/api/acm/records?source_id=${encodeURIComponent(sourceId)}&limit=500`
+  )
+  if (!response.ok) {
+    throw new Error(`Failed to fetch raw records: ${response.statusText}`)
+  }
+  const data = await response.json()
+  return Array.isArray(data) ? data : (data.records ?? [])
 }
 
 /**
@@ -43,29 +68,58 @@ interface RawExtractionTableProps {
  *
  * Story: E19-S4 Raw Extraction Table — Live Records During Extraction
  */
-export function RawExtractionTable({ sourceId, onComplete }: RawExtractionTableProps) {
-  const { previewRecords, chunksProcessed, chunksTotal, isConnected } =
-    useExtractionAgent(sourceId)
+export function RawExtractionTable({
+  sourceId,
+  phase,
+  pipelineState,
+  onComplete,
+}: RawExtractionTableProps) {
+  const { data: previewRecords = [] } = useQuery({
+    queryKey: ['raw-extraction-records', sourceId],
+    queryFn: () => fetchRawRecords(sourceId),
+    enabled: !!sourceId,
+    staleTime: 0,
+    refetchInterval: phase === 'extracting' ? 2000 : false,
+  })
 
-  const isStreaming = chunksProcessed < chunksTotal && chunksTotal > 0
-  const prevIsConnectedRef = useRef(isConnected)
+  const isStreaming = phase === 'extracting'
+  const previousPhaseRef = useRef<ExtractionPhase>(phase)
   const onCompleteCalledRef = useRef(false)
+
+  const stageIndex = useMemo(() => {
+    if (!pipelineState) return 1
+    const runningStage = STAGE_ORDER.find(
+      (stageId) => pipelineState.stages[stageId]?.status === 'running'
+    )
+    if (runningStage) {
+      return STAGE_ORDER.indexOf(runningStage) + 1
+    }
+    const completedStages = STAGE_ORDER.filter(
+      (stageId) => pipelineState.stages[stageId]?.status === 'complete'
+    )
+    if (completedStages.length > 0) {
+      return Math.min(completedStages.length + 1, STAGE_ORDER.length)
+    }
+    return 1
+  }, [pipelineState])
+
+  const stageTotal = STAGE_ORDER.length
 
   // Call onComplete once when streaming finishes and records exist
   useEffect(() => {
-    const wasConnected = prevIsConnectedRef.current
-    prevIsConnectedRef.current = isConnected
+    const previousPhase = previousPhaseRef.current
+    previousPhaseRef.current = phase
 
     if (
-      wasConnected &&
-      !isConnected &&
+      previousPhase === 'extracting' &&
+      (phase === 'completed' || phase === 'failed') &&
       previewRecords.length > 0 &&
       !onCompleteCalledRef.current
     ) {
       onCompleteCalledRef.current = true
       onComplete?.()
     }
-  }, [isConnected, previewRecords.length, onComplete])
+  }, [onComplete, phase, previewRecords.length])
 
   const columnDefs = useMemo<ColDef<RawRecord>[]>(
     () => [
@@ -225,9 +279,7 @@ export function RawExtractionTable({ sourceId, onComplete }: RawExtractionTableP
         </div>
         <div className="text-sm text-muted-foreground">
           {isStreaming ? (
-            <span>
-              Processing chunk {chunksProcessed} of {chunksTotal}...
-            </span>
+            <span>Extracting... Stage {stageIndex} of {stageTotal}</span>
           ) : recordCount > 0 ? (
             <span className="font-medium text-foreground">
               {recordCount} record{recordCount !== 1 ? 's' : ''} extracted

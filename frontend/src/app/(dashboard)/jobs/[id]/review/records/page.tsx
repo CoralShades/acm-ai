@@ -10,6 +10,7 @@ import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import type { ACMRecord } from '@/lib/types/acm'
 
 /**
@@ -68,17 +69,27 @@ function RecordsReviewPageContent({ sourceId }: { sourceId: string }) {
           nextLabel="Publish to Register"
         />
 
-        <BuildingTabs
-          records={records}
-          selectedBuilding={selectedBuilding}
-          onBuildingChange={setSelectedBuilding}
-        />
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            <Card className="rounded-xl shadow-sm">
+              <CardContent className="p-4">
+                <BuildingTabs
+                  records={records}
+                  selectedBuilding={selectedBuilding}
+                  onBuildingChange={setSelectedBuilding}
+                />
+              </CardContent>
+            </Card>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <ACMReviewGrid
-            sourceId={sourceId}
-            buildingId={selectedBuilding}
-          />
+            <Card className="rounded-xl shadow-sm">
+              <CardContent className="p-4">
+                <ACMReviewGrid
+                  sourceId={sourceId}
+                  buildingId={selectedBuilding}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
