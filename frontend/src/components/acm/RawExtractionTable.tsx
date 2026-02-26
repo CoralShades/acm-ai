@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AgGridReact } from 'ag-grid-react'
 import type { ColDef } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
-import { PreviewRecordBadge } from './PreviewRecordBadge'
 import type { ExtractionPhase } from '@/lib/hooks/use-extraction-progress'
 import { PIPELINE_STAGE_ORDER, type PipelineRunState } from '@/lib/types/pipeline'
+import { cn } from '@/lib/utils'
 
 // Register AG Grid modules (safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -41,6 +41,8 @@ interface RawExtractionTableProps {
   onComplete?: () => void
 }
 
+const rawRecordsQueryKey = (sourceId: string) => ['raw-extraction-records', sourceId] as const
+
 async function fetchRawRecords(sourceId: string): Promise<RawRecord[]> {
   const response = await fetch(
     `/api/acm/records?source_id=${encodeURIComponent(sourceId)}&limit=500`
@@ -64,15 +66,23 @@ export function RawExtractionTable({
   pipelineState,
   onComplete,
 }: RawExtractionTableProps) {
+  const queryClient = useQueryClient()
+
   const { data: previewRecords = [] } = useQuery({
-    queryKey: ['raw-extraction-records', sourceId],
+    queryKey: rawRecordsQueryKey(sourceId),
     queryFn: () => fetchRawRecords(sourceId),
     enabled: !!sourceId,
     staleTime: 0,
     refetchInterval: phase === 'extracting' ? 2000 : false,
   })
 
-  const isStreaming = phase === 'extracting'
+  const storeStageStatus = pipelineState?.stages.STORE?.status
+  const isSavingStage = phase === 'extracting' && storeStageStatus === 'running'
+  const hasPipelineState = !!pipelineState
+  const isStreaming = phase === 'extracting' && hasPipelineState
+  const isWaitingForRecords =
+    (phase === 'extracting' && !hasPipelineState) || (phase === 'idle' && previewRecords.length === 0)
+
   const previousPhaseRef = useRef<ExtractionPhase>(phase)
   const onCompleteCalledRef = useRef(false)
 
@@ -94,6 +104,29 @@ export function RawExtractionTable({
   }, [pipelineState])
 
   const stageTotal = PIPELINE_STAGE_ORDER.length
+
+  useEffect(() => {
+    const shouldRefresh =
+      phase === 'completed' ||
+      isSavingStage ||
+      (phase === 'extracting' && storeStageStatus === 'complete')
+
+    if (!shouldRefresh || !sourceId) return
+
+    queryClient.invalidateQueries({ queryKey: rawRecordsQueryKey(sourceId) })
+  }, [isSavingStage, phase, queryClient, sourceId, storeStageStatus])
+
+  useEffect(() => {
+    const shouldPoll = phase === 'completed' || isSavingStage
+
+    if (!shouldPoll || !sourceId) return
+
+    const interval = window.setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: rawRecordsQueryKey(sourceId) })
+    }, 5000)
+
+    return () => window.clearInterval(interval)
+  }, [isSavingStage, phase, queryClient, sourceId])
 
   // Call onComplete once when streaming finishes and records exist
   useEffect(() => {
@@ -257,18 +290,53 @@ export function RawExtractionTable({
 
   const recordCount = previewRecords.length
 
+  const statusBadge = useMemo(() => {
+    if (phase === 'completed') {
+      return {
+        label: `\u2022 Complete${recordCount > 0 ? ` (${recordCount} records)` : ''}`,
+        className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+      }
+    }
+
+    if (isSavingStage || (phase === 'extracting' && storeStageStatus === 'complete')) {
+      return {
+        label: '\u2022 Saving...',
+        className: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 animate-pulse',
+      }
+    }
+
+    if (phase === 'extracting' && hasPipelineState) {
+      return {
+        label: '\u2022 Processing',
+        className: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 animate-pulse',
+      }
+    }
+
+    return {
+      label: '\u2022 Waiting for records...',
+      className: 'bg-muted text-muted-foreground',
+    }
+  }, [hasPipelineState, isSavingStage, phase, recordCount, storeStageStatus])
+
   return (
     <div className="space-y-2">
-      {/* Streaming indicator header */}
+      {/* Status header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-foreground">
             Raw Extracted Records
           </span>
-          {isStreaming && <PreviewRecordBadge />}
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+              statusBadge.className
+            )}
+          >
+            {statusBadge.label}
+          </span>
         </div>
         <div className="text-sm text-muted-foreground">
-          {isStreaming ? (
+          {phase === 'extracting' && hasPipelineState ? (
             <span>Extracting... Stage {stageIndex} of {stageTotal}</span>
           ) : recordCount > 0 ? (
             <span className="font-medium text-foreground">
@@ -326,8 +394,12 @@ export function RawExtractionTable({
           // Use legacy theming for ag-theme-alpine CSS compatibility (matches ACMGrid.tsx)
           theme="legacy"
           overlayNoRowsTemplate={
-            isStreaming
-              ? '<span class="text-muted-foreground text-sm">Waiting for records...</span>'
+            isSavingStage
+              ? '<span class="text-muted-foreground text-sm">Saving extracted records...</span>'
+              : isStreaming
+                ? '<span class="text-muted-foreground text-sm">Processing extraction...</span>'
+                : isWaitingForRecords
+                  ? '<span class="text-muted-foreground text-sm">Waiting for records...</span>'
               : '<span class="text-muted-foreground text-sm">No records extracted yet.</span>'
           }
         />

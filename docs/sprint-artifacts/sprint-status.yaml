@@ -300,14 +300,14 @@ development_status:
   e21-s3-extraction-progress-feedback: done  # 2026-02-26: Upload→extract redirect, SSE wiring, job card progress, building review banner
 
   # Epic 22: Post-Audit Remediation & Feature Completion (P0/P1)
-  # 0/5 stories complete — EPIC IN PROGRESS
+  # 5/5 stories complete — EPIC COMPLETE
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260226-post-phase67-remediation.md
-  epic-22: in-progress
+  epic-22: done  # 2026-02-26: All 5 stories complete
   e22-s1-schema-resilience: done  # 2026-02-26: Resilient validators — normalize instead of reject. risk_status Moderate->Medium, all validators audited.
   e22-s2-dashboard-layout-fix: done  # 2026-02-26: Root dashboard page rendered without AppShell; wrapped (dashboard)/page.tsx in AppShell so sidebar/header/footer persist on '/'.
   e22-s3-job-detail-source-layout: done  # 2026-02-26: Two-column layout with Content tab (markdown), inline CRUD chat panel, unicode arrow fix
   e22-s4-building-tabs-everywhere: done  # 2026-02-26: Reusable BuildingTabFilter component, wired into ACM Register + Job Detail ACM Records + review records. Horizontal scroll, no overlap.
-  e22-s5-extraction-streaming-polish: drafted
+  e22-s5-extraction-streaming-polish: done  # 2026-02-26: Enhanced stage progress, removed misleading Streaming badge, auto-fetch on completion, navigation progress bar, error display
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook

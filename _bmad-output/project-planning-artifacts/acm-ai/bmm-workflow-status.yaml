@@ -56,6 +56,12 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-02-26: Epic 22 Post-Audit Remediation — COMPLETE
+#   - E22-S1: Schema resilience (normalize instead of reject)
+#   - E22-S2: Dashboard layout fix (sidebar restoration)
+#   - E22-S3: Job detail redesign (source layout with PDF + chat)
+#   - E22-S4: Building tabs everywhere (reusable component)
+#   - E22-S5: Extraction streaming polish (progress feedback + navigation)
 # 2026-02-26: SCP-20260226B — Epic 22 Post Phase 6+7 Remediation
 #   - 5 stories drafted for schema resilience, dashboard layout, job detail redesign,
 #     building tabs, and extraction streaming polish

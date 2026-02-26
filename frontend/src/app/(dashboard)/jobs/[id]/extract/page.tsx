@@ -1,7 +1,8 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useParams, useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -29,6 +30,7 @@ function ExtractPageContent() {
   const params = useParams()
   const router = useRouter()
   const sourceId = decodeURIComponent(params.id as string)
+  const queryClient = useQueryClient()
   const [isRetrying, setIsRetrying] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
 
@@ -73,6 +75,52 @@ function ExtractPageContent() {
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source?.command_id, sourceId])
+
+  // Ensure records are fetched immediately once save/completion is reached
+  useEffect(() => {
+    const shouldRefreshRecords =
+      extractionStatus.phase === 'completed' ||
+      extractionStatus.currentStageId === 'STORE'
+
+    if (!shouldRefreshRecords) return
+
+    queryClient.invalidateQueries({
+      queryKey: ['raw-extraction-records', sourceId],
+    })
+    queryClient.invalidateQueries({
+      queryKey: ['acm', 'records', sourceId],
+    })
+  }, [
+    extractionStatus.currentStageId,
+    extractionStatus.phase,
+    queryClient,
+    sourceId,
+  ])
+
+  // Keep polling records while save/completion handoff is active
+  useEffect(() => {
+    const shouldPollRecords =
+      extractionStatus.currentStageId === 'STORE' ||
+      extractionStatus.phase === 'completed'
+
+    if (!shouldPollRecords) return
+
+    const interval = window.setInterval(() => {
+      queryClient.invalidateQueries({
+        queryKey: ['raw-extraction-records', sourceId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['acm', 'records', sourceId],
+      })
+    }, 5000)
+
+    return () => window.clearInterval(interval)
+  }, [
+    extractionStatus.currentStageId,
+    extractionStatus.phase,
+    queryClient,
+    sourceId,
+  ])
 
   const handleProceedToReview = () => {
     router.push(`/jobs/${sourceId}/review/buildings`)
@@ -141,7 +189,8 @@ function ExtractPageContent() {
               Extracting: {sourceTitle}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Records appear below as the AI processes each section of the document.
+              Records are written at the end of extraction. Follow stage progress
+              below while processing runs.
             </p>
           </div>
 
@@ -184,7 +233,7 @@ function ExtractPageContent() {
           {/* Raw Records Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Live Record Stream</CardTitle>
+              <CardTitle className="text-base">Raw Extracted Records</CardTitle>
             </CardHeader>
             <CardContent>
               <RawExtractionTable
