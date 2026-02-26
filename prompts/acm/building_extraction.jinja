@@ -479,9 +479,21 @@ When the register entry uses one of these terms (or a close variant), prefer the
 | "Flange mastic" | "Flange joints" |
 | "Mastic" (on ductwork) | "Mastic / Flange joints" |
 
+{% if input_format is defined and input_format == "html" %}
+## HTML Table Input Notes
+
+The content below is structured MinerU HTML table output.
+
+- Treat each `<tr>` row as a distinct ACM register entry unless it is clearly a header row.
+- Treat each `<td>` cell value as a complete cell value (do not split or merge across columns).
+- Rows containing `Same as ...`, `As Per ...`, `Assumed positive`, `Not sampled`, or `No access` are valid ACM records and must be extracted.
+- Preserve sample reference strings exactly as shown in the source cells.
+
+{% endif %}
+
 ## Content to Extract
 
-```
+```{% if input_format is defined and input_format == "html" %}html{% else %}text{% endif %}
 {{ content }}
 ```
 

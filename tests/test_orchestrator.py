@@ -5,6 +5,7 @@ parallel orchestration, graph wiring, and backward compatibility.
 """
 
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,6 +28,8 @@ from open_notebook.extractors.orchestrator import (
     ExtractionStrategy,
     OrchestratorStats,
     _extract_building_content,
+    _format_html_tables_for_llm,
+    _get_mineru_tables_for_building,
     _regex_extract_simple_building,
     extract_building,
     merge_building_results,
@@ -102,6 +105,60 @@ def _make_content_with_pages(page_ranges: list[tuple[int, str]]) -> str:
     for page_num, text in page_ranges:
         parts.append(f"--- Page {page_num} ---\n{text}")
     return "\n".join(parts)
+
+
+class TestMineruHtmlHelpers:
+    def test_format_html_tables_for_llm(self):
+        tables = [
+            SimpleNamespace(
+                page_start=3,
+                page_end=3,
+                raw_html="<table><tr><td>A</td></tr></table>",
+            ),
+            SimpleNamespace(
+                page_start=4,
+                page_end=5,
+                raw_html="<table><tr><td>B</td></tr></table>",
+            ),
+        ]
+
+        formatted = _format_html_tables_for_llm(tables)
+
+        assert "MinerU table 1 | pages 3-3" in formatted
+        assert "MinerU table 2 | pages 4-5" in formatted
+        assert "<table><tr><td>A</td></tr></table>" in formatted
+        assert "<table><tr><td>B</td></tr></table>" in formatted
+
+    @pytest.mark.asyncio
+    async def test_get_mineru_tables_for_building_filters_and_caches(self):
+        sections = [
+            SimpleNamespace(page_start=2, page_end=2, raw_html="<table>a</table>"),
+            SimpleNamespace(page_start=3, page_end=4, raw_html="<table>b</table>"),
+            SimpleNamespace(page_start=5, page_end=5, raw_html=None),
+        ]
+
+        state = {}
+        with patch(
+            "open_notebook.extractors.orchestrator.ACMTableSection.get_by_source",
+            new=AsyncMock(return_value=sections),
+        ) as mock_get:
+            match_first = await _get_mineru_tables_for_building(
+                state,
+                "source:test",
+                3,
+                3,
+            )
+            match_second = await _get_mineru_tables_for_building(
+                state,
+                "source:test",
+                2,
+                4,
+            )
+
+        assert len(match_first) == 1
+        assert match_first[0].raw_html == "<table>b</table>"
+        assert len(match_second) == 2
+        mock_get.assert_awaited_once_with("source:test")
 
 
 # ---------------------------------------------------------------------------

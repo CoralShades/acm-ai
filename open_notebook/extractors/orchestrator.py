@@ -19,6 +19,7 @@ from langchain_core.runnables import RunnableConfig
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 
+from open_notebook.domain.acm import ACMTableSection
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_schemas import (
     ACMExtractionRecord,
@@ -389,10 +390,60 @@ def _split_building_by_rooms(
     return chunks
 
 
+def _format_html_tables_for_llm(tables: List[ACMTableSection]) -> str:
+    """Format MinerU HTML table sections into a deterministic LLM payload."""
+    formatted_parts: List[str] = []
+    for idx, table in enumerate(
+        sorted(tables, key=lambda t: (t.page_start, t.page_end)), start=1
+    ):
+        formatted_parts.append(
+            "\n".join(
+                [
+                    f"<!-- MinerU table {idx} | pages {table.page_start}-{table.page_end} -->",
+                    table.raw_html or "",
+                ]
+            )
+        )
+
+    return "\n\n".join(part for part in formatted_parts if part.strip())
+
+
+async def _get_mineru_tables_for_building(
+    state: dict,
+    source_id: str,
+    page_start: int,
+    page_end: int,
+) -> List[ACMTableSection]:
+    """Get MinerU HTML table sections for a building page range."""
+    cache_key = "_mineru_html_sections"
+
+    try:
+        sections: Optional[List[ACMTableSection]] = state.get(cache_key)
+        if sections is None:
+            sections = await ACMTableSection.get_by_source(source_id)
+            state[cache_key] = sections
+
+        return [
+            section
+            for section in sections
+            if section.raw_html
+            and section.page_start <= page_end
+            and section.page_end >= page_start
+        ]
+    except Exception as e:
+        logger.warning(
+            "Failed to load MinerU table sections for source {source_id}: {error}",
+            source_id=source_id,
+            error=e,
+        )
+        return []
+
+
 async def _llm_extract_building(
     building_content: str,
     plan: BuildingExtractionPlan,
     state: dict,
+    input_format: str = "markdown",
 ) -> List[ACMExtractionRecord]:
     """Run LLM extraction on building content using existing extraction logic.
 
@@ -407,7 +458,11 @@ async def _llm_extract_building(
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
 
     # Check room count and sub-chunk if needed
-    sub_chunks = _split_building_by_rooms(building_content)
+    sub_chunks = (
+        [building_content]
+        if input_format == "html"
+        else _split_building_by_rooms(building_content)
+    )
 
     all_records: List[ACMExtractionRecord] = []
 
@@ -431,6 +486,7 @@ async def _llm_extract_building(
             data={
                 "building_context": prompt_ctx,
                 "content": chunk_content,
+                "input_format": input_format,
                 "model_family": model_family,
             }
         )
@@ -569,6 +625,30 @@ async def extract_building(
     building_content = _extract_building_content(
         content, plan.page_range[0], plan.page_range[1]
     )
+
+    llm_input_content = building_content
+    llm_input_format = "markdown"
+
+    source: Optional[Source] = state.get("source")
+    if source and source.id:
+        mineru_sections = await _get_mineru_tables_for_building(
+            state,
+            str(source.id),
+            plan.page_range[0],
+            plan.page_range[1],
+        )
+        if mineru_sections:
+            formatted_html = _format_html_tables_for_llm(mineru_sections)
+            if formatted_html.strip():
+                llm_input_content = formatted_html
+                llm_input_format = "html"
+                logger.info(
+                    "Building {building_id} using MinerU HTML input "
+                    "({table_count} tables)",
+                    building_id=plan.building_id,
+                    table_count=len(mineru_sections),
+                )
+
     pages_processed = plan.page_range[1] - plan.page_range[0] + 1
 
     if plan.strategy == ExtractionStrategy.SKIP:
@@ -608,7 +688,12 @@ async def extract_building(
 
             if should_escalate:
                 try:
-                    records = await _llm_extract_building(building_content, plan, state)
+                    records = await _llm_extract_building(
+                        llm_input_content,
+                        plan,
+                        state,
+                        llm_input_format,
+                    )
                     for rec in records:
                         if not rec.building_name and plan.building_name:
                             rec.building_name = plan.building_name
@@ -654,9 +739,14 @@ async def extract_building(
         if pl:
             pl._log(
                 f"  FULL_LLM: Building {plan.building_id} ({plan.building_name}) | "
-                f"content_len={len(building_content)} | pages={pages_processed}"
+                f"content_len={len(llm_input_content)} | pages={pages_processed}"
             )
-        records = await _llm_extract_building(building_content, plan, state)
+        records = await _llm_extract_building(
+            llm_input_content,
+            plan,
+            state,
+            llm_input_format,
+        )
         if pl:
             pl._log(
                 f"  FULL_LLM result: {len(records)} records from {plan.building_id}"

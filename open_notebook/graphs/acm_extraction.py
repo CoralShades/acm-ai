@@ -21,7 +21,7 @@ from loguru import logger
 from pydantic import ValidationError
 from typing_extensions import TypedDict
 
-from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.acm import ACMRecord, ACMTableSection
 from open_notebook.domain.models import Model
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_debug import (
@@ -1023,6 +1023,38 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     """Prepare extraction context and chunk content if needed."""
     source: Source = state["source"]
     content = normalize_docling_text(source.full_text or "")
+    input_format = "markdown"
+
+    if source.id:
+        try:
+            table_sections = await ACMTableSection.get_by_source(str(source.id))
+            html_sections = [section for section in table_sections if section.raw_html]
+            if html_sections:
+                content = "\n\n".join(
+                    "\n".join(
+                        [
+                            f"<!-- MinerU table pages {section.page_start}-{section.page_end} -->",
+                            section.raw_html or "",
+                        ]
+                    )
+                    for section in sorted(
+                        html_sections,
+                        key=lambda section: (section.page_start, section.page_end),
+                    )
+                )
+                input_format = "html"
+                logger.info(
+                    "prepare_context using MinerU HTML content for source {source_id} "
+                    "({count} table sections)",
+                    source_id=source.id,
+                    count=len(html_sections),
+                )
+        except Exception as e:
+            logger.warning(
+                "Failed to load MinerU HTML table sections for source {source_id}: {error}",
+                source_id=source.id,
+                error=e,
+            )
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
 
@@ -1065,12 +1097,19 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
             )
             content = trimmed
 
-    # Pre-process content to add structural markers
-    processed_content, preprocess_meta = _preprocess_acm_content(content)
+    if input_format == "html":
+        processed_content = content
+        preprocess_meta = {
+            "acm_indicators_found": 0,
+            "no_asbestos_found": 0,
+        }
+    else:
+        # Pre-process content to add structural markers
+        processed_content, preprocess_meta = _preprocess_acm_content(content)
 
-    if debug_config.DEBUG_ENABLED:
-        acm_debug(f"Pre-processing complete: {preprocess_meta}")
-        dump_content_to_file(processed_content, source_id, "processed_content")
+        if debug_config.DEBUG_ENABLED:
+            acm_debug(f"Pre-processing complete: {preprocess_meta}")
+            dump_content_to_file(processed_content, source_id, "processed_content")
 
     # Initialize context from source metadata
     context = BuildingRoomContext()
@@ -1078,7 +1117,10 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
         context.school_name = source.title
 
     # Chunk processed content if needed
-    chunks = _chunk_content(processed_content)
+    if input_format == "html":
+        chunks = [{"content": processed_content, "page_number": 1}]
+    else:
+        chunks = _chunk_content(processed_content)
 
     logger.info(f"Prepared {len(chunks)} chunks for extraction from source {source.id}")
     acm_debug(
@@ -1103,6 +1145,7 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
     return {
         "content": processed_content,
         "chunks": chunks,
+        "input_format": input_format,
         "context": context,
         "current_chunk_index": 0,
         "records": [],
@@ -1117,6 +1160,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
     existing_records: List[ACMExtractionRecord] = state.get("records", [])
     model_id = state.get("model_id")
+    input_format = state.get("input_format", "markdown")
     retry_count = state.get("retry_count", 0)
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
@@ -1205,6 +1249,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
                 "total_chunks": len(chunks),
             },
             "content": chunk_content,
+            "input_format": input_format,
             "model_family": model_family,
         }
     )
