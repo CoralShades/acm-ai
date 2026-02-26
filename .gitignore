@@ -150,8 +150,13 @@ specs/
 .github/agents
 nul
 # .agent/ - Removed from gitignore so Antigravity can detect workflows
-.codex/
-.opencode/
+# Codex: ignore platform files, track project skills
+.codex/*
+!.codex/AGENTS.md
+!.codex/skills/
+# OpenCode: ignore platform files, track project skills
+.opencode/*
+!.opencode/skills/
 # _bmad/ - Removed from gitignore so Antigravity can detect configs
 # .gemini/ - Removed from gitignore so Antigravity can detect custom commands
 

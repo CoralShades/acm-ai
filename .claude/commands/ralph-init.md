@@ -60,3 +60,11 @@ To start the loop:
 To run the full sprint:
   .ralph/ralph_sprint.sh
 ```
+
+### 5. Superpowers Integration
+The generated fix plan and Ralph PROMPT.md include mandatory superpowers skill invocations:
+- `superpowers:test-driven-development` — invoked before each implementation task
+- `superpowers:systematic-debugging` — invoked when debugging failures
+- `superpowers:requesting-code-review` — invoked after all tasks complete
+
+These are enforced by the PROMPT.md template's "MANDATORY SKILL INVOCATIONS" section.

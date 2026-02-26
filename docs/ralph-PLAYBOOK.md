@@ -747,3 +747,48 @@ your-project/
 │   └── logs/                              # Iteration logs
 └── src/                                   # Your actual code
 ```
+
+---
+
+## 9. Superpowers Integration
+
+### Overview
+
+The Ralph loop now integrates with [obra/superpowers](https://github.com/obra/superpowers) for enforced development workflows. Superpowers skills are invoked automatically during Ralph iterations.
+
+### How It Works
+
+The `.ralph/PROMPT.md` template includes a "MANDATORY SKILL INVOCATIONS" section that requires:
+
+1. **Before each task**: `superpowers:test-driven-development` — RED-GREEN-REFACTOR cycle
+2. **When debugging**: `superpowers:systematic-debugging` — 4-phase root cause analysis
+3. **After all tasks**: `superpowers:requesting-code-review` — pre-review checklist
+
+### BMAD x Superpowers Routing
+
+- **BMAD** owns project-level planning: epics, stories, architecture, sprint status
+- **Superpowers** owns story-level execution: TDD, debugging, code review, implementation plans
+- **Ralph** orchestrates: reads BMAD stories, generates fix plans, iterates with superpowers enforcement
+
+### Setup Requirements
+
+Superpowers must be installed for the coding agent platform:
+
+```bash
+# Claude Code
+git clone https://github.com/obra/superpowers.git ~/.claude/superpowers
+mkdir -p ~/.claude/skills
+ln -sf ~/.claude/superpowers/skills ~/.claude/skills/superpowers
+```
+
+See `docs/SUPERPOWERS-INTEGRATION.md` for full multi-platform setup.
+
+### Bridge Skill
+
+The BMAD bridge skill (`~/.claude/skills/acm-ai/bmad-bridge/SKILL.md`) teaches agents how to route between BMAD planning and Superpowers implementation. It activates for any project with `_bmad/` directories.
+
+### Implementation Plans
+
+When using `superpowers:writing-plans`, implementation plans are saved to `docs/plans/` with the naming convention `YYYY-MM-DD-<story-id>-<name>.md`.
+
+BMAD artifacts remain in `_bmad-output/` as the planning source of truth.

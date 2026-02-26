@@ -184,6 +184,30 @@ Before marking **any** story done:
 
 ---
 
+## Superpowers Integration
+
+This project uses [obra/superpowers](https://github.com/obra/superpowers) for development workflow enforcement.
+
+### Mandatory Skills (always invoke)
+- `superpowers:test-driven-development` — for ALL coding tasks (RED-GREEN-REFACTOR)
+- `superpowers:systematic-debugging` — for ALL debugging (4-phase root cause analysis)
+- `superpowers:requesting-code-review` — before marking stories complete
+
+### Workflow Skills (invoke based on task)
+- `superpowers:brainstorming` — feature-level design within BMAD epics
+- `superpowers:writing-plans` — create implementation plans from BMAD stories
+- `superpowers:executing-plans` — batch execution with checkpoints
+- `superpowers:subagent-driven-development` — autonomous task execution
+
+### Routing Rule
+- PROJECT planning (epics, architecture): BMAD agents
+- STORY implementation: Superpowers skills
+- Plans saved to `docs/plans/`, BMAD artifacts in `_bmad-output/`
+
+See `docs/SUPERPOWERS-INTEGRATION.md` for full setup across Claude Code, Codex, and OpenCode.
+
+---
+
 ## Environment Variables
 
 Required in `.env` (see `.env.example` for full list):
