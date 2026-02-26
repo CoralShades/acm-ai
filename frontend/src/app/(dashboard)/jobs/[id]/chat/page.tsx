@@ -186,7 +186,7 @@ function CrudChatContent({ sourceId }: { sourceId: string }) {
  *
  * Mounts a dedicated CopilotKit provider pointing to /copilot-crud, which
  * bridges to the FastAPI CRUD chat agent. This is intentionally separate from
- * the main /copilot runtime to keep CRUD tools isolated from the read-only
+ * the main /api/copilotkit runtime to keep CRUD tools isolated from the read-only
  * supervisor agent.
  *
  * URL: /jobs/[id]/chat
@@ -210,7 +210,7 @@ function JobCrudChatPage({
         />
       )}
     >
-      {/* Nested CopilotKit provider — overrides the dashboard-level /copilot runtime */}
+      {/* Nested CopilotKit provider — overrides the dashboard-level /api/copilotkit runtime */}
       <CopilotKit runtimeUrl="/copilot-crud">
         <CrudChatContent sourceId={sourceId} />
       </CopilotKit>

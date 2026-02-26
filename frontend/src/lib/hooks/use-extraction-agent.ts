@@ -8,6 +8,11 @@ import type { ExtractionAgentState } from '@/lib/types/pipeline'
  * useExtractionAgent — connects CopilotKit useCoAgent to the AG-UI
  * extraction stream for incremental record display in the AG Grid.
  *
+ * The co-agent name 'extraction' must match an agent registered in
+ * the CopilotKit runtime at /api/copilotkit/route.ts. Currently the
+ * backend has no dedicated extraction AG-UI endpoint — when it is
+ * implemented, register it in the runtime's agents map.
+ *
  * Story: E17-S2 Incremental Record Streaming to AG Grid
  */
 export function useExtractionAgent(sourceId: string) {

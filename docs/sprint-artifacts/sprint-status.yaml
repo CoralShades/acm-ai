@@ -303,7 +303,7 @@ development_status:
   bug-frontend-build-lightning-css: done  # 2026-02-26: Removed lightningcss-linux-x64-gnu explicit dep from package-lock.json; lightningcss-win32-x64-msvc now resolved as optional dep via @tailwindcss/node; pdfjs-dist webpack alias added. npm run build ✓ lint ✓ HTTP 200. Commit 7ea7544
   bug-stale-commands-cleanup: done  # 2026-02-26: 11 running → failed (null claimed_by, pre-atomic-claim residue). 0 duplicate acm_records found. extraction_progress clean (2 failed, 0 running).
   bug-data-issues-schema-validation: done  # 2026-02-26: data_issues List[str] → field_validator coerces null→[] in ACMExtractionRecord. Also: _normalize_extraction_json None branch + null-safe _merge_records. 18 tests added (tests/test_acm_schemas.py). 194 tests pass. Was blocking 100% record loss (0/31).
-  bug-agui-path-alignment: drafted
+  bug-agui-path-alignment: done  # 2026-02-26: /copilot → /api/copilotkit. Created missing route.ts, updated CopilotProvider runtimeUrl, fixed stale comments, updated ag-ui-pipeline-spec.md. npm run build ✓ lint ✓
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
@@ -341,10 +341,10 @@ development_status:
 # ========
 # Total Epics: 21
 # Total Stories: 152  # Add E20-S6 to count (+1)
-# Stories Done: 135 (89%)  # E20-S5 moved to done (+1)
+# Stories Done: 136 (89%)  # bug-agui-path-alignment done (+1)
 # Stories Review: 0
 # Stories In-Progress: 0
-# Stories Drafted: 5 (E21-S1, E21-S2, E21-S3, E20-S6, bug-agui-path-alignment)
+# Stories Drafted: 4 (E21-S1, E21-S2, E21-S3, E20-S6)
 # Stories Backlog: 0
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #

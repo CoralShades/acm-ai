@@ -2,7 +2,7 @@
  * CopilotKit Runtime Route for CRUD Chat (v1 API)
  *
  * Bridges the CRUD chat frontend to the FastAPI backend's AG-UI
- * crud-chat endpoint. Mirrors the pattern in /copilot/route.ts but
+ * crud-chat endpoint. Mirrors the pattern in /api/copilotkit/route.ts but
  * registers the crud agent instead of the supervisor agent.
  *
  * Story: E19-S8 Conversational CRUD Chat
