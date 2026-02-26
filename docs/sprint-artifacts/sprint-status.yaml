@@ -304,7 +304,7 @@ development_status:
   # SCP: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260226-post-phase67-remediation.md
   epic-22: in-progress
   e22-s1-schema-resilience: done  # 2026-02-26: Resilient validators — normalize instead of reject. risk_status Moderate->Medium, all validators audited.
-  e22-s2-dashboard-layout-fix: drafted
+  e22-s2-dashboard-layout-fix: done  # 2026-02-26: Root dashboard page rendered without AppShell; wrapped (dashboard)/page.tsx in AppShell so sidebar/header/footer persist on '/'.
   e22-s3-job-detail-source-layout: drafted
   e22-s4-building-tabs-everywhere: drafted
   e22-s5-extraction-streaming-polish: drafted
