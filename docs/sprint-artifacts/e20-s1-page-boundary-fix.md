@@ -2,7 +2,7 @@
 
 **Epic:** E20 — Extraction Completeness & 100% Record Capture
 **Priority:** P0
-**Status:** backlog
+**Status:** Done
 **Change Proposal:** SCP-20260224 (2026-02-24)
 **Depends on:** — (can start immediately)
 
