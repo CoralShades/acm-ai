@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useCallback } from 'react'
+import { use, useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
@@ -13,6 +13,10 @@ import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
 import { JobContentPanel } from '@/components/jobs/JobContentPanel'
 import { JobCrudChatPanel } from '@/components/jobs/JobCrudChatPanel'
 import { BuildingReviewGrid } from '@/components/acm/BuildingReviewGrid'
+import {
+  BuildingTabFilter,
+  getRecordBuildingTabId,
+} from '@/components/acm/BuildingTabFilter'
 import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -20,6 +24,7 @@ import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useACMStats } from '@/lib/hooks/use-acm'
 import { sourcesApi } from '@/lib/api/sources'
+import type { ACMRecord } from '@/lib/types/acm'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 
@@ -37,11 +42,20 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
   const [chatExpanded, setChatExpanded] = useState(true)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
+  const { data: records = [] } = useQuery<ACMRecord[]>({
+    queryKey: ['acm-records', sourceId],
+    queryFn: () =>
+      fetch(`/api/acm/records?source_id=${encodeURIComponent(sourceId)}&limit=500`)
+        .then((response) => response.json())
+        .then((data) => (Array.isArray(data) ? data : (data.records ?? []))),
+    staleTime: 30_000,
+  })
 
   const { data: extractionProgress } = useQuery({
     queryKey: ['extraction-progress', source?.command_id],
@@ -108,6 +122,23 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
         : extractionProgress?.status === 'failed'
           ? 'failed'
           : 'idle'
+
+  useEffect(() => {
+    setSelectedBuilding(null)
+  }, [sourceId])
+
+  useEffect(() => {
+    if (!selectedBuilding) {
+      return
+    }
+
+    const buildingExists = records.some(
+      (record) => getRecordBuildingTabId(record) === selectedBuilding
+    )
+    if (!buildingExists) {
+      setSelectedBuilding(null)
+    }
+  }, [records, selectedBuilding])
 
   return (
     <AppShell>
@@ -176,8 +207,16 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                   className="m-0 h-full overflow-auto p-4 sm:p-6"
                 >
                   <Card className="rounded-xl shadow-sm">
-                    <CardContent className="p-4 sm:p-6">
-                      <ACMReviewGrid sourceId={sourceId} />
+                    <CardContent className="space-y-4 p-4 sm:p-6">
+                      <BuildingTabFilter
+                        records={records}
+                        selectedBuilding={selectedBuilding}
+                        onBuildingChange={setSelectedBuilding}
+                      />
+                      <ACMReviewGrid
+                        sourceId={sourceId}
+                        buildingId={selectedBuilding}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
 import { WizardStepHeader } from '@/components/acm/WizardStepHeader'
-import { BuildingTabs } from '@/components/acm/BuildingTabs'
+import { BuildingTabFilter } from '@/components/acm/BuildingTabFilter'
 import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
@@ -28,7 +28,7 @@ function RecordsReviewPageContent({ sourceId }: { sourceId: string }) {
   const [showPublishDialog, setShowPublishDialog] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
 
-  // Fetch records to drive the BuildingTabs component
+  // Fetch records to drive building tab filters
   const { data: records = [] } = useQuery<ACMRecord[]>({
     queryKey: ['acm-records', sourceId],
     queryFn: () =>
@@ -73,7 +73,7 @@ function RecordsReviewPageContent({ sourceId }: { sourceId: string }) {
           <div className="space-y-4">
             <Card className="rounded-xl shadow-sm">
               <CardContent className="p-4">
-                <BuildingTabs
+                <BuildingTabFilter
                   records={records}
                   selectedBuilding={selectedBuilding}
                   onBuildingChange={setSelectedBuilding}
