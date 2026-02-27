@@ -98,7 +98,8 @@ async def _extract_tables_with_docling(
 
             # 2. Strip "Asbestos " prefix from hazard status
             for col in df.columns:
-                if "hazard" in col.lower() or "status" in col.lower():
+                col_str = str(col).lower()
+                if "hazard" in col_str or "status" in col_str:
                     df[col] = df[col].apply(
                         lambda v: re.sub(r"^Asbestos\s+", "", str(v))
                         if isinstance(v, str)
@@ -141,7 +142,7 @@ async def _store_docling_tables(
         await repo_create(
             "acm_table_section",
             {
-                "source_id": source_id,
+                "source_id": ensure_record_id(source_id),
                 "page_start": table["page"],
                 "page_end": table["page"],
                 "raw_html": table.get("html"),
