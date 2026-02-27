@@ -462,6 +462,7 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
     area = (record.area_type or "Interior").lower()  # Default to Interior
     room = record.room_id or "none"
     product = (record.product or "unknown").lower()
+    location = (record.location or "unknown").lower()
     sample = (record.sample_no or "no_sample").lower()
 
     # Create hash of product description (first 50 chars) using SHA-256
@@ -469,7 +470,7 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
         (record.material_description or "")[:50].encode()
     ).hexdigest()[:8]
 
-    return f"{school}_{building}_{area}_{room}_{product}_{sample}_{desc_hash}"
+    return f"{school}_{building}_{area}_{room}_{product}_{location}_{sample}_{desc_hash}"
 
 
 def _merge_records(
@@ -2161,6 +2162,213 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
     return {"records": deduplicated}
 
 
+def _recover_no_access_records(
+    full_text: str,
+    extracted_records: List[ACMExtractionRecord],
+    building_id: str,
+    building_name: str,
+) -> List[ACMExtractionRecord]:
+    """Post-LLM fallback: scan full_text for 'No Access' entries not captured.
+
+    Targets the known pattern where register continuation rows on overflow
+    pages (e.g., page 8 of Broadmeadows) are below Docling's table detection
+    threshold and the LLM consistently skips them.
+
+    The vertical PDF text format for these entries is:
+        {Level}\\n{Room}\\n{Location}\\n{Product}\\n{dashes}\\nNo access...
+
+    The function finds level indicators (e.g., "Ground\\nfloor") and scans
+    forward to find "No access" phrases, extracting room/location/product
+    from the lines between.
+
+    Returns additional ACMExtractionRecord objects to append.
+    """
+    recovered: List[ACMExtractionRecord] = []
+
+    no_access_re = re.compile(
+        r"No\s+access|Height\s+restriction|Restricted\s+Access",
+        re.IGNORECASE,
+    )
+
+    # Level indicators: lines that mark the start of a register row block
+    level_re = re.compile(
+        r"^(Ground|First|Second|Third|Level|Roof|Basement)\s*$", re.IGNORECASE
+    )
+    # Second line of level indicator
+    level_suffix_re = re.compile(r"^(floor|level|\d)\s*$", re.IGNORECASE)
+
+    # Build lookup of existing room+location combos (lowered)
+    existing_combos = set()
+    for r in extracted_records:
+        room_norm = (r.room_name or "").lower().strip()
+        loc_norm = (r.location or "").lower().strip()
+        existing_combos.add((room_norm, loc_norm))
+
+    lines = full_text.split("\n")
+
+    # Scan for level-indicator lines, then check if their block has "no access"
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+
+        # Check if this line is a level indicator
+        if not level_re.match(stripped):
+            i += 1
+            continue
+
+        level_name = stripped.title()
+
+        # Check if next line is the level suffix (e.g., "floor")
+        if i + 1 < len(lines) and level_suffix_re.match(lines[i + 1].strip()):
+            level_name = f"{level_name} {lines[i + 1].strip().lower()}"
+            block_start = i + 2
+        else:
+            block_start = i + 1
+
+        # Collect content lines until we hit the next level indicator,
+        # a page marker, or exceed a reasonable window
+        content_lines: List[str] = []
+        no_access_line: Optional[str] = None
+        j = block_start
+        while j < len(lines) and j < block_start + 30:
+            line_s = lines[j].strip()
+
+            # Stop at next level indicator or page boundary
+            if level_re.match(line_s):
+                break
+            if line_s.startswith("--- Page"):
+                break
+
+            # Check for "No access" phrase
+            if no_access_re.search(line_s):
+                no_access_line = line_s
+                break
+
+            # Collect non-empty, non-dash lines as content
+            if line_s and line_s not in ("-", "–", " -"):
+                content_lines.append(line_s)
+
+            j += 1
+
+        # If no "no access" found in this block, skip
+        if no_access_line is None:
+            i = block_start
+            continue
+
+        # Advance past this block
+        i = j + 1
+
+        # Parse content_lines: [room, location_parts..., product]
+        # In the vertical register format, the product (ACM item) is the last
+        # meaningful line before the dashes. But multi-word locations can span
+        # several lines, so we check if the last line is a known ACM product.
+        KNOWN_PRODUCT_KEYWORDS = {
+            "lining", "cladding", "insulation", "lagging", "sheeting",
+            "covering", "coverings", "tiles", "cartridge", "gasket",
+            "eaves", "soffit", "mastic", "joint", "joints", "door",
+            "panel", "board", "coating", "millboard", "packing",
+            "gutter", "downpipe", "cistern", "pipe", "duct",
+        }
+
+        if len(content_lines) < 1:
+            continue
+
+        room_name = content_lines[0]
+
+        if len(content_lines) >= 3:
+            candidate_product = content_lines[-1]
+            # Check if last line looks like a known ACM product
+            words = candidate_product.lower().split()
+            if any(w in KNOWN_PRODUCT_KEYWORDS for w in words):
+                product_val = candidate_product
+                location_val = " ".join(content_lines[1:-1])
+            else:
+                # Last line is part of multi-word location, product unknown
+                product_val = "Unknown"
+                location_val = " ".join(content_lines[1:])
+        elif len(content_lines) == 2:
+            candidate = content_lines[1]
+            words = candidate.lower().split()
+            if any(w in KNOWN_PRODUCT_KEYWORDS for w in words):
+                product_val = candidate
+                location_val = "Unknown"
+            else:
+                location_val = candidate
+                product_val = "Unknown"
+        else:
+            location_val = "Unknown"
+            product_val = "Unknown"
+
+        # If product is a dash or empty, set Unknown
+        if product_val.strip() in ("-", "–", ""):
+            product_val = "Unknown"
+
+        # Check if this room+location already exists in extracted records
+        room_norm = room_name.lower().strip()
+        loc_norm = location_val.lower().strip()
+        if (room_norm, loc_norm) in existing_combos:
+            continue
+
+        # Also check against already-recovered records
+        if (room_norm, loc_norm) in {
+            ((r.room_name or "").lower().strip(), (r.location or "").lower().strip())
+            for r in recovered
+        }:
+            continue
+
+        no_access_comment = no_access_line.strip().rstrip(".")
+
+        recovered.append(
+            ACMExtractionRecord(
+                building_id=building_id,
+                building_name=building_name,
+                room_name=room_name.title(),
+                location=location_val,
+                product=product_val,
+                material_description=None,
+                result="Assumed Positive",
+                sample_result="Assumed Positive",
+                sample_no="Not Sampled",
+                no_access=True,
+                extraction_confidence="low",
+                data_issues=[
+                    f"No access — recovered by post-LLM fallback ({no_access_comment})"
+                ],
+                area_type="Interior",
+                floor_level=level_name,
+            )
+        )
+        logger.info(
+            f"Recovered no-access record: {room_name} / {location_val} / {product_val}"
+        )
+
+    return recovered
+
+
+async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
+    """Graph node: recover no-access records missed by LLM extraction."""
+    records: List[ACMExtractionRecord] = state.get("records", [])
+    source: Source = state["source"]
+    context: BuildingRoomContext = state.get("context", BuildingRoomContext())
+
+    full_text = getattr(source, "full_text", "") or ""
+    if not full_text:
+        return {"records": records}
+
+    building_id = context.building_id or "unknown"
+    building_name = context.building_name or ""
+
+    recovered = _recover_no_access_records(
+        full_text, records, building_id, building_name
+    )
+
+    if recovered:
+        records = list(records) + recovered
+        logger.info(f"Recovered {len(recovered)} no-access records via fallback")
+
+    return {"records": records}
+
+
 async def save_records(state: dict, config: RunnableConfig) -> dict:
     """Save validated records to the database."""
     records: List[ACMExtractionRecord] = state.get("records", [])
@@ -2394,6 +2602,7 @@ agent_state.add_node("extract", extract_records)
 agent_state.add_node("validate", validate_records_strict)
 agent_state.add_node("correct", correct_records)
 agent_state.add_node("deduplicate", deduplicate_records)
+agent_state.add_node("recover_no_access", recover_no_access_node)
 agent_state.add_node("save", save_records)
 
 # Add edges: START → extract_metadata → structure → inventory → tag_pages → prepare → ...
@@ -2424,7 +2633,8 @@ agent_state.add_conditional_edges(
 )
 # After correction, re-validate
 agent_state.add_edge("correct", "validate")
-agent_state.add_edge("deduplicate", "save")
+agent_state.add_edge("deduplicate", "recover_no_access")
+agent_state.add_edge("recover_no_access", "save")
 agent_state.add_edge("save", END)
 
 # Compile the graph
