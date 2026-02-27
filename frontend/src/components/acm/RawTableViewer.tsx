@@ -39,6 +39,13 @@ function getTableTypeMeta(tableType?: string | null): {
     }
   }
 
+  if (normalized === 'docling_direct_api') {
+    return {
+      label: 'Docling Direct API',
+      className: 'border-purple-200 bg-purple-50 text-purple-700',
+    }
+  }
+
   if (normalized.includes('docling')) {
     return {
       label: 'Docling Markdown',
@@ -129,13 +136,16 @@ export function RawTableViewer({ sourceId }: RawTableViewerProps) {
         if (normalizedType.includes('metadata')) {
           acc.metadata += 1
         }
+        if (normalizedType === 'docling_direct_api') {
+          acc.docling += 1
+        }
         if (hasMergedCells(table.raw_html)) {
           acc.merged += 1
         }
 
         return acc
       },
-      { register: 0, metadata: 0, merged: 0 }
+      { register: 0, metadata: 0, docling: 0, merged: 0 }
     )
   }, [tables])
 
@@ -171,6 +181,11 @@ export function RawTableViewer({ sourceId }: RawTableViewerProps) {
         <Badge variant="outline">{tables.length} table section(s)</Badge>
         <Badge variant="outline">Register: {summary.register}</Badge>
         <Badge variant="outline">Metadata: {summary.metadata}</Badge>
+        {summary.docling > 0 && (
+          <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
+            Docling: {summary.docling}
+          </Badge>
+        )}
         <Badge variant="outline">Merged cells: {summary.merged}</Badge>
       </div>
 
