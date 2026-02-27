@@ -1,0 +1,4 @@
+-- Migration 37: E26 Docling Direct API table storage (ADR-001 D5)
+-- Adds structured_json field for DataFrame CSV storage
+
+DEFINE FIELD IF NOT EXISTS structured_json ON acm_table_section TYPE option<string>;
