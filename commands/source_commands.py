@@ -1,3 +1,5 @@
+import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -5,9 +7,13 @@ from loguru import logger
 from pydantic import BaseModel
 from surreal_commands import CommandInput, CommandOutput, command
 
-from open_notebook.database.repository import ensure_record_id
+from open_notebook.database.repository import ensure_record_id, repo_create
 from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
+
+DOCLING_DIRECT_TABLE_EXTRACTION = (
+    os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "false").lower() == "true"
+)
 
 try:
     from open_notebook.graphs.source import source_graph
@@ -42,6 +48,109 @@ class SourceProcessingOutput(CommandOutput):
     insights_created: int = 0
     processing_time: float
     error_message: Optional[str] = None
+
+
+def _resolve_source_pdf_path(source: Source) -> Optional[str]:
+    """Resolve the PDF path from a processed source."""
+    if source.asset and source.asset.file_path:
+        return str(source.asset.file_path)
+    return None
+
+
+async def _extract_tables_with_docling(
+    source_id: str, pdf_path: str
+) -> List[Dict[str, Any]]:
+    """
+    Run Docling Direct API on PDF, return list of table dicts.
+    Runs AFTER PyMuPDF text extraction (does not replace it).
+
+    Uses DocumentConverter directly, bypassing content-core's serialization
+    layer that caused E24's row-fragmentation regression.
+    """
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+
+    pipeline_options = PdfPipelineOptions(do_table_structure=True)
+    pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
+    pipeline_options.table_structure_options.do_cell_matching = True
+
+    converter = DocumentConverter(
+        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+    )
+
+    result = converter.convert(pdf_path)
+    doc = result.document
+
+    tables: List[Dict[str, Any]] = []
+    for idx, table in enumerate(doc.tables):
+        try:
+            df = table.export_to_dataframe(doc=doc)
+
+            # --- Normalization pipeline (patterns validated in E25-S1) ---
+
+            # 1. Fix split sample numbers: "34511-039- 001" → "34511-039-001"
+            df = df.map(
+                lambda v: re.sub(r"(\d+)-\s+(\d+)", r"\1-\2", str(v))
+                if isinstance(v, str)
+                else v
+            )
+
+            # 2. Strip "Asbestos " prefix from hazard status
+            for col in df.columns:
+                if "hazard" in col.lower() or "status" in col.lower():
+                    df[col] = df[col].apply(
+                        lambda v: re.sub(r"^Asbestos\s+", "", str(v))
+                        if isinstance(v, str)
+                        else v
+                    )
+
+            page_no = table.prov[0].page_no if table.prov else -1
+
+            tables.append(
+                {
+                    "table_index": idx,
+                    "page": page_no,
+                    "rows": len(df),
+                    "columns": list(df.columns),
+                    "csv": df.to_csv(index=False),
+                    "markdown": df.to_markdown(index=False),
+                    "html": table.export_to_html(doc=doc),
+                }
+            )
+
+            logger.info(
+                f"Docling table {idx}: page={page_no}, rows={len(df)}, "
+                f"cols={len(df.columns)}"
+            )
+        except Exception as e:
+            logger.warning(f"Docling table {idx} export failed: {e}")
+            continue
+
+    logger.info(
+        f"Docling Direct API: {len(tables)} tables extracted from {pdf_path}"
+    )
+    return tables
+
+
+async def _store_docling_tables(
+    source_id: str, tables: List[Dict[str, Any]]
+) -> None:
+    """Store Docling DataFrame tables in acm_table_section."""
+    for table in tables:
+        await repo_create(
+            "acm_table_section",
+            {
+                "source_id": source_id,
+                "page_start": table["page"],
+                "page_end": table["page"],
+                "raw_html": table.get("html"),
+                "raw_text": table.get("markdown"),
+                "structured_json": table.get("csv"),
+                "table_type": "docling_direct_api",
+                "building_name": None,
+            },
+        )
 
 
 @command(
@@ -110,6 +219,27 @@ async def process_source_command(
         )
 
         processed_source = result["source"]
+
+        # 3b. Docling Direct API parallel extraction (E26, ADR-001 D5)
+        # Runs AFTER PyMuPDF saves full_text — zero regression risk
+        if DOCLING_DIRECT_TABLE_EXTRACTION:
+            pdf_path = _resolve_source_pdf_path(processed_source)
+            if pdf_path and pdf_path.lower().endswith(".pdf"):
+                try:
+                    docling_tables = await _extract_tables_with_docling(
+                        str(processed_source.id), pdf_path
+                    )
+                    if docling_tables:
+                        await _store_docling_tables(
+                            str(processed_source.id), docling_tables
+                        )
+                        logger.info(
+                            f"Stored {len(docling_tables)} Docling tables "
+                            f"for source {processed_source.id}"
+                        )
+                except Exception as e:
+                    logger.error(f"Docling table extraction failed: {e}")
+                    # Non-fatal — PyMuPDF text is already saved
 
         # 4. Gather processing results (notebook associations handled by source_graph)
         embedded_chunks = (
