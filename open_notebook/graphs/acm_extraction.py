@@ -57,6 +57,8 @@ from open_notebook.extractors.normalizers.content import normalize_docling_text
 from open_notebook.extractors.normalizers.enums import normalize_enum_value
 from open_notebook.extractors.orchestrator import (
     OrchestratorStats,
+    _get_docling_tables,
+    _inject_docling_tables,
     orchestrate_extraction,
     should_use_orchestrator,
 )
@@ -1080,6 +1082,27 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
         if debug_config.DEBUG_ENABLED:
             acm_debug(f"Pre-processing complete: {preprocess_meta}")
             dump_content_to_file(processed_content, source_id, "processed_content")
+
+    # E26-S4: Inject Docling structured tables into non-orchestrator path
+    # The orchestrator path handles this in _extract_single_building(),
+    # but single-building documents (building_inventory=0) skip the orchestrator.
+    source_id_str = str(source.id) if source.id else None
+    if source_id_str:
+        try:
+            # Use full document page range (1 to total_pages)
+            total_pages = state.get("pipeline_logger")
+            max_page = total_pages.total_pages if total_pages and hasattr(total_pages, "total_pages") else 999
+            docling_tables = await _get_docling_tables(source_id_str, 1, max_page)
+            if docling_tables:
+                processed_content = _inject_docling_tables(
+                    processed_content, docling_tables
+                )
+                logger.info(
+                    f"Non-orchestrator path: injected {len(docling_tables)} "
+                    f"Docling tables into LLM context for {source_id_str}"
+                )
+        except Exception as e:
+            logger.warning(f"Docling table injection failed in prepare_context: {e}")
 
     # Initialize context from source metadata
     context = BuildingRoomContext()

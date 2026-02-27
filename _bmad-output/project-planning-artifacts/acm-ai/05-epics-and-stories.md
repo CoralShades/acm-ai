@@ -34,7 +34,7 @@
 | E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Drafted |
 | E24 | TableFormer Table Structure Recognition | P0 | 4 | Done (flag OFF — regression) |
 | E25 | Table Extraction Research Spike — Docling Direct API | P0 | 2 | Done |
-| E26 | Docling Direct API Integration | P0 | 5 | Drafted |
+| E26 | Docling Direct API Integration | P0 | 5 | Done (INVESTIGATE — 28/31, flag remains false) |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
