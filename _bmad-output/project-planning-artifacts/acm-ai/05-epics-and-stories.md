@@ -2555,3 +2555,24 @@ E10-S1 (independent)
 - E26 total: 7 stories, 12 SP
 
 **Depends On:** E26-S6
+
+---
+
+## Epic 27: Structured Output Resilience (P1 — Bug Fix)
+
+**Priority**: P1
+**Goal**: Fix the `completionState` JSON envelope wrapping that breaks Pydantic structured output parsing in the orchestrator and pre-extraction intelligence modules, recovering Alexander District Hospital extraction from 0/43 to >= 40/43.
+**Trigger**: E26-S4 validation revealed 0/43 Alexander extraction (all 6 building-level LLM calls fail due to OpenRouter `completionState` envelope)
+**GitHub Issue**: https://github.com/CoralShades/acm-ai/issues/81
+
+### E27-S1: Fix completionState Wrapper Parsing in Orchestrator [M — 3 SP]
+**Status**: Drafted
+
+- Add `_unwrap_completion_state()` utility to `graphs/utils.py`
+- Add fallback path in orchestrator's `_invoke()` for `ValidationError` from `with_structured_output()`
+- Apply same unwrapping to `document_structure.py`, `building_inventory.py`, `page_tagger.py`
+- Unit tests for unwrapping + fallback path
+- Integration validation: Alexander >= 40/43, Broadmeadows maintains 31/31
+- Story file: `docs/sprint-artifacts/e27-s1-completionstate-wrapper-parsing-fix.md`
+
+**Depends On:** None (standalone bug fix)
