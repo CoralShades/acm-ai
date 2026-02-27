@@ -491,6 +491,20 @@ The content below is structured MinerU HTML table output.
 
 {% endif %}
 
+{% if input_format is defined and input_format == "markdown" %}
+## Structured Table Data Instructions
+
+When structured table data is provided below (under "## Structured Table Data"),
+prioritize it over the document text for extracting ACM records. Each row
+in the structured table represents one ACM record, including rows with:
+- "Same as [sample number]" — these are valid "As Per" records
+- "Not Sampled" — these are valid assumed-positive records
+- "No Access" — these are valid records with unknown status
+- "Assumed positive" — these are valid untested positive records
+
+Extract EVERY row as a separate record. Do not merge or skip any rows.
+{% endif %}
+
 ## Content to Extract
 
 ```{% if input_format is defined and input_format == "html" %}html{% else %}text{% endif %}

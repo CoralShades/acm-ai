@@ -656,6 +656,28 @@ async def extract_building(
     llm_input_content = building_content
     llm_input_format = "markdown"
 
+    # E26-S3: Inject Docling structured tables if available (ADR-001 D5)
+    source: Optional[Source] = state.get("source")
+    source_id = str(source.id) if source and source.id else None
+    if source_id:
+        try:
+            docling_tables = await _get_docling_tables(
+                source_id, plan.page_range[0], plan.page_range[1]
+            )
+            if docling_tables:
+                llm_input_content = _inject_docling_tables(
+                    building_content, docling_tables
+                )
+                logger.info(
+                    f"Building {plan.building_id}: injected {len(docling_tables)} "
+                    f"Docling tables into LLM context"
+                )
+        except Exception as e:
+            logger.warning(
+                f"Docling table injection failed for {plan.building_id}: {e}"
+            )
+            # Non-fatal — continue with original building_content
+
     pages_processed = plan.page_range[1] - plan.page_range[0] + 1
 
     if plan.strategy == ExtractionStrategy.SKIP:

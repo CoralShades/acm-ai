@@ -345,14 +345,14 @@ development_status:
   e25-s3-architecture-decision: done  # ADR update + E26 design. Depends: S2 ✓
 
   # Epic 26: Docling Direct API Integration — Hybrid Table Extraction (P0)
-  # 3/5 stories complete — S1 (parallel extraction) + S2 (DataFrame validation) + S5 (frontend) done
+  # 4/5 stories complete — S1 (parallel extraction) + S2 (DataFrame validation) + S3 (orchestrator injection) + S5 (frontend) done
   # Tech design: docs/architecture/e26-table-extraction-technical-design.md
   # ADR: docs/architecture/adr-tableformer-integration.md (D5)
   # Goal: PyMuPDF full_text + Docling DataFrames → target >=30/31 Broadmeadows
   epic-26: in-progress
   e26-s1-docling-direct-api-extraction: done  # Commit f20e9b3. Parallel Docling extraction in process_source_command. Feature flag DOCLING_DIRECT_TABLE_EXTRACTION=false. Migration 37: structured_json on acm_table_section. 19 unit tests. Ruff clean.
   e26-s2-dataframe-validation: done  # ALL 16 METRICS PASS. 8/8 tables, 30/30 register rows, 9/9 "Same as", 4/4 "Assumed positive". Record #9 (Battery Charger) FOUND. Page 8 gap CONFIRMED. Storage 8/8. 2 S1 bugs fixed (int column names, ensure_record_id). Report: docs/reviews/e26-s2-validation-results.md
-  e26-s3-orchestrator-context-injection: backlog  # Inject Docling tables into orchestrator LLM context. Depends: S1 ✓
+  e26-s3-orchestrator-context-injection: done  # _get_docling_tables() + _inject_docling_tables() + extract_building() injection. Prompt instruction added to building_extraction.jinja. 14 unit tests, 68/68 orchestrator tests pass. Zero regression. Non-fatal fallback.
   e26-s4-accuracy-validation: backlog  # Full pipeline validation, decision gate >=30/31. Depends: S3
   e26-s5-frontend-raw-tables: done  # Auto-discovery CONFIRMED: acm_table_section with table_type='docling_direct_api' picked up by Raw Tables endpoint. Enhanced: Docling Direct API badge (purple), summary count, split from generic 'Docling Markdown'. Build ✓ Lint ✓. No regression for non-Docling sources.
 
@@ -406,13 +406,13 @@ development_status:
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Drafted: 2 (E24-S2, E24-S4)
-# Stories Backlog: 2 (E26-S3, E26-S4)
+# Stories Backlog: 1 (E26-S4)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-27  # E26-S5 DONE: Raw Tables tab auto-discovers Docling tables. Added Docling Direct API badge + summary count. Build ✓ Lint ✓.
+# Last Updated: 2026-02-27  # E26-S3 DONE: Orchestrator Docling table injection. _get_docling_tables + _inject_docling_tables + extract_building integration. 14 new tests, 68/68 orchestrator tests pass. Zero regression.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23, E25
-# IN-PROGRESS EPICS: E24 (2/4 stories done, 2 drafted), E26 (3/5 stories done, 2 backlog)
+# IN-PROGRESS EPICS: E24 (2/4 stories done, 2 drafted), E26 (4/5 stories done, 1 backlog)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # EXTRACTION ACCURACY STATUS:
