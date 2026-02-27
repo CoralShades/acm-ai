@@ -123,11 +123,23 @@ direct table rendering in the frontend and future LLM-bypass optimization.
 Phase 2 requires a new `table_type = 'tableformer_structured'` value and
 additional fields on `acm_table_section`.
 
-### D5: Integrate Docling Direct API for Structured Table Extraction — YES
+### D5: Docling Direct API — PROMOTED (2026-02-28)
 
-**Date**: 2026-02-27
+**Date**: 2026-02-27 (decision), 2026-02-28 (promoted)
+**Status**: PROMOTED — flag set to `true` default
 **Evidence**: E25 research spike (`docs/reviews/e25-table-extraction-comparison.md`)
 **Raw data**: `research-output/e25/comparison_summary.json`
+
+**Results**:
+- Broadmeadows: 31/31 (100%) — up from 28/31 (90.3%) baseline
+- Alexander: No regression (52 records maintained, ground truth: 43)
+- Processing time: 207s (7% faster than E23 baseline)
+
+**Components**:
+1. Docling Direct API extraction with TableFormer ACCURATE mode
+2. DataFrame injection into orchestrator LLM context
+3. Dedup key with `location` field
+4. Post-LLM regex fallback for No Access recovery
 
 We integrate the Docling Direct API as a **parallel extraction path** alongside
 the existing PyMuPDF text extraction. This replaces the failed E24 approach of
@@ -258,13 +270,15 @@ directly, bypassing content-core entirely and preserving row-major DataFrames.
 2. E24 validation showed 17/31 regression — flag NOT promoted
 3. MinerU dead code removed in E24-S3
 
-**D5 (E26 path — new):**
-1. Feature flag: `DOCLING_DIRECT_TABLE_EXTRACTION=false` in `.env` (default: `false`)
-2. E26-S1: Implement Docling Direct API extraction in `process_source_command`
-3. E26-S2: Validate DataFrames on Broadmeadows (verify 30 register rows, 8 tables)
-4. E26-S3: Inject DataFrame markdown into orchestrator LLM context
-5. E26-S4: Full accuracy validation — decision gate: >= 30/31 → promote flag
-6. Rollback: Set `DOCLING_DIRECT_TABLE_EXTRACTION=false`, restart worker
+**D5 (E26 path — PROMOTED 2026-02-28):**
+1. Feature flag: `DOCLING_DIRECT_TABLE_EXTRACTION=true` in `.env` (default: `true`)
+2. E26-S1: Implement Docling Direct API extraction in `process_source_command` — Done
+3. E26-S2: Validate DataFrames on Broadmeadows (verify 30 register rows, 8 tables) — Done
+4. E26-S3: Inject DataFrame markdown into orchestrator LLM context — Done
+5. E26-S4: Full accuracy validation — 31/31 (100%) → PROMOTED
+6. E26-S6: Accuracy fixes — dedup key + prompt + regex fallback — Done
+7. E26-S7: Alexander ground truth CSV + closeout — Done
+8. Rollback: Set `DOCLING_DIRECT_TABLE_EXTRACTION=false`, restart worker
 
 ---
 

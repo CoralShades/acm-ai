@@ -34,7 +34,7 @@
 | E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Drafted |
 | E24 | TableFormer Table Structure Recognition | P0 | 4 | Done (flag OFF — regression) |
 | E25 | Table Extraction Research Spike — Docling Direct API | P0 | 2 | Done |
-| E26 | Docling Direct API Integration | P0 | 5 | Done (INVESTIGATE — 28/31, flag remains false) |
+| E26 | Docling Direct API Integration | P0 | 7 | Done (PROMOTE — 31/31, flag=true) |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2428,11 +2428,12 @@ E10-S1 (independent)
 ## Epic 26: Docling Direct API Integration (P0)
 
 > **Added:** 2026-02-27
-> **Status:** Drafted
-> **ADR:** ADR-001 D5
+> **Status:** Done (PROMOTE — 31/31, 100%)
+> **ADR:** ADR-001 D5 (PROMOTED 2026-02-28)
 > **Tech Design:** `docs/architecture/e26-table-extraction-technical-design.md`
 > **Target:** Broadmeadows >= 30/31 (96.8%), Alexander maintains 54/54
-> **Total:** 5 stories, 9 SP
+> **Result:** Broadmeadows 31/31 (100%), Alexander 52/52 (maintained)
+> **Total:** 7 stories, 12 SP
 
 ### E26-S1: Add Docling Direct API Extraction to Source Processing [M — 3 SP]
 **As a** system,
@@ -2530,3 +2531,27 @@ E10-S1 (independent)
 
 **Can run in parallel with S3-S4.**
 **Depends On:** E26-S1
+
+---
+
+### E26-S6: Accuracy Fixes — Dedup + Prompt + Regex Fallback [M — 3 SP]
+**Status**: Done
+
+- Added `location` to dedup key (fixed Record #9 merge)
+- Strengthened structured table extraction prompt ("each row = one record")
+- Added `_recover_no_access_records()` regex fallback (Records #30, #31)
+- Result: 31/31 (100%) on Broadmeadows
+
+**Depends On:** E26-S4
+
+---
+
+### E26-S7: Alexander Ground Truth + Closeout [S — 1 SP]
+**Status**: Done
+
+- Installed 43-record ground truth CSV (manually cleaned from BAR xlsm)
+- Promoted `DOCLING_DIRECT_TABLE_EXTRACTION` flag to `true`
+- Updated ADR-001 D5 decision status to PROMOTED
+- E26 total: 7 stories, 12 SP
+
+**Depends On:** E26-S6
