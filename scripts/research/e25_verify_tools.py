@@ -282,7 +282,7 @@ def print_results(results: Results) -> bool:
             has_critical_failure = True
 
     print("")
-    required_checks = [(s, l, d) for s, l, d, r in results if r]
+    required_checks = [(s, lbl, d) for s, lbl, d, r in results if r]
     passed = sum(1 for s, _, _ in required_checks if s == PASS)
     total = len(required_checks)
 
@@ -299,7 +299,7 @@ def print_results(results: Results) -> bool:
         else:
             print(f"  {msg}")
 
-    mineru_status = next((s for s, l, _, _ in results if "MinerU" in l), None)
+    mineru_status = next((s for s, lbl, _, _ in results if "MinerU" in lbl), None)
     if mineru_status == PASS:
         print("  + MinerU available (3-way comparison possible)")
     else:
