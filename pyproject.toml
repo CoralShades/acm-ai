@@ -47,6 +47,7 @@ dependencies = [
     "torch>=2.10.0",
     "torchvision>=0.25.0",
     "docling>=2.75.0",
+    "textual>=1.0.0",
 ]
 
 [tool.setuptools]
@@ -95,6 +96,7 @@ line_length = 88
 
 [tool.ruff]
 line-length = 88
+exclude = [".agents", ".claude", ".codex", ".opencode", "tui"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
