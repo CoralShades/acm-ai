@@ -32,6 +32,9 @@
 | E20 | Marketing-App Cross-Site Navigation & Domain Cutover | P0 | 2 | Done |
 | E21 | UX Loading States & Layout Consistency | P1 | 3 | Drafted |
 | E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Drafted |
+| E24 | TableFormer Table Structure Recognition | P0 | 4 | Done (flag OFF — regression) |
+| E25 | Table Extraction Research Spike — Docling Direct API | P0 | 2 | Done |
+| E26 | Docling Direct API Integration | P0 | 5 | Drafted |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2385,3 +2388,145 @@ E10-S1 (independent)
 1. **bug-frontend-build-lightning-css**: Fix lighting CSS build issues in frontend
 2. **bug-stale-commands-cleanup**: Fix and clean up stale application and database commands
 3. **bug-agui-path-alignment**: Correct paths and naming for AG-UI tools to align with technical debt items
+
+---
+
+## Epic 25: Table Extraction Research Spike — Docling Direct API (P0)
+
+> **Added:** 2026-02-27
+> **Status:** Done
+> **Evidence:** `docs/reviews/e25-table-extraction-comparison.md`
+
+### E25-S1: Environment Setup + Tool Verification — Done
+**Story File:** N/A (research spike)
+
+### E25-S2: PyMuPDF vs Docling Direct API Comparison — Done
+**As a** architect,
+**I want** empirical comparison of PyMuPDF and Docling Direct API on Broadmeadows,
+**So that** I can make an evidence-based architecture decision for E26.
+
+**Key Results:**
+- Docling DataFrames: 29/31 (93.5%), 9/9 "Same as", 4/6 "Not Sampled"
+- Processing time: 22.41s (acceptable)
+- Page 8 gap: 2 records missing (below TableFormer detection threshold)
+- Recommendation: Hybrid Approach A (PyMuPDF + Docling Direct API)
+
+**Story File:** `docs/reviews/e25-table-extraction-comparison.md`
+
+### E25-S3: Architecture Decision + E26 Technical Design — Done
+**As a** architect,
+**I want** an ADR decision and technical design based on E25-S2 evidence,
+**So that** implementation can proceed with a validated blueprint.
+
+**Deliverables:**
+- ADR-001 D5: `docs/architecture/adr-tableformer-integration.md`
+- E26 Technical Design: `docs/architecture/e26-table-extraction-technical-design.md`
+- E26 stories: 5 stories, 9 SP
+
+---
+
+## Epic 26: Docling Direct API Integration (P0)
+
+> **Added:** 2026-02-27
+> **Status:** Drafted
+> **ADR:** ADR-001 D5
+> **Tech Design:** `docs/architecture/e26-table-extraction-technical-design.md`
+> **Target:** Broadmeadows >= 30/31 (96.8%), Alexander maintains 54/54
+> **Total:** 5 stories, 9 SP
+
+### E26-S1: Add Docling Direct API Extraction to Source Processing [M — 3 SP]
+**As a** system,
+**I want** to extract structured DataFrames from PDFs using Docling Direct API,
+**So that** row-coherent table data is available for LLM extraction.
+
+**Acceptance Criteria:**
+- [ ] `_extract_tables_with_docling()` runs Docling DocumentConverter on PDFs
+- [ ] Feature flag `DOCLING_DIRECT_TABLE_EXTRACTION` controls the path (default: false)
+- [ ] DataFrames stored in `acm_table_section` with `table_type="docling_direct_api"`
+- [ ] Sample number normalization: `34511-039- 001` → `34511-039-001`
+- [ ] Hazard status normalization: strip "Asbestos " prefix
+- [ ] Per-table error handling — one failure doesn't block others
+- [ ] `source.full_text` remains PyMuPDF output (unchanged)
+- [ ] Unit tests for extraction, normalization, storage
+- [ ] New migration adds `structured_json` field to `acm_table_section`
+
+**File Changes:**
+- `commands/source_commands.py` — new functions + integration
+- `migrations/N.surrealql` — `structured_json` field
+- `.env.example` — new flag
+- `tests/test_source_commands_docling.py` — new tests
+
+**Story File:** `docs/sprint-artifacts/e26-s1-docling-direct-api.md`
+
+---
+
+### E26-S2: Broadmeadows DataFrame Validation [S — 1 SP]
+**As a** QA engineer,
+**I want** to validate Docling DataFrames against E25 spike results,
+**So that** the integration produces the expected table structure.
+
+**Acceptance Criteria:**
+- [ ] 8 tables stored in `acm_table_section` (3 register, 5 other)
+- [ ] 30 register rows across tables on pages 5-7
+- [ ] 9/9 "Same as" rows present
+- [ ] 4/6 "Not Sampled" rows present (matching E25 spike)
+- [ ] DataFrame column structure matches E25 report
+- [ ] Validation report: `docs/reviews/e26-s2-validation-results.md`
+
+**Depends On:** E26-S1
+
+---
+
+### E26-S3: Inject Docling Tables into Orchestrator Context [M — 3 SP]
+**As a** system,
+**I want** the orchestrator to inject Docling DataFrame markdown into LLM context,
+**So that** the LLM receives structured table data alongside full_text for better extraction.
+
+**Acceptance Criteria:**
+- [ ] `_get_docling_tables()` loads tables from `acm_table_section` by page range
+- [ ] `_inject_docling_tables()` appends DataFrame markdown to building content
+- [ ] Supplementary prompt instruction for structured table handling
+- [ ] "Same as", "Not Sampled", "No Access" explicitly mentioned in prompt
+- [ ] If no Docling tables: existing behavior unchanged
+- [ ] Integration test: extraction with Docling tables produces >= 29 records
+
+**File Changes:**
+- `open_notebook/extractors/orchestrator.py` — new functions + modify `extract_building()`
+- `prompts/acm/building_extraction.j2` — add structured table instruction
+- `tests/test_orchestrator_docling.py` — new tests
+
+**Depends On:** E26-S1
+
+---
+
+### E26-S4: Accuracy Validation — Target 30+/31 [S — 1 SP]
+**As a** product owner,
+**I want** full pipeline validation with a decision gate,
+**So that** we only promote the feature flag when accuracy targets are met.
+
+**Acceptance Criteria:**
+- [ ] Full extraction pipeline on Broadmeadows with Docling tables ON
+- [ ] Cross-reference against ground truth CSV (31 records)
+- [ ] Decision gate: >= 30/31 → promote flag; < 28/31 → rollback
+- [ ] Alexander regression check: must maintain 54/54
+- [ ] Record #9 (Switch Room / Battery Charger) must be captured
+- [ ] Validation report: `docs/reviews/e26-s4-validation-results.md`
+
+**Depends On:** E26-S3
+
+---
+
+### E26-S5: Frontend — Enhanced Raw Tables Display [S — 1 SP]
+**As a** compliance officer,
+**I want** the Raw Tables tab to show Docling-extracted tables,
+**So that** I can review high-quality structured table data from PDFs.
+
+**Acceptance Criteria:**
+- [ ] Raw Tables tab displays Docling tables from `acm_table_section`
+- [ ] HTML rendering quality verified (clean `<table>` elements)
+- [ ] Markdown fallback works for non-HTML consumers
+- [ ] No regression for non-Docling sources
+- [ ] Optional: "Source" indicator showing extraction method
+
+**Can run in parallel with S3-S4.**
+**Depends On:** E26-S1
