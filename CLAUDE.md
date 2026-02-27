@@ -160,6 +160,41 @@ extract_acm_records(
 - Consider Docker containerization for MinerU isolation in production
 - Fallback mechanism ensures data extraction works even if MinerU dependencies are unavailable
 
+## Secondary Python Environment: MinerU
+
+MinerU requires `paddlepaddle-gpu` which conflicts with `torch 2.10.0+cu126` in the main venv.
+It runs in an isolated venv at `.venv-mineru/` — managed by pip directly (not uv/pyproject.toml).
+
+### Venv Summary
+
+| Venv | Path | Purpose | Manager |
+|------|------|---------|---------|
+| Main | `.venv/` | All production services — API, worker, Docling/TableFormer | `uv` (pyproject.toml) |
+| MinerU | `.venv-mineru/` | MinerU table extraction — spike research + optional backend | `pip` (standalone) |
+
+### Interpreter Paths
+
+| Platform | Main venv | MinerU venv |
+|----------|-----------|-------------|
+| Windows | `.venv\Scripts\python.exe` | `.venv-mineru\Scripts\python.exe` |
+| WSL/Linux | `.venv/bin/python` | `.venv-mineru/bin/python` |
+
+### Rules for All AI Coding Tools
+
+- **Always `uv run ...`** for all main project work (API, tests, lint, workers)
+- **`.venv-mineru` only** for: `scripts/mineru_runner.py`, `scripts/research/` spike scripts
+- **Never** `uv pip install magic-pdf` or `paddlepaddle` into the main venv
+- **Never** import `magic_pdf` or `paddle` directly in main project code — use `scripts/mineru_runner.py` via subprocess
+
+### Backend Integration Pattern
+
+See `scripts/mineru_runner.py` for the subprocess bridge interface.
+Enable via environment variables: `MINERU_ENABLED=true` + `MINERU_VENV_PATH=.venv-mineru`
+
+### One-Time Setup (Windows)
+
+See `/e25-setup-mineru` command or Phase 1 of the MinerU venv plan.
+
 ## Database
 
 SurrealDB with core tables: `notebook`, `source`, `note`, `model`, `transformation`, `episode_profile`, `speaker_profile`

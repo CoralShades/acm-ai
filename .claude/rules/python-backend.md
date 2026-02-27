@@ -44,3 +44,15 @@ Background jobs in `commands/`:
 - Use custom exceptions from domain layer
 - Always log errors with context
 - Return appropriate HTTP status codes in API layer
+
+## Multi-Venv Pattern (MinerU)
+
+The project uses two Python environments:
+- **Main**: `.venv/` — `uv run ...` for all production code
+- **MinerU**: `.venv-mineru/` — `pip`-managed, isolated from main venv
+
+### When writing code that touches MinerU:
+- Call via `scripts/mineru_runner.py` subprocess bridge — never import `magic_pdf` directly
+- Use `MINERU_ENABLED` env var to gate the MinerU path
+- The bridge Python path: `.venv-mineru\Scripts\python.exe` (Windows) / `.venv-mineru/bin/python` (Linux)
+- Research scripts under `scripts/research/` may import from `.venv-mineru` when run inside it
