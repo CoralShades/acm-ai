@@ -4,6 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical** : Always use AskUserQuestion Tool when you want to clarify, interview or ask questions from the user.
 
+## CRITICAL PATH RULE (WSL/Windows)
+
+- Never `cd` to `/d/...` or `D:\...` in Bash commands.
+- Always use the repo root from `$CLAUDE_PROJECT_DIR`.
+- If `$CLAUDE_PROJECT_DIR` is not set, assume WSL mount: `/mnt/d/ailocal/acm-ai`.
+
+Examples:
+- `cd "$CLAUDE_PROJECT_DIR"`
+- `cd "$CLAUDE_PROJECT_DIR" && uv run ...`
+- `ls "$CLAUDE_PROJECT_DIR/docs"`
+- `cd /d/ailocal/acm-ai` — WRONG
+- `cd D:\ailocal\acm-ai` — WRONG
+
 ## Project Overview
 
 ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms SAMP (School Asbestos Management Plan) documents into structured, queryable data. It's a monorepo with two parts:
