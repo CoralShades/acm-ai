@@ -44,6 +44,9 @@ dependencies = [
     "openpyxl>=3.1.5",
     "ag-ui-protocol>=0.1.11",
     "ag-ui-langgraph>=0.0.25",
+    "torch>=2.10.0",
+    "torchvision>=0.25.0",
+    "docling>=2.75.0",
 ]
 
 [tool.setuptools]
@@ -74,6 +77,17 @@ dev = [
     "ruff>=0.14.7",
     "types-requests>=2.32.4.20250913",
 ]
+
+[tool.uv]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126" }]
+torchvision = [{ index = "pytorch-cu126" }]
 
 [tool.isort]
 profile = "black"
