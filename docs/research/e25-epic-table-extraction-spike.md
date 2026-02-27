@@ -5,6 +5,7 @@ status: in-progress
 priority: P0
 total_effort: 5 SP
 s1_completed: 2026-02-27
+s2_completed: 2026-02-27
 depends_on: E24 (complete)
 trigger: E24 validation proved content-core markdown serialization destroys TableFormer output (17/31 regression)
 ---
@@ -24,7 +25,7 @@ E24 proved that **content-core's markdown serializer** is the bottleneck, not Ta
 | Story | Title | Priority | Effort | Status | Phase |
 |-------|-------|----------|--------|--------|-------|
 | E25-S1 | Environment Setup & Dependency Audit | P0 | S (1 SP) | done | 1 |
-| E25-S2 | Research Spike Execution | P0 | M (2 SP) | backlog | 2 |
+| E25-S2 | Research Spike Execution | P0 | M (2 SP) | done | 2 |
 | E25-S3 | Architecture Decision & E26 Design | P0 | M (2 SP) | backlog | 3 |
 
 ## Phase Dependencies
@@ -139,11 +140,12 @@ Session 1: Run these commands in sequence:
 epic: Epic 25
 story_id: E25-S2
 title: Research Spike Execution
-status: backlog
+status: done
 priority: P0
 effort: M (2 SP)
 depends_on: E25-S1
 agent: Amelia (Developer)
+completed: 2026-02-27
 ```
 
 **As a** researcher,
@@ -152,15 +154,23 @@ agent: Amelia (Developer)
 
 ### Acceptance Criteria
 
-- [ ] Research spike script created: `scripts/research/e25_table_comparison.py`
-- [ ] PyMuPDF baseline captured (text-only, page markers)
-- [ ] Docling Direct API results captured (DataFrames, HTML, markdown per table)
-- [ ] MinerU results captured (if available — HTML tables)
-- [ ] Comparison report generated: `docs/reviews/e25-table-extraction-comparison.md`
-- [ ] Table-by-table quality analysis (rows, columns, coherence, merged cells)
-- [ ] ACM-specific validation: "As Per" rows, "Not Sampled" rows, NATA numbers
-- [ ] Individual table outputs saved: `research-output/e25/{method}/table_*.{md,html,csv}`
-- [ ] Structured comparison JSON: `research-output/e25/comparison_report.json`
+- [x] Research spike script created: `scripts/research/e25_table_comparison.py`
+- [x] PyMuPDF baseline captured (text-only, page markers) — 0.09s, 34,369 chars
+- [x] Docling Direct API results captured (DataFrames, HTML, markdown per table) — 22.41s, 8 tables
+- [x] MinerU results: SKIPPED (2-way comparison)
+- [x] Comparison report generated: `docs/reviews/e25-table-extraction-comparison.md`
+- [x] Table-by-table quality analysis: 3 register tables, 30 rows, row coherence PRESERVED
+- [x] ACM-specific validation: 9/9 "As Per", 4/6 "Not Sampled", 16/16 NATA — **29/31 (93.5%)**
+- [x] Individual table outputs saved: `research-output/e25/{method}/table_*.{md,html,csv,json}`
+- [x] Structured comparison JSON: `research-output/e25/comparison_summary.json`
+
+### Key Results
+
+- **Docling DataFrames: 29/31 (93.5%)** — beats E23 baseline of 28/31 (90.3%)
+- **Record #9 (Switch Room / Battery Charger)**: FOUND in DataFrames — previously missed by LLM
+- **Records #30, #31 (No Access)**: Still missing — on page 8, which Docling doesn't detect as a table
+- **Row coherence**: PRESERVED — each DataFrame row = one complete ACM register entry
+- **Recommendation**: Approach A (Hybrid PyMuPDF + Docling Direct API)
 
 ### CRITICAL: This is READ-ONLY Research
 

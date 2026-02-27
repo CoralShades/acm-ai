@@ -1,0 +1,7 @@
+| 0                                                    | 1                                                                      |
+|:-----------------------------------------------------|:-----------------------------------------------------------------------|
+| KEYTOASBESTOS-CONTAININGMATERIALSPRIORITYRISKRATING: | KEYTOASBESTOS-CONTAININGMATERIALSPRIORITYRISKRATING:                   |
+| Priority1 (P1) HIGH                                  | High Priority - Requiring immediate action                             |
+| Priority 2 (P2) MEDIUM                               | Medium Priority - May require action in the short term                 |
+| Priority 3 (P3) Low                                  | LowPriority-Mayrequireactioninthemediumterm                            |
+| Priority 4 (P4) Low                                  | Very LowPriority-Requires ongoingmanagement orlongertermremedialaction |

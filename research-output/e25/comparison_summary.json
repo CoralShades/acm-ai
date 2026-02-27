@@ -1,0 +1,52 @@
+{
+  "pymupdf": {
+    "duration_seconds": 0.088,
+    "total_chars": 34369,
+    "total_lines": 1658,
+    "total_pages": 19,
+    "tables_found": 0
+  },
+  "docling_direct_api": {
+    "duration_seconds": 22.408,
+    "total_chars": 74056,
+    "total_lines": 409,
+    "tables_found": 8,
+    "tables_with_errors": 0,
+    "register_tables": 3,
+    "register_rows": 30
+  },
+  "cross_reference": {
+    "ground_truth_records": 31,
+    "sample_numbers_matched": 0,
+    "as_per_references_matched": 0,
+    "unique_sample_numbers_found": 0,
+    "unique_as_per_found": 0,
+    "indicators": {
+      "as_per_rows_found": 9,
+      "not_sampled_rows_found": 0,
+      "assumed_positive_found": 4,
+      "no_access_found": 0
+    },
+    "missing_records_found": 2
+  },
+  "markdown_analysis": {
+    "total_chars": 74056,
+    "total_lines": 410,
+    "table_lines": 85,
+    "page_markers": 0,
+    "page_marker_samples": [],
+    "acm_indicators": {
+      "same as": 9,
+      "as per": 2,
+      "not sampled": 0,
+      "assumed positive": 4,
+      "no access": 0,
+      "34511": 48,
+      "battery charger": 1,
+      "fuse cartridge": 0,
+      "internal lining": 6,
+      "disabled toilet": 0,
+      "lift foyer": 1
+    }
+  }
+}

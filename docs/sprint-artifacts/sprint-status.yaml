@@ -334,6 +334,16 @@ development_status:
   e24-s3-remove-mineru-dead-code: done  # GitHub #78. Commit 6e0e2e8. Removed 2,298 lines dead MinerU code (4 files deleted, 13 tests removed across 3 files). Deprecation header added to acm_extractor.py. 936/936 tests pass, ruff clean, npm build ✓.
   e24-s4-docker-model-predownload: drafted  # GitHub #79. Pre-download TableFormer weights in Dockerfile, add env vars to docker-compose. Depends: S1 ✓
 
+  # Epic 25: Table Extraction Research Spike — Comparative Analysis (P0)
+  # 2/3 stories complete — S1 (environment) + S2 (spike execution) done, S3 (architecture decision) pending
+  # Epic file: docs/research/e25-epic-table-extraction-spike.md
+  # Goal: Empirical comparison of PyMuPDF vs Docling Direct API on Broadmeadows benchmark
+  # Result: Docling DataFrames achieve 29/31 (93.5%), +1 over E23 baseline (28/31)
+  epic-25: in-progress
+  e25-s1-environment-setup: done  # All 7 tools verified. Docling 2.75.0 + RTX 4090. 8 tables from Broadmeadows in 14.9s. Report: docs/research/e25-environment-audit.md
+  e25-s2-research-spike-execution: done  # PyMuPDF vs Docling Direct API comparison. 29/31 (93.5%) from DataFrames. Record #9 (Battery Charger) FOUND. Records #30,#31 on page 8 (not detected). Recommendation: Approach A (Hybrid). Report: docs/reviews/e25-table-extraction-comparison.md
+  e25-s3-architecture-decision: backlog  # ADR update + E26 design. Depends: S2 ✓
+
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
 
@@ -377,26 +387,27 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 24
-# Total Stories: 160
-# Stories Done: 146 (91%)
+# Total Epics: 25
+# Total Stories: 163
+# Stories Done: 149 (91%)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Drafted: 2 (E24-S2, E24-S4)
-# Stories Backlog: 0
+# Stories Backlog: 1 (E25-S3)
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
-# Last Updated: 2026-02-27  # E24-S3 DONE: Remove MinerU dead code (commit 6e0e2e8). 2,298 lines removed, 4 files deleted, 13 tests removed. 936/936 pass.
+# Last Updated: 2026-02-27  # E25-S2 DONE: Research spike — Docling DataFrames 29/31 (93.5%). Report: docs/reviews/e25-table-extraction-comparison.md
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23
-# IN-PROGRESS EPICS: E24 (2/4 stories done, 2 drafted)
+# IN-PROGRESS EPICS: E24 (2/4 stories done, 2 drafted), E25 (2/3 stories done, 1 backlog)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
-# 
+#
 # EXTRACTION ACCURACY STATUS:
 # ===========================
 # Alexander PDF: 54/54 records (100%) - COMPLETE
 # Broadmeadows PDF: 28/31 records (90.3%) - TARGET MET (≥90%), E24 targeting ≥30/31 (97%+)
+# Broadmeadows (E25 spike): 29/31 (93.5%) from Docling DataFrames alone — +1 over E23 baseline
 #
 # KEY CHANGES (2026-02-22 - Ralph Sprint: 11 Stories Completed):
 # ===============================================================

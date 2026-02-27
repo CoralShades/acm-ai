@@ -1,0 +1,54 @@
+{
+  "table_index": 1,
+  "page": 4,
+  "rows": 5,
+  "columns": 2,
+  "raw_column_names": [
+    0,
+    1
+  ],
+  "normalized_column_names": [
+    "0",
+    "1"
+  ],
+  "sample_rows": [
+    {
+      "0": "KEYTOASBESTOS-CONTAININGMATERIALSPRIORITYRISKRATING:",
+      "1": "KEYTOASBESTOS-CONTAININGMATERIALSPRIORITYRISKRATING:"
+    },
+    {
+      "0": "Priority1 (P1) HIGH",
+      "1": "High Priority - Requiring immediate action"
+    },
+    {
+      "0": "Priority 2 (P2) MEDIUM",
+      "1": "Medium Priority - May require action in the short term"
+    },
+    {
+      "0": "Priority 3 (P3) Low",
+      "1": "LowPriority-Mayrequireactioninthemediumterm"
+    },
+    {
+      "0": "Priority 4 (P4) Low",
+      "1": "Very LowPriority-Requires ongoingmanagement orlongertermremedialaction"
+    }
+  ],
+  "has_merged_cells": true,
+  "acm_indicators": {
+    "same as": false,
+    "as per": false,
+    "not sampled": false,
+    "assumed positive": false,
+    "assumed": false,
+    "no access": false,
+    "34511": false,
+    "negative": false,
+    "positive": false,
+    "battery charger": false,
+    "fuse cartridge": false,
+    "internal lining": false,
+    "disabled toilet": false,
+    "lift foyer": false,
+    "switch room": false
+  }
+}
