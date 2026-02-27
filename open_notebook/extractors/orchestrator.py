@@ -49,6 +49,83 @@ from open_notebook.graphs.utils import (
 )
 
 # ---------------------------------------------------------------------------
+# E26-S3: Docling table injection helpers (ADR-001 D5)
+# ---------------------------------------------------------------------------
+
+
+async def _get_docling_tables(
+    source_id: str,
+    page_start: int,
+    page_end: int,
+) -> List[Dict[str, Any]]:
+    """Load Docling Direct API tables from acm_table_section for a page range.
+
+    Returns tables where table_type='docling_direct_api' and page falls
+    within the building's page range.  Returns empty list if none found
+    (graceful fallback to existing behavior).
+    """
+    from open_notebook.database.repository import ensure_record_id, repo_query
+
+    try:
+        query = (
+            "SELECT * FROM acm_table_section "
+            "WHERE source_id = $source_id "
+            "AND table_type = 'docling_direct_api' "
+            "AND page_start >= $page_start "
+            "AND page_end <= $page_end "
+            "ORDER BY page_start ASC"
+        )
+        results = await repo_query(
+            query,
+            {
+                "source_id": ensure_record_id(source_id),
+                "page_start": page_start,
+                "page_end": page_end,
+            },
+        )
+        return results if results else []
+    except Exception as e:
+        logger.warning(f"Docling table query failed for {source_id}: {e}")
+        return []
+
+
+def _inject_docling_tables(
+    building_content: str,
+    docling_tables: List[Dict[str, Any]],
+) -> str:
+    """Inject Docling DataFrame markdown into building content for LLM context.
+
+    Appends structured table data AFTER the existing building content,
+    with clear section headers and an instruction for the LLM to prioritize
+    the structured data for record extraction.
+    """
+    if not docling_tables:
+        return building_content
+
+    context_parts = [building_content]
+    context_parts.append(
+        "\n\n## Structured Table Data (from PDF table extraction)\n"
+        "The following tables were extracted directly from the PDF with "
+        "preserved row structure. Each row is a complete ACM register entry.\n"
+    )
+
+    for table in docling_tables:
+        page = table.get("page_start", "?")
+        raw_text = table.get("raw_text", "")
+        if raw_text:
+            context_parts.append(f"### Table (Page {page})\n{raw_text}\n")
+
+    context_parts.append(
+        "\n**IMPORTANT**: The structured table data above preserves exact row "
+        "structure from the PDF. Each row represents one ACM record. Rows with "
+        "'Same as', 'As Per', 'Not Sampled', or 'No Access' entries are separate "
+        "records that must EACH be extracted as individual ACM records.\n"
+    )
+
+    return "\n".join(context_parts)
+
+
+# ---------------------------------------------------------------------------
 # Free-form JSON normalization helpers
 # ---------------------------------------------------------------------------
 
