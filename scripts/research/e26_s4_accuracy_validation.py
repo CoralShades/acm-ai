@@ -1,20 +1,19 @@
 """E26-S4 Accuracy Validation — Decision Gate
 
-Full pipeline: PyMuPDF text + Docling DataFrames (from DB) → LLM extraction
+Full pipeline: PyMuPDF text + Docling DataFrames → LLM extraction
 → Ground truth cross-reference.
 
-Uses Docling tables pre-stored in DB from E26-S2 validation (source:e26_s2_test).
-These tables were verified to match E25 spike results exactly (8 tables, 30 register
-rows, Record #9 present).
+Loads Docling register table markdown from E25 research output and mocks
+_get_docling_tables to inject them into the LLM context. This avoids
+requiring SurrealDB to have pre-stored tables.
 
 Usage:
     cd $CLAUDE_PROJECT_DIR
     uv run python scripts/research/e26_s4_accuracy_validation.py
 
 Requirements:
-    - SurrealDB running (port 8000)
     - OPENROUTER_API_KEY or ANTHROPIC_API_KEY in .env
-    - Docling tables stored in DB for source:e26_s2_test (from S2 validation)
+    - E25 research output in research-output/e25/docling_direct_api/
 """
 
 import asyncio
@@ -36,9 +35,20 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
-SAMPLE_PDF = PROJECT_ROOT / "docs/samplePDF/Clutch_Broadmeadows.pdf"
-SAMPLE_CSV = PROJECT_ROOT / "docs/samplePDF/Clutch_Broadmeadows.csv"
-SOURCE_ID = "source:e26_s2_test"
+BROADMEADOWS_PDF = PROJECT_ROOT / "docs/samplePDF/Clutch_Broadmeadows.pdf"
+BROADMEADOWS_CSV = PROJECT_ROOT / "docs/samplePDF/Clutch_Broadmeadows.csv"
+ALEXANDER_PDF = PROJECT_ROOT / "docs/samplePDF/Clucth_Alexander_District_Hospital.pdf"
+ALEXANDER_CSV = PROJECT_ROOT / "docs/samplePDF/Clutch_Alexandra.csv"
+DOCLING_TABLES_DIR = PROJECT_ROOT / "research-output/e25/docling_direct_api"
+
+# Register tables from E25 (pages 5, 6, 7 — 10 rows each = 30 register rows)
+REGISTER_TABLE_FILES = {
+    5: "table_2.md",  # Ground floor + First floor (page 5)
+    6: "table_3.md",  # First floor continued (page 6)
+    7: "table_4.md",  # External + Internal (page 7)
+}
+
+SOURCE_ID = "source:e26_s4_test"
 
 OPENROUTER_DEFAULT_MODEL = "anthropic/claude-sonnet-4"
 ANTHROPIC_DEFAULT_MODEL = "claude-haiku-4-5-20251001"
@@ -65,28 +75,6 @@ def _extract_pdf_text(pdf_path: Path) -> str:
         pages.append(f"--- Page {i} ---\n{text}")
     return "\n\n".join(pages)
 
-
-def _load_expected_records():
-    """Load ground truth from CSV."""
-    records = []
-    with open(SAMPLE_CSV, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            sample_no = row["NATA Endorsed Sample number (if available)"].strip()
-            records.append(
-                {
-                    "room": row["Room or Area"].strip(),
-                    "location": row["Location in Room"].strip(),
-                    "item": row["Specific Item/ACM Name"].strip(),
-                    "sample_no": sample_no,
-                    "result": row["Sample Result"].strip(),
-                    "level": row["Level"].strip(),
-                    "internal_external": row["Internal / External"].strip(),
-                    # Categorize for reporting
-                    "category": _categorize_record(sample_no, row["Sample Result"].strip()),
-                }
-            )
-    return records
 
 
 def _categorize_record(sample_no: str, result: str) -> str:
@@ -248,55 +236,79 @@ def _check_specific_record(extracted_records, room_substr: str, loc_substr: str)
     return False
 
 
+# ── Docling Table Mock ────────────────────────────────────────────────────
+
+
+def _load_register_tables():
+    """Load register table markdown from E25 research output."""
+    tables = []
+    for page, filename in REGISTER_TABLE_FILES.items():
+        filepath = DOCLING_TABLES_DIR / filename
+        if filepath.exists():
+            raw_text = filepath.read_text(encoding="utf-8")
+            tables.append({
+                "page_start": page,
+                "page_end": page,
+                "raw_text": raw_text,
+                "table_type": "docling_direct_api",
+            })
+    return tables
+
+
+def _make_docling_tables_mock(tables):
+    """Create a mock for _get_docling_tables that returns register tables."""
+    async def mock_get_docling_tables(source_id, page_start, page_end):
+        return [
+            t for t in tables
+            if t["page_start"] >= page_start and t["page_end"] <= page_end
+        ]
+    return mock_get_docling_tables
+
+
+def _load_expected_records_from_csv(csv_path):
+    """Load ground truth from any BAR-format CSV."""
+    records = []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            sample_no = row["NATA Endorsed Sample number (if available)"].strip()
+            records.append(
+                {
+                    "room": row["Room or Area"].strip(),
+                    "location": row["Location in Room"].strip(),
+                    "item": row["Specific Item/ACM Name"].strip(),
+                    "sample_no": sample_no,
+                    "result": row["Sample Result"].strip(),
+                    "level": row.get("Level", "").strip(),
+                    "internal_external": row.get("Internal / External", "").strip(),
+                    "category": _categorize_record(sample_no, row["Sample Result"].strip()),
+                }
+            )
+    return records
+
+
 # ── Main Validation ───────────────────────────────────────────────────────
 
 
-async def run_validation():
+async def _run_extraction(
+    pdf_text: str,
+    source_id: str,
+    title: str,
+    pdf_path: Path,
+    register_tables: list | None = None,
+):
+    """Run the extraction pipeline with optional Docling table injection.
+
+    Returns (extracted_records, result, elapsed_seconds).
+    """
     from open_notebook.domain.acm import ACMRecord, ACMTableSection
     from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
-    print("=" * 70)
-    print("E26-S4 ACCURACY VALIDATION — DECISION GATE")
-    print("=" * 70)
-
-    # 1. Pre-flight
-    print("\n[1/5] Pre-flight checks...")
-    assert SAMPLE_PDF.exists(), f"PDF not found: {SAMPLE_PDF}"
-    assert SAMPLE_CSV.exists(), f"CSV not found: {SAMPLE_CSV}"
-    assert os.environ.get("OPENROUTER_API_KEY") or os.environ.get(
-        "ANTHROPIC_API_KEY"
-    ), "No API key"
-
-    flag = os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "false")
-    print(f"  DOCLING_DIRECT_TABLE_EXTRACTION = {flag}")
-    model_name = os.environ.get("TEST_MODEL", OPENROUTER_DEFAULT_MODEL)
-    print(f"  Model: {model_name}")
-    print(f"  Source ID: {SOURCE_ID}")
-
-    # 2. Load ground truth
-    print("\n[2/5] Loading ground truth...")
-    expected = _load_expected_records()
-    print(f"  Ground truth: {len(expected)} records")
-
-    nata_count = sum(1 for r in expected if r["category"] == "nata_sampled")
-    as_per_count = sum(1 for r in expected if r["category"] == "as_per")
-    not_sampled_count = sum(1 for r in expected if r["category"] == "not_sampled")
-    print(f"  NATA-sampled: {nata_count}, As Per: {as_per_count}, Not Sampled: {not_sampled_count}")
-
-    # 3. Extract PDF text
-    print("\n[3/5] Extracting PDF text (PyMuPDF)...")
-    pdf_text = _extract_pdf_text(SAMPLE_PDF)
-    print(f"  PDF text: {len(pdf_text)} chars")
-
-    # 4. Run extraction
-    print("\n[4/5] Running full extraction pipeline (LLM + Docling context)...")
-    print(f"  This will take ~3-5 minutes (LLM extraction)...")
-
     source = MagicMock()
-    source.id = SOURCE_ID
+    source.id = source_id
     source.full_text = pdf_text
-    source.title = "Broadmeadows Police Station - Division 5 Asbestos Assessment"
-    source.asset = MagicMock(file_path=str(SAMPLE_PDF))
+    source.title = title
+    source.asset = MagicMock(file_path=str(pdf_path))
 
     extracted_records: list = []
 
@@ -312,9 +324,8 @@ async def run_validation():
     async def real_provision_model(content, model_id, default_type, **kwargs):
         return _create_llm_model(**kwargs)
 
-    start_time = time.time()
-
-    with (
+    # Build patches list
+    patches = [
         patch.object(ACMRecord, "save", capture_record_save),
         patch.object(ACMTableSection, "save", noop_section_save),
         patch(
@@ -329,15 +340,91 @@ async def run_validation():
             "open_notebook.graphs.utils.provision_langchain_model",
             real_provision_model,
         ),
-    ):
+    ]
+
+    # Mock _get_docling_tables if we have register tables to inject
+    if register_tables:
+        mock_fn = _make_docling_tables_mock(register_tables)
+        patches.append(
+            patch(
+                "open_notebook.extractors.orchestrator._get_docling_tables",
+                mock_fn,
+            )
+        )
+
+    start_time = time.time()
+
+    # Apply all patches
+    ctx_managers = [p.__enter__() for p in patches]
+    try:
         result = await extract_acm_from_source(
             source=source,
             model_id=None,
             force=False,
             command_id=None,
         )
+    finally:
+        for p in reversed(patches):
+            p.__exit__(None, None, None)
 
     elapsed = time.time() - start_time
+    return extracted_records, result, elapsed
+
+
+async def run_validation():
+    from open_notebook.domain.acm import ACMRecord, ACMTableSection
+    from open_notebook.graphs.acm_extraction import extract_acm_from_source
+
+    print("=" * 70)
+    print("E26-S4 ACCURACY VALIDATION — DECISION GATE")
+    print("=" * 70)
+
+    # 1. Pre-flight
+    print("\n[1/6] Pre-flight checks...")
+    assert BROADMEADOWS_PDF.exists(), f"PDF not found: {BROADMEADOWS_PDF}"
+    assert BROADMEADOWS_CSV.exists(), f"CSV not found: {BROADMEADOWS_CSV}"
+    assert os.environ.get("OPENROUTER_API_KEY") or os.environ.get(
+        "ANTHROPIC_API_KEY"
+    ), "No API key"
+
+    flag = os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "false")
+    print(f"  DOCLING_DIRECT_TABLE_EXTRACTION = {flag}")
+    model_name = os.environ.get("TEST_MODEL", OPENROUTER_DEFAULT_MODEL)
+    print(f"  Model: {model_name}")
+    print(f"  Source ID: {SOURCE_ID}")
+
+    # Load Docling register tables from E25 research output
+    register_tables = _load_register_tables()
+    print(f"  Docling register tables loaded: {len(register_tables)} (pages {[t['page_start'] for t in register_tables]})")
+    if not register_tables:
+        print("  WARNING: No Docling tables found — extraction will run without Docling context")
+
+    # 2. Load ground truth
+    print("\n[2/6] Loading ground truth...")
+    expected = _load_expected_records_from_csv(BROADMEADOWS_CSV)
+    print(f"  Ground truth: {len(expected)} records")
+
+    nata_count = sum(1 for r in expected if r["category"] == "nata_sampled")
+    as_per_count = sum(1 for r in expected if r["category"] == "as_per")
+    not_sampled_count = sum(1 for r in expected if r["category"] == "not_sampled")
+    print(f"  NATA-sampled: {nata_count}, As Per: {as_per_count}, Not Sampled: {not_sampled_count}")
+
+    # 3. Extract PDF text
+    print("\n[3/6] Extracting PDF text (PyMuPDF)...")
+    pdf_text = _extract_pdf_text(BROADMEADOWS_PDF)
+    print(f"  PDF text: {len(pdf_text)} chars")
+
+    # 4. Run Broadmeadows extraction
+    print("\n[4/6] Running Broadmeadows extraction (LLM + Docling context)...")
+    print(f"  This will take ~3-5 minutes (LLM extraction)...")
+
+    extracted_records, result, elapsed = await _run_extraction(
+        pdf_text=pdf_text,
+        source_id=SOURCE_ID,
+        title="Broadmeadows Police Station - Division 5 Asbestos Assessment",
+        pdf_path=BROADMEADOWS_PDF,
+        register_tables=register_tables,
+    )
 
     print(f"  Extraction status: {result.status}")
     print(f"  Records extracted: {result.total_records}")
@@ -351,8 +438,8 @@ async def run_validation():
             print("  FATAL: No records captured. Cannot proceed.")
             return
 
-    # 5. Cross-reference
-    print("\n[5/5] Cross-referencing against ground truth...")
+    # 5. Cross-reference Broadmeadows
+    print("\n[5/6] Cross-referencing Broadmeadows against ground truth...")
     found_indices, missing = _match_extracted_to_expected(extracted_records, expected)
 
     total_matched = len(found_indices)
@@ -410,24 +497,80 @@ async def run_validation():
             f"(sample: {r.sample_no or 'N/A'})"
         )
 
+    # 6. Alexander Regression Check
+    alexander_matched = None
+    alexander_expected_count = None
+    alexander_elapsed = None
+    if ALEXANDER_PDF.exists() and ALEXANDER_CSV.exists():
+        print("\n[6/6] Running Alexander regression check...")
+        alexander_expected = _load_expected_records_from_csv(ALEXANDER_CSV)
+        alexander_expected_count = len(alexander_expected)
+        print(f"  Alexander ground truth: {alexander_expected_count} records")
+        print(f"  This will take ~3-5 minutes (LLM extraction)...")
+
+        alexander_text = _extract_pdf_text(ALEXANDER_PDF)
+        # Alexander has no Docling tables — run without injection
+        alex_records, alex_result, alexander_elapsed = await _run_extraction(
+            pdf_text=alexander_text,
+            source_id="source:e26_s4_alexander",
+            title="Alexandra District Hospital - Asbestos Risk Assessment",
+            pdf_path=ALEXANDER_PDF,
+            register_tables=None,  # No Docling tables for Alexander
+        )
+
+        print(f"  Alexander extraction: {alex_result.status}, {len(alex_records)} records, {alexander_elapsed:.1f}s")
+
+        alex_found, alex_missing = _match_extracted_to_expected(alex_records, alexander_expected)
+        alexander_matched = len(alex_found)
+        alex_pct = 100 * alexander_matched / alexander_expected_count
+
+        print(f"  Alexander result: {alexander_matched}/{alexander_expected_count} ({alex_pct:.1f}%)")
+        if alex_missing:
+            print(f"  Missing ({len(alex_missing)}):")
+            for i, rec in enumerate(alex_missing, 1):
+                print(f"    {i}. {rec['room']} / {rec['location']} / {rec['item']} (sample: {rec['sample_no']})")
+    else:
+        print("\n[6/6] Alexander check SKIPPED (PDF or CSV not found)")
+
     # ── Decision Gate ──────────────────────────────────────────────────
 
     print("\n" + "=" * 70)
     print("DECISION GATE")
     print("=" * 70)
 
-    if total_matched >= 30 and total_matched > 28:
+    # Broadmeadows decision
+    if total_matched >= 30:
+        broadmeadows_decision = "PASS"
+    elif total_matched >= 28:
+        broadmeadows_decision = "INVESTIGATE"
+    else:
+        broadmeadows_decision = "FAIL"
+
+    # Alexander decision
+    if alexander_matched is not None:
+        alexander_pass = alexander_matched >= alexander_expected_count
+    else:
+        alexander_pass = True  # Skip if not run
+
+    # Combined decision
+    if broadmeadows_decision == "PASS" and alexander_pass:
         decision = "PROMOTE"
         print(f"\n  Result: PROMOTE")
-        print(f"  {total_matched}/31 >= 30/31 threshold")
-    elif total_matched >= 28:
+        print(f"  Broadmeadows: {total_matched}/31 >= 30/31 threshold")
+        if alexander_matched is not None:
+            print(f"  Alexander: {alexander_matched}/{alexander_expected_count} — no regression")
+    elif broadmeadows_decision == "INVESTIGATE":
         decision = "INVESTIGATE"
         print(f"\n  Result: INVESTIGATE")
-        print(f"  {total_matched}/31 — above baseline but below 30/31 target")
+        print(f"  Broadmeadows: {total_matched}/31 — above baseline but below 30/31 target")
+    elif not alexander_pass:
+        decision = "INVESTIGATE"
+        print(f"\n  Result: INVESTIGATE (Alexander regression)")
+        print(f"  Alexander: {alexander_matched}/{alexander_expected_count} — regression detected")
     else:
         decision = "ROLLBACK"
         print(f"\n  Result: ROLLBACK")
-        print(f"  {total_matched}/31 — regression from E23 baseline (28/31)")
+        print(f"  Broadmeadows: {total_matched}/31 — regression from E23 baseline (28/31)")
 
     # Save results to JSON
     results = {
@@ -435,28 +578,35 @@ async def run_validation():
         "model": model_name,
         "flag": flag,
         "source_id": SOURCE_ID,
-        "duration_s": round(elapsed, 1),
-        "total_matched": total_matched,
-        "total_expected": total_expected,
-        "pct": round(pct, 1),
-        "nata_sampled": {"matched": nata_matched, "total": nata_count},
-        "as_per": {"matched": as_per_matched, "total": as_per_count},
-        "not_sampled": {"matched": not_sampled_matched, "total": not_sampled_count},
-        "record_9_found": record_9_found,
-        "record_30_found": record_30_found,
-        "record_31_found": record_31_found,
+        "broadmeadows": {
+            "duration_s": round(elapsed, 1),
+            "total_matched": total_matched,
+            "total_expected": total_expected,
+            "pct": round(pct, 1),
+            "nata_sampled": {"matched": nata_matched, "total": nata_count},
+            "as_per": {"matched": as_per_matched, "total": as_per_count},
+            "not_sampled": {"matched": not_sampled_matched, "total": not_sampled_count},
+            "record_9_found": record_9_found,
+            "record_30_found": record_30_found,
+            "record_31_found": record_31_found,
+            "missing": [
+                {
+                    "level": r["level"],
+                    "room": r["room"],
+                    "location": r["location"],
+                    "item": r["item"],
+                    "sample_no": r["sample_no"],
+                    "category": r["category"],
+                }
+                for r in missing
+            ],
+        },
+        "alexander": {
+            "total_matched": alexander_matched,
+            "total_expected": alexander_expected_count,
+            "duration_s": round(alexander_elapsed, 1) if alexander_elapsed else None,
+        } if alexander_matched is not None else None,
         "decision": decision,
-        "missing": [
-            {
-                "level": r["level"],
-                "room": r["room"],
-                "location": r["location"],
-                "item": r["item"],
-                "sample_no": r["sample_no"],
-                "category": r["category"],
-            }
-            for r in missing
-        ],
     }
 
     output_dir = PROJECT_ROOT / "research-output" / "e26-s4"
