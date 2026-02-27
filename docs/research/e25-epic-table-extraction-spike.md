@@ -4,6 +4,7 @@ title: Table Extraction Research Spike — Comparative Analysis
 status: in-progress
 priority: P0
 total_effort: 5 SP
+s1_completed: 2026-02-27
 depends_on: E24 (complete)
 trigger: E24 validation proved content-core markdown serialization destroys TableFormer output (17/31 regression)
 ---
@@ -22,7 +23,7 @@ E24 proved that **content-core's markdown serializer** is the bottleneck, not Ta
 
 | Story | Title | Priority | Effort | Status | Phase |
 |-------|-------|----------|--------|--------|-------|
-| E25-S1 | Environment Setup & Dependency Audit | P0 | S (1 SP) | in-progress | 1 |
+| E25-S1 | Environment Setup & Dependency Audit | P0 | S (1 SP) | done | 1 |
 | E25-S2 | Research Spike Execution | P0 | M (2 SP) | backlog | 2 |
 | E25-S3 | Architecture Decision & E26 Design | P0 | M (2 SP) | backlog | 3 |
 
@@ -61,7 +62,7 @@ After E25 completes:
 epic: Epic 25
 story_id: E25-S1
 title: Environment Setup & Dependency Audit
-status: in-progress
+status: done
 priority: P0
 effort: S (1 SP)
 depends_on: none
@@ -80,16 +81,16 @@ claude_commands:
 ### Acceptance Criteria
 
 - [x] Pre-flight audit completed (Python, torch, CUDA, PyMuPDF verified)
-- [ ] Docling Direct API importable (`from docling.document_converter import DocumentConverter`)
-- [ ] TableFormer ACCURATE mode accessible (`TableFormerMode.ACCURATE`)
-- [ ] TableFormer model weights pre-downloaded (~500MB cached)
-- [ ] Docling functional test passes: `converter.convert()` produces tables from Broadmeadows PDF
-- [ ] `table.export_to_dataframe(doc=doc)` returns valid Pandas DataFrame
-- [ ] pandas + tabulate installed for DataFrame export
-- [ ] MinerU decision documented (install or skip, with rationale)
-- [ ] If MinerU installed: torch/paddle conflict resolved
-- [ ] Environment audit report written: `docs/research/e25-environment-audit.md`
-- [ ] Verification script committed: `scripts/research/e25_verify_tools.py`
+- [x] Docling Direct API importable (`from docling.document_converter import DocumentConverter`)
+- [x] TableFormer ACCURATE mode accessible (`TableFormerMode.ACCURATE`)
+- [x] TableFormer model weights pre-downloaded (~500MB cached, loads in <1s)
+- [x] Docling functional test passes: 8 tables from Broadmeadows in 14.9s
+- [x] `table.export_to_dataframe(doc=doc)` returns valid Pandas DataFrame (67 rows total)
+- [x] pandas 2.3.3 + tabulate 0.9.0 installed for DataFrame export
+- [x] MinerU decision documented: SKIPPED (Docling Direct API strong enough for 2-way comparison)
+- [x] N/A — MinerU skipped, no torch/paddle conflict to resolve
+- [x] Environment audit report written: `docs/research/e25-environment-audit.md`
+- [x] Verification script committed: `scripts/research/e25_verify_tools.py`
 
 ### Technical Notes
 

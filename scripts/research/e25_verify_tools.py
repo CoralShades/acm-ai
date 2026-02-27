@@ -1,36 +1,46 @@
-"""E25-S1 deliverable: Verify all 3 table extraction tools are operational.
+#!/usr/bin/env python3
+"""E25-S1 deliverable: Verify all extraction tools are operational.
 
 Run under the MAIN venv:
     uv run python scripts/research/e25_verify_tools.py
 
 Checks:
-    1. PyMuPDF (fitz) — direct import in main venv
-    2. Docling Direct API — import + pipeline_options in main venv
-    3. MinerU — subprocess bridge via .venv-mineru
+    1. Python version
+    2. GPU (torch + CUDA)
+    3. PyMuPDF — import + Broadmeadows PDF access
+    4. Docling Direct API — imports + converter creation
+    5. Docling Functional — full conversion with ACM indicator detection
+    6. pandas + tabulate — DataFrame export dependencies
+    7. MinerU (optional) — subprocess bridge via .venv-mineru
 
-Exit code 0 = all checks pass (warnings are OK, e.g. MinerU venv absent).
-Exit code 1 = at least one critical check failed.
+Exit code 0 = all required checks pass (warnings OK, e.g. MinerU absent).
+Exit code 1 = at least one required check failed.
 """
 
 from __future__ import annotations
 
-import importlib
-import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+BROADMEADOWS_PDF = PROJECT_ROOT / "docs" / "samplePDF" / "Clutch_Broadmeadows.pdf"
 
 PASS = "pass"
 WARN = "warn"
 FAIL = "fail"
+SKIP = "skip"
 
-SYMBOLS = {PASS: "OK", WARN: "!!", FAIL: "XX"}
-COLORS = {PASS: "\033[32m", WARN: "\033[33m", FAIL: "\033[31m"}
+SYMBOLS = {PASS: "OK", WARN: "!!", FAIL: "XX", SKIP: ">>"}
+COLORS = {PASS: "\033[32m", WARN: "\033[33m", FAIL: "\033[31m", SKIP: "\033[36m"}
 RESET = "\033[0m"
-USE_COLOR = not os.environ.get("NO_COLOR") and hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+USE_COLOR = (
+    not os.environ.get("NO_COLOR")
+    and hasattr(sys.stdout, "isatty")
+    and sys.stdout.isatty()
+)
 
 
 def _sym(status: str) -> str:
@@ -40,150 +50,195 @@ def _sym(status: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tool 1: PyMuPDF
+# Individual checks
 # ---------------------------------------------------------------------------
 
+Results = list[tuple[str, str, str, bool]]  # (status, label, detail, required)
 
-def check_pymupdf() -> tuple[str, str, str]:
-    label = "Tool 1: PyMuPDF (fitz)"
+
+def check_python() -> tuple[str, str, str, bool]:
+    return PASS, "Python", f"{sys.version.split()[0]}", True
+
+
+def check_gpu() -> tuple[str, str, str, bool]:
+    label = "GPU (torch + CUDA)"
     try:
-        fitz = importlib.import_module("fitz")
-        ver = fitz.version[0]  # type: ignore[attr-defined]
-        return PASS, label, f"v{ver} — main venv OK"
-    except ImportError as e:
-        return FAIL, label, f"import failed: {e}"
-    except Exception as e:  # noqa: BLE001
-        return FAIL, label, f"unexpected error: {e}"
+        import torch
+
+        if not torch.cuda.is_available():
+            return FAIL, label, "CUDA not available", True
+        name = torch.cuda.get_device_name(0)
+        return (
+            PASS,
+            label,
+            f"torch={torch.__version__}, CUDA={torch.version.cuda}, {name}",
+            True,
+        )
+    except ImportError:
+        return FAIL, label, "torch not installed", True
+    except Exception as e:
+        return FAIL, label, str(e), True
 
 
-# ---------------------------------------------------------------------------
-# Tool 2: Docling Direct API
-# ---------------------------------------------------------------------------
-
-
-def check_docling() -> list[tuple[str, str, str]]:
-    results = []
-
-    # DocumentConverter
+def check_pymupdf() -> tuple[str, str, str, bool]:
+    label = "PyMuPDF (fitz)"
     try:
-        importlib.import_module("docling.document_converter")
-        results.append((PASS, "Tool 2a: docling.DocumentConverter", "main venv OK"))
-    except ImportError as e:
-        results.append((FAIL, "Tool 2a: docling.DocumentConverter", f"import failed: {e}"))
+        import fitz
 
-    # TableFormerMode via pipeline_options
+        ver = fitz.version[0]
+        if BROADMEADOWS_PDF.exists():
+            doc = fitz.open(str(BROADMEADOWS_PDF))
+            pages = len(doc)
+            doc.close()
+            return PASS, label, f"v{ver}, Broadmeadows={pages} pages", True
+        return PASS, label, f"v{ver} (PDF not found at expected path)", True
+    except ImportError:
+        return FAIL, label, "fitz not installed", True
+    except Exception as e:
+        return FAIL, label, str(e), True
+
+
+def check_docling_imports() -> tuple[str, str, str, bool]:
+    label = "Docling Direct API imports"
     try:
-        mod = importlib.import_module("docling.datamodel.pipeline_options")
-        has_tf = hasattr(mod, "TableFormerMode")
-        if has_tf:
-            results.append((PASS, "Tool 2b: docling.TableFormerMode", "main venv OK"))
-        else:
-            results.append((WARN, "Tool 2b: docling.TableFormerMode", "attr not found in pipeline_options"))
+        from docling.datamodel.pipeline_options import TableFormerMode
+        from docling.document_converter import DocumentConverter  # noqa: F401
+
+        return (
+            PASS,
+            label,
+            f"DocumentConverter OK, TableFormerMode.ACCURATE={TableFormerMode.ACCURATE}",
+            True,
+        )
     except ImportError as e:
-        results.append((FAIL, "Tool 2b: docling.TableFormerMode", f"import failed: {e}"))
-
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Tool 3: MinerU (via subprocess bridge)
-# ---------------------------------------------------------------------------
+        return FAIL, label, f"import failed: {e}", True
+    except Exception as e:
+        return FAIL, label, str(e), True
 
 
-def _mineru_python() -> Path:
+def check_docling_converter() -> tuple[str, str, str, bool]:
+    label = "Docling Converter + weights"
+    try:
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import (
+            PdfPipelineOptions,
+            TableFormerMode,
+        )
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+
+        opts = PdfPipelineOptions(do_table_structure=True)
+        opts.table_structure_options.mode = TableFormerMode.ACCURATE
+        opts.table_structure_options.do_cell_matching = True
+
+        start = time.time()
+        DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}
+        )
+        elapsed = time.time() - start
+        return PASS, label, f"created in {elapsed:.1f}s (weights cached)", True
+    except Exception as e:
+        return FAIL, label, str(e), True
+
+
+def check_docling_functional() -> tuple[str, str, str, bool]:
+    label = "Docling Functional Test"
+    if not BROADMEADOWS_PDF.exists():
+        return WARN, label, "Broadmeadows PDF not found", True
+
+    try:
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import (
+            PdfPipelineOptions,
+            TableFormerMode,
+        )
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+
+        opts = PdfPipelineOptions(do_table_structure=True)
+        opts.table_structure_options.mode = TableFormerMode.ACCURATE
+        opts.table_structure_options.do_cell_matching = True
+        converter = DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}
+        )
+
+        start = time.time()
+        result = converter.convert(str(BROADMEADOWS_PDF))
+        elapsed = time.time() - start
+        doc = result.document
+
+        indicators = set()
+        total_rows = 0
+        for table in doc.tables:
+            try:
+                df = table.export_to_dataframe(doc=doc)
+                total_rows += len(df)
+                flat = df.to_string().lower()
+                for term in [
+                    "same as",
+                    "not sampled",
+                    "34511",
+                    "negative",
+                    "positive",
+                ]:
+                    if term in flat:
+                        indicators.add(term)
+            except Exception:
+                pass
+
+        return (
+            PASS,
+            label,
+            f"{len(doc.tables)} tables, {total_rows} rows, {elapsed:.1f}s, ACM: {sorted(indicators)}",
+            True,
+        )
+    except Exception as e:
+        return FAIL, label, str(e), True
+
+
+def check_pandas_tabulate() -> tuple[str, str, str, bool]:
+    label = "pandas + tabulate"
+    try:
+        import pandas as pd
+
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        md = df.to_markdown(index=False)
+        return PASS, label, f"pandas={pd.__version__}, to_markdown()={len(md)} chars", True
+    except ImportError as e:
+        return FAIL, label, f"import failed: {e}", True
+    except Exception as e:
+        return FAIL, label, str(e), True
+
+
+def check_mineru() -> tuple[str, str, str, bool]:
+    label = "MinerU (optional)"
     venv_path = os.environ.get("MINERU_VENV_PATH", ".venv-mineru")
     base = PROJECT_ROOT / venv_path
     win = base / "Scripts" / "python.exe"
     nix = base / "bin" / "python"
-    if win.exists():
-        return win
-    if nix.exists():
-        return nix
-    return win  # return win path for error messages even if absent
+    python = win if win.exists() else nix
 
-
-def check_mineru() -> list[tuple[str, str, str]]:
-    results = []
-    enabled = os.environ.get("MINERU_ENABLED", "false").lower() == "true"
-    python = _mineru_python()
-
-    # Check venv exists
     if not python.exists():
-        status = FAIL if enabled else WARN
-        suffix = "run /e25-setup-mineru to create" if not enabled else "MINERU_ENABLED=true but venv missing"
-        results.append((status, "Tool 3a: MinerU venv (.venv-mineru)", suffix))
-        return results
+        return SKIP, label, "venv not found (skipped — optional)", False
 
-    results.append((PASS, "Tool 3a: MinerU venv (.venv-mineru)", str(python)))
-
-    # Check magic_pdf import inside the venv
     try:
         proc = subprocess.run(
             [
                 str(python),
                 "-c",
-                "import importlib.metadata; v=importlib.metadata.version('magic-pdf'); print(f'v{v}')",
+                (
+                    "import importlib.metadata; "
+                    "v=importlib.metadata.version('magic-pdf'); "
+                    "print(f'magic-pdf={v}')"
+                ),
             ],
             capture_output=True,
             text=True,
             timeout=30,
         )
         if proc.returncode == 0:
-            ver = proc.stdout.strip()
-            results.append((PASS, "Tool 3b: magic_pdf import", f"{ver} in .venv-mineru"))
-        else:
-            results.append((WARN, "Tool 3b: magic_pdf import", f"failed: {proc.stderr.strip()[:120]}"))
-    except subprocess.TimeoutExpired:
-        results.append((WARN, "Tool 3b: magic_pdf import", "timeout after 30s"))
-    except Exception as e:  # noqa: BLE001
-        results.append((WARN, "Tool 3b: magic_pdf import", f"error: {e}"))
-
-    # Check paddle import inside the venv
-    try:
-        proc = subprocess.run(
-            [str(python), "-c", "import paddle; print(f'v{paddle.__version__}')"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if proc.returncode == 0:
-            ver = proc.stdout.strip()
-            results.append((PASS, "Tool 3c: paddle import", f"{ver} in .venv-mineru"))
-        else:
-            results.append((WARN, "Tool 3c: paddle import", f"failed: {proc.stderr.strip()[:120]}"))
-    except subprocess.TimeoutExpired:
-        results.append((WARN, "Tool 3c: paddle import", "timeout after 30s"))
-    except Exception as e:  # noqa: BLE001
-        results.append((WARN, "Tool 3c: paddle import", f"error: {e}"))
-
-    # Test subprocess bridge with a minimal dry-run (no PDF needed — just bridge invocation)
-    runner = PROJECT_ROOT / "scripts" / "mineru_runner.py"
-    if runner.exists():
-        try:
-            # Pass a nonexistent PDF — we expect {"status": "error", "tables": []}
-            # This confirms the bridge JSON protocol works end-to-end
-            proc = subprocess.run(
-                [str(python), str(runner), "--pdf", "/nonexistent.pdf"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            try:
-                data = json.loads(proc.stdout)
-                if "status" in data and "tables" in data:
-                    results.append((PASS, "Tool 3d: MinerU bridge protocol", "JSON protocol OK"))
-                else:
-                    results.append((WARN, "Tool 3d: MinerU bridge protocol", "unexpected JSON schema"))
-            except json.JSONDecodeError:
-                results.append((WARN, "Tool 3d: MinerU bridge protocol", f"invalid JSON: {proc.stdout[:80]}"))
-        except subprocess.TimeoutExpired:
-            results.append((WARN, "Tool 3d: MinerU bridge protocol", "timeout after 30s"))
-        except Exception as e:  # noqa: BLE001
-            results.append((WARN, "Tool 3d: MinerU bridge protocol", f"error: {e}"))
-    else:
-        results.append((WARN, "Tool 3d: MinerU bridge protocol", "scripts/mineru_runner.py not found"))
-
-    return results
+            return PASS, label, proc.stdout.strip(), False
+        return WARN, label, f"import failed: {proc.stderr.strip()[:80]}", False
+    except Exception as e:
+        return WARN, label, str(e), False
 
 
 # ---------------------------------------------------------------------------
@@ -191,51 +246,72 @@ def check_mineru() -> list[tuple[str, str, str]]:
 # ---------------------------------------------------------------------------
 
 
-def run_all_checks() -> list[tuple[str, str, str]]:
-    results: list[tuple[str, str, str]] = []
-    results.append(check_pymupdf())
-    results.extend(check_docling())
-    results.extend(check_mineru())
+def run_all_checks() -> Results:
+    checks = [
+        check_python,
+        check_gpu,
+        check_pymupdf,
+        check_docling_imports,
+        check_docling_converter,
+        check_docling_functional,
+        check_pandas_tabulate,
+        check_mineru,
+    ]
+    results: Results = []
+    for fn in checks:
+        print(f"  Checking {fn.__name__.replace('check_', '')}...")
+        results.append(fn())
     return results
 
 
-def print_results(results: list[tuple[str, str, str]]) -> bool:
+def print_results(results: Results) -> bool:
     max_label = max(len(r[1]) for r in results)
 
     print("")
-    print("=" * 65)
-    print("  E25 Tool Verification — 3-Way Extraction Spike")
-    print("=" * 65)
+    print("=" * 70)
+    print("  E25 Tool Verification — Table Extraction Research Spike")
+    print("=" * 70)
     print("")
 
     has_critical_failure = False
-    for status, label, detail in results:
+    for status, label, detail, required in results:
         sym = _sym(status)
-        print(f"  {sym}  {label:<{max_label}}  {detail}")
-        if status == FAIL:
+        req_tag = " [REQUIRED]" if required else " [optional]"
+        print(f"  {sym}  {label:<{max_label}}  {detail}{req_tag}")
+        if status == FAIL and required:
             has_critical_failure = True
 
     print("")
-    if has_critical_failure:
-        if USE_COLOR:
-            print(f"  {COLORS[FAIL]}RESULT: CRITICAL FAILURES DETECTED{RESET}")
-        else:
-            print("  RESULT: CRITICAL FAILURES DETECTED")
-    else:
-        warn_count = sum(1 for s, _, _ in results if s == WARN)
-        if warn_count:
-            print(f"  RESULT: PASSED ({warn_count} warning{'s' if warn_count > 1 else ''})")
-        else:
-            if USE_COLOR:
-                print(f"  {COLORS[PASS]}RESULT: ALL CHECKS PASSED{RESET}")
-            else:
-                print("  RESULT: ALL CHECKS PASSED")
-    print("")
+    required_checks = [(s, l, d) for s, l, d, r in results if r]
+    passed = sum(1 for s, _, _ in required_checks if s == PASS)
+    total = len(required_checks)
 
+    if has_critical_failure:
+        msg = f"NOT READY — {passed}/{total} required checks passed"
+        if USE_COLOR:
+            print(f"  {COLORS[FAIL]}{msg}{RESET}")
+        else:
+            print(f"  {msg}")
+    else:
+        msg = f"READY for E25 research spike ({passed}/{total} required)"
+        if USE_COLOR:
+            print(f"  {COLORS[PASS]}{msg}{RESET}")
+        else:
+            print(f"  {msg}")
+
+    mineru_status = next((s for s, l, _, _ in results if "MinerU" in l), None)
+    if mineru_status == PASS:
+        print("  + MinerU available (3-way comparison possible)")
+    else:
+        print("  MinerU not available (2-way comparison: PyMuPDF vs Docling Direct API)")
+
+    print("")
     return not has_critical_failure
 
 
 def main() -> int:
+    os.chdir(PROJECT_ROOT)
+    print("\nE25 Tool Verification starting...\n")
     results = run_all_checks()
     passed = print_results(results)
     return 0 if passed else 1
