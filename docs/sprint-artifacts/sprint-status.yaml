@@ -342,7 +342,7 @@ development_status:
   epic-25: in-progress
   e25-s1-environment-setup: done  # All 7 tools verified. Docling 2.75.0 + RTX 4090. 8 tables from Broadmeadows in 14.9s. Report: docs/research/e25-environment-audit.md
   e25-s2-research-spike-execution: done  # PyMuPDF vs Docling Direct API comparison. 29/31 (93.5%) from DataFrames. Record #9 (Battery Charger) FOUND. Records #30,#31 on page 8 (not detected). Recommendation: Approach A (Hybrid). Report: docs/reviews/e25-table-extraction-comparison.md
-  e25-s3-architecture-decision: backlog  # ADR update + E26 design. Depends: S2 ✓
+  e25-s3-architecture-decision: done  # ADR update + E26 design. Depends: S2 ✓
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
@@ -394,7 +394,7 @@ development_status:
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Drafted: 2 (E24-S2, E24-S4)
-# Stories Backlog: 1 (E25-S3)
+# Stories Backlog: 0 
 # Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
 #
 # Last Updated: 2026-02-27  # E25-S2 DONE: Research spike — Docling DataFrames 29/31 (93.5%). Report: docs/reviews/e25-table-extraction-comparison.md
