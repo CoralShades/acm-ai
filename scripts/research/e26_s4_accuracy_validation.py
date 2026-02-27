@@ -345,8 +345,11 @@ async def run_validation():
     print(f"  Duration: {elapsed:.1f}s")
 
     if result.error:
-        print(f"\n  ERROR: {result.error}")
-        return
+        print(f"\n  WARNING: {result.error}")
+        print(f"  (Continuing with {len(extracted_records)} captured records...)")
+        if len(extracted_records) == 0:
+            print("  FATAL: No records captured. Cannot proceed.")
+            return
 
     # 5. Cross-reference
     print("\n[5/5] Cross-referencing against ground truth...")

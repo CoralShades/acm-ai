@@ -2325,7 +2325,7 @@ def _recover_no_access_records(
                 room_name=room_name.title(),
                 location=location_val,
                 product=product_val,
-                material_description=None,
+                material_description=product_val or "Unknown",
                 result="Assumed Positive",
                 sample_result="Assumed Positive",
                 sample_no="Not Sampled",

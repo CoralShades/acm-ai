@@ -1,12 +1,12 @@
 {
-  "date": "2026-02-27",
+  "date": "2026-02-28",
   "model": "anthropic/claude-sonnet-4",
-  "flag": "true",
+  "flag": "false",
   "source_id": "source:e26_s2_test",
-  "duration_s": 216.6,
-  "total_matched": 28,
+  "duration_s": 206.8,
+  "total_matched": 31,
   "total_expected": 31,
-  "pct": 90.3,
+  "pct": 100.0,
   "nata_sampled": {
     "matched": 16,
     "total": 16
@@ -16,37 +16,12 @@
     "total": 9
   },
   "not_sampled": {
-    "matched": 3,
+    "matched": 6,
     "total": 6
   },
-  "record_9_found": false,
-  "record_30_found": false,
-  "record_31_found": false,
-  "decision": "INVESTIGATE",
-  "missing": [
-    {
-      "level": "Level 1",
-      "room": "Switch Room",
-      "location": "Automatic Battery Charger",
-      "item": "Fuse cartridge",
-      "sample_no": "Not Sampled",
-      "category": "not_sampled"
-    },
-    {
-      "level": "Ground",
-      "room": "Lift Foyer",
-      "location": "Lift",
-      "item": "Internal lining",
-      "sample_no": "Not Sampled",
-      "category": "not_sampled"
-    },
-    {
-      "level": "Ground",
-      "room": "Main Foyer",
-      "location": "Room Adjacent Disabled Toilet",
-      "item": "Unknown",
-      "sample_no": "Not Sampled",
-      "category": "not_sampled"
-    }
-  ]
+  "record_9_found": true,
+  "record_30_found": true,
+  "record_31_found": true,
+  "decision": "PROMOTE",
+  "missing": []
 }
