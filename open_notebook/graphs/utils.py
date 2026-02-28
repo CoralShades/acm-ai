@@ -58,14 +58,23 @@ def _apply_openrouter_preferences(
     if "openrouter.ai" not in str(base_url).lower():
         return lc_model
 
+    # ZDR (Zero Data Retention) requires opt-in at
+    # https://openrouter.ai/settings/privacy — if not configured,
+    # OpenRouter returns 404 "No endpoints found matching your data policy".
+    # Gate behind env var so it doesn't block extraction in dev.
+    enable_zdr = os.getenv("OPENROUTER_ZDR", "false").lower() in ("true", "1", "yes")
+
+    provider_config: dict[str, Any] = {
+        "only": OPENROUTER_ALLOWED_PROVIDERS,
+        "allow_fallbacks": False,
+        "require_parameters": True,
+        "data_collection": "deny",
+    }
+    if enable_zdr:
+        provider_config["zdr"] = True
+
     openrouter_body: dict[str, Any] = {
-        "provider": {
-            "only": OPENROUTER_ALLOWED_PROVIDERS,
-            "allow_fallbacks": False,
-            "require_parameters": True,
-            "data_collection": "deny",
-            "zdr": True,
-        },
+        "provider": provider_config,
         "plugins": [
             {"id": "response-healing"},
         ],
@@ -110,7 +119,8 @@ def _apply_openrouter_preferences(
     logger.info(
         f"Applied OpenRouter hard lock: "
         f"provider.only={OPENROUTER_ALLOWED_PROVIDERS}, "
-        f"allow_fallbacks=False, zdr=True, response-healing=ON"
+        f"allow_fallbacks=False, zdr={'ON' if enable_zdr else 'OFF'}, "
+        f"response-healing=ON"
     )
     return lc_model
 

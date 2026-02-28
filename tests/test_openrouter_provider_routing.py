@@ -86,9 +86,25 @@ class TestProviderHardLock:
         provider = extra_body.get("provider", {})
         assert provider.get("only") == OPENROUTER_ALLOWED_PROVIDERS
 
-    def test_zdr_enabled(self):
-        """Zero Data Retention must be enabled for government data."""
-        extra_body = _apply_and_get_extra_body()
+    def test_zdr_disabled_by_default(self):
+        """ZDR is off by default (requires OPENROUTER_ZDR=true env var)."""
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {}, clear=False):
+            # Ensure OPENROUTER_ZDR is not set
+            import os
+
+            os.environ.pop("OPENROUTER_ZDR", None)
+            extra_body = _apply_and_get_extra_body()
+        provider = extra_body.get("provider", {})
+        assert "zdr" not in provider
+
+    def test_zdr_enabled_when_env_set(self):
+        """ZDR is enabled when OPENROUTER_ZDR=true."""
+        from unittest.mock import patch
+
+        with patch.dict("os.environ", {"OPENROUTER_ZDR": "true"}):
+            extra_body = _apply_and_get_extra_body()
         provider = extra_body.get("provider", {})
         assert provider.get("zdr") is True
 
