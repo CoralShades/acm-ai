@@ -1,25 +1,28 @@
-# Progress — E27-S2: SSE/AG-UI Pipeline Visibility
+# Progress — E27-S3: Hard-Lock OpenRouter Provider Routing
 
 ## Session: 2026-02-28
-### Status: COMPLETE
+### Status: IN PROGRESS — Planning Complete
 
-### Backend
-- `pipeline_events.py`: Added `DOCLING_EXTRACTION` and `NO_ACCESS_RECOVERY` to StageId enum + STAGE_METADATA
-- `source_commands.py`: Instrumented `_extract_tables_with_docling()` with optional PipelineLogger (stage_enter/complete/fail)
-- `acm_extraction.py`: Instrumented `recover_no_access_node()` with PipelineLogger + AGUIEventEmitter (stage_enter/complete/skip)
-- `agent.json`: Updated A2A agent card with extraction capabilities, 9 pipeline stages, docling + recovery methods
+### Pre-Read Complete
+All mandatory files read and analyzed:
+- `open_notebook/graphs/utils.py` — Current routing (lines 22-100), provision functions
+- `open_notebook/graphs/acm_extraction.py` — ainvoke at lines 1287, 2025
+- `open_notebook/extractors/orchestrator.py` — ainvoke at line 534 (inner _invoke)
+- `open_notebook/extractors/document_structure.py` — ainvoke at line 152
+- `open_notebook/extractors/building_inventory.py` — ainvoke at line 486
+- `open_notebook/extractors/page_tagger.py` — ainvoke at line 363
+- `api/model_provisioning.py` — Model catalog, no OpenRouter-specific routing
+- `docs/sprint-artifacts/e18-s1-extraction-provider-compatibility.md` — Original fix context
 
-### Frontend
-- `pipeline.ts`: StageId type expanded to 9 values, PIPELINE_STAGE_ORDER + PIPELINE_STAGE_LABELS updated
-- `StageProgressPill.tsx`: STAGE_LABELS includes DOCLING_EXTRACTION and NO_ACCESS_RECOVERY
-- `ExtractionProgressPanel.tsx`: STAGE_CONFIG includes new stages with TableProperties + Search icons
+### Key Findings
+- Single chokepoint: ALL extraction paths flow through `provision_langchain_model()` → `_apply_openrouter_preferences()`
+- Only 2 call sites for `_apply_openrouter_preferences()` (utils.py:134, utils.py:413)
+- Current shallow merge in extra_body needs deepening for provider dict + plugins array
+- 6 ainvoke() call sites need provider verification instrumentation
 
-### Tests
-- 10 new tests in `test_pipeline_sse_new_stages.py` — all pass
-- Updated `test_pipeline_observability.py` stage count (7 → 9) — all pass
-- Full suite: 1048 pass, 0 fail (1 pre-existing docling storage test excluded)
-
-### Validation
-- Ruff lint: PASS
-- Frontend tsc --noEmit: PASS
-- Frontend npm run build: PASS
+### Next Steps
+1. Implement Phase 1 (replace constants + rewrite function)
+2. Implement Phase 2 (verification helper)
+3. Implement Phase 3 (instrument stages)
+4. Implement Phase 7 (tests)
+5. Validate (Phase 8)
