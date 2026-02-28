@@ -10,6 +10,8 @@ from surreal_commands import CommandInput, CommandOutput, command
 from open_notebook.database.repository import ensure_record_id, repo_create
 from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
+from open_notebook.extractors.pipeline_events import StageId
+from open_notebook.extractors.pipeline_logger import PipelineLogger
 
 DOCLING_DIRECT_TABLE_EXTRACTION = (
     os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "true").lower() == "true"
@@ -58,7 +60,9 @@ def _resolve_source_pdf_path(source: Source) -> Optional[str]:
 
 
 async def _extract_tables_with_docling(
-    source_id: str, pdf_path: str
+    source_id: str,
+    pdf_path: str,
+    pipeline_logger: Optional[PipelineLogger] = None,
 ) -> List[Dict[str, Any]]:
     """
     Run Docling Direct API on PDF, return list of table dicts.
@@ -70,6 +74,11 @@ async def _extract_tables_with_docling(
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
+
+    if pipeline_logger:
+        pipeline_logger.stage_enter(
+            StageId.DOCLING_EXTRACTION, "Starting Docling table extraction"
+        )
 
     pipeline_options = PdfPipelineOptions(do_table_structure=True)
     pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
@@ -127,6 +136,14 @@ async def _extract_tables_with_docling(
         except Exception as e:
             logger.warning(f"Docling table {idx} export failed: {e}")
             continue
+
+    if pipeline_logger:
+        pipeline_logger.stage_complete(
+            StageId.DOCLING_EXTRACTION,
+            summary=f"Extracted {len(tables)} tables from {pdf_path}",
+            tables_found=len(tables),
+            total_rows=sum(t["rows"] for t in tables),
+        )
 
     logger.info(
         f"Docling Direct API: {len(tables)} tables extracted from {pdf_path}"
@@ -226,9 +243,21 @@ async def process_source_command(
         if DOCLING_DIRECT_TABLE_EXTRACTION:
             pdf_path = _resolve_source_pdf_path(processed_source)
             if pdf_path and pdf_path.lower().endswith(".pdf"):
+                # Create a PipelineLogger for Docling stage visibility (E27-S2)
+                docling_command_id = (
+                    str(input_data.execution_context.command_id)
+                    if input_data.execution_context
+                    else None
+                )
+                docling_pl = PipelineLogger(
+                    source_id=str(processed_source.id),
+                    command_id=docling_command_id,
+                )
                 try:
                     docling_tables = await _extract_tables_with_docling(
-                        str(processed_source.id), pdf_path
+                        str(processed_source.id),
+                        pdf_path,
+                        pipeline_logger=docling_pl,
                     )
                     if docling_tables:
                         await _store_docling_tables(
@@ -239,6 +268,10 @@ async def process_source_command(
                             f"for source {processed_source.id}"
                         )
                 except Exception as e:
+                    docling_pl.stage_fail(
+                        StageId.DOCLING_EXTRACTION,
+                        error=str(e),
+                    )
                     logger.error(f"Docling table extraction failed: {e}")
                     # Non-fatal — PyMuPDF text is already saved
 

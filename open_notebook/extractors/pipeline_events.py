@@ -20,9 +20,11 @@ class StageId(str, Enum):
     STRUCTURE = "STRUCTURE"
     PREFLIGHT = "PREFLIGHT"
     ORCHESTRATOR = "ORCHESTRATOR"
+    DOCLING_EXTRACTION = "DOCLING_EXTRACTION"
     EXTRACT = "EXTRACT"
     VALIDATE = "VALIDATE"
     CORRECT = "CORRECT"
+    NO_ACCESS_RECOVERY = "NO_ACCESS_RECOVERY"
     STORE = "STORE"
 
 
@@ -63,6 +65,11 @@ STAGE_METADATA: Dict[StageId, Dict[str, str]] = {
         "description": "Plan extraction strategy per building section",
         "log_prefix": "ORCHESTRATOR",
     },
+    StageId.DOCLING_EXTRACTION: {
+        "name": "Docling Table Extraction",
+        "description": "Extracting structured tables via Docling Direct Python API",
+        "log_prefix": "DOCLING",
+    },
     StageId.EXTRACT: {
         "name": "Extract",
         "description": "LLM extraction of ACM records from content chunks",
@@ -77,6 +84,11 @@ STAGE_METADATA: Dict[StageId, Dict[str, str]] = {
         "name": "Corrective Validation",
         "description": "Auto-correction and LLM re-extraction for failed records",
         "log_prefix": "CORRECT",
+    },
+    StageId.NO_ACCESS_RECOVERY: {
+        "name": "No-Access Record Recovery",
+        "description": "Scanning for No Access/Not Sampled records missed by LLM extraction",
+        "log_prefix": "RECOVERY",
     },
     StageId.STORE: {
         "name": "Enrich & Store",

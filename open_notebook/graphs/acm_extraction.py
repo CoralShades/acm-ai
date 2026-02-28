@@ -2346,9 +2346,23 @@ async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     records: List[ACMExtractionRecord] = state.get("records", [])
     source: Source = state["source"]
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
+    pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
+
+    if agui:
+        await agui.emit_step_started("recover_no_access")
+    if pl:
+        pl.stage_enter(
+            StageId.NO_ACCESS_RECOVERY,
+            f"Scanning for missed No Access records ({len(records)} existing)",
+        )
 
     full_text = getattr(source, "full_text", "") or ""
     if not full_text:
+        if pl:
+            pl.stage_skip(StageId.NO_ACCESS_RECOVERY, "No full_text available")
+        if agui:
+            await agui.emit_step_finished("recover_no_access", recovered=0)
         return {"records": records}
 
     building_id = context.building_id or "unknown"
@@ -2361,6 +2375,17 @@ async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     if recovered:
         records = list(records) + recovered
         logger.info(f"Recovered {len(recovered)} no-access records via fallback")
+
+    if pl:
+        pl.stage_complete(
+            StageId.NO_ACCESS_RECOVERY,
+            summary=f"Recovery complete: {len(recovered)} records found",
+            records_recovered=len(recovered),
+        )
+    if agui:
+        await agui.emit_step_finished(
+            "recover_no_access", recovered=len(recovered)
+        )
 
     return {"records": records}
 

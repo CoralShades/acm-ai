@@ -13,8 +13,10 @@ import {
   FileSearch,
   Loader2,
   RefreshCw,
+  Search,
   Settings2,
   Table2,
+  TableProperties,
   XCircle,
   type LucideIcon,
 } from 'lucide-react'
@@ -45,9 +47,11 @@ const STAGE_CONFIG: Record<StageId, { label: string; icon: LucideIcon }> = {
   STRUCTURE: { label: 'Document Analysis', icon: FileSearch },
   PREFLIGHT: { label: 'Format Detection', icon: Settings2 },
   ORCHESTRATOR: { label: 'Building Inventory', icon: Building2 },
+  DOCLING_EXTRACTION: { label: 'Docling Tables', icon: TableProperties },
   EXTRACT: { label: 'Extracting Records', icon: Table2 },
   VALIDATE: { label: 'Validation', icon: CheckCircle2 },
   CORRECT: { label: 'Corrective Loop', icon: RefreshCw },
+  NO_ACCESS_RECOVERY: { label: 'Recovery Scan', icon: Search },
   STORE: { label: 'Saving Records', icon: Database },
 }
 

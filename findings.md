@@ -1,19 +1,11 @@
-# Findings — E26-S7: Alexander Ground Truth + Closeout
+# Findings — E27-S2: SSE/AG-UI Pipeline Visibility
 
-## Pre-Read Complete
+## Backend Architecture
+- StageId enum: UPPERCASE values (STRUCTURE, PREFLIGHT, ORCHESTRATOR, EXTRACT, VALIDATE, CORRECT, STORE)
+- STAGE_METADATA: maps StageId → {name, description, log_prefix}
+- PipelineLogger constructor: (source_id, total_pages=0, command_id=None)
+- AGUIEventEmitter: step_name strings in emit_step_started/emit_step_finished
+- Graph order: extract_metadata → structure → inventory → tag_pages → orchestrate/prepare → extract → validate → correct ↔ validate → deduplicate → recover_no_access → save
 
-### CSV Source Files
-- `docs/samplePDF/Alexandra Distric.csv` — 43 data rows + 1 header, 47 columns
-- `docs/samplePDF/Alexandra_District_Health - Sheet1.csv` — identical content (same source)
-- Both files have trailing space on column 27: `"ACM GROUP NAME EXCEL "` → needs strip
-
-### Current State
-- `.env.example` already has `DOCLING_DIRECT_TABLE_EXTRACTION=true` (promoted in prior session)
-- ADR D5 title: "YES" — needs updating to "PROMOTED" with results
-- Epic tracking: "Done (INVESTIGATE — 28/31, flag remains false)" — stale, needs "Done (PROMOTE — 31/31)"
-- E26 shows 5 stories, 9 SP — needs S6 (3 SP) + S7 (1 SP) = 7 stories, 12 SP
-
-### Column Differences (Expected)
-- Alexander col 3: `Site Name (if applicable)` vs Broadmeadows: `Site Name`
-- Alexander col 34: `Quantity` vs Broadmeadows: `Extent`
-- These are valid BAR column names from different consultants (Greencap vs Prensa)
+## Docling runs OUTSIDE extraction graph (source_commands.py)
+## recover_no_access_node runs INSIDE graph, has state access
