@@ -43,6 +43,7 @@ from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.graphs.utils import (
     _is_qwen_model,
     _unwrap_completion_state,
+    _verify_provider_routing,
     is_auth_error,
     is_provider_schema_error,
     parse_json_response,
@@ -532,6 +533,16 @@ async def _llm_extract_building(
             response_text = ""
             try:
                 raw_response = await active_model.ainvoke(messages)
+
+                # E27-S3: Verify provider routing (non-blocking)
+                try:
+                    await _verify_provider_routing(
+                        raw_response,
+                        f"orchestrator/{plan.building_id}",
+                    )
+                except Exception:
+                    pass
+
                 response_text = (
                     raw_response.content
                     if hasattr(raw_response, "content")

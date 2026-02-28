@@ -77,6 +77,7 @@ from open_notebook.extractors.validators.acm_validator import (
 from open_notebook.graphs.utils import (
     _is_qwen_model,
     _unwrap_completion_state,
+    _verify_provider_routing,
     is_auth_error,
     parse_json_response,
     provision_extraction_fallback_model,
@@ -1285,6 +1286,13 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
     # with_structured_output() that always fails on OpenRouter/Anthropic grammar limits)
     try:
         raw_response = await model.ainvoke(messages)
+
+        # E27-S3: Verify provider routing (non-blocking)
+        try:
+            await _verify_provider_routing(raw_response, "extract_records")
+        except Exception:
+            pass
+
         response_text = (
             raw_response.content
             if hasattr(raw_response, "content")
@@ -2023,6 +2031,13 @@ async def _llm_correct_records(
             ]
 
             response = await model.ainvoke(messages)
+
+            # E27-S3: Verify provider routing (non-blocking)
+            try:
+                await _verify_provider_routing(response, "correction")
+            except Exception:
+                pass
+
             response_text = (
                 response.content if hasattr(response, "content") else str(response)
             )

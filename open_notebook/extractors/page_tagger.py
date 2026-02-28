@@ -353,7 +353,11 @@ async def _llm_tag_batch(
         max_tokens=2048,
     )
 
-    from open_notebook.graphs.utils import _unwrap_completion_state, parse_json_response
+    from open_notebook.graphs.utils import (
+        _unwrap_completion_state,
+        _verify_provider_routing,
+        parse_json_response,
+    )
 
     messages = [
         SystemMessage(content=system_prompt),
@@ -361,6 +365,13 @@ async def _llm_tag_batch(
     ]
 
     raw_response = await model.ainvoke(messages)
+
+    # E27-S3: Verify provider routing (non-blocking)
+    try:
+        await _verify_provider_routing(raw_response, "page_tagger")
+    except Exception:
+        pass  # Never block extraction for verification failure
+
     response_text = (
         raw_response.content
         if hasattr(raw_response, "content")

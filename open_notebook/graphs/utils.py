@@ -3,6 +3,7 @@ import os
 import re
 from typing import Any, List, Optional
 
+import httpx
 from esperanto import AIFactory, LanguageModel
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -12,38 +13,42 @@ from open_notebook.domain.models import model_manager
 from open_notebook.utils import token_count
 
 # ---------------------------------------------------------------------------
-# OpenRouter provider routing preferences
+# OpenRouter provider routing — HARD LOCK (E27-S3)
+# ---------------------------------------------------------------------------
+# Uses provider.only (hard allowlist) instead of provider.order (soft
+# preference) to guarantee requests are served by Anthropic ONLY.
+# Combined with allow_fallbacks=false, this means if Anthropic is
+# unavailable the request FAILS rather than silently routing to
+# Google Vertex or another provider with different extraction behavior.
+#
+# Ref: https://openrouter.ai/docs/guides/routing/provider-selection
 # ---------------------------------------------------------------------------
 
-# Providers that reject complex structured-output schemas or have
-# incompatible beta-header requirements.  Excluding these forces
-# OpenRouter to route to direct-API providers (Anthropic, OpenAI, etc.)
-# that reliably support tool-calling / JSON-mode extraction.
-OPENROUTER_IGNORED_PROVIDERS = [
-    "Amazon Bedrock",
-    "Azure",
-]
-
-# Preferred provider order — direct providers first.
-# OpenRouter selects from top to bottom based on availability.
-OPENROUTER_PROVIDER_ORDER = [
-    "Anthropic",
-    "Google",
-    "OpenAI",
-]
+OPENROUTER_ALLOWED_PROVIDERS = ["Anthropic"]
 
 
-def _apply_openrouter_preferences(lc_model: BaseChatModel) -> BaseChatModel:
-    """Inject OpenRouter provider routing into a LangChain model.
+def _apply_openrouter_preferences(
+    lc_model: BaseChatModel,
+    *,
+    source_id: str | None = None,
+    building_name: str | None = None,
+    stage_name: str | None = None,
+) -> BaseChatModel:
+    """Apply hard provider lock + production features for OpenRouter models.
 
     Only applies when the model's base_url points to OpenRouter.
-    Adds ``provider.ignore``, ``provider.order``, and the
-    ``middle-out`` transform for response healing.
 
-    Model-aware routing: Anthropic/Claude models are restricted to the
-    Anthropic provider only, because other providers (e.g. Google) reject
-    the ``anthropic-beta: structured-outputs-*`` header that LangChain
-    sends with ``with_structured_output()``.
+    Configures 6 OpenRouter features:
+    1. provider.only — hard allowlist, Anthropic ONLY (no silent Vertex fallback)
+    2. allow_fallbacks=False — request FAILS if Anthropic unavailable
+    3. zdr=True — Zero Data Retention for Victorian Government data
+    4. Response Healing plugin — free auto-fix for malformed JSON (<1ms)
+    5. data_collection="deny" — don't train on government data
+    6. Request metadata — tags each call for production observability
+
+    Ref: https://openrouter.ai/docs/guides/routing/provider-selection
+    Ref: https://openrouter.ai/docs/guides/features/plugins/response-healing
+    Ref: https://openrouter.ai/docs/guides/features/zdr
     """
     base_url = (
         getattr(lc_model, "openai_api_base", None)
@@ -53,51 +58,165 @@ def _apply_openrouter_preferences(lc_model: BaseChatModel) -> BaseChatModel:
     if "openrouter.ai" not in str(base_url).lower():
         return lc_model
 
-    # Detect model family from LangChain model attributes
-    model_name = (
-        getattr(lc_model, "model_name", None) or getattr(lc_model, "model", None) or ""
-    )
-    model_name_lower = str(model_name).lower()
-    is_anthropic = "claude" in model_name_lower or model_name_lower.startswith(
-        "anthropic/"
-    )
-
-    if is_anthropic:
-        # Anthropic models MUST only route to the Anthropic provider.
-        # Other providers (Google, etc.) reject the anthropic-beta header
-        # that LangChain injects for structured output.
-        ignore_list = OPENROUTER_IGNORED_PROVIDERS + ["Google"]
-        order_list = ["Anthropic"]
-    else:
-        ignore_list = OPENROUTER_IGNORED_PROVIDERS
-        order_list = OPENROUTER_PROVIDER_ORDER
-
-    openrouter_body = {
+    openrouter_body: dict[str, Any] = {
         "provider": {
-            "ignore": ignore_list,
-            "order": order_list,
+            "only": OPENROUTER_ALLOWED_PROVIDERS,
+            "allow_fallbacks": False,
             "require_parameters": True,
+            "data_collection": "deny",
+            "zdr": True,
         },
+        "plugins": [
+            {"id": "response-healing"},
+        ],
         "transforms": ["middle-out"],
     }
-    existing = getattr(lc_model, "model_kwargs", {}) or {}
-    # Merge into extra_body so the OpenAI SDK passes these in the HTTP
-    # request body (not as create() kwargs which it would reject).
-    prev_extra = existing.get("extra_body", {})
-    object.__setattr__(
-        lc_model,
-        "model_kwargs",
-        {
-            **existing,
-            "extra_body": {**prev_extra, **openrouter_body},
-        },
-    )
+
+    # Request metadata for production observability
+    # OpenRouter: max 16 pairs, key ≤64 chars, value ≤512 chars
+    metadata: dict[str, str] = {"app": "acm-ai", "pipeline": "extraction"}
+    if source_id:
+        metadata["source_id"] = str(source_id)[:512]
+    if building_name:
+        metadata["building"] = str(building_name)[:512]
+    if stage_name:
+        metadata["stage"] = str(stage_name)[:512]
+    openrouter_body["metadata"] = metadata
+
+    # Deep merge into existing model_kwargs.extra_body
+    existing_kwargs = getattr(lc_model, "model_kwargs", {}) or {}
+    existing_extra = existing_kwargs.get("extra_body", {}) or {}
+
+    merged_extra = {**existing_extra, **openrouter_body}
+
+    # Deep merge provider dict (preserve any existing provider settings)
+    if "provider" in existing_extra and "provider" in openrouter_body:
+        merged_extra["provider"] = {
+            **existing_extra["provider"],
+            **openrouter_body["provider"],
+        }
+
+    # Append plugins without duplicates
+    if "plugins" in existing_extra and "plugins" in openrouter_body:
+        existing_ids = {p.get("id") for p in existing_extra.get("plugins", [])}
+        new_plugins = [
+            p for p in openrouter_body["plugins"] if p.get("id") not in existing_ids
+        ]
+        merged_extra["plugins"] = existing_extra["plugins"] + new_plugins
+
+    new_kwargs = {**existing_kwargs, "extra_body": merged_extra}
+    object.__setattr__(lc_model, "model_kwargs", new_kwargs)
+
     logger.info(
-        f"Applied OpenRouter provider preferences: "
-        f"ignore={ignore_list}, "
-        f"order={order_list}"
+        f"Applied OpenRouter hard lock: "
+        f"provider.only={OPENROUTER_ALLOWED_PROVIDERS}, "
+        f"allow_fallbacks=False, zdr=True, response-healing=ON"
     )
     return lc_model
+
+
+async def _verify_provider_routing(
+    response: Any,
+    stage_name: str,
+    *,
+    expected_provider: str = "Anthropic",
+) -> dict | None:
+    """Verify which OpenRouter provider actually served the request.
+
+    Uses TWO methods:
+    1. response_metadata (fast, inline)
+    2. Generation API fallback (definitive, async HTTP call)
+
+    Returns the generation data dict, or None if lookup failed.
+    Non-blocking — extraction continues if this fails.
+
+    Ref: https://openrouter.ai/docs/api-reference/get-a-generation
+    """
+    # Method 1: Check response_metadata (fast path)
+    metadata = getattr(response, "response_metadata", {}) or {}
+    actual_provider = metadata.get("provider", None)
+    actual_model = metadata.get("model", None)
+    gen_id = metadata.get("id", None)
+
+    if actual_provider:
+        if actual_provider.lower() != expected_provider.lower():
+            logger.warning(
+                f"[{stage_name}] PROVIDER MISMATCH — "
+                f"Expected: {expected_provider}, Got: {actual_provider} "
+                f"(model: {actual_model}, gen_id: {gen_id})"
+            )
+        else:
+            logger.info(
+                f"[{stage_name}] Provider: {actual_provider} | "
+                f"Model: {actual_model}"
+            )
+        return {"provider_name": actual_provider, "model": actual_model}
+
+    # Method 2: Query Generation API (definitive, async)
+    if not gen_id:
+        gen_id = (
+            metadata.get("id")
+            or (getattr(response, "additional_kwargs", {}) or {}).get("id")
+        )
+
+    if not gen_id:
+        logger.debug(
+            f"[{stage_name}] No generation ID — cannot verify provider"
+        )
+        return None
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        logger.debug(
+            f"[{stage_name}] No OPENROUTER_API_KEY — skipping Generation API lookup"
+        )
+        return None
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                "https://openrouter.ai/api/v1/generation",
+                params={"id": gen_id},
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            if resp.status_code == 200:
+                gen_data = resp.json().get("data", {})
+                prov = gen_data.get("provider_name", "unknown")
+                total_cost = gen_data.get("total_cost", 0)
+                cache_discount = gen_data.get("cache_discount", 0)
+                latency = gen_data.get("latency", 0)
+                tokens_in = gen_data.get("tokens_prompt", 0)
+                tokens_out = gen_data.get("tokens_completion", 0)
+
+                if prov.lower() != expected_provider.lower():
+                    logger.warning(
+                        f"[{stage_name}] PROVIDER MISMATCH (GenAPI) — "
+                        f"Expected: {expected_provider}, Got: {prov} | "
+                        f"Cost: ${total_cost:.4f} | Tokens: {tokens_in}->{tokens_out}"
+                    )
+                else:
+                    logger.info(
+                        f"[{stage_name}] Provider: {prov} | "
+                        f"Cost: ${total_cost:.4f} | Cache: -${cache_discount:.4f} | "
+                        f"Latency: {latency}ms | Tokens: {tokens_in}->{tokens_out}"
+                    )
+
+                for pr in gen_data.get("provider_responses", []):
+                    logger.debug(
+                        f"[{stage_name}]   Provider attempt: "
+                        f"{pr.get('provider_name')} -> status {pr.get('status')}"
+                    )
+
+                return gen_data
+            else:
+                logger.debug(
+                    f"[{stage_name}] Generation API returned {resp.status_code} "
+                    f"for gen_id={gen_id}"
+                )
+    except Exception as e:
+        logger.debug(f"[{stage_name}] Generation API lookup failed: {e}")
+
+    return None
 
 
 async def provision_langchain_model(

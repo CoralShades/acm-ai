@@ -362,6 +362,7 @@ development_status:
   epic-27: done
   e27-s1-completionstate-wrapper-parsing-fix: done  # Eliminated dead with_structured_output() from all 4 LLM stages. Direct ainvoke + parse_json_response + _unwrap_completion_state + Pydantic validate. Fixes Alexander 0/43 (orchestrator had no fallback). Saves ~43s latency. 10 unit tests. 1038 pass.
   e27-s2-sse-agui-pipeline-visibility: done  # Added DOCLING_EXTRACTION + NO_ACCESS_RECOVERY StageId enums. Instrumented Docling extraction (source_commands.py) and recovery node (acm_extraction.py) with PipelineLogger + AGUI events. Updated A2A agent card. Frontend: pipeline.ts types, StageProgressPill, ExtractionProgressPanel all show 9 stages. 10 new tests, 1048 pass.
+  e27-s3-hard-lock-provider-routing: done  # Replaced soft provider.order+ignore with hard provider.only=["Anthropic"]+allow_fallbacks=false. Added ZDR, Response Healing plugin, request metadata, Generation API verification. Deep merge for extra_body. 6 ainvoke() sites instrumented. 30 new tests, 1078 pass.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook

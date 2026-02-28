@@ -1,28 +1,45 @@
 # Progress — E27-S3: Hard-Lock OpenRouter Provider Routing
 
 ## Session: 2026-02-28
-### Status: IN PROGRESS — Planning Complete
+### Status: COMPLETE
 
-### Pre-Read Complete
-All mandatory files read and analyzed:
-- `open_notebook/graphs/utils.py` — Current routing (lines 22-100), provision functions
-- `open_notebook/graphs/acm_extraction.py` — ainvoke at lines 1287, 2025
-- `open_notebook/extractors/orchestrator.py` — ainvoke at line 534 (inner _invoke)
-- `open_notebook/extractors/document_structure.py` — ainvoke at line 152
-- `open_notebook/extractors/building_inventory.py` — ainvoke at line 486
-- `open_notebook/extractors/page_tagger.py` — ainvoke at line 363
-- `api/model_provisioning.py` — Model catalog, no OpenRouter-specific routing
-- `docs/sprint-artifacts/e18-s1-extraction-provider-compatibility.md` — Original fix context
+### Implementation Summary
 
-### Key Findings
-- Single chokepoint: ALL extraction paths flow through `provision_langchain_model()` → `_apply_openrouter_preferences()`
-- Only 2 call sites for `_apply_openrouter_preferences()` (utils.py:134, utils.py:413)
-- Current shallow merge in extra_body needs deepening for provider dict + plugins array
-- 6 ainvoke() call sites need provider verification instrumentation
+#### Phase 1: Replace Soft Routing (utils.py)
+- Removed `OPENROUTER_IGNORED_PROVIDERS` and `OPENROUTER_PROVIDER_ORDER`
+- Added `OPENROUTER_ALLOWED_PROVIDERS = ["Anthropic"]`
+- Rewrote `_apply_openrouter_preferences()` with 6 OpenRouter features:
+  1. `provider.only` — hard allowlist (Anthropic ONLY)
+  2. `allow_fallbacks=False` — fail, don't silently reroute
+  3. `zdr=True` — Zero Data Retention for government data
+  4. `data_collection="deny"` — don't train on government data
+  5. Response Healing plugin — auto-fix malformed JSON
+  6. Request metadata — app/pipeline/source_id/building/stage tagging
+- Deep merge logic: preserves existing extra_body, deep merges provider dict, appends plugins without duplicates
+- Added optional kwargs: source_id, building_name, stage_name
 
-### Next Steps
-1. Implement Phase 1 (replace constants + rewrite function)
-2. Implement Phase 2 (verification helper)
-3. Implement Phase 3 (instrument stages)
-4. Implement Phase 7 (tests)
-5. Validate (Phase 8)
+#### Phase 2: Provider Verification (utils.py)
+- Added `_verify_provider_routing()` async function
+- Two methods: response_metadata (fast path) + Generation API (definitive)
+- Non-blocking — extraction continues if verification fails
+
+#### Phase 3: Instrument Extraction Stages
+- `document_structure.py` — verification after ainvoke
+- `building_inventory.py` — verification after ainvoke
+- `page_tagger.py` — verification after ainvoke (per batch)
+- `orchestrator.py` — verification inside _invoke() per building
+- `acm_extraction.py` — verification after main extract + correction ainvoke
+
+#### Phase 4: Supporting Files
+- `.env.example` — updated OpenRouter section with routing documentation
+
+### Tests
+- 30 new tests in `tests/test_openrouter_provider_routing.py` — all pass
+- 7 test classes: ProviderHardLock(8), ResponseHealing(3), RequestMetadata(6), DeepMerge(3), OldConstantsRemoved(3), ProviderVerification(6), Transforms(1)
+- Full suite: 1078 pass, 0 fail (1 pre-existing docling storage test excluded)
+
+### Validation
+- Ruff lint: PASS
+- New tests: 30/30 PASS
+- Full suite: 1078 pass, 0 regressions
+- Old constants: grep confirms zero references to OPENROUTER_IGNORED/ORDER
