@@ -1,44 +1,71 @@
-# Task Plan — E27-S3: Hard-Lock OpenRouter to Anthropic + Production Features
+# Task Plan — E27-S4: Native JSON Schema Structured Outputs via OpenRouter
 
-## Phase 1: Replace Soft Routing Constants (CRITICAL)
-- [x] 1.1 Remove `OPENROUTER_IGNORED_PROVIDERS` and `OPENROUTER_PROVIDER_ORDER` constants
-- [x] 1.2 Add `OPENROUTER_ALLOWED_PROVIDERS = ["Anthropic"]` constant
-- [x] 1.3 Rewrite `_apply_openrouter_preferences()` with: provider.only, allow_fallbacks=false, zdr=true, data_collection=deny, require_parameters=true, Response Healing plugin, request metadata, transforms
-- [x] 1.4 Add deep merge logic: preserve existing extra_body fields, deep merge provider dict, append plugins array (no duplicates)
-- [x] 1.5 Add optional kwargs: source_id, building_name, stage_name for metadata tagging
-- [x] 1.6 Update log message to reflect new routing (provider.only, not provider.order)
+## Task 0: Story File Creation
+- [ ] 0.1 Create `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md`
 
-## Phase 2: Provider Verification Helper
-- [x] 2.1 Add `_verify_provider_routing()` async function to utils.py (Generation API + response_metadata)
-- [x] 2.2 Import `httpx` and `os` at top of utils.py
+## Task 1: Schema Utilities (utils.py)
+- [ ] 1.1 Add `pydantic_to_openrouter_schema(model_class)` — resolves `$defs`, adds `additionalProperties: false`, normalizes Optional fields
+- [ ] 1.2 Add `_get_acm_extraction_schema()` — lazy-cached schema getter (module-level cache)
+- [ ] 1.3 Add `_inject_response_format(model, schema_dict, schema_name)` — injects `response_format: json_schema` into model's `extra_body` (OpenRouter only, stage-specific)
+- [ ] 1.4 Verify generated schema: no `$ref`, has `additionalProperties: false`, reasonable size (<20KB)
 
-## Phase 3: Instrument Extraction Stages with Verification
-- [x] 3.1 Add `_verify_provider_routing` import and call after ainvoke in `document_structure.py`
-- [x] 3.2 Add verification call in `building_inventory.py`
-- [x] 3.3 Add verification call in `page_tagger.py` (per-batch)
-- [x] 3.4 Add verification call in `orchestrator.py` (`_invoke` inner function)
-- [x] 3.5 Add verification call in `acm_extraction.py` (main extract_records + correction path)
+## Task 2: Apply response_format to Extraction Call Sites
+- [ ] 2.1 `orchestrator.py:_llm_extract_building()` — call `_inject_response_format()` after `provision_langchain_model()`, before `model.ainvoke()`
+- [ ] 2.2 `acm_extraction.py:extract_records()` — call `_inject_response_format()` after model provisioning, before `model.ainvoke()`
+- [ ] 2.3 Verify: document_structure, building_inventory, page_tagger NOT modified (different schemas)
 
-## Phase 4: App Attribution Headers
-- [x] 4.1 Metadata-based observability (app, pipeline, source_id, building, stage tags in extra_body)
+## Task 3: Spike Validation — Observe Wrapper Behavior
+- [ ] 3.1 Add temporary debug logging to `parse_json_response()` (gated by `ACM_DEBUG_RAW_RESPONSE` env var)
+- [ ] 3.2 Run single Broadmeadows extraction with debug enabled
+- [ ] 3.3 Evaluate: completionState present? Schema-valid JSON? New errors?
+- [ ] 3.4 Remove temporary debug logging
 
-## Phase 5: Prompt Caching Prep — DEFERRED
-- [ ] 5.1 Update SystemMessage content format with cache_control (deferred — needs LangChain/Esperanto testing)
+## Task 4a: Remove Workaround Code (IF wrapper gone — Scenario A)
+- [ ] 4a.1 Delete `_unwrap_completion_state()` from `utils.py`
+- [ ] 4a.2 Remove call + import from `orchestrator.py` (2 sites: line 552, line 618)
+- [ ] 4a.3 Remove call + import from `document_structure.py` (line 170)
+- [ ] 4a.4 Remove call + import from `building_inventory.py` (line 504)
+- [ ] 4a.5 Remove call + import from `page_tagger.py` (line 381)
+- [ ] 4a.6 Remove call + import from `acm_extraction.py` (2 sites: line 1302, line 1451)
+- [ ] 4a.7 Remove dead `with_structured_output()` try/except blocks if any remain
 
-## Phase 6: Clean Up
-- [x] 6.1 Remove all references to old constants (grep confirms zero remaining)
-- [x] 6.2 Verify provision_extraction_fallback_model() also uses hard lock (it calls _apply_openrouter_preferences)
-- [x] 6.3 Update .env.example OpenRouter section comments
+## Task 4b: Document and Retain (IF wrapper persists — Scenario B)
+- [ ] 4b.1 Update `_unwrap_completion_state()` docstring with E27-S4 investigation notes
+- [ ] 4b.2 Create `docs/architecture/e27-s4-json-schema-investigation.md`
+- [ ] 4b.3 Remove `response_format` from extraction calls (no benefit if wrapper persists)
+- [ ] 4b.4 Keep `_inject_response_format()` utility for future use but don't call it
 
-## Phase 7: Unit Tests
-- [x] 7.1 Create `tests/test_openrouter_provider_routing.py` — 30 tests, 7 classes, all pass
+## Task 5: Full Validation Run
+- [ ] 5.1 Create `research-output/e27-s4/` directory
+- [ ] 5.2 Run Broadmeadows validation — expect 31/31 (100%)
+- [ ] 5.3 Run Alexander validation — expect ≥40/43
+- [ ] 5.4 Measure total extraction duration — target ≤180s (was ~220s)
 
-## Phase 8: Validation
-- [x] 8.1 Ruff lint pass
-- [x] 8.2 Run new tests: 30/30 pass
-- [x] 8.3 Run full test suite: 1078 pass, 0 regressions
-- [x] 8.4 Old constants grep: zero references
+## Task 6: Tests
+- [ ] 6.1 Add `TestResponseFormat` class to `test_openrouter_provider_routing.py` (schema generation, caching, no $ref, additionalProperties)
+- [ ] 6.2 Add `TestInjectResponseFormat` class — tests the stage-specific injection helper
+- [ ] 6.3 Handle `test_completion_state_unwrap.py`:
+  - Scenario A: delete file, document deletion
+  - Scenario B: update with investigation notes
 
-## Phase 9: Sprint Status + Commit
-- [x] 9.1 Update sprint-status.yaml
-- [ ] 9.2 Commit (awaiting user approval)
+## Task 7: Lint, Test Suite, Sprint Status
+- [ ] 7.1 `ruff check . --fix` + `ruff check .`
+- [ ] 7.2 `pytest tests/ -x --ignore=tests/test_broadmeadows_e2e.py`
+- [ ] 7.3 `cd frontend && npm run build`
+- [ ] 7.4 Update `sprint-status.yaml` — add e27-s4, mark done/partial
+- [ ] 7.5 Commit + push
+
+## Guard Rails (Pre-Commit Checklist)
+- [ ] G1: Broadmeadows 31/31 — no regression
+- [ ] G2: Alexander ≥40/43 — no regression
+- [ ] G3: Schema has no $ref
+- [ ] G4: Schema has additionalProperties: false
+- [ ] G5: Schema is cached (identity check)
+- [ ] G6: _unwrap_completion_state() only removed if AC-1 confirmed
+- [ ] G7: provider.only: ["Anthropic"] preserved (E27-S3)
+- [ ] G8: Response Healing plugin preserved (E27-S3)
+- [ ] G9: ZDR preserved (E27-S3)
+- [ ] G10: No with_structured_output() calls in extraction path (Scenario A)
+- [ ] G11: All tests pass (1078+ pass, 0 regressions)
+- [ ] G12: Extraction duration ≤180s (Scenario A)
+- [ ] G13: No ACM_DEBUG_RAW_RESPONSE in committed code

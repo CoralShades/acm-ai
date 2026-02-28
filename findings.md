@@ -1,84 +1,65 @@
-# Findings — E27-S3: Hard-Lock OpenRouter Provider Routing
+# Findings — E27-S4: Native JSON Schema Structured Outputs
 
-## Root Cause Analysis
+## Code Audit (2026-02-28)
 
-### Problem
-OpenRouter activity logs show extraction requests being served by BOTH Anthropic and Google Vertex providers during the same extraction run. After E27-S1 eliminated `with_structured_output()`, Vertex no longer errors on `anthropic-beta` headers, so it silently succeeds as fallback — with different extraction behavior.
+### `_unwrap_completion_state()` — Definition + 7 Call Sites
 
-### Current Code (utils.py:22-100)
-- `OPENROUTER_IGNORED_PROVIDERS = ["Amazon Bedrock", "Azure"]` — Vertex NOT blocked
-- `OPENROUTER_PROVIDER_ORDER = ["Anthropic", "Google", "OpenAI"]` — **soft preference**, not a hard lock
-- `_apply_openrouter_preferences()` uses `provider.ignore` + `provider.order` (both soft routing)
-- For Anthropic models, adds Google to ignore list — but this is conditional on model name detection
+| # | File | Line | Context |
+|---|------|------|---------|
+| 0 | `open_notebook/graphs/utils.py` | 342 | **Definition** |
+| 1 | `open_notebook/extractors/orchestrator.py` | 552 | `_invoke()` inside `_llm_extract_building` |
+| 2 | `open_notebook/extractors/orchestrator.py` | 618 | Schema-error fallback path |
+| 3 | `open_notebook/extractors/document_structure.py` | 170 | `_llm_extract_structure()` |
+| 4 | `open_notebook/extractors/building_inventory.py` | 504 | `_llm_compile_inventory()` |
+| 5 | `open_notebook/extractors/page_tagger.py` | 381 | `_llm_tag_batch()` |
+| 6 | `open_notebook/graphs/acm_extraction.py` | 1302 | `extract_records()` main path |
+| 7 | `open_notebook/graphs/acm_extraction.py` | 1451 | `extract_records()` fallback path |
 
-### Why Soft Routing Fails
-Per OpenRouter docs: `provider.order` is a PREFERENCE list. When the preferred provider is rate-limited, slow, or temporarily unavailable, OpenRouter CAN and DOES fall back to unlisted providers. `provider.ignore` only blocks listed providers — any unlisted provider is fair game.
+Import sites: orchestrator.py:45, document_structure.py:145, building_inventory.py:479, page_tagger.py:357, acm_extraction.py:79
 
-## Call Sites Analysis
+Test file: `tests/test_completion_state_unwrap.py` — 105 lines, 10 tests
 
-`_apply_openrouter_preferences()` is called from exactly 2 locations:
-1. `utils.py:134` — inside `provision_langchain_model()` (main path for ALL extraction stages)
-2. `utils.py:413` — inside `provision_extraction_fallback_model()` (fallback path)
+### CRITICAL DESIGN ISSUE: Shared Chokepoint
 
-All extraction stages go through `provision_langchain_model()`:
-- `document_structure.py:136` → `provision_langchain_model()` (line 136)
-- `building_inventory.py:470` → `provision_langchain_model()` (line 470)
-- `page_tagger.py:348` → `provision_langchain_model()` (line 348)
-- `orchestrator.py:501` → via `_llm_extract_building()` → `provision_langchain_model()`
-- `acm_extraction.py:1209` → `provision_langchain_model()` (main extract_records)
-- `acm_extraction.py:2003` → `provision_langchain_model()` (correction path)
+Task spec says add `response_format: json_schema` with `ACMExtractionResult` to `_apply_openrouter_preferences()`. **This would BREAK non-extraction stages.**
 
-**Good news**: ALL extraction paths flow through a single chokepoint (`provision_langchain_model` → `_apply_openrouter_preferences`). We only need to change `_apply_openrouter_preferences()` and the constants.
+`_apply_openrouter_preferences()` is called by ALL stages via `provision_langchain_model()`:
 
-## OpenRouter Feature Analysis
+| Stage | Schema | Breaks if ACMExtractionResult enforced? |
+|-------|--------|----------------------------------------|
+| document_structure | `DocumentStructureLLM` | YES |
+| building_inventory | `BuildingInventory` | YES |
+| page_tagger | `PageTagBatch` | YES |
+| metadata_extractor | `DocumentMetaLLM` (with_structured_output) | YES |
+| orchestrator extraction | `ACMExtractionResult` | NO — correct |
+| acm_extraction extract_records | `ACMExtractionResult` | NO — correct |
 
-| Feature | Status | Effort | Impact |
-|---------|--------|--------|--------|
-| `provider.only` + `allow_fallbacks=false` | **CRITICAL** | Low | Eliminates Vertex fallback |
-| Response Healing plugin | SHOULD-HAVE | Low | Auto-fix malformed JSON, free, <1ms |
-| ZDR (Zero Data Retention) | SHOULD-HAVE | Low | Government data compliance |
-| `data_collection: "deny"` | SHOULD-HAVE | Low | Don't train on government data |
-| `require_parameters: true` | Already present | None | Keep existing |
-| Request metadata | NICE-TO-HAVE | Medium | Production observability |
-| Generation API verification | NICE-TO-HAVE | Medium | Definitive provider logging |
-| App Attribution headers | NICE-TO-HAVE | Low | Dashboard visibility |
-| Prompt caching (`cache_control`) | EXPERIMENTAL | Medium | Cost savings, may not pass through LangChain |
+### Correct Approach: Stage-Specific Injection
 
-## Deep Merge Concern
+Create `_inject_response_format(model, schema_dict, name)` helper. Apply ONLY at extraction call sites after `provision_langchain_model()` returns, before `model.ainvoke()`.
 
-Current code (utils.py:83-94) does a SHALLOW merge:
-```python
-prev_extra = existing.get("extra_body", {})
-object.__setattr__(lc_model, "model_kwargs", {**existing, "extra_body": {**prev_extra, **openrouter_body}})
-```
+Non-extraction stages (document_structure, building_inventory, page_tagger) don't get response_format — but the wrapper was a routing artifact (non-Anthropic providers). With `provider.only: ["Anthropic"]` (E27-S3), the wrapper should be gone from ALL stages regardless.
 
-This overwrites `provider` dict entirely if one already exists. Need proper deep merge for `provider` dict and `plugins` array (append, don't replace).
+### `with_structured_output()` Remaining Usage
 
-## Esperanto/LangChain Header Injection
+`metadata_extractor.py:231` — uses `model.with_structured_output(DocumentMetaLLM)`. This is metadata extraction (NOT ACM extraction). Do NOT touch — different pipeline path, different schema.
 
-Models are constructed by Esperanto (`AIFactory.create_language()`) then converted to LangChain (`model.to_langchain()`). The LangChain `ChatOpenAI` class supports `default_headers` in the constructor, but since Esperanto creates the model, we can't easily inject headers at construction time.
+### `_normalize_extraction_json()` — KEEP
 
-**Alternative**: App Attribution headers (`HTTP-Referer`, `X-OpenRouter-Title`) can go in `extra_body` — BUT OpenRouter docs say these should be HTTP headers, not body fields. If `model_kwargs` can include `default_headers`, that works. Otherwise, skip app attribution headers for now (metadata covers observability).
+Located at orchestrator.py:135. Coerces `data_issues: str → list`, `data_issues: null → []`. Even with schema enforcement, retain as defense-in-depth. Field validators in Pydantic handle similar logic but `_normalize_extraction_json()` catches pre-validation edge cases.
 
-**Decision**: Include app attribution via `default_headers` injection through `model_kwargs` if LangChain supports it. Otherwise, the `metadata` field in `extra_body` handles observability.
+### Pydantic Schema Complexity
 
-## LLM Call Sites for Provider Verification
+`ACMExtractionResult` contains:
+- `records: List[ACMExtractionRecord]` — 40+ fields, many Optional
+- `status: ExtractionStatus` (str Enum)
+- `confidence_distribution: ConfidenceDistribution` (nested model)
+- Multiple `@field_validator` decorators (`result`, `friable`, `risk_status`, `material_condition`, `area_type`, `quantity`, `data_issues`)
 
-Each extraction stage calls `model.ainvoke(messages)`:
-- `document_structure.py:152` — single call
-- `building_inventory.py:486` — single call
-- `page_tagger.py:363` — per-batch call (multiple per document)
-- `orchestrator.py:534` (inside `_invoke()`) — per-building call
-- `acm_extraction.py:1287` — main extraction call
-- `acm_extraction.py:2025` — correction call
+`model_json_schema()` will generate `$defs` for: ExtractionStatus, ExtractionConfidence, ConfidenceDistribution, ACMExtractionRecord. All must be inlined. Field validators won't appear in schema — they're post-parse Python logic.
 
-Provider verification after ainvoke() would be ideal but requires the function to be importable and the response to contain gen_id. This is NON-CRITICAL — if it fails, extraction continues.
+Estimated schema size: 8-15KB (acceptable for OpenRouter requests).
 
-## Prompt Caching Compatibility
+### Sprint Status Location
 
-LangChain `SystemMessage` accepts `content` as either a string or a list of content blocks. To use Anthropic prompt caching, the content must be a list with `cache_control` on each block:
-```python
-SystemMessage(content=[{"type": "text", "text": "...", "cache_control": {"type": "ephemeral"}}])
-```
-
-**Risk**: LangChain/Esperanto may strip unknown fields like `cache_control`. This is a SHOULD-HAVE — log TODO if it doesn't work.
+`epic-27: done` at line 362. Need to reopen or add S4 below the existing entries.

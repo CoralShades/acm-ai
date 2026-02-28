@@ -1,45 +1,32 @@
-# Progress — E27-S3: Hard-Lock OpenRouter Provider Routing
+# Progress — E27-S4: Native JSON Schema Structured Outputs
 
 ## Session: 2026-02-28
-### Status: COMPLETE
+### Status: PLANNING
 
-### Implementation Summary
+### Reboot Check
+1. **Last completed milestone**: E27-S3 (hard-lock provider routing) — committed and done
+2. **Current active task**: E27-S4 planning — all mandatory files read, findings documented
+3. **Blockers**: None — spike validation requires running extraction (needs services up)
+4. **Files last modified**: findings.md, task_plan.md, progress.md (planning files)
+5. **Next planned action**: Task 0 — create story file, then Task 1 — implement schema utilities
 
-#### Phase 1: Replace Soft Routing (utils.py)
-- Removed `OPENROUTER_IGNORED_PROVIDERS` and `OPENROUTER_PROVIDER_ORDER`
-- Added `OPENROUTER_ALLOWED_PROVIDERS = ["Anthropic"]`
-- Rewrote `_apply_openrouter_preferences()` with 6 OpenRouter features:
-  1. `provider.only` — hard allowlist (Anthropic ONLY)
-  2. `allow_fallbacks=False` — fail, don't silently reroute
-  3. `zdr=True` — Zero Data Retention for government data
-  4. `data_collection="deny"` — don't train on government data
-  5. Response Healing plugin — auto-fix malformed JSON
-  6. Request metadata — app/pipeline/source_id/building/stage tagging
-- Deep merge logic: preserves existing extra_body, deep merges provider dict, appends plugins without duplicates
-- Added optional kwargs: source_id, building_name, stage_name
+### Key Decisions
+1. **Stage-specific injection** instead of modifying shared `_apply_openrouter_preferences()`:
+   - `_inject_response_format(model, schema_dict, name)` applies ONLY to extraction calls
+   - Other stages (document_structure, building_inventory, page_tagger) keep existing behavior
+   - Rationale: shared function applies to ALL models; ACMExtractionResult schema would break non-extraction stages
 
-#### Phase 2: Provider Verification (utils.py)
-- Added `_verify_provider_routing()` async function
-- Two methods: response_metadata (fast path) + Generation API (definitive)
-- Non-blocking — extraction continues if verification fails
+2. **Conditional removal gate**: `_unwrap_completion_state()` is only removed IF spike confirms no wrapper (Scenario A). If wrapper persists (Scenario B), retain and document.
 
-#### Phase 3: Instrument Extraction Stages
-- `document_structure.py` — verification after ainvoke
-- `building_inventory.py` — verification after ainvoke
-- `page_tagger.py` — verification after ainvoke (per batch)
-- `orchestrator.py` — verification inside _invoke() per building
-- `acm_extraction.py` — verification after main extract + correction ainvoke
-
-#### Phase 4: Supporting Files
-- `.env.example` — updated OpenRouter section with routing documentation
-
-### Tests
-- 30 new tests in `tests/test_openrouter_provider_routing.py` — all pass
-- 7 test classes: ProviderHardLock(8), ResponseHealing(3), RequestMetadata(6), DeepMerge(3), OldConstantsRemoved(3), ProviderVerification(6), Transforms(1)
-- Full suite: 1078 pass, 0 fail (1 pre-existing docling storage test excluded)
-
-### Validation
-- Ruff lint: PASS
-- New tests: 30/30 PASS
-- Full suite: 1078 pass, 0 regressions
-- Old constants: grep confirms zero references to OPENROUTER_IGNORED/ORDER
+### Files Read (Pre-Read Complete)
+- `open_notebook/graphs/utils.py` — full (549 lines)
+- `open_notebook/extractors/orchestrator.py` — full (1014 lines)
+- `open_notebook/extractors/document_structure.py` — full (268 lines)
+- `open_notebook/extractors/building_inventory.py` — full (602 lines)
+- `open_notebook/extractors/page_tagger.py` — full (478 lines)
+- `open_notebook/graphs/acm_extraction.py` — lines 1-100, 1270-1350, 1430-1480
+- `open_notebook/extractors/acm_schemas.py` — full (504 lines)
+- `api/model_provisioning.py` — full (448 lines)
+- `docs/sprint-artifacts/sprint-status.yaml` — epic-27 section
+- `tests/test_completion_state_unwrap.py` — full (105 lines)
+- `tests/test_openrouter_provider_routing.py` — full (367 lines)
