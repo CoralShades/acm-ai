@@ -1,0 +1,51 @@
+# Alexander District Hospital Ground Truth
+# Source: Clucth_Alexandra_District_BAR.xlsm (BAR export via Clutch_Alexandra.csv)
+# Buildings: 5 (Myrtle Street Clinic, Mortuary Buildings, Pathology Department, VMO Accommodations, Old Alexandra Hospital)
+# Total records: 43
+# Note: BAR has 5 buildings. PDF pages 16-34 contain Nurses Accommodation but no ACM records in BAR.
+# Note: Historical counts vary — 54 (E22/E23), 52 (DB/E21-S4), 43 (BAR xlsm ground truth)
+# Date: 2026-02-28
+building_name,room_name,location,product,sample_no,sample_result,friable
+Myrtle Street Clinic,Exterior,Eaves,Eaves,J169642-001-001,Negative,Non-friable
+Myrtle Street Clinic,Exterior,Wall,Wall(s),J169642-001-002,Negative,Non-friable
+Mortuary Buildings,Exterior,Window Frames,Window Frame,J169642-001-004,Positive,Non-friable
+Mortuary Buildings,Boiler Room,Fire Door,Fire Door(s),Not Sampled,Assumed Positive,Friable
+Mortuary Buildings,Mortuary Room,Ceiling,Ceiling,Not Sampled,Assumed Positive,Non-friable
+Mortuary Buildings,Mortuary Room,Wall,Wall(s),Not Sampled,Negative,Non-friable
+Mortuary Buildings,Shower Room,Cubicle - Behind Ceramic Tile,Shower Cubicle,Not Sampled,Assumed Positive,Non-friable
+Mortuary Buildings,Shower Room,Cubicle - Beneath Shower Tray,Shower Cubicle,Not Sampled,Assumed Positive,Non-friable
+Mortuary Buildings,Shower Room,Above Door,Infill panels,As Per J134889-01,Negative,Non-friable
+Pathology Department,Kitchen,Under Sink - Sink Lining,Lining,J169642-001-019,Negative,Non-friable
+VMO Accommodations,Exterior,Beneath Window Wall,Unknown,J169642-001-021,Negative,Non-friable
+VMO Accommodations,Exterior,On Ground Debris,Debris,As Per J169642-001-020,Assumed Positive,Friable
+VMO Accommodations,Exterior,Debris,Debris,J169642-001-020,Positive,Friable
+VMO Accommodations,Exterior,Eaves,Eaves,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,Exterior,Adjacent Workshop Gable End,Gable lining,J169642-001-018,Positive,Non-friable
+Old Alexandra Hospital,Roof,Ductwork,Ductwork,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,Exterior,Porch Ceiling,Porch ceiling,As Per 35766/11,Positive,Non-friable
+Old Alexandra Hospital,Exterior,South Window Frames,Window Frame,J169642-001-016,Negative,Non-friable
+Old Alexandra Hospital,North Courtyard,Expansion Joint,Expansion joint,J169642-001-015,Positive,Non-friable
+Old Alexandra Hospital,Bathroom Adjacent Labour Ward,Shower Cubicle - Beneath Shower Tray,Shower Cubicle,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,Boiler Room South,Mezzanine Floor,Flue,J169642-001-006,Positive,Non-friable
+Old Alexandra Hospital,Boiler Room South,Mezzanine Floor - Plant and Equipment,Boiler Gasket,J169642-001-005,Negative,Non-friable
+Old Alexandra Hospital,CCSD - Entry,Fire Door,Fire Door(s),Not Sampled,Assumed Positive,Friable
+Old Alexandra Hospital,East Passage,Floor,Floor covering adhesive,J169642-001-010,Negative,Non-friable
+Old Alexandra Hospital,East Passage - Linen Store,Floor,Floor covering,J169642-001-011,Negative,Non-friable
+Old Alexandra Hospital,East Passage - Linen Store,Floor,Floor covering,J169642-001-013,Negative,Non-friable
+Old Alexandra Hospital,East Passage - Linen Store,Floor,Floor covering adhesive,J169642-001-012,Negative,Non-friable
+Old Alexandra Hospital,Flamable Liquids Store,Ceiling,Ceiling,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,Former Laundry,Stored Item,Stored item(s),As Per J169642-001-017,Assumed Negative,Non-friable
+Old Alexandra Hospital,Former Laundry - External Passage,Electrical Distribution Board,Electrical board,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,Medical Imprest Store Room,Floor,Floor covering,J169642-001-008,Negative,Non-friable
+Old Alexandra Hospital,Multi Purpose Area  Adjacent CCSD,Fire Door,Fire Door(s),Not Sampled,Assumed Positive,Friable
+Old Alexandra Hospital,Rear Exit Foyer Adjacent Medical Records,Floor,Floor covering (beneath carpet),35766/07 35766/08X,Positive,Non-friable
+Old Alexandra Hospital,Reception,Safe,Insulation,Not Sampled,Assumed Positive,Friable
+Old Alexandra Hospital,South Store Room,Ceiling,Ceiling,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,Store Offices,Ceiling,Ceiling,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,Utility Room Adjacent Ward 10,Under Sink Shelf,Shelving,J169642-001-014,Positive,Friable
+Old Alexandra Hospital,Ward 12,Floor,Floor covering,As Per J169642-001-007,Assumed Negative,Non-friable
+Old Alexandra Hospital,Ward 12,Shower Cubicle - Beneath Shower Tray,Shower Cubicle,Not Sampled,Assumed Positive,Non-friable
+Old Alexandra Hospital,West Passage,Adjacent CCSD Fire Door,Fire Door(s),Not Sampled,Assumed Positive,Friable
+Old Alexandra Hospital,Workshop,Infill Panels,Infill panels,J169642-001-017,Negative,Non-friable
+Old Alexandra Hospital,Workshop,Stored Item,Stored item(s),As Per J169642-001-017,Assumed Negative,Non-friable
+Old Alexandra Hospital,Workshop,Above Flue Boxing Heater,Heater flue,As Per J169642-001-017,Assumed Negative,Non-friable
