@@ -167,13 +167,14 @@ class PipelineLogger:
             recent_logs = self._log_entries[-200:]
 
             async with db_connection() as db:
-                # Use deterministic record ID so UPSERT creates or updates
-                # (SurrealDB UPSERT ... WHERE doesn't create new records)
+                # Use deterministic record ID so UPSERT creates or updates.
+                # SurrealDB UPSERT ... WHERE doesn't create new records,
+                # and UPSERT $param treats param as a string — so we inline
+                # the record ID directly (safe: we control the value).
                 safe_id = self.command_id.replace(":", "_")
-                record_id = f"extraction_progress:{safe_id}"
                 await db.query(
-                    """
-                    UPSERT $record_id SET
+                    f"""
+                    UPSERT extraction_progress:{safe_id} SET
                         command_id = $command_id,
                         run_id = $run_id,
                         source_id = $source_id,
@@ -183,7 +184,6 @@ class PipelineLogger:
                         updated_at = time::now();
                     """,
                     {
-                        "record_id": record_id,
                         "command_id": self.command_id,
                         "run_id": self.run_id,
                         "source_id": self.source_id,

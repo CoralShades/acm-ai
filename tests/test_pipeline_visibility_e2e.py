@@ -100,15 +100,14 @@ class TestUpsertSyntax:
                 f"UPSERT query should not use WHERE clause: {query}"
             )
 
-            # Must contain record_id parameter
-            assert "record_id" in params, (
-                f"UPSERT should use deterministic record_id param: {params}"
+            # Must contain inlined record ID in the query string
+            assert "extraction_progress:command_test123" in query, (
+                f"UPSERT should inline deterministic record ID: {query}"
             )
 
-            # Record ID should be deterministic based on command_id
-            expected_id = "extraction_progress:command_test123"
-            assert params["record_id"] == expected_id, (
-                f"Record ID should be '{expected_id}', got: {params['record_id']}"
+            # Params should NOT contain record_id (it's inlined)
+            assert "record_id" not in params, (
+                f"record_id should be inlined, not a param: {params}"
             )
 
 
