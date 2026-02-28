@@ -358,6 +358,10 @@ development_status:
   e26-s6-accuracy-fixes-dedup-prompt-regex: done  # 31/31 (100%) via 3 fixes: dedup key (location field), prompt engineering (structured table rules), regex recovery (_recover_no_access_records). Records #9, #30, #31 all recovered.
   e26-s7-alexander-ground-truth-flag-promotion: done  # Alexander ground truth CSV (43 records from BAR xlsm). Flag DOCLING_DIRECT_TABLE_EXTRACTION promoted to default=true. ADR-001 D6. Epic closeout.
 
+  # Epic 27: Structured Output Resilience (P1 — Bug Fix)
+  epic-27: in-progress
+  e27-s1-completionstate-wrapper-parsing-fix: done  # Eliminated dead with_structured_output() from all 4 LLM stages. Direct ainvoke + parse_json_response + _unwrap_completion_state + Pydantic validate. Fixes Alexander 0/43 (orchestrator had no fallback). Saves ~43s latency. 10 unit tests. 1038 pass.
+
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
 

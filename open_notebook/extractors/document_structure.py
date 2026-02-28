@@ -141,14 +141,23 @@ async def _llm_extract_structure(
         max_tokens=16384,
     )
 
-    chain = model.with_structured_output(DocumentStructureLLM)
+    from open_notebook.graphs.utils import _unwrap_completion_state, parse_json_response
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
             content="Extract the document structure, table of contents, and section hierarchy."
         ),
     ]
-    llm_result: DocumentStructureLLM = await chain.ainvoke(messages)
+    raw_response = await model.ainvoke(messages)
+    response_text = (
+        raw_response.content
+        if hasattr(raw_response, "content")
+        else str(raw_response)
+    )
+    parsed = parse_json_response(response_text)
+    parsed = _unwrap_completion_state(parsed)
+    llm_result = DocumentStructureLLM.model_validate(parsed)
     return DocumentStructure(**llm_result.model_dump())
 
 

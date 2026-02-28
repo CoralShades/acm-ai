@@ -475,14 +475,23 @@ async def _llm_compile_inventory(
         max_tokens=4096,
     )
 
-    chain = model.with_structured_output(BuildingInventory)
+    from open_notebook.graphs.utils import _unwrap_completion_state, parse_json_response
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
             content="Compile a building inventory with page ranges, room codes, and complexity classifications."
         ),
     ]
-    result: BuildingInventory = await chain.ainvoke(messages)
+    raw_response = await model.ainvoke(messages)
+    response_text = (
+        raw_response.content
+        if hasattr(raw_response, "content")
+        else str(raw_response)
+    )
+    parsed = parse_json_response(response_text)
+    parsed = _unwrap_completion_state(parsed)
+    result = BuildingInventory.model_validate(parsed)
     return result
 
 

@@ -210,6 +210,33 @@ def _is_qwen_model(model: "BaseChatModel") -> bool:
     return "qwen2.5" in model_name.lower()
 
 
+def _unwrap_completion_state(parsed: Any) -> Any:
+    """Unwrap OpenRouter's completionState JSON envelope if present.
+
+    OpenRouter + claude-sonnet-4 sometimes wraps with_structured_output() responses in:
+        {"completionState": "complete", "result": {"records": [...]}, "type": "Object"}
+
+    This function extracts the inner "result" dict. If no envelope is detected,
+    returns the input unchanged (safe pass-through).
+
+    Args:
+        parsed: Parsed JSON (dict, list, or other). Expected to be the output of
+                parse_json_response().
+
+    Returns:
+        Unwrapped dict if completionState envelope detected, otherwise input unchanged.
+    """
+    if not isinstance(parsed, dict):
+        return parsed
+
+    if "completionState" in parsed and "result" in parsed:
+        inner = parsed["result"]
+        if isinstance(inner, dict):
+            return inner
+
+    return parsed
+
+
 def parse_json_response(response_text: str) -> dict[str, Any]:
     """Extract and parse a JSON object from LLM response text.
 

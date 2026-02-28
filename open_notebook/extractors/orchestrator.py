@@ -42,6 +42,7 @@ from open_notebook.extractors.page_tagger import (
 from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.graphs.utils import (
     _is_qwen_model,
+    _unwrap_completion_state,
     is_auth_error,
     is_provider_schema_error,
     parse_json_response,
@@ -528,34 +529,31 @@ async def _llm_extract_building(
         ]
 
         async def _invoke(active_model, active_is_qwen: bool) -> ACMExtractionResult:
-            if active_is_qwen:
-                response_text = ""
-                try:
-                    raw_response = await active_model.ainvoke(messages)
-                    response_text = (
-                        raw_response.content
-                        if hasattr(raw_response, "content")
-                        else str(raw_response)
-                    )
-                    parsed = parse_json_response(response_text)
-                    _normalize_extraction_json(parsed)
-                    result_local: ACMExtractionResult = (
-                        ACMExtractionResult.model_validate(parsed)
-                    )
-                    logger.info(
-                        f"Building {plan.building_id} Qwen direct JSON: "
-                        f"{len(result_local.records)} records"
-                    )
-                    return result_local
-                except (ValueError, ValidationError) as qwen_err:
-                    logger.error(
-                        f"Building {plan.building_id} Qwen JSON parsing failed: {qwen_err}. "
-                        f"Response preview: {response_text[:200] if response_text else 'N/A'}"
-                    )
-                    raise
-
-            chain = active_model.with_structured_output(ACMExtractionResult)
-            return await chain.ainvoke(messages)
+            response_text = ""
+            try:
+                raw_response = await active_model.ainvoke(messages)
+                response_text = (
+                    raw_response.content
+                    if hasattr(raw_response, "content")
+                    else str(raw_response)
+                )
+                parsed = parse_json_response(response_text)
+                parsed = _unwrap_completion_state(parsed)
+                _normalize_extraction_json(parsed)
+                result_local: ACMExtractionResult = (
+                    ACMExtractionResult.model_validate(parsed)
+                )
+                logger.info(
+                    f"Building {plan.building_id} direct JSON: "
+                    f"{len(result_local.records)} records"
+                )
+                return result_local
+            except (ValueError, ValidationError) as parse_err:
+                logger.error(
+                    f"Building {plan.building_id} JSON parsing failed: {parse_err}. "
+                    f"Response preview: {response_text[:200] if response_text else 'N/A'}"
+                )
+                raise
 
         try:
             result = await _invoke(model, is_qwen)
@@ -606,6 +604,7 @@ async def _llm_extract_building(
                         else str(raw_response)
                     )
                     parsed = parse_json_response(response_text)
+                    parsed = _unwrap_completion_state(parsed)
                     _normalize_extraction_json(parsed)
                     result = ACMExtractionResult.model_validate(parsed)
                     logger.info(

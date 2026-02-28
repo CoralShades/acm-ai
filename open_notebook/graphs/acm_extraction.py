@@ -76,7 +76,9 @@ from open_notebook.extractors.validators.acm_validator import (
 )
 from open_notebook.graphs.utils import (
     _is_qwen_model,
+    _unwrap_completion_state,
     is_auth_error,
+    parse_json_response,
     provision_extraction_fallback_model,
     provision_langchain_model,
 )
@@ -1279,24 +1281,19 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             ),
         )
 
-    # Use structured output (with manual JSON fallback for OpenRouter compatibility)
-    # Qwen2.5: bypass with_structured_output() — use direct ainvoke + JSON parsing
+    # Direct ainvoke + JSON parse for all models (E27-S1: eliminates dead
+    # with_structured_output() that always fails on OpenRouter/Anthropic grammar limits)
     try:
-        if is_qwen:
-            from open_notebook.graphs.utils import parse_json_response
-
-            raw_response = await model.ainvoke(messages)
-            response_text = (
-                raw_response.content
-                if hasattr(raw_response, "content")
-                else str(raw_response)
-            )
-            parsed = parse_json_response(response_text)
-            result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
-            logger.info(f"Qwen direct JSON extraction: {len(result.records)} records")
-        else:
-            chain = model.with_structured_output(ACMExtractionResult)
-            result = await chain.ainvoke(messages)
+        raw_response = await model.ainvoke(messages)
+        response_text = (
+            raw_response.content
+            if hasattr(raw_response, "content")
+            else str(raw_response)
+        )
+        parsed = parse_json_response(response_text)
+        parsed = _unwrap_completion_state(parsed)
+        result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
+        logger.info(f"Direct JSON extraction: {len(result.records)} records")
 
         # Debug: Log raw result before processing
         logger.debug(
@@ -1435,8 +1432,6 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         )
         response_text = ""
         try:
-            from open_notebook.graphs.utils import parse_json_response
-
             raw_response = await model.ainvoke(messages)
             response_text = (
                 raw_response.content
@@ -1445,6 +1440,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             )
 
             parsed = parse_json_response(response_text)
+            parsed = _unwrap_completion_state(parsed)
             result = ACMExtractionResult.model_validate(parsed)
             logger.info(
                 f"Fallback JSON parsing succeeded: {len(result.records)} records"
