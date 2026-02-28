@@ -1,11 +1,31 @@
-# Findings — E27-S2: SSE/AG-UI Pipeline Visibility
+# Findings — E27-S2: Browser Verification
 
-## Backend Architecture
-- StageId enum: UPPERCASE values (STRUCTURE, PREFLIGHT, ORCHESTRATOR, EXTRACT, VALIDATE, CORRECT, STORE)
-- STAGE_METADATA: maps StageId → {name, description, log_prefix}
-- PipelineLogger constructor: (source_id, total_pages=0, command_id=None)
-- AGUIEventEmitter: step_name strings in emit_step_started/emit_step_finished
-- Graph order: extract_metadata → structure → inventory → tag_pages → orchestrate/prepare → extract → validate → correct ↔ validate → deduplicate → recover_no_access → save
+## What to Verify
+1. Navigate to extraction page: `/jobs/{source_id}/extract`
+2. Start an extraction (or observe in-progress one)
+3. ExtractionProgressPanel should show 9 stage pills (was 7)
+4. New stages visible: "Docling Tables" (with TableProperties icon) and "Recovery Scan" (with Search icon)
+5. Stage pills light up teal when running, emerald when complete
 
-## Docling runs OUTSIDE extraction graph (source_commands.py)
-## recover_no_access_node runs INSIDE graph, has state access
+## Frontend Architecture for Verification
+- Extract page: `frontend/src/app/(dashboard)/jobs/[id]/extract/page.tsx`
+- Progress panel: `frontend/src/components/acm/ExtractionProgressPanel.tsx`
+- Stage pills: `frontend/src/components/acm/StageProgressPill.tsx`
+- SSE hook: `frontend/src/lib/hooks/use-extraction-progress.ts`
+
+## Services Required
+- SurrealDB on port 8000 (Docker)
+- API on port 5055 (uvicorn)
+- Frontend on port 8502 (Next.js dev)
+- Worker (background, for extraction commands)
+
+## Test Sources
+- Any uploaded PDF source with a command_id can be used
+- Broadmeadows or Alexandra test PDFs in docs/samplePDF/
+
+## Note on Docling Stage Timing
+- DOCLING_EXTRACTION runs during SOURCE PROCESSING (before the extraction graph)
+- Its events go to a separate PipelineLogger instance
+- The extraction graph's PipelineRunState won't include the Docling stage
+- To see Docling stage in the progress panel, the frontend would need to merge two PipelineRunState objects
+- For this verification, focus on: NO_ACCESS_RECOVERY stage appearing in the extraction graph run

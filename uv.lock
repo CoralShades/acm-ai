@@ -2900,6 +2900,7 @@ dependencies = [
     { name = "tomli" },
     { name = "torch" },
     { name = "torchvision" },
+    { name = "typer" },
     { name = "uvicorn" },
 ]
 
@@ -2966,6 +2967,7 @@ requires-dist = [
     { name = "tomli", specifier = ">=2.0.2" },
     { name = "torch", specifier = ">=2.10.0", index = "https://download.pytorch.org/whl/cu126" },
     { name = "torchvision", specifier = ">=0.25.0", index = "https://download.pytorch.org/whl/cu126" },
+    { name = "typer", specifier = ">=0.20.0" },
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.32.0.20241016" },
     { name = "uvicorn", specifier = ">=0.24.0" },
 ]

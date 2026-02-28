@@ -47,6 +47,7 @@ dependencies = [
     "torchvision>=0.25.0",
     "docling>=2.75.0",
     "textual>=1.0.0",
+    "typer>=0.20.0",
 ]
 
 [tool.setuptools]
