@@ -60,6 +60,8 @@ class TestUpsertSyntax:
         mock_db.query = AsyncMock(return_value=[])
 
         pl = PipelineLogger.__new__(PipelineLogger)
+        # command_id can be a RecordID object in practice,
+        # so test with a string (str() of RecordID gives "command:test123")
         pl.command_id = "command:test123"
         pl.run_id = "abcd1234"
         pl.source_id = "source:xyz"

@@ -150,10 +150,21 @@ class PipelineLogger:
             return
         try:
             loop = asyncio.get_running_loop()
-            loop.create_task(self._persist_state())
+            task = loop.create_task(self._persist_state())
+            # Add error handler so exceptions don't go silent
+            task.add_done_callback(self._persist_done_callback)
         except RuntimeError:
             # No running event loop - skip persistence (e.g., in tests)
             pass
+
+    @staticmethod
+    def _persist_done_callback(task: asyncio.Task) -> None:
+        """Log errors from fire-and-forget persist tasks."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc:
+            logger.warning(f"[PIPELINE] Persist task failed: {exc}")
 
     async def _persist_state(self) -> None:
         """Upsert current pipeline state to SurrealDB extraction_progress table."""
@@ -171,7 +182,9 @@ class PipelineLogger:
                 # SurrealDB UPSERT ... WHERE doesn't create new records,
                 # and UPSERT $param treats param as a string — so we inline
                 # the record ID directly (safe: we control the value).
-                safe_id = self.command_id.replace(":", "_")
+                # command_id may be a RecordID object — ensure string first.
+                cmd_str = str(self.command_id)
+                safe_id = cmd_str.replace(":", "_")
                 await db.query(
                     f"""
                     UPSERT extraction_progress:{safe_id} SET
@@ -184,7 +197,7 @@ class PipelineLogger:
                         updated_at = time::now();
                     """,
                     {
-                        "command_id": self.command_id,
+                        "command_id": cmd_str,
                         "run_id": self.run_id,
                         "source_id": self.source_id,
                         "status": self._state.status.value,
@@ -194,7 +207,7 @@ class PipelineLogger:
                 )
         except Exception as e:
             # DB persistence is best-effort — don't break the pipeline
-            logger.debug(f"[PIPELINE] Failed to persist state: {e}")
+            logger.warning(f"[PIPELINE] Failed to persist state: {e}")
 
     # ------------------------------------------------------------------
     # Stage lifecycle
