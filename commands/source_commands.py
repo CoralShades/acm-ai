@@ -12,7 +12,7 @@ from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
 
 DOCLING_DIRECT_TABLE_EXTRACTION = (
-    os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "false").lower() == "true"
+    os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "true").lower() == "true"
 )
 
 try:

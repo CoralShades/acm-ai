@@ -208,10 +208,32 @@ directly, bypassing content-core entirely and preserving row-major DataFrames.
 - Frontend display (Raw Tables tab auto-picks up `acm_table_section` data)
 - E24's `DOCLING_TABLE_STRUCTURE` flag (remains `false`, separate concern)
 
-**New feature flag**: `DOCLING_DIRECT_TABLE_EXTRACTION` (default: `false`)
+**Feature flag**: `DOCLING_DIRECT_TABLE_EXTRACTION` (default: `true` — promoted E26-S7)
 - Separate from E24's `DOCLING_TABLE_STRUCTURE` flag
 - Controls the new parallel path, not content-core's serialization
 - Rollback: set to `false`, restart worker, no data migration needed
+
+### D6: PROMOTE — Docling Direct API to Default (2026-02-28)
+
+**Context**: E26-S4 validation achieved 31/31 (100%) on Broadmeadows with:
+- Docling structured table injection (8 DataFrames, 3 register tables)
+- Dedup key refinement (location field added to prevent record merging)
+- Prompt engineering (structured table extraction rules for count-your-rows, same-room-different-location)
+- No-access regex recovery fallback (captures records LLM misses from full_text)
+
+Three specific fixes (E26-S6):
+1. Fix 1 — Dedup Key: Added `location` to dedup key → 31 raw → 30 after dedup (was 31→28)
+2. Fix 2 — Prompt: "CRITICAL: Structured Table Extraction Rules" → Record #9 + Record #30 captured
+3. Fix 3 — Regex Recovery: `_recover_no_access_records()` → Record #31 recovered
+
+**Decision**: Set `DOCLING_DIRECT_TABLE_EXTRACTION=true` as default.
+Alexander extraction failed 0/43 due to pre-existing `completionState` wrapper bug (NOT Docling-related — orchestrator path, GitHub #81).
+
+**Consequences**:
+- All new extractions use parallel PyMuPDF + Docling pipeline
+- Docling processing adds ~22s to source ingestion but improves LLM accuracy 90.3% → 100%
+- Table DataFrames available for orchestrator context injection (multi-building documents)
+- No regression on single-building extraction path
 
 ---
 

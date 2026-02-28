@@ -34,16 +34,16 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-27
+updated: 2026-02-28
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-02-27
-  reconciled_branches: [main]
-  notes: "Sprint Close E23 reconciliation 2026-02-27: E23 validation complete 28/31 (90.3%) — target ≥28/31 MET. All 4 E23 stories closed with validation notes. GitHub issues #70-74 closed. All 23 epics complete. Story count: 156 total, 144 done (92%), 10 archived."
+  last_reconciled: 2026-02-28
+  reconciled_branches: [main, ACMV3]
+  notes: "E26 closeout 2026-02-28: Epic 26 complete (7/7 stories). Broadmeadows 31/31 (100%). Alexander ground truth CSV installed (43 records). DOCLING_DIRECT_TABLE_EXTRACTION promoted to default=true. ADR-001 D6 recorded."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -349,12 +349,14 @@ development_status:
   # Tech design: docs/architecture/e26-table-extraction-technical-design.md
   # ADR: docs/architecture/adr-tableformer-integration.md (D5)
   # Goal: PyMuPDF full_text + Docling DataFrames → target >=30/31 Broadmeadows
-  epic-26: done  # PROMOTE decision — 31/31 (100%) Broadmeadows. Flag promoted to true. All 5 stories done.
+  epic-26: done  # PROMOTE decision — 31/31 (100%) Broadmeadows. Flag promoted to true. 7/7 stories complete — EPIC COMPLETE.
   e26-s1-docling-direct-api-extraction: done  # Commit f20e9b3. Parallel Docling extraction in process_source_command. Feature flag DOCLING_DIRECT_TABLE_EXTRACTION=false. Migration 37: structured_json on acm_table_section. 19 unit tests. Ruff clean.
   e26-s2-dataframe-validation: done  # ALL 16 METRICS PASS. 8/8 tables, 30/30 register rows, 9/9 "Same as", 4/4 "Assumed positive". Record #9 (Battery Charger) FOUND. Page 8 gap CONFIRMED. Storage 8/8. 2 S1 bugs fixed (int column names, ensure_record_id). Report: docs/reviews/e26-s2-validation-results.md
   e26-s3-orchestrator-context-injection: done  # _get_docling_tables() + _inject_docling_tables() + extract_building() injection. Prompt instruction added to building_extraction.jinja. 14 unit tests, 68/68 orchestrator tests pass. Zero regression. Non-fatal fallback.
   e26-s4-accuracy-validation: done  # PROMOTE — 31/31 (100%) Broadmeadows. All 3 missing records recovered: #9 (prompt+dedup fix), #30 (improved prompt), #31 (no-access fallback). Flag promoted to true. Bug fix: material_description=None. Report: docs/reviews/e26-s4-validation-results.md
   e26-s5-frontend-raw-tables: done  # Auto-discovery CONFIRMED: acm_table_section with table_type='docling_direct_api' picked up by Raw Tables endpoint. Enhanced: Docling Direct API badge (purple), summary count, split from generic 'Docling Markdown'. Build ✓ Lint ✓. No regression for non-Docling sources.
+  e26-s6-accuracy-fixes-dedup-prompt-regex: done  # 31/31 (100%) via 3 fixes: dedup key (location field), prompt engineering (structured table rules), regex recovery (_recover_no_access_records). Records #9, #30, #31 all recovered.
+  e26-s7-alexander-ground-truth-flag-promotion: done  # Alexander ground truth CSV (43 records from BAR xlsm). Flag DOCLING_DIRECT_TABLE_EXTRACTION promoted to default=true. ADR-001 D6. Epic closeout.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
