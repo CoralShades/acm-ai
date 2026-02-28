@@ -1,40 +1,30 @@
 # Progress — E27-S4: Native JSON Schema Structured Outputs
 
 ## Session: 2026-02-28
-### Status: IN PROGRESS — Spike Running
+### Status: COMPLETE — Ready to commit
 
 ### Reboot Check
-1. **Last completed milestone**: T0 (story file), T1 (schema utilities), T2 (response_format injection at call sites)
-2. **Current active task**: T3 — Spike validation running in background (task b3tt7la1q)
-3. **Blockers**: Waiting for spike extraction to complete (~5-10 min)
-4. **Files last modified**:
-   - `open_notebook/graphs/utils.py` — added `pydantic_to_openrouter_schema()`, `_get_acm_extraction_schema()`, `_inject_response_format()`, temp debug logging in `parse_json_response()`
-   - `open_notebook/extractors/orchestrator.py` — added `_inject_response_format()` call after model provisioning
-   - `open_notebook/graphs/acm_extraction.py` — added `_inject_response_format()` call after model provisioning
-   - `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md` — story file created
-5. **Next planned action**: Check spike results → decide Scenario A (remove workaround) vs Scenario B (retain)
+1. **Last completed milestone**: All tasks T0-T7 complete
+2. **Current active task**: Commit
+3. **Blockers**: None
+4. **Files last modified**: All files below
+5. **Next planned action**: Commit and close story
 
-### Implementation Log
+### Final Results
+- Broadmeadows: **31/31 (100%)** in 144.4s
+- Alexander: **29/43 (67.4%)** — pre-existing baseline, no regression from E27-S4
+- Tests: **1000 passed** (1 pre-existing fail, 10 deleted, 12 new)
+- Lint: clean
+- Frontend build: PASS
 
-#### T0: Story File (DONE)
-- Created `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md`
-
-#### T1: Schema Utilities (DONE)
-- `pydantic_to_openrouter_schema()` — resolves $defs, adds additionalProperties:false
-- `_get_acm_extraction_schema()` — lazy-cached, 8.3 KB schema
-- `_inject_response_format()` — stage-specific OpenRouter-only injection
-- All verification checks passed (no $ref, additionalProperties, caching, size)
-
-#### T2: Call Site Injection (DONE)
-- `orchestrator.py:_llm_extract_building()` — injected after `provision_langchain_model()`
-- `acm_extraction.py:extract_records()` — injected after model provisioning
-- document_structure, building_inventory, page_tagger: NOT modified (confirmed via git diff)
-
-#### T3: Spike Validation (RUNNING)
-- Temporary debug logging added to `parse_json_response()` (ACM_DEBUG_RAW_RESPONSE env gate)
-- Full Broadmeadows extraction running with debug enabled
-- Output: `research-output/e27-s4/spike_broadmeadows.log`
-- Background task: b3tt7la1q
-
-### Key Decision: Stage-Specific Injection
-Instead of modifying shared `_apply_openrouter_preferences()` (which would break non-extraction stages), created `_inject_response_format()` called only at extraction sites. This is architecturally correct because each stage uses a different schema.
+### Files Changed
+- `open_notebook/graphs/utils.py` — Added pydantic_to_openrouter_schema, _get_acm_extraction_schema, _inject_response_format. Deleted _unwrap_completion_state. Removed temp debug logging.
+- `open_notebook/extractors/orchestrator.py` — Added _inject_response_format call. Removed _unwrap_completion_state (2 sites).
+- `open_notebook/graphs/acm_extraction.py` — Removed _unwrap_completion_state (2 sites). No _inject_response_format (legacy path excluded).
+- `open_notebook/extractors/document_structure.py` — Removed _unwrap_completion_state (1 site).
+- `open_notebook/extractors/building_inventory.py` — Removed _unwrap_completion_state (1 site).
+- `open_notebook/extractors/page_tagger.py` — Removed _unwrap_completion_state (1 site).
+- `tests/test_completion_state_unwrap.py` — DELETED (function removed)
+- `tests/test_openrouter_provider_routing.py` — Added 5 new test classes (12 tests)
+- `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md` — Story file
+- `docs/sprint-artifacts/sprint-status.yaml` — e27-s4 marked done

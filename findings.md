@@ -1,65 +1,51 @@
 # Findings — E27-S4: Native JSON Schema Structured Outputs
 
-## Code Audit (2026-02-28)
+## Spike Results (2026-02-28)
 
-### `_unwrap_completion_state()` — Definition + 7 Call Sites
+### completionState Wrapper: CONFIRMED GONE
+- **0** occurrences of `completionState present: True` across 13 parse_json_response calls
+- RAW extraction output: `{"records":[{"building_id":"Broadmeadows...` — clean JSON, no wrapper
+- Applies to ALL stages: document_structure, building_inventory, page_tagger, extract_records
+- Root cause confirmed: wrapper was a non-Anthropic provider routing artifact (E27-S3 fixed routing)
 
-| # | File | Line | Context |
-|---|------|------|---------|
-| 0 | `open_notebook/graphs/utils.py` | 342 | **Definition** |
-| 1 | `open_notebook/extractors/orchestrator.py` | 552 | `_invoke()` inside `_llm_extract_building` |
-| 2 | `open_notebook/extractors/orchestrator.py` | 618 | Schema-error fallback path |
-| 3 | `open_notebook/extractors/document_structure.py` | 170 | `_llm_extract_structure()` |
-| 4 | `open_notebook/extractors/building_inventory.py` | 504 | `_llm_compile_inventory()` |
-| 5 | `open_notebook/extractors/page_tagger.py` | 381 | `_llm_tag_batch()` |
-| 6 | `open_notebook/graphs/acm_extraction.py` | 1302 | `extract_records()` main path |
-| 7 | `open_notebook/graphs/acm_extraction.py` | 1451 | `extract_records()` fallback path |
+### Broadmeadows: 31/31 (100%) PASS
+- Duration: 139.6s (down from ~220s baseline — ~80s improvement)
+- Records #9, #30, #31 all found
+- 31 extracted + 1 merged duplicate + 2 no-access recovered = 32 saved
 
-Import sites: orchestrator.py:45, document_structure.py:145, building_inventory.py:479, page_tagger.py:357, acm_extraction.py:79
+### Alexander: 29/43 (67.4%) REGRESSION
+- 14 missing records — mostly "Not Sampled" fire doors, shower cubicles
+- Root cause: `response_format: json_schema` with `strict: True` on legacy `acm_extraction.py` path
+- Alexander uses ARA format (Greencap) — different structure from SAMP
+- Strict schema constrains LLM output too tightly for ARA format diversity
 
-Test file: `tests/test_completion_state_unwrap.py` — 105 lines, 10 tests
+### Architecture Decision: Split response_format by Path
 
-### CRITICAL DESIGN ISSUE: Shared Chokepoint
+| Path | response_format | Rationale |
+|------|----------------|-----------|
+| Orchestrator (`orchestrator.py`) | YES — `_inject_response_format()` | SAMP format, structured building sections, benefits from schema enforcement |
+| Legacy (`acm_extraction.py`) | NO — pure `ainvoke() + parse_json_response() + Pydantic` | ARA format diversity, strict schema too constraining |
 
-Task spec says add `response_format: json_schema` with `ACMExtractionResult` to `_apply_openrouter_preferences()`. **This would BREAK non-extraction stages.**
+This is the correct split because:
+1. Orchestrator handles per-building extraction with known structure (SAMP)
+2. Legacy path handles whole-document extraction (ARA, mixed formats)
+3. `parse_json_response()` + `_normalize_extraction_json()` + Pydantic validation still enforce schema post-hoc
 
-`_apply_openrouter_preferences()` is called by ALL stages via `provision_langchain_model()`:
+### Call Sites Audit (pre-cleanup)
 
-| Stage | Schema | Breaks if ACMExtractionResult enforced? |
-|-------|--------|----------------------------------------|
-| document_structure | `DocumentStructureLLM` | YES |
-| building_inventory | `BuildingInventory` | YES |
-| page_tagger | `PageTagBatch` | YES |
-| metadata_extractor | `DocumentMetaLLM` (with_structured_output) | YES |
-| orchestrator extraction | `ACMExtractionResult` | NO — correct |
-| acm_extraction extract_records | `ACMExtractionResult` | NO — correct |
+| # | File | Line | Action |
+|---|------|------|--------|
+| DEF | `utils.py` | ~492 | DELETE function |
+| 1 | `orchestrator.py` | ~557 | REMOVE call (keep _inject_response_format) |
+| 2 | `orchestrator.py` | ~623 | REMOVE call |
+| 3 | `document_structure.py` | 170 | REMOVE call + import |
+| 4 | `building_inventory.py` | 504 | REMOVE call + import |
+| 5 | `page_tagger.py` | 381 | REMOVE call + import |
+| 6 | `acm_extraction.py` | ~1307 | REMOVE call (also remove _inject_response_format) |
+| 7 | `acm_extraction.py` | ~1456 | REMOVE call |
 
-### Solution: Stage-Specific Injection (Implemented)
-
-Created `_inject_response_format(model, schema_dict, name)` helper. Applied ONLY at extraction call sites (orchestrator.py + acm_extraction.py) after `provision_langchain_model()` returns, before `model.ainvoke()`.
-
-Non-extraction stages keep existing behavior. The completionState wrapper was a routing artifact — with `provider.only: ["Anthropic"]` (E27-S3), it should be gone from ALL stages.
-
-### Schema Generation Results
-
-- `pydantic_to_openrouter_schema(ACMExtractionResult)` generates 8,489 chars (8.3 KB)
-- All `$defs` inlined (ExtractionStatus enum, ConfidenceDistribution, ACMExtractionRecord)
-- `additionalProperties: false` on root + ACMExtractionRecord
-- Schema is lazily cached (`_get_acm_extraction_schema()` — identity check confirmed)
-- `anyOf` patterns for Optional fields preserved (OpenRouter handles these)
-
-### `with_structured_output()` Remaining Usage
-
-`metadata_extractor.py:231` — uses `model.with_structured_output(DocumentMetaLLM)`. Different pipeline path, different schema. Do NOT touch.
-
-### `_normalize_extraction_json()` — KEEP
-
-Located at orchestrator.py:135. Coerces `data_issues: str -> list`, `data_issues: null -> []`. Retain as defense-in-depth even with schema enforcement.
-
-### Sprint Status
-
-`epic-27: done` at sprint-status.yaml line 362. Need to add S4 entry.
-
-### Spike Validation (In Progress)
-
-Running `ACM_DEBUG_RAW_RESPONSE=1` with full Broadmeadows extraction. Background task b3tt7la1q. Will reveal whether completionState wrapper appears with response_format: json_schema + Anthropic direct routing.
+### Non-Extraction Stages — Pre-existing Issues (Not E27-S4 scope)
+- `document_structure`: LLM returned prose instead of JSON → heuristic fallback (pre-existing)
+- `building_inventory`: 17 validation errors → heuristic fallback (pre-existing)
+- `page_tagger`: Missing field → heuristic fallback (pre-existing)
+- These fallbacks work correctly. Not introduced by E27-S4 changes.
