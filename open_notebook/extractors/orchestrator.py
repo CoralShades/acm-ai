@@ -44,7 +44,6 @@ from open_notebook.graphs.utils import (
     _get_acm_extraction_schema,
     _inject_response_format,
     _is_qwen_model,
-    _unwrap_completion_state,
     _verify_provider_routing,
     is_auth_error,
     is_provider_schema_error,
@@ -556,7 +555,7 @@ async def _llm_extract_building(
                     else str(raw_response)
                 )
                 parsed = parse_json_response(response_text)
-                parsed = _unwrap_completion_state(parsed)
+                # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
                 _normalize_extraction_json(parsed)
                 result_local: ACMExtractionResult = (
                     ACMExtractionResult.model_validate(parsed)
@@ -622,7 +621,7 @@ async def _llm_extract_building(
                         else str(raw_response)
                     )
                     parsed = parse_json_response(response_text)
-                    parsed = _unwrap_completion_state(parsed)
+                    # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
                     _normalize_extraction_json(parsed)
                     result = ACMExtractionResult.model_validate(parsed)
                     logger.info(

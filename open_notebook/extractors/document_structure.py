@@ -142,7 +142,6 @@ async def _llm_extract_structure(
     )
 
     from open_notebook.graphs.utils import (
-        _unwrap_completion_state,
         _verify_provider_routing,
         parse_json_response,
     )
@@ -167,7 +166,6 @@ async def _llm_extract_structure(
         else str(raw_response)
     )
     parsed = parse_json_response(response_text)
-    parsed = _unwrap_completion_state(parsed)
     llm_result = DocumentStructureLLM.model_validate(parsed)
     return DocumentStructure(**llm_result.model_dump())
 

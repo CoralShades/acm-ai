@@ -476,7 +476,6 @@ async def _llm_compile_inventory(
     )
 
     from open_notebook.graphs.utils import (
-        _unwrap_completion_state,
         _verify_provider_routing,
         parse_json_response,
     )
@@ -501,7 +500,6 @@ async def _llm_compile_inventory(
         else str(raw_response)
     )
     parsed = parse_json_response(response_text)
-    parsed = _unwrap_completion_state(parsed)
     result = BuildingInventory.model_validate(parsed)
     return result
 

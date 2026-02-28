@@ -364,3 +364,171 @@ class TestTransforms:
         extra_body = _apply_and_get_extra_body()
         transforms = extra_body.get("transforms", [])
         assert "middle-out" in transforms
+
+
+class TestPydanticToOpenRouterSchema:
+    """Verify pydantic_to_openrouter_schema() schema transformation (E27-S4)."""
+
+    def test_no_refs_in_output(self):
+        """Output schema must have all $ref entries resolved (inlined)."""
+        from pydantic import BaseModel
+
+        from open_notebook.graphs.utils import pydantic_to_openrouter_schema
+
+        class Inner(BaseModel):
+            value: int
+
+        class Outer(BaseModel):
+            inner: Inner
+
+        schema = pydantic_to_openrouter_schema(Outer)
+        schema_str = str(schema)
+        assert "$ref" not in schema_str
+        assert "$defs" not in schema_str
+
+    def test_additional_properties_false_on_all_objects(self):
+        """All object schemas must have additionalProperties: false."""
+        from pydantic import BaseModel
+
+        from open_notebook.graphs.utils import pydantic_to_openrouter_schema
+
+        class Nested(BaseModel):
+            x: int
+
+        class Root(BaseModel):
+            nested: Nested
+            name: str
+
+        schema = pydantic_to_openrouter_schema(Root)
+        assert schema.get("additionalProperties") is False
+        nested_props = schema["properties"]["nested"]
+        assert nested_props.get("additionalProperties") is False
+
+    def test_title_removed(self):
+        """Pydantic 'title' metadata must be removed from top level."""
+        from pydantic import BaseModel
+
+        from open_notebook.graphs.utils import pydantic_to_openrouter_schema
+
+        class MyModel(BaseModel):
+            x: int
+
+        schema = pydantic_to_openrouter_schema(MyModel)
+        assert "title" not in schema
+
+    def test_acm_extraction_schema_no_refs(self):
+        """ACMExtractionResult schema must have no $ref entries."""
+        from open_notebook.extractors.acm_schemas import ACMExtractionResult
+        from open_notebook.graphs.utils import pydantic_to_openrouter_schema
+
+        schema = pydantic_to_openrouter_schema(ACMExtractionResult)
+        schema_str = str(schema)
+        assert "$ref" not in schema_str
+
+    def test_acm_extraction_schema_has_records(self):
+        """ACMExtractionResult schema must have records array."""
+        from open_notebook.extractors.acm_schemas import ACMExtractionResult
+        from open_notebook.graphs.utils import pydantic_to_openrouter_schema
+
+        schema = pydantic_to_openrouter_schema(ACMExtractionResult)
+        assert "records" in schema.get("properties", {})
+        records_prop = schema["properties"]["records"]
+        assert records_prop.get("type") == "array"
+
+
+class TestGetACMExtractionSchema:
+    """Verify _get_acm_extraction_schema() caching (E27-S4)."""
+
+    def test_returns_dict(self):
+        """Must return a dict schema."""
+        from open_notebook.graphs.utils import _get_acm_extraction_schema
+
+        schema = _get_acm_extraction_schema()
+        assert isinstance(schema, dict)
+        assert "properties" in schema
+
+    def test_cached_identity(self):
+        """Repeated calls must return the same object (identity cache)."""
+        from open_notebook.graphs.utils import _get_acm_extraction_schema
+
+        schema1 = _get_acm_extraction_schema()
+        schema2 = _get_acm_extraction_schema()
+        assert schema1 is schema2
+
+
+class TestInjectResponseFormat:
+    """Verify _inject_response_format() injection logic (E27-S4)."""
+
+    def test_injects_on_openrouter_model(self):
+        """Must inject response_format into OpenRouter model's extra_body."""
+        from open_notebook.graphs.utils import _inject_response_format
+
+        mock = MagicMock()
+        mock.openai_api_base = "https://openrouter.ai/api/v1"
+        mock.model_kwargs = {}
+
+        schema = {"type": "object", "properties": {"x": {"type": "integer"}}}
+        result = _inject_response_format(mock, schema, "TestSchema")
+
+        result_kwargs = result.__dict__.get("model_kwargs", {})
+        rf = result_kwargs.get("extra_body", {}).get("response_format", {})
+        assert rf.get("type") == "json_schema"
+        assert rf["json_schema"]["name"] == "TestSchema"
+        assert rf["json_schema"]["strict"] is True
+        assert rf["json_schema"]["schema"] == schema
+
+    def test_skips_non_openrouter_model(self):
+        """Must not inject on non-OpenRouter models."""
+        from open_notebook.graphs.utils import _inject_response_format
+
+        mock = MagicMock()
+        mock.openai_api_base = "https://api.anthropic.com/v1"
+        mock.base_url = "https://api.anthropic.com/v1"
+        mock.model_kwargs = {}
+
+        schema = {"type": "object"}
+        _inject_response_format(mock, schema, "TestSchema")
+
+        # model_kwargs should be unchanged
+        assert mock.model_kwargs == {}
+
+    def test_preserves_existing_extra_body(self):
+        """Must merge into existing extra_body, not overwrite."""
+        from open_notebook.graphs.utils import _inject_response_format
+
+        mock = MagicMock()
+        mock.openai_api_base = "https://openrouter.ai/api/v1"
+        mock.model_kwargs = {
+            "extra_body": {"provider": {"only": ["Anthropic"]}}
+        }
+
+        schema = {"type": "object"}
+        _inject_response_format(mock, schema, "TestSchema")
+
+        result_kwargs = mock.__dict__.get("model_kwargs", {})
+        extra_body = result_kwargs.get("extra_body", {})
+        # Provider settings preserved
+        assert extra_body.get("provider", {}).get("only") == ["Anthropic"]
+        # response_format added
+        assert "response_format" in extra_body
+
+    def test_returns_same_model(self):
+        """Must return the same model object (mutates in place)."""
+        from open_notebook.graphs.utils import _inject_response_format
+
+        mock = MagicMock()
+        mock.openai_api_base = "https://openrouter.ai/api/v1"
+        mock.model_kwargs = {}
+
+        result = _inject_response_format(mock, {"type": "object"}, "Test")
+        assert result is mock
+
+
+class TestUnwrapCompletionStateRemoved:
+    """Verify _unwrap_completion_state is fully removed (E27-S4)."""
+
+    def test_function_not_importable(self):
+        """_unwrap_completion_state must not exist in utils module."""
+        import open_notebook.graphs.utils as utils
+
+        assert not hasattr(utils, "_unwrap_completion_state")

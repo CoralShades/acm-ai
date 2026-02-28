@@ -75,10 +75,7 @@ from open_notebook.extractors.validators.acm_validator import (
     validate_acm_record,
 )
 from open_notebook.graphs.utils import (
-    _get_acm_extraction_schema,
-    _inject_response_format,
     _is_qwen_model,
-    _unwrap_completion_state,
     _verify_provider_routing,
     is_auth_error,
     parse_json_response,
@@ -1216,10 +1213,6 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             temperature=_temperature,
             max_tokens=_max_tokens,
         )
-        # E27-S4: Enforce JSON Schema at OpenRouter layer for extraction
-        model = _inject_response_format(
-            model, _get_acm_extraction_schema(), "ACMExtractionResult"
-        )
 
         is_qwen = _is_qwen_model(model)
         model_family = "qwen" if is_qwen else "default"
@@ -1306,7 +1299,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             else str(raw_response)
         )
         parsed = parse_json_response(response_text)
-        parsed = _unwrap_completion_state(parsed)
+        # E27-S4: completionState wrapper eliminated by Anthropic-direct routing (E27-S3)
         result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
         logger.info(f"Direct JSON extraction: {len(result.records)} records")
 
@@ -1455,7 +1448,6 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             )
 
             parsed = parse_json_response(response_text)
-            parsed = _unwrap_completion_state(parsed)
             result = ACMExtractionResult.model_validate(parsed)
             logger.info(
                 f"Fallback JSON parsing succeeded: {len(result.records)} records"
