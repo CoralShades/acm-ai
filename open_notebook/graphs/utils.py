@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import re
@@ -121,6 +122,159 @@ def _apply_openrouter_preferences(
         f"provider.only={OPENROUTER_ALLOWED_PROVIDERS}, "
         f"allow_fallbacks=False, zdr={'ON' if enable_zdr else 'OFF'}, "
         f"response-healing=ON"
+    )
+    return lc_model
+
+
+# ---------------------------------------------------------------------------
+# JSON Schema utilities for OpenRouter response_format (E27-S4)
+# ---------------------------------------------------------------------------
+
+
+def pydantic_to_openrouter_schema(model_class: type) -> dict:
+    """Convert a Pydantic model to an OpenRouter-compatible JSON Schema.
+
+    OpenRouter's strict mode requires:
+    1. All $defs (forward references) inlined into their usage sites
+    2. additionalProperties: false on all object types
+    3. Optional fields represented as anyOf with null normalized
+    """
+    raw_schema = model_class.model_json_schema()
+
+    def _resolve_refs(node: Any, defs: dict) -> Any:
+        """Recursively resolve all $ref entries by inlining definitions."""
+        if not isinstance(node, dict):
+            return node
+
+        if "$ref" in node:
+            ref_path = node["$ref"]
+            def_name = ref_path.split("/")[-1]
+            if def_name in defs:
+                resolved = copy.deepcopy(defs[def_name])
+                for k, v in node.items():
+                    if k != "$ref":
+                        resolved[k] = v
+                return _resolve_refs(resolved, defs)
+            return node
+
+        result = {}
+        for k, v in node.items():
+            if k == "properties" and isinstance(v, dict):
+                result[k] = {
+                    pk: _resolve_refs(pv, defs)
+                    for pk, pv in v.items()
+                }
+            elif k == "items":
+                result[k] = _resolve_refs(v, defs)
+            elif k in ("anyOf", "oneOf", "allOf") and isinstance(v, list):
+                result[k] = [_resolve_refs(s, defs) for s in v]
+            else:
+                result[k] = v
+
+        return result
+
+    def _add_additional_properties_false(node: Any) -> Any:
+        """Add additionalProperties: false to all object schemas."""
+        if not isinstance(node, dict):
+            return node
+
+        if node.get("type") == "object" or "properties" in node:
+            node["additionalProperties"] = False
+
+        if "properties" in node:
+            for k in node["properties"]:
+                node["properties"][k] = _add_additional_properties_false(
+                    node["properties"][k]
+                )
+        if "items" in node and isinstance(node["items"], dict):
+            node["items"] = _add_additional_properties_false(node["items"])
+        for key in ("anyOf", "oneOf", "allOf"):
+            if key in node and isinstance(node[key], list):
+                node[key] = [_add_additional_properties_false(s) for s in node[key]]
+
+        return node
+
+    # Extract and inline $defs
+    defs = raw_schema.pop("$defs", {})
+    resolved = _resolve_refs(copy.deepcopy(raw_schema), defs)
+
+    # Add additionalProperties: false to all objects
+    resolved = _add_additional_properties_false(resolved)
+
+    # Remove Pydantic metadata not needed in JSON Schema
+    resolved.pop("title", None)
+
+    return resolved
+
+
+# Module-level cache for ACM extraction schema (E27-S4)
+_ACM_EXTRACTION_JSON_SCHEMA: dict | None = None
+
+
+def _get_acm_extraction_schema() -> dict:
+    """Lazily generate and cache the JSON Schema for ACMExtractionResult."""
+    global _ACM_EXTRACTION_JSON_SCHEMA
+    if _ACM_EXTRACTION_JSON_SCHEMA is None:
+        from open_notebook.extractors.acm_schemas import ACMExtractionResult
+
+        _ACM_EXTRACTION_JSON_SCHEMA = pydantic_to_openrouter_schema(
+            ACMExtractionResult
+        )
+    return _ACM_EXTRACTION_JSON_SCHEMA
+
+
+def _inject_response_format(
+    lc_model: BaseChatModel,
+    schema_dict: dict,
+    schema_name: str,
+) -> BaseChatModel:
+    """Inject response_format: json_schema into model's extra_body.
+
+    Stage-specific — called AFTER provision_langchain_model() and BEFORE
+    model.ainvoke(). Only applies to OpenRouter models.
+
+    This enforces schema validation at the OpenRouter layer, so the LLM
+    returns JSON that conforms to the given schema. Combined with
+    Response Healing plugin (E27-S3), this provides production-grade
+    structured output without with_structured_output().
+
+    Args:
+        lc_model: LangChain model (already provisioned with OpenRouter prefs)
+        schema_dict: JSON Schema dict (from pydantic_to_openrouter_schema)
+        schema_name: Human-readable schema name (e.g. "ACMExtractionResult")
+
+    Returns:
+        The same model with response_format injected into extra_body.
+    """
+    base_url = (
+        getattr(lc_model, "openai_api_base", None)
+        or getattr(lc_model, "base_url", None)
+        or ""
+    )
+    if "openrouter.ai" not in str(base_url).lower():
+        return lc_model
+
+    existing_kwargs = getattr(lc_model, "model_kwargs", {}) or {}
+    existing_extra = existing_kwargs.get("extra_body", {}) or {}
+
+    merged_extra = {
+        **existing_extra,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "strict": True,
+                "schema": schema_dict,
+            },
+        },
+    }
+
+    new_kwargs = {**existing_kwargs, "extra_body": merged_extra}
+    object.__setattr__(lc_model, "model_kwargs", new_kwargs)
+
+    logger.debug(
+        f"Injected response_format: json_schema ({schema_name}) "
+        f"into model extra_body"
     )
     return lc_model
 
