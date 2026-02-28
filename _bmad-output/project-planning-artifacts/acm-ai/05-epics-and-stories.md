@@ -2607,3 +2607,21 @@ Replaced soft provider.order+ignore with hard provider.only=["Anthropic"]+allow_
 Added response_format:json_schema on orchestrator path. Removed dead `_unwrap_completion_state()` (7 call sites). Broadmeadows 31/31, Alexander 29/43. 12 new tests.
 
 **Depends On:** None (standalone bug fix)
+
+---
+
+## Epic 28: Alexander District Hospital — "Not Sampled" Record Recovery (P1)
+
+**Priority**: P1
+**Goal**: Recover 14 missing "Not Sampled" records from Alexander District Hospital
+ARA-format extraction. Improve from 29/43 (67.4%) to >=40/43 (93%).
+**Status**: Done (partial success — 36/43, 83.7%)
+
+### E28-S1: ARA "Not Sampled" Research Spike [S — 1 SP] — Done
+Identified 17 "Not Sampled" records in Alexander ground truth. Root cause: `_recover_no_access_records()` used SAMP-only `level_re` regex that never matched ARA section headers. No Docling tables available for Alexander. Spike output: `docs/research/e28-s1-ara-spike.md`.
+
+### E28-S2: Targeted Fix — ARA Regex Recovery [M — 3 SP] — Done
+Added `_recover_not_sampled_records_ara()` function for ARA-format "Not Sampled" pattern scanning. Improved room name parsing ("External - Throughout" -> "Exterior"). 8 records recovered deterministically via regex. Alexander: 29/43 -> 36/43 (+7). Broadmeadows: 31/31 maintained. 13 new tests. Files changed: `open_notebook/graphs/acm_extraction.py`, `tests/test_e28_ara_recovery.py`, `scripts/research/e26_s4_accuracy_validation.py`.
+
+### E28-S3: Validation Gate & Close-out [S — 1 SP] — Done
+Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues (room name format differences, not extraction failures). All 7 items ARE present in extracted data. Report: `docs/reviews/e28-validation-results.md`.

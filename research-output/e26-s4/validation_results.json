@@ -4,7 +4,7 @@
   "flag": "true",
   "source_id": "source:e26_s4_test",
   "broadmeadows": {
-    "duration_s": 144.4,
+    "duration_s": 141.9,
     "total_matched": 31,
     "total_expected": 31,
     "pct": 100.0,
@@ -26,9 +26,9 @@
     "missing": []
   },
   "alexander": {
-    "total_matched": 29,
+    "total_matched": 36,
     "total_expected": 43,
-    "duration_s": 214.9
+    "duration_s": 203.3
   },
   "decision": "INVESTIGATE"
 }

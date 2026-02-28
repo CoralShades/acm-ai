@@ -2352,6 +2352,270 @@ def _recover_no_access_records(
             f"Recovered no-access record: {room_name} / {location_val} / {product_val}"
         )
 
+    # ── ARA Format Scan (E28-S2) ──────────────────────────────────────────
+    # ARA (Asbestos Risk Assessment) format uses a different text layout:
+    #   {item_no}\n{room}\n{desc}\nAsbestos\nNot Sampled\n{restriction}\nPresumed Positive
+    # The SAMP-specific level_re above won't match ARA section headers like
+    # "Mortuary Buildings - Interior - Ground Level". This scan finds
+    # "Not Sampled" lines and works backward/forward to extract the record.
+    ara_recovered = _recover_not_sampled_records_ara(
+        full_text, extracted_records + recovered, building_id, building_name
+    )
+    recovered.extend(ara_recovered)
+
+    return recovered
+
+
+def _recover_not_sampled_records_ara(
+    full_text: str,
+    existing_records: List[ACMExtractionRecord],
+    default_building_id: str,
+    default_building_name: str,
+) -> List[ACMExtractionRecord]:
+    """ARA-format recovery for unsampled items missed by LLM.
+
+    Runs on orchestrator path (multi-building documents like Alexander).
+    Complements the SAMP-path scan in ``_recover_no_access_records()``.
+
+    ARA "Not Sampled" entries follow a consistent vertical text pattern::
+
+        {item_number}
+        {room_name}
+        {item_description} - {material}
+        Asbestos
+        Not Sampled
+        {access_restriction}   (Restricted Access / Height Restricted / Live Electrical Hazard)
+        Presumed Positive
+
+    The function locates every "Not Sampled" line, verifies "Asbestos" appears
+    just above it and "Presumed Positive" just below, then extracts room/product
+    from the lines between the item number and "Asbestos".
+    """
+    recovered: List[ACMExtractionRecord] = []
+
+    # Build dedup lookup: (room_norm, product_norm) to avoid duplicating
+    # records the LLM already captured. Use room+product instead of
+    # room+location because ARA's "location" field is less standardized.
+    existing_combos: set[tuple[str, str]] = set()
+    for r in existing_records:
+        room_norm = (r.room_name or "").lower().strip()
+        product_norm = (r.product or "").lower().strip()
+        existing_combos.add((room_norm, product_norm))
+        # Also add location-based combo for broader dedup
+        loc_norm = (r.location or "").lower().strip()
+        existing_combos.add((room_norm, loc_norm))
+
+    # ARA section header pattern: "Building Name - Interior/Exterior - Level"
+    section_header_re = re.compile(
+        r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(.+)$", re.IGNORECASE
+    )
+
+    lines = full_text.split("\n")
+    current_building = default_building_name
+    current_area_type = "Interior"
+
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+
+        # Track ARA section headers for building context
+        header_match = section_header_re.match(stripped)
+        if header_match:
+            current_building = header_match.group(1).strip()
+            current_area_type = header_match.group(2).strip()
+            i += 1
+            continue
+
+        # Look for "Not Sampled" lines
+        if stripped != "Not Sampled":
+            i += 1
+            continue
+
+        not_sampled_line = i
+
+        # Verify "Asbestos" appears within 5 lines above
+        asbestos_line = None
+        for back in range(1, 6):
+            if not_sampled_line - back < 0:
+                break
+            if lines[not_sampled_line - back].strip().lower() == "asbestos":
+                asbestos_line = not_sampled_line - back
+                break
+
+        if asbestos_line is None:
+            i += 1
+            continue
+
+        # Verify restriction + "Presumed Positive" appear within 3 lines below
+        restriction = None
+        presumed_positive = False
+        for fwd in range(1, 4):
+            if not_sampled_line + fwd >= len(lines):
+                break
+            fwd_stripped = lines[not_sampled_line + fwd].strip()
+            if re.match(
+                r"Restricted\s+Access|Height\s+Restricted|Live\s+Electrical",
+                fwd_stripped,
+                re.IGNORECASE,
+            ):
+                restriction = fwd_stripped
+            if fwd_stripped.lower() == "presumed positive":
+                presumed_positive = True
+
+        if not presumed_positive:
+            i += 1
+            continue
+
+        # Extract room/product from lines between item_number and "Asbestos"
+        # Scan backward from asbestos_line to find the item number
+        item_number = None
+        content_lines: List[str] = []
+        for back_idx in range(asbestos_line - 1, max(asbestos_line - 10, -1), -1):
+            if back_idx < 0:
+                break
+            back_line = lines[back_idx].strip()
+            if not back_line or back_line in ("-", "\u2013", " -"):
+                continue
+            # Item number: bare integer on its own line
+            if re.match(r"^\d+$", back_line):
+                item_number = back_line
+                break
+            content_lines.insert(0, back_line)
+
+        if not content_lines:
+            i += 1
+            continue
+
+        # ARA item description patterns — detect where room ends and item
+        # description starts. Item descriptions in ARA format have a
+        # "{Product} - {Material}" pattern with the product being a specific
+        # ACM item, not a room name.
+        _ARA_ITEM_DESC_RE = re.compile(
+            r"^(?:Fire\s+Door|Ceiling|Shower\s+Cubicle|Eaves|Ductwork|"
+            r"Electrical\s+Distribution|Safe|Infill|Wall(?:\s|$)|"
+            r"Pipe|Insulation|Window|Gable|Porch|Expansion|"
+            r"Stored\s+Item|Heater|Shelving|Debris|Floor)\b",
+            re.IGNORECASE,
+        )
+
+        # Split content_lines into room lines vs description lines.
+        # Walk forward: lines are room continuation until we hit one that
+        # matches an ARA item description pattern.
+        room_lines: List[str] = []
+        desc_lines: List[str] = []
+        found_desc = False
+        for cl in content_lines:
+            if found_desc:
+                desc_lines.append(cl)
+                continue
+            # Check if this line starts an item description
+            is_desc = bool(_ARA_ITEM_DESC_RE.match(cl.strip()))
+            if is_desc:
+                found_desc = True
+                desc_lines.append(cl)
+            else:
+                room_lines.append(cl)
+
+        # If no description found, first line is room, rest is desc
+        if not desc_lines and len(content_lines) >= 2:
+            room_lines = [content_lines[0]]
+            desc_lines = content_lines[1:]
+        elif not desc_lines:
+            room_lines = content_lines
+            desc_lines = []
+
+        room_name = " ".join(room_lines).strip()
+        item_desc = " ".join(desc_lines).strip()
+
+        if not item_desc:
+            item_desc = room_name
+            room_name = "Unknown"
+
+        # Parse item description: "{product} - {material}" or just product
+        product_val = item_desc
+        material_val = None
+        if " - " in item_desc:
+            parts = item_desc.split(" - ", 1)
+            product_val = parts[0].strip()
+            material_val = parts[1].strip()
+
+        # Parse ARA room: "External - Throughout" → room="Exterior", location_hint="Throughout"
+        # "External - On Roof" → room="Roof"
+        location_val = product_val
+        room_clean = room_name
+        if " - " in room_name:
+            room_parts = room_name.split(" - ", 1)
+            room_prefix = room_parts[0].strip()
+            room_suffix = room_parts[1].strip()
+            # "External - Throughout" → room=room_prefix, ignore "Throughout"
+            # "External - On Roof" → room="Roof" (suffix is location hint)
+            if room_prefix.lower() in ("external", "exterior"):
+                # For exterior items, use product as the room context
+                if room_suffix.lower().startswith("on "):
+                    room_clean = room_suffix[3:].strip()  # "On Roof" → "Roof"
+                elif room_suffix.lower() == "throughout":
+                    room_clean = "Exterior"
+                else:
+                    room_clean = room_suffix
+                location_val = product_val
+            else:
+                # Multi-part room name — keep the full name
+                room_clean = room_name
+
+        # Dedup check: room + product (and room + location)
+        room_norm = room_clean.lower().strip()
+        product_norm = product_val.lower().strip()
+        loc_norm = location_val.lower().strip()
+        if (room_norm, product_norm) in existing_combos:
+            i += 1
+            continue
+        if (room_norm, loc_norm) in existing_combos:
+            i += 1
+            continue
+
+        # Also check against already-recovered records
+        already_recovered = {
+            (
+                (r.room_name or "").lower().strip(),
+                (r.product or "").lower().strip(),
+            )
+            for r in recovered
+        }
+        if (room_norm, product_norm) in already_recovered:
+            i += 1
+            continue
+
+        existing_combos.add((room_norm, product_norm))
+        existing_combos.add((room_norm, loc_norm))
+
+        restriction_comment = restriction or "Not Sampled"
+
+        recovered.append(
+            ACMExtractionRecord(
+                building_id=default_building_id,
+                building_name=current_building or default_building_name,
+                room_name=room_clean,
+                location=location_val,
+                product=product_val,
+                material_description=material_val or product_val,
+                result="Assumed Positive",
+                sample_result="Assumed Positive",
+                sample_no="Not Sampled",
+                no_access=True,
+                extraction_confidence="low",
+                data_issues=[
+                    f"Not Sampled — recovered by ARA post-LLM fallback ({restriction_comment})"
+                ],
+                area_type=current_area_type,
+            )
+        )
+        logger.info(
+            f"ARA recovered not-sampled record: {room_clean} / {location_val} / {product_val} "
+            f"(item {item_number}, {restriction_comment})"
+        )
+
+        i = not_sampled_line + 3  # Skip past Presumed Positive
+
     return recovered
 
 

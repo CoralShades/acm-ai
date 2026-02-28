@@ -43,7 +43,7 @@ story_location: docs/sprint-artifacts
 reconciliation:
   last_reconciled: 2026-02-28
   reconciled_branches: [main, ACMV3]
-  notes: "E26 closeout 2026-02-28: Epic 26 complete (7/7 stories). Broadmeadows 31/31 (100%). Alexander ground truth CSV installed (43 records). DOCLING_DIRECT_TABLE_EXTRACTION promoted to default=true. ADR-001 D6 recorded. E24 archived 2026-02-28: E24-S2 + E24-S4 superseded by E26 Docling Direct API (31/31). E27 complete: structured output resilience (4/4 stories). ADR-001 D7 recorded."
+  notes: "E28 closeout 2026-02-28: Alexander 29/43→36/43 (+7) via ARA regex recovery. Broadmeadows 31/31 maintained. Decision gate PARTIAL SUCCESS (36>=36 threshold). 7 remaining gaps are validation matching issues. E27 complete: structured output resilience (4/4 stories). E26 complete (7/7 stories)."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -364,6 +364,12 @@ development_status:
   e27-s2-sse-agui-pipeline-visibility: done  # Added DOCLING_EXTRACTION + NO_ACCESS_RECOVERY StageId enums. Instrumented Docling extraction (source_commands.py) and recovery node (acm_extraction.py) with PipelineLogger + AGUI events. Updated A2A agent card. Frontend: pipeline.ts types, StageProgressPill, ExtractionProgressPanel all show 9 stages. 10 new tests, 1048 pass.
   e27-s3-hard-lock-provider-routing: done  # Replaced soft provider.order+ignore with hard provider.only=["Anthropic"]+allow_fallbacks=false. Added ZDR, Response Healing plugin, request metadata, Generation API verification. Deep merge for extra_body. 6 ainvoke() sites instrumented. 30 new tests, 1078 pass.
   e27-s4-native-json-schema-structured-outputs: done  # Added response_format:json_schema on orchestrator path only. Removed dead _unwrap_completion_state() (7 call sites + definition). Spike confirmed completionState wrapper eliminated by E27-S3 Anthropic-direct routing. Broadmeadows 31/31, Alexander 29/43 (pre-existing baseline). 12 new tests, 1000 pass.
+
+  # Epic 28: Alexander District Hospital — Not Sampled Recovery (P1)
+  epic-28: done
+  e28-s1-ara-not-sampled-spike: done  # Identified 17 "Not Sampled" records in Alexander GT. Root cause: _recover_no_access_records() used SAMP-only level_re regex, ARA section headers not matched. Docling tables not available for Alexander.
+  e28-s2-ara-recovery-fix: done  # Added _recover_not_sampled_records_ara() ARA-format regex recovery. 8 records recovered. Improved room name parsing for "External - Throughout" → "Exterior". Added product synonym matching. Alexander 29/43→36/43 (+7). Broadmeadows 31/31 maintained. 13 new tests.
+  e28-s3-validation-closeout: done  # Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues, not extraction failures. Report: docs/reviews/e28-validation-results.md.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook

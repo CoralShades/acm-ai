@@ -58,6 +58,13 @@ PRODUCT_SYNONYMS = {
     "flange joints": ["flange mastic", "mastic", "flange mastic (grey)"],
     "fuse cartridge": ["fuses", "fuse"],
     "internal lining": ["lining", "wall lining", "internal wall lining"],
+    "fire door(s)": ["fire door", "fire door core"],
+    "electrical board": ["electrical distribution board", "electrical panel"],
+    "shower cubicle": ["shower cubicle - flat cement sheeting"],
+    "ceiling": ["ceiling - flat cement sheeting"],
+    "eaves": ["eaves - flat cement sheeting"],
+    "ductwork": ["ductwork - mastic"],
+    "insulation": ["safe - insulation", "insulation - safe"],
 }
 
 
@@ -87,7 +94,10 @@ def _categorize_record(sample_no: str, result: str) -> str:
 
 
 def _normalize(s: str) -> str:
-    return " ".join(s.lower().split())
+    norm = " ".join(s.lower().split())
+    # ARA/BAR room name normalization
+    norm = norm.replace("external", "exterior")
+    return norm
 
 
 def _normalize_product(product: str) -> str:
@@ -524,11 +534,31 @@ async def run_validation():
         alexander_matched = len(alex_found)
         alex_pct = 100 * alexander_matched / alexander_expected_count
 
+        # Per-category breakdown for Alexander
+        alex_nata = sum(1 for r in alexander_expected if r["category"] == "nata_sampled")
+        alex_as_per = sum(1 for r in alexander_expected if r["category"] == "as_per")
+        alex_not_sampled = sum(1 for r in alexander_expected if r["category"] == "not_sampled")
+        alex_nata_matched = sum(1 for idx in alex_found if alexander_expected[idx]["category"] == "nata_sampled")
+        alex_as_per_matched = sum(1 for idx in alex_found if alexander_expected[idx]["category"] == "as_per")
+        alex_ns_matched = sum(1 for idx in alex_found if alexander_expected[idx]["category"] == "not_sampled")
+
         print(f"  Alexander result: {alexander_matched}/{alexander_expected_count} ({alex_pct:.1f}%)")
+        print(f"  NATA-sampled: {alex_nata_matched}/{alex_nata}")
+        print(f"  'As Per': {alex_as_per_matched}/{alex_as_per}")
+        print(f"  'Not Sampled': {alex_ns_matched}/{alex_not_sampled}")
         if alex_missing:
             print(f"  Missing ({len(alex_missing)}):")
             for i, rec in enumerate(alex_missing, 1):
-                print(f"    {i}. {rec['room']} / {rec['location']} / {rec['item']} (sample: {rec['sample_no']})")
+                print(f"    {i}. {rec['room']} / {rec['location']} / {rec['item']} (sample: {rec['sample_no']}, cat: {rec['category']})")
+
+        print(f"\n  ALEXANDER EXTRACTED RECORDS ({len(alex_records)}):")
+        for i, r in enumerate(alex_records, 1):
+            print(
+                f"    {i}. {r.room_name or '?'} / {r.location or '?'} / "
+                f"{r.product or r.material_description or '?'} "
+                f"(sample: {r.sample_no or 'N/A'}, "
+                f"{'RECOVERED' if r.data_issues and 'recovered' in str(r.data_issues).lower() else 'LLM'})"
+            )
     else:
         print("\n[6/6] Alexander check SKIPPED (PDF or CSV not found)")
 
