@@ -2,7 +2,7 @@
 epic: Epic 24
 story_id: E24-S4
 title: Docker Model Weight Pre-Download
-status: drafted
+status: archived  # Superseded by E26 Docling Direct API. See ADR-001 D7.
 priority: P1
 effort: S (1 SP)
 depends_on: E24-S1

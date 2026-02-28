@@ -32,9 +32,10 @@
 | E20 | Marketing-App Cross-Site Navigation & Domain Cutover | P0 | 2 | Done |
 | E21 | UX Loading States & Layout Consistency | P1 | 3 | Drafted |
 | E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Drafted |
-| E24 | TableFormer Table Structure Recognition | P0 | 4 | Done (flag OFF — regression) |
+| E24 | TableFormer Table Structure Recognition | P0 | 4 | Done (superseded — see ADR-001 D7) |
 | E25 | Table Extraction Research Spike — Docling Direct API | P0 | 2 | Done |
 | E26 | Docling Direct API Integration | P0 | 7 | Done (PROMOTE — 31/31, flag=true) |
+| E27 | Structured Output Resilience | P1 | 4 | Done |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2391,6 +2392,32 @@ E10-S1 (independent)
 
 ---
 
+## Epic 24: Docling TableFormer Activation & Structured Table Extraction (P0)
+
+> **Added:** 2026-02-27
+> **Status:** Done (superseded — see ADR-001 D7)
+> **Note:** E24-S2 and E24-S4 archived. Docling Direct API (E26) achieved 31/31 (100%),
+> exceeding this epic's accuracy target. TableFormer remains in codebase behind
+> `DOCLING_TABLE_STRUCTURE=false` feature flag but is not the production path.
+
+### E24-S1: Activate TableFormer in Source Processing — Done
+Feature flag `DOCLING_TABLE_STRUCTURE=false` (safe default). Commit 3c31fda.
+
+### E24-S2: Broadmeadows & Alexander Accuracy Validation
+**Status:** Archived
+**Reason:** Superseded by E26-S4. Docling Direct API achieved 31/31 (100%) — E24's
+>=30/31 target exceeded without TableFormer activation.
+
+### E24-S3: Remove MinerU Dead Code — Done
+Removed 2,298 lines dead MinerU code. Commit 6e0e2e8.
+
+### E24-S4: Docker Model Weight Pre-Download
+**Status:** Archived
+**Reason:** Superseded. Docling Direct API requires no model weight downloads.
+TableFormer weights not needed for production path.
+
+---
+
 ## Epic 25: Table Extraction Research Spike — Docling Direct API (P0)
 
 > **Added:** 2026-02-27
@@ -2560,19 +2587,23 @@ E10-S1 (independent)
 
 ## Epic 27: Structured Output Resilience (P1 — Bug Fix)
 
+> **Status:** Done (4/4 stories complete)
+
 **Priority**: P1
 **Goal**: Fix the `completionState` JSON envelope wrapping that breaks Pydantic structured output parsing in the orchestrator and pre-extraction intelligence modules, recovering Alexander District Hospital extraction from 0/43 to >= 40/43.
 **Trigger**: E26-S4 validation revealed 0/43 Alexander extraction (all 6 building-level LLM calls fail due to OpenRouter `completionState` envelope)
 **GitHub Issue**: https://github.com/CoralShades/acm-ai/issues/81
 
-### E27-S1: Fix completionState Wrapper Parsing in Orchestrator [M — 3 SP]
-**Status**: Drafted
+### E27-S1: Fix completionState Wrapper Parsing in Orchestrator [M — 3 SP] — Done
+Eliminated dead `with_structured_output()` from all 4 LLM stages. Direct `ainvoke` + `parse_json_response` + `_unwrap_completion_state` + Pydantic validate. Fixes Alexander 0/43. 10 unit tests.
 
-- Add `_unwrap_completion_state()` utility to `graphs/utils.py`
-- Add fallback path in orchestrator's `_invoke()` for `ValidationError` from `with_structured_output()`
-- Apply same unwrapping to `document_structure.py`, `building_inventory.py`, `page_tagger.py`
-- Unit tests for unwrapping + fallback path
-- Integration validation: Alexander >= 40/43, Broadmeadows maintains 31/31
-- Story file: `docs/sprint-artifacts/e27-s1-completionstate-wrapper-parsing-fix.md`
+### E27-S2: SSE/AG-UI Pipeline Visibility — Done
+Added DOCLING_EXTRACTION + NO_ACCESS_RECOVERY StageId enums. Instrumented Docling extraction and recovery node with PipelineLogger + AGUI events. Frontend types updated. 10 new tests.
+
+### E27-S3: Hard-Lock Provider Routing — Done
+Replaced soft provider.order+ignore with hard provider.only=["Anthropic"]+allow_fallbacks=false. ZDR, Response Healing, request metadata. 30 new tests.
+
+### E27-S4: Native JSON Schema Structured Outputs — Done
+Added response_format:json_schema on orchestrator path. Removed dead `_unwrap_completion_state()` (7 call sites). Broadmeadows 31/31, Alexander 29/43. 12 new tests.
 
 **Depends On:** None (standalone bug fix)

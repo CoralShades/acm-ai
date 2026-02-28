@@ -235,6 +235,33 @@ Alexander extraction failed 0/43 due to pre-existing `completionState` wrapper b
 - Table DataFrames available for orchestrator context injection (multi-building documents)
 - No regression on single-building extraction path
 
+### D7 — E24 Archived: TableFormer Superseded by Docling Direct API
+
+**Date**: 2026-02-28
+**Decision**: Archive E24-S2 (accuracy validation) and E24-S4 (Docker model pre-download).
+Close Epic 24 as superseded.
+
+**Context**: E24 planned to activate TableFormer for structured table extraction with a
+>=30/31 accuracy gate. E26 pursued the Docling Direct API path instead
+(`table.export_to_dataframe()`, bypassing content-core serialization) and achieved
+**31/31 (100%)** on Broadmeadows — exceeding E24's target by 1 record.
+
+**Rationale for archiving over completing**:
+- The accuracy target E24 was pursuing (>=30/31) is already exceeded via a better path
+- TableFormer requires model weights (~500MB), GPU inference, and Docker pre-download (E24-S4) —
+  Docling Direct API uses the same Docling install already present, zero extra overhead
+- E24-S1 (feature flag `DOCLING_TABLE_STRUCTURE=false`) remains in codebase as a safe
+  dead flag — no removal needed, harmless
+- Running E24-S2 validation now would be testing an inactive code path against a
+  benchmark already exceeded by the active path
+
+**Status of TableFormer code**: E24-S1 committed the activation code behind
+`DOCLING_TABLE_STRUCTURE` feature flag (default=false). This code remains in the codebase
+but is inactive. It is NOT removed — it could be re-evaluated in future if Docling Direct
+API has regressions. It is simply not the production path.
+
+**Production path**: `DOCLING_DIRECT_TABLE_EXTRACTION=true` (promoted E26-S4/S7).
+
 ---
 
 ## Consequences

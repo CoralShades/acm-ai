@@ -43,7 +43,7 @@ story_location: docs/sprint-artifacts
 reconciliation:
   last_reconciled: 2026-02-28
   reconciled_branches: [main, ACMV3]
-  notes: "E26 closeout 2026-02-28: Epic 26 complete (7/7 stories). Broadmeadows 31/31 (100%). Alexander ground truth CSV installed (43 records). DOCLING_DIRECT_TABLE_EXTRACTION promoted to default=true. ADR-001 D6 recorded."
+  notes: "E26 closeout 2026-02-28: Epic 26 complete (7/7 stories). Broadmeadows 31/31 (100%). Alexander ground truth CSV installed (43 records). DOCLING_DIRECT_TABLE_EXTRACTION promoted to default=true. ADR-001 D6 recorded. E24 archived 2026-02-28: E24-S2 + E24-S4 superseded by E26 Docling Direct API (31/31). E27 complete: structured output resilience (4/4 stories). ADR-001 D7 recorded."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -328,11 +328,11 @@ development_status:
   # Tech Design: docs/architecture/tableformer-technical-design.md
   # Goal: Activate Docling TableFormer for 97-100% accuracy (currently 90.3%)
   # Success Metric: Broadmeadows >=30/31, Alexander maintains 54/54
-  epic-24: in-progress  # GitHub #75
+  epic-24: done  # Superseded by E26 (Docling Direct API). E24-S2 + E24-S4 archived. See ADR-001 D7.
   e24-s1-activate-tableformer: done  # GitHub #76. Commit 3c31fda. Activate TableFormer in source.py content_process(), feature flag DOCLING_TABLE_STRUCTURE=false (safe default). 7 unit tests. 1004/1004 pass. npm build ✓.
-  e24-s2-accuracy-validation: drafted  # GitHub #77. Broadmeadows >=30/31 + Alexander 54/54 regression check, decision gate for flag promotion. Depends: S1 ✓
+  e24-s2-accuracy-validation: archived  # Superseded: E26-S4 achieved 31/31 (100%) via Docling Direct API. TableFormer validation not required.
   e24-s3-remove-mineru-dead-code: done  # GitHub #78. Commit 6e0e2e8. Removed 2,298 lines dead MinerU code (4 files deleted, 13 tests removed across 3 files). Deprecation header added to acm_extractor.py. 936/936 tests pass, ruff clean, npm build ✓.
-  e24-s4-docker-model-predownload: drafted  # GitHub #79. Pre-download TableFormer weights in Dockerfile, add env vars to docker-compose. Depends: S1 ✓
+  e24-s4-docker-model-predownload: archived  # Superseded: Docling Direct API is production path. TableFormer model weights not needed.
 
   # Epic 25: Table Extraction Research Spike — Comparative Analysis (P0)
   # 3/3 stories complete — DONE
@@ -408,20 +408,21 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 26
+# Total Epics: 27
 # Total Stories: 168
 # Stories Done: 151 (90%)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
-# Stories Drafted: 2 (E24-S2, E24-S4)
+# Stories Drafted: 0
 # Stories Backlog: 0
-# Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
+# Stories Archived: 12 (E8-S1..S10, E24-S2, E24-S4)
 #
-# Last Updated: 2026-02-28  # E26-S4 PROMOTE: 31/31 (100%) Broadmeadows. Flag promoted to true. Prompt engineering + dedup key + no-access recovery.
+# Last Updated: 2026-02-28  # E24 archived: E24-S2 + E24-S4 superseded by E26 Docling Direct API (31/31). ADR-001 D7.
 #
-# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23, E25, E26
-# IN-PROGRESS EPICS: E24 (2/4 stories done, 2 drafted)
+# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
+#                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27
+# IN-PROGRESS EPICS: none
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # EXTRACTION ACCURACY STATUS:
