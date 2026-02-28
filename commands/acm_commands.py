@@ -148,6 +148,27 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
     try:
         logger.info(f"Starting AI-powered ACM extraction for source: {source_id}")
 
+        # --- Update source.command to point to acm_extract job (Bug #1: fixes "0/9 stages") ---
+        # The frontend reads source.command_id to determine which command to track.
+        # process_source sets it to the process_source job, but by the time acm_extract
+        # runs, that job is done. Update it so SSE/polling uses the correct command_id.
+        if command_id:
+            try:
+                from open_notebook.database.repository import ensure_record_id
+
+                _temp_source = await Source.get(source_id)
+                if _temp_source:
+                    _temp_source.command = ensure_record_id(command_id)
+                    await _temp_source.save()
+                    logger.info(
+                        f"Updated source {source_id} command to acm_extract: {command_id}"
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to update source command for {source_id}: {e}"
+                )
+        # --- End command update ---
+
         # Validate source_id format
         if not source_id or not isinstance(source_id, str):
             raise ValueError("source_id must be a non-empty string")

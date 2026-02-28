@@ -46,8 +46,9 @@ class PipelineErrorCategory:
 # Width of separator lines
 _SEP_WIDTH = 64
 
-# Log file config
-_LOG_DIR = Path("logs")
+# Log file config — use absolute path so logs land in the repo's logs/ dir
+# regardless of the worker's current working directory.
+_LOG_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
 _LOG_FILE = _LOG_DIR / "acm-extraction.log"
 _LOG_MAX_BYTES = 10 * 1024 * 1024  # 10MB
 _LOG_BACKUP_COUNT = 5
@@ -166,19 +167,23 @@ class PipelineLogger:
             recent_logs = self._log_entries[-200:]
 
             async with db_connection() as db:
+                # Use deterministic record ID so UPSERT creates or updates
+                # (SurrealDB UPSERT ... WHERE doesn't create new records)
+                safe_id = self.command_id.replace(":", "_")
+                record_id = f"extraction_progress:{safe_id}"
                 await db.query(
                     """
-                    UPSERT extraction_progress
-                    SET command_id = $command_id,
+                    UPSERT $record_id SET
+                        command_id = $command_id,
                         run_id = $run_id,
                         source_id = $source_id,
                         status = $status,
                         state_json = $state_json,
                         log_entries = $log_entries,
-                        updated_at = time::now()
-                    WHERE command_id = $command_id;
+                        updated_at = time::now();
                     """,
                     {
+                        "record_id": record_id,
                         "command_id": self.command_id,
                         "run_id": self.run_id,
                         "source_id": self.source_id,

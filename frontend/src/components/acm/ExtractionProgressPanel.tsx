@@ -41,6 +41,9 @@ interface ExtractionProgressPanelProps {
   // AG-UI observability (E17-S3, E17-S4)
   reasoningText?: string
   toolCalls?: ToolCallEntry[]
+  // AG-UI live step/connection (Bug 4 fix)
+  aguiStep?: string | null
+  aguiConnected?: boolean
 }
 
 const STAGE_CONFIG: Record<StageId, { label: string; icon: LucideIcon }> = {
@@ -91,6 +94,8 @@ export function ExtractionProgressPanel({
   onDismiss,
   reasoningText,
   toolCalls,
+  aguiStep,
+  aguiConnected,
 }: ExtractionProgressPanelProps) {
   const [logsExpanded, setLogsExpanded] = useState(false)
   const [nowMs, setNowMs] = useState(() => Date.now())
@@ -266,6 +271,22 @@ export function ExtractionProgressPanel({
               />
             </div>
           </div>
+
+          {/* AG-UI step indicator */}
+          {aguiStep && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span
+                className="h-2 w-2 rounded-full bg-teal-500 animate-pulse"
+                aria-hidden
+              />
+              <span>AI Step: {aguiStep}</span>
+              {aguiConnected && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                  (live)
+                </span>
+              )}
+            </div>
+          )}
 
           {currentStageId === 'EXTRACT' && (
             <p className="text-sm text-muted-foreground">
