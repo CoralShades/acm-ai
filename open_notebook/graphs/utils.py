@@ -527,6 +527,16 @@ def parse_json_response(response_text: str) -> dict[str, Any]:
     matching. Returns the parsed dict. Raises ValueError if no JSON found
     or if the extracted structure is not valid JSON.
     """
+    # E27-S4 TEMPORARY: Debug raw response to observe completionState behavior
+    if os.environ.get("ACM_DEBUG_RAW_RESPONSE"):
+        logger.debug(
+            f"[parse_json_response] RAW INPUT (first 500 chars): "
+            f"{response_text[:500]}"
+        )
+        logger.debug(
+            f"[parse_json_response] completionState present: "
+            f"{'completionState' in response_text}"
+        )
     # Try ```json ... ``` blocks first
     json_match = re.search(
         r"```(?:json)?\s*\n?(\{.*?\})\s*\n?```",

@@ -41,6 +41,8 @@ from open_notebook.extractors.page_tagger import (
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.graphs.utils import (
+    _get_acm_extraction_schema,
+    _inject_response_format,
     _is_qwen_model,
     _unwrap_completion_state,
     _verify_provider_routing,
@@ -505,6 +507,11 @@ async def _llm_extract_building(
             "extraction",
             temperature=0.1,
             max_tokens=32768,
+        )
+
+        # E27-S4: Enforce JSON Schema at OpenRouter layer for extraction
+        model = _inject_response_format(
+            model, _get_acm_extraction_schema(), "ACMExtractionResult"
         )
 
         is_qwen = _is_qwen_model(model)

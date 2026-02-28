@@ -34,32 +34,32 @@ Task spec says add `response_format: json_schema` with `ACMExtractionResult` to 
 | orchestrator extraction | `ACMExtractionResult` | NO — correct |
 | acm_extraction extract_records | `ACMExtractionResult` | NO — correct |
 
-### Correct Approach: Stage-Specific Injection
+### Solution: Stage-Specific Injection (Implemented)
 
-Create `_inject_response_format(model, schema_dict, name)` helper. Apply ONLY at extraction call sites after `provision_langchain_model()` returns, before `model.ainvoke()`.
+Created `_inject_response_format(model, schema_dict, name)` helper. Applied ONLY at extraction call sites (orchestrator.py + acm_extraction.py) after `provision_langchain_model()` returns, before `model.ainvoke()`.
 
-Non-extraction stages (document_structure, building_inventory, page_tagger) don't get response_format — but the wrapper was a routing artifact (non-Anthropic providers). With `provider.only: ["Anthropic"]` (E27-S3), the wrapper should be gone from ALL stages regardless.
+Non-extraction stages keep existing behavior. The completionState wrapper was a routing artifact — with `provider.only: ["Anthropic"]` (E27-S3), it should be gone from ALL stages.
+
+### Schema Generation Results
+
+- `pydantic_to_openrouter_schema(ACMExtractionResult)` generates 8,489 chars (8.3 KB)
+- All `$defs` inlined (ExtractionStatus enum, ConfidenceDistribution, ACMExtractionRecord)
+- `additionalProperties: false` on root + ACMExtractionRecord
+- Schema is lazily cached (`_get_acm_extraction_schema()` — identity check confirmed)
+- `anyOf` patterns for Optional fields preserved (OpenRouter handles these)
 
 ### `with_structured_output()` Remaining Usage
 
-`metadata_extractor.py:231` — uses `model.with_structured_output(DocumentMetaLLM)`. This is metadata extraction (NOT ACM extraction). Do NOT touch — different pipeline path, different schema.
+`metadata_extractor.py:231` — uses `model.with_structured_output(DocumentMetaLLM)`. Different pipeline path, different schema. Do NOT touch.
 
 ### `_normalize_extraction_json()` — KEEP
 
-Located at orchestrator.py:135. Coerces `data_issues: str → list`, `data_issues: null → []`. Even with schema enforcement, retain as defense-in-depth. Field validators in Pydantic handle similar logic but `_normalize_extraction_json()` catches pre-validation edge cases.
+Located at orchestrator.py:135. Coerces `data_issues: str -> list`, `data_issues: null -> []`. Retain as defense-in-depth even with schema enforcement.
 
-### Pydantic Schema Complexity
+### Sprint Status
 
-`ACMExtractionResult` contains:
-- `records: List[ACMExtractionRecord]` — 40+ fields, many Optional
-- `status: ExtractionStatus` (str Enum)
-- `confidence_distribution: ConfidenceDistribution` (nested model)
-- Multiple `@field_validator` decorators (`result`, `friable`, `risk_status`, `material_condition`, `area_type`, `quantity`, `data_issues`)
+`epic-27: done` at sprint-status.yaml line 362. Need to add S4 entry.
 
-`model_json_schema()` will generate `$defs` for: ExtractionStatus, ExtractionConfidence, ConfidenceDistribution, ACMExtractionRecord. All must be inlined. Field validators won't appear in schema — they're post-parse Python logic.
+### Spike Validation (In Progress)
 
-Estimated schema size: 8-15KB (acceptable for OpenRouter requests).
-
-### Sprint Status Location
-
-`epic-27: done` at line 362. Need to reopen or add S4 below the existing entries.
+Running `ACM_DEBUG_RAW_RESPONSE=1` with full Broadmeadows extraction. Background task b3tt7la1q. Will reveal whether completionState wrapper appears with response_format: json_schema + Anthropic direct routing.

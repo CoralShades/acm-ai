@@ -75,6 +75,8 @@ from open_notebook.extractors.validators.acm_validator import (
     validate_acm_record,
 )
 from open_notebook.graphs.utils import (
+    _get_acm_extraction_schema,
+    _inject_response_format,
     _is_qwen_model,
     _unwrap_completion_state,
     _verify_provider_routing,
@@ -1214,6 +1216,11 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             temperature=_temperature,
             max_tokens=_max_tokens,
         )
+        # E27-S4: Enforce JSON Schema at OpenRouter layer for extraction
+        model = _inject_response_format(
+            model, _get_acm_extraction_schema(), "ACMExtractionResult"
+        )
+
         is_qwen = _is_qwen_model(model)
         model_family = "qwen" if is_qwen else "default"
         # Track model ID and prompt template for observability (E1-S21, AC #4)

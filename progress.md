@@ -1,32 +1,40 @@
 # Progress — E27-S4: Native JSON Schema Structured Outputs
 
 ## Session: 2026-02-28
-### Status: PLANNING
+### Status: IN PROGRESS — Spike Running
 
 ### Reboot Check
-1. **Last completed milestone**: E27-S3 (hard-lock provider routing) — committed and done
-2. **Current active task**: E27-S4 planning — all mandatory files read, findings documented
-3. **Blockers**: None — spike validation requires running extraction (needs services up)
-4. **Files last modified**: findings.md, task_plan.md, progress.md (planning files)
-5. **Next planned action**: Task 0 — create story file, then Task 1 — implement schema utilities
+1. **Last completed milestone**: T0 (story file), T1 (schema utilities), T2 (response_format injection at call sites)
+2. **Current active task**: T3 — Spike validation running in background (task b3tt7la1q)
+3. **Blockers**: Waiting for spike extraction to complete (~5-10 min)
+4. **Files last modified**:
+   - `open_notebook/graphs/utils.py` — added `pydantic_to_openrouter_schema()`, `_get_acm_extraction_schema()`, `_inject_response_format()`, temp debug logging in `parse_json_response()`
+   - `open_notebook/extractors/orchestrator.py` — added `_inject_response_format()` call after model provisioning
+   - `open_notebook/graphs/acm_extraction.py` — added `_inject_response_format()` call after model provisioning
+   - `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md` — story file created
+5. **Next planned action**: Check spike results → decide Scenario A (remove workaround) vs Scenario B (retain)
 
-### Key Decisions
-1. **Stage-specific injection** instead of modifying shared `_apply_openrouter_preferences()`:
-   - `_inject_response_format(model, schema_dict, name)` applies ONLY to extraction calls
-   - Other stages (document_structure, building_inventory, page_tagger) keep existing behavior
-   - Rationale: shared function applies to ALL models; ACMExtractionResult schema would break non-extraction stages
+### Implementation Log
 
-2. **Conditional removal gate**: `_unwrap_completion_state()` is only removed IF spike confirms no wrapper (Scenario A). If wrapper persists (Scenario B), retain and document.
+#### T0: Story File (DONE)
+- Created `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md`
 
-### Files Read (Pre-Read Complete)
-- `open_notebook/graphs/utils.py` — full (549 lines)
-- `open_notebook/extractors/orchestrator.py` — full (1014 lines)
-- `open_notebook/extractors/document_structure.py` — full (268 lines)
-- `open_notebook/extractors/building_inventory.py` — full (602 lines)
-- `open_notebook/extractors/page_tagger.py` — full (478 lines)
-- `open_notebook/graphs/acm_extraction.py` — lines 1-100, 1270-1350, 1430-1480
-- `open_notebook/extractors/acm_schemas.py` — full (504 lines)
-- `api/model_provisioning.py` — full (448 lines)
-- `docs/sprint-artifacts/sprint-status.yaml` — epic-27 section
-- `tests/test_completion_state_unwrap.py` — full (105 lines)
-- `tests/test_openrouter_provider_routing.py` — full (367 lines)
+#### T1: Schema Utilities (DONE)
+- `pydantic_to_openrouter_schema()` — resolves $defs, adds additionalProperties:false
+- `_get_acm_extraction_schema()` — lazy-cached, 8.3 KB schema
+- `_inject_response_format()` — stage-specific OpenRouter-only injection
+- All verification checks passed (no $ref, additionalProperties, caching, size)
+
+#### T2: Call Site Injection (DONE)
+- `orchestrator.py:_llm_extract_building()` — injected after `provision_langchain_model()`
+- `acm_extraction.py:extract_records()` — injected after model provisioning
+- document_structure, building_inventory, page_tagger: NOT modified (confirmed via git diff)
+
+#### T3: Spike Validation (RUNNING)
+- Temporary debug logging added to `parse_json_response()` (ACM_DEBUG_RAW_RESPONSE env gate)
+- Full Broadmeadows extraction running with debug enabled
+- Output: `research-output/e27-s4/spike_broadmeadows.log`
+- Background task: b3tt7la1q
+
+### Key Decision: Stage-Specific Injection
+Instead of modifying shared `_apply_openrouter_preferences()` (which would break non-extraction stages), created `_inject_response_format()` called only at extraction sites. This is architecturally correct because each stage uses a different schema.
