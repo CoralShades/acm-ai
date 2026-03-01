@@ -1,92 +1,91 @@
-# Findings — E29-S1: JSON Parser Resilience
+# Findings — E29 Gate 1 QA Verification
 
-## Current parse_json_response Behavior (utils.py:497-536)
-1. Fenced regex: `r"```(?:json)?\s*\n?(\{.*?\})\s*\n?```"` (DOTALL, non-greedy)
-2. If match → `json.loads(match.group(1))`
-3. Else → brace-depth scan from first `{`
-4. Return `dict` or raise `ValueError`
-
-## Bug: Non-greedy fenced regex
-- `\{.*?\}` stops at FIRST `}`, so `{"a":{"b":1}}` → captures `{"a":{"b":1}` → parse fails
-- Fix: remove regex fence detection, strip fence markers first, then always use brace-depth scan
-
-## Callers (5 sites)
-| File | Line | Context |
-|------|------|---------|
-| `acm_extraction.py` | 1301 | Direct JSON extraction |
-| `acm_extraction.py` | 1450 | Schema fallback path |
-| `orchestrator.py` | 557 | Per-building extraction |
-| `orchestrator.py` | 623 | Schema fallback path |
-| `page_tagger.py` | 379 | Page tag batch parsing |
-| `document_structure.py` | 168 | Structure analysis |
-| `building_inventory.py` | 502 | Inventory parsing |
-
-All use pattern: `parsed = parse_json_response(text)` with `except ValueError` or `except (ValueError, json.JSONDecodeError)`.
-
-## TruncationError Design
-- `class TruncationError(ValueError)` — subclass ensures backward-compat
-- Raised when brace-depth > 0 at EOF (JSON started but never closed)
-- Message includes: partial content preview, depth at EOF
-
-## Multi-Block Selection
-- Extract ALL complete JSON objects via brace-depth scan
-- Try `json.loads()` on each candidate
-- Return largest valid object (by `len(json.dumps(obj))`)
-- Deterministic: same input → same output
-
-## Existing Tests (test_qwen_extraction.py:63-113)
-7 tests covering: fenced, unfenced, preamble, nested, no-json, empty-string
-All must continue to pass (AC-5).
+## Date: 2026-03-01 | Evaluator: Murat (BMAD QA / TEA)
 
 ---
 
-# Findings — E29-S2: Benchmark Harness + Baseline Capture
+## S1 — JSON Parser Resilience: ALL AC VERIFIED — PASS
 
-## Extraction Pipeline Entry Points
-- `extract_acm_from_source()` in `acm_extraction.py:2943` — main entry, returns `ACMExtractionOutput`
-- `acm_extract` command in `acm_commands.py:93` — command handler that calls the above
-- Graph: extract_metadata → structure → inventory → tag_pages → [conditional] → orchestrate/prepare → validate → correct → deduplicate → recover_no_access → save
+### Code Evidence
+- `TruncationError(ValueError)` at `open_notebook/graphs/utils.py:497`
+- `_extract_json_objects()` at `utils.py:503`
+- `parse_json_response()` at `utils.py:547`
+- Design: TruncationError is ValueError subclass → backward-compat with 5 caller sites
 
-## ACMExtractionOutput Fields (Available for Harness)
-- `extraction_time_ms: Optional[int]` — wall-clock time (line 481)
-- `orchestrator_stats: Optional[dict]` — per-building plan, strategy, timing (line 488)
-- `pipeline_run: Optional[dict]` — PipelineRunState with stage timings (line 492)
-- `total_records: int` — extracted count (line 469)
-- `records_failed: int` — rejected count (line 470)
-- `correction_stats: Optional[dict]` — corrective RAG stats (line 484)
-
-## Token Tracking State
-- **No centralized token accumulator exists**
-- `_verify_provider_routing()` in `utils.py:282-383` queries OpenRouter Generation API per-call
-- Logs `tokens_prompt`, `tokens_completion`, `total_cost`, `latency` per LLM call
-- These are logged but NOT aggregated or returned in ACMExtractionOutput
-- **Harness strategy**: Intercept logging output OR patch `_verify_provider_routing` to accumulate
-
-## Existing E2E Test Pattern (`test_broadmeadows_e2e.py`)
-Template for mocked-DB extraction:
-```python
-patch.object(ACMRecord, "save", capture_save)
-patch.object(ACMTableSection, "save", noop)
-patch("...auto_populate_site_config", noop)
-patch("...provision_langchain_model", real_provision_model)  # both acm_extraction + utils
+### Test Evidence
 ```
-- Records captured via mock `save()`
-- 3-tier matching: sample_no → composite key → room+location
-- Product synonym map for known LLM output variations
+uv run pytest tests/test_json_parser.py -x -v — 34/34 PASSED (6.25s)
+  TestFenceStripping: 6 passed (AC-1)
+  TestPreambleHandling: 4 passed (AC-2)
+  TestMultiBlock: 4 passed (AC-3)
+  TestTruncation: 6 passed (AC-4)
+  TestBackwardCompat: 7 passed (AC-5)
+  TestEdgeCases: 7 passed (bonus)
+```
 
-## Ground Truth CSV Formats
-- **Broadmeadows**: 43-column standard BAR, DictReader-compatible, 31 rows
-  - Key columns: `Room or Area`, `Location in Room`, `Specific Item/ACM Name`, `NATA Endorsed Sample number`, `Sample Result`, `Friability of material`, `Internal / External`, `Level`, `Building Name`
-- **Alexander**: 7-column minimal with `#`-comment header lines, 43 rows
-  - Columns: `building_name`, `room_name`, `location`, `product`, `sample_no`, `sample_result`, `friable`
+### Lint Evidence
+```
+uv run ruff check . — All checks passed!
+```
 
-## Third Document Candidates
-| PDF | Size | Notes |
-|-----|------|-------|
-| `1124_AsbestosRegister.pdf` | 604 KB | Unknown — needs manual inspection |
-| `3980_AsbestosRegister.pdf` | 645 KB | Unknown — needs manual inspection |
-| `4601_AsbestosRegister.pdf` | 567 KB | Smallest — preferred for minimal effort |
+### Acceptance Criteria Verdict
+| AC | Criterion | Verdict | Evidence |
+|----|-----------|---------|----------|
+| AC-1 | Fenced JSON stripped | PASS | TestFenceStripping 6/6 |
+| AC-2 | Preamble handling | PASS | TestPreambleHandling 4/4 |
+| AC-3 | Multi-block largest selection | PASS | TestMultiBlock 4/4 |
+| AC-4 | TruncationError on incomplete | PASS | TestTruncation 6/6 (includes ValueError subclass test) |
+| AC-5 | Backward compatibility | PASS | TestBackwardCompat 7/7 |
 
-## ACMExtractionRecord Key Fields for Matching
-Required: `building_id`, `product`, `result`
-Matching-relevant: `building_name`, `room_name`, `location`, `sample_no`, `sample_result`, `friable`, `internal_external` (via `area_type`), `floor_level`
+**S1 Verdict: DONE**
+
+---
+
+## S2 — Benchmark Harness + Baseline Capture: NOT IMPLEMENTED
+
+### Missing Artifacts
+| Required Artifact | Status |
+|-------------------|--------|
+| `benchmarks/` directory | DOES NOT EXIST |
+| `benchmarks/ground_truth/broadmeadows.json` | DOES NOT EXIST |
+| `benchmarks/ground_truth/alexander.json` | DOES NOT EXIST |
+| `benchmarks/ground_truth/<third>.json` | DOES NOT EXIST |
+| `scripts/research/e29_benchmark_harness.py` | DOES NOT EXIST |
+| `tests/integration/test_benchmark_harness.py` | DOES NOT EXIST |
+| `docs/reviews/e29-baseline-benchmark-report.md` | DOES NOT EXIST |
+
+**S2 Status: `ready-for-dev` — development has not started. 0/8 AC verifiable.**
+
+---
+
+## Gate 1 — Baseline Harness: FAIL
+
+### Criterion Results
+| # | Criterion | Result | Evidence |
+|---|-----------|--------|----------|
+| G1.1 | Harness runs >=3 docs E2E | **FAIL** | Harness script does not exist |
+| G1.2 | Ground truth for 3 docs | **FAIL** | No ground truth files in benchmarks/ |
+| G1.3 | Baseline metrics (recall/precision/field-accuracy) | **FAIL** | No baseline report exists |
+| G1.4 | Baseline metrics (latency/token cost) | **FAIL** | No baseline report exists |
+| G1.5 | CI entrypoint works | **FAIL** | No benchmark tests exist |
+| G1.6 | S1 merged (parser fix) | **PASS** | Code + 34/34 tests passing, ruff clean |
+
+**Gate 1 Decision: FAIL — 1/6 criteria pass. S2 must be implemented.**
+
+### Blocker List
+1. S2 has not been implemented — zero deliverables exist
+2. All S2 acceptance criteria (AC-1 through AC-8) are unverifiable
+3. S3 through S8 remain blocked pending Gate 1 passage
+
+### Status Transitions Performed
+| Item | From | To | Reason |
+|------|------|----|--------|
+| E29-S1 | `review` | `done` | All 5 AC verified with test evidence |
+| E29-S2 | `ready-for-dev` | `ready-for-dev` | Not started — no change needed |
+| E29-S3 | `drafted` | `drafted` | Blocked by Gate 1 — no change |
+| Gate 1 | `PENDING` | `FAIL` | 5/6 criteria fail (S2 not implemented) |
+
+### Next Steps
+1. S2 must be developed (est. 3 SP)
+2. After S2 is implemented and passes QA, Gate 1 should be re-evaluated
+3. S1 is done and unblocks S2 development

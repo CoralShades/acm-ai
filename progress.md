@@ -1,53 +1,50 @@
-# Progress — E29-S1: JSON Parser Resilience
+# Progress — E29 Gate 1 QA Verification
 
-## Session: 2026-03-01
+## Session: 2026-03-01 | Agent: Murat (BMAD QA / TEA)
 
-### Entry 1 — Research & Planning (DONE)
-- Read story spec, execution contract, architecture delta, current `utils.py`
-- Identified 5 callers of `parse_json_response` (backward-compat surface)
-- Found existing tests in `test_qwen_extraction.py:63-113` (7 tests)
-- Bug found: fenced regex uses non-greedy `\{.*?\}` which fails on nested JSON in fences
-- Plan: strip fences first → brace-depth scan → multi-block selection → truncation detection
-- `TruncationError(ValueError)` subclass for backward-compat
+### Entry 1 — Gate 1 Verification (COMPLETE)
 
-### Entry 2 — Implementation (DONE)
-- T1: sprint-status.yaml → in-progress, story status → in-progress
-- T2: Added `TruncationError(ValueError)` exception class at utils.py:497
-- T3: Rewrote `parse_json_response()` — strip fences → brace-depth scan → multi-block → truncation
-- T3: Added `_extract_json_objects()` helper — handles strings with escaped quotes and braces
-- T4: Created `tests/test_json_parser.py` — 34 tests across 6 test classes
+**Objective**: Validate S1 and S2 acceptance criteria, run verification commands, fill Gate 1 decision.
 
-### Entry 3 — Verification (DONE)
-- `ruff check .` — All checks passed
-- `pytest tests/test_json_parser.py -x -v` — 34/34 passed (25.34s)
-- `pytest tests/test_qwen_extraction.py::TestParseJsonResponse -x -v` — 7/7 passed (5.64s)
+#### Actions Performed
+1. Read all context documents (execution contract, S1/S2 specs, gate decisions, sprint-status)
+2. Verified S1 code existence: `TruncationError`, `_extract_json_objects`, `parse_json_response` in `utils.py:497-590`
+3. Verified S1 test file: `tests/test_json_parser.py` (220 lines, 34 tests)
+4. Ran `uv run ruff check .` — All checks passed
+5. Ran `uv run pytest tests/test_json_parser.py -x` — 34/34 passed (6.25s)
+6. Checked S2 artifacts — ALL MISSING (benchmarks/, harness, ground truth, report, integration tests)
+7. Evaluated S1 AC: 5/5 PASS
+8. Evaluated S2 AC: NOT IMPLEMENTED (0/8 verifiable)
+9. Filled Gate 1 section in `e29-gate-decisions.md` — FAIL (1/6 criteria pass)
 
-### Entry 4 — Documentation & Status (DONE)
-- Updated story Post-Dev Notes with implementation summary, test evidence, risks
-- Set sprint-status → review
-- Created `e29-worklog.md`
+#### Status Transitions
+| Item | From | To |
+|------|------|----|
+| E29-S1 | `review` | `done` |
+| Gate 1 | `PENDING` | `FAIL` |
 
-### STATUS: COMPLETE — Ready for QA
+#### Files Modified
+- `docs/sprint-artifacts/e29-gate-decisions.md` — Gate 1 filled with FAIL verdict
+- `docs/sprint-artifacts/e29-s1-json-parser-resilience.md` — Status → done, QA checklist checked, Post-QA Notes filled
+- `docs/sprint-artifacts/sprint-status.yaml` — S1 → done, summary counts updated
+- `task_plan.md` — QA task plan
+- `findings.md` — QA evidence log
+- `progress.md` — This file
 
----
+#### Gate 1 Verdict: FAIL
+- **Reason**: S2 (Benchmark Harness) has not been implemented
+- **Passing**: G1.6 (S1 merged) — only criterion that passes
+- **Failing**: G1.1-G1.5 — all S2-dependent criteria
+- **Blocked**: S3, S4, S5, S6, S7, S8
 
-# Progress — E29-S2: Benchmark Harness + Baseline Capture
-
-## Session: 2026-03-01
-
-### Entry 1 — Research & Planning
-- Read all context: execution contract, S2 story spec, architecture delta, sprint-status
-- Explored extraction pipeline: `extract_acm_from_source()`, `ACMExtractionOutput`, `ACMExtractionRecord`
-- Studied existing E2E test pattern in `test_broadmeadows_e2e.py` (mocked DB, real LLM)
-- Analyzed ground truth CSVs: Broadmeadows (31 rows, 43-col BAR), Alexander (43 rows, 7-col minimal)
-- Identified third doc candidates: 1124 (604KB), 3980 (645KB), 4601 (567KB) — no existing ground truth
-- Token tracking: only ad-hoc via `_verify_provider_routing()` — must intercept for harness
-- Created task plan with 11 tasks (T1-T11)
-- **Next**: T1 (set status), T2 (dir structure), T3-T5 (ground truth), T6 (harness), T7 (tests)
+#### Next Steps
+1. S2 must be developed (3 SP) — task plan exists from prior session
+2. After S2 passes QA, Gate 1 should be re-evaluated
+3. S1 is done and unblocks S2 development
 
 ### Reboot Check
-1. Last completed milestone: Planning phase
-2. Current active task: T1 (set sprint-status to in-progress)
-3. Blockers: None for S2 dev. S1 must merge before Gate 1 pass.
-4. Files last modified: task_plan.md, findings.md, progress.md
-5. Next planned action: T1 → set sprint-status → T2 → create benchmarks/ dir
+1. Last completed milestone: Gate 1 QA verification
+2. Current active task: None — waiting for S2 implementation
+3. Blockers: S2 not implemented
+4. Files last modified: e29-gate-decisions.md, e29-s1 story, sprint-status.yaml
+5. Next planned action: Develop S2 (Benchmark Harness + Baseline Capture)
