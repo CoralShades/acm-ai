@@ -1,30 +1,32 @@
-# Progress — E27-S4: Native JSON Schema Structured Outputs
+# Progress — E29: Pipeline Unification Story Specs
 
-## Session: 2026-02-28
-### Status: COMPLETE — Ready to commit
+## Session: 2026-03-01
 
-### Reboot Check
-1. **Last completed milestone**: All tasks T0-T7 complete
-2. **Current active task**: Commit
-3. **Blockers**: None
-4. **Files last modified**: All files below
-5. **Next planned action**: Commit and close story
+### Entry 1 — Session Start
+- Activated SM agent (Bob)
+- Loaded all 3 mandatory pre-read documents
+- Created/refreshed planning files
+- Starting codebase verification + story spec generation
 
-### Final Results
-- Broadmeadows: **31/31 (100%)** in 144.4s
-- Alexander: **29/43 (67.4%)** — pre-existing baseline, no regression from E27-S4
-- Tests: **1000 passed** (1 pre-existing fail, 10 deleted, 12 new)
-- Lint: clean
-- Frontend build: PASS
+### Entry 2 — Codebase Verification (DONE)
+- Verified all key files: utils.py:497, orchestrator.py:322/915, acm_extraction.py:2913-2917
+- Confirmed: `should_use_orchestrator()` at orchestrator.py:322 (the fork to eliminate)
+- Confirmed: conditional edge at acm_extraction.py:2913 (what S3 replaces)
+- Confirmed: legacy nodes "prepare" (line 2899), "extract" (line 2900) still in graph
+- Confirmed: `benchmarks/` dir does NOT exist (S2 creates it)
+- Confirmed: ground truth CSVs exist for Broadmeadows + Alexander
+- Confirmed: `ExportDialog.tsx` does NOT exist (S8 creates or modifies existing)
 
-### Files Changed
-- `open_notebook/graphs/utils.py` — Added pydantic_to_openrouter_schema, _get_acm_extraction_schema, _inject_response_format. Deleted _unwrap_completion_state. Removed temp debug logging.
-- `open_notebook/extractors/orchestrator.py` — Added _inject_response_format call. Removed _unwrap_completion_state (2 sites).
-- `open_notebook/graphs/acm_extraction.py` — Removed _unwrap_completion_state (2 sites). No _inject_response_format (legacy path excluded).
-- `open_notebook/extractors/document_structure.py` — Removed _unwrap_completion_state (1 site).
-- `open_notebook/extractors/building_inventory.py` — Removed _unwrap_completion_state (1 site).
-- `open_notebook/extractors/page_tagger.py` — Removed _unwrap_completion_state (1 site).
-- `tests/test_completion_state_unwrap.py` — DELETED (function removed)
-- `tests/test_openrouter_provider_routing.py` — Added 5 new test classes (12 tests)
-- `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md` — Story file
-- `docs/sprint-artifacts/sprint-status.yaml` — e27-s4 marked done
+### Entry 3 — Story Specs (DONE)
+- Generated all 8 story specs (S1-S8) to `docs/sprint-artifacts/e29-story-specs.md`
+- Each spec includes: user story, ACs, tasks/subtasks, dependencies, test strategy, touched files
+- Added 4 decision gate Go/No-Go checklists
+- Added parallelization opportunities analysis
+- Quality rules verified:
+  - Every story has measurable acceptance checks (AC tables with specific checks)
+  - S7 references Gate 3 criteria explicitly (cross-reference table)
+  - S7 calls out Broadmeadows 31/31 and Alexander >=40/43 targets
+  - S2, S7, S8 include repeatable command entrypoints (bash blocks)
+
+### STATUS: COMPLETE
+Output: `docs/sprint-artifacts/e29-story-specs.md`

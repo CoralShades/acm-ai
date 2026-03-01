@@ -1,64 +1,38 @@
-# Task Plan — E27-S4: Native JSON Schema Structured Outputs via OpenRouter
+# Task Plan — E29: Pipeline Unification Story Specs (S1-S8)
 
-## Task 0: Story File Creation
-- [x] 0.1 Create `docs/sprint-artifacts/e27-s4-native-json-schema-structured-outputs.md`
+## Objective
+Convert Epic 29 into 8 execution-ready story specs with user stories, ACs, tasks, dependencies, test strategy, and touched files.
 
-## Task 1: Schema Utilities (utils.py)
-- [x] 1.1 Add `pydantic_to_openrouter_schema(model_class)` — resolves `$defs`, adds `additionalProperties: false`
-- [x] 1.2 Add `_get_acm_extraction_schema()` — lazy-cached schema getter (8.3 KB)
-- [x] 1.3 Add `_inject_response_format(model, schema_dict, schema_name)` — stage-specific OpenRouter injection
-- [x] 1.4 Verify schema: no `$ref`, `additionalProperties: false`, cached, size OK
+## Phases
 
-## Task 2: Apply response_format to Extraction Call Sites
-- [x] 2.1 `orchestrator.py:_llm_extract_building()` — injected after `provision_langchain_model()`
-- [x] 2.2 `acm_extraction.py:extract_records()` — injected (then REMOVED in T4a — Alexander regression)
-- [x] 2.3 Verify document_structure/building_inventory/page_tagger NOT modified
+### Phase 1: Research & Analysis
+- [x] Read reconciled YAML (V3/epic-29-pipeline-unification.reconciled.yaml)
+- [x] Read execution contract (V3/epic-29-execution-contract.md)
+- [x] Read architecture delta (docs/architecture/e29-architecture-delta.md)
+- [ ] Verify codebase state for referenced files
+- [ ] Cross-reference gaps and identify ambiguities
 
-## Task 3: Spike Validation — Observe Wrapper Behavior
-- [x] 3.1 Add temporary debug logging to `parse_json_response()` (ACM_DEBUG_RAW_RESPONSE gate)
-- [x] 3.2 Run Broadmeadows+Alexander extraction with debug — completionState: **0 True, 13 False**
-- [x] 3.3 Result: **Scenario A confirmed** — wrapper GONE. Broadmeadows 31/31. Alexander 29/43 REGRESSION.
-- [x] 3.4 Remove temporary debug logging (done in T4a)
+### Phase 2: Story Spec Generation
+- [x] E29-S1: JSON Parser Resilience
+- [x] E29-S2: Benchmark Harness + Baseline Capture
+- [x] E29-S3: Unified Orchestrator Path
+- [x] E29-S4: Capability Registry + Fallback Contract
+- [x] E29-S5: Agent Decomposition I (Table Parser + BAR Mapper)
+- [x] E29-S6: Agent Decomposition II (Enricher/Classifier/Validator)
+- [x] E29-S7: Dual-Benchmark Validation + Legacy Cleanup
+- [x] E29-S8: Export Hardening + Integration Tests + Doc Alignment
 
-## Task 4a: Scenario A Cleanup (DONE)
-- [x] 4a.1 REMOVE `_inject_response_format()` call from `acm_extraction.py` legacy path
-- [x] 4a.2 Delete `_unwrap_completion_state()` definition from `utils.py`
-- [x] 4a.3 Remove call + import from `orchestrator.py` (2 call sites)
-- [x] 4a.4 Remove call + import from `document_structure.py`
-- [x] 4a.5 Remove call + import from `building_inventory.py`
-- [x] 4a.6 Remove call + import from `page_tagger.py`
-- [x] 4a.7 Remove call + import from `acm_extraction.py` (2 call sites)
-- [x] 4a.8 Remove temporary debug logging from `parse_json_response()` in utils.py
+### Phase 3: Cross-Cutting Outputs
+- [x] Go/No-Go checklist per decision gate (4 gate checklists)
+- [x] Parallelization opportunities (confirmed: S1||S2, within-story parallelism)
+- [x] Quality rules compliance review
 
-## Task 5: Re-Validation Run (DONE)
-- [x] 5.1 Run Broadmeadows — 31/31 (100%) PASS
-- [x] 5.2 Run Alexander — 29/43 (pre-existing baseline, no regression from E27-S4)
-- [x] 5.3 Duration — Broadmeadows 144.4s, Alexander 214.9s
+## Output
+- File: `docs/sprint-artifacts/e29-story-specs.md`
+- Format: Markdown, one section per story (S1-S8)
 
-## Task 6: Tests (DONE)
-- [x] 6.1 Delete `tests/test_completion_state_unwrap.py` (function removed)
-- [x] 6.2 Add `TestPydanticToOpenRouterSchema` (5 tests)
-- [x] 6.3 Add `TestGetACMExtractionSchema` (2 tests)
-- [x] 6.4 Add `TestInjectResponseFormat` (4 tests)
-- [x] 6.5 Add `TestUnwrapCompletionStateRemoved` (1 test)
-- [x] 6.6 Full test suite — 1000 passed, 1 pre-existing failure (RecordID assertion)
-
-## Task 7: Lint, Sprint Status, Commit (DONE)
-- [x] 7.1 `ruff check . --fix` — clean (2 auto-fixed)
-- [x] 7.2 `pytest tests/ -x` — 1000 passed (1 pre-existing fail)
-- [x] 7.3 `cd frontend && npm run build` — PASS
-- [x] 7.4 Update `sprint-status.yaml`
-- [x] 7.5 Commit
-
-## Guard Rails
-- [x] G1: Broadmeadows 31/31
-- [x] G2: Alexander 29/43 (no regression — pre-existing baseline)
-- [x] G3: Schema has no $ref
-- [x] G4: Schema has additionalProperties: false
-- [x] G5: Schema is cached (identity check)
-- [x] G6: _unwrap_completion_state() removed (0 references)
-- [x] G7: provider.only: ["Anthropic"] preserved (E27-S3)
-- [x] G8: Response Healing plugin preserved (E27-S3)
-- [x] G9: ZDR preserved (E27-S3)
-- [x] G11: All tests pass (1000 pass, 1 pre-existing fail)
-- [x] G13: No ACM_DEBUG_RAW_RESPONSE in committed code
+## Quality Rules
+- Every story has measurable acceptance checks
+- Cleanup stories (S7) reference gate criteria explicitly
+- Validation stories call out Broadmeadows and Alexander targets
+- Benchmark stories include repeatable command entrypoints
