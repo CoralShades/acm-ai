@@ -28,3 +28,26 @@
 - Created `e29-worklog.md`
 
 ### STATUS: COMPLETE — Ready for QA
+
+---
+
+# Progress — E29-S2: Benchmark Harness + Baseline Capture
+
+## Session: 2026-03-01
+
+### Entry 1 — Research & Planning
+- Read all context: execution contract, S2 story spec, architecture delta, sprint-status
+- Explored extraction pipeline: `extract_acm_from_source()`, `ACMExtractionOutput`, `ACMExtractionRecord`
+- Studied existing E2E test pattern in `test_broadmeadows_e2e.py` (mocked DB, real LLM)
+- Analyzed ground truth CSVs: Broadmeadows (31 rows, 43-col BAR), Alexander (43 rows, 7-col minimal)
+- Identified third doc candidates: 1124 (604KB), 3980 (645KB), 4601 (567KB) — no existing ground truth
+- Token tracking: only ad-hoc via `_verify_provider_routing()` — must intercept for harness
+- Created task plan with 11 tasks (T1-T11)
+- **Next**: T1 (set status), T2 (dir structure), T3-T5 (ground truth), T6 (harness), T7 (tests)
+
+### Reboot Check
+1. Last completed milestone: Planning phase
+2. Current active task: T1 (set sprint-status to in-progress)
+3. Blockers: None for S2 dev. S1 must merge before Gate 1 pass.
+4. Files last modified: task_plan.md, findings.md, progress.md
+5. Next planned action: T1 → set sprint-status → T2 → create benchmarks/ dir
