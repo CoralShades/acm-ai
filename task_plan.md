@@ -1,100 +1,110 @@
-# E29 Gate 2 Recovery — SM Task Plan
+# E29-R2: Match-Gap Remediation — Task Plan
 
-## Context
+## Story Context
 
-Gate 2 evaluated FAIL (2026-03-01). PM authorized recovery loop (R1+R2, no rollback). SM needs to: correct status drift, annotate story files, create recovery spec, update workflow status, and append worklog.
+> As a pipeline developer, I want the LLM inventory compilation to return proper
+> `RoomMeta` objects and extraction output to use normalized room/material names,
+> so that Gate 2 thresholds are met.
 
-## Decision Point: S3/S4 Status
-
-**PM says**: S3 and S4 should be `done` (code complete, merged, gate-level concern not story defect).
-**User request says**: S3 → `review`, S4 → `review`.
-**SM recommends**: Follow PM — set to `done` with gate-2-fail annotation comment.
-
-> Plan proceeds with PM-aligned `done` status. If Demi prefers `review`, the edits are a one-word change.
+R2 scope only. S3/S4 architecture unchanged. No scope creep into S5/S6.
 
 ---
 
 ## Tasks
 
-### T1: Correct sprint-status.yaml (status drift + Gate 2 annotations)
+### T1: Fix RoomMeta Typing in LLM Inventory Compilation
+- [ ] Add `_coerce_rooms_in_inventory(parsed: dict)` to `building_inventory.py`
+  - Convert string rooms → `{"room_id": name, "name": name}`
+  - Handle dict rooms (pass through)
+  - Handle None/missing rooms (default to empty list)
+- [ ] Call `_coerce_rooms_in_inventory(parsed)` before `BuildingInventory.model_validate(parsed)` at line 503
+- [ ] Write `test_inventory_coerces_string_rooms` — strings → RoomMeta objects
+- [ ] Write `test_inventory_preserves_dict_rooms` — dicts pass through
+- [ ] Write `test_inventory_handles_mixed_rooms` — mix of strings and dicts
 
-**Changes:**
-- Line 375 comment: `1/8` → `4/8` (S1, S2, S3, S4 done)
-- `e29-s3`: `ready-for-dev` → `done` + annotation: "Code complete. Unconditional edge, synthetic plan. Gate 2 FAIL (gate-level, not story defect per PM). QA: AC-1..AC-5 verified. AC-6/AC-7 are gate criteria."
-- `e29-s4`: `drafted` → `done` + annotation: "Code complete. Registry 33/33, orchestrator 61/61 tests. Gate 2 FAIL (gate-level per PM). QA: AC-1..AC-6 verified. AC-7/AC-8 are gate criteria."
-- `e29-s5`: add "Blocked by Gate 2 FAIL." to comment
-- `e29-s6`: add "Blocked by Gate 2 FAIL (transitive via S5)." to comment
-- `e29-s7`: add "Blocked by Gate 2 FAIL (transitive via S5→S6)." to comment
-- `e29-s8`: add "Blocked by Gate 2 FAIL (transitive via S5→S6→S7)." to comment
-- Add new entries for R1 and R2 recovery stories: `e29-r1-benchmark-fidelity: drafted`, `e29-r2-match-gap-remediation: drafted`
+**AC**: R2-AC1
+**Files**: `building_inventory.py`, `tests/test_orchestrator.py`
 
-### T2: Update S3 and S4 story files (status tables + Post-QA Notes)
+### T2: Add Building Name Normalization to Benchmark Matching
+- [ ] Add `BUILDING_SYNONYMS` map to `e29_benchmark_harness.py`
+  - `"old alexandra hospital"` → `["main hospital building", "alexandra hospital"]`
+- [ ] Add `_normalize_building(building: str) -> str` function (like `_normalize_product`)
+- [ ] Apply `_normalize_building()` in tier 2 composite key construction (both GT and extracted)
+- [ ] Write `test_building_name_synonym_matching` — GT "Old Alexandra Hospital" matches extracted "Main Hospital Building"
 
-**S3 file** (`e29-s3-unified-orchestrator-path.md`):
-- Story Status table: `drafted` → `done`, Assigned To → Backend Dev, Started → 2026-03-01, Completed → 2026-03-01, Blocked By → resolved
-- Post-QA Notes: Gate 2 evidence summary, AC checklist results, blockers list, PM decision reference
+**AC**: R2-AC3, R2-AC5
+**Files**: `e29_benchmark_harness.py`
 
-**S4 file** (`e29-s4-capability-registry-fallback-contract.md`):
-- Story Status table: `review` → `done`, keep existing dates
-- Post-QA Notes: Gate 2 evidence summary, AC checklist results, blockers list, PM decision reference
+### T3: Expand Product Synonyms
+- [ ] Add missing product synonyms to `PRODUCT_SYNONYMS`:
+  - `"heater flue"` → `["heater"]`
+  - `"ceiling"` → `["porch ceiling"]`
+  - `"floor covering"` → `["floor covering (beneath carpet)"]`
+  - `"electrical board"` → `["electrical distribution board"]`
+- [ ] Add parenthetical stripping to `_normalize_product()`: `"Floor covering (beneath carpet)"` → `"floor covering"`
+- [ ] Write `test_product_synonym_new_entries` for each new synonym
 
-### T3: Create docs/sprint-artifacts/e29-gate2-recovery-spec.md
+**AC**: R2-AC3
+**Files**: `e29_benchmark_harness.py`
 
-New file with:
-- **E29-R1: Benchmark Fidelity + Docling Table Testability** (2 SP)
-  - R1.1: Seed Docling tables for benchmark docs
-  - R1.2: Improve benchmark matching normalization
-  - R1.3: Pin baseline artifacts as immutable JSON snapshots
-  - R1.4: Re-run benchmarks with Docling injection active
-  - Acceptance criteria with test commands
-- **E29-R2: Match-Gap Remediation** (2 SP)
-  - R2.1: Fix RoomMeta typing in LLM inventory compilation
-  - R2.2: Normalize room/location names in extraction output
-  - R2.3: Improve material/item description matching
-  - R2.4: Re-run Gate 2 benchmark suite
-  - Acceptance criteria with test commands
-- Gate 2 rerun go/no-go conditions (from PM sign-off)
-- Blocker list for dev handoff
+### T4: Normalize Room Names in Matching
+- [ ] Add `ROOM_SYNONYMS` map:
+  - `"exterior"` → `["external"]`
+- [ ] Add `_normalize_room(room: str) -> str` function
+  - Resolve room synonyms
+  - Collapse multiple whitespace to single space
+  - Strip trailing/leading dashes with surrounding spaces
+- [ ] Apply `_normalize_room()` in tier 2 and tier 3 key construction
+- [ ] Write `test_room_name_external_exterior_match`
+- [ ] Write `test_room_name_whitespace_normalization`
 
-### T4: Update e29-story-specs.md (gate status table)
+**AC**: R2-AC2
+**Files**: `e29_benchmark_harness.py`
 
-- Gate 1 status: `PENDING` → `PASS`
-- Gate 2 status: `PENDING` → `FAIL`
-- Add R1/R2 to story files table
-- Update dependency graph to show recovery loop
+### T5: Run Verification Suite (Pre-Benchmark)
+- [ ] `uv run ruff check .` — zero errors
+- [ ] `uv run pytest tests/test_orchestrator.py -x` — all pass (incl. new tests)
+- [ ] `uv run pytest tests/test_strategy_registry.py -x` — all pass (no changes, regression check)
 
-### T5: Update bmm-workflow-status.yaml (change-log entry)
+**AC**: R2-AC7, R2-AC8
 
-Add entry:
-```
-# 2026-03-01: E29 Gate 2 recovery loop initiated
-#   - Gate 2 FAIL: G2.1 28/31, G2.2 31/43, G2.3 not testable. No regression from baseline.
-#   - PM decision: NO ROLLBACK. Recovery stories R1 (benchmark fidelity) + R2 (match-gap) authorized.
-#   - S3/S4 marked done (story-level ACs verified). S5-S8 remain blocked by Gate 2.
-#   - Recovery spec: docs/sprint-artifacts/e29-gate2-recovery-spec.md
-```
+### T6: Run Gate 2 Benchmark Rerun
+- [ ] `uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows --output-tag gate2_rerun`
+- [ ] `uv run python scripts/research/e29_benchmark_harness.py --doc alexander --output-tag gate2_rerun`
+- [ ] Verify: Broadmeadows >= 31/31 matched (R2-AC4)
+- [ ] Verify: Alexander >= 36/43 matched (R2-AC5)
+- [ ] Verify: All 6 Alexander buildings producing records (R2-AC5)
+- [ ] Verify: Docling injection firing, no F2 fallback (R2-AC6)
+- [ ] Document per-building Alexander counts
 
-### T6: Append to e29-worklog.md
+**AC**: R2-AC4, R2-AC5, R2-AC6
 
-Add SM session entry documenting all changes made in T1-T5.
+### T7: Update Recovery Spec + Worklog + Sprint Status
+- [ ] Update R2 section in `e29-gate2-recovery-spec.md` with Dev Agent Record
+- [ ] Append R2 session to `e29-worklog.md`
+- [ ] Set `e29-r2` status to `review` in `sprint-status.yaml`
 
 ---
 
-## Output Artifacts
+## File Changes Summary
 
-| Artifact | Path |
-|----------|------|
-| Updated sprint status | `docs/sprint-artifacts/sprint-status.yaml` |
-| Recovery spec (R1+R2) | `docs/sprint-artifacts/e29-gate2-recovery-spec.md` |
-| Updated S3 story | `docs/sprint-artifacts/e29-s3-unified-orchestrator-path.md` |
-| Updated S4 story | `docs/sprint-artifacts/e29-s4-capability-registry-fallback-contract.md` |
-| Updated story index | `docs/sprint-artifacts/e29-story-specs.md` |
-| Updated workflow status | `_bmad-output/project-planning-artifacts/acm-ai/bmm-workflow-status.yaml` |
-| Updated worklog | `docs/sprint-artifacts/e29-worklog.md` |
+| File | Action | Task |
+|------|--------|------|
+| `open_notebook/extractors/building_inventory.py` | Modified | T1 |
+| `scripts/research/e29_benchmark_harness.py` | Modified | T2, T3, T4 |
+| `tests/test_orchestrator.py` | Modified | T1 |
+| `benchmarks/results/gate2_rerun_results.json` | Created (by harness) | T6 |
+| `docs/reviews/e29-gate2_rerun-benchmark-report.md` | Created (by harness) | T6 |
+| `docs/sprint-artifacts/e29-gate2-recovery-spec.md` | Modified | T7 |
+| `docs/sprint-artifacts/e29-worklog.md` | Modified | T7 |
+| `docs/sprint-artifacts/sprint-status.yaml` | Modified | T7 |
 
-## Blocker List (for Dev Handoff)
+## Verification Commands
 
-1. **No Docling tables in benchmark DB** — R1.1 must seed tables before R2 can be accurately measured
-2. **RoomMeta typing bug** — rooms returned as strings, not RoomMeta objects → heuristic fallback
-3. **Matching normalization** — casing, whitespace, abbreviation differences cause false-negative matches
-4. **7 pre-existing test failures** — S3 unconditional edge invalidated graph wiring tests (scheduled for S7 cleanup)
+```bash
+uv run ruff check .
+uv run pytest tests/test_orchestrator.py -x
+uv run pytest tests/test_strategy_registry.py -x
+uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows --output-tag gate2_rerun
+uv run python scripts/research/e29_benchmark_harness.py --doc alexander --output-tag gate2_rerun
+```
