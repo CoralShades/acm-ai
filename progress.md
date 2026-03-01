@@ -1,32 +1,43 @@
-# Progress — E29: Pipeline Unification Story Specs
+# Progress — E29: Pipeline Unification — Story Split & Sprint Setup
 
-## Session: 2026-03-01
+## Session: 2026-03-01 (Phase 4)
 
-### Entry 1 — Session Start
-- Activated SM agent (Bob)
-- Loaded all 3 mandatory pre-read documents
-- Created/refreshed planning files
-- Starting codebase verification + story spec generation
+### Entry 1 — Setup
+- Loaded prior session planning files (Phase 1-3 complete)
+- Read master story specs, sprint-status.yaml, bmm-workflow-status.yaml
+- Created task list for Phase 4 (split, index, gates, status)
 
-### Entry 2 — Codebase Verification (DONE)
-- Verified all key files: utils.py:497, orchestrator.py:322/915, acm_extraction.py:2913-2917
-- Confirmed: `should_use_orchestrator()` at orchestrator.py:322 (the fork to eliminate)
-- Confirmed: conditional edge at acm_extraction.py:2913 (what S3 replaces)
-- Confirmed: legacy nodes "prepare" (line 2899), "extract" (line 2900) still in graph
-- Confirmed: `benchmarks/` dir does NOT exist (S2 creates it)
-- Confirmed: ground truth CSVs exist for Broadmeadows + Alexander
-- Confirmed: `ExportDialog.tsx` does NOT exist (S8 creates or modifies existing)
+### Entry 2 — Story File Split (DONE)
+- Split monolithic e29-story-specs.md into 8 individual files
+- Added standard template sections to each: Story Status, QA Checklist, Post-Dev Notes, Post-QA Notes
+- Resolved threshold wording drift:
+  - Gate 2 floor: Alexander >= 36/43
+  - S7 stretch target: Alexander >= 40/43
+  - S7 PM-approved fallback: >= 36/43 with documented sign-off
+- Threshold clarification box added to S4 and S7 specs
 
-### Entry 3 — Story Specs (DONE)
-- Generated all 8 story specs (S1-S8) to `docs/sprint-artifacts/e29-story-specs.md`
-- Each spec includes: user story, ACs, tasks/subtasks, dependencies, test strategy, touched files
-- Added 4 decision gate Go/No-Go checklists
-- Added parallelization opportunities analysis
-- Quality rules verified:
-  - Every story has measurable acceptance checks (AC tables with specific checks)
-  - S7 references Gate 3 criteria explicitly (cross-reference table)
-  - S7 calls out Broadmeadows 31/31 and Alexander >=40/43 targets
-  - S2, S7, S8 include repeatable command entrypoints (bash blocks)
+### Entry 3 — Index + Gate Decisions (DONE)
+- Rewrote e29-story-specs.md as index with links to 8 story files
+- Includes: story table, gate summary, dependency graph, parallelization, threshold reference
+- Created e29-gate-decisions.md with empty Gate 1-4 check sections
+- Each gate has: criteria table, evidence fields, decision field, escalation notes
+
+### Entry 4 — Sprint Status Updates (DONE)
+- sprint-status.yaml: epic-29 → in-progress, S1/S2 → ready-for-dev, S3-S8 → drafted
+- bmm-workflow-status.yaml: appended E29 planning package changelog (PM+Architect+SM)
 
 ### STATUS: COMPLETE
-Output: `docs/sprint-artifacts/e29-story-specs.md`
+
+## Changed Files
+1. `docs/sprint-artifacts/e29-s1-json-parser-resilience.md` (NEW)
+2. `docs/sprint-artifacts/e29-s2-benchmark-harness-baseline-capture.md` (NEW)
+3. `docs/sprint-artifacts/e29-s3-unified-orchestrator-path.md` (NEW)
+4. `docs/sprint-artifacts/e29-s4-capability-registry-fallback-contract.md` (NEW)
+5. `docs/sprint-artifacts/e29-s5-agent-decomposition-table-parser-bar-mapper.md` (NEW)
+6. `docs/sprint-artifacts/e29-s6-agent-decomposition-enricher-classifier-validator.md` (NEW)
+7. `docs/sprint-artifacts/e29-s7-validation-gate-legacy-cleanup.md` (NEW)
+8. `docs/sprint-artifacts/e29-s8-export-hardening-integration-doc-alignment.md` (NEW)
+9. `docs/sprint-artifacts/e29-gate-decisions.md` (NEW)
+10. `docs/sprint-artifacts/e29-story-specs.md` (REWRITTEN as index)
+11. `docs/sprint-artifacts/sprint-status.yaml` (MODIFIED)
+12. `_bmad-output/project-planning-artifacts/acm-ai/bmm-workflow-status.yaml` (MODIFIED)

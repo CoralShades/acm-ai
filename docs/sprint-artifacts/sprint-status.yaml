@@ -372,17 +372,21 @@ development_status:
   e28-s3-validation-closeout: done  # Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues, not extraction failures. Report: docs/reviews/e28-validation-results.md.
 
   # Epic 29: Pipeline Unification — Unified Agent Pipeline (P0)
-  # 0/8 stories complete — EPIC PLANNED
+  # 0/8 stories complete — EPIC IN-PROGRESS (story specs drafted, S1+S2 ready for dev)
   # Reconciled plan: V3/epic-29-pipeline-unification.reconciled.yaml
-  epic-29: backlog
-  e29-s1-json-parser-resilience: backlog
-  e29-s2-benchmark-harness-baseline-capture: backlog
-  e29-s3-unified-orchestrator-path: backlog
-  e29-s4-capability-registry-fallback-contract: backlog
-  e29-s5-agent-decomposition-table-parser-bar-mapper: backlog
-  e29-s6-agent-decomposition-enricher-classifier-validator: backlog
-  e29-s7-validation-gate-legacy-cleanup: backlog
-  e29-s8-export-hardening-integration-doc-alignment: backlog
+  # Execution contract: V3/epic-29-execution-contract.md
+  # Architecture delta: docs/architecture/e29-architecture-delta.md
+  # Story index: docs/sprint-artifacts/e29-story-specs.md
+  # Gate tracking: docs/sprint-artifacts/e29-gate-decisions.md
+  epic-29: in-progress
+  e29-s1-json-parser-resilience: ready-for-dev  # Phase 1. 1 SP. utils.py parse_json_response fence/preamble/truncation. May run parallel with S2.
+  e29-s2-benchmark-harness-baseline-capture: ready-for-dev  # Phase 1. 3 SP. Benchmark harness, ground truth, baseline report. Gate 1 exit. Needs S1 merged for Alexander.
+  e29-s3-unified-orchestrator-path: drafted  # Phase 2. 3 SP. Blocked by Gate 1. Unconditional tag_pages→orchestrate edge, synthetic plan.
+  e29-s4-capability-registry-fallback-contract: drafted  # Phase 2. 2 SP. Strategy registry, fallback matrix F1-F8. Gate 2 exit.
+  e29-s5-agent-decomposition-table-parser-bar-mapper: drafted  # Phase 3. 3 SP. Blocked by Gate 2. table_parser.py + bar_mapper.py.
+  e29-s6-agent-decomposition-enricher-classifier-validator: drafted  # Phase 3. 3 SP. classifier.py + context_enricher.py + validator.py. Gate 3 exit.
+  e29-s7-validation-gate-legacy-cleanup: drafted  # Phase 4. 2 SP. Blocked by Gate 3. Legacy deletion. Broadmeadows 31/31, Alexander >=40/43 stretch.
+  e29-s8-export-hardening-integration-doc-alignment: drafted  # Phase 4. 2 SP. Export filtering, E2E tests, doc alignment. Gate 4 exit.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
@@ -434,15 +438,17 @@ development_status:
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Drafted: 0
-# Stories Backlog: 8 (E29-S1..E29-S8)
+# Stories Ready-For-Dev: 2 (E29-S1, E29-S2)
+# Stories Drafted: 6 (E29-S3..E29-S8)
+# Stories Backlog: 0
 # Stories Archived: 12 (E8-S1..S10, E24-S2, E24-S4)
 #
-# Last Updated: 2026-03-01  # E29 added as backlog epic with reconciled 8-story plan and decision gates.
+# Last Updated: 2026-03-01  # E29 story specs drafted (SM). S1+S2 promoted to ready-for-dev. Gate tracking created.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28
-# IN-PROGRESS EPICS: none
-# BACKLOG EPICS: E29
+# IN-PROGRESS EPICS: E29
+# BACKLOG EPICS: none
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # EXTRACTION ACCURACY STATUS:

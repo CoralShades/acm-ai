@@ -1,38 +1,41 @@
-# Task Plan — E29: Pipeline Unification Story Specs (S1-S8)
+# Task Plan — E29: Pipeline Unification — Phase 4: Story File Split & Sprint Setup
 
 ## Objective
-Convert Epic 29 into 8 execution-ready story specs with user stories, ACs, tasks, dependencies, test strategy, and touched files.
+Split the monolithic e29-story-specs.md into 8 individual story files, create gate decisions tracking doc, update sprint status, and produce clean dev handoff for S1+S2.
 
 ## Phases
 
-### Phase 1: Research & Analysis
-- [x] Read reconciled YAML (V3/epic-29-pipeline-unification.reconciled.yaml)
-- [x] Read execution contract (V3/epic-29-execution-contract.md)
-- [x] Read architecture delta (docs/architecture/e29-architecture-delta.md)
-- [ ] Verify codebase state for referenced files
-- [ ] Cross-reference gaps and identify ambiguities
+### Phase 1-3: COMPLETE (prior session)
+- [x] Research & Analysis
+- [x] Story Spec Generation (8 stories in monolithic file)
+- [x] Cross-Cutting Outputs (gates, parallelization)
 
-### Phase 2: Story Spec Generation
-- [x] E29-S1: JSON Parser Resilience
-- [x] E29-S2: Benchmark Harness + Baseline Capture
-- [x] E29-S3: Unified Orchestrator Path
-- [x] E29-S4: Capability Registry + Fallback Contract
-- [x] E29-S5: Agent Decomposition I (Table Parser + BAR Mapper)
-- [x] E29-S6: Agent Decomposition II (Enricher/Classifier/Validator)
-- [x] E29-S7: Dual-Benchmark Validation + Legacy Cleanup
-- [x] E29-S8: Export Hardening + Integration Tests + Doc Alignment
+### Phase 4: Story File Split + Sprint Housekeeping (CURRENT)
+- [x] T1: Read master story specs + sprint-status + bmm-workflow-status
+- [x] T2: Split into 8 individual story files with standard template sections
+- [x] T3: Rewrite master file as index with links
+- [x] T4: Resolve threshold wording drift (Gate 2: >=36/43, S7: >=40/43 stretch)
+- [x] T5: Create e29-gate-decisions.md with empty Gate 1..4 check sections
+- [x] T6: Update sprint-status.yaml (epic-29 in-progress, S1/S2 ready-for-dev)
+- [x] T7: Append CHANGE LOG to bmm-workflow-status.yaml
+- [x] T8: Final summary — changed files list, status, dev handoff
 
-### Phase 3: Cross-Cutting Outputs
-- [x] Go/No-Go checklist per decision gate (4 gate checklists)
-- [x] Parallelization opportunities (confirmed: S1||S2, within-story parallelism)
-- [x] Quality rules compliance review
+## Threshold Decision (wording drift fix)
+- **Gate 2**: Alexander baseline >=36/43 (ENTRY threshold for Gate 2 pass)
+- **S7**: Alexander stretch target >=40/43 OR PM-approved lower threshold (EXIT threshold for S7 AC-2)
+- Must be consistent across: execution contract, story specs, gate decisions doc
 
-## Output
-- File: `docs/sprint-artifacts/e29-story-specs.md`
-- Format: Markdown, one section per story (S1-S8)
-
-## Quality Rules
-- Every story has measurable acceptance checks
-- Cleanup stories (S7) reference gate criteria explicitly
-- Validation stories call out Broadmeadows and Alexander targets
-- Benchmark stories include repeatable command entrypoints
+## Standard Story Template Sections
+Each story file gets:
+1. Story header (title, SP, phase, owner, status)
+2. User Story
+3. Story Status (status field + notes)
+4. Dependencies
+5. Acceptance Criteria
+6. Tasks/Subtasks
+7. Test Strategy
+8. Touched Files
+9. Risks
+10. QA Checklist (empty, for QA to fill)
+11. Post-Dev Notes (empty, for dev to fill)
+12. Post-QA Notes (empty, for QA to fill)

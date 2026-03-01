@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-26"
+updated: "2026-03-01"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -56,6 +56,20 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-03-01: Epic 29 Pipeline Unification — PLANNING PACKAGE COMPLETE
+#   - PM (John): Execution contract finalized (V3/epic-29-execution-contract.md)
+#     - 8 stories, 19 SP, 4 decision gates, measure-first strategy
+#     - Out-of-scope list: embeddings, copilot, knowledge graph, new consultants
+#   - Architect (Winston): Architecture delta published (docs/architecture/e29-architecture-delta.md)
+#     - Current->target pipeline diagrams, fallback matrix F1-F8
+#     - File impact map (S1-S8), telemetry plan, migration/rollback plan
+#   - SM (Bob): 8 story specs drafted (docs/sprint-artifacts/e29-s{1..8}-*.md)
+#     - Standard template: user story, ACs, tasks, test strategy, touched files, QA checklist
+#     - Gate decisions tracker: docs/sprint-artifacts/e29-gate-decisions.md
+#     - Threshold drift resolved: Gate 2 floor=36/43, S7 stretch=40/43 (PM fallback=36/43)
+#     - S1+S2 promoted to ready-for-dev; S3-S8 drafted (gated)
+#     - Parallelization: S1||S2 confirmed, within-story parallel subtasks documented
+#   - Sprint status updated: epic-29 in-progress
 # 2026-02-26: Epic 22 Post-Audit Remediation — COMPLETE
 #   - E22-S1: Schema resilience (normalize instead of reject)
 #   - E22-S2: Dashboard layout fix (sidebar restoration)
