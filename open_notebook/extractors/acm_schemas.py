@@ -510,3 +510,7 @@ class ACMExtractionOutput(BaseModel):
         default=1,
         description="Number of chunks used for extraction (1 = no chunking needed) (E1-S23)",
     )
+    fallback_summary: Optional[List[str]] = Field(
+        default=None,
+        description="Fallback telemetry tags activated during extraction (E29-S4)",
+    )

@@ -41,6 +41,11 @@ from open_notebook.extractors.page_tagger import (
     SectionTaxonomy,
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
+from open_notebook.extractors.strategy_registry import (
+    CORRECTION_RETRY_CONTRACT,
+    FallbackId,
+    emit_fallback_telemetry,
+)
 from open_notebook.graphs.utils import (
     _get_acm_extraction_schema,
     _inject_response_format,
@@ -200,6 +205,7 @@ class BuildingExtractionStats(BaseModel):
     strategy_used: str = "full_llm"
     time_ms: int = 0
     errors: Optional[List[str]] = None
+    fallback_tags: List[str] = Field(default_factory=list)
 
 
 class OrchestratorStats(BaseModel):
@@ -212,6 +218,7 @@ class OrchestratorStats(BaseModel):
     strategy_distribution: Dict[str, int] = Field(default_factory=dict)
     total_time_ms: int = 0
     plan: Optional[ExtractionPlan] = None
+    fallback_activated: List[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -567,6 +574,12 @@ async def _llm_extract_building(
                 )
                 return result_local
             except (ValueError, ValidationError) as parse_err:
+                # E29-S4: F3 — JSON parse failure telemetry
+                emit_fallback_telemetry(
+                    FallbackId.F3_JSON_PARSE,
+                    plan.building_name or plan.building_id,
+                    str(parse_err),
+                )
                 logger.error(
                     f"Building {plan.building_id} JSON parsing failed: {parse_err}. "
                     f"Response preview: {response_text[:200] if response_text else 'N/A'}"
@@ -646,6 +659,12 @@ async def _llm_extract_building(
                         )
                     raise
             else:
+                # E29-S4: F7 — LLM provider error telemetry
+                emit_fallback_telemetry(
+                    FallbackId.F7_LLM_ERROR,
+                    plan.building_name or plan.building_id,
+                    str(invoke_err),
+                )
                 raise
 
         if len(sub_chunks) > 1:
@@ -666,6 +685,7 @@ async def extract_building(
 ) -> Tuple[List[ACMExtractionRecord], BuildingExtractionStats]:
     """Extract ACM records for a single building (Task 3.1)."""
     start = time.time()
+    fallback_tags: List[str] = []
     building_content = _extract_building_content(
         content, plan.page_range[0], plan.page_range[1]
     )
@@ -689,6 +709,14 @@ async def extract_building(
                     f"Building {plan.building_id}: injected {len(docling_tables)} "
                     f"Docling tables into LLM context"
                 )
+            else:
+                # E29-S4: F2 — no Docling tables in page range
+                tag = emit_fallback_telemetry(
+                    FallbackId.F2_NO_DOCLING_TABLES,
+                    plan.building_name or plan.building_id,
+                    "no Docling tables in page range",
+                )
+                fallback_tags.append(tag)
         except Exception as e:
             logger.warning(
                 f"Docling table injection failed for {plan.building_id}: {e}"
@@ -705,6 +733,7 @@ async def extract_building(
             pages_processed=0,
             strategy_used=ExtractionStrategy.SKIP.value,
             time_ms=elapsed,
+            fallback_tags=fallback_tags,
         )
 
     if plan.strategy == ExtractionStrategy.REGEX_ONLY:
@@ -752,6 +781,7 @@ async def extract_building(
                         pages_processed=pages_processed,
                         strategy_used="regex_escalated_to_llm",
                         time_ms=elapsed,
+                        fallback_tags=fallback_tags,
                     )
                 except Exception as llm_err:
                     logger.error(
@@ -766,6 +796,7 @@ async def extract_building(
                 pages_processed=pages_processed,
                 strategy_used=ExtractionStrategy.REGEX_ONLY.value,
                 time_ms=elapsed,
+                fallback_tags=fallback_tags,
             )
         except Exception as e:
             logger.error(f"Building {plan.building_id} regex extraction failed: {e}")
@@ -777,6 +808,7 @@ async def extract_building(
                 strategy_used=ExtractionStrategy.REGEX_ONLY.value,
                 time_ms=elapsed,
                 errors=[str(e)],
+                fallback_tags=fallback_tags,
             )
 
     # FULL_LLM path
@@ -810,6 +842,7 @@ async def extract_building(
             pages_processed=pages_processed,
             strategy_used=ExtractionStrategy.FULL_LLM.value,
             time_ms=elapsed,
+            fallback_tags=fallback_tags,
         )
     except Exception as e:
         logger.error(f"Building {plan.building_id} extraction failed: {e}")
@@ -827,6 +860,7 @@ async def extract_building(
             strategy_used=ExtractionStrategy.FULL_LLM.value,
             time_ms=elapsed,
             errors=[str(e)],
+            fallback_tags=fallback_tags,
         )
 
 
@@ -844,6 +878,7 @@ def merge_building_results(
     all_records: List[ACMExtractionRecord] = []
     strategy_dist: Dict[str, int] = {}
     buildings_extracted = 0
+    all_fallback_tags: List[str] = []
 
     for records, stats in results:
         all_records.extend(records)
@@ -852,6 +887,8 @@ def merge_building_results(
         )
         if stats.strategy_used != ExtractionStrategy.SKIP.value and not stats.errors:
             buildings_extracted += 1
+        # E29-S4: Aggregate fallback tags from all buildings
+        all_fallback_tags.extend(stats.fallback_tags)
 
     total_time = int((time.time() - total_start_time) * 1000)
 
@@ -863,6 +900,7 @@ def merge_building_results(
         strategy_distribution=strategy_dist,
         total_time_ms=total_time,
         plan=extraction_plan,
+        fallback_activated=all_fallback_tags,
     )
 
     return all_records, orchestrator_stats
@@ -959,6 +997,13 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
             estimated_llm_calls=1,
         )
 
+        # E29-S4: F1 — no building inventory fallback telemetry
+        emit_fallback_telemetry(
+            FallbackId.F1_NO_INVENTORY,
+            "Whole Document",
+            "no building inventory",
+        )
+
         logger.info(
             f"Orchestrator using synthetic plan for source {source.id}: "
             f"no building inventory, treating as whole document ({total_pages} pages)"
@@ -1021,6 +1066,12 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
             stats.records_extracted == 0
             and stats.strategy_used != ExtractionStrategy.SKIP.value
         ):
+            # E29-S4: F4 — empty extraction fallback telemetry
+            emit_fallback_telemetry(
+                FallbackId.F4_EMPTY_EXTRACTION,
+                stats.building_id,
+                f"0 records (strategy={stats.strategy_used})",
+            )
             logger.warning(
                 f"Building {stats.building_id} returned 0 records "
                 f"(strategy={stats.strategy_used}, pages={stats.pages_processed}, "
@@ -1047,4 +1098,6 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
         "context": context,
         "content": content,
         "start_time": state.get("start_time", time.time()),
+        # E29-S4: Propagate retry cap from registry (AC-5)
+        "max_correction_attempts": CORRECTION_RETRY_CONTRACT.max_retries,
     }

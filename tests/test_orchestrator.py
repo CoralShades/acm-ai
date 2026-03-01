@@ -1324,3 +1324,168 @@ class TestRegexYieldCheck:
         b00b_plan = next(p for p in plan_result.plans if p.building_id == "B00B")
         assert b00b_plan.acm_item_count_estimate == 5
         assert b00b_plan.strategy == ExtractionStrategy.REGEX_ONLY
+
+
+# ---------------------------------------------------------------------------
+# E29-S4: Strategy Registry Integration
+# ---------------------------------------------------------------------------
+
+
+class TestStrategyRegistryIntegration:
+    """E29-S4: Orchestrator integrates strategy registry for telemetry and retry cap."""
+
+    @pytest.mark.asyncio
+    async def test_orchestrate_sets_max_correction_attempts_3(self):
+        """AC-5: orchestrate_extraction() sets max_correction_attempts=3 in output."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        state = {
+            "source": source,
+            "building_inventory": None,
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with patch(
+            "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = await orchestrate_extraction(state, MagicMock())
+
+        assert result["max_correction_attempts"] == 3
+
+    @pytest.mark.asyncio
+    async def test_f1_telemetry_emitted_for_no_inventory(self):
+        """F1 telemetry emitted when no building inventory is available."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        state = {
+            "source": source,
+            "building_inventory": None,
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator.emit_fallback_telemetry",
+                wraps=__import__(
+                    "open_notebook.extractors.strategy_registry",
+                    fromlist=["emit_fallback_telemetry"],
+                ).emit_fallback_telemetry,
+            ) as mock_emit,
+        ):
+            await orchestrate_extraction(state, MagicMock())
+
+        from open_notebook.extractors.strategy_registry import FallbackId
+
+        mock_emit.assert_any_call(
+            FallbackId.F1_NO_INVENTORY,
+            "Whole Document",
+            "no building inventory",
+        )
+
+    @pytest.mark.asyncio
+    async def test_f4_telemetry_emitted_for_zero_records(self):
+        """F4 telemetry emitted when a building returns 0 records."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        zero_stats = BuildingExtractionStats(
+            building_id="B00A",
+            records_extracted=0,
+            pages_processed=5,
+            strategy_used="full_llm",
+            time_ms=100,
+        )
+
+        state = {
+            "source": source,
+            "building_inventory": _make_inventory(
+                [_make_building("B00A", "Admin", 10, 15)]
+            ),
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+                new_callable=AsyncMock,
+                return_value=[([], zero_stats)],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator.emit_fallback_telemetry",
+                wraps=__import__(
+                    "open_notebook.extractors.strategy_registry",
+                    fromlist=["emit_fallback_telemetry"],
+                ).emit_fallback_telemetry,
+            ) as mock_emit,
+        ):
+            await orchestrate_extraction(state, MagicMock())
+
+        from open_notebook.extractors.strategy_registry import FallbackId
+
+        mock_emit.assert_any_call(
+            FallbackId.F4_EMPTY_EXTRACTION,
+            "B00A",
+            "0 records (strategy=full_llm)",
+        )
+
+    def test_fallback_tags_aggregated_in_merge(self):
+        """Fallback tags from buildings are aggregated into OrchestratorStats."""
+        import time
+
+        results = [
+            (
+                [],
+                BuildingExtractionStats(
+                    building_id="B00A",
+                    records_extracted=0,
+                    pages_processed=5,
+                    strategy_used="full_llm",
+                    time_ms=100,
+                    fallback_tags=["fallback.no_docling_tables"],
+                ),
+            ),
+            (
+                [],
+                BuildingExtractionStats(
+                    building_id="B00B",
+                    records_extracted=0,
+                    pages_processed=3,
+                    strategy_used="full_llm",
+                    time_ms=50,
+                    fallback_tags=["fallback.no_docling_tables", "fallback.empty_extraction"],
+                ),
+            ),
+        ]
+        plan = ExtractionPlan(
+            plans=[],
+            total_buildings=2,
+            buildings_to_extract=2,
+            buildings_skipped=0,
+            estimated_llm_calls=2,
+        )
+
+        _, stats = merge_building_results(results, plan, time.time())
+        assert len(stats.fallback_activated) == 3
+        assert stats.fallback_activated.count("fallback.no_docling_tables") == 2
+        assert "fallback.empty_extraction" in stats.fallback_activated

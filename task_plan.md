@@ -1,82 +1,94 @@
-# E29-S3: Unified Orchestrator Path — Task Plan
+# E29-S4: Capability Registry + Fallback Contract — Task Plan
 
 ## Pre-Implementation
-- [x] T0: Read + understand current routing in `acm_extraction.py:2912-2917` and `orchestrator.py:915-1020`
+- [x] T0: Read all context (story spec, arch delta, execution contract, orchestrator.py, acm_schemas.py, acm_extraction.py, test_orchestrator.py)
 
 ## Implementation Tasks (execute in order)
 
-### T1: Create SyntheticExtractionPlan dataclass
-- **File**: `open_notebook/extractors/acm_schemas.py`
-- **What**: Add `SyntheticExtractionPlan` dataclass with `building_name`, `page_start`, `page_end`, `source` fields
-- **Note**: Architecture delta (section 2) specifies exact shape: `SyntheticExtractionPlan(building_name="Whole Document", page_start=1, page_end=total_pages, source="synthetic_no_inventory")`
-- **AC**: AC-3
+### T1: Create `strategy_registry.py` with FallbackId enum and routing rules
+- **File**: `open_notebook/extractors/strategy_registry.py` (NEW)
+- **What**:
+  - T1.1: `FallbackId(str, Enum)` — F1 through F8 with detection, behavior, telemetry_tag
+  - T1.2: `FallbackContract` dataclass — `id`, `detection`, `behavior`, `severity`, `telemetry_tag`, `retry_eligible`
+  - T1.3: `FALLBACK_MATRIX: dict[FallbackId, FallbackContract]` — static lookup table for all 8 fallbacks
+  - T1.4: `RetryContract` dataclass — `max_retries=3`, `backoff_seconds=5`, `retry_eligible` flag
+  - T1.5: `select_strategy(state) -> ExtractionStrategy` — centralized routing (replaces scattered conditionals)
+  - T1.6: `detect_fallback(state, fallback_id) -> bool` — check if a fallback condition applies
+  - T1.7: `emit_fallback_telemetry(fallback_id, building_name, reason)` — structured log with `fallback.*` tag
+  - T1.8: `check_retry_budget(attempt, contract) -> bool` — returns False when attempt >= max_retries
+- **AC**: AC-1 (single file), AC-5 (retry contract), AC-6 (telemetry tags)
 - [ ] Implement
 - [ ] Verify import
 
-### T2: Implement synthetic plan logic in `orchestrate_extraction()`
+### T2: Add strategy metadata fields to `acm_schemas.py`
+- **File**: `open_notebook/extractors/acm_schemas.py`
+- **What**:
+  - T2.1: Add `fallback_activated: list[str]` field to `OrchestratorStats` (in orchestrator.py, or via a new field on ACMExtractionOutput — check which fits)
+  - T2.2: Add `strategy_metadata: Optional[dict]` to `BuildingExtractionStats` for per-building fallback tracking
+- **AC**: AC-6
+- [ ] Implement
+
+### T3: Integrate registry into orchestrator
 - **File**: `open_notebook/extractors/orchestrator.py`
 - **What**:
-  - T2.1: When `building_inventory` is None/empty → create synthetic whole-doc `BuildingExtractionPlan`
-  - T2.2: Synthetic plan uses `page_start=1, page_end=total_pages` (from state or fallback 999)
-  - T2.3: Ensure `_inject_docling_tables()` works for synthetic plans (already called in `extract_building`)
-  - T2.4: `orchestrate_extraction` must not crash when `state["building_inventory"]` is None — currently line 924 does `inventory: BuildingInventory = state["building_inventory"]` with no guard
-- **AC**: AC-3, AC-4
+  - T3.1: Import `strategy_registry` functions
+  - T3.2: In `orchestrate_extraction()`: call `emit_fallback_telemetry(FallbackId.F1, ...)` when synthetic plan created
+  - T3.3: In `extract_building()`: call `emit_fallback_telemetry(FallbackId.F2, ...)` when no Docling tables found
+  - T3.4: In `_llm_extract_building()`: emit F3 on JSON parse failure, F4 on zero records, F7 on LLM error
+  - T3.5: Wire retry contract check into existing `should_correct()` max_attempts logic (currently `max_correction_attempts=2`, needs to be 3 per AC-5)
+  - T3.6: Collect `fallback_activated` tags into orchestrator stats output
+- **AC**: AC-2, AC-3, AC-4, AC-5, AC-6
 - [ ] Implement
-- [ ] Verify no crash on None inventory
 
-### T3: Replace conditional edge with unconditional edge
-- **File**: `open_notebook/graphs/acm_extraction.py`
+### T4: Write registry tests — `tests/test_strategy_registry.py`
+- **File**: `tests/test_strategy_registry.py` (NEW)
 - **What**:
-  - T3.1: Replace lines 2912-2917 `add_conditional_edges("tag_pages", ...)` with `add_edge("tag_pages", "orchestrate")`
-  - T3.2: Remove edges from `prepare` and `extract` nodes (lines 2919-2928). Leave `add_node` calls in place (AC-5).
-  - T3.3: Remove `should_use_orchestrator` from import at line 63 (no longer needed in routing)
-  - T3.4: Keep the `should_use_orchestrator` function in `orchestrator.py` (still importable, just unused in graph routing)
-- **AC**: AC-1, AC-2, AC-5
+  - T4.1: `test_no_inventory_fallback` — F1: state with no/empty inventory → synthetic plan, telemetry tag emitted (AC-2)
+  - T4.2: `test_no_tables_fallback` — F2: empty Docling tables → text-only, telemetry tag (AC-3)
+  - T4.3: `test_json_parse_fallback` — F3: JSONDecodeError → resilient parser activation, telemetry tag
+  - T4.4: `test_empty_extraction_fallback` — F4: zero records → log warning, continue
+  - T4.5: `test_validation_failure_fallback` — F5: ValidationError → correction retry, telemetry tag
+  - T4.6: `test_correction_exhausted_fallback` — F6: attempt >= 3 → accept partials, telemetry tag
+  - T4.7: `test_llm_failure_fallback` — F7: 5xx/timeout → retry once, then skip (AC-4)
+  - T4.8: `test_docling_failure_fallback` — F8: Docling exception → text-only fallback
+  - T4.9: `test_retry_cap_enforcement` — 4th retry rejected (AC-5)
+  - T4.10: `test_telemetry_tags_emitted` — structured log contains `fallback.*` tags (AC-6)
+  - T4.11: `test_select_strategy` — routing rules return correct ExtractionStrategy
+  - T4.12: `test_fallback_matrix_completeness` — all 8 FallbackIds have contracts
+- **AC**: AC-2, AC-3, AC-4, AC-5, AC-6
 - [ ] Implement
-- [ ] Verify graph compiles
+- [ ] All pass
 
-### T4: Update orchestrator tests
+### T5: Update existing orchestrator tests
 - **File**: `tests/test_orchestrator.py`
 - **What**:
-  - Add `TestSyntheticPlan`: test that `orchestrate_extraction` creates synthetic plan when `building_inventory` is None
-  - Add test: synthetic plan when inventory has empty buildings list
-  - Add test: synthetic plan page range = (1, total_pages)
-  - Add test: Docling table injection fires for synthetic plan
-  - Keep existing `TestShouldUseOrchestrator` tests (function still exists)
-- **AC**: AC-3, AC-4
+  - T5.1: Verify `orchestrate_extraction()` emits F1 telemetry when no inventory
+  - T5.2: Verify `extract_building()` emits F2 telemetry when no Docling tables
+  - T5.3: Verify retry contract uses max_retries=3 (not 2)
+- **AC**: AC-2, AC-3, AC-5
 - [ ] Implement
 - [ ] All pass
 
-### T5: Update extraction graph tests
-- **File**: `tests/test_acm_ai_extraction.py`
-- **What**:
-  - Update `TestGraphWiring` to reflect unconditional edge (not conditional)
-  - Update `TestBackwardCompatibility` — legacy functions present in source, nodes may/may not be in compiled graph
-  - Add test: no-inventory doc routes through orchestrator
-- **AC**: AC-1, AC-2, AC-5
-- [ ] Implement
+### T6: Lint + full test suite
+- **Commands**:
+  - `uv run ruff check .`
+  - `uv run pytest tests/test_strategy_registry.py -x -v`
+  - `uv run pytest tests/test_orchestrator.py -x`
+  - `uv run pytest tests/ -x`
 - [ ] All pass
 
-### T6: Run benchmark — Broadmeadows 31/31
+### T7: Run benchmark — Broadmeadows 31/31
 - **Command**: `uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows`
-- **AC**: AC-6
-- [ ] Run + capture results
-
-### T7: Run benchmark — Alexander >=36/43
-- **Command**: `uv run python scripts/research/e29_benchmark_harness.py --doc alexander`
 - **AC**: AC-7
 - [ ] Run + capture results
 
-### T8: Lint + full test suite
-- **Commands**:
-  - `uv run ruff check .`
-  - `uv run pytest tests/test_orchestrator.py -x`
-  - `uv run pytest tests/test_acm_ai_extraction.py -x`
-  - `uv run pytest tests/ -x` (full suite)
-- [ ] All pass
+### T8: Run benchmark — Alexander >=36/43
+- **Command**: `uv run python scripts/research/e29_benchmark_harness.py --doc alexander`
+- **AC**: AC-8
+- [ ] Run + capture results
 
 ## Post-Implementation
 - [ ] Update story status: `drafted` → `in-progress` → `review`
-- [ ] Fill Post-Dev Notes in `e29-s3-unified-orchestrator-path.md`
+- [ ] Fill Post-Dev Notes in `e29-s4-capability-registry-fallback-contract.md`
 - [ ] Append session to `e29-worklog.md`
-- [ ] Produce routing diff summary + AC-by-AC evidence
+- [ ] Produce fallback matrix implementation mapping + AC-by-AC evidence + Gate 2 readiness
