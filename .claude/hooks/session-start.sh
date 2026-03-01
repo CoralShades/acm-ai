@@ -154,4 +154,26 @@ printf '║  PROTECTED:  tests/  migrations/  pyproject.toml  package.json      
 printf '╚══════════════════════════════════════════════════════════════════════════╝\n'
 printf '\n'
 
+# ─── Superpowers × BMAD Bridge ────────────────────────────────────────────────
+# Superpowers skills are symlinked at ~/.claude/skills/superpowers
+# This section connects superpowers workflow routing with BMAD methodology
+SUPERPOWERS_DIR="${HOME}/.claude/superpowers"
+if [ -d "$SUPERPOWERS_DIR/skills" ]; then
+  printf '━━━ SUPERPOWERS × BMAD BRIDGE ━━━\n'
+  printf '\n'
+  printf 'WORKFLOW ROUTING:\n'
+  printf '  Planning (BMAD):     /party-mode | /analyst | /pm | /architect\n'
+  printf '  Brainstorm:          superpowers:brainstorming\n'
+  printf '  Impl. planning:      superpowers:writing-plans (reads BMAD stories)\n'
+  printf '  Autonomous impl:     Ralph loop OR superpowers:executing-plans\n'
+  printf '  Debugging:           ALWAYS superpowers:systematic-debugging\n'
+  printf '  Code review:         ALWAYS superpowers:requesting-code-review\n'
+  printf '  TDD:                 ALWAYS superpowers:test-driven-development\n'
+  printf '\n'
+  printf 'RULE: If a Superpowers skill exists for the task, you MUST use it.\n'
+  printf 'RULE: BMAD artifacts in _bmad-output/ are the source of truth for planning.\n'
+  printf 'RULE: Implementation plans go to docs/plans/ (Superpowers convention).\n'
+  printf '\n'
+fi
+
 exit 0

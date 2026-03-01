@@ -388,3 +388,37 @@ CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 ```
 
 Agent definitions in `.claude/agents/`. The `orchestrator` reads stories from `docs/sprint-artifacts/` and delegates to specialists based on the routing table above.
+
+## Superpowers Integration
+
+This project uses [obra/superpowers](https://github.com/obra/superpowers) for development workflow enforcement.
+
+### Mandatory Skills (always invoke these)
+- `superpowers:test-driven-development` — for ALL coding tasks
+- `superpowers:systematic-debugging` — for ALL debugging
+- `superpowers:requesting-code-review` — before marking stories complete
+
+### Workflow Skills (invoke based on task)
+- `superpowers:brainstorming` — for feature-level design (within BMAD epics)
+- `superpowers:writing-plans` — to create implementation plans from BMAD stories
+- `superpowers:executing-plans` — for batch execution with checkpoints
+- `superpowers:subagent-driven-development` — for autonomous task execution
+- `superpowers:using-git-worktrees` — for isolated development branches
+- `superpowers:finishing-a-development-branch` — for merge/PR workflow
+
+### Routing Rule
+- PROJECT-LEVEL planning: BMAD agents (/party-mode, /analyst, /pm, /architect)
+- STORY-LEVEL implementation: Superpowers skills
+- The two systems complement each other — never skip either.
+
+### Implementation Plans Location
+- BMAD artifacts: `_bmad-output/` (planning source of truth)
+- Superpowers plans: `docs/plans/` (implementation execution plans)
+
+### Multi-Platform Support
+Superpowers skills work across three platforms:
+- **Claude Code**: Skills at `~/.claude/skills/superpowers` (symlinked)
+- **ChatGPT Codex**: Skills at `~/.agents/skills/superpowers` (symlinked), project config in `.codex/`
+- **OpenCode**: Skills at `~/.config/opencode/skills/superpowers` (symlinked), project config in `.opencode/`
+
+See `docs/SUPERPOWERS-INTEGRATION.md` for full setup and troubleshooting.

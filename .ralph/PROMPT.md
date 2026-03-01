@@ -79,6 +79,20 @@ Only run ONE real extraction on `docs/samplePDF/` to validate. Never re-run unle
 - Format: `feat(e19-s1): add review_status field and clean acm_record slate`
 - Do NOT push — you only commit; push is handled by the user after review
 
+## MANDATORY SKILL INVOCATIONS
+
+Before implementing any task:
+1. Invoke superpowers:test-driven-development — follow RED-GREEN-REFACTOR
+2. Write the failing test FIRST, watch it fail, then implement
+
+When debugging any failure:
+1. Invoke superpowers:systematic-debugging — follow 4-phase process
+2. Do NOT guess — trace root cause systematically
+
+After completing all tasks:
+1. Invoke superpowers:requesting-code-review — run pre-review checklist
+2. Only output <promise>COMPLETE</promise> after review passes
+
 ## Never Skip
 
 - Never mark a task complete without all verification passing
@@ -86,3 +100,4 @@ Only run ONE real extraction on `docs/samplePDF/` to validate. Never re-run unle
 - Always write unit tests alongside implementation
 - Always read the full story spec AND the implementation prompt before coding
 - Never run real extractions except as explicitly permitted above
+- ALWAYS invoke superpowers skills when they apply — this is mandatory, not optional
