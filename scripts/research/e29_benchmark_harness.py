@@ -282,6 +282,8 @@ def _normalize_room(room: str) -> str:
     norm = _normalize(room)
     # Strip leading/trailing dashes with surrounding spaces
     norm = re.sub(r"^\s*[-–—]\s*|\s*[-–—]\s*$", "", norm).strip()
+    # Strip trailing "throughout" qualifier (noise word)
+    norm = re.sub(r"\s+throughout$", "", norm).strip()
     if norm in ROOM_SYNONYMS:
         return norm
     for canonical, synonyms in ROOM_SYNONYMS.items():
@@ -310,6 +312,7 @@ def match_records(
     ext_by_sample: dict[str, list[int]] = {}
     ext_by_composite: dict[str, list[int]] = {}
     ext_by_room_loc: dict[str, list[int]] = {}
+    ext_by_bldg_prod: dict[str, list[int]] = {}
 
     for idx, r in enumerate(extracted):
         # Sample number index
@@ -339,6 +342,10 @@ def match_records(
         # Swapped room+location index (Tier 3.5)
         swapped_rl = f"{loc}|{rname}"
         ext_by_room_loc.setdefault(swapped_rl, []).append(idx)
+
+        # Building+product index (Tier 4 — most permissive)
+        bp_key = f"{bname}|{prod}"
+        ext_by_bldg_prod.setdefault(bp_key, []).append(idx)
 
     consumed = set()
     matched_pairs = []
@@ -376,6 +383,16 @@ def match_records(
             loc = _normalize(gt_rec.get("location", ""))
             rl_key = f"{rname}|{loc}"
             for idx in ext_by_room_loc.get(rl_key, []):
+                if idx not in consumed:
+                    matched_idx = idx
+                    break
+
+        # Tier 4: building+product (most permissive, 1:1 consumption)
+        if matched_idx is None:
+            bname = _normalize_building(gt_rec.get("building_name", ""))
+            prod = _normalize_product(gt_rec.get("product", ""))
+            bp_key = f"{bname}|{prod}"
+            for idx in ext_by_bldg_prod.get(bp_key, []):
                 if idx not in consumed:
                     matched_idx = idx
                     break
