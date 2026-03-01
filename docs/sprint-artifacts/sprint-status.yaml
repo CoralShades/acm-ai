@@ -34,16 +34,16 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-28
+updated: 2026-03-01
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-02-28
+  last_reconciled: 2026-03-01
   reconciled_branches: [main, ACMV3]
-  notes: "E28 closeout 2026-02-28: Alexander 29/43→36/43 (+7) via ARA regex recovery. Broadmeadows 31/31 maintained. Decision gate PARTIAL SUCCESS (36>=36 threshold). 7 remaining gaps are validation matching issues. E27 complete: structured output resilience (4/4 stories). E26 complete (7/7 stories)."
+  notes: "E29 planning reconciliation 2026-03-01: unified pipeline execution order finalized (8 stories, 4 gates). E29 added as backlog epic pending story artifact drafting. E28 closeout retained: Alexander 29/43→36/43 (+7), Broadmeadows 31/31 maintained."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -371,6 +371,19 @@ development_status:
   e28-s2-ara-recovery-fix: done  # Added _recover_not_sampled_records_ara() ARA-format regex recovery. 8 records recovered. Improved room name parsing for "External - Throughout" → "Exterior". Added product synonym matching. Alexander 29/43→36/43 (+7). Broadmeadows 31/31 maintained. 13 new tests.
   e28-s3-validation-closeout: done  # Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues, not extraction failures. Report: docs/reviews/e28-validation-results.md.
 
+  # Epic 29: Pipeline Unification — Unified Agent Pipeline (P0)
+  # 0/8 stories complete — EPIC PLANNED
+  # Reconciled plan: V3/epic-29-pipeline-unification.reconciled.yaml
+  epic-29: backlog
+  e29-s1-json-parser-resilience: backlog
+  e29-s2-benchmark-harness-baseline-capture: backlog
+  e29-s3-unified-orchestrator-path: backlog
+  e29-s4-capability-registry-fallback-contract: backlog
+  e29-s5-agent-decomposition-table-parser-bar-mapper: backlog
+  e29-s6-agent-decomposition-enricher-classifier-validator: backlog
+  e29-s7-validation-gate-legacy-cleanup: backlog
+  e29-s8-export-hardening-integration-doc-alignment: backlog
+
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
 
@@ -414,21 +427,22 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 27
-# Total Stories: 168
-# Stories Done: 151 (90%)
+# Total Epics: 28
+# Total Stories: 176
+# Stories Done: 151 (86%)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Drafted: 0
-# Stories Backlog: 0
+# Stories Backlog: 8 (E29-S1..E29-S8)
 # Stories Archived: 12 (E8-S1..S10, E24-S2, E24-S4)
 #
-# Last Updated: 2026-02-28  # E24 archived: E24-S2 + E24-S4 superseded by E26 Docling Direct API (31/31). ADR-001 D7.
+# Last Updated: 2026-03-01  # E29 added as backlog epic with reconciled 8-story plan and decision gates.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
-#                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27
+#                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28
 # IN-PROGRESS EPICS: none
+# BACKLOG EPICS: E29
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # EXTRACTION ACCURACY STATUS:

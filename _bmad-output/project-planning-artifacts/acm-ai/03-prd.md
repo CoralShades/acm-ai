@@ -197,10 +197,12 @@ This document covers MVP requirements. Future enhancements are noted but not det
 
 | ID | Requirement | Priority | Acceptance Criteria |
 |----|-------------|----------|---------------------|
-| NFR-101 | PDF processing shall complete within 60 seconds for 50-page document | P0 | Measured on reference hardware |
-| NFR-102 | Spreadsheet shall render 1000+ rows without lag | P0 | Virtual scrolling enabled |
-| NFR-103 | Chat response shall begin streaming within 3 seconds | P0 | First token latency measured |
-| NFR-104 | Cell click to PDF display shall be <500ms | P1 | Cached pages load faster |
+| NFR-101 | Unified pipeline shall preserve Broadmeadows benchmark accuracy | P0 | Broadmeadows extraction remains 31/31 on orchestrator-only path |
+| NFR-102 | Unified pipeline shall maintain Alexander baseline and support E29 target uplift | P0 | Alexander remains >=36/43 during unification and reaches >=40/43 after decomposition stories |
+| NFR-103 | Measure phase shall run an automated benchmark harness before and after major pipeline changes | P0 | At least 3 benchmark documents execute with stored ground truth and report recall/precision/field accuracy |
+| NFR-104 | Regression policy shall block release on unapproved quality degradation | P0 | No benchmark drops more than 2% recall from approved baseline unless explicit waiver is recorded |
+| NFR-105 | Extraction latency and token usage shall be tracked as release gates | P1 | Baseline and post-change reports include per-document latency and token usage deltas |
+| NFR-106 | Spreadsheet shall render 1000+ rows without lag | P0 | Virtual scrolling enabled |
 
 ### 3.2 Privacy and Security (NFR-200 Series)
 
@@ -580,44 +582,39 @@ The system shall export Excel files compliant with Victorian Government BAR form
 
 ### 5.4 Extraction Pipeline Architecture
 
-Seven-stage pipeline with real-time observability:
+Epic 29 establishes a single-path extraction contract with benchmark-gated rollout.
 
-**Stage -1: Document Structure Analysis**
-- Extract TOC, building inventory, metadata
-- Tag page-level sections
-- Output: Document structure map
+**Authoritative flow (E29):**
 
-**Stage 0: Preflight**
-- Detect format (Prensa, Greencap, NSW, etc.)
-- Select parser configuration
-- Output: Parser selection
+```
+tag_pages -> orchestrate_extraction (always)
+          -> validate_records
+          -> correct_records
+          -> deduplicate_records
+          -> recover_records
+          -> save_records
+```
 
-**Stage 0.5: Agentic Orchestrator**
-- Analyze content per page range
-- Route to optimal tool (MinerU/Docling)
-- Output: Per-section extraction plan
+**Key requirements:**
+- All documents use the orchestrator path, including single-building and no-inventory inputs.
+- When inventory is missing, the system creates a synthetic whole-document plan and continues in orchestrator.
+- Docling table context injection is available to both single-building and multi-building documents.
+- `parse_json_response()` must handle fenced JSON, preamble text, and truncation errors.
 
-**Stage 1: Extract (Verbatim with Provenance)**
-- Extract raw data with bounding boxes
-- Preserve consultant wording
-- Output: Raw records + citations
+**Fallback contract:**
+- No inventory: create synthetic whole-document extraction plan.
+- No table context: continue with text-only extraction, non-fatal.
+- LLM schema/format issues: parse JSON from raw response and validate with Pydantic.
+- Validation failures: targeted correction retries (max 3), then deterministic error reporting.
 
-**Stage 2: Interpret (Normalization)**
-- Map to BAR field schema
-- Normalize terminology
-- Output: Normalized records
+**Decision gates (release controls):**
+1. Baseline harness gate (>=3 benchmark docs, reproducible metrics).
+2. Unified-path parity gate (Broadmeadows 31/31, Alexander baseline maintained).
+3. Cleanup gate (legacy path removal only after no-regression confirmation).
+4. Release readiness gate (benchmark + E2E pass + docs synchronized).
 
-**Stage 2.5: Corrective Validation**
-- Validate against schema
-- LLM re-extraction on failure (max 3)
-- Output: Validated records
-
-**Stage 3: Enrich & Store**
-- Generate embeddings
-- Store in SurrealDB with citations
-- Output: Queryable ACM records
-
-**Observability**: SSE events (pipeline:started, stage:entered, stage:progress, stage:completed) for real-time UI.
+**Observability:** SSE + structured logs for stage transitions, benchmark telemetry, retries,
+and correction outcomes.
 
 ### 5.5 Enum Definitions (NEW - 2026-02-05)
 
@@ -727,34 +724,37 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 
 ### 7.1 Test Data
 
-**Victorian BAR Format (Primary):**
-- `Clutch_Broadmeadows Police Station Div 5 34511-039 V2_done.pdf` - Prensa format (19 pages)
-- `Clucth_Alexander_District_Hospital_Asbestos_Risk_Assessment_2020-09-07.pdf` - Greencap format (34 pages)
+**Benchmark harness (minimum set):**
+- `Clutch_Broadmeadows Police Station Div 5 34511-039 V2_done.pdf` (Prensa, 19 pages)
+- `Clucth_Alexander_District_Hospital_Asbestos_Risk_Assessment_2020-09-07.pdf` (ARA/Greencap-style, 34 pages)
+- One additional consultant format benchmark (Greencap/Generic/edge-case), each with ground truth records
 
-**Expected Output Templates:**
-- `Clutch_Broadmeadows_Police_BAR.xlsx` - 43 columns, 32 records
-- `Clucth_Alexandra_District_BAR.xlsm` - 47 columns, 533 records
+**Ground truth artifacts:**
+- Per-benchmark `ground_truth.json` with expected record-level fields
+- Per-benchmark `last_run.json` with latest benchmark metrics
+- Validation reports in `docs/reviews/` for gate decisions
 
-**NSW SAMP Format (Legacy):**
-- `1124_AsbestosRegister.pdf` - Bankstown North Public School
-- `3980_AsbestosRegister.pdf` - Additional test case
-- `4601_AsbestosRegister.pdf` - Additional test case
+**Operational test corpus (non-gating):**
+- `1124_AsbestosRegister.pdf` (NSW SAMP)
+- `3980_AsbestosRegister.pdf`
+- `4601_AsbestosRegister.pdf`
 
 ### 7.2 Test Scenarios
 
 | ID | Scenario | Expected Result |
 |----|----------|-----------------|
-| T-001 | Upload Prensa PDF (Broadmeadows) | ACM data extracted with 32 records |
-| T-002 | Upload Greencap PDF (Alexandra) | ACM data extracted with 533 records |
-| T-003 | Configure site metadata during upload | Department, Agency populated |
-| T-004 | Export to BAR Excel | All 47 columns in correct order |
-| T-005 | Filter by risk status "Low" | Only Low risk rows shown |
-| T-006 | Click cell in spreadsheet | PDF viewer opens to correct page |
-| T-007 | Ask "What asbestos is in Building A?" | Chat responds with cited data |
-| T-008 | Export to CSV | All BAR columns included |
-| T-009 | Toggle column visibility | Columns show/hide correctly |
-| T-010 | AI classify product group | Correct Product Group assigned |
-| T-011 | Upload non-ACM PDF | Graceful error or empty ACM view |
+| T-001 | Unified-path run on Broadmeadows | Orchestrator path used; 31/31 records |
+| T-002 | Unified-path run on Alexander | All buildings produce records; >=36/43 baseline maintained |
+| T-003 | JSON parser fence/preamble handling | Fenced and prefixed model outputs parse successfully |
+| T-004 | Truncated JSON handling | Clear truncation error, not generic "No JSON object found" |
+| T-005 | Synthetic plan fallback (no inventory) | Extraction continues via orchestrator whole-document plan |
+| T-006 | Benchmark harness execution | >=3 benchmark docs produce recall/precision/field accuracy report |
+| T-007 | Legacy cleanup gate validation | No regression after legacy path removal |
+| T-008 | Export to BAR Excel | All BAR columns in configured order |
+| T-009 | Per-building/ACM-type export | Correct grouping and schema-driven fields |
+| T-010 | Spreadsheet filtering and column visibility | Filters and toggles behave without regression |
+| T-011 | PDF citation navigation from spreadsheet | Correct page open and cell context |
+| T-012 | Upload non-ACM PDF | Graceful error path or empty ACM view |
 
 ---
 
@@ -827,4 +827,4 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 | 2026-02-08 | 1.3 | Course correction: replaced 3 consultant parsers (Prensa, Greencap, Generic) with 1 generic configurable parser driven by BAR field schema configuration (FR-107, Section 5.7). See `_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md` |
 | 2026-02-20 | 1.4 | SCP-20260220: FR-102 updated (MinerU primary); 7 new `acm_record` fields (quantity, acm_labelled, identifying_company, floor_level, normalized_action, enriched_text, parent_table_id); 3 new tables (field_schema Â§5.1.2, acm_table_section Â§5.1.3, extraction_progress Â§5.1.4); 3 new API endpoints (extraction-progress SSE/REST, field-schema); FR-800 series (Extraction Monitor, E15); FR-900 series (UX Enhancement, E16); Section 1.4 note on generic parser; Section 9 resolved AG Grid license item |
 | 2026-02-23 | 1.6 | Added FR-1100 series for cross-site marketing-app navigation, canonical root-domain behavior, and env-configurable URL contract for Vercel multi-project deployment |
-
+| 2026-03-01 | 1.7 | Epic 29 reconciliation: unified orchestrator path contract, parser resilience requirement, benchmark-gated NFRs, and decision-gate release controls added. |

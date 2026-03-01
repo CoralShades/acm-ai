@@ -552,6 +552,9 @@ interface BARExportOptions {
 
 > **Updated 2026-02-05:** 7-stage pipeline (Stages -1, 0, 0.5, 1, 2, 2.5, 3).
 > **Updated 2026-02-20:** Heading corrected from "Two-Stage" to "7-Stage Pipeline".
+> **Updated 2026-03-01:** Epic 29 unified-path contract is now authoritative. Any
+> legacy dual-path, MinerU-primary, or conditional-routing descriptions in this
+> section are historical context only.
 > See `docs/reference/extraction-pipeline.md` for complete specification.
 
 ### 5.1 7-Stage Pipeline Architecture
@@ -648,7 +651,10 @@ class SourceLocation:
 4. **Business Rules:** Apply BAR rules (e.g., Negative ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ N/A for Condition)
 5. **Validation:** Validate against BAR schema
 
-### 5.1.3 MinerU Integration
+### 5.1.3 Historical MinerU Integration (Deprecated)
+
+> Superseded by Docling Direct API + orchestrator context injection. Retained only
+> as historical implementation detail for prior epics.
 
 MinerU is used for table extraction due to superior handling of:
 - Complex merged cells
@@ -878,6 +884,62 @@ Returns `{ command_id, status, state: PipelineRunState, log_entries, updated_at 
 - `ThinkingSteps` - Agent reasoning log with timestamps
 
 See `docs/ag-ui-pipeline-spec.md` for complete specification.
+
+### 5.5 Epic 29 Unified Pipeline Contract (Authoritative)
+
+The production extraction contract is now an orchestrator-only flow.
+
+```
+tag_pages -> orchestrate_extraction (always)
+          -> validate_records
+          -> correct_records
+          -> deduplicate_records
+          -> recover_records
+          -> save_records
+```
+
+#### 5.5.1 Routing Rules
+
+- `tag_pages` MUST always route to `orchestrate_extraction`.
+- Documents with missing `building_inventory` MUST use a synthetic whole-document
+  extraction plan and remain on orchestrator path.
+- Legacy `prepare_context -> extract_records` path is removed only after parity
+  and benchmark gates pass.
+
+#### 5.5.2 Fallback Contract
+
+| Condition | Behavior | Expected Result |
+|---|---|---|
+| No building inventory | Create synthetic whole-document plan | Extraction proceeds without branch switch |
+| No Docling tables in range | Continue text-only extraction | Non-fatal degradation, deterministic logs |
+| LLM JSON formatting issues | Parse raw output with resilient JSON parser | Pydantic validation still enforced |
+| Validation failure | Targeted correction retries (max 3) | Deterministic pass/fail outcome |
+
+### 5.6 Capability Registry and Agent Decomposition
+
+Epic 29 introduces explicit capability-driven routing and phased decomposition of the
+monolithic extraction stage:
+
+- Strategy and model capability registry centralizes route selection logic.
+- Table Parser + BAR Mapper become first decomposition units.
+- Context Enricher, Classifier, and Validator execute as bounded enrichment/correction
+  stages.
+- Existing post-extraction quality controls (dedup and recovery) remain compatible.
+
+### 5.7 Benchmark and Gate Telemetry
+
+Epic 29 release control uses benchmark-gated telemetry:
+
+- Baseline harness gate: >=3 benchmark documents with ground-truth comparison.
+- Unified-path parity gate: Broadmeadows 31/31 retained, Alexander baseline retained.
+- Cleanup gate: legacy-path deletion allowed only after no-regression verification.
+- Release gate: benchmark + integration test pass and documentation sync complete.
+
+Telemetry payloads must include:
+- Per-benchmark recall, precision, field accuracy
+- Per-document latency and token usage
+- Correction retry counts and failure reasons
+- Gate pass/fail decisions with timestamped evidence
 
 ---
 
@@ -1744,4 +1806,3 @@ ACM-AI now deploys as two separate Next.js projects on Vercel:
 | `frontend/src/components/acm/` | React components |
 | `frontend/src/lib/api/acm.ts` | API client |
 | `frontend/src/hooks/useACMRecords.ts` | Data hooks |
-

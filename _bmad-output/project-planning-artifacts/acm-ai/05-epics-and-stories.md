@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-26)
-> **Status:** Feature Complete + E22 Post-Audit Remediation Planned
-> **Change Log:** 2026-02-26 — Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 — Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 — Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 — Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted
+> **Date:** 2025-12-07 (Updated: 2026-03-01)
+> **Status:** Epics 1-28 complete; Epic 29 planned (pipeline unification reconciliation)
+> **Change Log:** 2026-03-01 - Epic 29 added (Pipeline Unification, 8 stories, measure-first gates, reconciled from audit + SCP + YAML); 2026-02-28 - Epic 28 closed (36/43 partial-success gate); 2026-02-26 - Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 - Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 - Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 - Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 - E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
 
@@ -30,12 +30,14 @@
 | E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | Done |
 | E19 | Marketing & Stakeholder Presentation | P1 | 1 | Done |
 | E20 | Marketing-App Cross-Site Navigation & Domain Cutover | P0 | 2 | Done |
-| E21 | UX Loading States & Layout Consistency | P1 | 3 | Drafted |
-| E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Drafted |
+| E21 | UX Loading States & Layout Consistency | P1 | 3 | Done |
+| E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Done |
 | E24 | TableFormer Table Structure Recognition | P0 | 4 | Done (superseded — see ADR-001 D7) |
-| E25 | Table Extraction Research Spike — Docling Direct API | P0 | 2 | Done |
+| E25 | Table Extraction Research Spike — Docling Direct API | P0 | 3 | Done |
 | E26 | Docling Direct API Integration | P0 | 7 | Done (PROMOTE — 31/31, flag=true) |
 | E27 | Structured Output Resilience | P1 | 4 | Done |
+| E28 | Alexander District Hospital — Not Sampled Record Recovery | P1 | 3 | Done (partial success gate) |
+| E29 | Pipeline Unification — Unified Agent Pipeline | P0 | 8 | Planned |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -1000,6 +1002,19 @@ E10-S1 (independent)
 | E13-S1 (Graph Schema) | E1-S4 (API, done) | E13-S2 |
 | E13-S2 (Graph API) | E13-S1 | E13-S3 |
 | E13-S3 (React Flow UI) | E13-S2 | - |
+
+### Epic 29 Dependency Chain (Reconciled 2026-03-01)
+
+| Story | Depends On | Blocks | Gate |
+|-------|------------|--------|------|
+| E29-S1 (JSON parser resilience) | - | E29-S2+ | - |
+| E29-S2 (Benchmark harness + baseline) | E29-S1 | E29-S3..E29-S8 | Gate 1 |
+| E29-S3 (Unified orchestrator path) | E29-S1, E29-S2 | E29-S4..E29-S8 | - |
+| E29-S4 (Capability registry + fallback contract) | E29-S3 | E29-S5..E29-S8 | Gate 2 |
+| E29-S5 (Table parser + BAR mapper) | E29-S4 | E29-S6..E29-S8 | - |
+| E29-S6 (Enricher/classifier/validator) | E29-S5 | E29-S7..E29-S8 | Gate 3 |
+| E29-S7 (Validation gate + legacy cleanup) | E29-S6 | E29-S8 | - |
+| E29-S8 (Export hardening + docs alignment) | E29-S7 | Release | Gate 4 |
 
 ---
 
@@ -2625,3 +2640,107 @@ Added `_recover_not_sampled_records_ara()` function for ARA-format "Not Sampled"
 
 ### E28-S3: Validation Gate & Close-out [S — 1 SP] — Done
 Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues (room name format differences, not extraction failures). All 7 items ARE present in extracted data. Report: `docs/reviews/e28-validation-results.md`.
+
+---
+
+## Epic 29: Pipeline Unification — Unified Agent Pipeline (P0)
+
+> **Added:** 2026-03-01 (reconciled)
+> **Status:** Planned
+> **Reference Plan:** `V3/epic-29-pipeline-unification.reconciled.yaml`
+> **Source Reconciliation:** BMAD audit + SCP-20260301 + initial E29 YAML
+> **Total:** 8 stories, 19 SP
+
+**Epic Goal:**
+- Move to one orchestrator path for all documents.
+- Introduce benchmark-gated delivery to prevent regressions.
+- Decompose monolithic extraction into testable agent stages.
+- Remove legacy branch only after parity gates pass.
+
+### Decision Gates
+
+1. **Gate 1 (after E29-S2):** Benchmark harness and baseline report complete for >=3 benchmark docs.
+2. **Gate 2 (after E29-S4):** Unified-path parity confirmed (Broadmeadows 31/31, Alexander baseline maintained).
+3. **Gate 3 (after E29-S6):** Cleanup permission granted only with no unapproved regression.
+4. **Gate 4 (after E29-S8):** Release readiness (benchmarks + integration + docs sync).
+
+### E29-S1: JSON Parser Resilience — Fence/Preamble/Truncation [S — 1 SP]
+**As a** system processing LLM responses,
+**I want** resilient JSON extraction,
+**So that** fenced and prefixed responses parse deterministically.
+
+**Acceptance Criteria:**
+- [ ] Handle fenced JSON, preamble text, multiple blocks, and truncation errors clearly
+- [ ] Preserve backward compatibility for unfenced responses
+- [ ] Unit tests cover all parser edge cases
+
+### E29-S2: Benchmark Harness + Baseline Capture [M — 3 SP]
+**As a** product team,
+**I want** automated benchmark measurement before refactors,
+**So that** architecture changes are gated by evidence.
+
+**Acceptance Criteria:**
+- [ ] Harness runs >=3 benchmark docs with ground truth
+- [ ] Reports recall, precision, field accuracy, latency, and token usage
+- [ ] Baseline report published under `docs/reviews/`
+
+### E29-S3: Unified Orchestrator Path — Remove Runtime Forking [M — 3 SP]
+**As a** system architect,
+**I want** all documents to route through orchestrator,
+**So that** extraction behavior is consistent and maintainable.
+
+**Acceptance Criteria:**
+- [ ] `tag_pages` always routes to `orchestrate_extraction`
+- [ ] Synthetic whole-document plan used when inventory is absent
+- [ ] Legacy branch remains unreachable until cleanup story
+
+### E29-S4: Capability Registry + Fallback Contract [S — 2 SP]
+**As a** platform maintainer,
+**I want** explicit strategy and fallback rules,
+**So that** routing and retry behavior are deterministic.
+
+**Acceptance Criteria:**
+- [ ] Capability/strategy selection centralized and test-covered
+- [ ] Fallback matrix documented and implemented
+- [ ] Gate 2 parity criteria met
+
+### E29-S5: Agent Decomposition I — Table Parser + BAR Mapper [M — 3 SP]
+**As a** developer,
+**I want** table parsing and BAR mapping extracted from the monolith,
+**So that** row extraction and schema mapping are independently testable.
+
+**Acceptance Criteria:**
+- [ ] DataFrame-first row extraction produces raw candidates
+- [ ] BAR mapping is field_schema-driven
+- [ ] Per-agent metrics logged for row and field mapping quality
+
+### E29-S6: Agent Decomposition II — Enricher/Classifier/Validator [M — 3 SP]
+**As a** developer,
+**I want** enrichment/classification/validation split into bounded stages,
+**So that** correction behavior is measurable and maintainable.
+
+**Acceptance Criteria:**
+- [ ] Regex-first classification with targeted LLM fallback
+- [ ] Batched enrichment and deterministic retry limits
+- [ ] Gate 3 criteria satisfied
+
+### E29-S7: Validation Gate + Legacy Dead-Code Cleanup [S — 2 SP]
+**As a** maintainer,
+**I want** legacy path removed only after parity is proven,
+**So that** cleanup cannot silently regress production quality.
+
+**Acceptance Criteria:**
+- [ ] Broadmeadows remains 31/31 after decomposition
+- [ ] Alexander reaches approved threshold and is documented
+- [ ] Legacy `prepare_context/extract_records` path removed
+- [ ] Ruff/pytest pass after cleanup
+
+### E29-S8: Export Hardening + Integration + Documentation Alignment [S — 2 SP]
+**As a** release owner,
+**I want** exports, tests, and planning docs aligned before release,
+**So that** pipeline behavior and documentation remain consistent.
+
+**Acceptance Criteria:**
+- [ ] Per-building and ACM-type exports remain schema-driven
+- [ ] Integration tests cover upload -> extract -> validate -> save -> export
+- [ ] PRD, architecture, epics, and sprint tracker updated to final E29 state
