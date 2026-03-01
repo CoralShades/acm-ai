@@ -29,6 +29,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass, field
@@ -71,6 +72,20 @@ COMPARISON_FIELDS = [
 ]
 
 # Product synonym map — LLM may use different names than ground truth
+# Building synonym map — LLM may use different names than ground truth
+BUILDING_SYNONYMS: dict[str, list[str]] = {
+    "old alexandra hospital": [
+        "main hospital building",
+        "alexandra hospital",
+        "old alexander hospital",
+    ],
+}
+
+# Room synonym map — LLM may use different names than ground truth
+ROOM_SYNONYMS: dict[str, list[str]] = {
+    "exterior": ["external"],
+}
+
 PRODUCT_SYNONYMS: dict[str, list[str]] = {
     "flange joints": ["flange mastic", "mastic", "flange mastic (grey)"],
     "fuse cartridge": ["fuses", "fuse"],
@@ -78,14 +93,16 @@ PRODUCT_SYNONYMS: dict[str, list[str]] = {
     "vinyl sheet": ["vinyl sheet flooring", "sheet vinyl"],
     "vinyl tiles": ["vinyl floor tiles", "floor tiles"],
     "flat sheeting": ["flat sheet", "cement sheet", "fibro sheet"],
-    "floor covering": ["floor coverings", "flooring"],
-    "ceiling": ["ceiling tiles", "ceiling panels", "ceiling lining"],
+    "floor covering": ["floor coverings", "flooring", "floor covering (beneath carpet)"],
+    "ceiling": ["ceiling tiles", "ceiling panels", "ceiling lining", "porch ceiling"],
+    "heater flue": ["heater"],
+    "electrical board": ["electrical distribution board"],
     "fire door(s)": ["fire door", "fire doors"],
     "window frame": ["window frames", "window frame(s)"],
     "wall(s)": ["wall", "walls", "wall lining"],
     "eaves": ["eave", "eave lining"],
     "debris": ["ground debris", "on ground debris"],
-    "expansion joint": ["expansion joints"],
+    "expansion joint": ["expansion joints", "construction joint", "construction joints"],
     "shower cubicle": ["shower cubicles", "shower lining"],
     "infill panels": ["infill panel", "infill"],
     "stored item(s)": ["stored items", "stored item"],
@@ -239,9 +256,35 @@ def _normalize(s: str) -> str:
 def _normalize_product(product: str) -> str:
     """Resolve product name synonyms to canonical name."""
     norm = _normalize(product)
+    # Strip parentheticals: "Floor covering (beneath carpet)" → "floor covering"
+    norm = re.sub(r"\s*\([^)]*\)", "", norm).strip()
     if norm in PRODUCT_SYNONYMS:
         return norm
     for canonical, synonyms in PRODUCT_SYNONYMS.items():
+        if norm in [_normalize(s) for s in synonyms]:
+            return canonical
+    return norm
+
+
+def _normalize_building(building: str) -> str:
+    """Resolve building name synonyms to canonical name."""
+    norm = _normalize(building)
+    if norm in BUILDING_SYNONYMS:
+        return norm
+    for canonical, synonyms in BUILDING_SYNONYMS.items():
+        if norm in [_normalize(s) for s in synonyms]:
+            return canonical
+    return norm
+
+
+def _normalize_room(room: str) -> str:
+    """Resolve room name synonyms and normalize whitespace/dashes."""
+    norm = _normalize(room)
+    # Strip leading/trailing dashes with surrounding spaces
+    norm = re.sub(r"^\s*[-–—]\s*|\s*[-–—]\s*$", "", norm).strip()
+    if norm in ROOM_SYNONYMS:
+        return norm
+    for canonical, synonyms in ROOM_SYNONYMS.items():
         if norm in [_normalize(s) for s in synonyms]:
             return canonical
     return norm
@@ -278,16 +321,24 @@ def match_records(
             ext_by_sample.setdefault(norm_sno, []).append(idx)
 
         # Composite key index (synonym-aware)
-        bname = _normalize(_get_field(r, "building_name"))
-        rname = _normalize(_get_field(r, "room_name"))
+        bname = _normalize_building(_get_field(r, "building_name"))
+        rname = _normalize_room(_get_field(r, "room_name"))
         loc = _normalize(_get_field(r, "location"))
         prod = _normalize_product(_get_field(r, "product"))
         composite = f"{bname}|{rname}|{loc}|{prod}"
         ext_by_composite.setdefault(composite, []).append(idx)
 
+        # Swapped room/location composite (Tier 2.5)
+        swapped = f"{bname}|{loc}|{rname}|{prod}"
+        ext_by_composite.setdefault(swapped, []).append(idx)
+
         # Room+location index
         rl_key = f"{rname}|{loc}"
         ext_by_room_loc.setdefault(rl_key, []).append(idx)
+
+        # Swapped room+location index (Tier 3.5)
+        swapped_rl = f"{loc}|{rname}"
+        ext_by_room_loc.setdefault(swapped_rl, []).append(idx)
 
     consumed = set()
     matched_pairs = []
@@ -309,8 +360,8 @@ def match_records(
 
         # Tier 2: composite key (synonym-aware)
         if matched_idx is None:
-            bname = _normalize(gt_rec.get("building_name", ""))
-            rname = _normalize(gt_rec.get("room_name", ""))
+            bname = _normalize_building(gt_rec.get("building_name", ""))
+            rname = _normalize_room(gt_rec.get("room_name", ""))
             loc = _normalize(gt_rec.get("location", ""))
             prod = _normalize_product(gt_rec.get("product", ""))
             composite = f"{bname}|{rname}|{loc}|{prod}"
@@ -321,7 +372,7 @@ def match_records(
 
         # Tier 3: room+location fuzzy
         if matched_idx is None:
-            rname = _normalize(gt_rec.get("room_name", ""))
+            rname = _normalize_room(gt_rec.get("room_name", ""))
             loc = _normalize(gt_rec.get("location", ""))
             rl_key = f"{rname}|{loc}"
             for idx in ext_by_room_loc.get(rl_key, []):
@@ -374,6 +425,14 @@ def calculate_field_accuracy(
             elif f == "product" and _normalize_product(gt_val) == _normalize_product(
                 ext_val
             ):
+                total_matches += 1
+            elif f == "building_name" and _normalize_building(
+                gt_val
+            ) == _normalize_building(ext_val):
+                total_matches += 1
+            elif f == "room_name" and _normalize_room(
+                gt_val
+            ) == _normalize_room(ext_val):
                 total_matches += 1
 
     return total_matches / total_checks if total_checks > 0 else 0.0

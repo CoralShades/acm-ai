@@ -1489,3 +1489,155 @@ class TestStrategyRegistryIntegration:
         assert len(stats.fallback_activated) == 3
         assert stats.fallback_activated.count("fallback.no_docling_tables") == 2
         assert "fallback.empty_extraction" in stats.fallback_activated
+
+
+# ---------------------------------------------------------------------------
+# R2: RoomMeta Typing Coercion Tests (R2-AC1)
+# ---------------------------------------------------------------------------
+
+
+class TestRoomMetaCoercion:
+    """Tests for _coerce_rooms_in_inventory (R2-T1)."""
+
+    def test_coerces_string_rooms_to_roommeta(self):
+        """String rooms are converted to {room_id, name} dicts."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": ["Room A", "Room B"],
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        rooms = parsed["buildings"][0]["rooms"]
+        assert len(rooms) == 2
+        assert rooms[0] == {"room_id": "Room A", "name": "Room A"}
+        assert rooms[1] == {"room_id": "Room B", "name": "Room B"}
+
+    def test_preserves_dict_rooms(self):
+        """Dict rooms pass through unchanged."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": [
+                        {"room_id": "R001", "name": "Office", "area_m2": 20.0}
+                    ],
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        rooms = parsed["buildings"][0]["rooms"]
+        assert len(rooms) == 1
+        assert rooms[0]["room_id"] == "R001"
+        assert rooms[0]["area_m2"] == 20.0
+
+    def test_handles_mixed_rooms(self):
+        """Mix of strings and dicts are both handled correctly."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": [
+                        "Hallway",
+                        {"room_id": "R002", "name": "Lab"},
+                    ],
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        rooms = parsed["buildings"][0]["rooms"]
+        assert len(rooms) == 2
+        assert rooms[0] == {"room_id": "Hallway", "name": "Hallway"}
+        assert rooms[1]["room_id"] == "R002"
+
+    def test_handles_none_rooms(self):
+        """None rooms default to empty list."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": None,
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        assert parsed["buildings"][0]["rooms"] == []
+
+    def test_handles_missing_rooms_key(self):
+        """Missing rooms key gets defaulted to empty list."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        assert parsed["buildings"][0]["rooms"] == []
+
+    def test_coerced_rooms_validate_as_building_inventory(self):
+        """Coerced string rooms pass BuildingInventory.model_validate()."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": ["External", "Roof Space"],
+                    "complexity": "complex",
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        inv = BuildingInventory.model_validate(parsed)
+        assert len(inv.buildings[0].rooms) == 2
+        assert inv.buildings[0].rooms[0].name == "External"
+        assert inv.buildings[0].rooms[0].room_id == "External"
