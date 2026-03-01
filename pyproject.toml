@@ -48,6 +48,7 @@ dependencies = [
     "docling>=2.75.0",
     "textual>=1.0.0",
     "typer>=0.20.0",
+    "langfuse>=3.14.5",
 ]
 
 [tool.setuptools]
