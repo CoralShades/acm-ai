@@ -1,43 +1,30 @@
-# Progress — E29: Pipeline Unification — Story Split & Sprint Setup
+# Progress — E29-S1: JSON Parser Resilience
 
-## Session: 2026-03-01 (Phase 4)
+## Session: 2026-03-01
 
-### Entry 1 — Setup
-- Loaded prior session planning files (Phase 1-3 complete)
-- Read master story specs, sprint-status.yaml, bmm-workflow-status.yaml
-- Created task list for Phase 4 (split, index, gates, status)
+### Entry 1 — Research & Planning (DONE)
+- Read story spec, execution contract, architecture delta, current `utils.py`
+- Identified 5 callers of `parse_json_response` (backward-compat surface)
+- Found existing tests in `test_qwen_extraction.py:63-113` (7 tests)
+- Bug found: fenced regex uses non-greedy `\{.*?\}` which fails on nested JSON in fences
+- Plan: strip fences first → brace-depth scan → multi-block selection → truncation detection
+- `TruncationError(ValueError)` subclass for backward-compat
 
-### Entry 2 — Story File Split (DONE)
-- Split monolithic e29-story-specs.md into 8 individual files
-- Added standard template sections to each: Story Status, QA Checklist, Post-Dev Notes, Post-QA Notes
-- Resolved threshold wording drift:
-  - Gate 2 floor: Alexander >= 36/43
-  - S7 stretch target: Alexander >= 40/43
-  - S7 PM-approved fallback: >= 36/43 with documented sign-off
-- Threshold clarification box added to S4 and S7 specs
+### Entry 2 — Implementation (DONE)
+- T1: sprint-status.yaml → in-progress, story status → in-progress
+- T2: Added `TruncationError(ValueError)` exception class at utils.py:497
+- T3: Rewrote `parse_json_response()` — strip fences → brace-depth scan → multi-block → truncation
+- T3: Added `_extract_json_objects()` helper — handles strings with escaped quotes and braces
+- T4: Created `tests/test_json_parser.py` — 34 tests across 6 test classes
 
-### Entry 3 — Index + Gate Decisions (DONE)
-- Rewrote e29-story-specs.md as index with links to 8 story files
-- Includes: story table, gate summary, dependency graph, parallelization, threshold reference
-- Created e29-gate-decisions.md with empty Gate 1-4 check sections
-- Each gate has: criteria table, evidence fields, decision field, escalation notes
+### Entry 3 — Verification (DONE)
+- `ruff check .` — All checks passed
+- `pytest tests/test_json_parser.py -x -v` — 34/34 passed (25.34s)
+- `pytest tests/test_qwen_extraction.py::TestParseJsonResponse -x -v` — 7/7 passed (5.64s)
 
-### Entry 4 — Sprint Status Updates (DONE)
-- sprint-status.yaml: epic-29 → in-progress, S1/S2 → ready-for-dev, S3-S8 → drafted
-- bmm-workflow-status.yaml: appended E29 planning package changelog (PM+Architect+SM)
+### Entry 4 — Documentation & Status (DONE)
+- Updated story Post-Dev Notes with implementation summary, test evidence, risks
+- Set sprint-status → review
+- Created `e29-worklog.md`
 
-### STATUS: COMPLETE
-
-## Changed Files
-1. `docs/sprint-artifacts/e29-s1-json-parser-resilience.md` (NEW)
-2. `docs/sprint-artifacts/e29-s2-benchmark-harness-baseline-capture.md` (NEW)
-3. `docs/sprint-artifacts/e29-s3-unified-orchestrator-path.md` (NEW)
-4. `docs/sprint-artifacts/e29-s4-capability-registry-fallback-contract.md` (NEW)
-5. `docs/sprint-artifacts/e29-s5-agent-decomposition-table-parser-bar-mapper.md` (NEW)
-6. `docs/sprint-artifacts/e29-s6-agent-decomposition-enricher-classifier-validator.md` (NEW)
-7. `docs/sprint-artifacts/e29-s7-validation-gate-legacy-cleanup.md` (NEW)
-8. `docs/sprint-artifacts/e29-s8-export-hardening-integration-doc-alignment.md` (NEW)
-9. `docs/sprint-artifacts/e29-gate-decisions.md` (NEW)
-10. `docs/sprint-artifacts/e29-story-specs.md` (REWRITTEN as index)
-11. `docs/sprint-artifacts/sprint-status.yaml` (MODIFIED)
-12. `_bmad-output/project-planning-artifacts/acm-ai/bmm-workflow-status.yaml` (MODIFIED)
+### STATUS: COMPLETE — Ready for QA

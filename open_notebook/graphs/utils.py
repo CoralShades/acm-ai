@@ -494,44 +494,101 @@ def _is_qwen_model(model: "BaseChatModel") -> bool:
 
 
 
+class TruncationError(ValueError):
+    """Raised when JSON is structurally incomplete (truncated by LLM output limit)."""
+
+    pass
+
+
+def _extract_json_objects(text: str) -> tuple[list[str], bool]:
+    """Extract all complete top-level JSON objects and detect truncation.
+
+    Returns:
+        (list of complete JSON object strings, truncated flag)
+    """
+    objects: list[str] = []
+    i = 0
+    n = len(text)
+    truncated = False
+    while i < n:
+        if text[i] == "{":
+            start = i
+            depth = 0
+            in_string = False
+            j = i
+            while j < n:
+                c = text[j]
+                if in_string:
+                    if c == "\\" and j + 1 < n:
+                        j += 2
+                        continue
+                    if c == '"':
+                        in_string = False
+                else:
+                    if c == '"':
+                        in_string = True
+                    elif c == "{":
+                        depth += 1
+                    elif c == "}":
+                        depth -= 1
+                        if depth == 0:
+                            objects.append(text[start : j + 1])
+                            break
+                j += 1
+            else:
+                # Hit EOF with open braces — truncated JSON
+                truncated = True
+            i = j + 1
+        else:
+            i += 1
+    return objects, truncated
+
+
 def parse_json_response(response_text: str) -> dict[str, Any]:
     """Extract and parse a JSON object from LLM response text.
 
-    Tries fenced ```json blocks first, then falls back to raw brace-depth
-    matching. Returns the parsed dict. Raises ValueError if no JSON found
-    or if the extracted structure is not valid JSON.
-    """
-    # Try ```json ... ``` blocks first
-    json_match = re.search(
-        r"```(?:json)?\s*\n?(\{.*?\})\s*\n?```",
-        response_text,
-        re.DOTALL,
-    )
-    if json_match:
-        try:
-            return json.loads(json_match.group(1))
-        except json.JSONDecodeError as e:
-            raise ValueError(
-                f"Found JSON-like structure but failed to parse: {e}"
-            ) from e
+    Resilient parser that handles:
+    - Markdown fences (```json ... ```)
+    - Conversational preamble/suffix text
+    - Multiple JSON blocks (returns the largest valid object)
+    - Truncated JSON (raises TruncationError)
 
-    # Fall back to raw brace-depth matching
-    brace_start = response_text.find("{")
-    if brace_start >= 0:
-        depth = 0
-        for idx, c in enumerate(response_text[brace_start:]):
-            if c == "{":
-                depth += 1
-            elif c == "}":
-                depth -= 1
-                if depth == 0:
-                    json_str = response_text[brace_start : brace_start + idx + 1]
-                    try:
-                        return json.loads(json_str)
-                    except json.JSONDecodeError as e:
-                        raise ValueError(
-                            f"Found JSON-like structure but failed to parse: {e}"
-                        ) from e
+    Returns the parsed dict. Raises ValueError if no JSON found,
+    or TruncationError if JSON is structurally incomplete.
+    """
+    # Step 1: Strip markdown fence markers
+    stripped = re.sub(r"```(?:json|JSON)?\s*\n?", "", response_text)
+    # Also strip trailing ``` that aren't part of a fence open
+    stripped = stripped.replace("```", "")
+
+    # Step 2: Extract all complete JSON objects via brace-depth scan
+    candidates, truncated = _extract_json_objects(stripped)
+
+    # Step 3: Try to parse each candidate, keep valid dicts
+    valid: list[tuple[dict[str, Any], str]] = []
+    for raw in candidates:
+        try:
+            obj = json.loads(raw)
+            if isinstance(obj, dict):
+                valid.append((obj, raw))
+        except json.JSONDecodeError:
+            continue
+
+    # Step 4: Return largest valid object
+    if valid:
+        # Select by serialized length (deterministic)
+        best = max(valid, key=lambda pair: len(pair[1]))
+        return best[0]
+
+    # Step 5: No valid objects — check for truncation
+    if truncated:
+        # Find the incomplete JSON for error context
+        brace_start = stripped.find("{")
+        preview = stripped[brace_start : brace_start + 100] if brace_start >= 0 else ""
+        raise TruncationError(
+            f"JSON is truncated (incomplete braces at end of response). "
+            f"Preview: {preview!r}..."
+        )
 
     raise ValueError("No JSON object found in response text")
 
