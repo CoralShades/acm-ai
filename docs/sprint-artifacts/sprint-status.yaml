@@ -390,7 +390,7 @@ development_status:
   e29-s8-export-hardening-integration-doc-alignment: drafted  # Phase 4. 2 SP. BLOCKED by Gate 2 FAIL (transitive via S5→S6→S7). Export filtering, E2E tests, doc alignment. Gate 4 exit.
   # --- Gate 2 Recovery Stories (PM-authorized 2026-03-01) ---
   e29-r1-benchmark-fidelity: review  # Recovery. 2 SP. Seed Docling tables, improve matching normalization, pin baseline artifacts. Must complete before R2.
-  e29-r2-match-gap-remediation: drafted  # Recovery. 2 SP. Fix RoomMeta typing, normalize room/location names, improve material matching. Depends on R1. Gate 2 rerun after completion.
+  e29-r2-match-gap-remediation: review  # Recovery. 2 SP. Fix RoomMeta typing, normalize room/location names, improve material matching. Depends on R1. Gate 2 rerun: Broadmeadows 30/31, Alexander 42/43.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook

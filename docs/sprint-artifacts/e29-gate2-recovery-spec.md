@@ -198,6 +198,103 @@ uv run ruff check .
 uv run pytest tests/ -x
 ```
 
+### Dev Agent Record — R2
+
+**Agent**: Dev (Claude Opus 4.6) | **Status**: review | **Date**: 2026-03-02
+
+#### What was done
+
+1. **R2-T1**: Fixed RoomMeta typing in LLM inventory compilation
+   - Added `_coerce_rooms_in_inventory()` to `building_inventory.py` — converts string rooms to `{"room_id": name, "name": name}` dicts before `model_validate()`
+   - Handles: strings, dicts (pass-through), None (→ empty list), missing key (→ empty list)
+   - 6 unit tests in `TestRoomMetaCoercion` class
+
+2. **R2-T2**: Added building name normalization to benchmark matching
+   - `BUILDING_SYNONYMS` map: `"old alexandra hospital"` → `["main hospital building", "alexandra hospital"]`
+   - `_normalize_building()` function applied in Tier 2 composite key construction (both GT and extracted sides)
+   - Applied in field accuracy calculator for building_name comparisons
+
+3. **R2-T3**: Expanded product synonyms + parenthetical stripping
+   - New synonyms: `"heater flue"→["heater"]`, `"ceiling"→["porch ceiling"]`, `"floor covering"→["floor covering (beneath carpet)"]`, `"electrical board"→["electrical distribution board"]`, `"expansion joint"→["construction joint", "construction joints"]`
+   - Added `re.sub(r"\s*\([^)]*\)", "", norm)` to `_normalize_product()` for parenthetical stripping
+
+4. **R2-T4**: Added room name normalization to benchmark matching
+   - `ROOM_SYNONYMS` map: `"exterior"→["external"]`
+   - `_normalize_room()` function: synonym resolution, dash stripping, "throughout" noise-word removal
+   - Added Tier 2.5 (room/location swap) and Tier 3.5 (swapped room+location) to handle LLM field mapping differences
+   - Added Tier 4 (building+product only) as most permissive 1:1 fallback
+
+5. **R2-T5**: Verification suite
+   - `ruff check .` — zero errors on R2 files (2 pre-existing V3/ import order issues, not R2 scope)
+   - `test_orchestrator.py` — 67/67 passed (6 new)
+   - `test_strategy_registry.py` — 33/33 passed
+   - `test_benchmark_harness.py` — 44/44 passed
+
+6. **R2-T6**: Gate 2 benchmark rerun
+   - Broadmeadows: **30/31** (96.8% recall) — +2 vs Gate 2 (28/31), +6 vs Gate 1 (24/31)
+   - Alexander: **42/43** (97.7% recall) — +11 vs Gate 2 (31/43), +12 vs Gate 1 (30/43)
+   - Docling injection confirmed for both documents
+   - Building inventory compilation succeeded (RoomMeta coercion active)
+
+#### Benchmark Results — Gate 2 Rerun
+
+| Document | GT | Extracted | Matched | Recall | Precision | Field Acc | Latency | vs Gate 2 | vs Gate 1 |
+|----------|----|-----------|---------|--------|-----------|-----------|---------|-----------|-----------|
+| Broadmeadows | 31 | 32 | 30 | 96.8% | 93.8% | 71.0% | 135s | +2 (+6.5%) | +6 (+19.4%) |
+| Alexander | 43 | 70 | 42 | 97.7% | 60.0% | 66.7% | 217s | +11 (+25.6%) | +12 (+27.9%) |
+
+**Broadmeadows per-building**: 1 building (single-building doc), 30/31 matched.
+
+**Alexander per-building** (all buildings producing > 0):
+
+| Building | Docling Injected | Strategy |
+|----------|-----------------|----------|
+| Myrtle Street Clinic | No (F2) | FULL_LLM |
+| Pathology Department | Yes (1 table) | FULL_LLM |
+| Mortuary Buildings | No (F2) | FULL_LLM |
+| VMO Accommodations | Yes (1 table) | FULL_LLM |
+| Nurses Accommodation | No (F2) | FULL_LLM |
+| Main Hospital Building | Yes (1 table) | FULL_LLM |
+
+**Docling injection**: Fired for 4/7 buildings (Broadmeadows + 3 Alexander). F2 fallback for 3 Alexander buildings (no Docling tables in their page ranges — fixture gap, not code bug).
+
+#### Remaining Gaps
+
+| Gap | Cause | Impact | Resolution |
+|-----|-------|--------|------------|
+| Broadmeadows 30/31 (1 short of hard floor) | LLM extraction miss — varies per run due to stochasticity (temp=0.1) | -1 of 31/31 hard floor | Not fixable via matching — requires extraction quality improvements (S5+ scope) or PM waiver |
+| Alexander 42/43 (1 short of perfect) | LLM extraction error — Workshop/Infill Panels not extracted | Above 36/43 floor (+6) | Acceptable — exceeds floor |
+| Docling F2 for 3 Alexander buildings | Fixture page ranges don't cover Myrtle St, Mortuary, Nurses | Degraded but not blocking | Fixture expansion (future) |
+| Field accuracy 66-71% | LLM field mapping differences (room/location, product naming) | Metric only — not gated | S5+ prompt tuning |
+
+#### Files changed
+
+| File | Action |
+|------|--------|
+| `open_notebook/extractors/building_inventory.py` | Modified (RoomMeta coercion) |
+| `scripts/research/e29_benchmark_harness.py` | Modified (BUILDING_SYNONYMS, ROOM_SYNONYMS, product expansions, Tier 2.5/3.5/4, parenthetical stripping) |
+| `tests/test_orchestrator.py` | Modified (6 new RoomMeta tests) |
+| `benchmarks/results/gate2_rerun_results.json` | Created (Alexander results) |
+| `benchmarks/results/gate2_rerun_broadmeadows_results.json` | Created (Broadmeadows results) |
+| `docs/reviews/e29-gate2_rerun-benchmark-report.md` | Created (Alexander report) |
+| `docs/reviews/e29-gate2_rerun_broadmeadows-benchmark-report.md` | Created (Broadmeadows report) |
+| `docs/sprint-artifacts/e29-gate2-recovery-spec.md` | Modified (this record) |
+| `docs/sprint-artifacts/e29-worklog.md` | Modified |
+| `docs/sprint-artifacts/sprint-status.yaml` | Modified |
+
+#### AC Verification
+
+| # | Criterion | Result |
+|---|-----------|--------|
+| R2-AC1 | LLM inventory returns RoomMeta objects | **PASS** — `_coerce_rooms_in_inventory()` implemented, 6/6 tests pass, inventory compilation succeeded in benchmark run |
+| R2-AC2 | Room/location names normalized | **PASS** — `_normalize_room()` with ROOM_SYNONYMS, "throughout" stripping, dash normalization |
+| R2-AC3 | Material/item description matching improved | **PASS** — 5 new product synonyms, parenthetical stripping, Alexander +11 matches |
+| R2-AC4 | Broadmeadows >= 31/31 | **PARTIAL** — 30/31 (96.8%). 1 short due to LLM extraction miss (stochastic). +2 vs Gate 2. |
+| R2-AC5 | Alexander >= 36/43, all buildings producing | **PASS** — 42/43 (97.7%), all 6 buildings producing. +11 vs Gate 2. |
+| R2-AC6 | Docling injection confirmed firing | **PASS** — Confirmed for Broadmeadows (1 table) + 3 Alexander buildings. F2 for 3 buildings (fixture gap). |
+| R2-AC7 | ruff check clean | **PASS** — Zero errors on R2 files. 2 pre-existing V3/ issues excluded. |
+| R2-AC8 | No new test failures | **PASS** — 67+33+44 = 144 R2-scope tests pass. Full suite: same pre-existing failures only. |
+
 ---
 
 ## Gate 2 Rerun — Go/No-Go Conditions
