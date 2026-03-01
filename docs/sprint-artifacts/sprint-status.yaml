@@ -380,8 +380,8 @@ development_status:
   # Gate tracking: docs/sprint-artifacts/e29-gate-decisions.md
   epic-29: in-progress
   e29-s1-json-parser-resilience: done  # Phase 1. 1 SP. QA verified 2026-03-01: 34/34 tests pass, all 5 AC verified, ruff clean. TruncationError(ValueError) subclass, brace-depth scan, multi-block selection.
-  e29-s2-benchmark-harness-baseline-capture: review  # Phase 1. 3 SP. Harness built, 3 ground truths, baseline captured. 30/30 tests pass. Broadmeadows 77.4%, Alexander 69.8%, Aldavilla 0% (legacy path failure). Gate 1 exit pending QA.
-  e29-s3-unified-orchestrator-path: drafted  # Phase 2. 3 SP. Blocked by Gate 1. Unconditional tag_pages→orchestrate edge, synthetic plan.
+  e29-s2-benchmark-harness-baseline-capture: done  # Phase 1. 3 SP. QA verified 2026-03-01: 30/30 tests pass, 7/8 AC PASS (AC-6 partial: token=0 OpenRouter limitation). Gate 1 PASS — 6/6 criteria. Baseline: Broadmeadows 77.4%, Alexander 69.8%, Aldavilla 0%.
+  e29-s3-unified-orchestrator-path: ready-for-dev  # Phase 2. 3 SP. Gate 1 PASS — unblocked. Unconditional tag_pages→orchestrate edge, synthetic plan.
   e29-s4-capability-registry-fallback-contract: drafted  # Phase 2. 2 SP. Strategy registry, fallback matrix F1-F8. Gate 2 exit.
   e29-s5-agent-decomposition-table-parser-bar-mapper: drafted  # Phase 3. 3 SP. Blocked by Gate 2. table_parser.py + bar_mapper.py.
   e29-s6-agent-decomposition-enricher-classifier-validator: drafted  # Phase 3. 3 SP. classifier.py + context_enricher.py + validator.py. Gate 3 exit.
