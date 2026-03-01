@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from loguru import logger
 
@@ -96,6 +96,7 @@ class PipelineLogger:
         source_id: str,
         total_pages: int = 0,
         command_id: Optional[str] = None,
+        emit_custom_events: bool = False,
     ) -> None:
         self.run_id = str(uuid.uuid4())[:8]
         self.source_id = source_id
@@ -114,6 +115,7 @@ class PipelineLogger:
             total_pages=total_pages,
         )
         self._pipeline_start = time.monotonic()
+        self._emit_custom_events = emit_custom_events
 
         # Emit pipeline start banner
         start_msg = f"Starting extraction for {source_id} ({total_pages} pages)"
@@ -209,6 +211,22 @@ class PipelineLogger:
             # DB persistence is best-effort — don't break the pipeline
             logger.warning(f"[PIPELINE] Failed to persist state: {e}")
 
+    def _emit_custom_event(self, event_type: str, payload: Dict[str, Any]) -> None:
+        """Emit a LangChain custom event for optional Langfuse bridging.
+
+        Non-fatal by design: observability must never block extraction flow.
+        """
+
+        if not self._emit_custom_events:
+            return
+
+        try:
+            from open_notebook.observability.langfuse_bridge import emit_pipeline_event
+
+            emit_pipeline_event(event_type, payload)
+        except Exception as e:
+            logger.debug(f"[PIPELINE] Custom event dispatch skipped: {e}")
+
     # ------------------------------------------------------------------
     # Stage lifecycle
     # ------------------------------------------------------------------
@@ -225,6 +243,15 @@ class PipelineLogger:
         stage.message = display_msg
 
         self._log(f"[PIPELINE] [{prefix}] STARTED | {display_msg}")
+        self._emit_custom_event(
+            "stage_enter",
+            {
+                "run_id": self.run_id,
+                "source_id": self.source_id,
+                "stage_id": stage_id.value,
+                "message": display_msg,
+            },
+        )
         self._schedule_persist()
 
     def stage_progress(
@@ -246,6 +273,17 @@ class PipelineLogger:
         for k, v in metrics.items():
             parts.append(f"{k}={v}")
         self._log(" | ".join(parts))
+        self._emit_custom_event(
+            "stage_progress",
+            {
+                "run_id": self.run_id,
+                "source_id": self.source_id,
+                "stage_id": stage_id.value,
+                "message": message,
+                "progress": progress,
+                "metrics": metrics,
+            },
+        )
         self._schedule_persist()
 
     def stage_complete(
@@ -276,6 +314,17 @@ class PipelineLogger:
         for k, v in metrics.items():
             parts.append(f"{k}={v}")
         self._log(" | ".join(parts))
+        self._emit_custom_event(
+            "stage_complete",
+            {
+                "run_id": self.run_id,
+                "source_id": self.source_id,
+                "stage_id": stage_id.value,
+                "summary": summary,
+                "duration_ms": duration_ms,
+                "metrics": metrics,
+            },
+        )
         self._schedule_persist()
 
     def stage_fail(
@@ -321,6 +370,18 @@ class PipelineLogger:
             f"[PIPELINE] [{prefix}] FAILED in {duration_s:.1f}s | [{error_category}] {error}",
             level="error",
         )
+        self._emit_custom_event(
+            "stage_fail",
+            {
+                "run_id": self.run_id,
+                "source_id": self.source_id,
+                "stage_id": stage_id.value,
+                "error": error,
+                "error_category": error_category,
+                "duration_ms": duration_ms,
+                "records_affected": records_affected,
+            },
+        )
         self._schedule_persist()
 
     def stage_skip(self, stage_id: StageId, reason: str = "") -> None:
@@ -331,6 +392,15 @@ class PipelineLogger:
         stage.message = reason or "Skipped"
 
         self._log(f"[PIPELINE] [{prefix}] SKIPPED | {reason}")
+        self._emit_custom_event(
+            "stage_skip",
+            {
+                "run_id": self.run_id,
+                "source_id": self.source_id,
+                "stage_id": stage_id.value,
+                "reason": reason,
+            },
+        )
         self._schedule_persist()
 
     # ------------------------------------------------------------------
@@ -398,6 +468,22 @@ class PipelineLogger:
             self._log(f"[PIPELINE]   Strategy: {strat_str}")
         self._log(f"[PIPELINE] {sep}")
 
+        self._emit_custom_event(
+            "pipeline_complete",
+            {
+                "run_id": self.run_id,
+                "source_id": self.source_id,
+                "total_duration_ms": total_duration_ms,
+                "total_records": total_records,
+                "records_rejected": records_rejected,
+                "records_unidentified": records_unidentified,
+                "total_chunks": total_chunks,
+                "total_buildings": total_buildings,
+                "confidence_distribution": confidence_distribution or {},
+                "strategy_distribution": strategy_distribution or {},
+            },
+        )
+
         self._schedule_persist()
         return self._state
 
@@ -417,6 +503,16 @@ class PipelineLogger:
             level="error",
         )
         self._log(f"[PIPELINE] {sep}", level="error")
+
+        self._emit_custom_event(
+            "pipeline_fail",
+            {
+                "run_id": self.run_id,
+                "source_id": self.source_id,
+                "total_duration_ms": total_duration_ms,
+                "error": error,
+            },
+        )
 
         self._schedule_persist()
         return self._state

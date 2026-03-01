@@ -12,6 +12,12 @@ from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.observability.langfuse_config import (
+    append_langfuse_callback,
+    build_langfuse_metadata,
+    flush_langfuse_handler,
+    get_langfuse_handler,
+)
 
 DOCLING_DIRECT_TABLE_EXTRACTION = (
     os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "true").lower() == "true"
@@ -85,7 +91,9 @@ async def _extract_tables_with_docling(
     pipeline_options.table_structure_options.do_cell_matching = True
 
     converter = DocumentConverter(
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+        }
     )
 
     result = converter.convert(pdf_path)
@@ -145,15 +153,11 @@ async def _extract_tables_with_docling(
             total_rows=sum(t["rows"] for t in tables),
         )
 
-    logger.info(
-        f"Docling Direct API: {len(tables)} tables extracted from {pdf_path}"
-    )
+    logger.info(f"Docling Direct API: {len(tables)} tables extracted from {pdf_path}")
     return tables
 
 
-async def _store_docling_tables(
-    source_id: str, tables: List[Dict[str, Any]]
-) -> None:
+async def _store_docling_tables(source_id: str, tables: List[Dict[str, Any]]) -> None:
     """Store Docling DataFrame tables in acm_table_section."""
     for table in tables:
         await repo_create(
@@ -225,16 +229,46 @@ async def process_source_command(
         # 3. Process source with all notebooks
         logger.info(f"Processing source with {len(input_data.notebook_ids)} notebooks")
 
-        # Execute source_graph with all notebooks
-        result = await source_graph.ainvoke(
-            {  # type: ignore[arg-type]
-                "content_state": input_data.content_state,
-                "notebook_ids": input_data.notebook_ids,  # Use notebook_ids (plural) as expected by SourceState
-                "apply_transformations": transformations,
-                "embed": input_data.embed,
-                "source_id": input_data.source_id,  # Add the source_id to the state
-            }
+        langfuse_handler = get_langfuse_handler()
+        callbacks = append_langfuse_callback([], langfuse_handler)
+        invoke_metadata = build_langfuse_metadata(
+            source_id=input_data.source_id,
+            extraction_model="source_graph",
+            document_type="source_processing",
+            command_id=str(input_data.execution_context.command_id)
+            if input_data.execution_context
+            else None,
+            extra_metadata={"workflow": "source_graph"},
         )
+
+        # Execute source_graph with all notebooks
+        try:
+            if callbacks:
+                result = await source_graph.ainvoke(
+                    {  # type: ignore[arg-type]
+                        "content_state": input_data.content_state,
+                        "notebook_ids": input_data.notebook_ids,  # Use notebook_ids (plural) as expected by SourceState
+                        "apply_transformations": transformations,
+                        "embed": input_data.embed,
+                        "source_id": input_data.source_id,  # Add the source_id to the state
+                    },
+                    config={
+                        "callbacks": callbacks,
+                        "metadata": invoke_metadata,
+                    },
+                )
+            else:
+                result = await source_graph.ainvoke(
+                    {  # type: ignore[arg-type]
+                        "content_state": input_data.content_state,
+                        "notebook_ids": input_data.notebook_ids,  # Use notebook_ids (plural) as expected by SourceState
+                        "apply_transformations": transformations,
+                        "embed": input_data.embed,
+                        "source_id": input_data.source_id,  # Add the source_id to the state
+                    }
+                )
+        finally:
+            flush_langfuse_handler(langfuse_handler)
 
         processed_source = result["source"]
 

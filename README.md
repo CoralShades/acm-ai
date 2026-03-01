@@ -165,6 +165,19 @@ cd frontend && npm run dev            # Frontend on port 8502
 ```
 uv run run_api.py --import-modules commands
 
+#### LangGraph Studio (Pipeline Visual Debugging)
+
+Use LangGraph Studio to inspect the compiled ACM extraction graph, step through node execution, and inspect state transitions.
+
+```bash
+pip install langgraph-cli
+langgraph dev
+```
+
+- The local server hot-reloads graph changes.
+- Studio URL is printed by `langgraph dev`.
+- LangGraph Studio web requires a free LangSmith login for access.
+
 #### Docker-Only Development
 ```bash
 # Full containerized development with hot-reload:

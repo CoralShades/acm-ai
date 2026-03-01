@@ -1,91 +1,55 @@
-# Findings — E29-S4 Capability Registry + Fallback Contract
+# Gate 2 Validation — Findings
 
-## Date: 2026-03-01 | Agent: Amelia (Dev)
-
----
-
-## Fallback Matrix Mapping (Architecture Delta § 3.1 → Code)
-
-| Fallback | Condition | Current Code Location | S4 Change |
-|----------|-----------|----------------------|-----------|
-| F1 | No inventory | `orchestrator.py:937` — creates SyntheticExtractionPlan | Add `emit_fallback_telemetry(F1, ...)` |
-| F2 | No Docling tables | `orchestrator.py:681-684` — `if docling_tables:` check | Add `emit_fallback_telemetry(F2, ...)` on else branch |
-| F3 | JSON parse failure | `orchestrator.py:569-574` — `ValueError/ValidationError` catch | Add `emit_fallback_telemetry(F3, ...)` in except |
-| F4 | Zero records | `orchestrator.py:1020-1035` — 0-record warning | Add `emit_fallback_telemetry(F4, ...)` |
-| F5 | Validation failure | `acm_extraction.py:2106` — `not validation.is_valid` | Telemetry tag on correction entry |
-| F6 | Correction exhausted | `acm_extraction.py:2085` — `attempt >= max_attempts` | Telemetry tag when cap hit |
-| F7 | LLM 5xx/timeout | `orchestrator.py:576-649` — exception handler | Add `emit_fallback_telemetry(F7, ...)` |
-| F8 | Docling extraction failure | `source_commands.py` Docling section | Already has `except` — add telemetry tag |
+## Date: 2026-03-01 | Evaluator: Quinn (BMAD QA)
 
 ---
 
-## Retry Contract — Current vs Target
+## Gate 2 Verdict: FAIL (2/5 criteria pass)
 
-| Aspect | Current | Target (S4) |
-|--------|---------|-------------|
-| Max correction attempts | `max_correction_attempts=2` in `should_correct()` | `max_retries=3` per AC-5 |
-| LLM retry | No explicit retry on 5xx | 1 retry with 5s backoff (F7) |
-| Backoff type | None | Fixed 5s (not exponential) |
-| Retry budget check | Inline `attempt >= max_attempts` | Centralized `check_retry_budget()` in registry |
+### Results Summary
 
-**Key change**: `should_correct()` at `acm_extraction.py:2083` uses `max_correction_attempts=2` default. Must change to `3` per AC-5. The registry codifies this but the actual enforcement remains in `should_correct()`.
+| # | Criterion | Result | Evidence |
+|---|-----------|--------|----------|
+| G2.1 | Broadmeadows >= 31/31 | **FAIL** (28/31) | 90.3% recall. Improved +4 from Gate 1 (24/31). |
+| G2.2 | Alexander >= 36/43 | **FAIL** (31/43) | 72.1% recall. Improved +1 from Gate 1 (30/43). 6/6 buildings producing. |
+| G2.3 | Docling injection confirmed | **NOT TESTED** | F2 fallback fired for ALL buildings — no Docling tables in benchmark DB. Unit test passes. |
+| G2.4 | Fallback contract tested | **PASS** | 33/33 registry tests + 61/61 orchestrator tests. |
+| G2.5 | Synthetic plan tested | **PASS** | 4 synthetic plan tests pass. E2E confirmed for Broadmeadows. |
 
----
+### Critical Finding: No Regression
 
-## Strategy Registry Design
+The execution contract's fail action for G2.1 is "STOP — file regression bug, rollback S3 changes". However, **there is no regression** — both documents improved from the Gate 1 baseline. The unified path is strictly better than the dual-path baseline.
 
-The registry is a **lookup table**, not an abstraction layer. Key design decisions:
+### Root Causes for Match Shortfall
 
-1. **FallbackId enum** with string values matching telemetry tags: `F1="fallback.no_inventory"`, etc.
-2. **FallbackContract** is a frozen dataclass (immutable) with all fields from arch delta § 3.1
-3. **FALLBACK_MATRIX** is a module-level `dict[FallbackId, FallbackContract]` — no dynamic construction
-4. **`emit_fallback_telemetry()`** uses `loguru.logger.info()` with structured dict for grep-ability
-5. **`select_strategy()`** wraps existing `_select_strategy()` logic — no behavior change, just centralization
-6. **`check_retry_budget()`** is a pure function: `attempt < contract.max_retries`
+1. **No Docling tables in benchmark DB** — The benchmark harness does not pre-populate Docling tables. F2 (no_docling_tables) fired for ALL buildings. Extraction ran without table injection.
+2. **LLM inventory compilation failing** — Both documents had validation errors (rooms as strings not RoomMeta). Fell back to heuristic inventory.
+3. **Matching algorithm strictness** — Some extracted records are semantically correct but don't match due to exact-field comparison (e.g., casing, product description variants).
 
----
+### OpenRouter Provider Verification
 
-## Integration Points (orchestrator.py changes)
+**PASS** — Anthropic hard-locked:
+- `OPENROUTER_ALLOWED_PROVIDERS = ["Anthropic"]` at `utils.py:28`
+- `allow_fallbacks=False` at `utils.py:70`
+- All benchmark LLM calls routed through `openrouter/anthropic/claude-sonnet-4.6`
+- `_verify_provider_routing()` called at all LLM sites (6 call sites verified)
+- `test_openrouter_provider_routing.py`: 43/43 pass
 
-1. **`orchestrate_extraction()`** line 937-965: F1 synthetic plan → add `emit_fallback_telemetry(F1)`
-2. **`extract_building()`** line 677-695: F2 no Docling tables → add `emit_fallback_telemetry(F2)` in else branch
-3. **`_llm_extract_building()`** line 569-574: F3 JSON parse → add `emit_fallback_telemetry(F3)` in except
-4. **`_llm_extract_building()`** line 576-649: F7 LLM error → add `emit_fallback_telemetry(F7)`
-5. **`orchestrate_extraction()`** line 1020-1035: F4 zero records → add `emit_fallback_telemetry(F4)`
-6. **`should_correct()`** in acm_extraction.py: F5/F6 correction loop → update max_attempts, add telemetry
-7. **Return value**: Add `fallback_activated: list[str]` to orchestrator output dict
+### Test Suite Status
 
----
+| Test File | Result |
+|-----------|--------|
+| `test_strategy_registry.py` | 33/33 pass |
+| `test_orchestrator.py` | 61/61 pass |
+| `test_openrouter_provider_routing.py` | 43/43 pass |
+| `test_benchmark_harness.py` | 30/30 pass |
+| Full suite | 1212 pass, 13 fail (pre-existing), 2 xfail |
+| `ruff check .` | All checks passed |
 
-## Risk: Minimal Behavior Change
+### Recommendation
 
-S4 is purely **additive** — it adds:
-- A new file (`strategy_registry.py`)
-- Structured log emissions at existing decision points
-- A retry cap change from 2 → 3
-- Metadata fields for fallback tracking
+The gate FAILS against stated thresholds, but the no-regression finding means S3 changes should NOT be rolled back. Options for PM:
 
-No routing logic changes. No extraction behavior changes. The benchmark numbers should be identical to post-S3 baseline.
-
----
-
-## acm_schemas.py Changes (Minimal)
-
-The story spec says T4 = "Update `acm_schemas.py` with strategy metadata fields" (~15 lines). Analysis:
-
-- `BuildingExtractionStats` (in `orchestrator.py`) already has `strategy_used: str`. Add optional `fallback_tags: list[str]` field.
-- `OrchestratorStats` (in `orchestrator.py`) — add `fallback_activated: list[str]` for aggregate tracking.
-- No changes needed to `ACMExtractionRecord` itself.
-- Could add a small `StrategyMetadata` model in `acm_schemas.py` but that's over-engineering. Keep it simple: just list[str] fields on existing models.
-
----
-
-## Gate 2 Readiness Pre-Check
-
-| # | Criterion | Pre-S4 Status | S4 Adds |
-|---|-----------|---------------|---------|
-| G2.1 | Broadmeadows >= 31/31 | Must verify post-S3 | No behavior change → same result expected |
-| G2.2 | Alexander >= 36/43 all buildings | Must verify post-S3 | No behavior change → same result expected |
-| G2.3 | Docling injection confirmed | Working (S3 did not change) | No change |
-| G2.4 | Fallback contract tested | NOT YET | **S4 delivers this** |
-| G2.5 | Synthetic plan for no-inventory | Working (S3 added) | Telemetry tag added |
+1. **Lower thresholds** — Accept current numbers as the unified-path baseline, PASS gate, proceed to S5
+2. **Defer and investigate** — Keep FAIL, investigate Docling table population in benchmark DB and matching algorithm
+3. **Conditional pass** — PASS G2 with a caveat that G3 must meet original thresholds after agent decomposition

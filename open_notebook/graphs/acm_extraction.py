@@ -81,6 +81,12 @@ from open_notebook.graphs.utils import (
     provision_extraction_fallback_model,
     provision_langchain_model,
 )
+from open_notebook.observability.langfuse_config import (
+    append_langfuse_callback,
+    build_langfuse_metadata,
+    flush_langfuse_handler,
+    get_langfuse_handler,
+)
 from open_notebook.utils import token_count
 
 # Constants
@@ -471,7 +477,9 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
         (record.material_description or "")[:50].encode()
     ).hexdigest()[:8]
 
-    return f"{school}_{building}_{area}_{room}_{product}_{location}_{sample}_{desc_hash}"
+    return (
+        f"{school}_{building}_{area}_{room}_{product}_{location}_{sample}_{desc_hash}"
+    )
 
 
 def _merge_records(
@@ -1093,7 +1101,11 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
         try:
             # Use full document page range (1 to total_pages)
             total_pages = state.get("pipeline_logger")
-            max_page = total_pages.total_pages if total_pages and hasattr(total_pages, "total_pages") else 999
+            max_page = (
+                total_pages.total_pages
+                if total_pages and hasattr(total_pages, "total_pages")
+                else 999
+            )
             docling_tables = await _get_docling_tables(source_id_str, 1, max_page)
             if docling_tables:
                 processed_content = _inject_docling_tables(
@@ -2272,11 +2284,32 @@ def _recover_no_access_records(
         # meaningful line before the dashes. But multi-word locations can span
         # several lines, so we check if the last line is a known ACM product.
         KNOWN_PRODUCT_KEYWORDS = {
-            "lining", "cladding", "insulation", "lagging", "sheeting",
-            "covering", "coverings", "tiles", "cartridge", "gasket",
-            "eaves", "soffit", "mastic", "joint", "joints", "door",
-            "panel", "board", "coating", "millboard", "packing",
-            "gutter", "downpipe", "cistern", "pipe", "duct",
+            "lining",
+            "cladding",
+            "insulation",
+            "lagging",
+            "sheeting",
+            "covering",
+            "coverings",
+            "tiles",
+            "cartridge",
+            "gasket",
+            "eaves",
+            "soffit",
+            "mastic",
+            "joint",
+            "joints",
+            "door",
+            "panel",
+            "board",
+            "coating",
+            "millboard",
+            "packing",
+            "gutter",
+            "downpipe",
+            "cistern",
+            "pipe",
+            "duct",
         }
 
         if len(content_lines) < 1:
@@ -2660,9 +2693,7 @@ async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
             records_recovered=len(recovered),
         )
     if agui:
-        await agui.emit_step_finished(
-            "recover_no_access", recovered=len(recovered)
-        )
+        await agui.emit_step_finished("recover_no_access", recovered=len(recovered))
 
     return {"records": records}
 
@@ -2944,6 +2975,15 @@ async def extract_acm_from_source(
         ACMExtractionOutput with results
     """
     start_time = time.time()
+    source_id_str = str(source.id)
+
+    langfuse_handler = get_langfuse_handler()
+    langfuse_callbacks = append_langfuse_callback([], langfuse_handler)
+    langfuse_metadata = build_langfuse_metadata(
+        source_id=source_id_str,
+        extraction_model=model_id,
+        command_id=command_id,
+    )
 
     # Initialize pipeline logger (E1-S21)
     # Use the shared _extract_total_pages utility (same pattern as the rest of the pipeline)
@@ -2957,15 +2997,16 @@ async def extract_acm_from_source(
             "Chunking will fall back to character-based splitting."
         )
     pl = PipelineLogger(
-        source_id=str(source.id),
+        source_id=source_id_str,
         total_pages=total_pages,
         command_id=command_id,
+        emit_custom_events=bool(langfuse_handler),
     )
 
     # Initialize AG-UI event emitter (E17-S1)
     agui: Optional[AGUIEventEmitter] = None
     if command_id:
-        agui = AGUIEventEmitter(command_id=command_id, source_id=str(source.id))
+        agui = AGUIEventEmitter(command_id=command_id, source_id=source_id_str)
         await agui.emit_run_started()
 
     if force:
@@ -2973,7 +3014,7 @@ async def extract_acm_from_source(
         from open_notebook.domain.acm import ACMTableSection
 
         try:
-            sections_deleted = await ACMTableSection.delete_by_source(str(source.id))
+            sections_deleted = await ACMTableSection.delete_by_source(source_id_str)
             if sections_deleted > 0:
                 logger.info(
                     f"Deleted {sections_deleted} existing table sections for source {source.id}"
@@ -2981,7 +3022,7 @@ async def extract_acm_from_source(
         except Exception as e:
             logger.warning(f"Failed to delete table sections: {e}")
 
-        deleted = await ACMRecord.delete_by_source(str(source.id))
+        deleted = await ACMRecord.delete_by_source(source_id_str)
         if deleted > 0:
             logger.info(
                 f"Deleted {deleted} existing ACM records for source {source.id}"
@@ -3028,7 +3069,16 @@ async def extract_acm_from_source(
     }
 
     try:
-        result = await graph.ainvoke(initial_state)
+        if langfuse_callbacks:
+            result = await graph.ainvoke(
+                initial_state,
+                config={
+                    "callbacks": langfuse_callbacks,
+                    "metadata": langfuse_metadata,
+                },
+            )
+        else:
+            result = await graph.ainvoke(initial_state)
 
         extraction_result: ACMExtractionResult = result.get(
             "extraction_result", ACMExtractionResult()
@@ -3054,7 +3104,7 @@ async def extract_acm_from_source(
                 await agui.emit_run_error(error)
             pipeline_run = pl.fail(error)
             return ACMExtractionOutput(
-                source_id=str(source.id),
+                source_id=source_id_str,
                 status="failed",
                 total_records=0,
                 records_failed=extraction_result.records_rejected,
@@ -3112,7 +3162,7 @@ async def extract_acm_from_source(
             token_limit_exceeded = assessment["token_limit_exceeded"]
 
         return ACMExtractionOutput(
-            source_id=str(source.id),
+            source_id=source_id_str,
             status=status,
             total_records=extraction_result.total_records,
             records_failed=extraction_result.records_rejected,
@@ -3132,7 +3182,7 @@ async def extract_acm_from_source(
             await agui.emit_run_error(str(e))
         pipeline_run = pl.fail(str(e))
         return ACMExtractionOutput(
-            source_id=str(source.id),
+            source_id=source_id_str,
             status="failed",
             total_records=0,
             records_failed=0,
@@ -3140,3 +3190,5 @@ async def extract_acm_from_source(
             extraction_time_ms=extraction_time,
             pipeline_run=pipeline_run.model_dump(mode="json"),
         )
+    finally:
+        flush_langfuse_handler(langfuse_handler)

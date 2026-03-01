@@ -1,41 +1,32 @@
-# E29-S4 Progress — Capability Registry + Fallback Contract
+# Gate 2 Validation — Progress
 
-## Session: 2026-03-01 — Planning Phase
+## Session: 2026-03-01 | Agent: Quinn (QA)
 
-### Status: PLANNING COMPLETE — READY TO IMPLEMENT
+### Status: GATE 2 EVALUATED — FAIL (2/5 pass, PM decision needed)
 
 ### 5-Question Reboot Check
-1. **Last completed milestone**: All context files read, findings documented, task plan created
-2. **Current active task**: Ready to begin T1 (strategy_registry.py)
-3. **Blockers**: None — S3 complete, Gate 1 PASS, S4 dependencies met
-4. **Files last modified**: `task_plan.md`, `findings.md`, `progress.md` (planning files only)
-5. **Next planned action**: Begin T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 in order
+1. **Last completed milestone**: Gate 2 evaluation complete — all criteria evaluated, evidence recorded
+2. **Current active task**: Awaiting PM decision on threshold adjustment
+3. **Blockers**: Gate 2 FAIL blocks S5-S8
+4. **Files last modified**: `e29-gate-decisions.md` (Gate 2 verdict + evidence), `findings.md`, `progress.md`
+5. **Next planned action**: PM reviews Gate 2 evidence and decides on threshold/path forward
 
-### Key Decisions
-- `strategy_registry.py` is a lookup table with `FallbackId` enum, `FallbackContract` frozen dataclass, and `FALLBACK_MATRIX` dict
-- `emit_fallback_telemetry()` uses `loguru.logger.info()` with structured dict — no custom telemetry framework
-- Retry cap change: `max_correction_attempts` from 2 → 3 in `should_correct()` (AC-5)
-- Minimal `acm_schemas.py` change: add `fallback_tags` to `BuildingExtractionStats`, `fallback_activated` to `OrchestratorStats`
-- No routing behavior changes — S4 is purely additive (structured logging + registry)
-- Benchmark results should be identical to post-S3 baseline (no extraction logic changes)
+### Completed Work
+1. Read all Gate 2 context docs (e29-gate-decisions, S3, S4, execution contract, baseline report)
+2. Verified OpenRouter provider is Anthropic-only (hard lock, 43/43 tests)
+3. Verified graph wiring: unconditional `tag_pages → orchestrate` edge
+4. Ran test_strategy_registry.py — 33/33 pass
+5. Ran test_orchestrator.py — 61/61 pass (incl. S3/S4 additions)
+6. Ran test_openrouter_provider_routing.py — 43/43 pass
+7. Ran full test suite — 1212 pass, 13 fail (all pre-existing), 2 xfail
+8. Ran ruff check — all passed
+9. Started SurrealDB + API services for benchmark
+10. Ran Broadmeadows benchmark — 28/31 matched (90.3% recall), up from 24/31
+11. Ran Alexander benchmark — 31/43 matched (72.1% recall), 6/6 buildings, up from 30/43
+12. Recorded Gate 2 verdict (FAIL) with full evidence in e29-gate-decisions.md
 
-### Context Files Read
-- `docs/sprint-artifacts/e29-s4-capability-registry-fallback-contract.md` — story spec (8 ACs, 8 tasks)
-- `V3/epic-29-execution-contract.md` — gate contract, story scope
-- `docs/architecture/e29-architecture-delta.md` — fallback matrix §3.1, routing contract §2
-- `open_notebook/extractors/orchestrator.py` — full file (1051 lines)
-- `open_notebook/extractors/acm_schemas.py` — full file (513 lines)
-- `open_notebook/graphs/acm_extraction.py` — graph topology (2880-2926), should_correct (2073-2112)
-- `tests/test_orchestrator.py` — full file (1168 lines)
-- `scripts/research/e29_benchmark_harness.py` — harness structure
-- `docs/sprint-artifacts/e29-worklog.md` — S1 entry
-- `docs/sprint-artifacts/e29-gate-decisions.md` — Gate 1 PASS, Gate 2 PENDING
-
-### Implementation Plan Summary
-1. **T1**: Create `strategy_registry.py` — FallbackId enum (F1-F8), FallbackContract, FALLBACK_MATRIX, RetryContract, emit_fallback_telemetry(), check_retry_budget()
-2. **T2**: Add `fallback_tags` to BuildingExtractionStats, `fallback_activated` to OrchestratorStats in orchestrator.py
-3. **T3**: Wire telemetry emissions into orchestrator at 6 decision points (F1-F4, F7 in orchestrator; F5-F6 in acm_extraction.py should_correct)
-4. **T4**: Write `tests/test_strategy_registry.py` — 12 tests covering F1-F8, retry cap, telemetry, routing, matrix completeness
-5. **T5**: Update `tests/test_orchestrator.py` — verify telemetry emission at F1, F2, F4 points
-6. **T6**: Lint + full test suite
-7. **T7-T8**: Benchmark validation (Broadmeadows 31/31, Alexander >=36/43)
+### Key Decision Points for PM
+- Both documents IMPROVED from Gate 1 (no regression)
+- Thresholds were set aspirationally; actual pre-E29 performance may have been similar
+- Docling tables not in benchmark DB (G2.3 untestable)
+- S3/S4 code and tests are complete and working

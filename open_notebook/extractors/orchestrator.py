@@ -494,6 +494,7 @@ async def _llm_extract_building(
 
     model_id = state.get("model_id")
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+    runnable_config: Optional[RunnableConfig] = state.get("_langchain_config")
 
     # Check room count and sub-chunk if needed
     sub_chunks = (
@@ -546,7 +547,10 @@ async def _llm_extract_building(
         async def _invoke(active_model, active_is_qwen: bool) -> ACMExtractionResult:
             response_text = ""
             try:
-                raw_response = await active_model.ainvoke(messages)
+                raw_response = await active_model.ainvoke(
+                    messages,
+                    config=runnable_config,
+                )
 
                 # E27-S3: Verify provider routing (non-blocking)
                 try:
@@ -565,8 +569,8 @@ async def _llm_extract_building(
                 parsed = parse_json_response(response_text)
                 # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
                 _normalize_extraction_json(parsed)
-                result_local: ACMExtractionResult = (
-                    ACMExtractionResult.model_validate(parsed)
+                result_local: ACMExtractionResult = ACMExtractionResult.model_validate(
+                    parsed
                 )
                 logger.info(
                     f"Building {plan.building_id} direct JSON: "
@@ -628,7 +632,10 @@ async def _llm_extract_building(
                         level="warning",
                     )
                 try:
-                    raw_response = await model.ainvoke(messages)
+                    raw_response = await model.ainvoke(
+                        messages,
+                        config=runnable_config,
+                    )
                     response_text = (
                         raw_response.content
                         if hasattr(raw_response, "content")
@@ -976,9 +983,7 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
         # E29-S3: Synthetic whole-document plan for no-inventory documents
         total_pages = page_tags.total_pages if page_tags else 999
 
-        synthetic = SyntheticExtractionPlan(
-            page_start=1, page_end=total_pages
-        )
+        synthetic = SyntheticExtractionPlan(page_start=1, page_end=total_pages)
 
         synthetic_building_plan = BuildingExtractionPlan(
             building_id="WHOLE_DOC",
@@ -1019,11 +1024,14 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
         f"{extraction_plan.estimated_llm_calls} LLM calls"
     )
 
+    state_with_config = dict(state)
+    state_with_config["_langchain_config"] = config
+
     # Execute per-building extractions in parallel
     results = await _extract_buildings_parallel(
         extraction_plan.plans,
         content,
-        state,
+        state_with_config,
     )
 
     # Add SKIP stats for skipped buildings
