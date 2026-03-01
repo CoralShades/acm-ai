@@ -56,6 +56,13 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-03-01: E29 Gate 2 recovery loop initiated
+#   - Gate 2 FAIL: G2.1 28/31, G2.2 31/43, G2.3 not testable. No regression from baseline.
+#   - PM decision: NO ROLLBACK. Recovery stories R1 (benchmark fidelity, 2 SP) + R2 (match-gap, 2 SP) authorized.
+#   - S3/S4 marked done (story-level ACs verified, benchmark thresholds are gate-level per PM).
+#   - S5-S8 remain blocked by Gate 2. Gate 2 rerun scheduled after R1+R2 completion.
+#   - Recovery spec: docs/sprint-artifacts/e29-gate2-recovery-spec.md
+#   - Sprint status drift corrected (S3 ready-for-dev→done, S4 drafted→done, R1/R2 entries added)
 # 2026-03-01: Epic 29 Pipeline Unification — PLANNING PACKAGE COMPLETE
 #   - PM (John): Execution contract finalized (V3/epic-29-execution-contract.md)
 #     - 8 stories, 19 SP, 4 decision gates, measure-first strategy

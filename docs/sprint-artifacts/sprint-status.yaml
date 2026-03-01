@@ -372,21 +372,25 @@ development_status:
   e28-s3-validation-closeout: done  # Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues, not extraction failures. Report: docs/reviews/e28-validation-results.md.
 
   # Epic 29: Pipeline Unification — Unified Agent Pipeline (P0)
-  # 1/8 stories complete — EPIC IN-PROGRESS (S1 done, S2 ready-for-dev, Gate 1 pending S2)
+  # 4/8 stories complete + 2 recovery stories drafted — Gate 2 FAIL, recovery loop in progress
   # Reconciled plan: V3/epic-29-pipeline-unification.reconciled.yaml
   # Execution contract: V3/epic-29-execution-contract.md
   # Architecture delta: docs/architecture/e29-architecture-delta.md
   # Story index: docs/sprint-artifacts/e29-story-specs.md
   # Gate tracking: docs/sprint-artifacts/e29-gate-decisions.md
+  # Recovery spec: docs/sprint-artifacts/e29-gate2-recovery-spec.md
   epic-29: in-progress
   e29-s1-json-parser-resilience: done  # Phase 1. 1 SP. QA verified 2026-03-01: 34/34 tests pass, all 5 AC verified, ruff clean. TruncationError(ValueError) subclass, brace-depth scan, multi-block selection.
   e29-s2-benchmark-harness-baseline-capture: done  # Phase 1. 3 SP. QA verified 2026-03-01: 30/30 tests pass, 7/8 AC PASS (AC-6 partial: token=0 OpenRouter limitation). Gate 1 PASS — 6/6 criteria. Baseline: Broadmeadows 77.4%, Alexander 69.8%, Aldavilla 0%.
-  e29-s3-unified-orchestrator-path: ready-for-dev  # Phase 2. 3 SP. Gate 1 PASS — unblocked. Unconditional tag_pages→orchestrate edge, synthetic plan.
-  e29-s4-capability-registry-fallback-contract: drafted  # Phase 2. 2 SP. Strategy registry, fallback matrix F1-F8. Gate 2 exit.
-  e29-s5-agent-decomposition-table-parser-bar-mapper: drafted  # Phase 3. 3 SP. Blocked by Gate 2. table_parser.py + bar_mapper.py.
-  e29-s6-agent-decomposition-enricher-classifier-validator: drafted  # Phase 3. 3 SP. classifier.py + context_enricher.py + validator.py. Gate 3 exit.
-  e29-s7-validation-gate-legacy-cleanup: drafted  # Phase 4. 2 SP. Blocked by Gate 3. Legacy deletion. Broadmeadows 31/31, Alexander >=40/43 stretch.
-  e29-s8-export-hardening-integration-doc-alignment: drafted  # Phase 4. 2 SP. Export filtering, E2E tests, doc alignment. Gate 4 exit.
+  e29-s3-unified-orchestrator-path: done  # Phase 2. 3 SP. Code complete 2026-03-01. Unconditional tag_pages→orchestrate edge, synthetic plan. AC-1..AC-5 verified. AC-6/AC-7 (benchmarks) are gate-level criteria — Gate 2 FAIL does not invalidate story per PM sign-off.
+  e29-s4-capability-registry-fallback-contract: done  # Phase 2. 2 SP. Code complete 2026-03-01. Registry 33/33 tests, orchestrator 61/61 tests. AC-1..AC-6 verified. AC-7/AC-8 (benchmarks) are gate-level criteria — Gate 2 FAIL does not invalidate story per PM sign-off.
+  e29-s5-agent-decomposition-table-parser-bar-mapper: drafted  # Phase 3. 3 SP. BLOCKED by Gate 2 FAIL. table_parser.py + bar_mapper.py. Unblocks when Gate 2 rerun passes after R1+R2.
+  e29-s6-agent-decomposition-enricher-classifier-validator: drafted  # Phase 3. 3 SP. BLOCKED by Gate 2 FAIL (transitive via S5). classifier.py + context_enricher.py + validator.py. Gate 3 exit.
+  e29-s7-validation-gate-legacy-cleanup: drafted  # Phase 4. 2 SP. BLOCKED by Gate 2 FAIL (transitive via S5→S6). Legacy deletion. Broadmeadows 31/31, Alexander >=40/43 stretch.
+  e29-s8-export-hardening-integration-doc-alignment: drafted  # Phase 4. 2 SP. BLOCKED by Gate 2 FAIL (transitive via S5→S6→S7). Export filtering, E2E tests, doc alignment. Gate 4 exit.
+  # --- Gate 2 Recovery Stories (PM-authorized 2026-03-01) ---
+  e29-r1-benchmark-fidelity: drafted  # Recovery. 2 SP. Seed Docling tables, improve matching normalization, pin baseline artifacts. Must complete before R2.
+  e29-r2-match-gap-remediation: drafted  # Recovery. 2 SP. Fix RoomMeta typing, normalize room/location names, improve material matching. Depends on R1. Gate 2 rerun after completion.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
