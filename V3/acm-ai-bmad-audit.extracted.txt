@@ -1,0 +1,221 @@
+BMAD V6 AUDIT REPORT
+ACM-AI Extraction Pipeline
+Architecture Gap Analysis & Multi-Agent Restructure Blueprint
+[TABLE]
+Field | Value
+Project | ACM-AI — Victorian Asbestos Eradication Agency
+Framework | BMAD V6 (Build-Measure-Analyse-Deploy)
+Audit Scope | Pipeline Architecture, Data Model, Accuracy, Tech Debt
+Date | March 2026
+Auditor | Claude (AI Architecture Analyst)
+Sprint Target | Next 1–2 sprints
+[/TABLE]
+[TABLE]
+ | AUDIT VERDICTThe pipeline achieves 100% accuracy on its single benchmark but carries significant architectural debt: 3 aspirational features documented as built, dead LLM code paths adding ~43s latency, no test harness for format generalisation, and a monolithic extraction stage that should be decomposed into specialised agents. The 1–2 sprint restructure is feasible if scoped to the core pipeline (not aspirational features).
+[/TABLE]
+1. Executive Assessment
+This BMAD V6 audit evaluates the ACM-AI extraction pipeline against four dimensions: architectural soundness, data model fitness, accuracy validation coverage, and technical debt impact. Each dimension is scored and mapped to actionable remediation items.
+1.1 BMAD Dimension Scores
+[TABLE]
+Dimension | Score | Grade | Key Finding
+Pipeline Architecture | 6/10 | NEEDS WORK | Unified pipeline principle is sound, but extraction is monolithic — not multi-agent. Pre-extraction stages are dead code.
+Data Model & Export | 7/10 | ADEQUATE | Schema covers 47 BAR fields well. Export flexibility (per-building, consolidated) exists but lacks first-class API design.
+Accuracy & Testing | 4/10 | CRITICAL | 100% on 1 doc (31 records). Zero validated accuracy on Greencap, Generic, or multi-building formats. No automated test harness.
+Tech Debt | 5/10 | AT RISK | completionState unwrapping, dead structured output calls, 3 aspirational features in architecture doc. ~43s wasted per extraction.
+[/TABLE]
+1.2 Architecture vs. Reality Matrix
+Mapping each architecture section to its actual implementation status.
+[TABLE]
+Component | Arch Doc Status | Reality | Gap
+PyMuPDF + Docling Hybrid | Documented | Built & working | None — core strength
+LangGraph Pipeline | Documented | Built & working | Functional but needs agent decomposition
+Orchestrator (Stage 0.5) | Documented | Built & working | Strategy logic sound; context assembly works
+Pre-Extraction LLM (Stage -1) | Documented as LLM | Heuristic fallbacks only | LLM calls fail; heuristics run instead
+Post-Extraction QA | Documented | Built & working | Dedup + regex recovery working
+Vector Embeddings | Documented | NOT BUILT | Aspirational — remove from arch doc or tag clearly
+CopilotKit AI Chat | Documented | NOT BUILT | Aspirational — do not include in sprint scope
+Knowledge Graph (React Flow) | Documented | Partially built | RELATION tables exist; viz may be incomplete
+BAR Excel Export | Documented | Built & working | Works but flexibility needs improvement
+AG Grid Frontend | Documented | Built & working | None
+[/TABLE]
+2. Pipeline Architecture Audit
+2.1 Current State: Monolithic Extraction
+The current pipeline uses a single LLM call per building (via building_extraction.jinja prompt) that performs all extraction, interpretation, normalisation, and BAR-field mapping in one shot. While this works for Broadmeadows, it creates a fragile single point of failure: if the LLM misinterprets one aspect (e.g., sample results), it may cascade errors into related fields (friability, risk status).
+[TABLE]
+ | BMAD FINDING: SINGLE-AGENT BOTTLENECKThe extraction stage violates the BMAD principle of separation of concerns. One prompt handles 6 distinct cognitive tasks: record identification, building context assignment, sample interpretation, BAR field mapping, product classification, and risk assessment. This makes debugging, improving, and testing individual capabilities impossible.
+[/TABLE]
+2.2 Proposed: Multi-Agent Extraction Architecture
+Decompose the monolithic extraction into specialised agents within the LangGraph pipeline. Each agent has a focused role, its own prompt template, and can be independently tested, improved, and swapped.
+[TABLE]
+Agent | Role | Input | Output | Model | Testable?
+TableExtractor | Raw row extraction from content | Building content + Docling tables | List of raw row dicts | Claude Sonnet 4 | Yes — count rows vs ground truth
+RecordInterpreter | Map raw rows to BAR field semantics | Raw row dicts + BAR schema | Typed ACMExtractionRecord[] | Claude Sonnet 4 | Yes — field accuracy per record
+SampleAnalyser | Interpret sample results, friability, condition | Record + sample columns | Enriched sample fields | Claude Sonnet 4 or regex | Yes — enum validation
+ProductClassifier | Assign ACM product group/type taxonomy | Product description | acm_product_group, acm_product_type | Regex → LLM fallback | Yes — taxonomy accuracy
+QualityValidator | Validate, correct, deduplicate | All records | Clean record set | Rules + LLM correction | Yes — before/after record counts
+RecoveryAgent | Find records LLM missed (No Access, sparse) | full_text + existing records | Recovered records | Regex + LLM | Yes — recall measurement
+[/TABLE]
+2.3 Agent Communication Pattern
+Agents communicate through the LangGraph state object — no direct inter-agent messaging. The orchestrator remains the coordinator, dispatching to agents in sequence per building. This is a pipeline-of-agents pattern, not a swarm.
+Recommended pattern: Orchestrator dispatches to TableExtractor per building (parallel, semaphore=3). Each building’s raw rows then flow sequentially through RecordInterpreter → SampleAnalyser → ProductClassifier. All buildings’ results merge, then flow through QualityValidator → RecoveryAgent.
+[TABLE]
+ | SPRINT SCOPING RECOMMENDATIONFor the 1–2 sprint window: implement TableExtractor and RecordInterpreter as the first two agents. Keep SampleAnalyser and ProductClassifier as post-extraction enrichment (they can remain in the current prompt initially). QualityValidator is already effectively built (validation + correction loops). This gives you the highest-value decomposition without rewriting everything.
+[/TABLE]
+2.4 Pre-Extraction Intelligence: Kill or Fix?
+All 4 Stage -1 LLM calls (Structure, Inventory, Page Tagging, Metadata) fail structured output and fall back to heuristics. The heuristics work for production. Two options:
+[TABLE]
+Option | Effort | Benefit | Recommendation
+A: Kill dead LLM calls | Low (1–2 days) | Save ~43s per extraction, simplify code, remove confusion | DO THIS IN SPRINT 1
+B: Fix structured output | Medium (3–5 days) | Better accuracy on complex multi-building docs | DEFER to Sprint 3+
+[/TABLE]
+The completionState envelope issue (OpenRouter wrapping) is the root cause. Fixing it requires either switching to direct Anthropic API calls or adding robust unwrapping. For now, the heuristics are sufficient and battle-tested.
+3. Data Model & Export Audit
+3.1 Schema Assessment
+The SurrealDB schema is well-designed for the core use case. The acm_record table covers all 47 BAR columns plus internal metadata (extraction_confidence, page_number, source_id). SCHEMAFULL enforcement is correct for compliance data.
+[TABLE]
+ | STRENGTHSurrealDB serving triple duty (document store, vector search, graph) is architecturally elegant and eliminates operational complexity of managing 3 separate databases. This is a good fit for the data volume (2000+ documents, ~50K records estimated).
+[/TABLE]
+3.2 Export Flexibility Gaps
+The architecture mentions per-building, per-site, and consolidated exports but doesn’t detail the export API design. For compliance officers, export is the final deliverable — it deserves first-class treatment.
+[TABLE]
+Export Type | Current Status | Gap | Priority
+Per-building BAR Excel | Built | Works but column ordering needs verification against template | P1
+Per-site consolidated | Partially built | Needs site_config merge logic for multi-building sites | P1
+Filtered export (by risk, by status) | Not built | Officers need to export subsets (e.g., all high-risk ACM) | P2
+CSV export for data interchange | Not built | Useful for integration with other government systems | P3
+Audit trail export | Not built | Extraction metadata, confidence scores, corrections applied | P2
+[/TABLE]
+3.3 Data Model Recommendations
+Add an extraction_run table to track pipeline executions (timestamp, model used, accuracy score, records extracted). This enables audit trail and regression detection.
+Add an export_template table to store BAR template configuration (column order, headers, formatting rules). Decouple template logic from code.
+Consider adding a correction_log table to track every LLM correction applied — this is valuable for improving prompts and measuring correction patterns.
+The site_config table needs a one-to-many relationship with sources (one site has many documents over time). Current schema implies 1:1.
+4. Accuracy & Testing Audit
+[TABLE]
+ | CRITICAL FINDINGThe pipeline achieves 100% on Broadmeadows (31 records, Prensa format) but has ZERO validated accuracy on Greencap format, Generic format, or multi-building documents. The biggest pain point (accuracy on untested formats) has no measurement infrastructure. This is the highest-priority gap.
+[/TABLE]
+4.1 Current Benchmark Coverage
+[TABLE]
+Benchmark | Format | Records | Accuracy | Status
+Broadmeadows | Prensa | 31 | 100% (31/31) | VALIDATED
+Alexander | Unknown | 43 | Not measured | UNVALIDATED
+Greencap sample | Greencap | Unknown | Not tested | NO BENCHMARK
+Generic consultant | Generic | Unknown | Not tested | NO BENCHMARK
+Multi-building doc | Any | Unknown | Not tested | NO BENCHMARK
+[/TABLE]
+4.2 BMAD Measure Phase: Test Harness Blueprint
+BMAD V6 requires a Measure phase before any restructure ships. You need an automated benchmark suite that runs on every pipeline change. Here is the blueprint:
+4.2.1 Ground Truth Dataset
+Minimum 5 benchmark documents: 1 Prensa (Broadmeadows, done), 1 Greencap, 1 Generic, 1 multi-building (5+ buildings), 1 edge-case (sparse tables, No Access heavy).
+Each benchmark needs a ground_truth.json with every expected ACMExtractionRecord (all 40+ fields).
+Store in a /benchmarks directory with structure: /benchmarks/{doc_name}/source.pdf + ground_truth.json + last_run.json.
+4.2.2 Accuracy Metrics
+[TABLE]
+Metric | Definition | Target | Current
+Record Recall | # correct records / # ground truth records | ≥95% | 100% (Broadmeadows only)
+Record Precision | # correct records / # extracted records | ≥95% | ~97% (1 extra record)
+Field Accuracy | # correct fields / # total fields across records | ≥90% | Not measured
+Format Coverage | # formats with ≥90% recall | ≥3 formats | 1 format
+Regression Rate | # benchmarks that regressed on latest change | 0 | Not tracked
+[/TABLE]
+4.2.3 Automated Test Runner
+Build a pytest-based test runner that: (1) processes each benchmark PDF through the full pipeline, (2) compares output against ground_truth.json, (3) produces a per-field accuracy report, (4) fails CI if any benchmark drops below threshold. Estimated effort: 3–4 days for the first version.
+[TABLE]
+ | BMAD GATE: NO RESTRUCTURE WITHOUT BENCHMARKSThe multi-agent restructure MUST be gated behind having at least 3 benchmark documents with ground truth. Without this, you cannot prove the restructure doesn’t regress accuracy. Build the harness first (Sprint 1, Week 1), then restructure (Sprint 1, Week 2 + Sprint 2).
+[/TABLE]
+5. Tech Debt Inventory
+5.1 Categorised Debt Items
+[TABLE]
+ID | Item | Impact | Effort | Priority | Sprint
+TD-01 | Dead structured output LLM calls (4 stages) | ~43s latency per extraction wasted | Low (1–2 days) | P0 | Sprint 1
+TD-02 | completionState envelope unwrapping | Fragile JSON parsing; breaks if OpenRouter changes | Medium (2–3 days) | P1 | Sprint 1
+TD-03 | Aspirational features in arch doc (3 items) | Misleads stakeholders about system capabilities | Low (1 day) | P0 | Sprint 1
+TD-04 | No extraction_run audit trail | Cannot track pipeline performance over time | Medium (2 days) | P2 | Sprint 2
+TD-05 | Monolithic building_extraction.jinja prompt | Untestable; debugging requires full pipeline run | High (5–7 days) | P1 | Sprint 1–2
+TD-06 | No automated benchmark suite | Cannot detect regressions; accuracy is manual-only | Medium (3–4 days) | P0 | Sprint 1
+TD-07 | Single-model dependency (Claude Sonnet 4 only) | No fallback if Anthropic has outage | Medium (2–3 days) | P3 | Backlog
+TD-08 | Heuristic fallbacks undocumented | Team cannot maintain what they don’t understand | Low (1 day) | P2 | Sprint 2
+TD-09 | site_config 1:1 relationship with source | Blocks multi-document site processing | Low (1 day) | P2 | Sprint 2
+TD-10 | No export API versioning or template config | Template changes require code changes | Medium (2 days) | P3 | Backlog
+[/TABLE]
+5.2 Debt Burndown Plan
+Prioritised by impact and sprint fit:
+[TABLE]
+Sprint | Items | Total Effort | Outcome
+Sprint 1 (Week 1) | TD-01, TD-03, TD-06 | 5–7 days | Kill dead code, fix arch doc, build benchmark harness
+Sprint 1 (Week 2) | TD-02, TD-05 (start) | 5–7 days | Fix envelope issue, begin agent decomposition
+Sprint 2 | TD-05 (complete), TD-04, TD-08, TD-09 | 7–10 days | Complete multi-agent, add audit trail, document heuristics
+Backlog | TD-07, TD-10 | 4–6 days | Model fallback strategy, export template config
+[/TABLE]
+6. Multi-Agent Restructure Plan
+6.1 Migration Strategy: Incremental, Not Big-Bang
+The restructure must be incremental to maintain the 100% Broadmeadows accuracy at every step. Each agent is extracted from the monolithic prompt, tested against benchmarks, and promoted only when accuracy is maintained or improved.
+[TABLE]
+ | GOLDEN RULENo agent goes live without passing all existing benchmarks at ≥95% recall. The benchmark harness is the safety net. Build it first.
+[/TABLE]
+6.2 Phase 1: TableExtractor Agent (Sprint 1, Week 2)
+Extract the row-identification logic from building_extraction.jinja into a dedicated TableExtractor agent.
+Input: Building content (PyMuPDF text + Docling DataFrames)
+Output: List of raw row dictionaries (one per ACM record) with original column names preserved
+Prompt focus: “Count every row. Same room, different location = separate records. Include No Access entries.”
+Test: Row count matches ground truth record count per building
+Key benefit: Isolates the #1 accuracy failure mode (missed or merged rows) into a testable unit
+6.3 Phase 2: RecordInterpreter Agent (Sprint 2, Week 1)
+Takes raw rows from TableExtractor and maps them to typed ACMExtractionRecord objects.
+Input: Raw row dicts + BAR schema definition + consultant metadata
+Output: ACMExtractionRecord[] with all 40+ fields populated
+Prompt focus: “Map these consultant-specific columns to BAR fields. Normalise values to enum sets.”
+Test: Per-field accuracy comparison against ground truth
+Key benefit: Separates “what are the records” from “what do the fields mean”
+6.4 Phase 3: Specialist Enrichment Agents (Sprint 2, Week 2)
+SampleAnalyser and ProductClassifier remain as post-extraction enrichment. They can initially stay embedded in RecordInterpreter’s prompt and be extracted later when benchmarks justify the effort.
+6.5 LangGraph State Machine Changes
+The LangGraph graph needs new nodes and edges but the overall topology remains similar:
+[TABLE]
+Current Node | Becomes | Change Type
+orchestrate_extraction | orchestrate_extraction (unchanged) | No change — still dispatches per building
+extract_building (monolithic) | table_extract → interpret_records (per building) | SPLIT into 2 sequential nodes
+validate_records | validate_records (unchanged) | No change
+correct_records | correct_records (unchanged) | Minor: correction prompt references agent outputs
+deduplicate_records | deduplicate_records (unchanged) | No change
+recover_no_access | recovery_agent (enhanced) | Upgrade: can now compare against TableExtractor output
+[/TABLE]
+7. Recommended Sprint Plan
+Sprint 1: Foundation & First Agent
+[TABLE]
+Week | Task | Owner | Deliverable | BMAD Phase
+W1 D1–D2 | Kill dead LLM calls (TD-01), fix arch doc (TD-03) | Dev | Cleaner pipeline, honest documentation | ANALYSE
+W1 D2–D4 | Build benchmark harness (TD-06) with Broadmeadows ground truth | Dev | pytest suite, CI integration | MEASURE
+W1 D4–D5 | Create Alexander ground truth + 1 Greencap ground truth | Tester + Dev | 2 new benchmark documents | MEASURE
+W2 D1–D2 | Fix completionState envelope (TD-02) | Dev | Reliable JSON parsing path | BUILD
+W2 D2–D5 | Extract TableExtractor agent from monolithic prompt | Dev | New LangGraph node, passing all benchmarks | BUILD
+[/TABLE]
+Sprint 2: Second Agent & Hardening
+[TABLE]
+Week | Task | Owner | Deliverable | BMAD Phase
+W1 D1–D3 | Extract RecordInterpreter agent | Dev | Second agent, per-field accuracy tests | BUILD
+W1 D3–D5 | Run full benchmark suite across 3+ formats | Tester | Accuracy report per format | MEASURE
+W2 D1–D2 | Add extraction_run audit trail (TD-04) | Dev | Pipeline execution logging | MEASURE
+W2 D2–D3 | Document heuristic fallbacks (TD-08) | Dev | Runbook for heuristic logic | ANALYSE
+W2 D3–D5 | Export flexibility improvements (filtered, per-site) | Dev | Enhanced export API | DEPLOY
+[/TABLE]
+8. Risk Register
+[TABLE]
+Risk | Likelihood | Impact | Mitigation
+Multi-agent restructure regresses Broadmeadows accuracy | Medium | Critical | Benchmark harness MUST exist before any restructure work begins. Gate every PR on benchmark pass.
+Greencap/Generic formats have fundamentally different table structures | High | High | Early spike: process 1 Greencap doc through current pipeline, measure accuracy, identify structural gaps before agent design.
+Sprint scope creep into aspirational features | Medium | Medium | Strict scope: NO work on embeddings, CopilotKit, or knowledge graph viz during these sprints. Focus on pipeline core.
+Team unfamiliar with LangGraph agent patterns | Medium | Medium | Pair programming on TableExtractor. Use existing orchestrator pattern as template.
+OpenRouter provider changes break envelope handling | Low | High | TD-02 fix (completionState unwrapping) adds resilience. Consider direct Anthropic SDK as P3 option.
+[/TABLE]
+9. Appendix: Architecture Doc Corrections
+The following corrections should be applied to acm-ai-solution-architecture.html to reflect actual system state:
+[TABLE]
+Section | Current (Incorrect) | Should Be | Action
+Section 02 System Context | Shows Ollama for embeddings as active | Embeddings not yet implemented | Add “PLANNED” badge or remove from context diagram
+Section 05 Pipeline | Shows generate_embeddings and update_graph nodes | These nodes are not built | Move to a “Future State” diagram or annotate
+Section 07 Pre-Extraction | Describes LLM-powered analysis stages | All 4 fail structured output; heuristics run instead | Add callout: “Current: heuristic fallback. LLM path is P2.”
+Section 15 Frontend | Shows CopilotKit AI Chat as a component | Not built | Tag as “PLANNED” or move to roadmap section
+Hero stats | Shows “100%” without qualification | 100% on single benchmark only | Change to “100% (Broadmeadows benchmark)”
+[/TABLE]
+End of BMAD V6 Audit Report. Generated March 2026.

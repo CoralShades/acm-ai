@@ -1,0 +1,366 @@
+{
+  "document": {
+    "name": "Broadmeadows Police Station",
+    "pdf_path": "docs/samplePDF/Clutch_Broadmeadows.pdf",
+    "source": "docs/samplePDF/Clutch_Broadmeadows.csv",
+    "total_buildings": 1,
+    "total_records": 31,
+    "consultant": "Prensa Pty Ltd"
+  },
+  "match_keys": {
+    "primary": "sample_no",
+    "secondary": [
+      "building_name",
+      "room_name",
+      "location",
+      "product"
+    ],
+    "tertiary": [
+      "room_name",
+      "location"
+    ]
+  },
+  "records": [
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Main Foyer",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "34511-039-001",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Front Desk Area",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "34511-039-002",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Front Desk Area",
+      "location": "Filing Cabinet",
+      "product": "Filing Cabinet",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Soft Interview Room No.2",
+      "location": "Skirting Board",
+      "product": "Skirting",
+      "sample_no": "34511-039-003",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Kitchenette",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "34511-039-004",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Corridor Adjacent Cells and Custody Counter",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "As Per 34511-039-001",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Lift Foyer",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "As Per 34511-039-001",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Switch Room",
+      "location": "Switchboard",
+      "product": "Fuse cartridge",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Switch Room",
+      "location": "Automatic Battery Charger",
+      "product": "Fuse cartridge",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Comms Area",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "34511-039-006",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Fan Room",
+      "location": "Air Handling Unit Ductwork",
+      "product": "Flange joints",
+      "sample_no": "34511-039-007",
+      "sample_result": "Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Fan Room",
+      "location": "Wall Opposite AHU Inlet",
+      "product": "Infill panels",
+      "sample_no": "34511-039-008",
+      "sample_result": "Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Male Locker Room",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "34511-039-009",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Male Locker Room",
+      "location": "Wall Adjacent Entrance To Office",
+      "product": "Wall lining",
+      "sample_no": "34511-039-010",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Throughout",
+      "location": "Male Locker Room",
+      "product": "Skirting",
+      "sample_no": "As Per 34511-039-003",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Kitchen",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "As Per 34511-039-009",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Kitchen",
+      "location": "Wall",
+      "product": "Skirting",
+      "sample_no": "As Per 34511-039-003",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Fan Room 2.24",
+      "location": "Air Handling Unit Ductwork",
+      "product": "Flange joints",
+      "sample_no": "As Per 34511-039-007",
+      "sample_result": "Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Fan Room",
+      "location": "Brick Wall",
+      "product": "Expansion joint",
+      "sample_no": "34511-039-011",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Level 1"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Fan Room",
+      "location": "Air Handling Unit Ductwork",
+      "product": "Flange joints",
+      "sample_no": "As Per 34511-039-007",
+      "sample_result": "Positive",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Boiler Room",
+      "location": "Switchboard",
+      "product": "Fuse cartridge",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Boiler Room",
+      "location": "Boiler",
+      "product": "Pipework",
+      "sample_no": "34511-039-012",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Boiler Room",
+      "location": "Boiler",
+      "product": "Pipework",
+      "sample_no": "34511-039-013",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Boiler Room",
+      "location": "Walls",
+      "product": "Expansion joint",
+      "sample_no": "34511-039-014",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "East Roof Fan Room",
+      "location": "Walls",
+      "product": "Wall(s)",
+      "sample_no": "34511-039-016",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Roof",
+      "location": "East Ductwork",
+      "product": "Flange joints",
+      "sample_no": "34511-039-015",
+      "sample_result": "Positive",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "East Roof Fan Room",
+      "location": "Ceiling",
+      "product": "Ceiling",
+      "sample_no": "As Per 34511-039-016",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Exterior",
+      "location": "Brown Walls",
+      "product": "Expansion joint",
+      "sample_no": "As Per 34511-039-014",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "External",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Property Storage",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "34511-039-017",
+      "sample_result": "Negative",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Lift Foyer",
+      "location": "Lift",
+      "product": "Internal lining",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    },
+    {
+      "building_name": "Broadmeadows Police Station",
+      "room_name": "Main Foyer",
+      "location": "Room Adjacent Disabled Toilet",
+      "product": "Unknown",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable",
+      "internal_external": "Internal",
+      "level": "Ground"
+    }
+  ]
+}

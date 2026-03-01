@@ -1,0 +1,128 @@
+# E29 — Pipeline Unification: Work Log
+
+## 2026-03-01: E29-S1 JSON Parser Resilience
+
+**Agent**: Amelia (Dev) | **Status**: review | **Duration**: ~30 min
+
+### What was done
+- Added `TruncationError(ValueError)` exception class
+- Rewrote `parse_json_response()` with 5-step resilient parser:
+  - Fence stripping → brace-depth scan → multi-block selection → truncation detection
+- Fixed bug: old fenced regex used non-greedy `\{.*?\}` which failed on nested JSON in fences
+- Created comprehensive test suite: `tests/test_json_parser.py` (34 tests)
+- Verified all 7 existing backward-compat tests in `test_qwen_extraction.py` still pass
+- `ruff check .` clean
+
+### Files changed
+| File | Action |
+|------|--------|
+| `open_notebook/graphs/utils.py` | Modified (TruncationError + _extract_json_objects + parse_json_response rewrite) |
+| `tests/test_json_parser.py` | Added (34 tests covering AC-1..AC-5 + edge cases) |
+| `docs/sprint-artifacts/e29-s1-json-parser-resilience.md` | Updated (status + Post-Dev Notes) |
+| `docs/sprint-artifacts/sprint-status.yaml` | Updated (e29-s1: review) |
+
+### Verification
+- `uv run ruff check .` — All checks passed
+- `uv run pytest tests/test_json_parser.py -x -v` — 34/34 passed
+- `uv run pytest tests/test_qwen_extraction.py::TestParseJsonResponse -x -v` — 7/7 passed
+
+## 2026-03-01: E29-S4 Capability Registry + Fallback Contract
+
+**Agent**: Dev | **Status**: review | **Duration**: ~45 min
+
+### What was done
+- Created `strategy_registry.py` — centralized fallback matrix (F1-F8 as frozen dataclasses), retry contracts (`CORRECTION_RETRY_CONTRACT` max=3, `LLM_RETRY_CONTRACT` max=1), `emit_fallback_telemetry()` for structured logging, `check_retry_budget()` pure function, `select_strategy()` delegation to orchestrator
+- Wired telemetry into orchestrator at 5 decision points: F1 (no inventory), F2 (no Docling tables), F3 (JSON parse failure), F4 (empty extraction), F7 (LLM provider error)
+- Added `fallback_tags` field to `BuildingExtractionStats` and `fallback_activated` to `OrchestratorStats`
+- Propagated `max_correction_attempts=3` from registry into graph state via orchestrator return dict
+- Added `fallback_summary` field to `ACMExtractionOutput`
+- Created 33 registry unit tests + 4 orchestrator integration tests
+
+### Files changed
+| File | Action |
+|------|--------|
+| `open_notebook/extractors/strategy_registry.py` | Added (~180 lines) |
+| `open_notebook/extractors/orchestrator.py` | Modified (~50 lines) |
+| `open_notebook/extractors/acm_schemas.py` | Modified (~3 lines) |
+| `tests/test_strategy_registry.py` | Added (~280 lines) |
+| `tests/test_orchestrator.py` | Modified (~100 lines) |
+| `docs/sprint-artifacts/e29-s4-capability-registry-fallback-contract.md` | Updated (status + Post-Dev Notes) |
+| `docs/sprint-artifacts/e29-worklog.md` | Updated |
+
+### Verification
+- `uv run ruff check .` — All checks passed
+- `uv run pytest tests/test_strategy_registry.py -x -v` — 33/33 passed
+- `uv run pytest tests/test_orchestrator.py -x -v` — 61/61 passed
+- Full suite: 1212 passed, 6 pre-existing failures (none from S4), 2 xfailed
+
+## 2026-03-01: Gate 2 Evaluation + PM Triage
+
+**Agent**: Quinn (QA) + John (PM) | **Gate Status**: FAIL | **PM Decision**: NO ROLLBACK, recovery loop authorized
+
+### Gate 2 Results
+- **G2.1**: Broadmeadows 28/31 (FAIL, need 31/31) — +4 from Gate 1 baseline (no regression)
+- **G2.2**: Alexander 31/43 (FAIL, need 36/43) — +1 from Gate 1 baseline (no regression)
+- **G2.3**: Docling injection NOT TESTED — no Docling tables in benchmark DB
+- **G2.4**: Fallback contract — PASS (33/33 + 61/61 tests)
+- **G2.5**: Synthetic plan — PASS (4 tests + E2E)
+
+### PM Decision
+- **Gate 2 = FAIL** (thresholds unmet) — maintained, not waived
+- **NO ROLLBACK** — no regression observed, unified path is strictly better than dual-path baseline
+- **Recovery loop authorized**: 2 remediation stories (E29-R1, E29-R2) to close the gap
+  - R1 (2 SP): Benchmark fidelity — seed Docling tables, improve matching normalization, pin baselines
+  - R2 (2 SP): Match-gap remediation — fix RoomMeta typing, normalize room/location names
+- **No threshold waiver** until R1+R2 rerun demonstrates compliance
+- **S5-S8 remain blocked** until Gate 2 rerun PASSES
+- Full decision recorded in `e29-gate-decisions.md` → "PM Sign-Off — Gate 2"
+
+## 2026-03-01: E29 Gate 2 Recovery Sprint Planning
+
+**Agent**: Bob (SM) | **Status**: complete | **Duration**: ~20 min
+
+### What was done
+
+Post-Gate 2 FAIL sprint maintenance and recovery story authoring:
+
+1. **Status drift corrected** in `sprint-status.yaml`:
+   - S3: `ready-for-dev` → `done` (was code complete, PM confirmed story-level ACs verified)
+   - S4: `drafted` → `done` (was code complete, PM confirmed story-level ACs verified)
+   - S5-S8: added "BLOCKED by Gate 2 FAIL" annotations
+   - Added R1/R2 recovery story entries as `drafted`
+   - Updated story count comment: 4/8 done + 2 recovery stories
+
+2. **Post-QA Notes filled** in S3 and S4 story files:
+   - Per-AC result tables with PASS/GATE annotations
+   - Gate 2 FAIL impact section referencing PM decision
+   - Test suite evidence
+
+3. **Recovery spec created**: `docs/sprint-artifacts/e29-gate2-recovery-spec.md`
+   - E29-R1 (2 SP): Benchmark fidelity — seed Docling tables, normalize matching, pin baselines
+   - E29-R2 (2 SP): Match-gap remediation — fix RoomMeta typing, normalize room/material names
+   - Gate 2 rerun go/no-go conditions (7 criteria)
+   - Blocker list with 7 items for dev handoff
+
+4. **Story index updated**: `e29-story-specs.md`
+   - Gate 1 status: PENDING → PASS
+   - Gate 2 status: PENDING → FAIL
+   - R1/R2 added to story table
+   - Dependency graph updated with recovery loop
+
+5. **Workflow status updated**: `bmm-workflow-status.yaml` change-log entry added
+
+### Files changed
+
+| File | Action |
+|------|--------|
+| `docs/sprint-artifacts/sprint-status.yaml` | Modified (E29 section: statuses, annotations, R1/R2 entries) |
+| `docs/sprint-artifacts/e29-s3-unified-orchestrator-path.md` | Modified (status table + Post-QA Notes) |
+| `docs/sprint-artifacts/e29-s4-capability-registry-fallback-contract.md` | Modified (status table + Post-QA Notes) |
+| `docs/sprint-artifacts/e29-gate2-recovery-spec.md` | Added (R1+R2 recovery spec with ACs, tasks, blockers) |
+| `docs/sprint-artifacts/e29-story-specs.md` | Modified (gate statuses, R1/R2 in table, dependency graph) |
+| `_bmad-output/project-planning-artifacts/acm-ai/bmm-workflow-status.yaml` | Modified (change-log entry) |
+| `docs/sprint-artifacts/e29-worklog.md` | Modified (this entry) |
+
+### Next Steps
+- Dev: Pick up R1, then R2 (sequential — R2 depends on R1)
+- QA: Re-run Gate 2 after R1+R2 complete
+- PM: Evaluate Gate 2 rerun results

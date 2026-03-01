@@ -1,0 +1,214 @@
+# ============================================================================
+# EPIC 29: Pipeline Unification — Unified Agent Pipeline
+# ============================================================================
+# Generated from BMAD Architecture Audit (2026-03-01)
+# Closes: GAP-1 (Dual Path), GAP-2 (Table Priority), GAP-3 (Monolithic LLM),
+#          GAP-4 (Export Rigidity), GAP-5 (Wasted Pre-Intel), GAP-6 (Dead Code)
+# Total: 9 stories, 20 story points, ~14 days estimated
+# Execution: New epic with research spike first, aggressive dead code cleanup
+# ============================================================================
+
+epic_29_pipeline_unification:
+  title: "Pipeline Unification — Unified Agent Pipeline"
+  status: planned
+  total_stories: 9
+  total_points: 20
+  decision_gates:
+    gate_1:
+      after: E29-S2
+      criteria: "Table Parser ≥29/31 Broadmeadows (no LLM). Dead code cleanup passes all tests."
+      blocking: [E29-S3, E29-S4, E29-S5, E29-S6]
+    gate_2:
+      after: E29-S6
+      criteria: "Broadmeadows 31/31. Alexander ≥40/43. Per-agent accuracy documented."
+      blocking: [E29-S8, E29-S9]
+
+  # Phase 1: Research & Cleanup
+  stories:
+    e29-s1:
+      title: "Research Spike: DataFrame-First Extraction Validation"
+      status: planned
+      points: 2
+      phase: 1
+      gaps: [GAP-2]
+      depends_on: []
+      files:
+        - scripts/research/e29_s1_dataframe_first_spike.py
+      acceptance_criteria:
+        - "Broadmeadows: ≥29/31 records from DataFrames alone (no LLM)"
+        - "Field coverage: ≥60% of BAR fields populated from DataFrame columns"
+        - "Alexander: ≥35/43 records from DataFrames alone"
+        - "Document fields CAN vs CANNOT be derived from tables"
+        - "Produce 'fields requiring AI enrichment' list with justification"
+        - "Processing time: <5s per document for table parsing"
+
+    e29-s2:
+      title: "Aggressive Dead Code Cleanup"
+      status: planned
+      points: 1
+      phase: 1
+      gaps: [GAP-1, GAP-6]
+      depends_on: [e29-s1]
+      files:
+        - open_notebook/graphs/acm_extraction.py  # Remove legacy path, prepare_context, extract_records
+        - commands/source_commands.py  # Remove DOCLING_TABLE_STRUCTURE flag, DOCLING_DIRECT flag
+        - open_notebook/extractors/orchestrator.py  # Remove should_use_orchestrator conditional
+        - tests/test_orchestrator.py  # Update graph topology tests
+        - tests/test_document_structure.py  # Update graph edge tests
+        - tests/test_page_tagger.py  # Update graph edge tests
+      acceptance_criteria:
+        - "Legacy prepare_context() and extract_records() nodes removed from graph"
+        - "should_use_orchestrator() conditional removed — always routes to orchestrate"
+        - "MinerU HTML fallback code removed"
+        - "DOCLING_TABLE_STRUCTURE flag and guarded code removed"
+        - "DOCLING_DIRECT_TABLE_EXTRACTION flag removed (always-on)"
+        - "uv run ruff check . passes"
+        - "uv run pytest tests/ — all previously-passing tests pass"
+        - "Broadmeadows 31/31 regression gate"
+
+    # Phase 2: Core Pipeline
+    e29-s3:
+      title: "Unified Orchestrator — Single Path, No Legacy"
+      status: planned
+      points: 3
+      phase: 2
+      gaps: [GAP-1, GAP-5]
+      depends_on: [e29-s2]
+      files:
+        - open_notebook/extractors/orchestrator.py  # Redesign for single path
+        - open_notebook/graphs/acm_extraction.py  # Remove conditional edges
+        - open_notebook/extractors/document_structure.py  # Table-derived structure
+        - open_notebook/extractors/building_inventory.py  # Fallback: Whole Document plan
+        - open_notebook/extractors/page_tagger.py  # Table-derived page tags
+      acceptance_criteria:
+        - "NO conditional edges in LangGraph — single path"
+        - "should_use_orchestrator() removed entirely"
+        - "Inventory present → per-building plans (unchanged)"
+        - "Inventory absent → single Whole Document plan (page 1 → last)"
+        - "Pre-extraction uses table-derived structure (table page ranges)"
+        - "Heuristic fallbacks for building names (regex, not LLM)"
+        - "4 pre-extraction LLM calls eliminated"
+        - "Broadmeadows 31/31"
+        - "Alexander ≥40/43"
+
+    e29-s4:
+      title: "Table Parser + BAR Mapper Agents"
+      status: planned
+      points: 3
+      phase: 2
+      gaps: [GAP-2, GAP-3]
+      depends_on: [e29-s3]
+      files:
+        - open_notebook/extractors/table_parser.py  # NEW
+        - open_notebook/extractors/bar_mapper.py  # NEW
+        - tests/test_table_parser.py  # NEW
+        - tests/test_bar_mapper.py  # NEW
+      acceptance_criteria:
+        - "Table Parser: DataFrame rows → raw ACMRecord list (no LLM)"
+        - "Table Parser: regex normalization (sample numbers, prefixes)"
+        - "Table Parser: Broadmeadows → ≥29 raw records from 3 tables"
+        - "BAR Mapper: uses field_schema table (not hardcoded)"
+        - "BAR Mapper: enum normalization for friable, condition, risk_status"
+        - "BAR Mapper: handles consultant column name variations"
+        - "Unit tests with Broadmeadows DataFrame fixtures"
+        - "Per-agent accuracy metrics documented"
+
+    e29-s5:
+      title: "Context Enricher + Classifier Agents"
+      status: planned
+      points: 3
+      phase: 2
+      gaps: [GAP-2, GAP-3]
+      depends_on: [e29-s4]
+      files:
+        - open_notebook/extractors/context_enricher.py  # NEW
+        - open_notebook/extractors/classifier.py  # MODIFY (add regex-primary logic)
+        - tests/test_context_enricher.py  # NEW
+        - tests/test_classifier.py  # NEW
+      acceptance_criteria:
+        - "Enricher: receives records with missing fields + full_text excerpt"
+        - "Enricher: batch-fills fields (floor_level, area_type, recommendations)"
+        - "Enricher: recovers sparse text records not in DataFrames"
+        - "Enricher: ≤1 LLM call per building (batched)"
+        - "Classifier: 80%+ products resolved by regex"
+        - "Classifier: remaining products batched into single LLM call"
+        - "Broadmeadows combined: 31/31 records, classifications correct"
+        - "LLM token usage measured vs current approach"
+
+    e29-s6:
+      title: "Validator + Corrector Agent (Targeted)"
+      status: planned
+      points: 2
+      phase: 2
+      gaps: [GAP-3]
+      depends_on: [e29-s5]
+      files:
+        - open_notebook/extractors/validator.py  # NEW
+        - open_notebook/graphs/acm_extraction.py  # Wire new agents into graph
+        - tests/test_validator.py  # NEW
+      acceptance_criteria:
+        - "Pydantic validation unchanged (same schema, same rules)"
+        - "Field errors: LLM receives SINGLE failing record + error + text"
+        - "Structural errors: re-chunk retry with different boundaries"
+        - "Max 3 retries per record"
+        - "Dedup key: room + product + location (unchanged)"
+        - "No-Access regex recovery (unchanged)"
+        - "Token usage per correction ≥80% reduction vs current"
+        - "Broadmeadows 31/31 after full pipeline"
+
+    # Phase 3: Polish & Export
+    e29-s7:
+      title: "Dual-Benchmark Accuracy Validation"
+      status: planned
+      points: 1
+      phase: 3
+      gaps: [regression_gate]
+      depends_on: [e29-s6]
+      files:
+        - scripts/research/e29_s7_accuracy_validation.py
+        - docs/reviews/e29-s7-validation-results.md
+      acceptance_criteria:
+        - "Broadmeadows: 31/31 (100%) — NO regression"
+        - "Alexander: ≥40/43 (recovery from 0/43)"
+        - "Per-agent accuracy breakdown documented"
+        - "LLM cost comparison: tokens vs E26 baseline"
+        - "Processing time comparison: seconds vs E26 baseline"
+        - "Validation report generated"
+
+    e29-s8:
+      title: "Flexible Export: Per-Building + ACM-Type"
+      status: planned
+      points: 3
+      phase: 3
+      gaps: [GAP-4]
+      depends_on: [e29-s7]
+      files:
+        - api/routers/acm.py  # Wire field_schema, add new endpoints
+        - frontend/src/components/ExportDialog.tsx  # NEW
+        - tests/test_export.py  # NEW
+      acceptance_criteria:
+        - "Export endpoints use field_schema table (not hardcoded)"
+        - "Per-building export: one Excel file per building"
+        - "ACM-type export: records grouped by product type / risk"
+        - "Consolidated BAR export using field_schema"
+        - "CSV with all 47 BAR columns"
+        - "Frontend: export dialog with format selection"
+        - "All exports include site config fields"
+
+    e29-s9:
+      title: "Integration Testing + Performance Baseline"
+      status: planned
+      points: 2
+      phase: 3
+      gaps: [production_readiness]
+      depends_on: [e29-s8]
+      files:
+        - tests/test_unified_pipeline.py  # NEW
+        - docs/architecture/pipeline-v2.md  # NEW
+      acceptance_criteria:
+        - "E2E test: upload → processing → extraction → DB → export"
+        - "Broadmeadows <120s (current: ~207s)"
+        - "Alexander <300s"
+        - "No uncaught exceptions for malformed/empty PDFs"
+        - "Pipeline architecture document updated"
+        - "Agent specifications documented with I/O schemas"
