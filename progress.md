@@ -136,3 +136,48 @@
 - All 6 criteria pass
 - S3 is unblocked for development
 - Status transitions complete
+
+---
+
+## Session: 2026-03-01 | Agent: John (BMAD PM)
+
+### Entry 4 — PM Gate 1 Sign-Off Review
+
+**Objective**: Review QA Gate 1 outcome, authorize or block S3 start, confirm S3/S4 scope.
+
+#### Documents Reviewed
+1. `V3/epic-29-execution-contract.md` — PM charter, gate criteria, risk register
+2. `docs/sprint-artifacts/e29-gate-decisions.md` — QA gate evaluation (Quinn)
+3. `docs/reviews/e29-baseline-benchmark-report.md` — Per-doc baseline metrics
+4. `docs/sprint-artifacts/sprint-status.yaml` — E29 status (S1 done, S2 done, S3 ready-for-dev)
+5. `docs/sprint-artifacts/e29-s3-unified-orchestrator-path.md` — S3 scope and ACs
+6. `docs/sprint-artifacts/e29-s4-capability-registry-fallback-contract.md` — S4 scope and ACs
+
+#### PM Assessment
+
+**Gate 1 Criteria — PM Concurrence (6/6 PASS)**:
+- G1.1-G1.6: Concur with QA evaluation. Evidence is complete and verifiable.
+- AC-6 PARTIAL (token=0): Accepted as infrastructure limitation, not functional deficiency. Token fields exist in harness schema. OpenRouter Gen API 404 is external.
+
+**Baseline Metrics — PM Risk Assessment**:
+- Broadmeadows 77.4% recall: Acceptable baseline. Over-extraction (32 vs 31 GT) suggests field-matching tuning needed — S5/S6 agent decomposition should address this.
+- Alexander 69.8% recall, 42.3% precision: Significant over-extraction (71 vs 43). Known multi-building complexity. Gate 2 threshold (>=36/43) is appropriate guard.
+- Aldavilla 0%: Not a gate blocker (not in Gate 2+ criteria). Notes for future backlog.
+
+**S3/S4 Scope Verification**:
+- S3: 3 SP, 7 ACs, 5 files — unchanged from execution contract. Dependencies met.
+- S4: 2 SP, 8 ACs, 4 files — unchanged from execution contract. Depends only on S3.
+
+#### Decision
+**GATE 1: APPROVED — S3 AUTHORIZED TO START**
+
+#### Risk Flags Raised
+1. **Token cost tracking** (OpenRouter API 404) — Must be resolved before Gate 3 evaluation, which includes cost thresholds (<=130% of Gate 2 baseline). If not resolvable, PM will need to waive G3.3 or accept manual cost estimation.
+2. **Aldavilla 0% extraction** — Not E29 scope per execution contract out-of-scope list. Logged for future epic backlog (new consultant format investigation).
+
+#### Reboot Check
+1. Last completed milestone: PM Gate 1 sign-off
+2. Current active task: None — sign-off recorded, S3 ready for dev pickup
+3. Blockers: None
+4. Files last modified: e29-gate-decisions.md, progress.md, findings.md
+5. Next planned action: Developer picks up S3, implements unified orchestrator path
