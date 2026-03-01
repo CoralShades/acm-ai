@@ -34,7 +34,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 # Ensure project root is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -55,8 +55,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 GROUND_TRUTH_DIR = PROJECT_ROOT / "benchmarks" / "ground_truth"
+FIXTURES_DIR = PROJECT_ROOT / "benchmarks" / "fixtures"
 RESULTS_DIR = PROJECT_ROOT / "benchmarks" / "results"
-REPORT_PATH = PROJECT_ROOT / "docs" / "reviews" / "e29-baseline-benchmark-report.md"
+REPORT_DIR = PROJECT_ROOT / "docs" / "reviews"
 
 # Fields used for accuracy comparison (must exist in both ground truth and extracted)
 COMPARISON_FIELDS = [
@@ -182,6 +183,47 @@ def load_ground_truth(path: Path) -> dict:
     if "records" not in data or "document" not in data:
         raise ValueError(f"Invalid ground truth format: {path}")
     return data
+
+
+# ---------------------------------------------------------------------------
+# Docling Fixture Loading (R1-T2)
+# ---------------------------------------------------------------------------
+
+# Module-level fixture cache for the mock to reference
+_docling_fixture_cache: list[dict] = []
+
+
+def _load_docling_fixtures(config_name: str) -> list[dict]:
+    """Load Docling table fixtures for a benchmark document.
+
+    Loads from ``benchmarks/fixtures/docling_{config_name}.json`` and returns
+    the ``tables`` list.  Returns an empty list when the fixture file does not
+    exist (graceful fallback).
+    """
+    fixture_path = FIXTURES_DIR / f"docling_{config_name}.json"
+    if not fixture_path.exists():
+        logger.debug(f"No Docling fixture at {fixture_path}")
+        return []
+    with open(fixture_path) as f:
+        data = json.load(f)
+    return data.get("tables", [])
+
+
+async def _mock_get_docling_tables(
+    source_id: str, page_start: int, page_end: int
+) -> list[dict]:
+    """Mock replacement for ``_get_docling_tables`` during benchmarks.
+
+    Filters the module-level ``_docling_fixture_cache`` by the requested page
+    range, returning tables whose ``page_start >= page_start`` and
+    ``page_end <= page_end``.
+    """
+    return [
+        t
+        for t in _docling_fixture_cache
+        if t.get("page_start", 0) >= page_start
+        and t.get("page_end", 0) <= page_end
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -441,11 +483,23 @@ def _extract_pdf_text(pdf_path: Path) -> str:
     return "\n\n".join(pages)
 
 
-async def run_extraction(config: BenchmarkConfig) -> tuple[list, object, float]:
+async def run_extraction(
+    config: BenchmarkConfig,
+    *,
+    with_docling_fixtures: bool = True,
+) -> tuple[list, object, float]:
     """Run extraction pipeline with mocked DB, real LLM.
+
+    Args:
+        config: Benchmark document configuration.
+        with_docling_fixtures: When True (default), load Docling table fixtures
+            and patch ``_get_docling_tables`` so the pipeline injects structured
+            table data instead of falling back to F2.
 
     Returns: (extracted_records, extraction_output, latency_s)
     """
+    global _docling_fixture_cache
+
     from open_notebook.domain.acm import ACMRecord, ACMTableSection
     from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
@@ -453,6 +507,28 @@ async def run_extraction(config: BenchmarkConfig) -> tuple[list, object, float]:
     pdf_text = _extract_pdf_text(config.pdf_path)
     if len(pdf_text) < 100:
         raise ValueError(f"PDF text too short: {len(pdf_text)} chars")
+
+    # Load Docling fixtures if requested
+    if with_docling_fixtures:
+        # Derive config key from BenchmarkConfig name → registry key
+        config_key = config.name.lower().replace(" ", "_")
+        # Try common short names first
+        for candidate in [
+            config_key,
+            config_key.split("_")[0],  # e.g. "broadmeadows"
+        ]:
+            tables = _load_docling_fixtures(candidate)
+            if tables:
+                break
+        else:
+            tables = []
+        _docling_fixture_cache = tables
+        if tables:
+            logger.info(
+                f"Loaded {len(tables)} Docling fixture tables for {config.name}"
+            )
+    else:
+        _docling_fixture_cache = []
 
     # Create mock Source
     source = MagicMock()
@@ -490,6 +566,14 @@ async def run_extraction(config: BenchmarkConfig) -> tuple[list, object, float]:
         patch(
             "open_notebook.graphs.utils.provision_langchain_model",
             _real_provision_model,
+        ),
+        patch(
+            "open_notebook.extractors.orchestrator._get_docling_tables",
+            _mock_get_docling_tables,
+        ),
+        patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            _mock_get_docling_tables,
         ),
     ):
         result = await extract_acm_from_source(
@@ -715,6 +799,16 @@ async def run_benchmark(
     return result
 
 
+def _results_path(output_tag: str) -> Path:
+    """Return the results JSON path for a given output tag."""
+    return RESULTS_DIR / f"{output_tag}_results.json"
+
+
+def _report_path(output_tag: str) -> Path:
+    """Return the report markdown path for a given output tag."""
+    return REPORT_DIR / f"e29-{output_tag}-benchmark-report.md"
+
+
 async def main():
     parser = argparse.ArgumentParser(description="E29 Benchmark Harness")
     parser.add_argument(
@@ -728,13 +822,26 @@ async def main():
         action="store_true",
         help="Generate report from cached results",
     )
+    parser.add_argument(
+        "--output-tag",
+        type=str,
+        default="baseline",
+        help="Tag for output files (e.g., 'gate2', 'gate2_rerun')",
+    )
+    parser.add_argument(
+        "--with-docling-fixtures",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Load Docling table fixtures for injection (default: True)",
+    )
     args = parser.parse_args()
 
     configs = get_benchmark_configs()
+    results_file = _results_path(args.output_tag)
+    report_file = _report_path(args.output_tag)
 
     if args.report_only:
         # Load cached results
-        results_file = RESULTS_DIR / "baseline_results.json"
         if not results_file.exists():
             print(f"No cached results at {results_file}")
             sys.exit(1)
@@ -742,9 +849,9 @@ async def main():
             cached = json.load(f)
         results = [BenchmarkResult(**r) for r in cached]
         report = generate_report(results)
-        REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        REPORT_PATH.write_text(report)
-        print(f"Report written to {REPORT_PATH}")
+        report_file.parent.mkdir(parents=True, exist_ok=True)
+        report_file.write_text(report)
+        print(f"Report written to {report_file}")
         return
 
     # Determine which docs to run
@@ -786,7 +893,6 @@ async def main():
 
     # Save results
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    results_file = RESULTS_DIR / "baseline_results.json"
     serializable = []
     for r in results:
         d = {
@@ -811,9 +917,9 @@ async def main():
 
     # Generate report
     report = generate_report(results)
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(report)
-    print(f"Report written to {REPORT_PATH}")
+    report_file.parent.mkdir(parents=True, exist_ok=True)
+    report_file.write_text(report)
+    print(f"Report written to {report_file}")
 
     # Print summary
     print(f"\n{'='*60}")

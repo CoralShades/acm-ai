@@ -126,3 +126,49 @@ Post-Gate 2 FAIL sprint maintenance and recovery story authoring:
 - Dev: Pick up R1, then R2 (sequential — R2 depends on R1)
 - QA: Re-run Gate 2 after R1+R2 complete
 - PM: Evaluate Gate 2 rerun results
+
+## 2026-03-02: E29-R1 Benchmark Fidelity + Docling Table Testability
+
+**Agent**: Dev (Claude Opus 4.6) | **Status**: review | **Duration**: ~40 min
+
+### What was done
+
+Made G2.3 (Docling injection) testable by creating synthetic Docling table fixtures and
+patching the benchmark harness to inject them. Also prevented output drift via `--output-tag`
+and pinned Gate 2 baseline as an immutable JSON snapshot.
+
+1. Created Docling table fixtures from ground truth:
+   - `benchmarks/fixtures/docling_broadmeadows.json` (2 tables, 31 records)
+   - `benchmarks/fixtures/docling_alexander.json` (5 tables, 43 records, one per building)
+
+2. Patched `e29_benchmark_harness.py`:
+   - Added `_load_docling_fixtures()` + `_mock_get_docling_tables()` for fixture injection
+   - Patched both `orchestrator._get_docling_tables` and `acm_extraction._get_docling_tables`
+   - Added `--output-tag` (default: "baseline") and `--with-docling-fixtures` CLI args
+   - Added `_results_path()` and `_report_path()` helpers for tagged output files
+
+3. Pinned Gate 2 baseline: `benchmarks/baselines/gate2_baseline.json` (immutable)
+
+4. Added 14 new tests (TestNormalization: 7, TestDoclingFixtures: 7)
+
+### Files changed
+| File | Action |
+|------|--------|
+| `scripts/research/e29_benchmark_harness.py` | Modified |
+| `benchmarks/fixtures/docling_broadmeadows.json` | Added |
+| `benchmarks/fixtures/docling_alexander.json` | Added |
+| `benchmarks/baselines/gate2_baseline.json` | Added |
+| `tests/integration/test_benchmark_harness.py` | Modified |
+| `docs/sprint-artifacts/e29-gate2-recovery-spec.md` | Modified |
+| `docs/sprint-artifacts/e29-worklog.md` | Modified |
+| `docs/sprint-artifacts/sprint-status.yaml` | Modified |
+
+### Verification
+- `uv run ruff check .` — All checks passed
+- `uv run pytest tests/integration/test_benchmark_harness.py -x -v` — 44/44 passed
+- `uv run pytest tests/` — 1228 passed, 11 failed (all pre-existing), 2 xfailed
+
+### Next Steps
+- Dev: Pick up R2 (RoomMeta typing, room/material normalization)
+- QA: Re-run Gate 2 after R2 complete
+- E2E verification of Docling injection requires LLM API key (manual step)

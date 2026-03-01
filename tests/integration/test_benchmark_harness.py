@@ -23,9 +23,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from scripts.research.e29_benchmark_harness import (  # noqa: E402
     COMPARISON_FIELDS,
+    PRODUCT_SYNONYMS,
     BenchmarkConfig,
     BenchmarkResult,
     MatchResult,
+    _load_docling_fixtures,
+    _normalize,
+    _normalize_product,
+    _report_path,
+    _results_path,
     calculate_field_accuracy,
     calculate_metrics,
     generate_report,
@@ -556,3 +562,108 @@ class TestConfigRegistry:
         configs = get_benchmark_configs()
         assert "aldavilla" in configs
         assert configs["aldavilla"].expected_records == 4
+
+
+# ---------------------------------------------------------------------------
+# Test: Normalization (R1-AC2, R1-AC3)
+# ---------------------------------------------------------------------------
+
+
+class TestNormalization:
+    def test_room_name_case_insensitive(self):
+        """R1-AC2: Room names match regardless of case."""
+        assert _normalize("Room 1") == _normalize("room 1")
+        assert _normalize("room 1") == _normalize("ROOM 1")
+        assert _normalize("Room 1") == _normalize("ROOM 1")
+
+    def test_room_name_whitespace_normalization(self):
+        """R1-AC2: Extra whitespace is collapsed."""
+        assert _normalize("Room  1") == _normalize("Room 1")
+        assert _normalize("  Room 1  ") == _normalize("Room 1")
+        assert _normalize("Room\t1") == _normalize("Room 1")
+
+    def test_material_description_case_normalization(self):
+        """R1-AC3: Material descriptions are case-insensitive."""
+        assert _normalize("Floor Covering") == _normalize("floor covering")
+        assert _normalize("CEILING TILES") == _normalize("ceiling tiles")
+
+    def test_material_synonym_mapping(self):
+        """R1-AC3: Product synonyms resolve to canonical form."""
+        assert _normalize_product("Mastic") == "flange joints"
+        assert _normalize_product("Flange joints") == "flange joints"
+        assert _normalize_product("flange mastic") == "flange joints"
+
+    def test_product_synonym_fuse(self):
+        """Fuse variants resolve correctly."""
+        assert _normalize_product("Fuses") == "fuse cartridge"
+        assert _normalize_product("Fuse") == "fuse cartridge"
+        assert _normalize_product("Fuse cartridge") == "fuse cartridge"
+
+    def test_product_synonym_unknown_preserved(self):
+        """Unknown products are returned as-is (normalized case)."""
+        assert _normalize_product("Pipe Insulation") == "pipe insulation"
+        assert _normalize_product("Unknown Special Material") == "unknown special material"
+
+    def test_normalize_empty_string(self):
+        """Empty strings normalize cleanly."""
+        assert _normalize("") == ""
+        assert _normalize("   ") == ""
+        assert _normalize_product("") == ""
+
+
+# ---------------------------------------------------------------------------
+# Test: Docling Fixtures (R1-AC1)
+# ---------------------------------------------------------------------------
+
+
+class TestDoclingFixtures:
+    def test_docling_fixture_loading_broadmeadows(self):
+        """Broadmeadows fixture exists and parses correctly."""
+        tables = _load_docling_fixtures("broadmeadows")
+        assert len(tables) > 0, "Broadmeadows fixture should have at least one table"
+
+    def test_docling_fixture_loading_alexander(self):
+        """Alexander fixture exists and parses correctly."""
+        tables = _load_docling_fixtures("alexander")
+        assert len(tables) > 0, "Alexander fixture should have at least one table"
+
+    def test_docling_fixture_loading_missing(self):
+        """Missing fixture returns empty list (graceful fallback)."""
+        tables = _load_docling_fixtures("nonexistent_document")
+        assert tables == []
+
+    def test_docling_fixture_format_broadmeadows(self):
+        """Broadmeadows fixture has required fields."""
+        tables = _load_docling_fixtures("broadmeadows")
+        for table in tables:
+            assert "page_start" in table, "Missing page_start"
+            assert "raw_text" in table, "Missing raw_text"
+            assert "table_type" in table, "Missing table_type"
+            assert table["table_type"] == "docling_direct_api"
+            assert isinstance(table["page_start"], int)
+            assert len(table["raw_text"]) > 0
+
+    def test_docling_fixture_format_alexander(self):
+        """Alexander fixture has required fields and per-building tables."""
+        tables = _load_docling_fixtures("alexander")
+        for table in tables:
+            assert "page_start" in table
+            assert "raw_text" in table
+            assert "table_type" in table
+            assert table["table_type"] == "docling_direct_api"
+        # Alexander has 5 buildings → expect 5 tables
+        assert len(tables) == 5
+
+    def test_output_tag_file_paths(self):
+        """--output-tag produces correctly named result/report files."""
+        results = _results_path("gate2")
+        report = _report_path("gate2")
+        assert results.name == "gate2_results.json"
+        assert report.name == "e29-gate2-benchmark-report.md"
+
+    def test_output_tag_default_baseline(self):
+        """Default tag 'baseline' produces backward-compatible paths."""
+        results = _results_path("baseline")
+        report = _report_path("baseline")
+        assert results.name == "baseline_results.json"
+        assert report.name == "e29-baseline-benchmark-report.md"

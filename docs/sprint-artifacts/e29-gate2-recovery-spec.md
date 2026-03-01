@@ -80,6 +80,64 @@ uv run ruff check .
 uv run pytest tests/ -x
 ```
 
+### Dev Agent Record — R1
+
+**Agent**: Dev (Claude Opus 4.6) | **Status**: review | **Date**: 2026-03-02
+
+#### What was done
+
+1. **R1-T1**: Created Docling table fixtures from ground truth data
+   - `benchmarks/fixtures/docling_broadmeadows.json` — 2 tables (31 records, single building)
+   - `benchmarks/fixtures/docling_alexander.json` — 5 tables (43 records, one per building)
+
+2. **R1-T2**: Patched benchmark harness for Docling injection
+   - Added `_load_docling_fixtures()` — loads `benchmarks/fixtures/docling_{name}.json`
+   - Added `_mock_get_docling_tables()` — async mock that filters fixtures by page range
+   - Patched both import sites: `orchestrator._get_docling_tables` and `acm_extraction._get_docling_tables`
+   - Added `--with-docling-fixtures` CLI flag (default: True)
+
+3. **R1-T3**: Prevented output drift with `--output-tag`
+   - Results → `{tag}_results.json`, report → `e29-{tag}-benchmark-report.md`
+   - Backward-compatible: default tag is `"baseline"`
+   - `--report-only` respects `--output-tag`
+
+4. **R1-T4**: Pinned Gate 2 baseline
+   - `benchmarks/baselines/gate2_baseline.json` — immutable snapshot with metadata envelope
+
+5. **R1-T5**: Added normalization + Docling test coverage (14 new tests)
+   - `TestNormalization` (7 tests): case, whitespace, synonym mapping
+   - `TestDoclingFixtures` (7 tests): fixture loading, format validation, output-tag paths
+
+6. **R1-T6**: Lint + test suite verified
+   - `ruff check .` — zero errors
+   - `pytest tests/integration/test_benchmark_harness.py` — 44/44 passed
+   - `pytest tests/` — 1228 passed, 11 failed (all pre-existing B4/B5/B6), 2 xfailed
+
+#### Files changed
+
+| File | Action |
+|------|--------|
+| `scripts/research/e29_benchmark_harness.py` | Modified (Docling injection, output-tag, fixture loading) |
+| `benchmarks/fixtures/docling_broadmeadows.json` | Added |
+| `benchmarks/fixtures/docling_alexander.json` | Added |
+| `benchmarks/baselines/gate2_baseline.json` | Added |
+| `tests/integration/test_benchmark_harness.py` | Modified (14 new tests) |
+| `docs/sprint-artifacts/e29-gate2-recovery-spec.md` | Modified (this record) |
+| `docs/sprint-artifacts/e29-worklog.md` | Modified |
+| `docs/sprint-artifacts/sprint-status.yaml` | Modified |
+
+#### AC Verification
+
+| # | Criterion | Result |
+|---|-----------|--------|
+| R1-AC1 | Docling tables seeded for Broadmeadows and Alexander | PASS — fixtures created, `test_docling_fixture_loading_*` pass |
+| R1-AC2 | Room name normalization | PASS — `test_room_name_*` pass (case, whitespace) |
+| R1-AC3 | Material description normalization | PASS — `test_material_*` pass (case, synonyms) |
+| R1-AC4 | Baseline Gate 2 results pinned | PASS — `gate2_baseline.json` committed |
+| R1-AC5 | Docling injection active (no F2 fallback) | READY — fixtures loaded, mock patched at both sites; requires LLM run for full E2E confirmation |
+| R1-AC6 | ruff check clean | PASS |
+| R1-AC7 | No new test failures | PASS — 11 failures all pre-existing (B4/B5/B6) |
+
 ---
 
 ## E29-R2: Match-Gap Remediation — Inventory Typing + Normalization (2 SP)
