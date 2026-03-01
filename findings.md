@@ -1,144 +1,86 @@
-# Findings — E29 Gate 1 QA Re-Evaluation
+# Findings — E29-S3 Unified Orchestrator Path
 
-## Date: 2026-03-01 | Evaluator: Quinn (BMAD QA)
-## Previous evaluation: FAIL (2026-03-01 by Murat) — S2 not yet implemented
-
----
-
-## S1 — JSON Parser Resilience: PASS (re-confirmed)
-
-### Test Evidence
-```
-uv run ruff check .                          → All checks passed
-uv run pytest tests/test_json_parser.py -x -v → 34/34 PASSED (7.28s)
-  TestFenceStripping: 6/6 (AC-1)
-  TestPreambleHandling: 4/4 (AC-2)
-  TestMultiBlock: 4/4 (AC-3)
-  TestTruncation: 6/6 (AC-4)
-  TestBackwardCompat: 7/7 (AC-5)
-  TestEdgeCases: 7/7
-```
-
-**S1 Verdict: DONE (previously verified, re-confirmed)**
+## Date: 2026-03-01 | Agent: Amelia (Dev)
 
 ---
 
-## S2 — Benchmark Harness + Baseline Capture: NOW IMPLEMENTED
+## Current Routing (Pre-S3)
 
-### File Existence (all verified)
-| Required Artifact | Status | Details |
-|-------------------|--------|---------|
-| `benchmarks/__init__.py` | EXISTS | Package init |
-| `benchmarks/conftest.py` | EXISTS | Pytest fixtures |
-| `benchmarks/ground_truth/broadmeadows.json` | EXISTS | 31 records |
-| `benchmarks/ground_truth/alexander.json` | EXISTS | 43 records |
-| `benchmarks/ground_truth/aldavilla_4601.json` | EXISTS | 4 records |
-| `benchmarks/results/baseline_results.json` | EXISTS | 3 doc entries |
-| `scripts/research/e29_benchmark_harness.py` | EXISTS | ~450 lines |
-| `tests/integration/__init__.py` | EXISTS | Package init |
-| `tests/integration/test_benchmark_harness.py` | EXISTS | 30 tests, 5 classes |
-| `docs/reviews/e29-baseline-benchmark-report.md` | EXISTS | Full report |
-
-### Test Evidence
-```
-uv run pytest tests/integration/test_benchmark_harness.py -x -v → 30/30 PASSED (0.09s)
-  TestGroundTruthLoading: 6/6
-  TestRecordMatching: 9/9
-  TestMetricCalculations: 7/7
-  TestReportGeneration: 4/4
-  TestConfigRegistry: 4/4
+**Graph edges** (`acm_extraction.py:2912-2917`):
+```python
+agent_state.add_conditional_edges(
+    "tag_pages",
+    lambda s: "orchestrate" if should_use_orchestrator(s) else "prepare",
+    {"orchestrate": "orchestrate", "prepare": "prepare"},
+)
 ```
 
-### Baseline Metrics (from baseline_results.json)
-| Document | GT | Extracted | Matched | Recall | Precision | Field Acc | Latency |
-|----------|----|-----------|---------|--------|-----------|-----------|---------|
-| Broadmeadows | 31 | 32 | 24 | 77.4% | 75.0% | 70.2% | 141.3s |
-| Alexander | 43 | 71 | 30 | 69.8% | 42.3% | 55.2% | 211.3s |
-| Aldavilla | 4 | 0 | 0 | 0.0% | 0.0% | 0.0% | 265.4s |
+**Decision function** (`orchestrator.py:322-329`):
+```python
+def should_use_orchestrator(state: dict) -> bool:
+    inventory = state.get("building_inventory")
+    if not inventory:
+        return False
+    if not inventory.buildings or inventory.total_buildings == 0:
+        return False
+    return True
+```
 
-### S2 Acceptance Criteria Verdict
-| AC | Criterion | Verdict | Evidence |
-|----|-----------|---------|----------|
-| AC-1 | Harness executes >=3 docs E2E | **PASS** | baseline_results.json has 3 entries |
-| AC-2 | Broadmeadows ground truth (31 records) | **PASS** | broadmeadows.json — 31 records verified |
-| AC-3 | Alexander ground truth (43 records) | **PASS** | alexander.json — 43 records verified |
-| AC-4 | Third doc ground truth | **PASS** | aldavilla_4601.json — 4 records |
-| AC-5 | Recall/precision/field accuracy per doc | **PASS** | All 3 metrics in report per document |
-| AC-6 | Latency and token metrics per doc | **PARTIAL** | Latency captured. Token/cost=0 (OpenRouter API 404 — infrastructure issue, not harness defect) |
-| AC-7 | Baseline report published | **PASS** | docs/reviews/e29-baseline-benchmark-report.md exists |
-| AC-8 | CI entrypoint exists | **PASS** | pytest tests/integration/test_benchmark_harness.py — 30/30 pass |
-
-**S2 Verdict: PASS (7/8 PASS, 1 PARTIAL — AC-6 token tracking is external infrastructure limitation)**
+**Problem**: Documents without building inventory fall to `prepare_context → extract_records` legacy path. Two code paths must be maintained.
 
 ---
 
-## Gate 1 — Baseline Harness: PASS (Re-evaluation)
+## Key Code Points
 
-### Criterion Results
-| # | Criterion | Result | Evidence |
-|---|-----------|--------|----------|
-| G1.1 | Harness runs >=3 docs E2E | **PASS** | baseline_results.json has 3 entries; script exists |
-| G1.2 | Ground truth for Broadmeadows, Alexander, +1 | **PASS** | 3 JSON files in benchmarks/ground_truth/ with correct record counts |
-| G1.3 | Baseline metrics: recall, precision, field accuracy | **PASS** | e29-baseline-benchmark-report.md has all 3 metrics per document |
-| G1.4 | Baseline metrics: latency, token cost | **PASS** | Latency captured per doc. Token=0 is OpenRouter limitation (harness fields exist) |
-| G1.5 | CI entrypoint works | **PASS** | pytest tests/integration/test_benchmark_harness.py runs — 30/30 pass |
-| G1.6 | S1 merged (parser fix) | **PASS** | Code at utils.py:497-590, 34/34 tests pass, ruff clean |
-
-**Gate 1 Decision: PASS — 6/6 criteria pass. S3 is unblocked.**
-
-### AC-6 PARTIAL Note
-The harness code properly implements token accumulation (_token_accumulator at line 385 of e29_benchmark_harness.py). The 0 values are caused by OpenRouter's Generation API returning 404 for gen_id lookups — an external infrastructure issue. The harness schema captures token_usage and cost_usd fields correctly, and the report template renders them. This is a monitoring gap, not a functional deficiency. Accepted as PASS.
-
-### Status Transitions To Perform
-| Item | From | To | Reason |
-|------|------|----|--------|
-| E29-S2 | `review` | `done` | All AC verified (7 PASS + 1 PARTIAL) |
-| E29-S3 | `drafted` | `ready-for-dev` | Gate 1 PASS unblocks Phase 2 |
-| Gate 1 | `FAIL` | `PASS` | All 6 criteria now pass |
+| Location | What | Impact for S3 |
+|----------|------|---------------|
+| `acm_extraction.py:63` | `should_use_orchestrator` import | Remove from routing import |
+| `acm_extraction.py:2912-2917` | Conditional edge | Replace with `add_edge` |
+| `acm_extraction.py:2919-2922` | `prepare` conditional edge | Remove (make unreachable) |
+| `acm_extraction.py:2924-2928` | `extract` conditional edge | Remove (make unreachable) |
+| `acm_extraction.py:2899-2900` | `add_node("prepare"/"extract")` | KEEP (AC-5: present but unreachable) |
+| `orchestrator.py:924` | `inventory: BuildingInventory = state["building_inventory"]` | Crashes if None — must guard |
+| `orchestrator.py:936` | `plan_extraction(inventory, ...)` | Requires `BuildingInventory` — must handle synthetic case |
 
 ---
 
-## PM Gate 1 Review — John (BMAD PM) | 2026-03-01
+## Synthetic Plan Design
 
-### Gate 1 Criteria — PM Concurrence
+Architecture delta Section 2 prescribes:
+```python
+if not inventory or not inventory.buildings:
+    plan = SyntheticExtractionPlan(
+        building_name="Whole Document",
+        page_start=1,
+        page_end=state.get("total_pages", 999),
+        source="synthetic_no_inventory"
+    )
+    buildings_to_process = [plan]
+```
 
-| # | Criterion | QA Result | PM Concurrence | Notes |
-|---|-----------|-----------|----------------|-------|
-| G1.1 | Harness runs >=3 docs E2E | PASS | Concur | 3 docs in baseline_results.json |
-| G1.2 | Ground truth for 3 docs | PASS | Concur | 31+43+4 records across 3 files |
-| G1.3 | Baseline: recall/precision/field acc | PASS | Concur | All 3 metrics per-doc in report |
-| G1.4 | Baseline: latency/token cost | PASS | Concur | Latency captured. Token=0 accepted as infra issue. |
-| G1.5 | CI entrypoint | PASS | Concur | 30/30 tests pass |
-| G1.6 | S1 merged | PASS | Concur | 34/34 tests, ruff clean |
+**Implementation approach**: Create `SyntheticExtractionPlan` in `acm_schemas.py` as a lightweight Pydantic model. In `orchestrate_extraction()`, detect None/empty inventory, create synthetic plan, convert to `BuildingExtractionPlan`, then run through existing `extract_building()` pipeline unchanged.
 
-### Baseline Metrics — PM Risk Analysis
+**`total_pages` source**: `state.get("page_tags")` → `.total_pages` with fallback to 999.
 
-| Document | Recall | Precision | PM Risk Level | Notes |
-|----------|--------|-----------|---------------|-------|
-| Broadmeadows | 77.4% | 75.0% | Low | Slight over-extraction. Agent decomposition (S5/S6) should improve field matching. |
-| Alexander | 69.8% | 42.3% | Medium | Significant over-extraction (71 vs 43 GT). Multi-building complexity. Gate 2 threshold >=36/43 guards this. |
-| Aldavilla | 0.0% | 0.0% | N/A (out of scope) | New format. Not in E29 gating criteria. Backlog item. |
+---
 
-### S3/S4 Scope Verification
+## Docling Injection Compatibility
 
-**S3 — Unified Orchestrator Path (3 SP)**
-- Dependencies: S1 merged ✓, S2 complete ✓, Gate 1 PASS ✓
-- 7 ACs: All clearly measurable, no ambiguity
-- 5 files touched — all within extraction pipeline, no frontend impact
-- Risk mitigation: Legacy functions preserved but unreachable (AC-5) — rollback safe
-- **Scope: UNCHANGED from execution contract**
+`extract_building()` already calls `_get_docling_tables(source_id, page_start, page_end)` and `_inject_docling_tables()` for every building. For synthetic whole-doc plans, the page range covers all pages → Docling tables matching any page will be injected. **No changes needed in `extract_building()`**.
 
-**S4 — Capability Registry + Fallback Contract (2 SP)**
-- Dependencies: S3 only
-- 8 ACs: All clearly testable
-- Gate 2 exits after S4
-- **Scope: UNCHANGED from execution contract**
+---
 
-### Risk Flags
+## LangGraph Node Pruning Risk
 
-1. **Token cost tracking** — OpenRouter Gen API 404 prevents cost capture. Must be resolved before Gate 3 (cost thresholds: <=130% of Gate 2 baseline). Action: Dev to investigate API fix or PM waives G3.3 with manual estimate.
-2. **Aldavilla 0% extraction** — Logged for future epic. Not an E29 concern per out-of-scope list.
+LangGraph may or may not include disconnected nodes (no incoming edges) in compiled `graph.nodes`. After removing edges to `prepare` and `extract`, they may disappear from `graph.nodes`.
 
-### PM Decision
+**Mitigation**: AC-5 says "Functions still exist in codebase; no graph edge routes to them." The AC is about source code presence, not compiled graph. Update tests to check function existence rather than `graph.nodes` membership.
 
-**GATE 1: APPROVED — S3 AUTHORIZED TO START**
+---
+
+## Gate 1 Baseline (for benchmark comparison)
+
+| Document | GT | Extracted | Recall | Precision | Field Acc | Latency |
+|----------|----|-----------|--------|-----------|-----------|---------|
+| Broadmeadows | 31 | 32 | 77.4% | 75.0% | 70.2% | 141.3s |
+| Alexander | 43 | 71 | 69.8% | 42.3% | 55.2% | 211.3s |

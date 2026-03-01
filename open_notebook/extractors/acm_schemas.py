@@ -449,6 +449,15 @@ class ChunkExtractionInput(BaseModel):
     )
 
 
+class SyntheticExtractionPlan(BaseModel):
+    """Synthetic extraction plan for documents without building inventory (E29-S3)."""
+
+    building_name: str = "Whole Document"
+    page_start: int = 1
+    page_end: int = 999
+    source: str = "synthetic_no_inventory"
+
+
 class ACMExtractionInput(BaseModel):
     """Input for the ACM extraction command."""
 

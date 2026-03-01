@@ -24,6 +24,7 @@ from open_notebook.extractors.acm_schemas import (
     ACMExtractionRecord,
     ACMExtractionResult,
     BuildingRoomContext,
+    SyntheticExtractionPlan,
 )
 from open_notebook.extractors.building_inventory import (
     BuildingComplexity,
@@ -921,7 +922,7 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
     """
     source: Source = state["source"]
     content = normalize_docling_text(source.full_text or "")
-    inventory: BuildingInventory = state["building_inventory"]
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
     page_tags: Optional[PageTaggingResult] = state.get("page_tags")
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
 
@@ -933,7 +934,37 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
     total_start = time.time()
 
     # Generate extraction plan
-    extraction_plan = plan_extraction(inventory, page_tags, doc_meta)
+    if not inventory or not inventory.buildings:
+        # E29-S3: Synthetic whole-document plan for no-inventory documents
+        total_pages = page_tags.total_pages if page_tags else 999
+
+        synthetic = SyntheticExtractionPlan(
+            page_start=1, page_end=total_pages
+        )
+
+        synthetic_building_plan = BuildingExtractionPlan(
+            building_id="WHOLE_DOC",
+            building_name=synthetic.building_name,
+            page_range=(synthetic.page_start, synthetic.page_end),
+            strategy=ExtractionStrategy.FULL_LLM,
+            complexity="complex",
+            context_summary=f"Whole Document (synthetic, {total_pages} pages)",
+        )
+
+        extraction_plan = ExtractionPlan(
+            plans=[synthetic_building_plan],
+            total_buildings=1,
+            buildings_to_extract=1,
+            buildings_skipped=0,
+            estimated_llm_calls=1,
+        )
+
+        logger.info(
+            f"Orchestrator using synthetic plan for source {source.id}: "
+            f"no building inventory, treating as whole document ({total_pages} pages)"
+        )
+    else:
+        extraction_plan = plan_extraction(inventory, page_tags, doc_meta)
 
     logger.info(
         f"Orchestrator plan for source {source.id}: "

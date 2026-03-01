@@ -1,37 +1,82 @@
-# Task Plan — E29 Gate 1 QA Re-Evaluation (BMAD QA — Quinn)
+# E29-S3: Unified Orchestrator Path — Task Plan
 
-## Objective
-Re-evaluate Gate 1 after S2 implementation. Validate all S1 and S2 acceptance criteria, run verification commands, update Gate 1 in e29-gate-decisions.md, transition statuses.
+## Pre-Implementation
+- [x] T0: Read + understand current routing in `acm_extraction.py:2912-2917` and `orchestrator.py:915-1020`
 
-## Phase 1: Evidence Collection (COMPLETE)
+## Implementation Tasks (execute in order)
 
-### S1 Verification (previously verified — re-confirmed)
-- [x] `uv run ruff check .` — All checks passed
-- [x] `uv run pytest tests/test_json_parser.py -x -v` — 34/34 passed (7.28s)
-- [x] Code verified: TruncationError at utils.py:497, _extract_json_objects at utils.py:503, parse_json_response at utils.py:547
+### T1: Create SyntheticExtractionPlan dataclass
+- **File**: `open_notebook/extractors/acm_schemas.py`
+- **What**: Add `SyntheticExtractionPlan` dataclass with `building_name`, `page_start`, `page_end`, `source` fields
+- **Note**: Architecture delta (section 2) specifies exact shape: `SyntheticExtractionPlan(building_name="Whole Document", page_start=1, page_end=total_pages, source="synthetic_no_inventory")`
+- **AC**: AC-3
+- [ ] Implement
+- [ ] Verify import
 
-### S2 Verification (NEW — all artifacts now exist)
-- [x] `uv run pytest tests/integration/test_benchmark_harness.py -x -v` — 30/30 passed (0.09s)
-- [x] Ground truth files verified:
-  - `benchmarks/ground_truth/broadmeadows.json` — 31 records
-  - `benchmarks/ground_truth/alexander.json` — 43 records
-  - `benchmarks/ground_truth/aldavilla_4601.json` — 4 records
-- [x] Baseline report: `docs/reviews/e29-baseline-benchmark-report.md` — exists with full metrics
-- [x] Results file: `benchmarks/results/baseline_results.json` — 3 entries
-- [x] Harness script: `scripts/research/e29_benchmark_harness.py` — exists (~450 lines)
-- [x] CI entrypoint: `pytest tests/integration/test_benchmark_harness.py -x` — 30/30 pass
+### T2: Implement synthetic plan logic in `orchestrate_extraction()`
+- **File**: `open_notebook/extractors/orchestrator.py`
+- **What**:
+  - T2.1: When `building_inventory` is None/empty → create synthetic whole-doc `BuildingExtractionPlan`
+  - T2.2: Synthetic plan uses `page_start=1, page_end=total_pages` (from state or fallback 999)
+  - T2.3: Ensure `_inject_docling_tables()` works for synthetic plans (already called in `extract_building`)
+  - T2.4: `orchestrate_extraction` must not crash when `state["building_inventory"]` is None — currently line 924 does `inventory: BuildingInventory = state["building_inventory"]` with no guard
+- **AC**: AC-3, AC-4
+- [ ] Implement
+- [ ] Verify no crash on None inventory
 
-## Phase 2: Apply Updates (COMPLETE)
-- [x] Update `e29-gate-decisions.md` Gate 1 → PASS with evidence
-- [x] Update `e29-s2-benchmark-harness-baseline-capture.md` → status done, QA checklist, Post-QA Notes
-- [x] Update `sprint-status.yaml`: S2 → done, S3 → ready-for-dev
+### T3: Replace conditional edge with unconditional edge
+- **File**: `open_notebook/graphs/acm_extraction.py`
+- **What**:
+  - T3.1: Replace lines 2912-2917 `add_conditional_edges("tag_pages", ...)` with `add_edge("tag_pages", "orchestrate")`
+  - T3.2: Remove edges from `prepare` and `extract` nodes (lines 2919-2928). Leave `add_node` calls in place (AC-5).
+  - T3.3: Remove `should_use_orchestrator` from import at line 63 (no longer needed in routing)
+  - T3.4: Keep the `should_use_orchestrator` function in `orchestrator.py` (still importable, just unused in graph routing)
+- **AC**: AC-1, AC-2, AC-5
+- [ ] Implement
+- [ ] Verify graph compiles
 
-## Phase 3: PM Gate 1 Sign-Off (COMPLETE)
-- [x] Read execution contract, gate decisions, benchmark report, sprint-status
-- [x] Read S3 and S4 story specs for scope verification
-- [x] Assess Gate 1 criteria — concur with QA 6/6 PASS
-- [x] Review baseline metrics for risk signals (token tracking, Aldavilla 0%)
-- [x] Confirm S3/S4 scope unchanged from execution contract
-- [x] Record PM sign-off in `e29-gate-decisions.md`
-- [x] Update `findings.md` with PM risk analysis
-- [x] Update `progress.md` with PM session entry
+### T4: Update orchestrator tests
+- **File**: `tests/test_orchestrator.py`
+- **What**:
+  - Add `TestSyntheticPlan`: test that `orchestrate_extraction` creates synthetic plan when `building_inventory` is None
+  - Add test: synthetic plan when inventory has empty buildings list
+  - Add test: synthetic plan page range = (1, total_pages)
+  - Add test: Docling table injection fires for synthetic plan
+  - Keep existing `TestShouldUseOrchestrator` tests (function still exists)
+- **AC**: AC-3, AC-4
+- [ ] Implement
+- [ ] All pass
+
+### T5: Update extraction graph tests
+- **File**: `tests/test_acm_ai_extraction.py`
+- **What**:
+  - Update `TestGraphWiring` to reflect unconditional edge (not conditional)
+  - Update `TestBackwardCompatibility` — legacy functions present in source, nodes may/may not be in compiled graph
+  - Add test: no-inventory doc routes through orchestrator
+- **AC**: AC-1, AC-2, AC-5
+- [ ] Implement
+- [ ] All pass
+
+### T6: Run benchmark — Broadmeadows 31/31
+- **Command**: `uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows`
+- **AC**: AC-6
+- [ ] Run + capture results
+
+### T7: Run benchmark — Alexander >=36/43
+- **Command**: `uv run python scripts/research/e29_benchmark_harness.py --doc alexander`
+- **AC**: AC-7
+- [ ] Run + capture results
+
+### T8: Lint + full test suite
+- **Commands**:
+  - `uv run ruff check .`
+  - `uv run pytest tests/test_orchestrator.py -x`
+  - `uv run pytest tests/test_acm_ai_extraction.py -x`
+  - `uv run pytest tests/ -x` (full suite)
+- [ ] All pass
+
+## Post-Implementation
+- [ ] Update story status: `drafted` → `in-progress` → `review`
+- [ ] Fill Post-Dev Notes in `e29-s3-unified-orchestrator-path.md`
+- [ ] Append session to `e29-worklog.md`
+- [ ] Produce routing diff summary + AC-by-AC evidence

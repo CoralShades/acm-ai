@@ -60,7 +60,6 @@ from open_notebook.extractors.orchestrator import (
     _get_docling_tables,
     _inject_docling_tables,
     orchestrate_extraction,
-    should_use_orchestrator,
 )
 from open_notebook.extractors.page_tagger import (
     PageTaggingResult,
@@ -2909,23 +2908,10 @@ agent_state.add_edge(START, "extract_metadata")
 agent_state.add_edge("extract_metadata", "structure")
 agent_state.add_edge("structure", "inventory")
 agent_state.add_edge("inventory", "tag_pages")
-# E1-S20: Conditional routing after page tagging
-agent_state.add_conditional_edges(
-    "tag_pages",
-    lambda s: "orchestrate" if should_use_orchestrator(s) else "prepare",
-    {"orchestrate": "orchestrate", "prepare": "prepare"},
-)
-agent_state.add_edge("orchestrate", "validate")  # Orchestrator feeds into validation
-agent_state.add_conditional_edges(
-    "prepare",
-    lambda s: "error" if s.get("error") else "extract",
-    {"extract": "extract", "error": END},
-)
-agent_state.add_conditional_edges(
-    "extract",
-    should_continue_extraction,
-    {"extract": "extract", "validate": "validate", "error": END},
-)
+# E29-S3: Unconditional routing — all documents go through orchestrator
+agent_state.add_edge("tag_pages", "orchestrate")
+agent_state.add_edge("orchestrate", "validate")
+# Legacy edges removed — prepare/extract nodes kept but unreachable (AC-5)
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}
 agent_state.add_conditional_edges(
     "validate", should_correct, {"correct": "correct", "deduplicate": "deduplicate"}
