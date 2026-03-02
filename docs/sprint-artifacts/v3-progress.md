@@ -17,12 +17,13 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | Date | Story | Title | SP | Files Changed | Key Learnings |
 |------|-------|-------|----|---------------|---------------|
 | 2026-03-03 | E30-S1 | SF Schema Config Loader | 5 | field_config.py, config_loader.py, sf_schema_provisioning.py, models.py, acm.py, main.py, 38.surrealql, test_config_loader.py | Additive pattern, 137 building types (not 114), Item_Name__c is NOT dependent picklist |
+| 2026-03-03 | E30-S3 | ACM Record SF Item__c Alignment | 3 | acm.py, acm_schemas.py, 39.surrealql, test_acm_sf_alignment.py, test_domain.py | AliasChoices for dual BAR/SF access, populate_by_name=True, school_name now optional |
 
 ## Sprint Summary
 
 | Sprint | Stories Done | SP Done | Status |
 |--------|-------------|---------|--------|
-| V3-1 | 1/6 | 5/22 | In Progress |
+| V3-1 | 2/6 | 8/22 | In Progress |
 | V3-2 | 0/2 | 0/8 | Not Started |
 | V3-3 | 0/7 | 0/19 | Not Started |
 | V3-4 | 0/5 | 0/14 | Not Started |
