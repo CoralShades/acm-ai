@@ -141,14 +141,32 @@ async def _llm_extract_structure(
         max_tokens=16384,
     )
 
-    chain = model.with_structured_output(DocumentStructureLLM)
+    from open_notebook.graphs.utils import (
+        _verify_provider_routing,
+        parse_json_response,
+    )
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
             content="Extract the document structure, table of contents, and section hierarchy."
         ),
     ]
-    llm_result: DocumentStructureLLM = await chain.ainvoke(messages)
+    raw_response = await model.ainvoke(messages)
+
+    # E27-S3: Verify provider routing (non-blocking)
+    try:
+        await _verify_provider_routing(raw_response, "document_structure")
+    except Exception:
+        pass  # Never block extraction for verification failure
+
+    response_text = (
+        raw_response.content
+        if hasattr(raw_response, "content")
+        else str(raw_response)
+    )
+    parsed = parse_json_response(response_text)
+    llm_result = DocumentStructureLLM.model_validate(parsed)
     return DocumentStructure(**llm_result.model_dump())
 
 

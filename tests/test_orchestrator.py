@@ -672,6 +672,161 @@ class TestOrchestrateExtraction:
 
 
 # ---------------------------------------------------------------------------
+# E29-S3: Synthetic plan for no-inventory documents
+# ---------------------------------------------------------------------------
+
+
+class TestSyntheticPlan:
+    @pytest.mark.asyncio
+    async def test_creates_synthetic_plan_when_no_inventory(self):
+        """AC-3: No-inventory documents produce synthetic plan."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = "Test School"
+        source.full_text = "Some document content"
+
+        page_tags = _make_page_tags([(1, 1, 0.9), (2, 1, 0.9), (3, 1, 0.9)])
+
+        state = {
+            "source": source,
+            "building_inventory": None,
+            "page_tags": page_tags,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with patch(
+            "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as mock_parallel:
+            result = await orchestrate_extraction(state, MagicMock())
+
+        # Verify synthetic plan was created and passed to parallel extraction
+        plans_arg = mock_parallel.await_args.args[0]
+        assert len(plans_arg) == 1
+        assert plans_arg[0].building_id == "WHOLE_DOC"
+        assert plans_arg[0].building_name == "Whole Document"
+        assert plans_arg[0].page_range == (1, 3)
+        assert plans_arg[0].strategy == ExtractionStrategy.FULL_LLM
+
+    @pytest.mark.asyncio
+    async def test_creates_synthetic_plan_when_empty_buildings(self):
+        """AC-3: Empty building list produces synthetic plan."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        empty_inventory = BuildingInventory(
+            buildings=[],
+            processing_groups=[],
+            total_buildings=0,
+        )
+
+        state = {
+            "source": source,
+            "building_inventory": empty_inventory,
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with patch(
+            "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as mock_parallel:
+            result = await orchestrate_extraction(state, MagicMock())
+
+        plans_arg = mock_parallel.await_args.args[0]
+        assert len(plans_arg) == 1
+        assert plans_arg[0].building_id == "WHOLE_DOC"
+        # No page_tags → default 999 pages
+        assert plans_arg[0].page_range == (1, 999)
+
+    @pytest.mark.asyncio
+    async def test_synthetic_plan_page_range(self):
+        """Synthetic plan uses page_start=1, page_end=total_pages."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        page_tags = _make_page_tags(
+            [(1, 1, 0.9), (2, 1, 0.9), (3, 1, 0.9), (4, 1, 0.9), (5, 1, 0.9)]
+        )
+
+        state = {
+            "source": source,
+            "building_inventory": None,
+            "page_tags": page_tags,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with patch(
+            "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as mock_parallel:
+            await orchestrate_extraction(state, MagicMock())
+
+        plans_arg = mock_parallel.await_args.args[0]
+        assert plans_arg[0].page_range == (1, 5)
+        assert "5 pages" in plans_arg[0].context_summary
+
+    @pytest.mark.asyncio
+    async def test_synthetic_plan_docling_injection(self):
+        """AC-4: Docling table injection fires for synthetic plan."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content with tables"
+
+        state = {
+            "source": source,
+            "building_inventory": None,
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        mock_records = [
+            ACMExtractionRecord(
+                building_id="WHOLE_DOC",
+                product="Floor Tiles",
+                material_description="Vinyl",
+                result="Positive",
+            )
+        ]
+
+        with patch(
+            "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+            new_callable=AsyncMock,
+            return_value=[
+                (
+                    mock_records,
+                    BuildingExtractionStats(
+                        building_id="WHOLE_DOC",
+                        records_extracted=1,
+                        pages_processed=999,
+                        strategy_used="full_llm",
+                        time_ms=100,
+                    ),
+                )
+            ],
+        ):
+            result = await orchestrate_extraction(state, MagicMock())
+
+        assert len(result["records"]) == 1
+        stats = result["orchestrator_stats"]
+        assert isinstance(stats, OrchestratorStats)
+        assert stats.total_buildings == 1
+        assert stats.total_records == 1
+
+
+# ---------------------------------------------------------------------------
 # Task 7.12: Parallel extraction
 # ---------------------------------------------------------------------------
 
@@ -885,18 +1040,23 @@ class TestGraphWiring:
         assert "orchestrate" in graph.nodes
 
     def test_graph_has_legacy_nodes(self):
-        from open_notebook.graphs.acm_extraction import graph
+        """AC-5: Legacy functions exist in source but nodes may be unreachable."""
+        from open_notebook.graphs.acm_extraction import (
+            extract_records,
+            prepare_context,
+        )
 
-        assert "prepare" in graph.nodes
-        assert "extract" in graph.nodes
+        assert callable(prepare_context)
+        assert callable(extract_records)
 
-    def test_conditional_edge_from_tag_pages(self):
-        """tag_pages should have conditional edges to both orchestrate and prepare."""
-        from open_notebook.graphs.acm_extraction import graph
+    def test_unconditional_edge_from_tag_pages(self):
+        """E29-S3 AC-1: tag_pages routes unconditionally to orchestrate."""
+        from open_notebook.graphs.acm_extraction import agent_state
 
-        # Both orchestrate and prepare should be reachable from the compiled graph
-        assert "orchestrate" in graph.nodes
-        assert "prepare" in graph.nodes
+        edges = agent_state.edges
+        assert ("tag_pages", "orchestrate") in edges or any(
+            e == ("tag_pages", "orchestrate") for e in edges
+        )
 
     def test_orchestrate_connects_to_validate(self):
         """orchestrate node should connect to validate."""
@@ -914,19 +1074,18 @@ class TestGraphWiring:
 
 
 class TestBackwardCompatibility:
-    def test_legacy_path_reachable(self):
-        """The prepare -> extract path should still be compilable."""
-        from open_notebook.graphs.acm_extraction import graph
+    def test_legacy_functions_exist_but_unreachable(self):
+        """E29-S3 AC-5: Legacy functions exist in source, importable but unreachable in graph."""
+        from open_notebook.graphs.acm_extraction import (
+            extract_records,
+            prepare_context,
+        )
 
-        assert "prepare" in graph.nodes
-        assert "extract" in graph.nodes
-        assert "validate" in graph.nodes
-        assert "correct" in graph.nodes
-        assert "deduplicate" in graph.nodes
-        assert "save" in graph.nodes
+        assert callable(prepare_context)
+        assert callable(extract_records)
 
     def test_no_inventory_uses_legacy(self):
-        """Without building_inventory, should_use_orchestrator returns False."""
+        """should_use_orchestrator returns False for None inventory (function still works)."""
         state = {"building_inventory": None, "page_tags": None}
         assert should_use_orchestrator(state) is False
 
@@ -1165,3 +1324,320 @@ class TestRegexYieldCheck:
         b00b_plan = next(p for p in plan_result.plans if p.building_id == "B00B")
         assert b00b_plan.acm_item_count_estimate == 5
         assert b00b_plan.strategy == ExtractionStrategy.REGEX_ONLY
+
+
+# ---------------------------------------------------------------------------
+# E29-S4: Strategy Registry Integration
+# ---------------------------------------------------------------------------
+
+
+class TestStrategyRegistryIntegration:
+    """E29-S4: Orchestrator integrates strategy registry for telemetry and retry cap."""
+
+    @pytest.mark.asyncio
+    async def test_orchestrate_sets_max_correction_attempts_3(self):
+        """AC-5: orchestrate_extraction() sets max_correction_attempts=3 in output."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        state = {
+            "source": source,
+            "building_inventory": None,
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with patch(
+            "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = await orchestrate_extraction(state, MagicMock())
+
+        assert result["max_correction_attempts"] == 3
+
+    @pytest.mark.asyncio
+    async def test_f1_telemetry_emitted_for_no_inventory(self):
+        """F1 telemetry emitted when no building inventory is available."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        state = {
+            "source": source,
+            "building_inventory": None,
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator.emit_fallback_telemetry",
+                wraps=__import__(
+                    "open_notebook.extractors.strategy_registry",
+                    fromlist=["emit_fallback_telemetry"],
+                ).emit_fallback_telemetry,
+            ) as mock_emit,
+        ):
+            await orchestrate_extraction(state, MagicMock())
+
+        from open_notebook.extractors.strategy_registry import FallbackId
+
+        mock_emit.assert_any_call(
+            FallbackId.F1_NO_INVENTORY,
+            "Whole Document",
+            "no building inventory",
+        )
+
+    @pytest.mark.asyncio
+    async def test_f4_telemetry_emitted_for_zero_records(self):
+        """F4 telemetry emitted when a building returns 0 records."""
+        source = MagicMock()
+        source.id = "source:test"
+        source.title = None
+        source.full_text = "Content"
+
+        zero_stats = BuildingExtractionStats(
+            building_id="B00A",
+            records_extracted=0,
+            pages_processed=5,
+            strategy_used="full_llm",
+            time_ms=100,
+        )
+
+        state = {
+            "source": source,
+            "building_inventory": _make_inventory(
+                [_make_building("B00A", "Admin", 10, 15)]
+            ),
+            "page_tags": None,
+            "document_metadata": None,
+            "start_time": 0.0,
+        }
+
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._extract_buildings_parallel",
+                new_callable=AsyncMock,
+                return_value=[([], zero_stats)],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator.emit_fallback_telemetry",
+                wraps=__import__(
+                    "open_notebook.extractors.strategy_registry",
+                    fromlist=["emit_fallback_telemetry"],
+                ).emit_fallback_telemetry,
+            ) as mock_emit,
+        ):
+            await orchestrate_extraction(state, MagicMock())
+
+        from open_notebook.extractors.strategy_registry import FallbackId
+
+        mock_emit.assert_any_call(
+            FallbackId.F4_EMPTY_EXTRACTION,
+            "B00A",
+            "0 records (strategy=full_llm)",
+        )
+
+    def test_fallback_tags_aggregated_in_merge(self):
+        """Fallback tags from buildings are aggregated into OrchestratorStats."""
+        import time
+
+        results = [
+            (
+                [],
+                BuildingExtractionStats(
+                    building_id="B00A",
+                    records_extracted=0,
+                    pages_processed=5,
+                    strategy_used="full_llm",
+                    time_ms=100,
+                    fallback_tags=["fallback.no_docling_tables"],
+                ),
+            ),
+            (
+                [],
+                BuildingExtractionStats(
+                    building_id="B00B",
+                    records_extracted=0,
+                    pages_processed=3,
+                    strategy_used="full_llm",
+                    time_ms=50,
+                    fallback_tags=["fallback.no_docling_tables", "fallback.empty_extraction"],
+                ),
+            ),
+        ]
+        plan = ExtractionPlan(
+            plans=[],
+            total_buildings=2,
+            buildings_to_extract=2,
+            buildings_skipped=0,
+            estimated_llm_calls=2,
+        )
+
+        _, stats = merge_building_results(results, plan, time.time())
+        assert len(stats.fallback_activated) == 3
+        assert stats.fallback_activated.count("fallback.no_docling_tables") == 2
+        assert "fallback.empty_extraction" in stats.fallback_activated
+
+
+# ---------------------------------------------------------------------------
+# R2: RoomMeta Typing Coercion Tests (R2-AC1)
+# ---------------------------------------------------------------------------
+
+
+class TestRoomMetaCoercion:
+    """Tests for _coerce_rooms_in_inventory (R2-T1)."""
+
+    def test_coerces_string_rooms_to_roommeta(self):
+        """String rooms are converted to {room_id, name} dicts."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": ["Room A", "Room B"],
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        rooms = parsed["buildings"][0]["rooms"]
+        assert len(rooms) == 2
+        assert rooms[0] == {"room_id": "Room A", "name": "Room A"}
+        assert rooms[1] == {"room_id": "Room B", "name": "Room B"}
+
+    def test_preserves_dict_rooms(self):
+        """Dict rooms pass through unchanged."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": [
+                        {"room_id": "R001", "name": "Office", "area_m2": 20.0}
+                    ],
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        rooms = parsed["buildings"][0]["rooms"]
+        assert len(rooms) == 1
+        assert rooms[0]["room_id"] == "R001"
+        assert rooms[0]["area_m2"] == 20.0
+
+    def test_handles_mixed_rooms(self):
+        """Mix of strings and dicts are both handled correctly."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": [
+                        "Hallway",
+                        {"room_id": "R002", "name": "Lab"},
+                    ],
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        rooms = parsed["buildings"][0]["rooms"]
+        assert len(rooms) == 2
+        assert rooms[0] == {"room_id": "Hallway", "name": "Hallway"}
+        assert rooms[1]["room_id"] == "R002"
+
+    def test_handles_none_rooms(self):
+        """None rooms default to empty list."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": None,
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        assert parsed["buildings"][0]["rooms"] == []
+
+    def test_handles_missing_rooms_key(self):
+        """Missing rooms key gets defaulted to empty list."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        assert parsed["buildings"][0]["rooms"] == []
+
+    def test_coerced_rooms_validate_as_building_inventory(self):
+        """Coerced string rooms pass BuildingInventory.model_validate()."""
+        from open_notebook.extractors.building_inventory import (
+            _coerce_rooms_in_inventory,
+        )
+
+        parsed = {
+            "buildings": [
+                {
+                    "building_id": "B00A",
+                    "name": "Admin",
+                    "page_start": 1,
+                    "rooms": ["External", "Roof Space"],
+                    "complexity": "complex",
+                }
+            ],
+            "processing_groups": [],
+            "total_buildings": 1,
+        }
+        _coerce_rooms_in_inventory(parsed)
+        inv = BuildingInventory.model_validate(parsed)
+        assert len(inv.buildings[0].rooms) == 2
+        assert inv.buildings[0].rooms[0].name == "External"
+        assert inv.buildings[0].rooms[0].room_id == "External"

@@ -11,13 +11,24 @@ cd /d "%ACM_DIR%"
 REM Create logs directory
 if not exist "%ACM_DIR%logs" mkdir "%ACM_DIR%logs"
 
-echo [0/5] Syncing Python dependencies...
+echo [0/7] Syncing Python dependencies...
 set UV_LINK_MODE=copy
 uv sync --quiet
 echo Dependencies synced.
 echo.
 
-echo [1/5] Clearing ports and killing stale processes...
+echo [1/7] Running preflight checks...
+uv run python scripts/preflight_checks.py
+if %errorlevel% neq 0 (
+    echo.
+    echo PREFLIGHT FAILED — fix issues above before starting.
+    echo.
+    pause
+    exit /b 1
+)
+echo.
+
+echo [2/7] Clearing ports and killing stale processes...
 REM Kill any leftover ACM-AI service windows from previous runs
 taskkill /FI "WINDOWTITLE eq ACM-AI - Frontend*" /F >nul 2>&1
 taskkill /FI "WINDOWTITLE eq ACM-AI - Worker*" /F >nul 2>&1
@@ -28,7 +39,7 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8502.*LISTENING"') do taskk
 uv run python scripts/service_manager.py fix --auto-fix 2>nul
 echo.
 
-echo [2/5] Checking SurrealDB...
+echo [3/7] Checking SurrealDB...
 docker compose ps surrealdb 2>nul | findstr /i "running" >nul
 if %errorlevel% neq 0 (
     echo Starting SurrealDB via Docker Compose...
@@ -41,7 +52,7 @@ REM Save SurrealDB startup logs
 docker compose logs --no-color --tail 200 surrealdb > "%ACM_DIR%logs\surrealdb.log" 2>&1
 echo.
 
-echo [3/5] Starting API Server (port 5055)...
+echo [4/7] Starting API Server (port 5055)...
 start "ACM-AI - API" cmd /k "chcp 65001 >nul && cd /d %ACM_DIR% && set API_RELOAD=false && uv run python run_api.py"
 echo Waiting for API to be ready...
 :wait_api
@@ -51,12 +62,12 @@ if %errorlevel% neq 0 goto wait_api
 echo API Server is ready!
 echo.
 
-echo [4/5] Starting Background Worker...
+echo [5/7] Starting Background Worker...
 start "ACM-AI - Worker" cmd /k "chcp 65001 >nul && cd /d %ACM_DIR% && set PYTHONIOENCODING=utf-8 && uv run python run_worker.py --import-modules commands"
 timeout /t 2 /nobreak >nul
 echo.
 
-echo [5/5] Starting Frontend (port 8502)...
+echo [6/7] Starting Frontend (port 8502)...
 start "ACM-AI - Frontend" powershell -NoProfile -Command "cd '%ACM_DIR%frontend'; $env:PORT='8502'; npm run dev -- -p 8502 2>&1 | Tee-Object -FilePath '%ACM_DIR%logs\frontend.log'"
 echo.
 
@@ -79,6 +90,6 @@ echo     Frontend:  logs\frontend.log
 echo ========================================
 echo.
 
-echo Verifying service health...
+echo [7/7] Verifying service health...
 timeout /t 5 /nobreak >nul
 uv run python scripts/service_manager.py status 2>nul

@@ -1,0 +1,8954 @@
+Attributes
+activateable: false
+associateEntityType:
+associateParentEntity:
+compactLayoutable: true
+createable: true
+custom: true
+customSetting: false
+deepCloneable: false
+defaultImplementation:
+deletable: true
+deprecatedAndHidden: false
+feedEnabled: true
+hasSubtypes: false
+idEnabled: true
+implementedBy:
+implementsInterfaces:
+isInterface: false
+isSubtype: false
+keyPrefix: a00
+label: Asset Class
+labelPlural: Asset Classes
+layoutable: true
+mergeable: false
+mruEnabled: true
+name: Building__c
+networkScopeFieldName:
+queryable: true
+replicateable: true
+retrieveable: true
+searchLayoutable: true
+searchable: true
+triggerable: true
+undeletable: true
+updateable: true
+urlDetail: https://vaea--sit.sandbox.my.salesforce.com/{ID}
+urlEdit: https://vaea--sit.sandbox.my.salesforce.com/{ID}/e
+urlNew: https://vaea--sit.sandbox.my.salesforce.com/a00/e
+Action Overrides (2)
+New
+formFactor: LARGE
+isAvailableInTouch: false
+name: New
+pageId: 0Ab9n000000e21VCAQ
+url:
+View
+formFactor: LARGE
+isAvailableInTouch: false
+name: View
+pageId: 0M07F0000003TmZSAU
+url:
+Child Relationships (73)
+AIInsightValue.SobjectLookupValueId
+cascadeDelete: true
+childSObject: AIInsightValue
+deprecatedAndHidden: false
+field: SobjectLookupValueId
+AIRecordInsight.TargetId
+cascadeDelete: false
+childSObject: AIRecordInsight
+deprecatedAndHidden: false
+field: TargetId
+ActivityHistory.WhatId
+cascadeDelete: true
+childSObject: ActivityHistory
+deprecatedAndHidden: false
+field: WhatId
+relationshipName: ActivityHistories
+ApprovalSubmission.RelatedRecordId
+cascadeDelete: false
+childSObject: ApprovalSubmission
+deprecatedAndHidden: false
+field: RelatedRecordId
+relationshipName: ApprovalSubmissions
+ApprovalWorkItem.RelatedRecordId
+cascadeDelete: false
+childSObject: ApprovalWorkItem
+deprecatedAndHidden: false
+field: RelatedRecordId
+relationshipName: ApprovalWorkItems
+AttachedContentDocument.LinkedEntityId
+cascadeDelete: true
+childSObject: AttachedContentDocument
+deprecatedAndHidden: false
+field: LinkedEntityId
+relationshipName: AttachedContentDocuments
+AttachedContentNote.LinkedEntityId
+cascadeDelete: true
+childSObject: AttachedContentNote
+deprecatedAndHidden: false
+field: LinkedEntityId
+relationshipName: AttachedContentNotes
+Attachment.ParentId
+cascadeDelete: true
+childSObject: Attachment
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: Attachments
+Audit__c.Building__c
+cascadeDelete: false
+childSObject: Audit__c
+deprecatedAndHidden: false
+field: Building__c
+relationshipName: Jobs__r
+restrictedDelete: true
+Building__Feed.ParentId
+cascadeDelete: true
+childSObject: Building__Feed
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: Feeds
+Building__History.ParentId
+cascadeDelete: true
+childSObject: Building__History
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: Histories
+Building__Share.ParentId
+cascadeDelete: true
+childSObject: Building__Share
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: Shares
+Building__c_hd.ParentId
+cascadeDelete: true
+childSObject: Building__c_hd
+deprecatedAndHidden: false
+field: ParentId
+CollaborationGroupRecord.RecordId
+cascadeDelete: true
+childSObject: CollaborationGroupRecord
+deprecatedAndHidden: false
+field: RecordId
+relationshipName: RecordAssociatedGroups
+CollaborationGroupRecordChangeEvent.RecordId
+cascadeDelete: false
+childSObject: CollaborationGroupRecordChangeEvent
+deprecatedAndHidden: false
+field: RecordId
+CombinedAttachment.ParentId
+cascadeDelete: true
+childSObject: CombinedAttachment
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: CombinedAttachments
+ContactRequest.WhatId
+cascadeDelete: false
+childSObject: ContactRequest
+deprecatedAndHidden: false
+field: WhatId
+relationshipName: ContactRequests
+ContentDistribution.RelatedRecordId
+cascadeDelete: true
+childSObject: ContentDistribution
+deprecatedAndHidden: false
+field: RelatedRecordId
+ContentDocumentLink.LinkedEntityId
+cascadeDelete: true
+childSObject: ContentDocumentLink
+deprecatedAndHidden: false
+field: LinkedEntityId
+relationshipName: ContentDocumentLinks
+ContentDocumentLinkChangeEvent.LinkedEntityId
+cascadeDelete: false
+childSObject: ContentDocumentLinkChangeEvent
+deprecatedAndHidden: false
+field: LinkedEntityId
+ContentVersion.FirstPublishLocationId
+cascadeDelete: false
+childSObject: ContentVersion
+deprecatedAndHidden: false
+field: FirstPublishLocationId
+ContentVersionChangeEvent.FirstPublishLocationId
+cascadeDelete: false
+childSObject: ContentVersionChangeEvent
+deprecatedAndHidden: false
+field: FirstPublishLocationId
+DuplicateRecordItem.RecordId
+cascadeDelete: true
+childSObject: DuplicateRecordItem
+deprecatedAndHidden: false
+field: RecordId
+relationshipName: DuplicateRecordItems
+EmailMessage.RelatedToId
+cascadeDelete: false
+childSObject: EmailMessage
+deprecatedAndHidden: false
+field: RelatedToId
+relationshipName: Emails
+EmailMessageChangeEvent.RelatedToId
+cascadeDelete: false
+childSObject: EmailMessageChangeEvent
+deprecatedAndHidden: false
+field: RelatedToId
+EngagementTopic.TopicId
+cascadeDelete: false
+childSObject: EngagementTopic
+deprecatedAndHidden: false
+field: TopicId
+relationshipName: EngagementInitiatedTopic
+EngagementTopicChangeEvent.TopicId
+cascadeDelete: false
+childSObject: EngagementTopicChangeEvent
+deprecatedAndHidden: false
+field: TopicId
+EntitySubscription.ParentId
+cascadeDelete: true
+childSObject: EntitySubscription
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: FeedSubscriptionsForEntity
+Event.WhatId
+cascadeDelete: true
+childSObject: Event
+deprecatedAndHidden: false
+field: WhatId
+relationshipName: Events
+EventChangeEvent.WhatId
+cascadeDelete: false
+childSObject: EventChangeEvent
+deprecatedAndHidden: false
+field: WhatId
+EventRelation.RelationId
+cascadeDelete: true
+childSObject: EventRelation
+deprecatedAndHidden: false
+field: RelationId
+relationshipName: EventRelations
+EventRelationChangeEvent.RelationId
+cascadeDelete: false
+childSObject: EventRelationChangeEvent
+deprecatedAndHidden: false
+field: RelationId
+FeedComment.ParentId
+cascadeDelete: false
+childSObject: FeedComment
+deprecatedAndHidden: false
+field: ParentId
+FeedItem.ParentId
+cascadeDelete: true
+childSObject: FeedItem
+deprecatedAndHidden: false
+field: ParentId
+FlowExecutionErrorEvent.ContextRecordId
+cascadeDelete: false
+childSObject: FlowExecutionErrorEvent
+deprecatedAndHidden: false
+field: ContextRecordId
+FlowOrchestrationWorkItem.RelatedRecordId
+cascadeDelete: false
+childSObject: FlowOrchestrationWorkItem
+deprecatedAndHidden: false
+field: RelatedRecordId
+relationshipName: FlowOrchestrationWorkItems
+FlowRecordRelation.RelatedRecordId
+cascadeDelete: false
+childSObject: FlowRecordRelation
+deprecatedAndHidden: false
+field: RelatedRecordId
+History_Tracking__c.Building__c
+cascadeDelete: false
+childSObject: History_Tracking__c
+deprecatedAndHidden: false
+field: Building__c
+relationshipName: History_Trackings__r
+Item_Snapshot__c_hd.ParentId
+cascadeDelete: true
+childSObject: Item_Snapshot__c_hd
+deprecatedAndHidden: false
+field: ParentId
+Item__c.Building_Code__c
+cascadeDelete: true
+childSObject: Item__c
+deprecatedAndHidden: false
+field: Building_Code__c
+relationshipName: Items__r
+Item__c_hd.ParentId
+cascadeDelete: true
+childSObject: Item__c_hd
+deprecatedAndHidden: false
+field: ParentId
+NetworkActivityAudit.ParentEntityId
+cascadeDelete: false
+childSObject: NetworkActivityAudit
+deprecatedAndHidden: false
+field: ParentEntityId
+relationshipName: ParentEntities
+NetworkFeedResponseMetric.ParentRecordId
+cascadeDelete: false
+childSObject: NetworkFeedResponseMetric
+deprecatedAndHidden: false
+field: ParentRecordId
+NetworkUserHistoryRecent.RecordId
+cascadeDelete: true
+childSObject: NetworkUserHistoryRecent
+deprecatedAndHidden: false
+field: RecordId
+relationshipName: NetworkUserHistoryRecentToRecord
+Note.ParentId
+cascadeDelete: true
+childSObject: Note
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: Notes
+NoteAndAttachment.ParentId
+cascadeDelete: true
+childSObject: NoteAndAttachment
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: NotesAndAttachments
+ObjectRelatedUrl.ParentId
+cascadeDelete: true
+childSObject: ObjectRelatedUrl
+deprecatedAndHidden: false
+field: ParentId
+ObjectRelatedUrlChangeEvent.ParentId
+cascadeDelete: false
+childSObject: ObjectRelatedUrlChangeEvent
+deprecatedAndHidden: false
+field: ParentId
+OpenActivity.WhatId
+cascadeDelete: true
+childSObject: OpenActivity
+deprecatedAndHidden: false
+field: WhatId
+relationshipName: OpenActivities
+OutgoingEmail.RelatedToId
+cascadeDelete: false
+childSObject: OutgoingEmail
+deprecatedAndHidden: false
+field: RelatedToId
+ProcessException.AttachedToId
+cascadeDelete: true
+childSObject: ProcessException
+deprecatedAndHidden: false
+field: AttachedToId
+relationshipName: ProcessExceptions
+ProcessExceptionChangeEvent.AttachedToId
+cascadeDelete: false
+childSObject: ProcessExceptionChangeEvent
+deprecatedAndHidden: false
+field: AttachedToId
+ProcessExceptionEvent.AttachedToId
+cascadeDelete: false
+childSObject: ProcessExceptionEvent
+deprecatedAndHidden: false
+field: AttachedToId
+ProcessInstance.TargetObjectId
+cascadeDelete: true
+childSObject: ProcessInstance
+deprecatedAndHidden: false
+field: TargetObjectId
+relationshipName: ProcessInstances
+ProcessInstanceChangeEvent.TargetObjectId
+cascadeDelete: false
+childSObject: ProcessInstanceChangeEvent
+deprecatedAndHidden: false
+field: TargetObjectId
+ProcessInstanceHistory.TargetObjectId
+cascadeDelete: false
+childSObject: ProcessInstanceHistory
+deprecatedAndHidden: false
+field: TargetObjectId
+relationshipName: ProcessSteps
+RecordAction.RecordId
+cascadeDelete: true
+childSObject: RecordAction
+deprecatedAndHidden: false
+field: RecordId
+relationshipName: RecordActions
+RecordActionHistory.ParentRecordId
+cascadeDelete: false
+childSObject: RecordActionHistory
+deprecatedAndHidden: false
+field: ParentRecordId
+relationshipName: RecordActionHistories
+RecordAlert.ParentId
+cascadeDelete: false
+childSObject: RecordAlert
+deprecatedAndHidden: false
+field: ParentId
+relationshipName: RecordAlertParent
+restrictedDelete: true
+RecordAlert.WhatId
+cascadeDelete: false
+childSObject: RecordAlert
+deprecatedAndHidden: false
+field: WhatId
+relationshipName: RecordAlertWhat
+restrictedDelete: true
+RecordAlertChangeEvent.ParentId
+cascadeDelete: false
+childSObject: RecordAlertChangeEvent
+deprecatedAndHidden: false
+field: ParentId
+RecordAlertChangeEvent.WhatId
+cascadeDelete: false
+childSObject: RecordAlertChangeEvent
+deprecatedAndHidden: false
+field: WhatId
+Removal_Job__c.Building__c
+cascadeDelete: false
+childSObject: Removal_Job__c
+deprecatedAndHidden: false
+field: Building__c
+relationshipName: Removal_Jobs__r
+SurveySubject.SubjectId
+cascadeDelete: false
+childSObject: SurveySubject
+deprecatedAndHidden: false
+field: SubjectId
+relationshipName: SurveySubjectEntities
+SurveySubjectChangeEvent.SubjectId
+cascadeDelete: false
+childSObject: SurveySubjectChangeEvent
+deprecatedAndHidden: false
+field: SubjectId
+Task.WhatId
+cascadeDelete: true
+childSObject: Task
+deprecatedAndHidden: false
+field: WhatId
+relationshipName: Tasks
+TaskChangeEvent.WhatId
+cascadeDelete: false
+childSObject: TaskChangeEvent
+deprecatedAndHidden: false
+field: WhatId
+TaskRelation.RelationId
+cascadeDelete: true
+childSObject: TaskRelation
+deprecatedAndHidden: false
+field: RelationId
+relationshipName: TaskRelations
+TaskRelationChangeEvent.RelationId
+cascadeDelete: false
+childSObject: TaskRelationChangeEvent
+deprecatedAndHidden: false
+field: RelationId
+TopicAssignment.EntityId
+cascadeDelete: true
+childSObject: TopicAssignment
+deprecatedAndHidden: false
+field: EntityId
+relationshipName: TopicAssignments
+UserDefinedLabelAssignment.ItemId
+cascadeDelete: true
+childSObject: UserDefinedLabelAssignment
+deprecatedAndHidden: false
+field: ItemId
+relationshipName: UserDefinedLabelAssignments
+Visitor_Log_Building__c.Building__c
+cascadeDelete: false
+childSObject: Visitor_Log_Building__c
+deprecatedAndHidden: false
+field: Building__c
+relationshipName: Visitor_Log_Buildings__r
+building_snapshot__c.Building__c
+cascadeDelete: true
+childSObject: building_snapshot__c
+deprecatedAndHidden: false
+field: Building__c
+relationshipName: Building_Snapshots__r
+Fields (143)
+ABAR_QR_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: IMAGE(''+$Label.QR_Code_Generation_Api_Url+'?size=150x150&data=' & $Label.ABAR_Community_Url &'?buildingId='& $Label.ABAR_Community_Prefix & Id & $Label.ABAR_Community_Suffix ,'Scan QR code to open record in mobile.')
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+htmlFormatted: true
+idLookup: false
+inlineHelpText: QR Code for specific record
+label: ABAR QR Code
+length: 1300
+name: ABAR_QR_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+ABAR_Unique_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Generate the Asset QR code for ABAR community
+label: ABAR Unique Code
+length: 255
+name: ABAR_Unique_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+ACM_Snapshot_In_Progress__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultValue: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: This check will be checked if any ACM Snapshot batch job is in progress
+label: ACM Snapshot In Progress
+length: 0
+name: ACM_Snapshot_In_Progress__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:boolean
+sortable: true
+type: boolean
+unique: false
+updateable: true
+Additional_Comments__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 393216
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+extraTypeInfo: plaintextarea
+filterable: false
+groupable: false
+idLookup: false
+label: Additional Comments
+length: 131072
+name: Additional_Comments__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: false
+type: textarea
+unique: false
+updateable: true
+Addressify_Building_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Addressify asset name is different to the VAEA Asset name
+label: Addressify Asset Name
+length: 255
+name: Addressify_Building_Name__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Address_Component_Flag__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Address Component Flag
+length: 255
+name: Address_Component_Flag__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+AIRHaz_ABAR_Unique_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Regenerate the Asset QR code for ABAR community in Airhaz app
+label: AIRHaz ABAR Unique Code
+length: 255
+name: AIRHaz_ABAR_Unique_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Asbestos_Register_Available__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Is the Asbestos Register Available as required by OHS? Select Yes or No
+label: Asbestos Register Available
+length: 255
+name: Asbestos_Register_Available__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Yes
+active: true
+defaultValue: false
+label: Yes
+value: Yes
+No
+active: true
+defaultValue: false
+label: No
+value: No
+Audit_Report_Available__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: The Audit Report usually accompanies the asbestos register. Select yes or No.
+label: Audit Report Available
+length: 255
+name: Audit_Report_Available__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Yes
+active: true
+defaultValue: false
+label: Yes
+value: Yes
+No
+active: true
+defaultValue: false
+label: No
+value: No
+Australian_Building_Address_Only__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: IF(1 == 1, TRUE, FALSE)
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: true
+idLookup: false
+label: Australian Asset Address Only
+length: 0
+name: Australian_Building_Address_Only__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:boolean
+sortable: true
+type: boolean
+unique: false
+updateable: false
+BLD18CharID__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: CASESAFEID(Id)
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+label: BLD18CharID
+length: 1300
+name: BLD18CharID__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Building_Address_LGA__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: The Local Government Area (LGA) is derived automatically using the Meshblock or Postcode of the asset address. No manual input is required.
+label: Asset Address LGA
+length: 255
+name: Building_Address_LGA__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (80)
+Alpine Shire Council
+active: true
+defaultValue: false
+label: Alpine Shire Council
+value: Alpine Shire Council
+Ararat Rural City Council
+active: true
+defaultValue: false
+label: Ararat Rural City Council
+value: Ararat Rural City Council
+Ballarat City Council
+active: true
+defaultValue: false
+label: Ballarat City Council
+value: Ballarat City Council
+Banyule City Council
+active: true
+defaultValue: false
+label: Banyule City Council
+value: Banyule City Council
+Bass Coast Shire Council
+active: true
+defaultValue: false
+label: Bass Coast Shire Council
+value: Bass Coast Shire Council
+Baw Baw Shire Council
+active: true
+defaultValue: false
+label: Baw Baw Shire Council
+value: Baw Baw Shire Council
+Bayside City Council
+active: true
+defaultValue: false
+label: Bayside City Council
+value: Bayside City Council
+Benalla Rural City Council
+active: true
+defaultValue: false
+label: Benalla Rural City Council
+value: Benalla Rural City Council
+Boroondara City Council
+active: true
+defaultValue: false
+label: Boroondara City Council
+value: Boroondara City Council
+Borough of Queenscliffe
+active: true
+defaultValue: false
+label: Borough of Queenscliffe
+value: Borough of Queenscliffe
+Brimbank City Council
+active: true
+defaultValue: false
+label: Brimbank City Council
+value: Brimbank City Council
+Buloke Shire Council
+active: true
+defaultValue: false
+label: Buloke Shire Council
+value: Buloke Shire Council
+Campaspe Shire Council
+active: true
+defaultValue: false
+label: Campaspe Shire Council
+value: Campaspe Shire Council
+Cardinia Shire Council
+active: true
+defaultValue: false
+label: Cardinia Shire Council
+value: Cardinia Shire Council
+Central Goldfields Shire Council
+active: true
+defaultValue: false
+label: Central Goldfields Shire Council
+value: Central Goldfields Shire Council
+City of Casey
+active: true
+defaultValue: false
+label: City of Casey
+value: City of Casey
+Colac-Otway Shire Council
+active: true
+defaultValue: false
+label: Colac-Otway Shire Council
+value: Colac-Otway Shire Council
+Corangamite Shire Council
+active: true
+defaultValue: false
+label: Corangamite Shire Council
+value: Corangamite Shire Council
+Darebin City Council
+active: true
+defaultValue: false
+label: Darebin City Council
+value: Darebin City Council
+East Gippsland Shire Council
+active: true
+defaultValue: false
+label: East Gippsland Shire Council
+value: East Gippsland Shire Council
+Frankston City Council
+active: true
+defaultValue: false
+label: Frankston City Council
+value: Frankston City Council
+French Island (Unincorporated)
+active: true
+defaultValue: false
+label: French Island (Unincorporated)
+value: French Island (Unincorporated)
+Gannawarra Shire Council
+active: true
+defaultValue: false
+label: Gannawarra Shire Council
+value: Gannawarra Shire Council
+Glen Eira City Council
+active: true
+defaultValue: false
+label: Glen Eira City Council
+value: Glen Eira City Council
+Glenelg Shire Council
+active: true
+defaultValue: false
+label: Glenelg Shire Council
+value: Glenelg Shire Council
+Golden Plains Shire Council
+active: true
+defaultValue: false
+label: Golden Plains Shire Council
+value: Golden Plains Shire Council
+Greater Bendigo City Council
+active: true
+defaultValue: false
+label: Greater Bendigo City Council
+value: Greater Bendigo City Council
+Greater Dandenong City Council
+active: true
+defaultValue: false
+label: Greater Dandenong City Council
+value: Greater Dandenong City Council
+Greater Geelong City Council
+active: true
+defaultValue: false
+label: Greater Geelong City Council
+value: Greater Geelong City Council
+Greater Shepparton City Council
+active: true
+defaultValue: false
+label: Greater Shepparton City Council
+value: Greater Shepparton City Council
+Hepburn Shire Council
+active: true
+defaultValue: false
+label: Hepburn Shire Council
+value: Hepburn Shire Council
+Hindmarsh Shire Council
+active: true
+defaultValue: false
+label: Hindmarsh Shire Council
+value: Hindmarsh Shire Council
+Hobsons Bay City Council
+active: true
+defaultValue: false
+label: Hobsons Bay City Council
+value: Hobsons Bay City Council
+Horsham Rural City Council
+active: true
+defaultValue: false
+label: Horsham Rural City Council
+value: Horsham Rural City Council
+Hume City Council
+active: true
+defaultValue: false
+label: Hume City Council
+value: Hume City Council
+Indigo Shire Council
+active: true
+defaultValue: false
+label: Indigo Shire Council
+value: Indigo Shire Council
+Kingston City Council
+active: true
+defaultValue: false
+label: Kingston City Council
+value: Kingston City Council
+Knox City Council
+active: true
+defaultValue: false
+label: Knox City Council
+value: Knox City Council
+Latrobe City Council
+active: true
+defaultValue: false
+label: Latrobe City Council
+value: Latrobe City Council
+Loddon Shire Council
+active: true
+defaultValue: false
+label: Loddon Shire Council
+value: Loddon Shire Council
+Macedon Ranges Shire Council
+active: true
+defaultValue: false
+label: Macedon Ranges Shire Council
+value: Macedon Ranges Shire Council
+Manningham City Council
+active: true
+defaultValue: false
+label: Manningham City Council
+value: Manningham City Council
+Mansfield Shire Council
+active: true
+defaultValue: false
+label: Mansfield Shire Council
+value: Mansfield Shire Council
+Maribyrnong City Council
+active: true
+defaultValue: false
+label: Maribyrnong City Council
+value: Maribyrnong City Council
+Maroondah City Council
+active: true
+defaultValue: false
+label: Maroondah City Council
+value: Maroondah City Council
+Melbourne City Council
+active: true
+defaultValue: false
+label: Melbourne City Council
+value: Melbourne City Council
+Melton City Council
+active: true
+defaultValue: false
+label: Melton City Council
+value: Melton City Council
+Merri-bek City Council
+active: true
+defaultValue: false
+label: Merri-bek City Council
+value: Merri-bek City Council
+Mildura Rural City Council
+active: true
+defaultValue: false
+label: Mildura Rural City Council
+value: Mildura Rural City Council
+Mitchell Shire Council
+active: true
+defaultValue: false
+label: Mitchell Shire Council
+value: Mitchell Shire Council
+Moira Shire Council
+active: true
+defaultValue: false
+label: Moira Shire Council
+value: Moira Shire Council
+Monash City Council
+active: true
+defaultValue: false
+label: Monash City Council
+value: Monash City Council
+Moonee Valley City Council
+active: true
+defaultValue: false
+label: Moonee Valley City Council
+value: Moonee Valley City Council
+Moorabool Shire Council
+active: true
+defaultValue: false
+label: Moorabool Shire Council
+value: Moorabool Shire Council
+Mornington Peninsula Shire Council
+active: true
+defaultValue: false
+label: Mornington Peninsula Shire Council
+value: Mornington Peninsula Shire Council
+Mount Alexander Shire Council
+active: true
+defaultValue: false
+label: Mount Alexander Shire Council
+value: Mount Alexander Shire Council
+Moyne Shire Council
+active: true
+defaultValue: false
+label: Moyne Shire Council
+value: Moyne Shire Council
+Murrindindi Shire Council
+active: true
+defaultValue: false
+label: Murrindindi Shire Council
+value: Murrindindi Shire Council
+Nillumbik Shire Council
+active: true
+defaultValue: false
+label: Nillumbik Shire Council
+value: Nillumbik Shire Council
+Northern Grampians Shire Council
+active: true
+defaultValue: false
+label: Northern Grampians Shire Council
+value: Northern Grampians Shire Council
+Port Phillip City Council
+active: true
+defaultValue: false
+label: Port Phillip City Council
+value: Port Phillip City Council
+Pyrenees Shire Council
+active: true
+defaultValue: false
+label: Pyrenees Shire Council
+value: Pyrenees Shire Council
+Southern Grampians Shire Council
+active: true
+defaultValue: false
+label: Southern Grampians Shire Council
+value: Southern Grampians Shire Council
+South Gippsland Shire Council
+active: true
+defaultValue: false
+label: South Gippsland Shire Council
+value: South Gippsland Shire Council
+Stonnington City Council
+active: true
+defaultValue: false
+label: Stonnington City Council
+value: Stonnington City Council
+Strathbogie Shire Council
+active: true
+defaultValue: false
+label: Strathbogie Shire Council
+value: Strathbogie Shire Council
+Surf Coast Shire Council
+active: true
+defaultValue: false
+label: Surf Coast Shire Council
+value: Surf Coast Shire Council
+Swan Hill Rural City Council
+active: true
+defaultValue: false
+label: Swan Hill Rural City Council
+value: Swan Hill Rural City Council
+Towong Shire Council
+active: true
+defaultValue: false
+label: Towong Shire Council
+value: Towong Shire Council
+Wangaratta Rural City Council
+active: true
+defaultValue: false
+label: Wangaratta Rural City Council
+value: Wangaratta Rural City Council
+Warrnambool City Council
+active: true
+defaultValue: false
+label: Warrnambool City Council
+value: Warrnambool City Council
+Wellington Shire Council
+active: true
+defaultValue: false
+label: Wellington Shire Council
+value: Wellington Shire Council
+West Wimmera Shire Council
+active: true
+defaultValue: false
+label: West Wimmera Shire Council
+value: West Wimmera Shire Council
+Whitehorse City Council
+active: true
+defaultValue: false
+label: Whitehorse City Council
+value: Whitehorse City Council
+Whittlesea City Council
+active: true
+defaultValue: false
+label: Whittlesea City Council
+value: Whittlesea City Council
+Wodonga City Council
+active: true
+defaultValue: false
+label: Wodonga City Council
+value: Wodonga City Council
+Wyndham City Council
+active: true
+defaultValue: false
+label: Wyndham City Council
+value: Wyndham City Council
+Yarra City Council
+active: true
+defaultValue: false
+label: Yarra City Council
+value: Yarra City Council
+Yarra Ranges Shire Council
+active: true
+defaultValue: false
+label: Yarra Ranges Shire Council
+value: Yarra Ranges Shire Council
+Yarriambiack Shire Council
+active: true
+defaultValue: false
+label: Yarriambiack Shire Council
+value: Yarriambiack Shire Council
+Building_Address_Map__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: IF(Building_Location__Latitude__s=0, HYPERLINK("http://maps.google.com/maps?f=q&hl=en&q="& Building_Address__c &" ,+ "&Suburb__c&" ,+ "&Postcode__c& "&om=1", IMAGE('https://maps.googleapis.com/maps/api/staticmap?zoom=15&size=400x200&maptype=roadmap&key='+$Label.Google_Map_API_Key+'&markers=color:green|label:Marker_Label|'+ Building_Address__c + ', ' + Suburb__c + ',' + Postcode__c , 'Asset Location')), HYPERLINK("http://maps.google.com/maps?f=q&hl=en&q="& TEXT(Building_Location__Latitude__s) &", "&TEXT(Building_Location__Longitude__s),IMAGE('https://maps.googleapis.com/maps/api/staticmap?key='+$Label.Google_Map_API_Key+'&zoom=15&size=400x200&markers=color:Marker_Color|label:Marker_Label|'+ TEXT(Building_Location__Latitude__s) + ',' + TEXT(Building_Location__Longitude__s), 'Title')) )
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+htmlFormatted: true
+idLookup: false
+inlineHelpText: Lookup Google Maps using Asset Location or Asset Address
+label: Asset Address Map
+length: 1300
+name: Building_Address_Map__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Building_Address_Region__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: The local government area in which the asset address is located
+label: Region Type
+length: 255
+name: Building_Address_Region__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (10)
+Barwon South West
+active: true
+defaultValue: false
+label: Barwon South West
+value: Barwon South West
+Gippsland
+active: true
+defaultValue: false
+label: Gippsland
+value: Gippsland
+Grampians
+active: true
+defaultValue: false
+label: Grampians
+value: Grampians
+Hume
+active: true
+defaultValue: false
+label: Hume
+value: Hume
+Loddon - Mallee
+active: true
+defaultValue: false
+label: Loddon - Mallee
+value: Loddon - Mallee
+Metro - Eastern
+active: true
+defaultValue: false
+label: Metro - Eastern
+value: Metro - Eastern
+Metro - Melbourne
+active: true
+defaultValue: false
+label: Metro - Melbourne
+value: Metro - Melbourne
+Metro - Northern
+active: true
+defaultValue: false
+label: Metro - Northern
+value: Metro - Northern
+Metro - Southern
+active: true
+defaultValue: false
+label: Metro - Southern
+value: Metro - Southern
+Metro - Western
+active: true
+defaultValue: false
+label: Metro - Western
+value: Metro - Western
+Building_Address__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Enter the level, number and street address for this asset
+label: Asset Address
+length: 255
+name: Building_Address__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Building_Category__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+controllerName: Building_Type__c
+createable: true
+custom: true
+defaultedOnCreate: false
+dependentPicklist: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Select from the dropdown list provided in the Resource Centre Tab
+label: Asset Category
+length: 255
+name: Building_Category__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (13)
+Agriculture
+active: true
+defaultValue: false
+label: Agriculture
+validFor:
+value: Agriculture
+Commercial and retail
+active: true
+defaultValue: false
+label: Commercial and retail
+validFor: @`
+value: Commercial and retail
+Correctional and justice facilities
+active: true
+defaultValue: false
+label: Correctional and justice facilities
+validFor:
+value: Correctional and justice facilities
+Defence and emergency services
+active: true
+defaultValue: false
+label: Defence and emergency services
+validFor:
+value: Defence and emergency services
+Educational and training facilities
+active: true
+defaultValue: false
+label: Educational and training facilities
+validFor:
+value: Educational and training facilities
+Factories, warehouses and shops
+active: true
+defaultValue: false
+label: Factories, warehouses and shops
+validFor:
+value: Factories, warehouses and shops
+Health services
+active: true
+defaultValue: false
+label: Health services
+validFor:
+value: Health services
+Housing and accommodation
+active: true
+defaultValue: false
+label: Housing and accommodation
+validFor:
+value: Housing and accommodation
+IT and communications
+active: true
+defaultValue: false
+label: IT and communications
+validFor:
+value: IT and communications
+Offices and professional services
+active: true
+defaultValue: false
+label: Offices and professional services
+validFor:  
+value: Offices and professional services
+Public and family services
+active: true
+defaultValue: false
+label: Public and family services
+validFor:
+value: Public and family services
+Transport
+active: true
+defaultValue: false
+label: Transport
+validFor:
+value: Transport
+Unknown/other
+active: true
+defaultValue: false
+label: Unknown/other
+validFor:
+value: Unknown/other
+Building_GPS_Location__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+displayLocationInDecimal: true
+filterable: false
+groupable: false
+idLookup: false
+inlineHelpText: Geocodes for asset address using mobile app GPS
+label: Asset GPS Location
+length: 0
+name: Building_GPS_Location__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: tns:location
+sortable: false
+type: location
+unique: false
+updateable: false
+Building_GPS_Location__Latitude__s
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+compoundFieldName: Building_GPS_Location__c
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+displayLocationInDecimal: true
+filterable: true
+groupable: false
+idLookup: false
+label: Asset GPS Location (Latitude)
+length: 0
+name: Building_GPS_Location__Latitude__s
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 11
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Building_GPS_Location__Longitude__s
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+compoundFieldName: Building_GPS_Location__c
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+displayLocationInDecimal: true
+filterable: true
+groupable: false
+idLookup: false
+label: Asset GPS Location (Longitude)
+length: 0
+name: Building_GPS_Location__Longitude__s
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 11
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Building_In_Audit__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Asset In Audit
+length: 0
+name: Building_In_Audit__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Building_Location__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+displayLocationInDecimal: true
+filterable: false
+groupable: false
+idLookup: false
+inlineHelpText: Geocodes for asset address
+label: Asset Location
+length: 0
+name: Building_Location__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: tns:location
+sortable: false
+type: location
+unique: false
+updateable: false
+Building_Location__Latitude__s
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+compoundFieldName: Building_Location__c
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+displayLocationInDecimal: true
+filterable: true
+groupable: false
+idLookup: false
+label: Asset Location (Latitude)
+length: 0
+name: Building_Location__Latitude__s
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 11
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Building_Location__Longitude__s
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+compoundFieldName: Building_Location__c
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+displayLocationInDecimal: true
+filterable: true
+groupable: false
+idLookup: false
+label: Asset Location (Longitude)
+length: 0
+name: Building_Location__Longitude__s
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 11
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Building_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Name of the Asset
+label: Asset Name (provided by Gov Agency)
+length: 255
+name: Building_Name__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Building_Out_Of_Scope_Comments__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 393216
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+extraTypeInfo: plaintextarea
+filterable: false
+groupable: false
+idLookup: false
+inlineHelpText: Comments related to why Asset Out Of Scope is checked
+label: Asset Out of Scope Comments
+length: 131072
+name: Building_Out_Of_Scope_Comments__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: false
+type: textarea
+unique: false
+updateable: true
+Building_Out_Of_Scope_New__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: By selecting a value, it identifies the asset as being out of VAEA’s scope for removal and provides a reason for being out of scope.
+label: Asset Out of Scope
+length: 255
+name: Building_Out_Of_Scope_New__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Asset Out of Scope
+active: true
+defaultValue: false
+label: Asset Out of Scope
+value: Asset Out of Scope
+Organisation Out of Scope
+active: true
+defaultValue: false
+label: Organisation Out of Scope
+value: Organisation Out of Scope
+Building_Risk_Rating_Color_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: IF( Building_Risk_Rating__c == 'Very Low' , IMAGE('/resource/1519104215000/LIGHTYELLOW','Light Yellow') , IF( Building_Risk_Rating__c== 'Low', IMAGE('/resource/1519104247000/YELLOW','Yellow') , IF( Building_Risk_Rating__c== 'Medium', IMAGE('/resource/1519104229000/ORANGE','Orange') , IF(Building_Risk_Rating__c== 'High', IMAGE('/resource/1519104198000/REDORANGE','Red/Orange') , IF(Building_Risk_Rating__c== 'Very High', IMAGE('/resource/1519104198000/RED','RED'), NULL) ) ) ) )
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+htmlFormatted: true
+idLookup: false
+label: Asset Rating Color Code
+length: 1300
+name: Building_Risk_Rating_Color_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Building_Risk_Rating__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: This the system generated rating for the assets level of activity usage
+label: Asset Rating
+length: 255
+name: Building_Risk_Rating__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Building_Type__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Select from the dropdown list provided in the Resource Centre Tab
+label: Asset Type
+length: 255
+name: Building_Type__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (137)
+Accommodation unit
+active: true
+defaultValue: false
+label: Accommodation unit
+value: Accommodation unit
+Activities shelter
+active: true
+defaultValue: false
+label: Activities shelter
+value: Activities shelter
+Administration
+active: true
+defaultValue: false
+label: Administration
+value: Administration
+Aged Care
+active: true
+defaultValue: false
+label: Aged Care
+value: Aged Care
+Airbase
+active: true
+defaultValue: false
+label: Airbase
+value: Airbase
+Ambulance garage
+active: true
+defaultValue: false
+label: Ambulance garage
+value: Ambulance garage
+Ambulance station
+active: true
+defaultValue: false
+label: Ambulance station
+value: Ambulance station
+Amenities
+active: true
+defaultValue: false
+label: Amenities
+value: Amenities
+Apartment
+active: true
+defaultValue: false
+label: Apartment
+value: Apartment
+Art centre
+active: true
+defaultValue: false
+label: Art centre
+value: Art centre
+Assembly hall
+active: true
+defaultValue: false
+label: Assembly hall
+value: Assembly hall
+Band room
+active: true
+defaultValue: false
+label: Band room
+value: Band room
+Barrier or Fencing
+active: true
+defaultValue: false
+label: Barrier or Fencing
+value: Barrier or Fencing
+Basketball court
+active: true
+defaultValue: false
+label: Basketball court
+value: Basketball court
+Bicycle enclosure
+active: true
+defaultValue: false
+label: Bicycle enclosure
+value: Bicycle enclosure
+Bridge
+active: true
+defaultValue: false
+label: Bridge
+value: Bridge
+Building
+active: true
+defaultValue: false
+label: Building
+value: Building
+Building nursery
+active: true
+defaultValue: false
+label: Building nursery
+value: Building nursery
+Building room
+active: true
+defaultValue: false
+label: Building room
+value: Building room
+Bush nursing
+active: true
+defaultValue: false
+label: Bush nursing
+value: Bush nursing
+Business interruption
+active: true
+defaultValue: false
+label: Business interruption
+value: Business interruption
+Canteen
+active: true
+defaultValue: false
+label: Canteen
+value: Canteen
+Car
+active: true
+defaultValue: false
+label: Car
+value: Car
+CFA/FRV
+active: true
+defaultValue: false
+label: CFA/FRV
+value: CFA/FRV
+Child care
+active: true
+defaultValue: false
+label: Child care
+value: Child care
+Children’s centre
+active: true
+defaultValue: false
+label: Children’s centre
+value: Children’s centre
+Classroom
+active: true
+defaultValue: false
+label: Classroom
+value: Classroom
+Commercial
+active: true
+defaultValue: false
+label: Commercial
+value: Commercial
+Communication tower
+active: true
+defaultValue: false
+label: Communication tower
+value: Communication tower
+Community centre
+active: true
+defaultValue: false
+label: Community centre
+value: Community centre
+Community hall
+active: true
+defaultValue: false
+label: Community hall
+value: Community hall
+Community Health Centre
+active: true
+defaultValue: false
+label: Community Health Centre
+value: Community Health Centre
+Computer centre
+active: true
+defaultValue: false
+label: Computer centre
+value: Computer centre
+Concert hall
+active: true
+defaultValue: false
+label: Concert hall
+value: Concert hall
+Conference centre
+active: true
+defaultValue: false
+label: Conference centre
+value: Conference centre
+Consulting rooms
+active: true
+defaultValue: false
+label: Consulting rooms
+value: Consulting rooms
+Control building
+active: true
+defaultValue: false
+label: Control building
+value: Control building
+Control centre (train network)
+active: true
+defaultValue: false
+label: Control centre (train network)
+value: Control centre (train network)
+Control centre (tram network)
+active: true
+defaultValue: false
+label: Control centre (tram network)
+value: Control centre (tram network)
+Control room
+active: true
+defaultValue: false
+label: Control room
+value: Control room
+Court
+active: true
+defaultValue: false
+label: Court
+value: Court
+Crew room
+active: true
+defaultValue: false
+label: Crew room
+value: Crew room
+Curator house
+active: true
+defaultValue: false
+label: Curator house
+value: Curator house
+Day centre
+active: true
+defaultValue: false
+label: Day centre
+value: Day centre
+Dental clinic
+active: true
+defaultValue: false
+label: Dental clinic
+value: Dental clinic
+Depot
+active: true
+defaultValue: false
+label: Depot
+value: Depot
+Docklands studios
+active: true
+defaultValue: false
+label: Docklands studios
+value: Docklands studios
+Education centre
+active: true
+defaultValue: false
+label: Education centre
+value: Education centre
+Facility
+active: true
+defaultValue: false
+label: Facility
+value: Facility
+Factory
+active: true
+defaultValue: false
+label: Factory
+value: Factory
+Farm annexe
+active: true
+defaultValue: false
+label: Farm annexe
+value: Farm annexe
+Farm depot house
+active: true
+defaultValue: false
+label: Farm depot house
+value: Farm depot house
+Film vault
+active: true
+defaultValue: false
+label: Film vault
+value: Film vault
+Fire pump shed
+active: true
+defaultValue: false
+label: Fire pump shed
+value: Fire pump shed
+Flat
+active: true
+defaultValue: false
+label: Flat
+value: Flat
+Forklift
+active: true
+defaultValue: false
+label: Forklift
+value: Forklift
+Fruit shed
+active: true
+defaultValue: false
+label: Fruit shed
+value: Fruit shed
+Gallery
+active: true
+defaultValue: false
+label: Gallery
+value: Gallery
+Garage
+active: true
+defaultValue: false
+label: Garage
+value: Garage
+Grain storage shed
+active: true
+defaultValue: false
+label: Grain storage shed
+value: Grain storage shed
+Gymnasium
+active: true
+defaultValue: false
+label: Gymnasium
+value: Gymnasium
+Hall
+active: true
+defaultValue: false
+label: Hall
+value: Hall
+Hay shed
+active: true
+defaultValue: false
+label: Hay shed
+value: Hay shed
+Head office
+active: true
+defaultValue: false
+label: Head office
+value: Head office
+Health centre
+active: true
+defaultValue: false
+label: Health centre
+value: Health centre
+Hospital
+active: true
+defaultValue: false
+label: Hospital
+value: Hospital
+Hostel
+active: true
+defaultValue: false
+label: Hostel
+value: Hostel
+Hothouse
+active: true
+defaultValue: false
+label: Hothouse
+value: Hothouse
+House
+active: true
+defaultValue: false
+label: House
+value: House
+Housing - disability
+active: true
+defaultValue: false
+label: Housing - disability
+value: Housing - disability
+Housing - Other
+active: true
+defaultValue: false
+label: Housing - Other
+value: Housing - Other
+HQ
+active: true
+defaultValue: false
+label: HQ
+value: HQ
+Information centre
+active: true
+defaultValue: false
+label: Information centre
+value: Information centre
+Juvenile
+active: true
+defaultValue: false
+label: Juvenile
+value: Juvenile
+Leisure centre
+active: true
+defaultValue: false
+label: Leisure centre
+value: Leisure centre
+Level crossing
+active: true
+defaultValue: false
+label: Level crossing
+value: Level crossing
+Library
+active: true
+defaultValue: false
+label: Library
+value: Library
+Lodge
+active: true
+defaultValue: false
+label: Lodge
+value: Lodge
+Main building
+active: true
+defaultValue: false
+label: Main building
+value: Main building
+Multipurpose hall
+active: true
+defaultValue: false
+label: Multipurpose hall
+value: Multipurpose hall
+Museum
+active: true
+defaultValue: false
+label: Museum
+value: Museum
+Nursing home
+active: true
+defaultValue: false
+label: Nursing home
+value: Nursing home
+Office
+active: true
+defaultValue: false
+label: Office
+value: Office
+Other
+active: true
+defaultValue: false
+label: Other
+value: Other
+Pavilion
+active: true
+defaultValue: false
+label: Pavilion
+value: Pavilion
+Pipe
+active: true
+defaultValue: false
+label: Pipe
+value: Pipe
+Plant and equipment
+active: true
+defaultValue: false
+label: Plant and equipment
+value: Plant and equipment
+Plant room
+active: true
+defaultValue: false
+label: Plant room
+value: Plant room
+Police Station
+active: true
+defaultValue: false
+label: Police Station
+value: Police Station
+Polyhouse
+active: true
+defaultValue: false
+label: Polyhouse
+value: Polyhouse
+Poultry pen
+active: true
+defaultValue: false
+label: Poultry pen
+value: Poultry pen
+Prison
+active: true
+defaultValue: false
+label: Prison
+value: Prison
+Pump house
+active: true
+defaultValue: false
+label: Pump house
+value: Pump house
+Radio tower
+active: true
+defaultValue: false
+label: Radio tower
+value: Radio tower
+Ranger's office
+active: true
+defaultValue: false
+label: Ranger's office
+value: Ranger's office
+Reception
+active: true
+defaultValue: false
+label: Reception
+value: Reception
+Recreation and sport
+active: true
+defaultValue: false
+label: Recreation and sport
+value: Recreation and sport
+Recreation centre
+active: true
+defaultValue: false
+label: Recreation centre
+value: Recreation centre
+Rehab
+active: true
+defaultValue: false
+label: Rehab
+value: Rehab
+Research facility
+active: true
+defaultValue: false
+label: Research facility
+value: Research facility
+Residence
+active: true
+defaultValue: false
+label: Residence
+value: Residence
+Retail
+active: true
+defaultValue: false
+label: Retail
+value: Retail
+Roadway
+active: true
+defaultValue: false
+label: Roadway
+value: Roadway
+Rotunda
+active: true
+defaultValue: false
+label: Rotunda
+value: Rotunda
+School
+active: true
+defaultValue: false
+label: School
+value: School
+Shed
+active: true
+defaultValue: false
+label: Shed
+value: Shed
+Shelter
+active: true
+defaultValue: false
+label: Shelter
+value: Shelter
+Shelter shed
+active: true
+defaultValue: false
+label: Shelter shed
+value: Shelter shed
+Shipping Container
+active: true
+defaultValue: false
+label: Shipping Container
+value: Shipping Container
+Shop / Kiosk
+active: true
+defaultValue: false
+label: Shop / Kiosk
+value: Shop / Kiosk
+Specialist clinic
+active: true
+defaultValue: false
+label: Specialist clinic
+value: Specialist clinic
+Stables
+active: true
+defaultValue: false
+label: Stables
+value: Stables
+Stockyard
+active: true
+defaultValue: false
+label: Stockyard
+value: Stockyard
+Storage Shed
+active: true
+defaultValue: false
+label: Storage Shed
+value: Storage Shed
+Storeroom
+active: true
+defaultValue: false
+label: Storeroom
+value: Storeroom
+TAFE
+active: true
+defaultValue: false
+label: TAFE
+value: TAFE
+Teacher house
+active: true
+defaultValue: false
+label: Teacher house
+value: Teacher house
+Tennis pavilion
+active: true
+defaultValue: false
+label: Tennis pavilion
+value: Tennis pavilion
+Theatre
+active: true
+defaultValue: false
+label: Theatre
+value: Theatre
+Toilet
+active: true
+defaultValue: false
+label: Toilet
+value: Toilet
+Tower
+active: true
+defaultValue: false
+label: Tower
+value: Tower
+Training centre
+active: true
+defaultValue: false
+label: Training centre
+value: Training centre
+Train maintenance facility
+active: true
+defaultValue: false
+label: Train maintenance facility
+value: Train maintenance facility
+Train station
+active: true
+defaultValue: false
+label: Train station
+value: Train station
+Train station precinct
+active: true
+defaultValue: false
+label: Train station precinct
+value: Train station precinct
+Train substation
+active: true
+defaultValue: false
+label: Train substation
+value: Train substation
+Train yard
+active: true
+defaultValue: false
+label: Train yard
+value: Train yard
+Tram depot
+active: true
+defaultValue: false
+label: Tram depot
+value: Tram depot
+Tram substation
+active: true
+defaultValue: false
+label: Tram substation
+value: Tram substation
+Transport depot
+active: true
+defaultValue: false
+label: Transport depot
+value: Transport depot
+Truck
+active: true
+defaultValue: false
+label: Truck
+value: Truck
+Tunnel
+active: true
+defaultValue: false
+label: Tunnel
+value: Tunnel
+Van
+active: true
+defaultValue: false
+label: Van
+value: Van
+Visitor centre
+active: true
+defaultValue: false
+label: Visitor centre
+value: Visitor centre
+Warehouse
+active: true
+defaultValue: false
+label: Warehouse
+value: Warehouse
+Workshop
+active: true
+defaultValue: false
+label: Workshop
+value: Workshop
+Youth camp
+active: true
+defaultValue: false
+label: Youth camp
+value: Youth camp
+Building_Unique_ID__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Enter Agency's unique Asset ID if applicable.
+label: Asset Unique ID (If Applicable)
+length: 255
+name: Building_Unique_ID__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Capital_Works_Project_Provide_Details__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 393216
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+extraTypeInfo: plaintextarea
+filterable: false
+groupable: false
+idLookup: false
+label: Capital Works Project/ Provide Details
+length: 131072
+name: Capital_Works_Project_Provide_Details__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: false
+type: textarea
+unique: false
+updateable: true
+CoM_Full_ID__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: CoM_Reserved_ID__c+""+Com_Local_Name__c+""+Com_Parcel_ID__c+""+Com_SPI__c
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: CoM Full ID
+length: 1300
+name: CoM_Full_ID__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Com_Local_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Com Local Name
+length: 255
+name: Com_Local_Name__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Com_Parcel_ID__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Com Parcel ID
+length: 255
+name: Com_Parcel_ID__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+CoM_Reserved_ID__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: CoM Reserve ID
+length: 255
+name: CoM_Reserved_ID__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Com_SPI__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: SPI
+length: 255
+name: Com_SPI__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Construction_Type__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 300
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Materials used in the construction of the asset’s structure. For example. ‘Fibre cement and timber’ or ‘Concrete and brickwork’
+label: Construction Type
+length: 100
+name: Construction_Type__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Country__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Country
+length: 255
+name: Country__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+CreatedById
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Created By ID
+length: 18
+name: CreatedById
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+referenceTo: User
+relationshipName: CreatedBy
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: tns:ID
+sortable: true
+type: reference
+unique: false
+updateable: false
+CreatedDate
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Created Date
+length: 0
+name: CreatedDate
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:dateTime
+sortable: true
+type: datetime
+unique: false
+updateable: false
+Daily_Duration__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: How many hours of the day on average is the asset accessed
+label: Daily Duration
+length: 255
+name: Daily_Duration__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (5)
+24 hours
+active: true
+defaultValue: false
+label: 24 hours
+value: 24 hours
+12 hours
+active: true
+defaultValue: false
+label: 12 hours
+value: 12 hours
+8 hours (typical working day)
+active: true
+defaultValue: false
+label: 8 hours (typical working day)
+value: 8 hours (typical working day)
+4 hours
+active: true
+defaultValue: false
+label: 4 hours
+value: 4 hours
+<4 hours
+active: true
+defaultValue: false
+label: <4 hours
+value: <4 hours
+Date_of_Audit_Report__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: The date that the most recent assessment took place
+label: Date of Audit Report
+length: 0
+name: Date_of_Audit_Report__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:date
+sortable: true
+type: date
+unique: false
+updateable: true
+Date_of_Inspection__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Date is calculated from the latest ACM snapshot of all underlying ACMs
+label: Date of Most Recent Item Inspection
+length: 0
+name: Date_of_Inspection__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:date
+sortable: true
+type: date
+unique: false
+updateable: false
+Date_of_Most_Recent_Inspection__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Date is calculated from the latest Asset snapshot of all underlying Asset snapshots related.
+label: Date of Most Recent Inspection
+length: 0
+name: Date_of_Most_Recent_Inspection__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:date
+sortable: true
+type: date
+unique: false
+updateable: false
+Demolished_Status__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Demolished Status
+length: 255
+name: Demolished_Status__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Demolished
+active: true
+defaultValue: false
+label: Demolished
+value: Demolished
+Partially Demolished
+active: true
+defaultValue: false
+label: Partially Demolished
+value: Partially Demolished
+Demolition_Comments__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 98304
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+extraTypeInfo: plaintextarea
+filterable: false
+groupable: false
+idLookup: false
+label: Demolition Comments
+length: 32768
+name: Demolition_Comments__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: false
+type: textarea
+unique: false
+updateable: true
+Demolition_Date__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Demolition Date
+length: 0
+name: Demolition_Date__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:date
+sortable: true
+type: date
+unique: false
+updateable: true
+Demolition_Type__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Demolition Type
+length: 255
+name: Demolition_Type__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (3)
+Planned - Part of Project
+active: true
+defaultValue: false
+label: Planned - Part of Project
+value: Planned - Part of Project
+Planned - Not Part of Project
+active: true
+defaultValue: false
+label: Planned - Not Part of Project
+value: Planned - Not Part of Project
+Unplanned
+active: true
+defaultValue: false
+label: Unplanned
+value: Unplanned
+Department_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: Organisation__r.Department__r.Name
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Department Name
+length: 1300
+name: Department_Name__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Department__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: Organisation__r.Department__r.Name
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+label: Department
+length: 1300
+name: Department__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Dust_or_Soil_Sample_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: VALUE( $Label.Dust_or_Soil_Sample_Cost_Per_Item ) * Total_Number_of_Dust_or_Soil_Sample_Item__c
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the cost of dust, debris or soil sampling based on number of those product types within the asset multiplied by dust/soil sampling cost within AIRSystem
+label: Dust or Soil Sample Cost
+length: 0
+name: Dust_or_Soil_Sample_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Estimated_Age__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: IF( NOT( ISBLANK( TEXT(Estimated_Year_Build_New__c ) ) ) , TEXT(( YEAR(TODAY()) - VALUE(TEXT(Estimated_Year_Build_New__c ))))+" Years" , NULL)
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculated age of asset from Estimated Year Built
+label: Estimated Asset Age
+length: 1300
+name: Estimated_Age__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Estimated_Daily_Duration_of_use_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Estimated Daily Duration of Use Score
+length: 0
+name: Estimated_Daily_Duration_of_use_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 10
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Estimated_Year_Build_New__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Used to calculate the estimated age of the asset.
+label: Estimated Year Built
+length: 255
+name: Estimated_Year_Build_New__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (330)
+2030
+active: true
+defaultValue: false
+label: 2029
+value: 2029
+2029
+active: true
+defaultValue: false
+label: 2028
+value: 2028
+2028
+active: true
+defaultValue: false
+label: 2027
+value: 2027
+2027
+active: true
+defaultValue: false
+label: 2026
+value: 2026
+2026
+active: true
+defaultValue: false
+label: 2025
+value: 2025
+2025
+active: true
+defaultValue: false
+label: 2024
+value: 2024
+2024
+active: true
+defaultValue: false
+label: 2023
+value: 2023
+2023
+active: true
+defaultValue: false
+label: 2022
+value: 2022
+2022
+active: true
+defaultValue: false
+label: 2021
+value: 2021
+2021
+active: true
+defaultValue: false
+label: 2020
+value: 2020
+2020
+active: true
+defaultValue: false
+label: 2019
+value: 2019
+2019
+active: true
+defaultValue: false
+label: 2018
+value: 2018
+2018
+active: true
+defaultValue: false
+label: 2017
+value: 2017
+2017
+active: true
+defaultValue: false
+label: 2016
+value: 2016
+2016
+active: true
+defaultValue: false
+label: 2015
+value: 2015
+2015
+active: true
+defaultValue: false
+label: 2014
+value: 2014
+2014
+active: true
+defaultValue: false
+label: 2013
+value: 2013
+2013
+active: true
+defaultValue: false
+label: 2012
+value: 2012
+2012
+active: true
+defaultValue: false
+label: 2011
+value: 2011
+2011
+active: true
+defaultValue: false
+label: 2010
+value: 2010
+2010
+active: true
+defaultValue: false
+label: 2009
+value: 2009
+2009
+active: true
+defaultValue: false
+label: 2008
+value: 2008
+2008
+active: true
+defaultValue: false
+label: 2007
+value: 2007
+2007
+active: true
+defaultValue: false
+label: 2006
+value: 2006
+2006
+active: true
+defaultValue: false
+label: 2005
+value: 2005
+2005
+active: true
+defaultValue: false
+label: 2004
+value: 2004
+2004
+active: true
+defaultValue: false
+label: 2003
+value: 2003
+2003
+active: true
+defaultValue: false
+label: 2002
+value: 2002
+2002
+active: true
+defaultValue: false
+label: 2001
+value: 2001
+2001
+active: true
+defaultValue: false
+label: 2000
+value: 2000
+2000
+active: true
+defaultValue: false
+label: 1999
+value: 1999
+1999
+active: true
+defaultValue: false
+label: 1998
+value: 1998
+1998
+active: true
+defaultValue: false
+label: 1997
+value: 1997
+1997
+active: true
+defaultValue: false
+label: 1996
+value: 1996
+1996
+active: true
+defaultValue: false
+label: 1995
+value: 1995
+1995
+active: true
+defaultValue: false
+label: 1994
+value: 1994
+1994
+active: true
+defaultValue: false
+label: 1993
+value: 1993
+1993
+active: true
+defaultValue: false
+label: 1992
+value: 1992
+1992
+active: true
+defaultValue: false
+label: 1991
+value: 1991
+1991
+active: true
+defaultValue: false
+label: 1990
+value: 1990
+1990
+active: true
+defaultValue: false
+label: 1989
+value: 1989
+1989
+active: true
+defaultValue: false
+label: 1988
+value: 1988
+1988
+active: true
+defaultValue: false
+label: 1987
+value: 1987
+1987
+active: true
+defaultValue: false
+label: 1986
+value: 1986
+1986
+active: true
+defaultValue: false
+label: 1985
+value: 1985
+1985
+active: true
+defaultValue: false
+label: 1984
+value: 1984
+1984
+active: true
+defaultValue: false
+label: 1983
+value: 1983
+1983
+active: true
+defaultValue: false
+label: 1982
+value: 1982
+1982
+active: true
+defaultValue: false
+label: 1981
+value: 1981
+1981
+active: true
+defaultValue: false
+label: 1980
+value: 1980
+1980
+active: true
+defaultValue: false
+label: 1979
+value: 1979
+1979
+active: true
+defaultValue: false
+label: 1978
+value: 1978
+1978
+active: true
+defaultValue: false
+label: 1977
+value: 1977
+1977
+active: true
+defaultValue: false
+label: 1976
+value: 1976
+1976
+active: true
+defaultValue: false
+label: 1975
+value: 1975
+1975
+active: true
+defaultValue: false
+label: 1974
+value: 1974
+1974
+active: true
+defaultValue: false
+label: 1973
+value: 1973
+1973
+active: true
+defaultValue: false
+label: 1972
+value: 1972
+1972
+active: true
+defaultValue: false
+label: 1971
+value: 1971
+1971
+active: true
+defaultValue: false
+label: 1970
+value: 1970
+1970
+active: true
+defaultValue: false
+label: 1969
+value: 1969
+1969
+active: true
+defaultValue: false
+label: 1968
+value: 1968
+1968
+active: true
+defaultValue: false
+label: 1967
+value: 1967
+1967
+active: true
+defaultValue: false
+label: 1966
+value: 1966
+1966
+active: true
+defaultValue: false
+label: 1965
+value: 1965
+1965
+active: true
+defaultValue: false
+label: 1964
+value: 1964
+1964
+active: true
+defaultValue: false
+label: 1963
+value: 1963
+1963
+active: true
+defaultValue: false
+label: 1962
+value: 1962
+1962
+active: true
+defaultValue: false
+label: 1961
+value: 1961
+1961
+active: true
+defaultValue: false
+label: 1960
+value: 1960
+1960
+active: true
+defaultValue: false
+label: 1959
+value: 1959
+1959
+active: true
+defaultValue: false
+label: 1958
+value: 1958
+1958
+active: true
+defaultValue: false
+label: 1957
+value: 1957
+1957
+active: true
+defaultValue: false
+label: 1956
+value: 1956
+1956
+active: true
+defaultValue: false
+label: 1955
+value: 1955
+1955
+active: true
+defaultValue: false
+label: 1954
+value: 1954
+1954
+active: true
+defaultValue: false
+label: 1953
+value: 1953
+1953
+active: true
+defaultValue: false
+label: 1952
+value: 1952
+1952
+active: true
+defaultValue: false
+label: 1951
+value: 1951
+1951
+active: true
+defaultValue: false
+label: 1950
+value: 1950
+1950
+active: true
+defaultValue: false
+label: 1949
+value: 1949
+1949
+active: true
+defaultValue: false
+label: 1948
+value: 1948
+1948
+active: true
+defaultValue: false
+label: 1947
+value: 1947
+1947
+active: true
+defaultValue: false
+label: 1946
+value: 1946
+1946
+active: true
+defaultValue: false
+label: 1945
+value: 1945
+1945
+active: true
+defaultValue: false
+label: 1944
+value: 1944
+1944
+active: true
+defaultValue: false
+label: 1943
+value: 1943
+1943
+active: true
+defaultValue: false
+label: 1942
+value: 1942
+1942
+active: true
+defaultValue: false
+label: 1941
+value: 1941
+1941
+active: true
+defaultValue: false
+label: 1940
+value: 1940
+1940
+active: true
+defaultValue: false
+label: 1939
+value: 1939
+1939
+active: true
+defaultValue: false
+label: 1938
+value: 1938
+1938
+active: true
+defaultValue: false
+label: 1937
+value: 1937
+1937
+active: true
+defaultValue: false
+label: 1936
+value: 1936
+1936
+active: true
+defaultValue: false
+label: 1935
+value: 1935
+1935
+active: true
+defaultValue: false
+label: 1934
+value: 1934
+1934
+active: true
+defaultValue: false
+label: 1933
+value: 1933
+1933
+active: true
+defaultValue: false
+label: 1932
+value: 1932
+1932
+active: true
+defaultValue: false
+label: 1931
+value: 1931
+1931
+active: true
+defaultValue: false
+label: 1930
+value: 1930
+1930
+active: true
+defaultValue: false
+label: 1929
+value: 1929
+1929
+active: true
+defaultValue: false
+label: 1928
+value: 1928
+1928
+active: true
+defaultValue: false
+label: 1927
+value: 1927
+1927
+active: true
+defaultValue: false
+label: 1926
+value: 1926
+1926
+active: true
+defaultValue: false
+label: 1925
+value: 1925
+1925
+active: true
+defaultValue: false
+label: 1924
+value: 1924
+1924
+active: true
+defaultValue: false
+label: 1923
+value: 1923
+1923
+active: true
+defaultValue: false
+label: 1922
+value: 1922
+1922
+active: true
+defaultValue: false
+label: 1921
+value: 1921
+1921
+active: true
+defaultValue: false
+label: 1920
+value: 1920
+1920
+active: true
+defaultValue: false
+label: 1919
+value: 1919
+1919
+active: true
+defaultValue: false
+label: 1918
+value: 1918
+1918
+active: true
+defaultValue: false
+label: 1917
+value: 1917
+1917
+active: true
+defaultValue: false
+label: 1916
+value: 1916
+1916
+active: true
+defaultValue: false
+label: 1915
+value: 1915
+1915
+active: true
+defaultValue: false
+label: 1914
+value: 1914
+1914
+active: true
+defaultValue: false
+label: 1913
+value: 1913
+1913
+active: true
+defaultValue: false
+label: 1912
+value: 1912
+1912
+active: true
+defaultValue: false
+label: 1911
+value: 1911
+1911
+active: true
+defaultValue: false
+label: 1910
+value: 1910
+1910
+active: true
+defaultValue: false
+label: 1909
+value: 1909
+1909
+active: true
+defaultValue: false
+label: 1908
+value: 1908
+1908
+active: true
+defaultValue: false
+label: 1907
+value: 1907
+1907
+active: true
+defaultValue: false
+label: 1906
+value: 1906
+1906
+active: true
+defaultValue: false
+label: 1905
+value: 1905
+1905
+active: true
+defaultValue: false
+label: 1904
+value: 1904
+1904
+active: true
+defaultValue: false
+label: 1903
+value: 1903
+1903
+active: true
+defaultValue: false
+label: 1902
+value: 1902
+1902
+active: true
+defaultValue: false
+label: 1901
+value: 1901
+1901
+active: true
+defaultValue: false
+label: 1900
+value: 1900
+1900
+active: true
+defaultValue: false
+label: 1899
+value: 1899
+1899
+active: true
+defaultValue: false
+label: 1898
+value: 1898
+1898
+active: true
+defaultValue: false
+label: 1897
+value: 1897
+1897
+active: true
+defaultValue: false
+label: 1896
+value: 1896
+1896
+active: true
+defaultValue: false
+label: 1895
+value: 1895
+1895
+active: true
+defaultValue: false
+label: 1894
+value: 1894
+1894
+active: true
+defaultValue: false
+label: 1893
+value: 1893
+1893
+active: true
+defaultValue: false
+label: 1892
+value: 1892
+1892
+active: true
+defaultValue: false
+label: 1891
+value: 1891
+1891
+active: true
+defaultValue: false
+label: 1890
+value: 1890
+1890
+active: true
+defaultValue: false
+label: 1889
+value: 1889
+1889
+active: true
+defaultValue: false
+label: 1888
+value: 1888
+1888
+active: true
+defaultValue: false
+label: 1887
+value: 1887
+1887
+active: true
+defaultValue: false
+label: 1886
+value: 1886
+1886
+active: true
+defaultValue: false
+label: 1885
+value: 1885
+1885
+active: true
+defaultValue: false
+label: 1884
+value: 1884
+1884
+active: true
+defaultValue: false
+label: 1883
+value: 1883
+1883
+active: true
+defaultValue: false
+label: 1882
+value: 1882
+1882
+active: true
+defaultValue: false
+label: 1881
+value: 1881
+1881
+active: true
+defaultValue: false
+label: 1880
+value: 1880
+1880
+active: true
+defaultValue: false
+label: 1879
+value: 1879
+1879
+active: true
+defaultValue: false
+label: 1878
+value: 1878
+1878
+active: true
+defaultValue: false
+label: 1877
+value: 1877
+1877
+active: true
+defaultValue: false
+label: 1876
+value: 1876
+1876
+active: true
+defaultValue: false
+label: 1875
+value: 1875
+1875
+active: true
+defaultValue: false
+label: 1874
+value: 1874
+1874
+active: true
+defaultValue: false
+label: 1873
+value: 1873
+1873
+active: true
+defaultValue: false
+label: 1872
+value: 1872
+1872
+active: true
+defaultValue: false
+label: 1871
+value: 1871
+1871
+active: true
+defaultValue: false
+label: 1870
+value: 1870
+1870
+active: true
+defaultValue: false
+label: 1869
+value: 1869
+1869
+active: true
+defaultValue: false
+label: 1868
+value: 1868
+1868
+active: true
+defaultValue: false
+label: 1867
+value: 1867
+1867
+active: true
+defaultValue: false
+label: 1866
+value: 1866
+1866
+active: true
+defaultValue: false
+label: 1865
+value: 1865
+1865
+active: true
+defaultValue: false
+label: 1864
+value: 1864
+1864
+active: true
+defaultValue: false
+label: 1863
+value: 1863
+1863
+active: true
+defaultValue: false
+label: 1862
+value: 1862
+1862
+active: true
+defaultValue: false
+label: 1861
+value: 1861
+1861
+active: true
+defaultValue: false
+label: 1860
+value: 1860
+1860
+active: true
+defaultValue: false
+label: 1859
+value: 1859
+1859
+active: true
+defaultValue: false
+label: 1858
+value: 1858
+1858
+active: true
+defaultValue: false
+label: 1857
+value: 1857
+1857
+active: true
+defaultValue: false
+label: 1856
+value: 1856
+1856
+active: true
+defaultValue: false
+label: 1855
+value: 1855
+1855
+active: true
+defaultValue: false
+label: 1854
+value: 1854
+1854
+active: true
+defaultValue: false
+label: 1853
+value: 1853
+1853
+active: true
+defaultValue: false
+label: 1852
+value: 1852
+1852
+active: true
+defaultValue: false
+label: 1851
+value: 1851
+1851
+active: true
+defaultValue: false
+label: 1850
+value: 1850
+1850
+active: true
+defaultValue: false
+label: 1849
+value: 1849
+1849
+active: true
+defaultValue: false
+label: 1848
+value: 1848
+1848
+active: true
+defaultValue: false
+label: 1847
+value: 1847
+1847
+active: true
+defaultValue: false
+label: 1846
+value: 1846
+1846
+active: true
+defaultValue: false
+label: 1845
+value: 1845
+1845
+active: true
+defaultValue: false
+label: 1844
+value: 1844
+1844
+active: true
+defaultValue: false
+label: 1843
+value: 1843
+1843
+active: true
+defaultValue: false
+label: 1842
+value: 1842
+1842
+active: true
+defaultValue: false
+label: 1841
+value: 1841
+1841
+active: true
+defaultValue: false
+label: 1840
+value: 1840
+1840
+active: true
+defaultValue: false
+label: 1839
+value: 1839
+1839
+active: true
+defaultValue: false
+label: 1838
+value: 1838
+1838
+active: true
+defaultValue: false
+label: 1837
+value: 1837
+1837
+active: true
+defaultValue: false
+label: 1836
+value: 1836
+1836
+active: true
+defaultValue: false
+label: 1835
+value: 1835
+1835
+active: true
+defaultValue: false
+label: 1834
+value: 1834
+1834
+active: true
+defaultValue: false
+label: 1833
+value: 1833
+1833
+active: true
+defaultValue: false
+label: 1832
+value: 1832
+1832
+active: true
+defaultValue: false
+label: 1831
+value: 1831
+1831
+active: true
+defaultValue: false
+label: 1830
+value: 1830
+1830
+active: true
+defaultValue: false
+label: 1829
+value: 1829
+1829
+active: true
+defaultValue: false
+label: 1828
+value: 1828
+1828
+active: true
+defaultValue: false
+label: 1827
+value: 1827
+1827
+active: true
+defaultValue: false
+label: 1826
+value: 1826
+1826
+active: true
+defaultValue: false
+label: 1825
+value: 1825
+1825
+active: true
+defaultValue: false
+label: 1824
+value: 1824
+1824
+active: true
+defaultValue: false
+label: 1823
+value: 1823
+1823
+active: true
+defaultValue: false
+label: 1822
+value: 1822
+1822
+active: true
+defaultValue: false
+label: 1821
+value: 1821
+1821
+active: true
+defaultValue: false
+label: 1820
+value: 1820
+1820
+active: true
+defaultValue: false
+label: 1819
+value: 1819
+1819
+active: true
+defaultValue: false
+label: 1818
+value: 1818
+1818
+active: true
+defaultValue: false
+label: 1817
+value: 1817
+1817
+active: true
+defaultValue: false
+label: 1816
+value: 1816
+1816
+active: true
+defaultValue: false
+label: 1815
+value: 1815
+1815
+active: true
+defaultValue: false
+label: 1814
+value: 1814
+1814
+active: true
+defaultValue: false
+label: 1813
+value: 1813
+1813
+active: true
+defaultValue: false
+label: 1812
+value: 1812
+1812
+active: true
+defaultValue: false
+label: 1811
+value: 1811
+1811
+active: true
+defaultValue: false
+label: 1810
+value: 1810
+1810
+active: true
+defaultValue: false
+label: 1809
+value: 1809
+1809
+active: true
+defaultValue: false
+label: 1808
+value: 1808
+1808
+active: true
+defaultValue: false
+label: 1807
+value: 1807
+1807
+active: true
+defaultValue: false
+label: 1806
+value: 1806
+1806
+active: true
+defaultValue: false
+label: 1805
+value: 1805
+1805
+active: true
+defaultValue: false
+label: 1804
+value: 1804
+1804
+active: true
+defaultValue: false
+label: 1803
+value: 1803
+1803
+active: true
+defaultValue: false
+label: 1802
+value: 1802
+1802
+active: true
+defaultValue: false
+label: 1801
+value: 1801
+1801
+active: true
+defaultValue: false
+label: 1800
+value: 1800
+1800
+active: true
+defaultValue: false
+label: 1799
+value: 1799
+1799
+active: true
+defaultValue: false
+label: 1798
+value: 1798
+1798
+active: true
+defaultValue: false
+label: 1797
+value: 1797
+1797
+active: true
+defaultValue: false
+label: 1796
+value: 1796
+1796
+active: true
+defaultValue: false
+label: 1795
+value: 1795
+1795
+active: true
+defaultValue: false
+label: 1794
+value: 1794
+1794
+active: true
+defaultValue: false
+label: 1793
+value: 1793
+1793
+active: true
+defaultValue: false
+label: 1792
+value: 1792
+1792
+active: true
+defaultValue: false
+label: 1791
+value: 1791
+1791
+active: true
+defaultValue: false
+label: 1790
+value: 1790
+1790
+active: true
+defaultValue: false
+label: 1789
+value: 1789
+1789
+active: true
+defaultValue: false
+label: 1788
+value: 1788
+1788
+active: true
+defaultValue: false
+label: 1787
+value: 1787
+1787
+active: true
+defaultValue: false
+label: 1786
+value: 1786
+1786
+active: true
+defaultValue: false
+label: 1785
+value: 1785
+1785
+active: true
+defaultValue: false
+label: 1784
+value: 1784
+1784
+active: true
+defaultValue: false
+label: 1783
+value: 1783
+1783
+active: true
+defaultValue: false
+label: 1782
+value: 1782
+1782
+active: true
+defaultValue: false
+label: 1781
+value: 1781
+1781
+active: true
+defaultValue: false
+label: 1780
+value: 1780
+1780
+active: true
+defaultValue: false
+label: 1779
+value: 1779
+1779
+active: true
+defaultValue: false
+label: 1778
+value: 1778
+1778
+active: true
+defaultValue: false
+label: 1777
+value: 1777
+1777
+active: true
+defaultValue: false
+label: 1776
+value: 1776
+1776
+active: true
+defaultValue: false
+label: 1775
+value: 1775
+1775
+active: true
+defaultValue: false
+label: 1774
+value: 1774
+1774
+active: true
+defaultValue: false
+label: 1773
+value: 1773
+1773
+active: true
+defaultValue: false
+label: 1772
+value: 1772
+1772
+active: true
+defaultValue: false
+label: 1771
+value: 1771
+1771
+active: true
+defaultValue: false
+label: 1770
+value: 1770
+1770
+active: true
+defaultValue: false
+label: 1769
+value: 1769
+1769
+active: true
+defaultValue: false
+label: 1768
+value: 1768
+1768
+active: true
+defaultValue: false
+label: 1767
+value: 1767
+1767
+active: true
+defaultValue: false
+label: 1766
+value: 1766
+1766
+active: true
+defaultValue: false
+label: 1765
+value: 1765
+1765
+active: true
+defaultValue: false
+label: 1764
+value: 1764
+1764
+active: true
+defaultValue: false
+label: 1763
+value: 1763
+1763
+active: true
+defaultValue: false
+label: 1762
+value: 1762
+1762
+active: true
+defaultValue: false
+label: 1761
+value: 1761
+1761
+active: true
+defaultValue: false
+label: 1760
+value: 1760
+1760
+active: true
+defaultValue: false
+label: 1759
+value: 1759
+1759
+active: true
+defaultValue: false
+label: 1758
+value: 1758
+1758
+active: true
+defaultValue: false
+label: 1757
+value: 1757
+1757
+active: true
+defaultValue: false
+label: 1756
+value: 1756
+1756
+active: true
+defaultValue: false
+label: 1755
+value: 1755
+1755
+active: true
+defaultValue: false
+label: 1754
+value: 1754
+1754
+active: true
+defaultValue: false
+label: 1753
+value: 1753
+1753
+active: true
+defaultValue: false
+label: 1752
+value: 1752
+1752
+active: true
+defaultValue: false
+label: 1751
+value: 1751
+1751
+active: true
+defaultValue: false
+label: 1750
+value: 1750
+1750
+active: true
+defaultValue: false
+label: 1749
+value: 1749
+1749
+active: true
+defaultValue: false
+label: 1748
+value: 1748
+1748
+active: true
+defaultValue: false
+label: 1747
+value: 1747
+1747
+active: true
+defaultValue: false
+label: 1746
+value: 1746
+1746
+active: true
+defaultValue: false
+label: 1745
+value: 1745
+1745
+active: true
+defaultValue: false
+label: 1744
+value: 1744
+1744
+active: true
+defaultValue: false
+label: 1743
+value: 1743
+1743
+active: true
+defaultValue: false
+label: 1742
+value: 1742
+1742
+active: true
+defaultValue: false
+label: 1741
+value: 1741
+1741
+active: true
+defaultValue: false
+label: 1740
+value: 1740
+1740
+active: true
+defaultValue: false
+label: 1739
+value: 1739
+1739
+active: true
+defaultValue: false
+label: 1738
+value: 1738
+1738
+active: true
+defaultValue: false
+label: 1737
+value: 1737
+1737
+active: true
+defaultValue: false
+label: 1736
+value: 1736
+1736
+active: true
+defaultValue: false
+label: 1735
+value: 1735
+1735
+active: true
+defaultValue: false
+label: 1734
+value: 1734
+1734
+active: true
+defaultValue: false
+label: 1733
+value: 1733
+1733
+active: true
+defaultValue: false
+label: 1732
+value: 1732
+1732
+active: true
+defaultValue: false
+label: 1731
+value: 1731
+1731
+active: true
+defaultValue: false
+label: 1730
+value: 1730
+1730
+active: true
+defaultValue: false
+label: 1729
+value: 1729
+1729
+active: true
+defaultValue: false
+label: 1728
+value: 1728
+1728
+active: true
+defaultValue: false
+label: 1727
+value: 1727
+1727
+active: true
+defaultValue: false
+label: 1726
+value: 1726
+1726
+active: true
+defaultValue: false
+label: 1725
+value: 1725
+1725
+active: true
+defaultValue: false
+label: 1724
+value: 1724
+1724
+active: true
+defaultValue: false
+label: 1723
+value: 1723
+1723
+active: true
+defaultValue: false
+label: 1722
+value: 1722
+1722
+active: true
+defaultValue: false
+label: 1721
+value: 1721
+1721
+active: true
+defaultValue: false
+label: 1720
+value: 1720
+1720
+active: true
+defaultValue: false
+label: 1719
+value: 1719
+1719
+active: true
+defaultValue: false
+label: 1718
+value: 1718
+1718
+active: true
+defaultValue: false
+label: 1717
+value: 1717
+1717
+active: true
+defaultValue: false
+label: 1716
+value: 1716
+1716
+active: true
+defaultValue: false
+label: 1715
+value: 1715
+1715
+active: true
+defaultValue: false
+label: 1714
+value: 1714
+1714
+active: true
+defaultValue: false
+label: 1713
+value: 1713
+1713
+active: true
+defaultValue: false
+label: 1712
+value: 1712
+1712
+active: true
+defaultValue: false
+label: 1711
+value: 1711
+1711
+active: true
+defaultValue: false
+label: 1710
+value: 1710
+1710
+active: true
+defaultValue: false
+label: 1709
+value: 1709
+1709
+active: true
+defaultValue: false
+label: 1708
+value: 1708
+1708
+active: true
+defaultValue: false
+label: 1707
+value: 1707
+1707
+active: true
+defaultValue: false
+label: 1706
+value: 1706
+1706
+active: true
+defaultValue: false
+label: 1705
+value: 1705
+1705
+active: true
+defaultValue: false
+label: 1704
+value: 1704
+1704
+active: true
+defaultValue: false
+label: 1703
+value: 1703
+1703
+active: true
+defaultValue: false
+label: 1702
+value: 1702
+1702
+active: true
+defaultValue: false
+label: 1701
+value: 1701
+1701
+active: true
+defaultValue: false
+label: 1700
+value: 1700
+Estimated_Year_Built__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Used to calculate the estimated age of the asset
+label: Estimated Date Built
+length: 0
+name: Estimated_Year_Built__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:date
+sortable: true
+type: date
+unique: false
+updateable: true
+Est_Building_Size_m2__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: An estimate of the structure’s area profile in square meters.
+label: Est. Asset Size (m2)
+length: 255
+name: Est_Building_Size_m2__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Est_Daily_Duration_of_use_Perc_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Est Daily Duration of use Perc Score
+length: 0
+name: Est_Daily_Duration_of_use_Perc_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 17
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+External_ID__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+externalId: true
+filterable: true
+groupable: true
+idLookup: true
+inlineHelpText: External ID Field to simplify the Data Migration process
+label: External ID
+length: 255
+name: External_ID__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Frequency_of_Use_Percentage_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Frequency of Use Percentage Score
+length: 0
+name: Frequency_of_Use_Percentage_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 17
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Frequency_of_Use_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: This is derived from the VAEA risk model, based on the frequency the asset is accessed - see VAEA Risk assessment model guide in resource centre for a detailed explanation
+label: Frequency of Use Score
+length: 0
+name: Frequency_of_Use_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 10
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Frequency_of_Use__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Select the frequency that the asset is used or accessed, refer to the Resource Centre
+label: Frequency of Use (Asset)
+length: 255
+name: Frequency_of_Use__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (6)
+Every day
+active: true
+defaultValue: false
+label: Every day
+value: Every day
+Every day with intermittent breaks
+active: true
+defaultValue: false
+label: Every day with intermittent breaks
+value: Every day with intermittent breaks
+Once every 3–5 days
+active: true
+defaultValue: false
+label: Once every 3–5 days
+value: Once every 3–5 days
+Every 2–3 weeks
+active: true
+defaultValue: false
+label: Every 2–3 weeks
+value: Every 2–3 weeks
+Once every 2–3 months
+active: true
+defaultValue: false
+label: Once every 2–3 months
+value: Once every 2–3 months
+Annually or less frequently
+active: true
+defaultValue: false
+label: Annually or less frequently
+value: Annually or less frequently
+GNAF_Id__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: GNAF Id
+length: 255
+name: GNAF_Id__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+GPS_Coordinates_provided_by_metro__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 60
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: GPS Coordinates (provided by Gov Agency)
+length: 20
+name: GPS_Coordinates_provided_by_metro__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+HSR_Airhaz_Unique_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Regenerate the Asset QR code for HSR community in Airhaz app
+label: HSR Airhaz Unique Code
+length: 255
+name: HSR_Airhaz_Unique_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+HSR_QR_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: IMAGE(''+$Label.QR_Code_Generation_Api_Url+'?size=150x150&data=' & $Label.HSR_Community_Url &'?buildingId='& $Label.HSR_Community_Prefix & Id & $Label.HSR_Community_Suffix ,'Scan QR code to open record in mobile.')
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+htmlFormatted: true
+idLookup: false
+label: HSR QR Code
+length: 1300
+name: HSR_QR_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+HSR_Unique_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Unique Code used to generate the Asset QR code for HSR community
+label: HSR Unique Code
+length: 255
+name: HSR_Unique_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Hygienist_Inspection_Report_Prep_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: ( VALUE( $Label.Hygienist_Inspection_Report_Preparation_Time_Per_Item ) * Number_of_Items__c / 60)* VALUE( $Label.Hygienist_Inspection_Report_Preparation_Cost_Per_Hour )
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the cost of preparing an asbestos survey report based on number of items within the asset, the time (hrs) taken to undertake that sampling multiplied by the hourly rate for a hygienist within AIRSystem
+label: Hygienist Inspection Report Prep Cost
+length: 0
+name: Hygienist_Inspection_Report_Prep_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Hygienist_Travel_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: VALUE( $Label.Hygienist_Travel_Time_Per_Hour_Cost ) * Hygienist_Travel_Time_in_hours__c
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the cost of the hygienists travel based on the Hygienist Travel Time field multiplied by the hourly rate of hygienist within AIRSystem
+label: Hygienist Travel Cost
+length: 0
+name: Hygienist_Travel_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Hygienist_Travel_KM_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: VALUE($Label.Hygienist_Travel_Cost_Per_KM) * Hygienist_Travel_KM__c
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates cost of travel a hygienist based on Hygienist Travel field multiplied by ATO per km rate
+label: Hygienist Travel KM Cost
+length: 0
+name: Hygienist_Travel_KM_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Hygienist_Travel_KM__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the KMs travelled by the hygienist (from Spring St Melb to asset address in AIRSystem) to determine KM cost
+label: Hygienist Travel KM
+length: 0
+name: Hygienist_Travel_KM__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Hygienist_Travel_Time_in_hours__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the estimated time (hrs) taken by the hygienist (using Google travel estimator) based on the number of KMs determined by the Hygienist Travel field
+label: Hygienist Travel Time (in hours)
+length: 0
+name: Hygienist_Travel_Time_in_hours__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Id
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: true
+label: Record ID
+length: 18
+name: Id
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: tns:ID
+sortable: true
+type: id
+unique: false
+updateable: false
+IsDeleted
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultValue: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Deleted
+length: 0
+name: IsDeleted
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:boolean
+sortable: true
+type: boolean
+unique: false
+updateable: false
+Is_Building_Merge_Running__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultValue: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Shows whether current asset record has a ongoing asset merge (VS-501)
+label: Is Asset Merge Running
+length: 0
+name: Is_Building_Merge_Running__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:boolean
+sortable: true
+type: boolean
+unique: false
+updateable: true
+LastActivityDate
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Last Activity Date
+length: 0
+name: LastActivityDate
+nameField: false
+namePointing: false
+nillable: true
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:date
+sortable: true
+type: date
+unique: false
+updateable: false
+LastModifiedById
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Last Modified By ID
+length: 18
+name: LastModifiedById
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+referenceTo: User
+relationshipName: LastModifiedBy
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: tns:ID
+sortable: true
+type: reference
+unique: false
+updateable: false
+LastModifiedDate
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Last Modified Date
+length: 0
+name: LastModifiedDate
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:dateTime
+sortable: true
+type: datetime
+unique: false
+updateable: false
+LastReferencedDate
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Last Referenced Date
+length: 0
+name: LastReferencedDate
+nameField: false
+namePointing: false
+nillable: true
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:dateTime
+sortable: true
+type: datetime
+unique: false
+updateable: false
+LastViewedDate
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Last Viewed Date
+length: 0
+name: LastViewedDate
+nameField: false
+namePointing: false
+nillable: true
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:dateTime
+sortable: true
+type: datetime
+unique: false
+updateable: false
+Last_Print_Date__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Last Print Date
+length: 0
+name: Last_Print_Date__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:dateTime
+sortable: true
+type: datetime
+unique: false
+updateable: true
+Level_of_Activity_Percentage_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Level of Activity Percentage Score
+length: 0
+name: Level_of_Activity_Percentage_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 17
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Level_of_Activity_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Activity Score
+length: 0
+name: Level_of_Activity_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 10
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Level_of_Activity__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: The intensity of the activity in the asset
+label: Level of Activity
+length: 255
+name: Level_of_Activity__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (5)
+Very high
+active: true
+defaultValue: false
+label: Very high
+value: Very high
+High
+active: true
+defaultValue: false
+label: High
+value: High
+Moderate
+active: true
+defaultValue: false
+label: Moderate
+value: Moderate
+low
+active: true
+defaultValue: false
+label: low
+value: Low
+Very low
+active: true
+defaultValue: false
+label: Very low
+value: Very low
+Meshblock2016__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Meshblock2016
+length: 255
+name: Meshblock2016__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Meshblock__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Meshblock
+length: 255
+name: Meshblock__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Mobile_Plant_Operating_Percentage_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Mobile Plant Operating Percentage Score
+length: 0
+name: Mobile_Plant_Operating_Percentage_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 17
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Mobile_Plant_Operating_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Mobile Plant Operating Score
+length: 0
+name: Mobile_Plant_Operating_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 10
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Mobile_Plant__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Whether mobile plant (e.g. forklifts, scissor lifts etc.) is used in the asset or not
+label: Mobile Plant
+length: 255
+name: Mobile_Plant__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Yes
+active: true
+defaultValue: false
+label: Yes
+value: Yes
+No
+active: true
+defaultValue: false
+label: No
+value: No
+Name
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 240
+calculated: false
+caseSensitive: false
+createable: true
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: true
+label: Asset Code
+length: 80
+name: Name
+nameField: true
+namePointing: false
+nillable: true
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+No_Identified_ACMs_Note__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+extraTypeInfo: plaintextarea
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Detail what assessment has occurred to determine that no ACMs are present
+label: No Identified ACMs Note
+length: 255
+name: No_Identified_ACMs_Note__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: textarea
+unique: false
+updateable: true
+No_Identified_ACMs__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultValue: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Select this checkbox if the asset has been identified as containing no ACMs (Asbestos-Containing Materials).
+label: No Identified ACMs
+length: 0
+name: No_Identified_ACMs__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:boolean
+sortable: true
+type: boolean
+unique: false
+updateable: true
+Number_of_ACMs__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Count of all positive ACMs in this Asset that have not been removed
+label: Number of ACMs
+length: 0
+name: Number_of_ACMs__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+number_of_ACM_Product_type_not_Unknown__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: number of ACM Product type not Unknown
+length: 0
+name: number_of_ACM_Product_type_not_Unknown__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Number_of_ACM_Product_type_Unknown__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Number of ACM Product type Unknown
+length: 0
+name: Number_of_ACM_Product_type_Unknown__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Number_of_Items__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Count of total number of items in this Building
+label: Number of Items
+length: 0
+name: Number_of_Items__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Number_of_Levels__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: The number of levels in the asset including ground level and levels below ground.
+label: Number of Levels
+length: 255
+name: Number_of_Levels__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (99)
+2
+active: true
+defaultValue: false
+label: 1
+value: 1
+3
+active: true
+defaultValue: false
+label: 2
+value: 2
+4
+active: true
+defaultValue: false
+label: 3
+value: 3
+5
+active: true
+defaultValue: false
+label: 4
+value: 4
+6
+active: true
+defaultValue: false
+label: 5
+value: 5
+7
+active: true
+defaultValue: false
+label: 6
+value: 6
+8
+active: true
+defaultValue: false
+label: 7
+value: 7
+9
+active: true
+defaultValue: false
+label: 8
+value: 8
+10
+active: true
+defaultValue: false
+label: 9
+value: 9
+11
+active: true
+defaultValue: false
+label: 10
+value: 10
+12
+active: true
+defaultValue: false
+label: 11
+value: 11
+13
+active: true
+defaultValue: false
+label: 12
+value: 12
+14
+active: true
+defaultValue: false
+label: 13
+value: 13
+15
+active: true
+defaultValue: false
+label: 14
+value: 14
+16
+active: true
+defaultValue: false
+label: 15
+value: 15
+17
+active: true
+defaultValue: false
+label: 16
+value: 16
+18
+active: true
+defaultValue: false
+label: 17
+value: 17
+19
+active: true
+defaultValue: false
+label: 18
+value: 18
+20
+active: true
+defaultValue: false
+label: 19
+value: 19
+21
+active: true
+defaultValue: false
+label: 20
+value: 20
+22
+active: true
+defaultValue: false
+label: 21
+value: 21
+23
+active: true
+defaultValue: false
+label: 22
+value: 22
+24
+active: true
+defaultValue: false
+label: 23
+value: 23
+25
+active: true
+defaultValue: false
+label: 24
+value: 24
+26
+active: true
+defaultValue: false
+label: 25
+value: 25
+27
+active: true
+defaultValue: false
+label: 26
+value: 26
+28
+active: true
+defaultValue: false
+label: 27
+value: 27
+29
+active: true
+defaultValue: false
+label: 28
+value: 28
+30
+active: true
+defaultValue: false
+label: 29
+value: 29
+31
+active: true
+defaultValue: false
+label: 30
+value: 30
+32
+active: true
+defaultValue: false
+label: 31
+value: 31
+33
+active: true
+defaultValue: false
+label: 32
+value: 32
+34
+active: true
+defaultValue: false
+label: 33
+value: 33
+35
+active: true
+defaultValue: false
+label: 34
+value: 34
+36
+active: true
+defaultValue: false
+label: 35
+value: 35
+37
+active: true
+defaultValue: false
+label: 36
+value: 36
+38
+active: true
+defaultValue: false
+label: 37
+value: 37
+39
+active: true
+defaultValue: false
+label: 38
+value: 38
+40
+active: true
+defaultValue: false
+label: 39
+value: 39
+41
+active: true
+defaultValue: false
+label: 40
+value: 40
+42
+active: true
+defaultValue: false
+label: 41
+value: 41
+43
+active: true
+defaultValue: false
+label: 42
+value: 42
+44
+active: true
+defaultValue: false
+label: 43
+value: 43
+45
+active: true
+defaultValue: false
+label: 44
+value: 44
+46
+active: true
+defaultValue: false
+label: 45
+value: 45
+47
+active: true
+defaultValue: false
+label: 46
+value: 46
+48
+active: true
+defaultValue: false
+label: 47
+value: 47
+49
+active: true
+defaultValue: false
+label: 48
+value: 48
+50
+active: true
+defaultValue: false
+label: 49
+value: 49
+51
+active: true
+defaultValue: false
+label: 50
+value: 50
+52
+active: true
+defaultValue: false
+label: 51
+value: 51
+53
+active: true
+defaultValue: false
+label: 52
+value: 52
+54
+active: true
+defaultValue: false
+label: 53
+value: 53
+55
+active: true
+defaultValue: false
+label: 54
+value: 54
+56
+active: true
+defaultValue: false
+label: 55
+value: 55
+57
+active: true
+defaultValue: false
+label: 56
+value: 56
+58
+active: true
+defaultValue: false
+label: 57
+value: 57
+59
+active: true
+defaultValue: false
+label: 58
+value: 58
+60
+active: true
+defaultValue: false
+label: 59
+value: 59
+61
+active: true
+defaultValue: false
+label: 60
+value: 60
+62
+active: true
+defaultValue: false
+label: 61
+value: 61
+63
+active: true
+defaultValue: false
+label: 62
+value: 62
+64
+active: true
+defaultValue: false
+label: 63
+value: 63
+65
+active: true
+defaultValue: false
+label: 64
+value: 64
+66
+active: true
+defaultValue: false
+label: 65
+value: 65
+67
+active: true
+defaultValue: false
+label: 66
+value: 66
+68
+active: true
+defaultValue: false
+label: 67
+value: 67
+69
+active: true
+defaultValue: false
+label: 68
+value: 68
+70
+active: true
+defaultValue: false
+label: 69
+value: 69
+71
+active: true
+defaultValue: false
+label: 70
+value: 70
+72
+active: true
+defaultValue: false
+label: 71
+value: 71
+73
+active: true
+defaultValue: false
+label: 72
+value: 72
+74
+active: true
+defaultValue: false
+label: 73
+value: 73
+75
+active: true
+defaultValue: false
+label: 74
+value: 74
+76
+active: true
+defaultValue: false
+label: 75
+value: 75
+77
+active: true
+defaultValue: false
+label: 76
+value: 76
+78
+active: true
+defaultValue: false
+label: 77
+value: 77
+79
+active: true
+defaultValue: false
+label: 78
+value: 78
+80
+active: true
+defaultValue: false
+label: 79
+value: 79
+81
+active: true
+defaultValue: false
+label: 80
+value: 80
+82
+active: true
+defaultValue: false
+label: 81
+value: 81
+83
+active: true
+defaultValue: false
+label: 82
+value: 82
+84
+active: true
+defaultValue: false
+label: 83
+value: 83
+85
+active: true
+defaultValue: false
+label: 84
+value: 84
+86
+active: true
+defaultValue: false
+label: 85
+value: 85
+87
+active: true
+defaultValue: false
+label: 86
+value: 86
+88
+active: true
+defaultValue: false
+label: 87
+value: 87
+89
+active: true
+defaultValue: false
+label: 88
+value: 88
+90
+active: true
+defaultValue: false
+label: 89
+value: 89
+91
+active: true
+defaultValue: false
+label: 90
+value: 90
+92
+active: true
+defaultValue: false
+label: 91
+value: 91
+93
+active: true
+defaultValue: false
+label: 92
+value: 92
+94
+active: true
+defaultValue: false
+label: 93
+value: 93
+95
+active: true
+defaultValue: false
+label: 94
+value: 94
+96
+active: true
+defaultValue: false
+label: 95
+value: 95
+97
+active: true
+defaultValue: false
+label: 96
+value: 96
+98
+active: true
+defaultValue: false
+label: 97
+value: 97
+99
+active: true
+defaultValue: false
+label: 98
+value: 98
+100
+active: true
+defaultValue: false
+label: 99
+value: 99
+Organisation_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: Organisation__r.Name
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Organisation Name
+length: 1300
+name: Organisation_Name__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Organisation_Parent__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Hidden lookup field populated automatically with the Asset Org's Parent Org
+label: Organisation Parent
+length: 18
+name: Organisation_Parent__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+referenceTo: Account
+relationshipName: Organisation_Parent__r
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: true
+soapType: tns:ID
+sortable: true
+type: reference
+unique: false
+updateable: true
+Organisation_Sector_Grouping__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: TEXT(Organisation__r.Sector_Grouping__c)
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+inlineHelpText: Sector group of related organisation
+label: Organisation Sector Grouping
+length: 1300
+name: Organisation_Sector_Grouping__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Organisation_Sub_Type__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: TEXT(Organisation__r.Account_Sub_Type__c)
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Sub type of related organisation
+label: Organisation Sub Type
+length: 1300
+name: Organisation_Sub_Type__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Organisation_Total_Buildings_With_ACMs__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: IF(Organisation__r.Total_Buildings_with_ACMs_Items__c==null, 0, Organisation__r.Total_Buildings_with_ACMs_Items__c)
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+inlineHelpText: Total assets count of related organisation that contain ACMs
+label: Organisation Total Assets With ACMs
+length: 0
+name: Organisation_Total_Buildings_With_ACMs__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Organisation__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Please choose the Agency related to the Asset
+label: Organisation
+length: 18
+name: Organisation__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+referenceTo: Account
+relationshipName: Organisation__r
+restrictedDelete: true
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: true
+soapType: tns:ID
+sortable: true
+type: reference
+unique: false
+updateable: true
+Owned_or_Leased__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultValueFormula: "Owned"
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Select the legal title status of this asset from the drop-down list provided.
+label: Owned or Leased
+length: 255
+name: Owned_or_Leased__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Owned
+active: true
+defaultValue: false
+label: Owned
+value: Owned
+Leased
+active: true
+defaultValue: false
+label: Leased
+value: Leased
+OwnerId
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: true
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Owner ID
+length: 18
+name: OwnerId
+nameField: false
+namePointing: true
+nillable: false
+permissionable: false
+polymorphicForeignKey: true
+precision: 0
+queryByDistance: false
+relationshipName: Owner
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: tns:ID
+sortable: true
+type: reference
+unique: false
+updateable: true
+Reference To (2)
+Group
+User
+Phase1_and_Phase_2_ACM__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Phase1 and Phase 2 ACM
+length: 0
+name: Phase1_and_Phase_2_ACM__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Possible_Capital_Works_Project__c
+aggregatable: false
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultValue: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Possible Capital Works Project
+length: 0
+name: Possible_Capital_Works_Project__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:boolean
+sortable: true
+type: boolean
+unique: false
+updateable: true
+Postcode__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Postcode
+length: 255
+name: Postcode__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Power_of_One__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: 1
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+label: Asset Count
+length: 0
+name: Power_of_One__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Project_Management_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: (VALUE( $Label.Project_Management_Time_Per_Item ) * Number_of_Items__c / 60 ) * VALUE( $Label.Project_Management_Cost_Per_Hour )
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates cost of project management tasks undertaken as part of an asbestos survey based on number of items within the asset, the time (hrs) taken to undertake that sampling multiplied by the hourly rate for a hygienist within AIRSystem
+label: Project Management Cost
+length: 0
+name: Project_Management_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Proportional_Total_Building_Risk_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: Est_Daily_Duration_of_use_Perc_Score__c + Frequency_of_Use_Percentage_Score__c + Level_of_Activity_Percentage_Score__c + Mobile_Plant_Operating_Percentage_Score__c + Public_Access_Percentage_Score__c
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+inlineHelpText: Total asset rating score out of 100 "This is the system generated rating for the assets level of activity and usage"
+label: Asset Rating Score
+length: 0
+name: Proportional_Total_Building_Risk_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 9
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Proportional_Total_Building_Score_HT__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Proportional Total Asset Score HT
+length: 0
+name: Proportional_Total_Building_Score_HT__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 17
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+PSB_District_Region__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: details the district or regional designation used by the PSB
+label: PSB District/Region
+length: 255
+name: PSB_District_Region__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Public_Access_Percentage_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Public Access Percentage Score
+length: 0
+name: Public_Access_Percentage_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 17
+queryByDistance: false
+restrictedPicklist: false
+scale: 8
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Public_Access_Score__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Public Access Score
+length: 0
+name: Public_Access_Score__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 10
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: true
+Public_Access__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Can the public access this asset ? Select Yes or No
+label: Public Access (Asset)
+length: 255
+name: Public_Access__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Yes
+active: true
+defaultValue: false
+label: Yes
+value: Yes
+No
+active: true
+defaultValue: false
+label: No
+value: No
+QR_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: IMAGE(''+$Label.QR_Code_Generation_Api_Url+'?size=150x150&data=' &LEFT($Api.Partner_Server_URL_440, FIND('/services', $Api.Partner_Server_URL_440))&Id, "Scan QR code to open record.")
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+htmlFormatted: true
+idLookup: false
+label: QR Code
+length: 1300
+name: QR_Code__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+RecordTypeId
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: true
+custom: false
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Record Type ID
+length: 18
+name: RecordTypeId
+nameField: false
+namePointing: false
+nillable: true
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+referenceTo: RecordType
+relationshipName: RecordType
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: tns:ID
+sortable: true
+type: reference
+unique: false
+updateable: true
+Responsible_Agency_Department__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: Organisation__r.Parent.Name
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+formulaTreatNullNumberAsZero: true
+groupable: false
+idLookup: false
+label: Responsible Agency/Department
+length: 1300
+name: Responsible_Agency_Department__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Responsible_Portfolio__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 18
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Responsible government department for this asset.
+label: Responsible Portfolio
+length: 18
+name: Responsible_Portfolio__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+referenceTo: Account
+relationshipName: Responsible_Portfolio__r
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: true
+soapType: tns:ID
+sortable: true
+type: reference
+unique: false
+updateable: true
+Filtered Lookup Info (2)
+dependent: false
+optionalFilter: false
+Responsible_Portofolio_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 3900
+calculated: true
+calculatedFormula: Responsible_Portfolio__r.Name
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Responsible Portofolio Name
+length: 1300
+name: Responsible_Portofolio_Name__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Roof_Type__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 300
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: The roof’s construction material. For example, ‘Metal’ or ‘Tile’ or ‘Slate’
+label: Roof Type
+length: 100
+name: Roof_Type__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+School_UID__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: School UID
+length: 255
+name: School_UID__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+SED_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: State Electoral Division derived from the Asset Address meshblock ID
+label: SED Name
+length: 255
+name: SED_Name__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Site_Name__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Enter the common name given to the location of the asset e.g. Park
+label: Site Name (If Applicable)
+length: 255
+name: Site_Name__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Standard_Sample_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: VALUE( $Label.Standard_Sample_Cost_Per_Item ) * Number_of_Items__c
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the cost of standard sampling based on number of items within the asset multiplied by standard sampling cost within AIRSystem
+label: Standard Sample Cost
+length: 0
+name: Standard_Sample_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Standard_Sample_Time_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: (VALUE( $Label.Standard_Sample_Time_Per_Item ) * Number_of_Items__c / 60) * VALUE( $Label.Standard_Sample_Time_Cost_Per_Hour )
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the cost of undertaking standard sampling based on number of standard items within the asset, the time (hrs) taken to undertake that sampling multiplied by the hourly rate for a hygienist within AIRSystem
+label: Standard Sample Time Cost
+length: 0
+name: Standard_Sample_Time_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+State__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: State
+length: 255
+name: State__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+Suburb__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+label: Suburb
+length: 255
+name: Suburb__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: true
+SystemModstamp
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: false
+caseSensitive: false
+createable: false
+custom: false
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: System Modstamp
+length: 0
+name: SystemModstamp
+nameField: false
+namePointing: false
+nillable: false
+permissionable: false
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:dateTime
+sortable: true
+type: datetime
+unique: false
+updateable: false
+Total_ACM_Weight__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Total weight of all ACMs in the asset.
+label: Total ACM Weight (tonnes)
+length: 0
+name: Total_ACM_Weight__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Total_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: Hygienist_Travel_Cost__c + Hygienist_Travel_KM_Cost__c + Standard_Sample_Cost__c + Dust_or_Soil_Sample_Cost__c + Standard_Sample_Time_Cost__c + Hygienist_Inspection_Report_Prep_Cost__c + Project_Management_Cost__c + Travel_Cost_Contingency__c + Verification_Cost_Contingency__c
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Estimated Total Cost for Asset Verification
+label: Total Cost
+length: 0
+name: Total_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Total_Estimated_Reinspection_Cost__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Total Estimated Reinspection Cost
+length: 0
+name: Total_Estimated_Reinspection_Cost__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 12
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Total_Item_Removal_Cost_Custom__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Estimated Schedule - Generated by VAEA
+label: Total ACM Removal Cost (Schedule 4)
+length: 0
+name: Total_Item_Removal_Cost_Custom__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 12
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Total_Item_Removal_Cost_std__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Estimated Schedule - Generated by Removal Industry
+label: Total ACM Removal Cost (Schedule 1)
+length: 0
+name: Total_Item_Removal_Cost_std__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 12
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Total_Item_Removal_Cost_VSBA_Simple__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Estimated Schedule - Friable/Non-Friable Based on School Removal Project
+label: Total ACM Removal Cost (Schedule 3)
+length: 0
+name: Total_Item_Removal_Cost_VSBA_Simple__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 12
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Total_Item_Removal_Cost_VSBA__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Estimated Schedule – Generated by multiple values based on School Removal Project
+label: Total ACM Removal Cost (Schedule 2)
+length: 0
+name: Total_Item_Removal_Cost_VSBA__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 12
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Total_Item_Weight__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+label: Total Item Weight (tonnes)
+length: 0
+name: Total_Item_Weight__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Total_Number_of_Dust_or_Soil_Sample_Item__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Calculates the number of items classified as dust, debris or soil within the asset
+label: Total Number of Dust or Soil Sample Item
+length: 0
+name: Total_Number_of_Dust_or_Soil_Sample_Item__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Total_Weight__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Total weight of all items in the asset.
+label: Total Weight (tonnes)
+length: 0
+name: Total_Weight__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: double
+unique: false
+updateable: false
+Travel_Cost_Contingency__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: Hygienist_Travel_Cost__c * 10/100
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Add an amount equivalent to 10% of the Hygienist Travel Cost travel cost as a contingency
+label: Travel Cost Contingency
+length: 0
+name: Travel_Cost_Contingency__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Unique_Asset_Class_Code__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: true
+byteLength: 90
+calculated: false
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: true
+deprecatedAndHidden: false
+digits: 0
+externalId: true
+filterable: true
+groupable: false
+idLookup: true
+inlineHelpText: Used to generate the unique incremental ID numbers added to the Asset Code for all Asset Class record types..
+label: Unique Asset Class Code
+length: 30
+name: Unique_Asset_Class_Code__c
+nameField: false
+namePointing: false
+nillable: false
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: false
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: string
+unique: false
+updateable: false
+Verification_Cost_Contingency__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 0
+calculated: true
+calculatedFormula: ( Standard_Sample_Cost__c + Dust_or_Soil_Sample_Cost__c + Standard_Sample_Time_Cost__c + Hygienist_Inspection_Report_Prep_Cost__c + Project_Management_Cost__c ) * 15/100
+caseSensitive: false
+createable: false
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: false
+idLookup: false
+inlineHelpText: Add an amount equivalent to 15% to the costs of verifications as a contingency
+label: Verification Cost Contingency
+length: 0
+name: Verification_Cost_Contingency__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 18
+queryByDistance: false
+restrictedPicklist: false
+scale: 2
+searchPrefilterable: false
+soapType: xsd:double
+sortable: true
+type: currency
+unique: false
+updateable: false
+Within_Your_Portfolio__c
+aggregatable: true
+aiPredictionField: false
+autoNumber: false
+byteLength: 765
+calculated: false
+caseSensitive: false
+createable: true
+custom: true
+defaultedOnCreate: false
+deprecatedAndHidden: false
+digits: 0
+filterable: true
+groupable: true
+idLookup: false
+inlineHelpText: Are you responsible for this asset? Select Yes or No.
+label: Within Your Portfolio
+length: 255
+name: Within_Your_Portfolio__c
+nameField: false
+namePointing: false
+nillable: true
+permissionable: true
+polymorphicForeignKey: false
+precision: 0
+queryByDistance: false
+restrictedPicklist: true
+scale: 0
+searchPrefilterable: false
+soapType: xsd:string
+sortable: true
+type: picklist
+unique: false
+updateable: true
+Picklist Values (2)
+Yes
+active: true
+defaultValue: false
+label: Yes
+value: Yes
+No
+active: true
+defaultValue: false
+label: No
+value: No
+Record Type Infos (4)
+Building
+active: true
+available: true
+defaultRecordTypeMapping: true
+developerName: Building
+master: false
+name: Building
+recordTypeId: 0127F000000NPjXQAW
+Structure
+active: true
+available: true
+defaultRecordTypeMapping: false
+developerName: Structure
+master: false
+name: Structure
+recordTypeId: 0129n000002ZVcTAAW
+Vehicle
+active: true
+available: true
+defaultRecordTypeMapping: false
+developerName: Vehicle
+master: false
+name: Vehicle
+recordTypeId: 0129n000002ZVcUAAW
+Master
+active: true
+available: true
+defaultRecordTypeMapping: false
+developerName: Master
+master: true
+name: Master
+recordTypeId: 012000000000000AAA
+Supported Scopes (6)
+everything
+label: All asset classes
+name: everything
+mine
+label: My asset classes
+name: mine
+queue_owned
+label: Queue owned asset classes
+name: queue_owned
+scopingRule
+label: Filter by scope
+name: scopingRule
+team
+label: My team's asset classes
+name: team
+user_owned
+label: User owned asset classes
+name: user_owned

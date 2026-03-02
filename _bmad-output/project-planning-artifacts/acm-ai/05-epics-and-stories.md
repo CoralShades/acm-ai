@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
 > **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-26)
-> **Status:** Feature Complete + E22 Post-Audit Remediation Planned
-> **Change Log:** 2026-02-26 — Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 — Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 — Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 — Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 — E15 + E16 added, E9-S3/E10-S1 promoted
+> **Date:** 2025-12-07 (Updated: 2026-03-01)
+> **Status:** Epics 1-28 complete; Epic 29 planned (pipeline unification reconciliation)
+> **Change Log:** 2026-03-01 - Epic 29 added (Pipeline Unification, 8 stories, measure-first gates, reconciled from audit + SCP + YAML); 2026-02-28 - Epic 28 closed (36/43 partial-success gate); 2026-02-26 - Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 - Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 - Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 - Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 - E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
 
@@ -30,8 +30,14 @@
 | E17 | Live Extraction Intelligence — AG-UI + A2A + Observability | P0/P1 | 6 | Done |
 | E19 | Marketing & Stakeholder Presentation | P1 | 1 | Done |
 | E20 | Marketing-App Cross-Site Navigation & Domain Cutover | P0 | 2 | Done |
-| E21 | UX Loading States & Layout Consistency | P1 | 3 | Drafted |
-| E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Drafted |
+| E21 | UX Loading States & Layout Consistency | P1 | 3 | Done |
+| E22 | Post-Audit Remediation & Feature Completion | P0/P1 | 5 | Done |
+| E24 | TableFormer Table Structure Recognition | P0 | 4 | Done (superseded — see ADR-001 D7) |
+| E25 | Table Extraction Research Spike — Docling Direct API | P0 | 3 | Done |
+| E26 | Docling Direct API Integration | P0 | 7 | Done (PROMOTE — 31/31, flag=true) |
+| E27 | Structured Output Resilience | P1 | 4 | Done |
+| E28 | Alexander District Hospital — Not Sampled Record Recovery | P1 | 3 | Done (partial success gate) |
+| E29 | Pipeline Unification — Unified Agent Pipeline | P0 | 8 | Planned |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -996,6 +1002,19 @@ E10-S1 (independent)
 | E13-S1 (Graph Schema) | E1-S4 (API, done) | E13-S2 |
 | E13-S2 (Graph API) | E13-S1 | E13-S3 |
 | E13-S3 (React Flow UI) | E13-S2 | - |
+
+### Epic 29 Dependency Chain (Reconciled 2026-03-01)
+
+| Story | Depends On | Blocks | Gate |
+|-------|------------|--------|------|
+| E29-S1 (JSON parser resilience) | - | E29-S2+ | - |
+| E29-S2 (Benchmark harness + baseline) | E29-S1 | E29-S3..E29-S8 | Gate 1 |
+| E29-S3 (Unified orchestrator path) | E29-S1, E29-S2 | E29-S4..E29-S8 | - |
+| E29-S4 (Capability registry + fallback contract) | E29-S3 | E29-S5..E29-S8 | Gate 2 |
+| E29-S5 (Table parser + BAR mapper) | E29-S4 | E29-S6..E29-S8 | - |
+| E29-S6 (Enricher/classifier/validator) | E29-S5 | E29-S7..E29-S8 | Gate 3 |
+| E29-S7 (Validation gate + legacy cleanup) | E29-S6 | E29-S8 | - |
+| E29-S8 (Export hardening + docs alignment) | E29-S7 | Release | Gate 4 |
 
 ---
 
@@ -2385,3 +2404,343 @@ E10-S1 (independent)
 1. **bug-frontend-build-lightning-css**: Fix lighting CSS build issues in frontend
 2. **bug-stale-commands-cleanup**: Fix and clean up stale application and database commands
 3. **bug-agui-path-alignment**: Correct paths and naming for AG-UI tools to align with technical debt items
+
+---
+
+## Epic 24: Docling TableFormer Activation & Structured Table Extraction (P0)
+
+> **Added:** 2026-02-27
+> **Status:** Done (superseded — see ADR-001 D7)
+> **Note:** E24-S2 and E24-S4 archived. Docling Direct API (E26) achieved 31/31 (100%),
+> exceeding this epic's accuracy target. TableFormer remains in codebase behind
+> `DOCLING_TABLE_STRUCTURE=false` feature flag but is not the production path.
+
+### E24-S1: Activate TableFormer in Source Processing — Done
+Feature flag `DOCLING_TABLE_STRUCTURE=false` (safe default). Commit 3c31fda.
+
+### E24-S2: Broadmeadows & Alexander Accuracy Validation
+**Status:** Archived
+**Reason:** Superseded by E26-S4. Docling Direct API achieved 31/31 (100%) — E24's
+>=30/31 target exceeded without TableFormer activation.
+
+### E24-S3: Remove MinerU Dead Code — Done
+Removed 2,298 lines dead MinerU code. Commit 6e0e2e8.
+
+### E24-S4: Docker Model Weight Pre-Download
+**Status:** Archived
+**Reason:** Superseded. Docling Direct API requires no model weight downloads.
+TableFormer weights not needed for production path.
+
+---
+
+## Epic 25: Table Extraction Research Spike — Docling Direct API (P0)
+
+> **Added:** 2026-02-27
+> **Status:** Done
+> **Evidence:** `docs/reviews/e25-table-extraction-comparison.md`
+
+### E25-S1: Environment Setup + Tool Verification — Done
+**Story File:** N/A (research spike)
+
+### E25-S2: PyMuPDF vs Docling Direct API Comparison — Done
+**As a** architect,
+**I want** empirical comparison of PyMuPDF and Docling Direct API on Broadmeadows,
+**So that** I can make an evidence-based architecture decision for E26.
+
+**Key Results:**
+- Docling DataFrames: 29/31 (93.5%), 9/9 "Same as", 4/6 "Not Sampled"
+- Processing time: 22.41s (acceptable)
+- Page 8 gap: 2 records missing (below TableFormer detection threshold)
+- Recommendation: Hybrid Approach A (PyMuPDF + Docling Direct API)
+
+**Story File:** `docs/reviews/e25-table-extraction-comparison.md`
+
+### E25-S3: Architecture Decision + E26 Technical Design — Done
+**As a** architect,
+**I want** an ADR decision and technical design based on E25-S2 evidence,
+**So that** implementation can proceed with a validated blueprint.
+
+**Deliverables:**
+- ADR-001 D5: `docs/architecture/adr-tableformer-integration.md`
+- E26 Technical Design: `docs/architecture/e26-table-extraction-technical-design.md`
+- E26 stories: 5 stories, 9 SP
+
+---
+
+## Epic 26: Docling Direct API Integration (P0)
+
+> **Added:** 2026-02-27
+> **Status:** Done (PROMOTE — 31/31, 100%)
+> **ADR:** ADR-001 D5 (PROMOTED 2026-02-28)
+> **Tech Design:** `docs/architecture/e26-table-extraction-technical-design.md`
+> **Target:** Broadmeadows >= 30/31 (96.8%), Alexander maintains 54/54
+> **Result:** Broadmeadows 31/31 (100%), Alexander 52/52 (maintained)
+> **Total:** 7 stories, 12 SP
+
+### E26-S1: Add Docling Direct API Extraction to Source Processing [M — 3 SP]
+**As a** system,
+**I want** to extract structured DataFrames from PDFs using Docling Direct API,
+**So that** row-coherent table data is available for LLM extraction.
+
+**Acceptance Criteria:**
+- [ ] `_extract_tables_with_docling()` runs Docling DocumentConverter on PDFs
+- [ ] Feature flag `DOCLING_DIRECT_TABLE_EXTRACTION` controls the path (default: false)
+- [ ] DataFrames stored in `acm_table_section` with `table_type="docling_direct_api"`
+- [ ] Sample number normalization: `34511-039- 001` → `34511-039-001`
+- [ ] Hazard status normalization: strip "Asbestos " prefix
+- [ ] Per-table error handling — one failure doesn't block others
+- [ ] `source.full_text` remains PyMuPDF output (unchanged)
+- [ ] Unit tests for extraction, normalization, storage
+- [ ] New migration adds `structured_json` field to `acm_table_section`
+
+**File Changes:**
+- `commands/source_commands.py` — new functions + integration
+- `migrations/N.surrealql` — `structured_json` field
+- `.env.example` — new flag
+- `tests/test_source_commands_docling.py` — new tests
+
+**Story File:** `docs/sprint-artifacts/e26-s1-docling-direct-api.md`
+
+---
+
+### E26-S2: Broadmeadows DataFrame Validation [S — 1 SP]
+**As a** QA engineer,
+**I want** to validate Docling DataFrames against E25 spike results,
+**So that** the integration produces the expected table structure.
+
+**Acceptance Criteria:**
+- [ ] 8 tables stored in `acm_table_section` (3 register, 5 other)
+- [ ] 30 register rows across tables on pages 5-7
+- [ ] 9/9 "Same as" rows present
+- [ ] 4/6 "Not Sampled" rows present (matching E25 spike)
+- [ ] DataFrame column structure matches E25 report
+- [ ] Validation report: `docs/reviews/e26-s2-validation-results.md`
+
+**Depends On:** E26-S1
+
+---
+
+### E26-S3: Inject Docling Tables into Orchestrator Context [M — 3 SP]
+**As a** system,
+**I want** the orchestrator to inject Docling DataFrame markdown into LLM context,
+**So that** the LLM receives structured table data alongside full_text for better extraction.
+
+**Acceptance Criteria:**
+- [ ] `_get_docling_tables()` loads tables from `acm_table_section` by page range
+- [ ] `_inject_docling_tables()` appends DataFrame markdown to building content
+- [ ] Supplementary prompt instruction for structured table handling
+- [ ] "Same as", "Not Sampled", "No Access" explicitly mentioned in prompt
+- [ ] If no Docling tables: existing behavior unchanged
+- [ ] Integration test: extraction with Docling tables produces >= 29 records
+
+**File Changes:**
+- `open_notebook/extractors/orchestrator.py` — new functions + modify `extract_building()`
+- `prompts/acm/building_extraction.j2` — add structured table instruction
+- `tests/test_orchestrator_docling.py` — new tests
+
+**Depends On:** E26-S1
+
+---
+
+### E26-S4: Accuracy Validation — Target 30+/31 [S — 1 SP]
+**As a** product owner,
+**I want** full pipeline validation with a decision gate,
+**So that** we only promote the feature flag when accuracy targets are met.
+
+**Acceptance Criteria:**
+- [ ] Full extraction pipeline on Broadmeadows with Docling tables ON
+- [ ] Cross-reference against ground truth CSV (31 records)
+- [ ] Decision gate: >= 30/31 → promote flag; < 28/31 → rollback
+- [ ] Alexander regression check: must maintain 54/54
+- [ ] Record #9 (Switch Room / Battery Charger) must be captured
+- [ ] Validation report: `docs/reviews/e26-s4-validation-results.md`
+
+**Depends On:** E26-S3
+
+---
+
+### E26-S5: Frontend — Enhanced Raw Tables Display [S — 1 SP]
+**As a** compliance officer,
+**I want** the Raw Tables tab to show Docling-extracted tables,
+**So that** I can review high-quality structured table data from PDFs.
+
+**Acceptance Criteria:**
+- [ ] Raw Tables tab displays Docling tables from `acm_table_section`
+- [ ] HTML rendering quality verified (clean `<table>` elements)
+- [ ] Markdown fallback works for non-HTML consumers
+- [ ] No regression for non-Docling sources
+- [ ] Optional: "Source" indicator showing extraction method
+
+**Can run in parallel with S3-S4.**
+**Depends On:** E26-S1
+
+---
+
+### E26-S6: Accuracy Fixes — Dedup + Prompt + Regex Fallback [M — 3 SP]
+**Status**: Done
+
+- Added `location` to dedup key (fixed Record #9 merge)
+- Strengthened structured table extraction prompt ("each row = one record")
+- Added `_recover_no_access_records()` regex fallback (Records #30, #31)
+- Result: 31/31 (100%) on Broadmeadows
+
+**Depends On:** E26-S4
+
+---
+
+### E26-S7: Alexander Ground Truth + Closeout [S — 1 SP]
+**Status**: Done
+
+- Installed 43-record ground truth CSV (manually cleaned from BAR xlsm)
+- Promoted `DOCLING_DIRECT_TABLE_EXTRACTION` flag to `true`
+- Updated ADR-001 D5 decision status to PROMOTED
+- E26 total: 7 stories, 12 SP
+
+**Depends On:** E26-S6
+
+---
+
+## Epic 27: Structured Output Resilience (P1 — Bug Fix)
+
+> **Status:** Done (4/4 stories complete)
+
+**Priority**: P1
+**Goal**: Fix the `completionState` JSON envelope wrapping that breaks Pydantic structured output parsing in the orchestrator and pre-extraction intelligence modules, recovering Alexander District Hospital extraction from 0/43 to >= 40/43.
+**Trigger**: E26-S4 validation revealed 0/43 Alexander extraction (all 6 building-level LLM calls fail due to OpenRouter `completionState` envelope)
+**GitHub Issue**: https://github.com/CoralShades/acm-ai/issues/81
+
+### E27-S1: Fix completionState Wrapper Parsing in Orchestrator [M — 3 SP] — Done
+Eliminated dead `with_structured_output()` from all 4 LLM stages. Direct `ainvoke` + `parse_json_response` + `_unwrap_completion_state` + Pydantic validate. Fixes Alexander 0/43. 10 unit tests.
+
+### E27-S2: SSE/AG-UI Pipeline Visibility — Done
+Added DOCLING_EXTRACTION + NO_ACCESS_RECOVERY StageId enums. Instrumented Docling extraction and recovery node with PipelineLogger + AGUI events. Frontend types updated. 10 new tests.
+
+### E27-S3: Hard-Lock Provider Routing — Done
+Replaced soft provider.order+ignore with hard provider.only=["Anthropic"]+allow_fallbacks=false. ZDR, Response Healing, request metadata. 30 new tests.
+
+### E27-S4: Native JSON Schema Structured Outputs — Done
+Added response_format:json_schema on orchestrator path. Removed dead `_unwrap_completion_state()` (7 call sites). Broadmeadows 31/31, Alexander 29/43. 12 new tests.
+
+**Depends On:** None (standalone bug fix)
+
+---
+
+## Epic 28: Alexander District Hospital — "Not Sampled" Record Recovery (P1)
+
+**Priority**: P1
+**Goal**: Recover 14 missing "Not Sampled" records from Alexander District Hospital
+ARA-format extraction. Improve from 29/43 (67.4%) to >=40/43 (93%).
+**Status**: Done (partial success — 36/43, 83.7%)
+
+### E28-S1: ARA "Not Sampled" Research Spike [S — 1 SP] — Done
+Identified 17 "Not Sampled" records in Alexander ground truth. Root cause: `_recover_no_access_records()` used SAMP-only `level_re` regex that never matched ARA section headers. No Docling tables available for Alexander. Spike output: `docs/research/e28-s1-ara-spike.md`.
+
+### E28-S2: Targeted Fix — ARA Regex Recovery [M — 3 SP] — Done
+Added `_recover_not_sampled_records_ara()` function for ARA-format "Not Sampled" pattern scanning. Improved room name parsing ("External - Throughout" -> "Exterior"). 8 records recovered deterministically via regex. Alexander: 29/43 -> 36/43 (+7). Broadmeadows: 31/31 maintained. 13 new tests. Files changed: `open_notebook/graphs/acm_extraction.py`, `tests/test_e28_ara_recovery.py`, `scripts/research/e26_s4_accuracy_validation.py`.
+
+### E28-S3: Validation Gate & Close-out [S — 1 SP] — Done
+Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues (room name format differences, not extraction failures). All 7 items ARE present in extracted data. Report: `docs/reviews/e28-validation-results.md`.
+
+---
+
+## Epic 29: Pipeline Unification — Unified Agent Pipeline (P0)
+
+> **Added:** 2026-03-01 (reconciled)
+> **Status:** Planned
+> **Reference Plan:** `V3/epic-29-pipeline-unification.reconciled.yaml`
+> **Source Reconciliation:** BMAD audit + SCP-20260301 + initial E29 YAML
+> **Total:** 8 stories, 19 SP
+
+**Epic Goal:**
+- Move to one orchestrator path for all documents.
+- Introduce benchmark-gated delivery to prevent regressions.
+- Decompose monolithic extraction into testable agent stages.
+- Remove legacy branch only after parity gates pass.
+
+### Decision Gates
+
+1. **Gate 1 (after E29-S2):** Benchmark harness and baseline report complete for >=3 benchmark docs.
+2. **Gate 2 (after E29-S4):** Unified-path parity confirmed (Broadmeadows 31/31, Alexander baseline maintained).
+3. **Gate 3 (after E29-S6):** Cleanup permission granted only with no unapproved regression.
+4. **Gate 4 (after E29-S8):** Release readiness (benchmarks + integration + docs sync).
+
+### E29-S1: JSON Parser Resilience — Fence/Preamble/Truncation [S — 1 SP]
+**As a** system processing LLM responses,
+**I want** resilient JSON extraction,
+**So that** fenced and prefixed responses parse deterministically.
+
+**Acceptance Criteria:**
+- [ ] Handle fenced JSON, preamble text, multiple blocks, and truncation errors clearly
+- [ ] Preserve backward compatibility for unfenced responses
+- [ ] Unit tests cover all parser edge cases
+
+### E29-S2: Benchmark Harness + Baseline Capture [M — 3 SP]
+**As a** product team,
+**I want** automated benchmark measurement before refactors,
+**So that** architecture changes are gated by evidence.
+
+**Acceptance Criteria:**
+- [ ] Harness runs >=3 benchmark docs with ground truth
+- [ ] Reports recall, precision, field accuracy, latency, and token usage
+- [ ] Baseline report published under `docs/reviews/`
+
+### E29-S3: Unified Orchestrator Path — Remove Runtime Forking [M — 3 SP]
+**As a** system architect,
+**I want** all documents to route through orchestrator,
+**So that** extraction behavior is consistent and maintainable.
+
+**Acceptance Criteria:**
+- [ ] `tag_pages` always routes to `orchestrate_extraction`
+- [ ] Synthetic whole-document plan used when inventory is absent
+- [ ] Legacy branch remains unreachable until cleanup story
+
+### E29-S4: Capability Registry + Fallback Contract [S — 2 SP]
+**As a** platform maintainer,
+**I want** explicit strategy and fallback rules,
+**So that** routing and retry behavior are deterministic.
+
+**Acceptance Criteria:**
+- [ ] Capability/strategy selection centralized and test-covered
+- [ ] Fallback matrix documented and implemented
+- [ ] Gate 2 parity criteria met
+
+### E29-S5: Agent Decomposition I — Table Parser + BAR Mapper [M — 3 SP]
+**As a** developer,
+**I want** table parsing and BAR mapping extracted from the monolith,
+**So that** row extraction and schema mapping are independently testable.
+
+**Acceptance Criteria:**
+- [ ] DataFrame-first row extraction produces raw candidates
+- [ ] BAR mapping is field_schema-driven
+- [ ] Per-agent metrics logged for row and field mapping quality
+
+### E29-S6: Agent Decomposition II — Enricher/Classifier/Validator [M — 3 SP]
+**As a** developer,
+**I want** enrichment/classification/validation split into bounded stages,
+**So that** correction behavior is measurable and maintainable.
+
+**Acceptance Criteria:**
+- [ ] Regex-first classification with targeted LLM fallback
+- [ ] Batched enrichment and deterministic retry limits
+- [ ] Gate 3 criteria satisfied
+
+### E29-S7: Validation Gate + Legacy Dead-Code Cleanup [S — 2 SP]
+**As a** maintainer,
+**I want** legacy path removed only after parity is proven,
+**So that** cleanup cannot silently regress production quality.
+
+**Acceptance Criteria:**
+- [ ] Broadmeadows remains 31/31 after decomposition
+- [ ] Alexander reaches approved threshold and is documented
+- [ ] Legacy `prepare_context/extract_records` path removed
+- [ ] Ruff/pytest pass after cleanup
+
+### E29-S8: Export Hardening + Integration + Documentation Alignment [S — 2 SP]
+**As a** release owner,
+**I want** exports, tests, and planning docs aligned before release,
+**So that** pipeline behavior and documentation remain consistent.
+
+**Acceptance Criteria:**
+- [ ] Per-building and ACM-type exports remain schema-driven
+- [ ] Integration tests cover upload -> extract -> validate -> save -> export
+- [ ] PRD, architecture, epics, and sprint tracker updated to final E29 state

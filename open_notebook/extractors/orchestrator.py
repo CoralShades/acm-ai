@@ -24,6 +24,7 @@ from open_notebook.extractors.acm_schemas import (
     ACMExtractionRecord,
     ACMExtractionResult,
     BuildingRoomContext,
+    SyntheticExtractionPlan,
 )
 from open_notebook.extractors.building_inventory import (
     BuildingComplexity,
@@ -40,13 +41,98 @@ from open_notebook.extractors.page_tagger import (
     SectionTaxonomy,
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
+from open_notebook.extractors.strategy_registry import (
+    CORRECTION_RETRY_CONTRACT,
+    FallbackId,
+    emit_fallback_telemetry,
+)
 from open_notebook.graphs.utils import (
+    _get_acm_extraction_schema,
+    _inject_response_format,
     _is_qwen_model,
+    _verify_provider_routing,
     is_auth_error,
     is_provider_schema_error,
     parse_json_response,
     provision_extraction_fallback_model,
 )
+
+# ---------------------------------------------------------------------------
+# E26-S3: Docling table injection helpers (ADR-001 D5)
+# ---------------------------------------------------------------------------
+
+
+async def _get_docling_tables(
+    source_id: str,
+    page_start: int,
+    page_end: int,
+) -> List[Dict[str, Any]]:
+    """Load Docling Direct API tables from acm_table_section for a page range.
+
+    Returns tables where table_type='docling_direct_api' and page falls
+    within the building's page range.  Returns empty list if none found
+    (graceful fallback to existing behavior).
+    """
+    from open_notebook.database.repository import ensure_record_id, repo_query
+
+    try:
+        query = (
+            "SELECT * FROM acm_table_section "
+            "WHERE source_id = $source_id "
+            "AND table_type = 'docling_direct_api' "
+            "AND page_start >= $page_start "
+            "AND page_end <= $page_end "
+            "ORDER BY page_start ASC"
+        )
+        results = await repo_query(
+            query,
+            {
+                "source_id": ensure_record_id(source_id),
+                "page_start": page_start,
+                "page_end": page_end,
+            },
+        )
+        return results if results else []
+    except Exception as e:
+        logger.warning(f"Docling table query failed for {source_id}: {e}")
+        return []
+
+
+def _inject_docling_tables(
+    building_content: str,
+    docling_tables: List[Dict[str, Any]],
+) -> str:
+    """Inject Docling DataFrame markdown into building content for LLM context.
+
+    Appends structured table data AFTER the existing building content,
+    with clear section headers and an instruction for the LLM to prioritize
+    the structured data for record extraction.
+    """
+    if not docling_tables:
+        return building_content
+
+    context_parts = [building_content]
+    context_parts.append(
+        "\n\n## Structured Table Data (from PDF table extraction)\n"
+        "The following tables were extracted directly from the PDF with "
+        "preserved row structure. Each row is a complete ACM register entry.\n"
+    )
+
+    for table in docling_tables:
+        page = table.get("page_start", "?")
+        raw_text = table.get("raw_text", "")
+        if raw_text:
+            context_parts.append(f"### Table (Page {page})\n{raw_text}\n")
+
+    context_parts.append(
+        "\n**IMPORTANT**: The structured table data above preserves exact row "
+        "structure from the PDF. Each row represents one ACM record. Rows with "
+        "'Same as', 'As Per', 'Not Sampled', or 'No Access' entries are separate "
+        "records that must EACH be extracted as individual ACM records.\n"
+    )
+
+    return "\n".join(context_parts)
+
 
 # ---------------------------------------------------------------------------
 # Free-form JSON normalization helpers
@@ -119,6 +205,7 @@ class BuildingExtractionStats(BaseModel):
     strategy_used: str = "full_llm"
     time_ms: int = 0
     errors: Optional[List[str]] = None
+    fallback_tags: List[str] = Field(default_factory=list)
 
 
 class OrchestratorStats(BaseModel):
@@ -131,6 +218,7 @@ class OrchestratorStats(BaseModel):
     strategy_distribution: Dict[str, int] = Field(default_factory=dict)
     total_time_ms: int = 0
     plan: Optional[ExtractionPlan] = None
+    fallback_activated: List[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +494,7 @@ async def _llm_extract_building(
 
     model_id = state.get("model_id")
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+    runnable_config: Optional[RunnableConfig] = state.get("_langchain_config")
 
     # Check room count and sub-chunk if needed
     sub_chunks = (
@@ -426,6 +515,11 @@ async def _llm_extract_building(
             "extraction",
             temperature=0.1,
             max_tokens=32768,
+        )
+
+        # E27-S4: Enforce JSON Schema at OpenRouter layer for extraction
+        model = _inject_response_format(
+            model, _get_acm_extraction_schema(), "ACMExtractionResult"
         )
 
         is_qwen = _is_qwen_model(model)
@@ -451,34 +545,50 @@ async def _llm_extract_building(
         ]
 
         async def _invoke(active_model, active_is_qwen: bool) -> ACMExtractionResult:
-            if active_is_qwen:
-                response_text = ""
-                try:
-                    raw_response = await active_model.ainvoke(messages)
-                    response_text = (
-                        raw_response.content
-                        if hasattr(raw_response, "content")
-                        else str(raw_response)
-                    )
-                    parsed = parse_json_response(response_text)
-                    _normalize_extraction_json(parsed)
-                    result_local: ACMExtractionResult = (
-                        ACMExtractionResult.model_validate(parsed)
-                    )
-                    logger.info(
-                        f"Building {plan.building_id} Qwen direct JSON: "
-                        f"{len(result_local.records)} records"
-                    )
-                    return result_local
-                except (ValueError, ValidationError) as qwen_err:
-                    logger.error(
-                        f"Building {plan.building_id} Qwen JSON parsing failed: {qwen_err}. "
-                        f"Response preview: {response_text[:200] if response_text else 'N/A'}"
-                    )
-                    raise
+            response_text = ""
+            try:
+                raw_response = await active_model.ainvoke(
+                    messages,
+                    config=runnable_config,
+                )
 
-            chain = active_model.with_structured_output(ACMExtractionResult)
-            return await chain.ainvoke(messages)
+                # E27-S3: Verify provider routing (non-blocking)
+                try:
+                    await _verify_provider_routing(
+                        raw_response,
+                        f"orchestrator/{plan.building_id}",
+                    )
+                except Exception:
+                    pass
+
+                response_text = (
+                    raw_response.content
+                    if hasattr(raw_response, "content")
+                    else str(raw_response)
+                )
+                parsed = parse_json_response(response_text)
+                # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
+                _normalize_extraction_json(parsed)
+                result_local: ACMExtractionResult = ACMExtractionResult.model_validate(
+                    parsed
+                )
+                logger.info(
+                    f"Building {plan.building_id} direct JSON: "
+                    f"{len(result_local.records)} records"
+                )
+                return result_local
+            except (ValueError, ValidationError) as parse_err:
+                # E29-S4: F3 — JSON parse failure telemetry
+                emit_fallback_telemetry(
+                    FallbackId.F3_JSON_PARSE,
+                    plan.building_name or plan.building_id,
+                    str(parse_err),
+                )
+                logger.error(
+                    f"Building {plan.building_id} JSON parsing failed: {parse_err}. "
+                    f"Response preview: {response_text[:200] if response_text else 'N/A'}"
+                )
+                raise
 
         try:
             result = await _invoke(model, is_qwen)
@@ -522,13 +632,17 @@ async def _llm_extract_building(
                         level="warning",
                     )
                 try:
-                    raw_response = await model.ainvoke(messages)
+                    raw_response = await model.ainvoke(
+                        messages,
+                        config=runnable_config,
+                    )
                     response_text = (
                         raw_response.content
                         if hasattr(raw_response, "content")
                         else str(raw_response)
                     )
                     parsed = parse_json_response(response_text)
+                    # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
                     _normalize_extraction_json(parsed)
                     result = ACMExtractionResult.model_validate(parsed)
                     logger.info(
@@ -552,6 +666,12 @@ async def _llm_extract_building(
                         )
                     raise
             else:
+                # E29-S4: F7 — LLM provider error telemetry
+                emit_fallback_telemetry(
+                    FallbackId.F7_LLM_ERROR,
+                    plan.building_name or plan.building_id,
+                    str(invoke_err),
+                )
                 raise
 
         if len(sub_chunks) > 1:
@@ -572,12 +692,43 @@ async def extract_building(
 ) -> Tuple[List[ACMExtractionRecord], BuildingExtractionStats]:
     """Extract ACM records for a single building (Task 3.1)."""
     start = time.time()
+    fallback_tags: List[str] = []
     building_content = _extract_building_content(
         content, plan.page_range[0], plan.page_range[1]
     )
 
     llm_input_content = building_content
     llm_input_format = "markdown"
+
+    # E26-S3: Inject Docling structured tables if available (ADR-001 D5)
+    source: Optional[Source] = state.get("source")
+    source_id = str(source.id) if source and source.id else None
+    if source_id:
+        try:
+            docling_tables = await _get_docling_tables(
+                source_id, plan.page_range[0], plan.page_range[1]
+            )
+            if docling_tables:
+                llm_input_content = _inject_docling_tables(
+                    building_content, docling_tables
+                )
+                logger.info(
+                    f"Building {plan.building_id}: injected {len(docling_tables)} "
+                    f"Docling tables into LLM context"
+                )
+            else:
+                # E29-S4: F2 — no Docling tables in page range
+                tag = emit_fallback_telemetry(
+                    FallbackId.F2_NO_DOCLING_TABLES,
+                    plan.building_name or plan.building_id,
+                    "no Docling tables in page range",
+                )
+                fallback_tags.append(tag)
+        except Exception as e:
+            logger.warning(
+                f"Docling table injection failed for {plan.building_id}: {e}"
+            )
+            # Non-fatal — continue with original building_content
 
     pages_processed = plan.page_range[1] - plan.page_range[0] + 1
 
@@ -589,6 +740,7 @@ async def extract_building(
             pages_processed=0,
             strategy_used=ExtractionStrategy.SKIP.value,
             time_ms=elapsed,
+            fallback_tags=fallback_tags,
         )
 
     if plan.strategy == ExtractionStrategy.REGEX_ONLY:
@@ -636,6 +788,7 @@ async def extract_building(
                         pages_processed=pages_processed,
                         strategy_used="regex_escalated_to_llm",
                         time_ms=elapsed,
+                        fallback_tags=fallback_tags,
                     )
                 except Exception as llm_err:
                     logger.error(
@@ -650,6 +803,7 @@ async def extract_building(
                 pages_processed=pages_processed,
                 strategy_used=ExtractionStrategy.REGEX_ONLY.value,
                 time_ms=elapsed,
+                fallback_tags=fallback_tags,
             )
         except Exception as e:
             logger.error(f"Building {plan.building_id} regex extraction failed: {e}")
@@ -661,6 +815,7 @@ async def extract_building(
                 strategy_used=ExtractionStrategy.REGEX_ONLY.value,
                 time_ms=elapsed,
                 errors=[str(e)],
+                fallback_tags=fallback_tags,
             )
 
     # FULL_LLM path
@@ -694,6 +849,7 @@ async def extract_building(
             pages_processed=pages_processed,
             strategy_used=ExtractionStrategy.FULL_LLM.value,
             time_ms=elapsed,
+            fallback_tags=fallback_tags,
         )
     except Exception as e:
         logger.error(f"Building {plan.building_id} extraction failed: {e}")
@@ -711,6 +867,7 @@ async def extract_building(
             strategy_used=ExtractionStrategy.FULL_LLM.value,
             time_ms=elapsed,
             errors=[str(e)],
+            fallback_tags=fallback_tags,
         )
 
 
@@ -728,6 +885,7 @@ def merge_building_results(
     all_records: List[ACMExtractionRecord] = []
     strategy_dist: Dict[str, int] = {}
     buildings_extracted = 0
+    all_fallback_tags: List[str] = []
 
     for records, stats in results:
         all_records.extend(records)
@@ -736,6 +894,8 @@ def merge_building_results(
         )
         if stats.strategy_used != ExtractionStrategy.SKIP.value and not stats.errors:
             buildings_extracted += 1
+        # E29-S4: Aggregate fallback tags from all buildings
+        all_fallback_tags.extend(stats.fallback_tags)
 
     total_time = int((time.time() - total_start_time) * 1000)
 
@@ -747,6 +907,7 @@ def merge_building_results(
         strategy_distribution=strategy_dist,
         total_time_ms=total_time,
         plan=extraction_plan,
+        fallback_activated=all_fallback_tags,
     )
 
     return all_records, orchestrator_stats
@@ -806,7 +967,7 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
     """
     source: Source = state["source"]
     content = normalize_docling_text(source.full_text or "")
-    inventory: BuildingInventory = state["building_inventory"]
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
     page_tags: Optional[PageTaggingResult] = state.get("page_tags")
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
 
@@ -818,7 +979,42 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
     total_start = time.time()
 
     # Generate extraction plan
-    extraction_plan = plan_extraction(inventory, page_tags, doc_meta)
+    if not inventory or not inventory.buildings:
+        # E29-S3: Synthetic whole-document plan for no-inventory documents
+        total_pages = page_tags.total_pages if page_tags else 999
+
+        synthetic = SyntheticExtractionPlan(page_start=1, page_end=total_pages)
+
+        synthetic_building_plan = BuildingExtractionPlan(
+            building_id="WHOLE_DOC",
+            building_name=synthetic.building_name,
+            page_range=(synthetic.page_start, synthetic.page_end),
+            strategy=ExtractionStrategy.FULL_LLM,
+            complexity="complex",
+            context_summary=f"Whole Document (synthetic, {total_pages} pages)",
+        )
+
+        extraction_plan = ExtractionPlan(
+            plans=[synthetic_building_plan],
+            total_buildings=1,
+            buildings_to_extract=1,
+            buildings_skipped=0,
+            estimated_llm_calls=1,
+        )
+
+        # E29-S4: F1 — no building inventory fallback telemetry
+        emit_fallback_telemetry(
+            FallbackId.F1_NO_INVENTORY,
+            "Whole Document",
+            "no building inventory",
+        )
+
+        logger.info(
+            f"Orchestrator using synthetic plan for source {source.id}: "
+            f"no building inventory, treating as whole document ({total_pages} pages)"
+        )
+    else:
+        extraction_plan = plan_extraction(inventory, page_tags, doc_meta)
 
     logger.info(
         f"Orchestrator plan for source {source.id}: "
@@ -828,11 +1024,14 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
         f"{extraction_plan.estimated_llm_calls} LLM calls"
     )
 
+    state_with_config = dict(state)
+    state_with_config["_langchain_config"] = config
+
     # Execute per-building extractions in parallel
     results = await _extract_buildings_parallel(
         extraction_plan.plans,
         content,
-        state,
+        state_with_config,
     )
 
     # Add SKIP stats for skipped buildings
@@ -875,6 +1074,12 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
             stats.records_extracted == 0
             and stats.strategy_used != ExtractionStrategy.SKIP.value
         ):
+            # E29-S4: F4 — empty extraction fallback telemetry
+            emit_fallback_telemetry(
+                FallbackId.F4_EMPTY_EXTRACTION,
+                stats.building_id,
+                f"0 records (strategy={stats.strategy_used})",
+            )
             logger.warning(
                 f"Building {stats.building_id} returned 0 records "
                 f"(strategy={stats.strategy_used}, pages={stats.pages_processed}, "
@@ -901,4 +1106,6 @@ async def orchestrate_extraction(state: dict, config: RunnableConfig) -> dict:
         "context": context,
         "content": content,
         "start_time": state.get("start_time", time.time()),
+        # E29-S4: Propagate retry cap from registry (AC-5)
+        "max_correction_attempts": CORRECTION_RETRY_CONTRACT.max_retries,
     }

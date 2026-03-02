@@ -278,8 +278,8 @@ class TestDeduplicationLogic:
 
         key = _generate_dedup_key(record, "SCHOOL01")
 
-        # Key format: {school}_{building}_{area_type}_{room}_{product}_{desc_hash}
-        assert key.startswith("SCHOOL01_B1_interior_B1-R1_tiles_")
+        # Key format: {school}_{building}_{area_type}_{room}_{product}_{location}_{sample}_{desc_hash}
+        assert key.startswith("SCHOOL01_B1_interior_B1-R1_tiles_unknown_")
         assert len(key) > 20  # Should include hash
 
     def test_dedup_key_different_for_different_records(self):
@@ -598,6 +598,45 @@ class TestExternalInternalMerging:
 
         # Keys must be different due to area_type
         assert key1 != key2
+
+    def test_dedup_preserves_different_locations_same_room(self):
+        """Two records in same room with same product but different locations should NOT merge.
+
+        Regression test for Record #9 (Broadmeadows): Switch Room has both
+        Switchboard and Auto Battery Charger with Fuse cartridge product.
+        """
+        from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+        from open_notebook.graphs.acm_extraction import _generate_dedup_key
+
+        switchboard_rec = ACMExtractionRecord(
+            building_id="B1",
+            room_id="R1",
+            room_name="Switch Room",
+            product="Fuse cartridge",
+            location="Switchboard",
+            material_description="Electrical Components",
+            result="Assumed Positive",
+            sample_no=None,
+        )
+
+        battery_charger_rec = ACMExtractionRecord(
+            building_id="B1",
+            room_id="R1",
+            room_name="Switch Room",
+            product="Fuse cartridge",
+            location="Auto Battery Charger",
+            material_description="Electrical Components",
+            result="Assumed Positive",
+            sample_no=None,
+        )
+
+        key1 = _generate_dedup_key(switchboard_rec, "SCHOOL01")
+        key2 = _generate_dedup_key(battery_charger_rec, "SCHOOL01")
+
+        # Keys must be different due to different location
+        assert key1 != key2
+        assert "switchboard" in key1
+        assert "auto battery charger" in key2
 
     @pytest.mark.parametrize(
         "area_type,expected",

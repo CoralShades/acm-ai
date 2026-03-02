@@ -34,16 +34,16 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-02-27
+updated: 2026-03-01
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-02-27
-  reconciled_branches: [main]
-  notes: "Sprint Close E23 reconciliation 2026-02-27: E23 validation complete 28/31 (90.3%) — target ≥28/31 MET. All 4 E23 stories closed with validation notes. GitHub issues #70-74 closed. All 23 epics complete. Story count: 156 total, 144 done (92%), 10 archived."
+  last_reconciled: 2026-03-01
+  reconciled_branches: [main, ACMV3]
+  notes: "E29 planning reconciliation 2026-03-01: unified pipeline execution order finalized (8 stories, 4 gates). E29 added as backlog epic pending story artifact drafting. E28 closeout retained: Alexander 29/43→36/43 (+7), Broadmeadows 31/31 maintained."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -328,11 +328,69 @@ development_status:
   # Tech Design: docs/architecture/tableformer-technical-design.md
   # Goal: Activate Docling TableFormer for 97-100% accuracy (currently 90.3%)
   # Success Metric: Broadmeadows >=30/31, Alexander maintains 54/54
-  epic-24: in-progress  # GitHub #75
+  epic-24: done  # Superseded by E26 (Docling Direct API). E24-S2 + E24-S4 archived. See ADR-001 D7.
   e24-s1-activate-tableformer: done  # GitHub #76. Commit 3c31fda. Activate TableFormer in source.py content_process(), feature flag DOCLING_TABLE_STRUCTURE=false (safe default). 7 unit tests. 1004/1004 pass. npm build ✓.
-  e24-s2-accuracy-validation: drafted  # GitHub #77. Broadmeadows >=30/31 + Alexander 54/54 regression check, decision gate for flag promotion. Depends: S1 ✓
+  e24-s2-accuracy-validation: archived  # Superseded: E26-S4 achieved 31/31 (100%) via Docling Direct API. TableFormer validation not required.
   e24-s3-remove-mineru-dead-code: done  # GitHub #78. Commit 6e0e2e8. Removed 2,298 lines dead MinerU code (4 files deleted, 13 tests removed across 3 files). Deprecation header added to acm_extractor.py. 936/936 tests pass, ruff clean, npm build ✓.
-  e24-s4-docker-model-predownload: drafted  # GitHub #79. Pre-download TableFormer weights in Dockerfile, add env vars to docker-compose. Depends: S1 ✓
+  e24-s4-docker-model-predownload: archived  # Superseded: Docling Direct API is production path. TableFormer model weights not needed.
+
+  # Epic 25: Table Extraction Research Spike — Comparative Analysis (P0)
+  # 3/3 stories complete — DONE
+  # Epic file: docs/research/e25-epic-table-extraction-spike.md
+  # Goal: Empirical comparison of PyMuPDF vs Docling Direct API on Broadmeadows benchmark
+  # Result: Docling DataFrames achieve 29/31 (93.5%), +1 over E23 baseline (28/31)
+  epic-25: done
+  e25-s1-environment-setup: done  # All 7 tools verified. Docling 2.75.0 + RTX 4090. 8 tables from Broadmeadows in 14.9s. Report: docs/research/e25-environment-audit.md
+  e25-s2-research-spike-execution: done  # PyMuPDF vs Docling Direct API comparison. 29/31 (93.5%) from DataFrames. Record #9 (Battery Charger) FOUND. Records #30,#31 on page 8 (not detected). Recommendation: Approach A (Hybrid). Report: docs/reviews/e25-table-extraction-comparison.md
+  e25-s3-architecture-decision: done  # ADR update + E26 design. Depends: S2 ✓
+
+  # Epic 26: Docling Direct API Integration — Hybrid Table Extraction (P0)
+  # 5/5 stories complete — S4 decision gate: INVESTIGATE (28/31, flag remains false). Needs prompt engineering for Record #9 + page 8 gap
+  # Tech design: docs/architecture/e26-table-extraction-technical-design.md
+  # ADR: docs/architecture/adr-tableformer-integration.md (D5)
+  # Goal: PyMuPDF full_text + Docling DataFrames → target >=30/31 Broadmeadows
+  epic-26: done  # PROMOTE decision — 31/31 (100%) Broadmeadows. Flag promoted to true. 7/7 stories complete — EPIC COMPLETE.
+  e26-s1-docling-direct-api-extraction: done  # Commit f20e9b3. Parallel Docling extraction in process_source_command. Feature flag DOCLING_DIRECT_TABLE_EXTRACTION=false. Migration 37: structured_json on acm_table_section. 19 unit tests. Ruff clean.
+  e26-s2-dataframe-validation: done  # ALL 16 METRICS PASS. 8/8 tables, 30/30 register rows, 9/9 "Same as", 4/4 "Assumed positive". Record #9 (Battery Charger) FOUND. Page 8 gap CONFIRMED. Storage 8/8. 2 S1 bugs fixed (int column names, ensure_record_id). Report: docs/reviews/e26-s2-validation-results.md
+  e26-s3-orchestrator-context-injection: done  # _get_docling_tables() + _inject_docling_tables() + extract_building() injection. Prompt instruction added to building_extraction.jinja. 14 unit tests, 68/68 orchestrator tests pass. Zero regression. Non-fatal fallback.
+  e26-s4-accuracy-validation: done  # PROMOTE — 31/31 (100%) Broadmeadows. All 3 missing records recovered: #9 (prompt+dedup fix), #30 (improved prompt), #31 (no-access fallback). Flag promoted to true. Bug fix: material_description=None. Report: docs/reviews/e26-s4-validation-results.md
+  e26-s5-frontend-raw-tables: done  # Auto-discovery CONFIRMED: acm_table_section with table_type='docling_direct_api' picked up by Raw Tables endpoint. Enhanced: Docling Direct API badge (purple), summary count, split from generic 'Docling Markdown'. Build ✓ Lint ✓. No regression for non-Docling sources.
+  e26-s6-accuracy-fixes-dedup-prompt-regex: done  # 31/31 (100%) via 3 fixes: dedup key (location field), prompt engineering (structured table rules), regex recovery (_recover_no_access_records). Records #9, #30, #31 all recovered.
+  e26-s7-alexander-ground-truth-flag-promotion: done  # Alexander ground truth CSV (43 records from BAR xlsm). Flag DOCLING_DIRECT_TABLE_EXTRACTION promoted to default=true. ADR-001 D6. Epic closeout.
+
+  # Epic 27: Structured Output Resilience (P1 — Bug Fix)
+  epic-27: done
+  e27-s1-completionstate-wrapper-parsing-fix: done  # Eliminated dead with_structured_output() from all 4 LLM stages. Direct ainvoke + parse_json_response + _unwrap_completion_state + Pydantic validate. Fixes Alexander 0/43 (orchestrator had no fallback). Saves ~43s latency. 10 unit tests. 1038 pass.
+  e27-s2-sse-agui-pipeline-visibility: done  # Added DOCLING_EXTRACTION + NO_ACCESS_RECOVERY StageId enums. Instrumented Docling extraction (source_commands.py) and recovery node (acm_extraction.py) with PipelineLogger + AGUI events. Updated A2A agent card. Frontend: pipeline.ts types, StageProgressPill, ExtractionProgressPanel all show 9 stages. 10 new tests, 1048 pass.
+  e27-s3-hard-lock-provider-routing: done  # Replaced soft provider.order+ignore with hard provider.only=["Anthropic"]+allow_fallbacks=false. Added ZDR, Response Healing plugin, request metadata, Generation API verification. Deep merge for extra_body. 6 ainvoke() sites instrumented. 30 new tests, 1078 pass.
+  e27-s4-native-json-schema-structured-outputs: done  # Added response_format:json_schema on orchestrator path only. Removed dead _unwrap_completion_state() (7 call sites + definition). Spike confirmed completionState wrapper eliminated by E27-S3 Anthropic-direct routing. Broadmeadows 31/31, Alexander 29/43 (pre-existing baseline). 12 new tests, 1000 pass.
+
+  # Epic 28: Alexander District Hospital — Not Sampled Recovery (P1)
+  epic-28: done
+  e28-s1-ara-not-sampled-spike: done  # Identified 17 "Not Sampled" records in Alexander GT. Root cause: _recover_no_access_records() used SAMP-only level_re regex, ARA section headers not matched. Docling tables not available for Alexander.
+  e28-s2-ara-recovery-fix: done  # Added _recover_not_sampled_records_ara() ARA-format regex recovery. 8 records recovered. Improved room name parsing for "External - Throughout" → "Exterior". Added product synonym matching. Alexander 29/43→36/43 (+7). Broadmeadows 31/31 maintained. 13 new tests.
+  e28-s3-validation-closeout: done  # Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues, not extraction failures. Report: docs/reviews/e28-validation-results.md.
+
+  # Epic 29: Pipeline Unification — Unified Agent Pipeline (P0)
+  # 4/8 stories complete + 2 recovery stories drafted — Gate 2 FAIL, recovery loop in progress
+  # Reconciled plan: V3/epic-29-pipeline-unification.reconciled.yaml
+  # Execution contract: V3/epic-29-execution-contract.md
+  # Architecture delta: docs/architecture/e29-architecture-delta.md
+  # Story index: docs/sprint-artifacts/e29-story-specs.md
+  # Gate tracking: docs/sprint-artifacts/e29-gate-decisions.md
+  # Recovery spec: docs/sprint-artifacts/e29-gate2-recovery-spec.md
+  epic-29: in-progress
+  e29-s1-json-parser-resilience: done  # Phase 1. 1 SP. QA verified 2026-03-01: 34/34 tests pass, all 5 AC verified, ruff clean. TruncationError(ValueError) subclass, brace-depth scan, multi-block selection.
+  e29-s2-benchmark-harness-baseline-capture: done  # Phase 1. 3 SP. QA verified 2026-03-01: 30/30 tests pass, 7/8 AC PASS (AC-6 partial: token=0 OpenRouter limitation). Gate 1 PASS — 6/6 criteria. Baseline: Broadmeadows 77.4%, Alexander 69.8%, Aldavilla 0%.
+  e29-s3-unified-orchestrator-path: done  # Phase 2. 3 SP. Code complete 2026-03-01. Unconditional tag_pages→orchestrate edge, synthetic plan. AC-1..AC-5 verified. AC-6/AC-7 (benchmarks) are gate-level criteria — Gate 2 FAIL does not invalidate story per PM sign-off.
+  e29-s4-capability-registry-fallback-contract: done  # Phase 2. 2 SP. Code complete 2026-03-01. Registry 33/33 tests, orchestrator 61/61 tests. AC-1..AC-6 verified. AC-7/AC-8 (benchmarks) are gate-level criteria — Gate 2 FAIL does not invalidate story per PM sign-off.
+  e29-s5-agent-decomposition-table-parser-bar-mapper: drafted  # Phase 3. 3 SP. BLOCKED by Gate 2 FAIL. table_parser.py + bar_mapper.py. Unblocks when Gate 2 rerun passes after R1+R2.
+  e29-s6-agent-decomposition-enricher-classifier-validator: drafted  # Phase 3. 3 SP. BLOCKED by Gate 2 FAIL (transitive via S5). classifier.py + context_enricher.py + validator.py. Gate 3 exit.
+  e29-s7-validation-gate-legacy-cleanup: drafted  # Phase 4. 2 SP. BLOCKED by Gate 2 FAIL (transitive via S5→S6). Legacy deletion. Broadmeadows 31/31, Alexander >=40/43 stretch.
+  e29-s8-export-hardening-integration-doc-alignment: drafted  # Phase 4. 2 SP. BLOCKED by Gate 2 FAIL (transitive via S5→S6→S7). Export filtering, E2E tests, doc alignment. Gate 4 exit.
+  # --- Gate 2 Recovery Stories (PM-authorized 2026-03-01) ---
+  e29-r1-benchmark-fidelity: review  # Recovery. 2 SP. Seed Docling tables, improve matching normalization, pin baseline artifacts. Must complete before R2.
+  e29-r2-match-gap-remediation: review  # Recovery. 2 SP. Fix RoomMeta typing, normalize room/location names, improve material matching. Depends on R1. Gate 2 rerun: Broadmeadows 30/31, Alexander 42/43.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook
@@ -377,26 +435,31 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 24
-# Total Stories: 160
-# Stories Done: 146 (91%)
+# Total Epics: 28
+# Total Stories: 176
+# Stories Done: 152 (86%)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
-# Stories Drafted: 2 (E24-S2, E24-S4)
+# Stories Ready-For-Dev: 1 (E29-S2)
+# Stories Drafted: 6 (E29-S3..E29-S8)
 # Stories Backlog: 0
-# Stories Archived: 10 (E8-S1..S10, E8-S11 completed separately)
+# Stories Archived: 12 (E8-S1..S10, E24-S2, E24-S4)
 #
-# Last Updated: 2026-02-27  # E24-S3 DONE: Remove MinerU dead code (commit 6e0e2e8). 2,298 lines removed, 4 files deleted, 13 tests removed. 936/936 pass.
+# Last Updated: 2026-03-01  # Gate 1 QA: S1 verified DONE (34/34 tests, all AC pass). S2 not implemented — Gate 1 FAIL. S2 must be built before Gate 1 re-eval.
 #
-# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15, E16, E17, E18, E19, E20, E21, E22, E23
-# IN-PROGRESS EPICS: E24 (2/4 stories done, 2 drafted)
+# COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
+#                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28
+# IN-PROGRESS EPICS: E29
+# BACKLOG EPICS: none
 # ARCHIVED EPICS: E8 (all 10 stories archived)
-# 
+#
 # EXTRACTION ACCURACY STATUS:
 # ===========================
-# Alexander PDF: 54/54 records (100%) - COMPLETE
-# Broadmeadows PDF: 28/31 records (90.3%) - TARGET MET (≥90%), E24 targeting ≥30/31 (97%+)
+# Alexander PDF: 52/52 records (maintained in DB, pre-E26) - No Docling tables, zero regression vector
+# Broadmeadows PDF: 31/31 records (100%) - E26 PROMOTE! Up from 28/31 (E23 baseline)
+# Broadmeadows (E25 spike): 29/31 (93.5%) from Docling DataFrames alone
+# E26 final: 31/31 (100%) — PROMOTE. Prompt engineering + dedup key + no-access recovery. Flag=true.
 #
 # KEY CHANGES (2026-02-22 - Ralph Sprint: 11 Stories Completed):
 # ===============================================================

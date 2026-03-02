@@ -27,6 +27,22 @@ fi
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-${CWD:-$(pwd)}}"
 
+# ─── WSL Path Normalization ──────────────────────────────────────────────────
+# Convert Windows-style paths (D:\...) to WSL mount paths (/mnt/d/...)
+if grep -qi microsoft /proc/version 2>/dev/null; then
+  if [[ "${PROJECT_DIR:-}" =~ ^[A-Za-z]:\\ ]]; then
+    PROJECT_DIR="$(wslpath -u "$PROJECT_DIR")"
+  fi
+fi
+
+# Catch /d/... (Git Bash style) and convert to /mnt/d/... for WSL
+if [[ "${PROJECT_DIR:-}" =~ ^/([a-zA-Z])/ ]] && [ -d "/mnt/${BASH_REMATCH[1]}" ]; then
+  PROJECT_DIR="/mnt${PROJECT_DIR}"
+fi
+
+# Export normalized path so all downstream tools use it
+export CLAUDE_PROJECT_DIR="$PROJECT_DIR"
+
 # ─── Environment Detection ───────────────────────────────────────────────────
 detect_env() {
   if   [ "${CLAUDE_CODE_REMOTE:-}" = "true" ];                      then echo "claude-web";        return; fi

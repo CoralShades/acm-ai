@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-02-26"
+updated: "2026-03-01"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -56,6 +56,27 @@ workflow_status:
 
 # CHANGE LOG:
 # ===========
+# 2026-03-01: E29 Gate 2 recovery loop initiated
+#   - Gate 2 FAIL: G2.1 28/31, G2.2 31/43, G2.3 not testable. No regression from baseline.
+#   - PM decision: NO ROLLBACK. Recovery stories R1 (benchmark fidelity, 2 SP) + R2 (match-gap, 2 SP) authorized.
+#   - S3/S4 marked done (story-level ACs verified, benchmark thresholds are gate-level per PM).
+#   - S5-S8 remain blocked by Gate 2. Gate 2 rerun scheduled after R1+R2 completion.
+#   - Recovery spec: docs/sprint-artifacts/e29-gate2-recovery-spec.md
+#   - Sprint status drift corrected (S3 ready-for-dev→done, S4 drafted→done, R1/R2 entries added)
+# 2026-03-01: Epic 29 Pipeline Unification — PLANNING PACKAGE COMPLETE
+#   - PM (John): Execution contract finalized (V3/epic-29-execution-contract.md)
+#     - 8 stories, 19 SP, 4 decision gates, measure-first strategy
+#     - Out-of-scope list: embeddings, copilot, knowledge graph, new consultants
+#   - Architect (Winston): Architecture delta published (docs/architecture/e29-architecture-delta.md)
+#     - Current->target pipeline diagrams, fallback matrix F1-F8
+#     - File impact map (S1-S8), telemetry plan, migration/rollback plan
+#   - SM (Bob): 8 story specs drafted (docs/sprint-artifacts/e29-s{1..8}-*.md)
+#     - Standard template: user story, ACs, tasks, test strategy, touched files, QA checklist
+#     - Gate decisions tracker: docs/sprint-artifacts/e29-gate-decisions.md
+#     - Threshold drift resolved: Gate 2 floor=36/43, S7 stretch=40/43 (PM fallback=36/43)
+#     - S1+S2 promoted to ready-for-dev; S3-S8 drafted (gated)
+#     - Parallelization: S1||S2 confirmed, within-story parallel subtasks documented
+#   - Sprint status updated: epic-29 in-progress
 # 2026-02-26: Epic 22 Post-Audit Remediation — COMPLETE
 #   - E22-S1: Schema resilience (normalize instead of reject)
 #   - E22-S2: Dashboard layout fix (sidebar restoration)

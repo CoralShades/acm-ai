@@ -69,3 +69,6 @@ echo ""
 # Post-stop verification
 echo "Verification:"
 uv run python scripts/service_manager.py status 2>/dev/null || true
+echo ""
+echo "Running shutdown cleanup..."
+uv run python scripts/shutdown_cleanup.py || true

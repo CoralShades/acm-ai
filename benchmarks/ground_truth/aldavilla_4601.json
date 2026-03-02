@@ -1,0 +1,72 @@
+{
+  "document": {
+    "name": "Aldavilla Public School",
+    "pdf_path": "docs/samplePDF/4601_AsbestosRegister.pdf",
+    "source": "manual extraction from PDF pages 13-14",
+    "total_buildings": 10,
+    "total_records": 4,
+    "consultant": "Department of Education NSW",
+    "notes": "SAMP format. 10 buildings (B001-B010), only B009 has ACM records. All others report 'No Asbestos'."
+  },
+  "match_keys": {
+    "primary": "sample_no",
+    "secondary": ["building_name", "room_name", "location", "product"],
+    "tertiary": ["room_name", "location"]
+  },
+  "records": [
+    {
+      "building_name": "Special Purpose",
+      "room_name": "General Storeroom",
+      "location": "Throughout",
+      "product": "Vinyl Sheet",
+      "sample_no": "",
+      "sample_result": "Negative",
+      "friable": "Non Friable",
+      "internal_external": "Internal",
+      "level": "",
+      "notes": "B009-R0001. 6.61 m2. Floor Coverings Res/Textile. Result: Non asbestos-containing material."
+    },
+    {
+      "building_name": "Special Purpose",
+      "room_name": "General Storeroom",
+      "location": "Throughout",
+      "product": "Vinyl Tiles",
+      "sample_no": "",
+      "sample_result": "Positive",
+      "friable": "Non Friable",
+      "material_condition": "Minimal Damage",
+      "risk_status": "Low",
+      "internal_external": "Internal",
+      "level": "",
+      "notes": "B009-R0005. 1.45 m2. Floor Coverings Res/Textile. Result: Asbestos-containing material."
+    },
+    {
+      "building_name": "Special Purpose",
+      "room_name": "Movement",
+      "location": "Throughout",
+      "product": "Vinyl Tiles",
+      "sample_no": "",
+      "sample_result": "Positive",
+      "friable": "Non Friable",
+      "material_condition": "Minimal Damage",
+      "risk_status": "Low",
+      "internal_external": "Internal",
+      "level": "",
+      "notes": "B009-R0007. 0.97 m2. Floor Coverings Res/Textile. Result: Asbestos-containing material."
+    },
+    {
+      "building_name": "Special Purpose",
+      "room_name": "General Storeroom",
+      "location": "Throughout",
+      "product": "Vinyl Tiles",
+      "sample_no": "",
+      "sample_result": "Positive",
+      "friable": "Non Friable",
+      "material_condition": "Minimal Damage",
+      "risk_status": "Low",
+      "internal_external": "Internal",
+      "level": "",
+      "notes": "B009-R0008. 1.45 m2. Floor Coverings Res/Textile. Result: Asbestos-containing material."
+    }
+  ]
+}

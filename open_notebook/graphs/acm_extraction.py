@@ -57,8 +57,9 @@ from open_notebook.extractors.normalizers.content import normalize_docling_text
 from open_notebook.extractors.normalizers.enums import normalize_enum_value
 from open_notebook.extractors.orchestrator import (
     OrchestratorStats,
+    _get_docling_tables,
+    _inject_docling_tables,
     orchestrate_extraction,
-    should_use_orchestrator,
 )
 from open_notebook.extractors.page_tagger import (
     PageTaggingResult,
@@ -74,9 +75,17 @@ from open_notebook.extractors.validators.acm_validator import (
 )
 from open_notebook.graphs.utils import (
     _is_qwen_model,
+    _verify_provider_routing,
     is_auth_error,
+    parse_json_response,
     provision_extraction_fallback_model,
     provision_langchain_model,
+)
+from open_notebook.observability.langfuse_config import (
+    append_langfuse_callback,
+    build_langfuse_metadata,
+    flush_langfuse_handler,
+    get_langfuse_handler,
 )
 from open_notebook.utils import token_count
 
@@ -460,6 +469,7 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
     area = (record.area_type or "Interior").lower()  # Default to Interior
     room = record.room_id or "none"
     product = (record.product or "unknown").lower()
+    location = (record.location or "unknown").lower()
     sample = (record.sample_no or "no_sample").lower()
 
     # Create hash of product description (first 50 chars) using SHA-256
@@ -467,7 +477,9 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
         (record.material_description or "")[:50].encode()
     ).hexdigest()[:8]
 
-    return f"{school}_{building}_{area}_{room}_{product}_{sample}_{desc_hash}"
+    return (
+        f"{school}_{building}_{area}_{room}_{product}_{location}_{sample}_{desc_hash}"
+    )
 
 
 def _merge_records(
@@ -1081,6 +1093,31 @@ async def prepare_context(state: dict, config: RunnableConfig) -> dict:
             acm_debug(f"Pre-processing complete: {preprocess_meta}")
             dump_content_to_file(processed_content, source_id, "processed_content")
 
+    # E26-S4: Inject Docling structured tables into non-orchestrator path
+    # The orchestrator path handles this in _extract_single_building(),
+    # but single-building documents (building_inventory=0) skip the orchestrator.
+    source_id_str = str(source.id) if source.id else None
+    if source_id_str:
+        try:
+            # Use full document page range (1 to total_pages)
+            total_pages = state.get("pipeline_logger")
+            max_page = (
+                total_pages.total_pages
+                if total_pages and hasattr(total_pages, "total_pages")
+                else 999
+            )
+            docling_tables = await _get_docling_tables(source_id_str, 1, max_page)
+            if docling_tables:
+                processed_content = _inject_docling_tables(
+                    processed_content, docling_tables
+                )
+                logger.info(
+                    f"Non-orchestrator path: injected {len(docling_tables)} "
+                    f"Docling tables into LLM context for {source_id_str}"
+                )
+        except Exception as e:
+            logger.warning(f"Docling table injection failed in prepare_context: {e}")
+
     # Initialize context from source metadata
     context = BuildingRoomContext()
     if source.title:
@@ -1187,6 +1224,7 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             temperature=_temperature,
             max_tokens=_max_tokens,
         )
+
         is_qwen = _is_qwen_model(model)
         model_family = "qwen" if is_qwen else "default"
         # Track model ID and prompt template for observability (E1-S21, AC #4)
@@ -1255,24 +1293,26 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
             ),
         )
 
-    # Use structured output (with manual JSON fallback for OpenRouter compatibility)
-    # Qwen2.5: bypass with_structured_output() — use direct ainvoke + JSON parsing
+    # Direct ainvoke + JSON parse for all models (E27-S1: eliminates dead
+    # with_structured_output() that always fails on OpenRouter/Anthropic grammar limits)
     try:
-        if is_qwen:
-            from open_notebook.graphs.utils import parse_json_response
+        raw_response = await model.ainvoke(messages)
 
-            raw_response = await model.ainvoke(messages)
-            response_text = (
-                raw_response.content
-                if hasattr(raw_response, "content")
-                else str(raw_response)
-            )
-            parsed = parse_json_response(response_text)
-            result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
-            logger.info(f"Qwen direct JSON extraction: {len(result.records)} records")
-        else:
-            chain = model.with_structured_output(ACMExtractionResult)
-            result = await chain.ainvoke(messages)
+        # E27-S3: Verify provider routing (non-blocking)
+        try:
+            await _verify_provider_routing(raw_response, "extract_records")
+        except Exception:
+            pass
+
+        response_text = (
+            raw_response.content
+            if hasattr(raw_response, "content")
+            else str(raw_response)
+        )
+        parsed = parse_json_response(response_text)
+        # E27-S4: completionState wrapper eliminated by Anthropic-direct routing (E27-S3)
+        result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
+        logger.info(f"Direct JSON extraction: {len(result.records)} records")
 
         # Debug: Log raw result before processing
         logger.debug(
@@ -1411,8 +1451,6 @@ async def extract_records(state: dict, config: RunnableConfig) -> dict:
         )
         response_text = ""
         try:
-            from open_notebook.graphs.utils import parse_json_response
-
             raw_response = await model.ainvoke(messages)
             response_text = (
                 raw_response.content
@@ -2003,6 +2041,13 @@ async def _llm_correct_records(
             ]
 
             response = await model.ainvoke(messages)
+
+            # E27-S3: Verify provider routing (non-blocking)
+            try:
+                await _verify_provider_routing(response, "correction")
+            except Exception:
+                pass
+
             response_text = (
                 response.content if hasattr(response, "content") else str(response)
             )
@@ -2136,6 +2181,521 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
         )
 
     return {"records": deduplicated}
+
+
+def _recover_no_access_records(
+    full_text: str,
+    extracted_records: List[ACMExtractionRecord],
+    building_id: str,
+    building_name: str,
+) -> List[ACMExtractionRecord]:
+    """Post-LLM fallback: scan full_text for 'No Access' entries not captured.
+
+    Targets the known pattern where register continuation rows on overflow
+    pages (e.g., page 8 of Broadmeadows) are below Docling's table detection
+    threshold and the LLM consistently skips them.
+
+    The vertical PDF text format for these entries is:
+        {Level}\\n{Room}\\n{Location}\\n{Product}\\n{dashes}\\nNo access...
+
+    The function finds level indicators (e.g., "Ground\\nfloor") and scans
+    forward to find "No access" phrases, extracting room/location/product
+    from the lines between.
+
+    Returns additional ACMExtractionRecord objects to append.
+    """
+    recovered: List[ACMExtractionRecord] = []
+
+    no_access_re = re.compile(
+        r"No\s+access|Height\s+restriction|Restricted\s+Access",
+        re.IGNORECASE,
+    )
+
+    # Level indicators: lines that mark the start of a register row block
+    level_re = re.compile(
+        r"^(Ground|First|Second|Third|Level|Roof|Basement)\s*$", re.IGNORECASE
+    )
+    # Second line of level indicator
+    level_suffix_re = re.compile(r"^(floor|level|\d)\s*$", re.IGNORECASE)
+
+    # Build lookup of existing room+location combos (lowered)
+    existing_combos = set()
+    for r in extracted_records:
+        room_norm = (r.room_name or "").lower().strip()
+        loc_norm = (r.location or "").lower().strip()
+        existing_combos.add((room_norm, loc_norm))
+
+    lines = full_text.split("\n")
+
+    # Scan for level-indicator lines, then check if their block has "no access"
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+
+        # Check if this line is a level indicator
+        if not level_re.match(stripped):
+            i += 1
+            continue
+
+        level_name = stripped.title()
+
+        # Check if next line is the level suffix (e.g., "floor")
+        if i + 1 < len(lines) and level_suffix_re.match(lines[i + 1].strip()):
+            level_name = f"{level_name} {lines[i + 1].strip().lower()}"
+            block_start = i + 2
+        else:
+            block_start = i + 1
+
+        # Collect content lines until we hit the next level indicator,
+        # a page marker, or exceed a reasonable window
+        content_lines: List[str] = []
+        no_access_line: Optional[str] = None
+        j = block_start
+        while j < len(lines) and j < block_start + 30:
+            line_s = lines[j].strip()
+
+            # Stop at next level indicator or page boundary
+            if level_re.match(line_s):
+                break
+            if line_s.startswith("--- Page"):
+                break
+
+            # Check for "No access" phrase
+            if no_access_re.search(line_s):
+                no_access_line = line_s
+                break
+
+            # Collect non-empty, non-dash lines as content
+            if line_s and line_s not in ("-", "–", " -"):
+                content_lines.append(line_s)
+
+            j += 1
+
+        # If no "no access" found in this block, skip
+        if no_access_line is None:
+            i = block_start
+            continue
+
+        # Advance past this block
+        i = j + 1
+
+        # Parse content_lines: [room, location_parts..., product]
+        # In the vertical register format, the product (ACM item) is the last
+        # meaningful line before the dashes. But multi-word locations can span
+        # several lines, so we check if the last line is a known ACM product.
+        KNOWN_PRODUCT_KEYWORDS = {
+            "lining",
+            "cladding",
+            "insulation",
+            "lagging",
+            "sheeting",
+            "covering",
+            "coverings",
+            "tiles",
+            "cartridge",
+            "gasket",
+            "eaves",
+            "soffit",
+            "mastic",
+            "joint",
+            "joints",
+            "door",
+            "panel",
+            "board",
+            "coating",
+            "millboard",
+            "packing",
+            "gutter",
+            "downpipe",
+            "cistern",
+            "pipe",
+            "duct",
+        }
+
+        if len(content_lines) < 1:
+            continue
+
+        room_name = content_lines[0]
+
+        if len(content_lines) >= 3:
+            candidate_product = content_lines[-1]
+            # Check if last line looks like a known ACM product
+            words = candidate_product.lower().split()
+            if any(w in KNOWN_PRODUCT_KEYWORDS for w in words):
+                product_val = candidate_product
+                location_val = " ".join(content_lines[1:-1])
+            else:
+                # Last line is part of multi-word location, product unknown
+                product_val = "Unknown"
+                location_val = " ".join(content_lines[1:])
+        elif len(content_lines) == 2:
+            candidate = content_lines[1]
+            words = candidate.lower().split()
+            if any(w in KNOWN_PRODUCT_KEYWORDS for w in words):
+                product_val = candidate
+                location_val = "Unknown"
+            else:
+                location_val = candidate
+                product_val = "Unknown"
+        else:
+            location_val = "Unknown"
+            product_val = "Unknown"
+
+        # If product is a dash or empty, set Unknown
+        if product_val.strip() in ("-", "–", ""):
+            product_val = "Unknown"
+
+        # Check if this room+location already exists in extracted records
+        room_norm = room_name.lower().strip()
+        loc_norm = location_val.lower().strip()
+        if (room_norm, loc_norm) in existing_combos:
+            continue
+
+        # Also check against already-recovered records
+        if (room_norm, loc_norm) in {
+            ((r.room_name or "").lower().strip(), (r.location or "").lower().strip())
+            for r in recovered
+        }:
+            continue
+
+        no_access_comment = no_access_line.strip().rstrip(".")
+
+        recovered.append(
+            ACMExtractionRecord(
+                building_id=building_id,
+                building_name=building_name,
+                room_name=room_name.title(),
+                location=location_val,
+                product=product_val,
+                material_description=product_val or "Unknown",
+                result="Assumed Positive",
+                sample_result="Assumed Positive",
+                sample_no="Not Sampled",
+                no_access=True,
+                extraction_confidence="low",
+                data_issues=[
+                    f"No access — recovered by post-LLM fallback ({no_access_comment})"
+                ],
+                area_type="Interior",
+                floor_level=level_name,
+            )
+        )
+        logger.info(
+            f"Recovered no-access record: {room_name} / {location_val} / {product_val}"
+        )
+
+    # ── ARA Format Scan (E28-S2) ──────────────────────────────────────────
+    # ARA (Asbestos Risk Assessment) format uses a different text layout:
+    #   {item_no}\n{room}\n{desc}\nAsbestos\nNot Sampled\n{restriction}\nPresumed Positive
+    # The SAMP-specific level_re above won't match ARA section headers like
+    # "Mortuary Buildings - Interior - Ground Level". This scan finds
+    # "Not Sampled" lines and works backward/forward to extract the record.
+    ara_recovered = _recover_not_sampled_records_ara(
+        full_text, extracted_records + recovered, building_id, building_name
+    )
+    recovered.extend(ara_recovered)
+
+    return recovered
+
+
+def _recover_not_sampled_records_ara(
+    full_text: str,
+    existing_records: List[ACMExtractionRecord],
+    default_building_id: str,
+    default_building_name: str,
+) -> List[ACMExtractionRecord]:
+    """ARA-format recovery for unsampled items missed by LLM.
+
+    Runs on orchestrator path (multi-building documents like Alexander).
+    Complements the SAMP-path scan in ``_recover_no_access_records()``.
+
+    ARA "Not Sampled" entries follow a consistent vertical text pattern::
+
+        {item_number}
+        {room_name}
+        {item_description} - {material}
+        Asbestos
+        Not Sampled
+        {access_restriction}   (Restricted Access / Height Restricted / Live Electrical Hazard)
+        Presumed Positive
+
+    The function locates every "Not Sampled" line, verifies "Asbestos" appears
+    just above it and "Presumed Positive" just below, then extracts room/product
+    from the lines between the item number and "Asbestos".
+    """
+    recovered: List[ACMExtractionRecord] = []
+
+    # Build dedup lookup: (room_norm, product_norm) to avoid duplicating
+    # records the LLM already captured. Use room+product instead of
+    # room+location because ARA's "location" field is less standardized.
+    existing_combos: set[tuple[str, str]] = set()
+    for r in existing_records:
+        room_norm = (r.room_name or "").lower().strip()
+        product_norm = (r.product or "").lower().strip()
+        existing_combos.add((room_norm, product_norm))
+        # Also add location-based combo for broader dedup
+        loc_norm = (r.location or "").lower().strip()
+        existing_combos.add((room_norm, loc_norm))
+
+    # ARA section header pattern: "Building Name - Interior/Exterior - Level"
+    section_header_re = re.compile(
+        r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(.+)$", re.IGNORECASE
+    )
+
+    lines = full_text.split("\n")
+    current_building = default_building_name
+    current_area_type = "Interior"
+
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+
+        # Track ARA section headers for building context
+        header_match = section_header_re.match(stripped)
+        if header_match:
+            current_building = header_match.group(1).strip()
+            current_area_type = header_match.group(2).strip()
+            i += 1
+            continue
+
+        # Look for "Not Sampled" lines
+        if stripped != "Not Sampled":
+            i += 1
+            continue
+
+        not_sampled_line = i
+
+        # Verify "Asbestos" appears within 5 lines above
+        asbestos_line = None
+        for back in range(1, 6):
+            if not_sampled_line - back < 0:
+                break
+            if lines[not_sampled_line - back].strip().lower() == "asbestos":
+                asbestos_line = not_sampled_line - back
+                break
+
+        if asbestos_line is None:
+            i += 1
+            continue
+
+        # Verify restriction + "Presumed Positive" appear within 3 lines below
+        restriction = None
+        presumed_positive = False
+        for fwd in range(1, 4):
+            if not_sampled_line + fwd >= len(lines):
+                break
+            fwd_stripped = lines[not_sampled_line + fwd].strip()
+            if re.match(
+                r"Restricted\s+Access|Height\s+Restricted|Live\s+Electrical",
+                fwd_stripped,
+                re.IGNORECASE,
+            ):
+                restriction = fwd_stripped
+            if fwd_stripped.lower() == "presumed positive":
+                presumed_positive = True
+
+        if not presumed_positive:
+            i += 1
+            continue
+
+        # Extract room/product from lines between item_number and "Asbestos"
+        # Scan backward from asbestos_line to find the item number
+        item_number = None
+        content_lines: List[str] = []
+        for back_idx in range(asbestos_line - 1, max(asbestos_line - 10, -1), -1):
+            if back_idx < 0:
+                break
+            back_line = lines[back_idx].strip()
+            if not back_line or back_line in ("-", "\u2013", " -"):
+                continue
+            # Item number: bare integer on its own line
+            if re.match(r"^\d+$", back_line):
+                item_number = back_line
+                break
+            content_lines.insert(0, back_line)
+
+        if not content_lines:
+            i += 1
+            continue
+
+        # ARA item description patterns — detect where room ends and item
+        # description starts. Item descriptions in ARA format have a
+        # "{Product} - {Material}" pattern with the product being a specific
+        # ACM item, not a room name.
+        _ARA_ITEM_DESC_RE = re.compile(
+            r"^(?:Fire\s+Door|Ceiling|Shower\s+Cubicle|Eaves|Ductwork|"
+            r"Electrical\s+Distribution|Safe|Infill|Wall(?:\s|$)|"
+            r"Pipe|Insulation|Window|Gable|Porch|Expansion|"
+            r"Stored\s+Item|Heater|Shelving|Debris|Floor)\b",
+            re.IGNORECASE,
+        )
+
+        # Split content_lines into room lines vs description lines.
+        # Walk forward: lines are room continuation until we hit one that
+        # matches an ARA item description pattern.
+        room_lines: List[str] = []
+        desc_lines: List[str] = []
+        found_desc = False
+        for cl in content_lines:
+            if found_desc:
+                desc_lines.append(cl)
+                continue
+            # Check if this line starts an item description
+            is_desc = bool(_ARA_ITEM_DESC_RE.match(cl.strip()))
+            if is_desc:
+                found_desc = True
+                desc_lines.append(cl)
+            else:
+                room_lines.append(cl)
+
+        # If no description found, first line is room, rest is desc
+        if not desc_lines and len(content_lines) >= 2:
+            room_lines = [content_lines[0]]
+            desc_lines = content_lines[1:]
+        elif not desc_lines:
+            room_lines = content_lines
+            desc_lines = []
+
+        room_name = " ".join(room_lines).strip()
+        item_desc = " ".join(desc_lines).strip()
+
+        if not item_desc:
+            item_desc = room_name
+            room_name = "Unknown"
+
+        # Parse item description: "{product} - {material}" or just product
+        product_val = item_desc
+        material_val = None
+        if " - " in item_desc:
+            parts = item_desc.split(" - ", 1)
+            product_val = parts[0].strip()
+            material_val = parts[1].strip()
+
+        # Parse ARA room: "External - Throughout" → room="Exterior", location_hint="Throughout"
+        # "External - On Roof" → room="Roof"
+        location_val = product_val
+        room_clean = room_name
+        if " - " in room_name:
+            room_parts = room_name.split(" - ", 1)
+            room_prefix = room_parts[0].strip()
+            room_suffix = room_parts[1].strip()
+            # "External - Throughout" → room=room_prefix, ignore "Throughout"
+            # "External - On Roof" → room="Roof" (suffix is location hint)
+            if room_prefix.lower() in ("external", "exterior"):
+                # For exterior items, use product as the room context
+                if room_suffix.lower().startswith("on "):
+                    room_clean = room_suffix[3:].strip()  # "On Roof" → "Roof"
+                elif room_suffix.lower() == "throughout":
+                    room_clean = "Exterior"
+                else:
+                    room_clean = room_suffix
+                location_val = product_val
+            else:
+                # Multi-part room name — keep the full name
+                room_clean = room_name
+
+        # Dedup check: room + product (and room + location)
+        room_norm = room_clean.lower().strip()
+        product_norm = product_val.lower().strip()
+        loc_norm = location_val.lower().strip()
+        if (room_norm, product_norm) in existing_combos:
+            i += 1
+            continue
+        if (room_norm, loc_norm) in existing_combos:
+            i += 1
+            continue
+
+        # Also check against already-recovered records
+        already_recovered = {
+            (
+                (r.room_name or "").lower().strip(),
+                (r.product or "").lower().strip(),
+            )
+            for r in recovered
+        }
+        if (room_norm, product_norm) in already_recovered:
+            i += 1
+            continue
+
+        existing_combos.add((room_norm, product_norm))
+        existing_combos.add((room_norm, loc_norm))
+
+        restriction_comment = restriction or "Not Sampled"
+
+        recovered.append(
+            ACMExtractionRecord(
+                building_id=default_building_id,
+                building_name=current_building or default_building_name,
+                room_name=room_clean,
+                location=location_val,
+                product=product_val,
+                material_description=material_val or product_val,
+                result="Assumed Positive",
+                sample_result="Assumed Positive",
+                sample_no="Not Sampled",
+                no_access=True,
+                extraction_confidence="low",
+                data_issues=[
+                    f"Not Sampled — recovered by ARA post-LLM fallback ({restriction_comment})"
+                ],
+                area_type=current_area_type,
+            )
+        )
+        logger.info(
+            f"ARA recovered not-sampled record: {room_clean} / {location_val} / {product_val} "
+            f"(item {item_number}, {restriction_comment})"
+        )
+
+        i = not_sampled_line + 3  # Skip past Presumed Positive
+
+    return recovered
+
+
+async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
+    """Graph node: recover no-access records missed by LLM extraction."""
+    records: List[ACMExtractionRecord] = state.get("records", [])
+    source: Source = state["source"]
+    context: BuildingRoomContext = state.get("context", BuildingRoomContext())
+    pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
+
+    if agui:
+        await agui.emit_step_started("recover_no_access")
+    if pl:
+        pl.stage_enter(
+            StageId.NO_ACCESS_RECOVERY,
+            f"Scanning for missed No Access records ({len(records)} existing)",
+        )
+
+    full_text = getattr(source, "full_text", "") or ""
+    if not full_text:
+        if pl:
+            pl.stage_skip(StageId.NO_ACCESS_RECOVERY, "No full_text available")
+        if agui:
+            await agui.emit_step_finished("recover_no_access", recovered=0)
+        return {"records": records}
+
+    building_id = context.building_id or "unknown"
+    building_name = context.building_name or ""
+
+    recovered = _recover_no_access_records(
+        full_text, records, building_id, building_name
+    )
+
+    if recovered:
+        records = list(records) + recovered
+        logger.info(f"Recovered {len(recovered)} no-access records via fallback")
+
+    if pl:
+        pl.stage_complete(
+            StageId.NO_ACCESS_RECOVERY,
+            summary=f"Recovery complete: {len(recovered)} records found",
+            records_recovered=len(recovered),
+        )
+    if agui:
+        await agui.emit_step_finished("recover_no_access", recovered=len(recovered))
+
+    return {"records": records}
 
 
 async def save_records(state: dict, config: RunnableConfig) -> dict:
@@ -2371,6 +2931,7 @@ agent_state.add_node("extract", extract_records)
 agent_state.add_node("validate", validate_records_strict)
 agent_state.add_node("correct", correct_records)
 agent_state.add_node("deduplicate", deduplicate_records)
+agent_state.add_node("recover_no_access", recover_no_access_node)
 agent_state.add_node("save", save_records)
 
 # Add edges: START → extract_metadata → structure → inventory → tag_pages → prepare → ...
@@ -2378,30 +2939,18 @@ agent_state.add_edge(START, "extract_metadata")
 agent_state.add_edge("extract_metadata", "structure")
 agent_state.add_edge("structure", "inventory")
 agent_state.add_edge("inventory", "tag_pages")
-# E1-S20: Conditional routing after page tagging
-agent_state.add_conditional_edges(
-    "tag_pages",
-    lambda s: "orchestrate" if should_use_orchestrator(s) else "prepare",
-    {"orchestrate": "orchestrate", "prepare": "prepare"},
-)
-agent_state.add_edge("orchestrate", "validate")  # Orchestrator feeds into validation
-agent_state.add_conditional_edges(
-    "prepare",
-    lambda s: "error" if s.get("error") else "extract",
-    {"extract": "extract", "error": END},
-)
-agent_state.add_conditional_edges(
-    "extract",
-    should_continue_extraction,
-    {"extract": "extract", "validate": "validate", "error": END},
-)
+# E29-S3: Unconditional routing — all documents go through orchestrator
+agent_state.add_edge("tag_pages", "orchestrate")
+agent_state.add_edge("orchestrate", "validate")
+# Legacy edges removed — prepare/extract nodes kept but unreachable (AC-5)
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}
 agent_state.add_conditional_edges(
     "validate", should_correct, {"correct": "correct", "deduplicate": "deduplicate"}
 )
 # After correction, re-validate
 agent_state.add_edge("correct", "validate")
-agent_state.add_edge("deduplicate", "save")
+agent_state.add_edge("deduplicate", "recover_no_access")
+agent_state.add_edge("recover_no_access", "save")
 agent_state.add_edge("save", END)
 
 # Compile the graph
@@ -2426,6 +2975,15 @@ async def extract_acm_from_source(
         ACMExtractionOutput with results
     """
     start_time = time.time()
+    source_id_str = str(source.id)
+
+    langfuse_handler = get_langfuse_handler()
+    langfuse_callbacks = append_langfuse_callback([], langfuse_handler)
+    langfuse_metadata = build_langfuse_metadata(
+        source_id=source_id_str,
+        extraction_model=model_id,
+        command_id=command_id,
+    )
 
     # Initialize pipeline logger (E1-S21)
     # Use the shared _extract_total_pages utility (same pattern as the rest of the pipeline)
@@ -2439,15 +2997,16 @@ async def extract_acm_from_source(
             "Chunking will fall back to character-based splitting."
         )
     pl = PipelineLogger(
-        source_id=str(source.id),
+        source_id=source_id_str,
         total_pages=total_pages,
         command_id=command_id,
+        emit_custom_events=bool(langfuse_handler),
     )
 
     # Initialize AG-UI event emitter (E17-S1)
     agui: Optional[AGUIEventEmitter] = None
     if command_id:
-        agui = AGUIEventEmitter(command_id=command_id, source_id=str(source.id))
+        agui = AGUIEventEmitter(command_id=command_id, source_id=source_id_str)
         await agui.emit_run_started()
 
     if force:
@@ -2455,7 +3014,7 @@ async def extract_acm_from_source(
         from open_notebook.domain.acm import ACMTableSection
 
         try:
-            sections_deleted = await ACMTableSection.delete_by_source(str(source.id))
+            sections_deleted = await ACMTableSection.delete_by_source(source_id_str)
             if sections_deleted > 0:
                 logger.info(
                     f"Deleted {sections_deleted} existing table sections for source {source.id}"
@@ -2463,7 +3022,7 @@ async def extract_acm_from_source(
         except Exception as e:
             logger.warning(f"Failed to delete table sections: {e}")
 
-        deleted = await ACMRecord.delete_by_source(str(source.id))
+        deleted = await ACMRecord.delete_by_source(source_id_str)
         if deleted > 0:
             logger.info(
                 f"Deleted {deleted} existing ACM records for source {source.id}"
@@ -2510,7 +3069,16 @@ async def extract_acm_from_source(
     }
 
     try:
-        result = await graph.ainvoke(initial_state)
+        if langfuse_callbacks:
+            result = await graph.ainvoke(
+                initial_state,
+                config={
+                    "callbacks": langfuse_callbacks,
+                    "metadata": langfuse_metadata,
+                },
+            )
+        else:
+            result = await graph.ainvoke(initial_state)
 
         extraction_result: ACMExtractionResult = result.get(
             "extraction_result", ACMExtractionResult()
@@ -2536,7 +3104,7 @@ async def extract_acm_from_source(
                 await agui.emit_run_error(error)
             pipeline_run = pl.fail(error)
             return ACMExtractionOutput(
-                source_id=str(source.id),
+                source_id=source_id_str,
                 status="failed",
                 total_records=0,
                 records_failed=extraction_result.records_rejected,
@@ -2594,7 +3162,7 @@ async def extract_acm_from_source(
             token_limit_exceeded = assessment["token_limit_exceeded"]
 
         return ACMExtractionOutput(
-            source_id=str(source.id),
+            source_id=source_id_str,
             status=status,
             total_records=extraction_result.total_records,
             records_failed=extraction_result.records_rejected,
@@ -2614,7 +3182,7 @@ async def extract_acm_from_source(
             await agui.emit_run_error(str(e))
         pipeline_run = pl.fail(str(e))
         return ACMExtractionOutput(
-            source_id=str(source.id),
+            source_id=source_id_str,
             status="failed",
             total_records=0,
             records_failed=0,
@@ -2622,3 +3190,5 @@ async def extract_acm_from_source(
             extraction_time_ms=extraction_time,
             pipeline_run=pipeline_run.model_dump(mode="json"),
         )
+    finally:
+        flush_langfuse_handler(langfuse_handler)

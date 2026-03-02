@@ -4,6 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical** : Always use AskUserQuestion Tool when you want to clarify, interview or ask questions from the user.
 
+## CRITICAL PATH RULE (WSL/Windows)
+
+- Never `cd` to `/d/...` or `D:\...` in Bash commands.
+- Always use the repo root from `$CLAUDE_PROJECT_DIR`.
+- If `$CLAUDE_PROJECT_DIR` is not set, assume WSL mount: `/mnt/d/ailocal/acm-ai`.
+
+Examples:
+- `cd "$CLAUDE_PROJECT_DIR"`
+- `cd "$CLAUDE_PROJECT_DIR" && uv run ...`
+- `ls "$CLAUDE_PROJECT_DIR/docs"`
+- `cd /d/ailocal/acm-ai` — WRONG
+- `cd D:\ailocal\acm-ai` — WRONG
+
 ## Project Overview
 
 ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms SAMP (School Asbestos Management Plan) documents into structured, queryable data. It's a monorepo with two parts:
@@ -146,6 +159,41 @@ extract_acm_records(
 - MinerU dependency (`magic-pdf`) has incomplete dependency declarations - may require manual installation of `opencv-python`, `ultralytics`, `doclayout-yolo` for full functionality
 - Consider Docker containerization for MinerU isolation in production
 - Fallback mechanism ensures data extraction works even if MinerU dependencies are unavailable
+
+## Secondary Python Environment: MinerU
+
+MinerU requires `paddlepaddle-gpu` which conflicts with `torch 2.10.0+cu126` in the main venv.
+It runs in an isolated venv at `.venv-mineru/` — managed by pip directly (not uv/pyproject.toml).
+
+### Venv Summary
+
+| Venv | Path | Purpose | Manager |
+|------|------|---------|---------|
+| Main | `.venv/` | All production services — API, worker, Docling/TableFormer | `uv` (pyproject.toml) |
+| MinerU | `.venv-mineru/` | MinerU table extraction — spike research + optional backend | `pip` (standalone) |
+
+### Interpreter Paths
+
+| Platform | Main venv | MinerU venv |
+|----------|-----------|-------------|
+| Windows | `.venv\Scripts\python.exe` | `.venv-mineru\Scripts\python.exe` |
+| WSL/Linux | `.venv/bin/python` | `.venv-mineru/bin/python` |
+
+### Rules for All AI Coding Tools
+
+- **Always `uv run ...`** for all main project work (API, tests, lint, workers)
+- **`.venv-mineru` only** for: `scripts/mineru_runner.py`, `scripts/research/` spike scripts
+- **Never** `uv pip install magic-pdf` or `paddlepaddle` into the main venv
+- **Never** import `magic_pdf` or `paddle` directly in main project code — use `scripts/mineru_runner.py` via subprocess
+
+### Backend Integration Pattern
+
+See `scripts/mineru_runner.py` for the subprocess bridge interface.
+Enable via environment variables: `MINERU_ENABLED=true` + `MINERU_VENV_PATH=.venv-mineru`
+
+### One-Time Setup (Windows)
+
+See `/e25-setup-mineru` command or Phase 1 of the MinerU venv plan.
 
 ## Database
 

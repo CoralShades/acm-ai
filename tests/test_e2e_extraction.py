@@ -184,16 +184,22 @@ def _make_extraction_records() -> List[ACMExtractionRecord]:
 
 
 def _make_mock_llm_model(records: List[ACMExtractionRecord]) -> MagicMock:
-    """Create a mock LLM model that returns structured ACMExtractionResult."""
+    """Create a mock LLM model that returns JSON via direct ainvoke().
+
+    E27-S1: All extraction paths now use model.ainvoke() → parse_json_response()
+    instead of model.with_structured_output().ainvoke(). The mock returns a
+    response object whose .content is valid JSON matching ACMExtractionResult.
+    """
     result = ACMExtractionResult(
         records=records,
         status=ExtractionStatus.VALID,
         total_records=len(records),
     )
-    chain = AsyncMock()
-    chain.ainvoke = AsyncMock(return_value=result)
+    json_content = result.model_dump_json()
+    response = MagicMock()
+    response.content = json_content
     model = AsyncMock()
-    model.with_structured_output = MagicMock(return_value=chain)
+    model.ainvoke = AsyncMock(return_value=response)
     return model
 
 

@@ -1,0 +1,227 @@
+# ============================================================================
+# EPIC 29: Pipeline Unification - Reconciled Plan
+# ============================================================================
+# Reconciliation date: 2026-03-01
+# Source artifacts:
+#   - V3/acm-ai-bmad-audit.extracted.txt
+#   - V3/sprint-change-proposal-20260301-unified-pipeline.md
+#   - V3/epic-29-pipeline-unification.yaml
+#
+# Reconciliation decisions:
+#   1) Keep SCP sequencing (blockers first, cleanup after validation gate)
+#   2) Add audit benchmark rigor (measure-first harness with >= 3 benchmarks)
+#   3) Keep YAML implementation breadth (agent decomposition + export hardening)
+# ============================================================================
+
+epic_29_pipeline_unification:
+  title: "Pipeline Unification - Unified Agent Pipeline"
+  status: planned
+  total_stories: 8
+  total_points: 19
+  strategy: "Measure first, then unify, then decompose, then clean up"
+
+  source_of_truth:
+    - "SCP-20260301-unified-pipeline (sequencing and blocker detail)"
+    - "BMAD audit (benchmark rigor and decomposition guidance)"
+    - "Original Epic 29 YAML (implementation coverage)"
+
+  goals:
+    - "Single extraction path for all documents through orchestrator"
+    - "Deterministic fallback and validation contract"
+    - "Benchmark harness with reproducible quality/cost/performance gates"
+    - "Incremental agent decomposition without Broadmeadows regression"
+    - "Legacy-path removal only after parity gate is passed"
+
+  non_goals:
+    - "No embeddings/copilot/knowledge-graph feature expansion"
+    - "No provider migration outside existing routing strategy"
+    - "No broad UI redesign beyond extraction/export surfaces"
+
+  decision_gates:
+    gate_1_baseline_harness:
+      after: e29-s2
+      criteria:
+        - "Automated benchmark harness runs at least 3 benchmark documents"
+        - "Ground truth exists for Broadmeadows, Alexander, and one additional format"
+        - "Baseline metrics captured: recall, precision, field accuracy, latency, token usage"
+      blocking: [e29-s3, e29-s4, e29-s5, e29-s6, e29-s7, e29-s8]
+
+    gate_2_unified_path_parity:
+      after: e29-s4
+      criteria:
+        - "Broadmeadows remains 31/31 on unified orchestrator path"
+        - "Alexander baseline is >=36/43 with all buildings producing records"
+        - "Docling table injection confirmed for single-building and multi-building scenarios"
+      blocking: [e29-s5, e29-s6, e29-s7, e29-s8]
+
+    gate_3_cleanup_permission:
+      after: e29-s6
+      criteria:
+        - "No benchmark regression beyond agreed thresholds"
+        - "Latency/token usage are <= baseline or explicitly approved tradeoff"
+        - "Fallback and correction behavior is deterministic under test"
+      blocking: [e29-s7, e29-s8]
+
+    gate_4_release_readiness:
+      after: e29-s8
+      criteria:
+        - "E2E extraction tests pass"
+        - "Benchmark suite passes in CI"
+        - "PRD/architecture/epics/sprint-status docs are updated and aligned"
+      blocking: []
+
+  stories:
+    e29-s1:
+      title: "JSON Parser Resilience - Fence/Preamble/Truncation Handling"
+      status: planned
+      points: 1
+      phase: 1
+      depends_on: []
+      gaps: [GAP-0-parser-blocker]
+      files:
+        - open_notebook/graphs/utils.py
+        - tests/test_json_parser.py
+      acceptance_criteria:
+        - "parse_json_response strips markdown fences before brace-depth scan"
+        - "Conversational preamble does not affect JSON extraction"
+        - "Multiple JSON blocks select largest valid complete object"
+        - "Truncated JSON raises explicit truncation error"
+        - "Existing unfenced behavior remains backward compatible"
+
+    e29-s2:
+      title: "Benchmark Harness + Baseline Capture (Measure-First Gate)"
+      status: planned
+      points: 3
+      phase: 1
+      depends_on: [e29-s1]
+      gaps: [GAP-accuracy-measurement]
+      files:
+        - benchmarks/
+        - scripts/research/e29_benchmark_harness.py
+        - tests/integration/test_benchmark_harness.py
+        - docs/reviews/e29-baseline-benchmark-report.md
+      acceptance_criteria:
+        - "Harness executes at least 3 benchmark documents end-to-end"
+        - "Ground-truth comparison calculates recall/precision/field-accuracy"
+        - "Latency and token/cost metrics recorded per benchmark"
+        - "Baseline report published and versioned"
+        - "CI entrypoint exists for benchmark execution"
+
+    e29-s3:
+      title: "Unified Orchestrator Path - Remove Runtime Forking"
+      status: planned
+      points: 3
+      phase: 2
+      depends_on: [e29-s1, e29-s2]
+      gaps: [GAP-1-dual-path]
+      files:
+        - open_notebook/graphs/acm_extraction.py
+        - open_notebook/extractors/orchestrator.py
+        - open_notebook/extractors/acm_schemas.py
+        - tests/test_orchestrator.py
+        - tests/test_acm_ai_extraction.py
+      acceptance_criteria:
+        - "tag_pages always routes to orchestrate_extraction"
+        - "should_use_orchestrator conditional routing is removed"
+        - "No-inventory documents create synthetic whole-document extraction plan"
+        - "Docling table injection can execute on single-building documents"
+        - "Legacy path remains present but unreachable until cleanup story"
+
+    e29-s4:
+      title: "Capability Registry + Fallback Contract"
+      status: planned
+      points: 2
+      phase: 2
+      depends_on: [e29-s3]
+      gaps: [GAP-3-monolithic-logic, GAP-5-routing-ambiguity]
+      files:
+        - open_notebook/extractors/orchestrator.py
+        - open_notebook/extractors/strategy_registry.py
+        - open_notebook/extractors/acm_schemas.py
+        - tests/test_strategy_registry.py
+      acceptance_criteria:
+        - "Strategy selection rules are centralized and testable"
+        - "Fallback behavior is explicit for no-inventory/no-table/llm-failure cases"
+        - "Validation and correction retry contract is codified"
+        - "Parity gate confirms Broadmeadows 31/31 and Alexander >=36/43"
+
+    e29-s5:
+      title: "Agent Decomposition I - Table Parser + BAR Mapper"
+      status: planned
+      points: 3
+      phase: 3
+      depends_on: [e29-s4]
+      gaps: [GAP-2-table-priority, GAP-3-monolithic-logic]
+      files:
+        - open_notebook/extractors/table_parser.py
+        - open_notebook/extractors/bar_mapper.py
+        - tests/test_table_parser.py
+        - tests/test_bar_mapper.py
+      acceptance_criteria:
+        - "DataFrame rows produce raw record candidates without LLM dependency"
+        - "BAR mapping is schema-driven from field_schema"
+        - "Regex normalization handles known consultant field variants"
+        - "Per-agent metrics are logged for row recall and mapping accuracy"
+
+    e29-s6:
+      title: "Agent Decomposition II - Enricher/Classifier/Validator"
+      status: planned
+      points: 3
+      phase: 3
+      depends_on: [e29-s5]
+      gaps: [GAP-3-monolithic-logic]
+      files:
+        - open_notebook/extractors/context_enricher.py
+        - open_notebook/extractors/classifier.py
+        - open_notebook/extractors/validator.py
+        - open_notebook/graphs/acm_extraction.py
+        - tests/test_context_enricher.py
+        - tests/test_classifier.py
+        - tests/test_validator.py
+      acceptance_criteria:
+        - "Regex-first classifier resolves majority of product types"
+        - "LLM enrichment and correction are batched and targeted"
+        - "Validation retries capped and deterministic"
+        - "Benchmark deltas meet or exceed baseline gate thresholds"
+
+    e29-s7:
+      title: "Dual-Benchmark Validation Gate + Legacy Dead-Code Cleanup"
+      status: planned
+      points: 2
+      phase: 4
+      depends_on: [e29-s6]
+      gaps: [GAP-1-dual-path, GAP-6-dead-code]
+      files:
+        - scripts/research/e29_validation_gate.py
+        - docs/reviews/e29-validation-gate-results.md
+        - open_notebook/graphs/acm_extraction.py
+        - commands/source_commands.py
+        - tests/test_orchestrator.py
+      acceptance_criteria:
+        - "Broadmeadows remains 31/31 after decomposition"
+        - "Alexander reaches >=40/43 or documented approved threshold"
+        - "prepare_context/extract_records legacy path removed"
+        - "Legacy feature flags and dead branches removed"
+        - "ruff and pytest suites pass after cleanup"
+
+    e29-s8:
+      title: "Export Hardening + Integration Tests + Documentation Alignment"
+      status: planned
+      points: 2
+      phase: 4
+      depends_on: [e29-s7]
+      gaps: [GAP-4-export-rigidity, production-readiness]
+      files:
+        - api/routers/acm.py
+        - frontend/src/components/ExportDialog.tsx
+        - tests/test_export.py
+        - tests/test_unified_pipeline.py
+        - _bmad-output/project-planning-artifacts/acm-ai/03-prd.md
+        - _bmad-output/project-planning-artifacts/acm-ai/04-architecture.md
+        - _bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md
+        - docs/sprint-artifacts/sprint-status.yaml
+      acceptance_criteria:
+        - "Per-building and ACM-type exports are schema-driven"
+        - "Integration tests cover upload->extract->validate->save->export"
+        - "Performance baseline is documented against pre-E29 and post-E29"
+        - "PRD/architecture/epics/sprint status updated to Epic 29 reality"

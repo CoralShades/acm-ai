@@ -2,7 +2,7 @@
 epic: Epic 24
 story_id: E24-S2
 title: Broadmeadows & Alexander Accuracy Validation
-status: done
+status: archived  # Superseded by E26 Docling Direct API (31/31). See ADR-001 D7.
 priority: P0
 effort: S (1 SP)
 depends_on: E24-S1

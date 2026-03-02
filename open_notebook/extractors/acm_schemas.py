@@ -449,6 +449,15 @@ class ChunkExtractionInput(BaseModel):
     )
 
 
+class SyntheticExtractionPlan(BaseModel):
+    """Synthetic extraction plan for documents without building inventory (E29-S3)."""
+
+    building_name: str = "Whole Document"
+    page_start: int = 1
+    page_end: int = 999
+    source: str = "synthetic_no_inventory"
+
+
 class ACMExtractionInput(BaseModel):
     """Input for the ACM extraction command."""
 
@@ -500,4 +509,8 @@ class ACMExtractionOutput(BaseModel):
     chunk_count: int = Field(
         default=1,
         description="Number of chunks used for extraction (1 = no chunking needed) (E1-S23)",
+    )
+    fallback_summary: Optional[List[str]] = Field(
+        default=None,
+        description="Fallback telemetry tags activated during extraction (E29-S4)",
     )

@@ -1,0 +1,139 @@
+{
+  "ground_truth_records": 31,
+  "ground_truth_nata": 16,
+  "ground_truth_as_per": 9,
+  "ground_truth_not_sampled": 6,
+  "docling_register_pages": [
+    5,
+    6,
+    7
+  ],
+  "docling_register_rows": 30,
+  "matches": {
+    "by_sample_number": 0,
+    "by_as_per_reference": 0,
+    "by_room_product": 0
+  },
+  "indicators": {
+    "as_per_rows_found": 9,
+    "not_sampled_rows_found": 0,
+    "assumed_positive_found": 4,
+    "no_access_found": 0
+  },
+  "missing_record_hunt": [
+    {
+      "id": "MISSING-1",
+      "gt_index": 9,
+      "description": "Switch Room / Automatic Battery Charger / Fuse cartridge",
+      "search_terms": [
+        "battery charger",
+        "fuse cartridge"
+      ],
+      "found": true,
+      "matching_rows": [
+        {
+          "Area / Level Room& Location": "First floor",
+          "Area / Level Room& Location_1": "Switch Room",
+          "Feature": "Automatic battery charger",
+          "Item Description": "Fuses",
+          "Hazard Type Hazard Status": "Asbestos Assumed positive",
+          "Sample Number": "-",
+          "Friability": "Non-friable",
+          "Labelled Y/N": "Yes",
+          "Source of Asbestos That is Not Fixed or Installed": "- None normal occupation and",
+          "Workplace Activities Likely to Disturb Asbestos": "under use",
+          "Potential": "Low",
+          "Condition": "Good",
+          "Risk Status": "Low",
+          "Quantity": "12",
+          "Control Priority Comments &Recommendations": "Maintain in current condition if to remain in-situ. Remove under controlled bonded asbestos removal conditions prior to refurbishment or demolition works by a Class A (friable & non- friable) or Class B (non-friable) licensed asbestos removal contractor.",
+          "Date of Identification": "Apr-20",
+          "Reinspect Date": "Apr-25",
+          "Photograph": ""
+        }
+      ]
+    },
+    {
+      "id": "MISSING-2",
+      "gt_index": 30,
+      "description": "Lift Foyer / Lift / Internal lining",
+      "search_terms": [
+        "lift foyer",
+        "internal lining"
+      ],
+      "found": true,
+      "matching_rows": [
+        {
+          "Area / Level Room& Location": "Ground floor",
+          "Area / Level Room& Location_1": "Front desk area Filing cabinet Internal lining Asbestos",
+          "Feature": "Front desk area Filing cabinet Internal lining Asbestos",
+          "Item Description": "Front desk area Filing cabinet Internal lining Asbestos",
+          "Hazard Type Hazard Status": "Front desk area Filing cabinet Internal lining Asbestos",
+          "Sample Number": "Assumed positive -",
+          "Friability": "Non-friable",
+          "Labelled Y/N": "Yes",
+          "Source of Asbestos That is Not Fixed or Installed": "-",
+          "Workplace Activities Likely to Disturb Asbestos": "None under normal occupation and use",
+          "Potential": "Low",
+          "Condition": "Good",
+          "Risk Status": "Low",
+          "Quantity": "3 units",
+          "Control Priority Comments &Recommendations": "Maintain in current condition if to remain in-situ. Remove under controlled bonded asbestos removal conditions prior to refurbishment or demolition works by a Class A (friable & non- friable) or Class B (non-friable) licensed asbestos removal contractor.",
+          "Date of Identification": "Apr-20",
+          "Reinspect Date": "Apr-25",
+          "Photograph": ""
+        },
+        {
+          "Area / Level Room& Location": "Ground floor",
+          "Area / Level Room& Location_1": "Lift foyer",
+          "Feature": "Floor",
+          "Item Description": "Vinyl sheet (cream)",
+          "Hazard Type Hazard Status": "Asbestos Negative",
+          "Sample Number": "Same as 34511-039- 001",
+          "Friability": "-",
+          "Labelled Y/N": "-",
+          "Source of Asbestos That is Not Fixed or Installed": "-",
+          "Workplace Activities Likely to Disturb Asbestos": "-",
+          "Potential": "-",
+          "Condition": "-",
+          "Risk Status": "-",
+          "Quantity": "-",
+          "Control Priority Comments &Recommendations": "-",
+          "Date of Identification": "-",
+          "Reinspect Date": "-",
+          "Photograph": ""
+        }
+      ]
+    },
+    {
+      "id": "MISSING-3",
+      "gt_index": 31,
+      "description": "Main Foyer / Room Adjacent Disabled Toilet / Unknown",
+      "search_terms": [
+        "disabled toilet",
+        "no access"
+      ],
+      "found": false,
+      "matching_rows": []
+    }
+  ],
+  "sample_numbers_found": [],
+  "as_per_references_found": [],
+  "all_table_search_hits": [
+    {
+      "term": "battery charger",
+      "table_index": 2,
+      "page": 5
+    },
+    {
+      "term": "lift foyer",
+      "table_index": 2,
+      "page": 5
+    },
+    {
+      "term": "internal lining",
+      "table_index": 2,
+      "page": 5
+    }
+  ]
+}

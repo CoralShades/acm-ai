@@ -45,6 +45,14 @@ UV_LINK_MODE=copy uv sync --quiet
 echo "Dependencies synced."
 echo ""
 
+# Preflight checks
+echo "Running preflight checks..."
+if ! uv run python scripts/preflight_checks.py; then
+    echo "PREFLIGHT FAILED — fix issues above before starting."
+    exit 1
+fi
+echo ""
+
 # Kill any processes occupying our ports before starting
 echo "Clearing ports..."
 uv run python scripts/service_manager.py fix --auto-fix 2>/dev/null || true

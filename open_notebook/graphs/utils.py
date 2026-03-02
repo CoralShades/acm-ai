@@ -1,8 +1,10 @@
+import copy
 import json
 import os
 import re
 from typing import Any, List, Optional
 
+import httpx
 from esperanto import AIFactory, LanguageModel
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -12,38 +14,42 @@ from open_notebook.domain.models import model_manager
 from open_notebook.utils import token_count
 
 # ---------------------------------------------------------------------------
-# OpenRouter provider routing preferences
+# OpenRouter provider routing — HARD LOCK (E27-S3)
+# ---------------------------------------------------------------------------
+# Uses provider.only (hard allowlist) instead of provider.order (soft
+# preference) to guarantee requests are served by Anthropic ONLY.
+# Combined with allow_fallbacks=false, this means if Anthropic is
+# unavailable the request FAILS rather than silently routing to
+# Google Vertex or another provider with different extraction behavior.
+#
+# Ref: https://openrouter.ai/docs/guides/routing/provider-selection
 # ---------------------------------------------------------------------------
 
-# Providers that reject complex structured-output schemas or have
-# incompatible beta-header requirements.  Excluding these forces
-# OpenRouter to route to direct-API providers (Anthropic, OpenAI, etc.)
-# that reliably support tool-calling / JSON-mode extraction.
-OPENROUTER_IGNORED_PROVIDERS = [
-    "Amazon Bedrock",
-    "Azure",
-]
-
-# Preferred provider order — direct providers first.
-# OpenRouter selects from top to bottom based on availability.
-OPENROUTER_PROVIDER_ORDER = [
-    "Anthropic",
-    "Google",
-    "OpenAI",
-]
+OPENROUTER_ALLOWED_PROVIDERS = ["Anthropic"]
 
 
-def _apply_openrouter_preferences(lc_model: BaseChatModel) -> BaseChatModel:
-    """Inject OpenRouter provider routing into a LangChain model.
+def _apply_openrouter_preferences(
+    lc_model: BaseChatModel,
+    *,
+    source_id: str | None = None,
+    building_name: str | None = None,
+    stage_name: str | None = None,
+) -> BaseChatModel:
+    """Apply hard provider lock + production features for OpenRouter models.
 
     Only applies when the model's base_url points to OpenRouter.
-    Adds ``provider.ignore``, ``provider.order``, and the
-    ``middle-out`` transform for response healing.
 
-    Model-aware routing: Anthropic/Claude models are restricted to the
-    Anthropic provider only, because other providers (e.g. Google) reject
-    the ``anthropic-beta: structured-outputs-*`` header that LangChain
-    sends with ``with_structured_output()``.
+    Configures 6 OpenRouter features:
+    1. provider.only — hard allowlist, Anthropic ONLY (no silent Vertex fallback)
+    2. allow_fallbacks=False — request FAILS if Anthropic unavailable
+    3. zdr=True — Zero Data Retention for Victorian Government data
+    4. Response Healing plugin — free auto-fix for malformed JSON (<1ms)
+    5. data_collection="deny" — don't train on government data
+    6. Request metadata — tags each call for production observability
+
+    Ref: https://openrouter.ai/docs/guides/routing/provider-selection
+    Ref: https://openrouter.ai/docs/guides/features/plugins/response-healing
+    Ref: https://openrouter.ai/docs/guides/features/zdr
     """
     base_url = (
         getattr(lc_model, "openai_api_base", None)
@@ -53,51 +59,328 @@ def _apply_openrouter_preferences(lc_model: BaseChatModel) -> BaseChatModel:
     if "openrouter.ai" not in str(base_url).lower():
         return lc_model
 
-    # Detect model family from LangChain model attributes
-    model_name = (
-        getattr(lc_model, "model_name", None) or getattr(lc_model, "model", None) or ""
-    )
-    model_name_lower = str(model_name).lower()
-    is_anthropic = "claude" in model_name_lower or model_name_lower.startswith(
-        "anthropic/"
-    )
+    # ZDR (Zero Data Retention) requires opt-in at
+    # https://openrouter.ai/settings/privacy — if not configured,
+    # OpenRouter returns 404 "No endpoints found matching your data policy".
+    # Gate behind env var so it doesn't block extraction in dev.
+    enable_zdr = os.getenv("OPENROUTER_ZDR", "false").lower() in ("true", "1", "yes")
 
-    if is_anthropic:
-        # Anthropic models MUST only route to the Anthropic provider.
-        # Other providers (Google, etc.) reject the anthropic-beta header
-        # that LangChain injects for structured output.
-        ignore_list = OPENROUTER_IGNORED_PROVIDERS + ["Google"]
-        order_list = ["Anthropic"]
-    else:
-        ignore_list = OPENROUTER_IGNORED_PROVIDERS
-        order_list = OPENROUTER_PROVIDER_ORDER
+    provider_config: dict[str, Any] = {
+        "only": OPENROUTER_ALLOWED_PROVIDERS,
+        "allow_fallbacks": False,
+        "require_parameters": True,
+        "data_collection": "deny",
+    }
+    if enable_zdr:
+        provider_config["zdr"] = True
 
-    openrouter_body = {
-        "provider": {
-            "ignore": ignore_list,
-            "order": order_list,
-            "require_parameters": True,
-        },
+    openrouter_body: dict[str, Any] = {
+        "provider": provider_config,
+        "plugins": [
+            {"id": "response-healing"},
+        ],
         "transforms": ["middle-out"],
     }
-    existing = getattr(lc_model, "model_kwargs", {}) or {}
-    # Merge into extra_body so the OpenAI SDK passes these in the HTTP
-    # request body (not as create() kwargs which it would reject).
-    prev_extra = existing.get("extra_body", {})
-    object.__setattr__(
-        lc_model,
-        "model_kwargs",
-        {
-            **existing,
-            "extra_body": {**prev_extra, **openrouter_body},
-        },
-    )
+
+    # Request metadata for production observability
+    # OpenRouter: max 16 pairs, key ≤64 chars, value ≤512 chars
+    metadata: dict[str, str] = {"app": "acm-ai", "pipeline": "extraction"}
+    if source_id:
+        metadata["source_id"] = str(source_id)[:512]
+    if building_name:
+        metadata["building"] = str(building_name)[:512]
+    if stage_name:
+        metadata["stage"] = str(stage_name)[:512]
+    openrouter_body["metadata"] = metadata
+
+    # Deep merge into existing model_kwargs.extra_body
+    existing_kwargs = getattr(lc_model, "model_kwargs", {}) or {}
+    existing_extra = existing_kwargs.get("extra_body", {}) or {}
+
+    merged_extra = {**existing_extra, **openrouter_body}
+
+    # Deep merge provider dict (preserve any existing provider settings)
+    if "provider" in existing_extra and "provider" in openrouter_body:
+        merged_extra["provider"] = {
+            **existing_extra["provider"],
+            **openrouter_body["provider"],
+        }
+
+    # Append plugins without duplicates
+    if "plugins" in existing_extra and "plugins" in openrouter_body:
+        existing_ids = {p.get("id") for p in existing_extra.get("plugins", [])}
+        new_plugins = [
+            p for p in openrouter_body["plugins"] if p.get("id") not in existing_ids
+        ]
+        merged_extra["plugins"] = existing_extra["plugins"] + new_plugins
+
+    new_kwargs = {**existing_kwargs, "extra_body": merged_extra}
+    object.__setattr__(lc_model, "model_kwargs", new_kwargs)
+
     logger.info(
-        f"Applied OpenRouter provider preferences: "
-        f"ignore={ignore_list}, "
-        f"order={order_list}"
+        f"Applied OpenRouter hard lock: "
+        f"provider.only={OPENROUTER_ALLOWED_PROVIDERS}, "
+        f"allow_fallbacks=False, zdr={'ON' if enable_zdr else 'OFF'}, "
+        f"response-healing=ON"
     )
     return lc_model
+
+
+# ---------------------------------------------------------------------------
+# JSON Schema utilities for OpenRouter response_format (E27-S4)
+# ---------------------------------------------------------------------------
+
+
+def pydantic_to_openrouter_schema(model_class: type) -> dict:
+    """Convert a Pydantic model to an OpenRouter-compatible JSON Schema.
+
+    OpenRouter's strict mode requires:
+    1. All $defs (forward references) inlined into their usage sites
+    2. additionalProperties: false on all object types
+    3. Optional fields represented as anyOf with null normalized
+    """
+    raw_schema = model_class.model_json_schema()
+
+    def _resolve_refs(node: Any, defs: dict) -> Any:
+        """Recursively resolve all $ref entries by inlining definitions."""
+        if not isinstance(node, dict):
+            return node
+
+        if "$ref" in node:
+            ref_path = node["$ref"]
+            def_name = ref_path.split("/")[-1]
+            if def_name in defs:
+                resolved = copy.deepcopy(defs[def_name])
+                for k, v in node.items():
+                    if k != "$ref":
+                        resolved[k] = v
+                return _resolve_refs(resolved, defs)
+            return node
+
+        result = {}
+        for k, v in node.items():
+            if k == "properties" and isinstance(v, dict):
+                result[k] = {
+                    pk: _resolve_refs(pv, defs)
+                    for pk, pv in v.items()
+                }
+            elif k == "items":
+                result[k] = _resolve_refs(v, defs)
+            elif k in ("anyOf", "oneOf", "allOf") and isinstance(v, list):
+                result[k] = [_resolve_refs(s, defs) for s in v]
+            else:
+                result[k] = v
+
+        return result
+
+    def _add_additional_properties_false(node: Any) -> Any:
+        """Add additionalProperties: false to all object schemas."""
+        if not isinstance(node, dict):
+            return node
+
+        if node.get("type") == "object" or "properties" in node:
+            node["additionalProperties"] = False
+
+        if "properties" in node:
+            for k in node["properties"]:
+                node["properties"][k] = _add_additional_properties_false(
+                    node["properties"][k]
+                )
+        if "items" in node and isinstance(node["items"], dict):
+            node["items"] = _add_additional_properties_false(node["items"])
+        for key in ("anyOf", "oneOf", "allOf"):
+            if key in node and isinstance(node[key], list):
+                node[key] = [_add_additional_properties_false(s) for s in node[key]]
+
+        return node
+
+    # Extract and inline $defs
+    defs = raw_schema.pop("$defs", {})
+    resolved = _resolve_refs(copy.deepcopy(raw_schema), defs)
+
+    # Add additionalProperties: false to all objects
+    resolved = _add_additional_properties_false(resolved)
+
+    # Remove Pydantic metadata not needed in JSON Schema
+    resolved.pop("title", None)
+
+    return resolved
+
+
+# Module-level cache for ACM extraction schema (E27-S4)
+_ACM_EXTRACTION_JSON_SCHEMA: dict | None = None
+
+
+def _get_acm_extraction_schema() -> dict:
+    """Lazily generate and cache the JSON Schema for ACMExtractionResult."""
+    global _ACM_EXTRACTION_JSON_SCHEMA
+    if _ACM_EXTRACTION_JSON_SCHEMA is None:
+        from open_notebook.extractors.acm_schemas import ACMExtractionResult
+
+        _ACM_EXTRACTION_JSON_SCHEMA = pydantic_to_openrouter_schema(
+            ACMExtractionResult
+        )
+    return _ACM_EXTRACTION_JSON_SCHEMA
+
+
+def _inject_response_format(
+    lc_model: BaseChatModel,
+    schema_dict: dict,
+    schema_name: str,
+) -> BaseChatModel:
+    """Inject response_format: json_schema into model's extra_body.
+
+    Stage-specific — called AFTER provision_langchain_model() and BEFORE
+    model.ainvoke(). Only applies to OpenRouter models.
+
+    This enforces schema validation at the OpenRouter layer, so the LLM
+    returns JSON that conforms to the given schema. Combined with
+    Response Healing plugin (E27-S3), this provides production-grade
+    structured output without with_structured_output().
+
+    Args:
+        lc_model: LangChain model (already provisioned with OpenRouter prefs)
+        schema_dict: JSON Schema dict (from pydantic_to_openrouter_schema)
+        schema_name: Human-readable schema name (e.g. "ACMExtractionResult")
+
+    Returns:
+        The same model with response_format injected into extra_body.
+    """
+    base_url = (
+        getattr(lc_model, "openai_api_base", None)
+        or getattr(lc_model, "base_url", None)
+        or ""
+    )
+    if "openrouter.ai" not in str(base_url).lower():
+        return lc_model
+
+    existing_kwargs = getattr(lc_model, "model_kwargs", {}) or {}
+    existing_extra = existing_kwargs.get("extra_body", {}) or {}
+
+    merged_extra = {
+        **existing_extra,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "strict": True,
+                "schema": schema_dict,
+            },
+        },
+    }
+
+    new_kwargs = {**existing_kwargs, "extra_body": merged_extra}
+    object.__setattr__(lc_model, "model_kwargs", new_kwargs)
+
+    logger.debug(
+        f"Injected response_format: json_schema ({schema_name}) "
+        f"into model extra_body"
+    )
+    return lc_model
+
+
+async def _verify_provider_routing(
+    response: Any,
+    stage_name: str,
+    *,
+    expected_provider: str = "Anthropic",
+) -> dict | None:
+    """Verify which OpenRouter provider actually served the request.
+
+    Uses TWO methods:
+    1. response_metadata (fast, inline)
+    2. Generation API fallback (definitive, async HTTP call)
+
+    Returns the generation data dict, or None if lookup failed.
+    Non-blocking — extraction continues if this fails.
+
+    Ref: https://openrouter.ai/docs/api-reference/get-a-generation
+    """
+    # Method 1: Check response_metadata (fast path)
+    metadata = getattr(response, "response_metadata", {}) or {}
+    actual_provider = metadata.get("provider", None)
+    actual_model = metadata.get("model", None)
+    gen_id = metadata.get("id", None)
+
+    if actual_provider:
+        if actual_provider.lower() != expected_provider.lower():
+            logger.warning(
+                f"[{stage_name}] PROVIDER MISMATCH — "
+                f"Expected: {expected_provider}, Got: {actual_provider} "
+                f"(model: {actual_model}, gen_id: {gen_id})"
+            )
+        else:
+            logger.info(
+                f"[{stage_name}] Provider: {actual_provider} | "
+                f"Model: {actual_model}"
+            )
+        return {"provider_name": actual_provider, "model": actual_model}
+
+    # Method 2: Query Generation API (definitive, async)
+    if not gen_id:
+        gen_id = (
+            metadata.get("id")
+            or (getattr(response, "additional_kwargs", {}) or {}).get("id")
+        )
+
+    if not gen_id:
+        logger.debug(
+            f"[{stage_name}] No generation ID — cannot verify provider"
+        )
+        return None
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        logger.debug(
+            f"[{stage_name}] No OPENROUTER_API_KEY — skipping Generation API lookup"
+        )
+        return None
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                "https://openrouter.ai/api/v1/generation",
+                params={"id": gen_id},
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            if resp.status_code == 200:
+                gen_data = resp.json().get("data", {})
+                prov = gen_data.get("provider_name", "unknown")
+                total_cost = gen_data.get("total_cost", 0)
+                cache_discount = gen_data.get("cache_discount", 0)
+                latency = gen_data.get("latency", 0)
+                tokens_in = gen_data.get("tokens_prompt", 0)
+                tokens_out = gen_data.get("tokens_completion", 0)
+
+                if prov.lower() != expected_provider.lower():
+                    logger.warning(
+                        f"[{stage_name}] PROVIDER MISMATCH (GenAPI) — "
+                        f"Expected: {expected_provider}, Got: {prov} | "
+                        f"Cost: ${total_cost:.4f} | Tokens: {tokens_in}->{tokens_out}"
+                    )
+                else:
+                    logger.info(
+                        f"[{stage_name}] Provider: {prov} | "
+                        f"Cost: ${total_cost:.4f} | Cache: -${cache_discount:.4f} | "
+                        f"Latency: {latency}ms | Tokens: {tokens_in}->{tokens_out}"
+                    )
+
+                for pr in gen_data.get("provider_responses", []):
+                    logger.debug(
+                        f"[{stage_name}]   Provider attempt: "
+                        f"{pr.get('provider_name')} -> status {pr.get('status')}"
+                    )
+
+                return gen_data
+            else:
+                logger.debug(
+                    f"[{stage_name}] Generation API returned {resp.status_code} "
+                    f"for gen_id={gen_id}"
+                )
+    except Exception as e:
+        logger.debug(f"[{stage_name}] Generation API lookup failed: {e}")
+
+    return None
 
 
 async def provision_langchain_model(
@@ -210,44 +493,102 @@ def _is_qwen_model(model: "BaseChatModel") -> bool:
     return "qwen2.5" in model_name.lower()
 
 
+
+class TruncationError(ValueError):
+    """Raised when JSON is structurally incomplete (truncated by LLM output limit)."""
+
+    pass
+
+
+def _extract_json_objects(text: str) -> tuple[list[str], bool]:
+    """Extract all complete top-level JSON objects and detect truncation.
+
+    Returns:
+        (list of complete JSON object strings, truncated flag)
+    """
+    objects: list[str] = []
+    i = 0
+    n = len(text)
+    truncated = False
+    while i < n:
+        if text[i] == "{":
+            start = i
+            depth = 0
+            in_string = False
+            j = i
+            while j < n:
+                c = text[j]
+                if in_string:
+                    if c == "\\" and j + 1 < n:
+                        j += 2
+                        continue
+                    if c == '"':
+                        in_string = False
+                else:
+                    if c == '"':
+                        in_string = True
+                    elif c == "{":
+                        depth += 1
+                    elif c == "}":
+                        depth -= 1
+                        if depth == 0:
+                            objects.append(text[start : j + 1])
+                            break
+                j += 1
+            else:
+                # Hit EOF with open braces — truncated JSON
+                truncated = True
+            i = j + 1
+        else:
+            i += 1
+    return objects, truncated
+
+
 def parse_json_response(response_text: str) -> dict[str, Any]:
     """Extract and parse a JSON object from LLM response text.
 
-    Tries fenced ```json blocks first, then falls back to raw brace-depth
-    matching. Returns the parsed dict. Raises ValueError if no JSON found
-    or if the extracted structure is not valid JSON.
-    """
-    # Try ```json ... ``` blocks first
-    json_match = re.search(
-        r"```(?:json)?\s*\n?(\{.*?\})\s*\n?```",
-        response_text,
-        re.DOTALL,
-    )
-    if json_match:
-        try:
-            return json.loads(json_match.group(1))
-        except json.JSONDecodeError as e:
-            raise ValueError(
-                f"Found JSON-like structure but failed to parse: {e}"
-            ) from e
+    Resilient parser that handles:
+    - Markdown fences (```json ... ```)
+    - Conversational preamble/suffix text
+    - Multiple JSON blocks (returns the largest valid object)
+    - Truncated JSON (raises TruncationError)
 
-    # Fall back to raw brace-depth matching
-    brace_start = response_text.find("{")
-    if brace_start >= 0:
-        depth = 0
-        for idx, c in enumerate(response_text[brace_start:]):
-            if c == "{":
-                depth += 1
-            elif c == "}":
-                depth -= 1
-                if depth == 0:
-                    json_str = response_text[brace_start : brace_start + idx + 1]
-                    try:
-                        return json.loads(json_str)
-                    except json.JSONDecodeError as e:
-                        raise ValueError(
-                            f"Found JSON-like structure but failed to parse: {e}"
-                        ) from e
+    Returns the parsed dict. Raises ValueError if no JSON found,
+    or TruncationError if JSON is structurally incomplete.
+    """
+    # Step 1: Strip markdown fence markers
+    stripped = re.sub(r"```(?:json|JSON)?\s*\n?", "", response_text)
+    # Also strip trailing ``` that aren't part of a fence open
+    stripped = stripped.replace("```", "")
+
+    # Step 2: Extract all complete JSON objects via brace-depth scan
+    candidates, truncated = _extract_json_objects(stripped)
+
+    # Step 3: Try to parse each candidate, keep valid dicts
+    valid: list[tuple[dict[str, Any], str]] = []
+    for raw in candidates:
+        try:
+            obj = json.loads(raw)
+            if isinstance(obj, dict):
+                valid.append((obj, raw))
+        except json.JSONDecodeError:
+            continue
+
+    # Step 4: Return largest valid object
+    if valid:
+        # Select by serialized length (deterministic)
+        best = max(valid, key=lambda pair: len(pair[1]))
+        return best[0]
+
+    # Step 5: No valid objects — check for truncation
+    if truncated:
+        # Find the incomplete JSON for error context
+        brace_start = stripped.find("{")
+        preview = stripped[brace_start : brace_start + 100] if brace_start >= 0 else ""
+        raise TruncationError(
+            f"JSON is truncated (incomplete braces at end of response). "
+            f"Preview: {preview!r}..."
+        )
 
     raise ValueError("No JSON object found in response text")
 

@@ -1,0 +1,45 @@
+{
+  "document_name": "alexander",
+  "tables": [
+    {
+      "page_start": 5,
+      "page_end": 6,
+      "raw_text": "| Room | Location | Product | Sample No | Result | Friable |\n|---|---|---|---|---|---|\n| Exterior | Eaves | Eaves | J169642-001-001 | Negative | Non-friable |\n| Exterior | Wall | Wall(s) | J169642-001-002 | Negative | Non-friable |",
+      "table_type": "docling_direct_api",
+      "source_id": null,
+      "_building": "Myrtle Street Clinic"
+    },
+    {
+      "page_start": 7,
+      "page_end": 9,
+      "raw_text": "| Room | Location | Product | Sample No | Result | Friable |\n|---|---|---|---|---|---|\n| Exterior | Window Frames | Window Frame | J169642-001-004 | Positive | Non-friable |\n| Boiler Room | Fire Door | Fire Door(s) | Not Sampled | Assumed Positive | Friable |\n| Mortuary Room | Ceiling | Ceiling | Not Sampled | Assumed Positive | Non-friable |\n| Mortuary Room | Wall | Wall(s) | Not Sampled | Negative | Non-friable |\n| Shower Room | Cubicle - Behind Ceramic Tile | Shower Cubicle | Not Sampled | Assumed Positive | Non-friable |\n| Shower Room | Cubicle - Beneath Shower Tray | Shower Cubicle | Not Sampled | Assumed Positive | Non-friable |\n| Shower Room | Above Door | Infill panels | As Per J134889-01 | Negative | Non-friable |",
+      "table_type": "docling_direct_api",
+      "source_id": null,
+      "_building": "Mortuary Buildings"
+    },
+    {
+      "page_start": 10,
+      "page_end": 10,
+      "raw_text": "| Room | Location | Product | Sample No | Result | Friable |\n|---|---|---|---|---|---|\n| Kitchen | Under Sink - Sink Lining | Lining | J169642-001-019 | Negative | Non-friable |",
+      "table_type": "docling_direct_api",
+      "source_id": null,
+      "_building": "Pathology Department"
+    },
+    {
+      "page_start": 11,
+      "page_end": 12,
+      "raw_text": "| Room | Location | Product | Sample No | Result | Friable |\n|---|---|---|---|---|---|\n| Exterior | Beneath Window Wall | Unknown | J169642-001-021 | Negative | Non-friable |\n| Exterior | On Ground Debris | Debris | As Per J169642-001-020 | Assumed Positive | Friable |\n| Exterior | Debris | Debris | J169642-001-020 | Positive | Friable |\n| Exterior | Eaves | Eaves | Not Sampled | Assumed Positive | Non-friable |",
+      "table_type": "docling_direct_api",
+      "source_id": null,
+      "_building": "VMO Accommodations"
+    },
+    {
+      "page_start": 13,
+      "page_end": 20,
+      "raw_text": "| Room | Location | Product | Sample No | Result | Friable |\n|---|---|---|---|---|---|\n| Exterior | Adjacent Workshop Gable End | Gable lining | J169642-001-018 | Positive | Non-friable |\n| Roof | Ductwork | Ductwork | Not Sampled | Assumed Positive | Non-friable |\n| Exterior | Porch Ceiling | Porch ceiling | As Per 35766/11 | Positive | Non-friable |\n| Exterior | South Window Frames | Window Frame | J169642-001-016 | Negative | Non-friable |\n| North Courtyard | Expansion Joint | Expansion joint | J169642-001-015 | Positive | Non-friable |\n| Bathroom Adjacent Labour Ward | Shower Cubicle - Beneath Shower Tray | Shower Cubicle | Not Sampled | Assumed Positive | Non-friable |\n| Boiler Room South | Mezzanine Floor | Flue | J169642-001-006 | Positive | Non-friable |\n| Boiler Room South | Mezzanine Floor - Plant and Equipment | Boiler Gasket | J169642-001-005 | Negative | Non-friable |\n| CCSD - Entry | Fire Door | Fire Door(s) | Not Sampled | Assumed Positive | Friable |\n| East Passage | Floor | Floor covering adhesive | J169642-001-010 | Negative | Non-friable |\n| East Passage - Linen Store | Floor | Floor covering | J169642-001-011 | Negative | Non-friable |\n| East Passage - Linen Store | Floor | Floor covering | J169642-001-013 | Negative | Non-friable |\n| East Passage - Linen Store | Floor | Floor covering adhesive | J169642-001-012 | Negative | Non-friable |\n| Flamable Liquids Store | Ceiling | Ceiling | Not Sampled | Assumed Positive | Non-friable |\n| Former Laundry | Stored Item | Stored item(s) | As Per J169642-001-017 | Assumed Negative | Non-friable |\n| Former Laundry - External Passage | Electrical Distribution Board | Electrical board | Not Sampled | Assumed Positive | Non-friable |\n| Medical Imprest Store Room | Floor | Floor covering | J169642-001-008 | Negative | Non-friable |\n| Multi Purpose Area  Adjacent CCSD | Fire Door | Fire Door(s) | Not Sampled | Assumed Positive | Friable |\n| Rear Exit Foyer Adjacent Medical Records | Floor | Floor covering (beneath carpet) | 35766/07 35766/08X | Positive | Non-friable |\n| Reception | Safe | Insulation | Not Sampled | Assumed Positive | Friable |\n| South Store Room | Ceiling | Ceiling | Not Sampled | Assumed Positive | Non-friable |\n| Store Offices | Ceiling | Ceiling | Not Sampled | Assumed Positive | Non-friable |\n| Utility Room Adjacent Ward 10 | Under Sink Shelf | Shelving | J169642-001-014 | Positive | Friable |\n| Ward 12 | Floor | Floor covering | As Per J169642-001-007 | Assumed Negative | Non-friable |\n| Ward 12 | Shower Cubicle - Beneath Shower Tray | Shower Cubicle | Not Sampled | Assumed Positive | Non-friable |\n| West Passage | Adjacent CCSD Fire Door | Fire Door(s) | Not Sampled | Assumed Positive | Friable |\n| Workshop | Infill Panels | Infill panels | J169642-001-017 | Negative | Non-friable |\n| Workshop | Stored Item | Stored item(s) | As Per J169642-001-017 | Assumed Negative | Non-friable |\n| Workshop | Above Flue Boxing Heater | Heater flue | As Per J169642-001-017 | Assumed Negative | Non-friable |",
+      "table_type": "docling_direct_api",
+      "source_id": null,
+      "_building": "Old Alexandra Hospital"
+    }
+  ]
+}

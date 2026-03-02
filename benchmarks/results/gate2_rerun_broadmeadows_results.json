@@ -1,0 +1,32 @@
+[
+  {
+    "document_name": "Broadmeadows Police Station",
+    "ground_truth_count": 31,
+    "extracted_count": 32,
+    "matched_count": 30,
+    "recall": 0.967741935483871,
+    "precision": 0.9375,
+    "field_accuracy": 0.7095238095238096,
+    "latency_s": 136.854,
+    "token_usage": 0,
+    "cost_usd": 0.0,
+    "error": null,
+    "unmatched_gt": [
+      {
+        "building_name": "Broadmeadows Police Station",
+        "room_name": "Property Storage",
+        "location": "Floor",
+        "product": "Floor covering",
+        "sample_no": "34511-039-017",
+        "sample_result": "Negative",
+        "friable": "Non-friable",
+        "internal_external": "Internal",
+        "level": "Ground"
+      }
+    ],
+    "unmatched_extracted": [
+      "Ceiling space throughout/Flange joints",
+      "Ceiling Space/Unknown"
+    ]
+  }
+]

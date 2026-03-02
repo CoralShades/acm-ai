@@ -491,6 +491,26 @@ The content below is structured MinerU HTML table output.
 
 {% endif %}
 
+{% if input_format is defined and input_format == "markdown" %}
+## CRITICAL: Structured Table Extraction Rules
+
+The structured table data below contains the AUTHORITATIVE register entries.
+Your task is to extract EXACTLY ONE record per table row. No exceptions.
+
+RULES:
+1. COUNT the rows in each structured table. Your output MUST have the same count.
+2. TWO rows in the same room with the same product are TWO SEPARATE records if
+   they have different locations (e.g., "Switchboard" vs "Auto Battery Charger").
+   Extract BOTH.
+3. Rows containing "Same as", "As Per", "Not Sampled", "Assumed positive",
+   "No Access", or "Height restriction" are ALL valid records. Extract them.
+4. If a row has no sample number, it is still a valid record. Do not skip it.
+5. "No Access" means the area could not be inspected — extract as:
+   - sample_result: "Assumed Positive"
+   - no_access: true
+   - Add "No access - area could not be inspected" to data_issues
+{% endif %}
+
 ## Content to Extract
 
 ```{% if input_format is defined and input_format == "html" %}html{% else %}text{% endif %}

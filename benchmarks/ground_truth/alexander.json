@@ -1,0 +1,412 @@
+{
+  "document": {
+    "name": "Alexander District Hospital",
+    "pdf_path": "docs/samplePDF/Clucth_Alexander_District_Hospital.pdf",
+    "source": "docs/samplePDF/Alexander_GroundTruth.csv",
+    "total_buildings": 5,
+    "total_records": 43,
+    "consultant": "Greencap Pty Ltd"
+  },
+  "match_keys": {
+    "primary": "sample_no",
+    "secondary": [
+      "building_name",
+      "room_name",
+      "location",
+      "product"
+    ],
+    "tertiary": [
+      "room_name",
+      "location"
+    ]
+  },
+  "records": [
+    {
+      "building_name": "Myrtle Street Clinic",
+      "room_name": "Exterior",
+      "location": "Eaves",
+      "product": "Eaves",
+      "sample_no": "J169642-001-001",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Myrtle Street Clinic",
+      "room_name": "Exterior",
+      "location": "Wall",
+      "product": "Wall(s)",
+      "sample_no": "J169642-001-002",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Mortuary Buildings",
+      "room_name": "Exterior",
+      "location": "Window Frames",
+      "product": "Window Frame",
+      "sample_no": "J169642-001-004",
+      "sample_result": "Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Mortuary Buildings",
+      "room_name": "Boiler Room",
+      "location": "Fire Door",
+      "product": "Fire Door(s)",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "Mortuary Buildings",
+      "room_name": "Mortuary Room",
+      "location": "Ceiling",
+      "product": "Ceiling",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Mortuary Buildings",
+      "room_name": "Mortuary Room",
+      "location": "Wall",
+      "product": "Wall(s)",
+      "sample_no": "Not Sampled",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Mortuary Buildings",
+      "room_name": "Shower Room",
+      "location": "Cubicle - Behind Ceramic Tile",
+      "product": "Shower Cubicle",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Mortuary Buildings",
+      "room_name": "Shower Room",
+      "location": "Cubicle - Beneath Shower Tray",
+      "product": "Shower Cubicle",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Mortuary Buildings",
+      "room_name": "Shower Room",
+      "location": "Above Door",
+      "product": "Infill panels",
+      "sample_no": "As Per J134889-01",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Pathology Department",
+      "room_name": "Kitchen",
+      "location": "Under Sink - Sink Lining",
+      "product": "Lining",
+      "sample_no": "J169642-001-019",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "VMO Accommodations",
+      "room_name": "Exterior",
+      "location": "Beneath Window Wall",
+      "product": "Unknown",
+      "sample_no": "J169642-001-021",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "VMO Accommodations",
+      "room_name": "Exterior",
+      "location": "On Ground Debris",
+      "product": "Debris",
+      "sample_no": "As Per J169642-001-020",
+      "sample_result": "Assumed Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "VMO Accommodations",
+      "room_name": "Exterior",
+      "location": "Debris",
+      "product": "Debris",
+      "sample_no": "J169642-001-020",
+      "sample_result": "Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "VMO Accommodations",
+      "room_name": "Exterior",
+      "location": "Eaves",
+      "product": "Eaves",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Exterior",
+      "location": "Adjacent Workshop Gable End",
+      "product": "Gable lining",
+      "sample_no": "J169642-001-018",
+      "sample_result": "Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Roof",
+      "location": "Ductwork",
+      "product": "Ductwork",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Exterior",
+      "location": "Porch Ceiling",
+      "product": "Porch ceiling",
+      "sample_no": "As Per 35766/11",
+      "sample_result": "Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Exterior",
+      "location": "South Window Frames",
+      "product": "Window Frame",
+      "sample_no": "J169642-001-016",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "North Courtyard",
+      "location": "Expansion Joint",
+      "product": "Expansion joint",
+      "sample_no": "J169642-001-015",
+      "sample_result": "Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Bathroom Adjacent Labour Ward",
+      "location": "Shower Cubicle - Beneath Shower Tray",
+      "product": "Shower Cubicle",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Boiler Room South",
+      "location": "Mezzanine Floor",
+      "product": "Flue",
+      "sample_no": "J169642-001-006",
+      "sample_result": "Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Boiler Room South",
+      "location": "Mezzanine Floor - Plant and Equipment",
+      "product": "Boiler Gasket",
+      "sample_no": "J169642-001-005",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "CCSD - Entry",
+      "location": "Fire Door",
+      "product": "Fire Door(s)",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "East Passage",
+      "location": "Floor",
+      "product": "Floor covering adhesive",
+      "sample_no": "J169642-001-010",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "East Passage - Linen Store",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "J169642-001-011",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "East Passage - Linen Store",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "J169642-001-013",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "East Passage - Linen Store",
+      "location": "Floor",
+      "product": "Floor covering adhesive",
+      "sample_no": "J169642-001-012",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Flamable Liquids Store",
+      "location": "Ceiling",
+      "product": "Ceiling",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Former Laundry",
+      "location": "Stored Item",
+      "product": "Stored item(s)",
+      "sample_no": "As Per J169642-001-017",
+      "sample_result": "Assumed Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Former Laundry - External Passage",
+      "location": "Electrical Distribution Board",
+      "product": "Electrical board",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Medical Imprest Store Room",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "J169642-001-008",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Multi Purpose Area  Adjacent CCSD",
+      "location": "Fire Door",
+      "product": "Fire Door(s)",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Rear Exit Foyer Adjacent Medical Records",
+      "location": "Floor",
+      "product": "Floor covering (beneath carpet)",
+      "sample_no": "35766/07 35766/08X",
+      "sample_result": "Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Reception",
+      "location": "Safe",
+      "product": "Insulation",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "South Store Room",
+      "location": "Ceiling",
+      "product": "Ceiling",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Store Offices",
+      "location": "Ceiling",
+      "product": "Ceiling",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Utility Room Adjacent Ward 10",
+      "location": "Under Sink Shelf",
+      "product": "Shelving",
+      "sample_no": "J169642-001-014",
+      "sample_result": "Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Ward 12",
+      "location": "Floor",
+      "product": "Floor covering",
+      "sample_no": "As Per J169642-001-007",
+      "sample_result": "Assumed Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Ward 12",
+      "location": "Shower Cubicle - Beneath Shower Tray",
+      "product": "Shower Cubicle",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "West Passage",
+      "location": "Adjacent CCSD Fire Door",
+      "product": "Fire Door(s)",
+      "sample_no": "Not Sampled",
+      "sample_result": "Assumed Positive",
+      "friable": "Friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Workshop",
+      "location": "Infill Panels",
+      "product": "Infill panels",
+      "sample_no": "J169642-001-017",
+      "sample_result": "Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Workshop",
+      "location": "Stored Item",
+      "product": "Stored item(s)",
+      "sample_no": "As Per J169642-001-017",
+      "sample_result": "Assumed Negative",
+      "friable": "Non-friable"
+    },
+    {
+      "building_name": "Old Alexandra Hospital",
+      "room_name": "Workshop",
+      "location": "Above Flue Boxing Heater",
+      "product": "Heater flue",
+      "sample_no": "As Per J169642-001-017",
+      "sample_result": "Assumed Negative",
+      "friable": "Non-friable"
+    }
+  ]
+}
