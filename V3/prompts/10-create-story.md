@@ -14,7 +14,7 @@
 - `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md` — Story definition
 - `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md` — Architecture context
 - `docs/sprint-artifacts/sprint-status.yaml` — Current status
-- Sprint plan from Step 09
+- `docs\sprint-artifacts\v3-sprint-plan.md` -  Sprint plan
 
 ### Story-Specific Context (varies per story — update {PLACEHOLDERS})
 - Any prerequisite stories that are already `done` — read their tech specs
