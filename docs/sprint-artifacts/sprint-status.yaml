@@ -34,16 +34,16 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-02
+updated: 2026-03-03
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-03-02
+  last_reconciled: 2026-03-03
   reconciled_branches: [main, ACMV3]
-  notes: "E29 planning reconciliation 2026-03-01: unified pipeline execution order finalized (8 stories, 4 gates). E29 added as backlog epic pending story artifact drafting. E28 closeout retained: Alexander 29/43→36/43 (+7), Broadmeadows 31/31 maintained."
+  notes: "V3 Sprint Planning 2026-03-03: 5 V3 epics (E30-E34) added, 33 stories, 97 SP. Schema freeze gate after E30-S6. Critical path: E30→E31→E32→E33-S3→E34. Parallel lane: E33-S1,S2 after E30. E32-S6 and E30-S8 independent. Source: Party Mode plan, readiness report Step 08 (CONDITIONAL GO → fixes applied Step 08b), PRD v3.0, Architecture v3.0."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -402,6 +402,97 @@ development_status:
   bug-stale-commands-cleanup: done  # 2026-02-26: 11 running → failed (null claimed_by, pre-atomic-claim residue). 0 duplicate acm_records found. extraction_progress clean (2 failed, 0 running).
   bug-data-issues-schema-validation: done  # 2026-02-26: data_issues List[str] → field_validator coerces null→[] in ACMExtractionRecord. Also: _normalize_extraction_json None branch + null-safe _merge_records. 18 tests added (tests/test_acm_schemas.py). 194 tests pass. Was blocking 100% record loss (0/31).
   bug-agui-path-alignment: done  # 2026-02-26: /copilot → /api/copilotkit. Created missing route.ts, updated CopilotProvider runtimeUrl, fixed stale comments, updated ag-ui-pipeline-spec.md. npm run build ✓ lint ✓
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # V3 — Salesforce Alignment + Multi-Provider Extraction + Two-View UI
+  # ═══════════════════════════════════════════════════════════════════════
+  # Planning: Party Mode 2026-03-02, Sprint Planning 2026-03-03
+  # Source: 05-epics-and-stories.md (V3 section), v3-party-mode-plan.md
+  # Total: 5 epics, 33 stories, 97 SP, ~32-42 days estimated
+  # Critical path: E30 → E31 → E32 → E33-S3+ → E34
+  # Parallel lane: E33-S1,S2 can start after E30 schema freeze gate
+  # Gate: SCHEMA FREEZE after E30-S6 (blocks E31, E32, E33, E34)
+
+  # ─────────────────────────────────────────────────────
+  # Epic 30: V3 Foundation — Schema + Config (P0)
+  # 8 stories, 29 SP. Gates ALL downstream V3 epics.
+  # Dependencies: E29 S1-S4 (completed)
+  # FRs: FR-1401..FR-1412
+  # ─────────────────────────────────────────────────────
+  epic-30: backlog
+  e30-s1-sf-schema-config-loader: backlog            # 5 SP. No deps. FIRST V3 STORY — unblocks S2,S3,S4,S7,S8
+  e30-s2-building-record-table-domain-model: backlog  # 5 SP. Blocked by S1. New building_record table + BuildingRecord model
+  e30-s3-acm-record-sf-item-alignment: backlog        # 3 SP. Blocked by S1. Pydantic SF aliases for Item__c fields
+  e30-s4-dependent-picklist-validator: backlog         # 5 SP. Blocked by S1. SalesforcePicklistValidator + dependency chains
+  e30-s5-data-migration-script: backlog               # 3 SP. Blocked by S2, S3. Migrate existing records to new schema
+  e30-s6-bar-sf-vocabulary-transition: backlog         # 2 SP. Blocked by S3. BAR→SF vocab in validators, prompts, 33+ test files
+  # ═══ SCHEMA FREEZE GATE after S6 ═══ — E31/E32/E33/E34 blocked until S1-S6 done
+  e30-s7-two-phase-extraction-prompts: backlog        # 3 SP. Blocked by S1,S2,S3. CAN proceed in parallel with E31 (post-freeze)
+  e30-s8-anthropic-direct-api-openrouter-fallback: backlog  # 3 SP. Blocked by S1. CAN proceed in parallel with E31 (post-freeze)
+  epic-30-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # Epic 31: V3 Multi-Provider Extraction (P0)
+  # 7 stories, 18 SP
+  # Dependencies: E30 Schema Freeze Gate (S1-S6 done)
+  # FRs: FR-1501..FR-1506, FR-1701, FR-1704
+  # ─────────────────────────────────────────────────────
+  epic-31: backlog
+  e31-s1-mineru-2x-integration-validation: backlog    # 2 SP. Post schema freeze. MinerU install + benchmark validation
+  e31-s2-provider-adapter-framework: backlog           # 3 SP. Blocked by S1. ExtractionProvider protocol + DoclingAdapter + MinerUAdapter
+  e31-s3-consensus-layer-core: backlog                 # 3 SP. Blocked by S2. RecordMatcher + ConsensusEngine + ConflictResolver
+  e31-s4-raw-extraction-table-storage: backlog         # 2 SP. Blocked by S2. New raw_extraction_table + per-provider storage
+  e31-s5-pipeline-integration: backlog                 # 3 SP. Blocked by S3, S4. Wire dual-provider into orchestrator + consensus
+  e31-s6-dual-provider-benchmark: backlog              # 2 SP. Blocked by S5. Broadmeadows 31/31, Alexander ≥40/43 consensus validation
+  e31-s7-pipeline-event-bus-sse-infrastructure: backlog  # 3 SP. Blocked by S5. PipelineEventBus + SSE endpoints + Zustand streaming
+  epic-31-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # Epic 32: V3 AI Processing & Validation (P0)
+  # 6 stories, 16 SP
+  # Dependencies: E30 (schema), E31 (providers — consensus tables)
+  # FRs: FR-1409..FR-1412, FR-1801..FR-1804
+  # ─────────────────────────────────────────────────────
+  epic-32: backlog
+  e32-s1-building-ai-extraction-node: backlog          # 3 SP. Blocked by E31-S5, E30-S7. Building__c extraction via Claude Sonnet
+  e32-s2-item-ai-extraction-node: backlog              # 3 SP. Blocked by S1. Item__c extraction with Item_Name subsetting
+  e32-s3-sf-validation-correction-loop: backlog        # 3 SP. Blocked by S2, E30-S4. Pydantic validation + AI correction max 3 retries
+  e32-s4-classifier-update-sf-taxonomy: backlog        # 2 SP. Blocked by E30-S6. Update 60+ regex patterns BAR→SF
+  e32-s5-extraction-pipeline-e2e-test: backlog         # 3 SP. Blocked by S1-S4. Full V3 E2E: upload→extract→consensus→AI→validate
+  e32-s6-ollama-model-evaluation-spike: backlog        # 2 SP. Blocked by E30-S8 only. Independent spike: llama3.1, qwen2.5, mistral
+  epic-32-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # Epic 33: V3 Frontend & UX (P0)
+  # 8 stories, 25 SP
+  # Dependencies: E30 (schema/API contracts), E32 (AI data for grids)
+  # S1-S2 can start after E30 schema freeze; S3-S8 after E32
+  # FRs: FR-1406, FR-1407, FR-1601..FR-1611
+  # ─────────────────────────────────────────────────────
+  epic-33: backlog
+  e33-s1-upload-wizard-extraction-progress: backlog    # 3 SP. Post schema freeze + E31-S7 (SSE). Upload wizard + SSE progress
+  e33-s2-building-grid-item-grid-two-view: backlog     # 5 SP. Post schema freeze + E30-S2 (API). Building sidebar + Item AG Grid
+  e33-s3-dependent-picklist-cell-editors: backlog      # 3 SP. Blocked by E32, E30-S4. AG Grid cascading picklist editors
+  e33-s4-sf-validation-badges-record-wizard: backlog   # 3 SP. Blocked by S2, S3, E30-S4. Inline badges + record wizard modal
+  e33-s5-raw-table-review: backlog                     # 3 SP. Blocked by E31-S4, S2. Raw extraction AG Grid (opt-in)
+  e33-s6-provenance-viewer: backlog                    # 3 SP. Blocked by E31-S4, S2. PDF.js + bbox overlay + lineage table
+  e33-s7-building-detail-page: backlog                 # 3 SP. Blocked by E30-S2, S2. Building__c detail form with picklist editing
+  e33-s8-salesforce-ready-export-ui: backlog           # 2 SP. Blocked by E30-S2, E30-S3, S4. Building__c + Item__c CSV/Excel export
+  epic-33-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # Epic 34: V3 Integration, Streaming & Polish (P0)
+  # 4 stories, 9 SP
+  # Dependencies: E30-E33 (builds on all prior)
+  # SSE infra moved to E31-S7 (timing fix from Step 08b)
+  # FRs: FR-1702, FR-1703
+  # ─────────────────────────────────────────────────────
+  epic-34: backlog
+  e34-s1-record-by-record-streaming: backlog           # 2 SP. Blocked by E31-S7, E33-S2. Records appear in grid as validated
+  e34-s2-bulk-operations: backlog                      # 2 SP. Blocked by E33-S2, E33-S4, E31-S7. Multi-select, bulk edit/validate/export
+  e34-s3-performance-optimization: backlog             # 2 SP. Blocked by E31-S5, E32-S5. Broadmeadows <120s, Alexander <300s
+  e34-s4-canonical-artifact-update: backlog            # 3 SP. Last story — or parallel with S1-S3. PRD, arch, epics, sprint-status, CLAUDE.md
+  epic-34-retrospective: optional
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
