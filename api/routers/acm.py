@@ -51,6 +51,7 @@ from api.models import (
     RawTableResponse,
     ReEmbedRequest,
     ReEmbedResponse,
+    SFFieldSchemaConfigResponse,
     SiteConfigRequest,
     SiteConfigResponse,
     SiteConfigTemplateResponse,
@@ -2081,3 +2082,41 @@ async def reset_field_mapping():
     except Exception as e:
         logger.error(f"Error resetting field mapping: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SF Field Schema Endpoint (E30-S1 — V3 Foundation)
+# =============================================================================
+
+
+@router.get("/field-schema", response_model=SFFieldSchemaConfigResponse)
+async def get_sf_field_schema():
+    """Get the current Salesforce field schema configuration.
+
+    Returns the SF schema bundle parsed from V3 markdown files.
+    Falls back to in-memory parse if DB record is not yet populated.
+
+    Returns:
+        SFFieldSchemaConfigResponse with building_fields, item_fields,
+        picklists, and dependency chains.
+    """
+    from open_notebook.extractors.parsers.config_loader import (
+        SFSchemaLoadError,
+        load_sf_field_schema,
+    )
+
+    try:
+        schema = load_sf_field_schema()
+        return SFFieldSchemaConfigResponse(**schema.model_dump())
+    except SFSchemaLoadError as e:
+        logger.error(f"SF schema load error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"SF schema not available: {e}",
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error loading SF schema: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"SF schema not available: {e}",
+        )

@@ -1143,3 +1143,75 @@ class FieldMappingUpdateRequest(BaseModel):
         None, description="Column mappings"
     )
     notes: Optional[str] = None
+
+
+# =============================================================================
+# SF Field Schema Config Models (E30-S1 — V3 Foundation)
+# =============================================================================
+
+
+class SFFieldDefResponse(BaseModel):
+    """Single Salesforce field definition."""
+
+    api_name: str = Field(..., description="Salesforce API name (primary key)")
+    label: str = Field(..., description="Human-readable label")
+    field_type: str = Field(..., description="Field type: string, picklist, boolean, etc.")
+    length: Optional[int] = Field(None, description="Max field length")
+    nillable: bool = Field(..., description="Whether the field can be null")
+    custom: bool = Field(..., description="Whether this is a custom field")
+    calc: bool = Field(..., description="Whether this is a formula/rollup field")
+    updateable: bool = Field(..., description="Whether the field can be updated via API")
+    notes: Optional[str] = Field(None, description="Additional notes from SF schema")
+    is_restricted_picklist: bool = Field(
+        ..., description="Whether this is a restricted picklist"
+    )
+    is_dependent: bool = Field(
+        ..., description="Whether this picklist depends on a controller field"
+    )
+    controller_field: Optional[str] = Field(
+        None, description="API name of the controller field (if dependent)"
+    )
+
+
+class SFDependencyChainResponse(BaseModel):
+    """A dependent picklist chain mapping."""
+
+    controller_api_name: str = Field(..., description="Controller picklist API name")
+    dependent_api_name: str = Field(..., description="Dependent picklist API name")
+    mapping: Dict[str, Any] = Field(
+        ..., description="controller_value -> valid dependent value(s)"
+    )
+
+
+class SFFieldSchemaObjectResponse(BaseModel):
+    """Field schema for a single Salesforce object."""
+
+    object_name: str = Field(..., description="Salesforce object API name")
+    object_label: str = Field(..., description="Salesforce object label")
+    total_fields: int = Field(..., description="Total number of fields")
+    custom_fields: int = Field(..., description="Number of custom fields")
+    picklist_fields: int = Field(..., description="Number of picklist fields")
+    fields: List[SFFieldDefResponse] = Field(..., description="All field definitions")
+    picklists: Dict[str, List[str]] = Field(
+        ..., description="Picklist api_name -> [values]"
+    )
+    version: str = Field(..., description="Schema version")
+
+
+class SFFieldSchemaConfigResponse(BaseModel):
+    """Full SF schema bundle response."""
+
+    version: str = Field(..., description="Schema version")
+    building_fields: SFFieldSchemaObjectResponse = Field(
+        ..., description="Building__c field schema"
+    )
+    item_fields: SFFieldSchemaObjectResponse = Field(
+        ..., description="Item__c field schema"
+    )
+    picklists: Dict[str, List[str]] = Field(
+        ..., description="Combined picklists from both objects"
+    )
+    dependencies: List[SFDependencyChainResponse] = Field(
+        ..., description="All dependency chains"
+    )
+    loaded_at: Optional[str] = Field(None, description="ISO timestamp when schema was loaded")

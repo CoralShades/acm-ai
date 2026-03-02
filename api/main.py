@@ -39,6 +39,7 @@ logger.add(
 
 from api.auth import PasswordAuthMiddleware
 from api.model_provisioning import run_model_provisioning
+from api.sf_schema_provisioning import run_sf_schema_provisioning
 from api.routers import (
     a2a,
     acm,
@@ -114,6 +115,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Model provisioning failed (non-fatal): {e}")
         # Don't fail startup - models can be configured via UI
+
+    # Load Salesforce field schema into DB (V3 Foundation)
+    try:
+        await run_sf_schema_provisioning()
+    except Exception as e:
+        logger.warning(f"SF schema provisioning failed (non-fatal): {e}")
 
     logger.success("API initialization completed successfully")
 
