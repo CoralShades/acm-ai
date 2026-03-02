@@ -11,3 +11,21 @@
 - [x] Debate Topic 5: AI Model Strategy (All agents)
 - [x] Synthesize into v3-party-mode-plan.md
 - [x] Verification checklist pass
+
+## Phase: Follow-Up — Open Question Resolution + AI Provider Update
+
+- [x] Resolve Q1: Confirm Building_Sub_Category__c absent from SF schema
+- [x] Resolve Q2: Validation policy — WARN on edit, REJECT on export
+- [x] Resolve Q3: MinerU torch — test in E31-S1, subprocess bridge contingency
+- [x] Resolve Q4: Google Doc AI — confirmed deferred
+- [x] Resolve Q5: Cell-level bbox — accepted (~250KB negligible)
+- [x] Resolve Q6: E29 R1/R2 — review during E32 story writing
+- [x] Update Topic 3 table: OpenRouter fallback + Ollama full support
+- [x] Update Topic 5 table: Multi-provider compatibility
+- [x] Add E32-S6: Ollama Model Evaluation Spike (2 SP)
+- [x] Add Capability Registry Routing Table (6 task types)
+- [x] Update FR-1409 amendment: Anthropic default + OpenRouter fallback
+- [x] Update E30-S4: Remove SubCategory, add WARN/REJECT policy
+- [x] Update E30-S8: OpenRouter fallback preservation
+- [x] Update totals: 32 stories, 90 SP
+- [x] Update planning support files (progress.md, findings.md)

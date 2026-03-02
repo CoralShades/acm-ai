@@ -11,3 +11,7 @@
 7. **Solution Architecture V3** — Client-facing spec defines 5-phase pipeline, per-building extraction, SF schema drives everything.
 8. **Heuristic rules** — 60+ regex patterns carry forward. BAR vocabulary must transition to SF vocabulary.
 9. **Current BAR "Good" → SF "Stable"** — Cross-cutting vocabulary mismatch affects 33+ test files.
+10. **Building_Sub_Category__c does NOT exist** — Confirmed absent from `building_fields_summary.md`. Dependency chain is BuildingType→Category only (2 levels, not 3). E30-S4 simplified.
+11. **Validation policy: WARN on edit, REJECT on export** — Officers see inline AG Grid badges (red/orange/yellow). Export grayed out until all validation errors resolved.
+12. **OpenRouter MUST remain fully supported** — Not just Anthropic direct. Fallback chain: Anthropic → OpenRouter. Admin toggle. Esperanto retained for non-extraction tasks.
+13. **Ollama model candidates**: `llama3.1:8b`, `qwen2.5:7b`, `mistral:7b` for classification + enrichment evaluation spike (E32-S6).

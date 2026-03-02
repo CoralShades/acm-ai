@@ -42,17 +42,31 @@
 
 | Question | Decision | Rationale |
 |----------|----------|-----------|
-| Extraction provider | Anthropic Claude Sonnet direct API (FR-1409) | Remove OpenRouter intermediary. Direct API for reliability + feature parity |
-| Classification | Regex first (80%), Claude Sonnet fallback | Existing E29 classifier pattern. Cost-efficient |
-| Enrichment | Configurable: Ollama local OR Claude Haiku | Low-stakes, high-volume. Officer doesn't see model choice |
+| **Primary extraction** | Anthropic Claude Sonnet direct API (FR-1409) | Default for Building__c + Item__c extraction. Direct API for reliability + structured output |
+| **OpenRouter fallback** | **MUST remain fully supported** | Fallback chain: Anthropic direct → OpenRouter (same model or alternative). Admin setting to switch. All non-extraction tasks (chat, search, general AI) continue via Esperanto/OpenRouter |
+| **OpenRouter compatibility** | Full structured output (tool_use/function calling) via OpenRouter API | Pydantic model serialization compatible with both Anthropic direct + OpenRouter request/response formats |
+| Classification | Regex first (80%), Ollama local fallback, Claude Sonnet last resort | 3-tier cascade: regex → Ollama (llama3.1:8b or similar) → Claude. Cost-efficient |
+| Enrichment | Configurable: Ollama local OR Claude Haiku via OpenRouter | Low-stakes, high-volume. Officer doesn't see model choice |
 | Embeddings | Ollama local ONLY | $0 cost, no cloud dependency, no data leaves machine |
+| **Ollama model evaluation** | Spike story in E32: test `llama3.1:8b`, `qwen2.5:7b`, `mistral:7b` | Evaluate for classification + enrichment tasks. Select 1-2 models for production use |
 | Token limits | Not a practical constraint (200K context) | Typical building section: 3-8K tokens. Batch large buildings at ~15 items/call |
 | Batching granularity | Per-building (existing orchestrator pattern) | Two calls per building: Building__c fields, then Item__c fields |
-| Structured output | Pydantic models via Claude `tool_use` | `BuildingExtractionResult` + `ACMItemExtractionResult` Pydantic schemas |
-| Provider failure | Existing F7 fallback + skip building + preserve partial results | No cascading failure. Each building is independent |
-| Esperanto abstraction | Remove from extraction path. Keep for Ollama/enrichment | Extraction: direct `ChatAnthropic`. Other tasks: Esperanto model provisioning |
-| Capability registry | Extend E29-S4 with `ModelCapability` enum + `ModelPolicy` | `EXTRACTION`, `CLASSIFICATION`, `ENRICHMENT`, `EMBEDDING` capabilities |
+| Structured output | Pydantic models via Claude `tool_use` | `BuildingExtractionResult` + `ACMItemExtractionResult` Pydantic schemas. Compatible with both Anthropic direct + OpenRouter |
+| Provider failure | Anthropic → OpenRouter fallback → skip building + preserve partial | No cascading failure. Each building is independent. Admin can force OpenRouter-only mode |
+| Esperanto abstraction | Keep for Ollama/enrichment/chat. Extraction uses direct API with OpenRouter fallback | Extraction: direct `ChatAnthropic` → OpenRouter fallback. Other tasks: Esperanto model provisioning |
+| **Capability registry** | Extend E29-S4 with `ModelCapability` enum + `ModelPolicy` + provider routing | See Capability Registry Routing Table below |
 | Cost projection | ~$1,000-1,650 for 2,000 documents | < 1% of manual cost ($200K-400K). Optimize for accuracy, not cost |
+
+#### Capability Registry Routing Table
+
+| Task Type | Default Provider | Fallback | Admin Override? |
+|-----------|-----------------|----------|:--------------:|
+| `EXTRACTION` | Anthropic Claude Sonnet (direct API) | OpenRouter (same or alt model) | YES — can switch to OpenRouter-only |
+| `CLASSIFICATION` | Regex patterns (80% hit rate) | Ollama local → Claude Sonnet | YES — can skip Ollama tier |
+| `ENRICHMENT` | Ollama local (llama3.1:8b) | Claude Haiku via OpenRouter | YES — can force cloud-only |
+| `EMBEDDING` | Ollama local (nomic-embed-text) | None (local only) | NO — always local |
+| `CHAT` | Esperanto/OpenRouter (user-selected model) | N/A | YES — model selector |
+| `SEARCH` | Esperanto/OpenRouter | N/A | YES — model selector |
 
 ### Topic 4: SSE Streaming + AG-UI
 
@@ -71,12 +85,15 @@
 
 | Question | Decision | Rationale |
 |----------|----------|-----------|
-| Extraction AI | Anthropic Claude Sonnet ONLY (direct API) | FR-1409 approved. Adapter pattern mitigates lock-in |
-| FR-1409 clarification | "Sole AI **interpretation** provider for extraction" | Ollama for embeddings and Google Doc AI for table extraction are not "extraction AI" |
-| User-facing AI choice | **Invisible.** No model selection in upload wizard | Officers care about accuracy, not which model runs. Admin settings only |
+| **Primary extraction AI** | Anthropic Claude Sonnet (direct API) — **default, not exclusive** | FR-1409 approved. Direct API for structured output + reliability |
+| **OpenRouter support** | **FULLY SUPPORTED** — secondary extraction path + all non-extraction AI | Current pipeline uses OpenRouter via Esperanto. V3 MUST NOT break this. Admin toggle: Anthropic direct vs OpenRouter |
+| **Ollama local** | Supported for: embeddings, classification fallback, enrichment | 3 candidate models for evaluation: `llama3.1:8b`, `qwen2.5:7b`, `mistral:7b` |
+| FR-1409 clarification | "Sole AI **interpretation** provider for extraction" — Anthropic is DEFAULT, OpenRouter is FALLBACK | Ollama for embeddings/classification, Google Doc AI for table extraction, and OpenRouter for non-extraction tasks are all permitted |
+| User-facing AI choice | **Invisible.** No model selection in upload wizard | Officers care about accuracy, not which model runs. Admin settings page for provider routing |
+| **Admin controls** | Settings page: switch extraction between Anthropic direct vs OpenRouter, configure Ollama models, set fallback behavior | Per-task-type provider routing via capability registry |
 | Testing matrix | Nightly: full `{provider} × {model} × {format}`. Per-PR: Broadmeadows only | CI cost: ~$0.50/run for Claude API |
-| Vendor lock-in | Mitigated by adapter pattern + Pydantic structured output | Switching AI provider = prompt rewrite, not architecture change |
-| Data sovereignty | Anthropic: API data NOT used for training. Ollama: fully local | VAEA-compliant. Google Assured Workloads available for future |
+| Vendor lock-in | Mitigated by adapter pattern + Pydantic structured output + OpenRouter fallback | Switching AI provider = prompt rewrite + admin toggle, not architecture change |
+| Data sovereignty | Anthropic: API data NOT used for training. Ollama: fully local. OpenRouter: per-provider policy | VAEA-compliant. Google Assured Workloads available for future |
 
 ---
 
@@ -152,11 +169,11 @@ Phase 5: Review & Export
 | E30-S1 | SF Schema Config Loader | 5 | Parse building_list.txt + item_list.txt → JSON configs. Load into field_schema table. Dependency chain mappings. Startup loading. |
 | E30-S2 | Building Record Table + Domain Model | 5 | New migration: building_record with 29 extractable SF fields. BuildingRecord Pydantic model. Master-detail FK: acm_record.building_id → building_record.id. CRUD API endpoints. |
 | E30-S3 | ACM Record SF Item__c Alignment | 4 | Additive migration (new SF fields alongside old). Pydantic aliases for 35+ fields. 294-value Item_Name picklist. Dual-schema coexistence during cutover. |
-| E30-S4 | Dependent Picklist Validator | 5 | SalesforcePicklistValidator class. Friability→Classification→SubClassification (36 combos). BuildingType→Category→SubCategory (114→13). Strict case-sensitive. Warn-not-reject policy. |
+| E30-S4 | Dependent Picklist Validator | 5 | SalesforcePicklistValidator class. Friability→Classification→SubClassification (18 groups × 2 friability = 36 combos). BuildingType→Category (114→13, **NO SubCategory** — confirmed absent from SF schema). Strict case-sensitive. WARN during editing, REJECT on export. |
 | E30-S5 | Data Migration Script | 3 | Migrate existing acm_record building fields to building_record. "Good"→"Stable" vocabulary migration. Rollback plan. |
 | E30-S6 | BAR→SF Vocabulary Transition | 2 | Cross-cutting: update BAR field names→SF names in validators, normalizers, test fixtures (33+ files). "Good"→"Stable", "T3 Vinyl products"→"Vinyl products". |
 | E30-S7 | Two-Phase Extraction Prompts | 4 | New Building__c extraction prompt (SF field names, constrained picklists). Updated Item__c extraction prompt (SF vocabulary, dynamic picklist injection, Item_Name subsetting by Product Group). |
-| E30-S8 | Anthropic Claude Direct API | 3 | Replace Esperanto/OpenRouter extraction path with direct ChatAnthropic. Capability registry extension. Feature-flag for transition. Benchmarks pass. |
+| E30-S8 | Anthropic Claude Direct API + OpenRouter Fallback | 3 | Add direct ChatAnthropic extraction path as DEFAULT. Preserve OpenRouter as FALLBACK (admin toggle). Capability registry extension with `ModelPolicy` routing. Esperanto retained for non-extraction tasks. Feature-flag for transition. Benchmarks pass. |
 
 **Schema Freeze Gate after E30-S6** — all downstream epics depend on stable SF schema.
 
@@ -177,9 +194,9 @@ Phase 5: Review & Export
 
 **Dependencies**: E30 (schema freeze).
 
-### Epic 32: AI Processing & Validation (16 SP, 5 stories)
+### Epic 32: AI Processing & Validation (18 SP, 6 stories)
 
-**Goal**: Two-phase Building + Item extraction, SF-aligned validation, correction loop.
+**Goal**: Two-phase Building + Item extraction, SF-aligned validation, correction loop, Ollama model evaluation.
 
 | # | Story | SP | Description |
 |---|-------|----|-------------|
@@ -188,6 +205,7 @@ Phase 5: Review & Export
 | E32-S3 | SF Validation + Correction Loop | 3 | Pydantic validation against SF schema. Picklist validation (exact case-sensitive). Dependency chain enforcement. AI correction with single-record context (max 3 retries). Negative→N/A business rule. |
 | E32-S4 | Classifier Update (SF Taxonomy) | 2 | Update regex patterns from BAR taxonomy to SF ACM_Classification/ACM_Sub_Classification values. 18 classification groups × friability. |
 | E32-S5 | Extraction Pipeline E2E Test | 3 | Upload→extract (dual provider)→consensus→AI extraction→validation→correction→save. Broadmeadows 31/31, Alexander >= 42/43. All picklist values valid SF values. |
+| E32-S6 | Ollama Model Evaluation Spike | 2 | Test `llama3.1:8b`, `qwen2.5:7b`, `mistral:7b` for classification + enrichment tasks. Benchmark accuracy vs Claude on 50-record sample. Select 1-2 models for production. Document latency, VRAM usage, accuracy per task type. |
 
 **Dependencies**: E30 (schema), E31 (providers).
 
@@ -229,10 +247,10 @@ Phase 5: Review & Export
 |------|---------|---:|:------------:|:--------------:|
 | E30: Foundation & SF Schema | 8 | 20 | 8-10 days | **YES** — gates all others |
 | E31: Multi-Provider Extraction | 6 | 18 | 6-8 days | YES — gates E32 |
-| E32: AI Processing & Validation | 5 | 16 | 5-7 days | YES — gates E33 |
+| E32: AI Processing & Validation | **6** | **18** | 6-8 days | YES — gates E33 |
 | E33: Frontend & UX | 7 | 22 | 8-10 days | Partial (S1-S2 gate S3-S7) |
 | E34: Integration & Polish | 5 | 12 | 4-5 days | No (parallelizable) |
-| **TOTAL** | **31** | **88** | **~31-40 days** | |
+| **TOTAL** | **32** | **90** | **~32-42 days** | |
 
 ### Parallelization Opportunities
 
@@ -272,16 +290,16 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
 
 ---
 
-## 6. Open Questions
+## 6. Open Questions — RESOLVED
 
-| # | Question | Owner | Blocking? | Recommended Resolution |
-|---|----------|-------|:---------:|------------------------|
-| Q1 | **Building_Sub_Category__c** — SCP references this field but it's not clearly visible in SF field summaries. Does this dependency chain (BuildingType→Category→**SubCategory**) exist in production SF? | Demi (verify with VAEA) | YES (E30-S4) | Verify in SF org. If no SubCategory, simplify to BuildingType→Category only. |
-| Q2 | **Validation policy: warn vs reject** — Should invalid picklist values block export, or warn and allow override? | John (PM) + Demi | YES (E30-S4) | Recommend: warn-not-reject for extraction, reject for export (officer must fix before exporting). |
-| Q3 | **MinerU 2.x torch compatibility** — Does `mineru` v2.7+ work with `torch 2.10`? | Amelia (test in E31-S1) | YES (E31 approach) | Test `pip install mineru --dry-run`. If fails, budget 3 SP for subprocess bridge. |
-| Q4 | **Google Doc AI procurement** — Does VAEA procurement allow Google cloud AI services? | Demi (verify with VAEA) | NO (future epic) | Defer to post-V3. Assured Workloads available if approved. |
-| Q5 | **Cell-level bbox storage** — How much storage overhead does cell-level (not just table-level) bbox tracking add? | Amelia (estimate in E31-S4) | NO | Estimate: ~500 bytes per cell × 50 cells per table × 10 tables per doc = ~250KB per doc. Negligible. |
-| Q6 | **Existing E29 recovery stories (R1, R2)** — Do any fixes from these carry forward as explicit V3 requirements? | Bob (SM) | NO | Review R1 (benchmark fidelity) and R2 (match-gap) during E32 story writing. Carry forward applicable fixes. |
+| # | Question | Status | Resolution |
+|---|----------|:------:|------------|
+| Q1 | **Building_Sub_Category__c** — Does this dependency chain (BuildingType→Category→SubCategory) exist? | **RESOLVED** | **NO.** `Building_Sub_Category__c` does not exist as a field in `building_fields_summary.md`. The chain is `Building_Type__c → Building_Category__c` only (2 levels). Simplified in E30-S4 accordingly. |
+| Q2 | **Validation policy: warn vs reject** | **RESOLVED** | **WARN during extraction/editing, REJECT on export.** Officers must fix all validation errors before generating SF Data Loader CSV. Inline AG Grid badges (red/orange/yellow) during editing. Export button grayed out with "X validation errors" message until resolved. |
+| Q3 | **MinerU 2.x torch compatibility** | **RESOLVED** | **Keep as test task in E31-S1.** If torch 2.10 conflicts with MinerU's `<2.7` constraint, use subprocess bridge pattern (already proven with `.venv-mineru/`). Budget 3 SP contingency for bridge. |
+| Q4 | **Google Doc AI procurement** | **RESOLVED** | **Confirmed deferred.** Not in V3 scope. Future epic only. |
+| Q5 | **Cell-level bbox storage** | **RESOLVED** | **Accepted.** ~250KB per document is negligible. Proceed with cell-level storage. |
+| Q6 | **E29 R1/R2 carry-forward** | **RESOLVED** | **Review during E32 story writing.** Not blocking V3 planning. Carry forward applicable fixes as needed. |
 
 ---
 
@@ -333,7 +351,7 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
 
 ### FR-1409 Amendment
 
-**FR-1409 (revised)**: Use Anthropic Claude Sonnet as the sole AI **interpretation** provider for Building__c and Item__c field extraction. Ollama local for embeddings and classification is permitted. Google Document AI as a future table extraction provider (not AI interpretation) is permitted.
+**FR-1409 (revised)**: Use Anthropic Claude Sonnet as the **default** AI interpretation provider for Building__c and Item__c field extraction. OpenRouter MUST remain fully supported as a fallback path (admin-configurable toggle). Ollama local for embeddings, classification fallback, and enrichment is permitted. Google Document AI as a future table extraction provider (not AI interpretation) is permitted. All non-extraction AI tasks (chat, search, general) continue via Esperanto/OpenRouter.
 
 ---
 
@@ -374,6 +392,7 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
    │ S3: Validation  │            │
    │ S4: Classifier  │            │
    │ S5: E2E Test    │            │
+   │ S6: Ollama Spike│            │
    └────────┬────────┘            │
             │                     │
             ▼                     ▼
@@ -539,5 +558,5 @@ Provider Registry
 ---
 
 *Generated 2026-03-02 by Party Mode Multi-Agent Session*
-*31 stories · 88 SP · 5 epics · ~31-40 days estimated*
+*32 stories · 90 SP · 5 epics · ~32-42 days estimated*
 *Next step: BMAD Planning Cycle — PRD v3.0 → Architecture v3.0 → Epics & Stories → Sprint Planning*
