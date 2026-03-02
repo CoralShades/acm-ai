@@ -28,16 +28,6 @@ The agent should read these before starting:
 
 ## Research Topic: Multi-Provider Table Extraction for ACM-AI V3
 
-## Pre-Read Documents
-
-The agent should read these before starting:
-- `V3/output/e30-multi-agent-audit-unified.md` — Section: "Amelia (Dev) — Unified Findings" for current extraction pipeline details
-- `docs/architecture/e29-architecture-delta.md` — Current pipeline architecture
-- `docs/architecture/e26-table-extraction-technical-design.md` — Docling/TableFormer design
-- `docs/architecture/adr-tableformer-integration.md` — TableFormer ADR
-- `open_notebook/extractors/orchestrator.py` — Current extraction orchestrator (scan structure, don't deep-read)
-- `V3/output/solution-architecture-v3.md` — Client architecture requirements (from P0)
-
 ### Context
 
 ACM-AI extracts asbestos register data from PDF documents (SAMP reports). The current pipeline uses:
@@ -49,8 +39,6 @@ Performance:
 - Broadmeadows (1 building, 31 records): 31/31 (100%) with full pipeline
 - Alexander (6 buildings, 43 records): 36/43 (~84%) after E28 fixes
 - **Untested on 2000+ production documents from various consulting firms** — this is the risk
-
-
 
 ### Research Goal
 
