@@ -95,8 +95,8 @@
         "AC7: Unit tests verifying both BAR and SF field access patterns",
         "AC8: Embedding fields preserved unchanged"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -104,11 +104,11 @@
       "keyFiles": [
         "open_notebook/domain/acm.py",
         "open_notebook/extractors/acm_schemas.py",
-        "migrations/40.surrealql",
-        "tests/test_acm_record.py"
+        "migrations/39.surrealql",
+        "tests/test_acm_sf_alignment.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e30-s3-acm-record-sf-item-alignment.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-03"
     },
     {
       "id": "E30-S4",
