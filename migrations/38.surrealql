@@ -1,0 +1,10 @@
+-- Migration 38: Add SF schema columns to field_schema table (E30-S1 V3 Foundation)
+-- Additive only — existing field_schema:default record is NOT affected.
+-- New record field_schema:sf_v1 uses these new columns.
+-- Uses DEFINE FIELD IF NOT EXISTS to be safe on re-run.
+
+DEFINE FIELD IF NOT EXISTS building_fields ON TABLE field_schema TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS item_fields     ON TABLE field_schema TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS picklists       ON TABLE field_schema TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS dependencies    ON TABLE field_schema TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS loaded_at       ON TABLE field_schema TYPE option<string>;

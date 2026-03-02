@@ -39,7 +39,6 @@ logger.add(
 
 from api.auth import PasswordAuthMiddleware
 from api.model_provisioning import run_model_provisioning
-from api.sf_schema_provisioning import run_sf_schema_provisioning
 from api.routers import (
     a2a,
     acm,
@@ -68,6 +67,7 @@ from api.routers import (
     transformations,
 )
 from api.routers import commands as commands_router
+from api.sf_schema_provisioning import run_sf_schema_provisioning
 from open_notebook.database.async_migrate import AsyncMigrationManager
 from open_notebook.database.repository import repo_query
 
