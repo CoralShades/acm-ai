@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACM-AI BMAD Architecture Audit</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #3a8f8a; --teal-light: #4db3ac; --teal-dark: #2d706c; --teal-bg: #f0f9f8;
+    --coral: #d4614a; --coral-light: #e8856f; --coral-bg: #fdf4f2;
+    --navy: #2a2f45; --navy-light: #3d4466; --navy-bg: #f4f4f7;
+    --red: #dc2626; --red-bg: #fef2f2; --amber: #d97706; --amber-bg: #fffbeb;
+    --green: #16a34a; --green-bg: #f0fdf4;
+    --white: #ffffff; --gray-50: #f8f9fa; --gray-100: #f1f3f5; --gray-200: #e9ecef;
+    --gray-300: #dee2e6; --gray-400: #ced4da; --gray-500: #adb5bd;
+    --gray-600: #868e96; --gray-700: #495057; --gray-800: #343a40; --gray-900: #212529;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow-sm: 0 1px 2px rgba(42,47,69,0.06);
+    --shadow-md: 0 4px 12px rgba(42,47,69,0.08);
+    --radius: 8px; --radius-lg: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font-body); color: var(--navy); background: var(--gray-50); line-height: 1.7; }
+
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
+    background: var(--navy); color: rgba(255,255,255,0.85); padding: 32px 0; overflow-y: auto; z-index: 100;
+  }
+  .sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; }
+  .sidebar-brand h1 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--coral-light); }
+  .sidebar-brand p { font-size: 0.7rem; color: rgba(255,255,255,0.45); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .sidebar-section { padding: 10px 20px 4px; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.3); font-weight: 600; }
+  .sidebar a { display: block; padding: 6px 20px; color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.82rem; border-left: 3px solid transparent; transition: all 0.15s; }
+  .sidebar a:hover, .sidebar a.active { color: #fff; background: rgba(255,255,255,0.06); border-left-color: var(--coral-light); }
+
+  .main { margin-left: 260px; min-height: 100vh; }
+
+  .hero {
+    background: linear-gradient(135deg, #7f1d1d 0%, var(--navy) 60%, var(--navy-light) 100%);
+    color: white; padding: 64px 56px 52px; position: relative;
+  }
+  .hero-badge { display: inline-block; background: rgba(220,38,38,0.2); border: 1px solid rgba(220,38,38,0.4); padding: 4px 14px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; color: #fca5a5; }
+  .hero h1 { font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 12px; }
+  .hero h1 span { color: var(--coral-light); }
+  .hero p { font-size: 1.05rem; color: rgba(255,255,255,0.7); max-width: 680px; }
+
+  .content { padding: 0 56px 80px; max-width: 1060px; }
+  section { padding-top: 48px; }
+
+  h2 { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; margin-bottom: 6px; }
+  h2 .num { color: var(--coral); font-weight: 500; font-size: 0.85em; }
+  .section-subtitle { font-size: 0.92rem; color: var(--gray-600); margin-bottom: 28px; max-width: 700px; }
+  h3 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; color: var(--navy); margin: 28px 0 10px; }
+  h4 { font-weight: 600; font-size: 0.95rem; color: var(--navy); margin: 20px 0 6px; }
+  p { margin-bottom: 12px; color: var(--gray-700); font-size: 0.92rem; }
+
+  .card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 24px 28px; margin: 16px 0; box-shadow: var(--shadow-sm); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 16px 0; }
+  .card-grid .card { margin: 0; }
+
+  .callout { border-left: 4px solid var(--teal); background: var(--teal-bg); padding: 18px 22px; border-radius: 0 var(--radius) var(--radius) 0; margin: 16px 0; }
+  .callout.red { border-left-color: var(--red); background: var(--red-bg); }
+  .callout.amber { border-left-color: var(--amber); background: var(--amber-bg); }
+  .callout.green { border-left-color: var(--green); background: var(--green-bg); }
+  .callout.navy { border-left-color: var(--navy); background: var(--navy-bg); }
+  .callout-title { font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; color: var(--navy); }
+  .callout p { margin-bottom: 0; font-size: 0.88rem; }
+
+  .diagram-container { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 28px; margin: 20px 0; box-shadow: var(--shadow-md); overflow-x: auto; }
+  .diagram-title { font-family: var(--font-display); font-size: 1rem; font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+  .diagram-caption { font-size: 0.78rem; color: var(--gray-500); margin-bottom: 16px; }
+  .mermaid { display: flex; justify-content: center; }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.85rem; }
+  thead th { background: var(--navy); color: white; padding: 8px 14px; text-align: left; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  thead th:first-child { border-radius: var(--radius) 0 0 0; }
+  thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+  tbody td { padding: 8px 14px; border-bottom: 1px solid var(--gray-200); color: var(--gray-700); }
+  tbody tr:hover { background: var(--gray-50); }
+
+  code { font-family: var(--font-mono); font-size: 0.8em; background: var(--gray-100); padding: 2px 5px; border-radius: 4px; color: var(--coral); }
+  pre { background: var(--navy); color: rgba(255,255,255,0.9); padding: 18px 22px; border-radius: var(--radius); overflow-x: auto; margin: 14px 0; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  .severity { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .severity.critical { background: var(--red-bg); color: var(--red); border: 1px solid rgba(220,38,38,0.2); }
+  .severity.high { background: #fff7ed; color: #c2410c; border: 1px solid rgba(194,65,12,0.2); }
+  .severity.medium { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(217,119,6,0.2); }
+  .severity.low { background: var(--green-bg); color: var(--green); border: 1px solid rgba(22,163,74,0.2); }
+
+  .gap-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .gap-header h3 { margin: 0; }
+
+  .story-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 16px 20px; margin: 10px 0; }
+  .story-card .story-id { font-family: var(--font-mono); font-size: 0.75rem; color: var(--coral); font-weight: 600; }
+  .story-card .story-title { font-weight: 600; color: var(--navy); margin: 4px 0; }
+  .story-card .story-desc { font-size: 0.85rem; color: var(--gray-600); margin: 0; }
+  .story-card .story-meta { display: flex; gap: 12px; margin-top: 8px; font-size: 0.75rem; color: var(--gray-500); }
+  .story-card .story-meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .compare-col { }
+  .compare-col h4 { text-align: center; padding: 8px; border-radius: var(--radius) var(--radius) 0 0; color: white; margin: 0; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .compare-col.current h4 { background: var(--red); }
+  .compare-col.target h4 { background: var(--green); }
+  .compare-col .compare-body { border: 1px solid var(--gray-200); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 16px; background: white; min-height: 120px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 20px 0; }
+  .stat-block { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 16px; text-align: center; }
+  .stat-number { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; line-height: 1; }
+  .stat-number.red { color: var(--red); } .stat-number.amber { color: var(--amber); }
+  .stat-number.green { color: var(--green); } .stat-number.teal { color: var(--teal); }
+  .stat-label { font-size: 0.72rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-top: 4px; }
+
+  @media print { .sidebar { display: none; } .main { margin-left: 0; } }
+  @media (max-width: 900px) { .sidebar { display: none; } .main { margin-left: 0; } .hero { padding: 40px 24px; } .content { padding: 0 24px 60px; } .compare-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h1>BMAD Audit</h1>
+    <p>Architecture Gap Analysis</p>
+  </div>
+  <div class="sidebar-section">Assessment</div>
+  <a href="#summary">Executive Summary</a>
+  <a href="#scorecard">Gap Scorecard</a>
+  <div class="sidebar-section">Gaps</div>
+  <a href="#gap1">GAP 1: Dual Path</a>
+  <a href="#gap2">GAP 2: Table Priority</a>
+  <a href="#gap3">GAP 3: Monolithic LLM</a>
+  <a href="#gap4">GAP 4: Export Rigidity</a>
+  <a href="#gap5">GAP 5: Wasted Pre-Intel</a>
+  <a href="#gap6">GAP 6: Dead Code</a>
+  <div class="sidebar-section">Target State</div>
+  <a href="#target-pipeline">Unified Pipeline v2</a>
+  <a href="#agent-design">Agent Design</a>
+  <div class="sidebar-section">Remediation</div>
+  <a href="#epic-plan">Epic Plan</a>
+  <a href="#stories">Story Breakdown</a>
+  <a href="#regression">Regression Strategy</a>
+  <a href="#risks">Risk Assessment</a>
+</nav>
+
+<div class="main">
+  <header class="hero">
+    <div class="hero-badge">BMAD Architecture Audit</div>
+    <h1>ACM-AI Pipeline <span>Gap Analysis</span></h1>
+    <p>Comprehensive audit of the existing extraction pipeline against the unified pipeline vision. 6 gaps identified, 1 critical, 2 high severity. Remediation via new Epic 29 with research spike.</p>
+  </header>
+
+  <div class="content">
+
+    <!-- ================================================================== -->
+    <!-- EXECUTIVE SUMMARY -->
+    <!-- ================================================================== -->
+    <section id="summary">
+      <h2><span class="num">01 /</span> Executive Summary</h2>
+      <p class="section-subtitle">The existing pipeline achieves 100% accuracy on Broadmeadows but contains architectural debt that conflicts with the stated vision for production at scale.</p>
+
+      <div class="callout red">
+        <div class="callout-title">Core Finding</div>
+        <p>The pipeline contains a <strong>conditional dual-path architecture</strong> (legacy vs orchestrator) that violates the stated principle: "Every PDF needs to use 1 single pipeline." Additionally, AI is used for bulk extraction when empirical evidence (E25) shows Docling DataFrames alone achieve 93.5% — the AI should interpret and fill gaps, not extract from scratch.</p>
+      </div>
+
+      <h3>Vision Statement (from Demi)</h3>
+      <div class="card" style="border-left: 4px solid var(--teal);">
+        <p style="font-style: italic; margin-bottom: 0;">"Every PDF needs to use 1 single orchestrator/pipeline/workflow. Since we do not know what PDF user might upload, which consultant, format is. The table extraction needs to extract the table correctly then the AI needs to be used (multi agent, request — any way you prefer or best for our use case) for the rest of the steps to fill the data based on the BAR format (but it's not the final export type, user will/might need per building, ACM exports)."</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-block"><div class="stat-number red">6</div><div class="stat-label">Gaps Found</div></div>
+        <div class="stat-block"><div class="stat-number red">1</div><div class="stat-label">Critical</div></div>
+        <div class="stat-block"><div class="stat-number amber">2</div><div class="stat-label">High</div></div>
+        <div class="stat-block"><div class="stat-number amber">2</div><div class="stat-label">Medium</div></div>
+        <div class="stat-block"><div class="stat-number green">1</div><div class="stat-label">Low</div></div>
+      </div>
+
+      <h3>Decisions Locked In</h3>
+      <table>
+        <thead><tr><th>Decision</th><th>Choice</th><th>Impact</th></tr></thead>
+        <tbody>
+          <tr><td>Legacy path</td><td><strong>REMOVE entirely</strong> — orchestrator handles all cases</td><td>Eliminates dual-path unpredictability</td></tr>
+          <tr><td>Table priority</td><td><strong>DataFrames are primary</strong> — AI fills gaps only</td><td>Inverts current architecture fundamentally</td></tr>
+          <tr><td>AI decomposition</td><td><strong>Specialized pipeline agents</strong> — deterministic first, LLM surgical</td><td>Reduces LLM cost ~60%, improves debuggability</td></tr>
+          <tr><td>Export flexibility</td><td><strong>Both per-building AND ACM-type exports</strong></td><td>New export endpoints required</td></tr>
+          <tr><td>Dead code</td><td><strong>Aggressive cleanup NOW</strong></td><td>Remove legacy path, MinerU, old flags in Phase 1</td></tr>
+          <tr><td>Execution</td><td><strong>New epic with research spike first</strong></td><td>Clean design, empirical validation before implementation</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- GAP SCORECARD -->
+    <!-- ================================================================== -->
+    <section id="scorecard">
+      <h2><span class="num">02 /</span> Gap Scorecard</h2>
+      <p class="section-subtitle">All identified gaps ranked by severity and mapped to remediation stories.</p>
+
+      <table>
+        <thead><tr><th>ID</th><th>Gap</th><th>Severity</th><th>Current State</th><th>Target State</th><th>Stories</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>GAP-1</strong></td>
+            <td>Dual extraction path</td>
+            <td><span class="severity critical">Critical</span></td>
+            <td>Conditional edge: orchestrator OR legacy</td>
+            <td>Single unified orchestrator for all documents</td>
+            <td>E29-S2, S3</td>
+          </tr>
+          <tr>
+            <td><strong>GAP-2</strong></td>
+            <td>Tables are supplementary, not primary</td>
+            <td><span class="severity high">High</span></td>
+            <td>full_text primary, DataFrames appended</td>
+            <td>DataFrames primary, full_text for context/recovery</td>
+            <td>E29-S1, S3</td>
+          </tr>
+          <tr>
+            <td><strong>GAP-3</strong></td>
+            <td>Monolithic LLM extraction call</td>
+            <td><span class="severity high">High</span></td>
+            <td>Single prompt extracts all 40+ fields</td>
+            <td>Specialized agents: parser → enricher → mapper → classifier → validator</td>
+            <td>E29-S4, S5</td>
+          </tr>
+          <tr>
+            <td><strong>GAP-4</strong></td>
+            <td>Export locked to BAR-only</td>
+            <td><span class="severity medium">Medium</span></td>
+            <td>13 hardcoded columns, no per-building</td>
+            <td>Per-building + ACM-type exports via field mapping</td>
+            <td>E29-S8</td>
+          </tr>
+          <tr>
+            <td><strong>GAP-5</strong></td>
+            <td>Wasted pre-extraction LLM calls</td>
+            <td><span class="severity medium">Medium</span></td>
+            <td>4 LLM calls that ALL fail → heuristic fallback</td>
+            <td>Derive structure from tables + lightweight heuristics</td>
+            <td>E29-S3</td>
+          </tr>
+          <tr>
+            <td><strong>GAP-6</strong></td>
+            <td>Dead code & feature flag debt</td>
+            <td><span class="severity low">Low</span></td>
+            <td>Legacy path, MinerU refs, old flags in codebase</td>
+            <td>Aggressive cleanup: remove all dead paths</td>
+            <td>E29-S2</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- GAP DETAILS -->
+    <!-- ================================================================== -->
+    <section id="gap1">
+      <div class="gap-header">
+        <h2><span class="num">03 /</span> GAP 1: Dual Extraction Path</h2>
+        <span class="severity critical">Critical</span>
+      </div>
+      <p class="section-subtitle">The pipeline has two completely different extraction flows, creating unpredictable behaviour across document types.</p>
+
+      <div class="compare-grid">
+        <div class="compare-col current">
+          <h4>🔴 Current State</h4>
+          <div class="compare-body">
+            <p style="font-size:0.85rem;"><strong>Conditional edge after <code>tag_pages</code>:</strong></p>
+            <pre><code>tag_pages → should_use_orchestrator()?
+  → TRUE:  orchestrate → validate → ...
+  → FALSE: prepare → extract → loop → validate → ...</code></pre>
+            <p style="font-size:0.85rem;">Returns <code>FALSE</code> when <code>building_inventory</code> is <code>None</code> or has 0 buildings. This means any document where pre-extraction intelligence fails gets a completely different extraction path — different prompts, different chunking, different accuracy characteristics.</p>
+            <p style="font-size:0.85rem;"><strong>Evidence:</strong> E1-S20 explicitly preserves legacy path "for backward compatibility." Tests assert both paths are reachable in the compiled graph.</p>
+          </div>
+        </div>
+        <div class="compare-col target">
+          <h4>🟢 Target State</h4>
+          <div class="compare-body">
+            <p style="font-size:0.85rem;"><strong>Single orchestrator path for ALL documents:</strong></p>
+            <pre><code>tag_pages → orchestrate → agent_pipeline → validate → ...</code></pre>
+            <p style="font-size:0.85rem;">When building inventory fails, the orchestrator treats the entire document as a single building (page 1 to last page). No conditional edge. No legacy path. One pipeline, one set of prompts, one accuracy profile.</p>
+            <p style="font-size:0.85rem;"><strong>Fallback:</strong> If Docling tables AND inventory both fail, orchestrator creates a single "Unknown Building" extraction plan with FULL_LLM strategy covering all pages.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout red">
+        <div class="callout-title">Production Risk</div>
+        <p>With 2000+ documents from unknown consultants, the probability of pre-extraction intelligence failing for some documents is high. Every such document silently gets the legacy path — which was never optimised for the E26 improvements (Docling tables, dedup key fix, regex recovery). This creates an accuracy cliff that won't show up until production.</p>
+      </div>
+    </section>
+
+    <section id="gap2">
+      <div class="gap-header">
+        <h2><span class="num">04 /</span> GAP 2: Tables Supplementary, Not Primary</h2>
+        <span class="severity high">High</span>
+      </div>
+      <p class="section-subtitle">Docling DataFrames are treated as supplementary context when empirical evidence proves they should be the primary structured input.</p>
+
+      <div class="compare-grid">
+        <div class="compare-col current">
+          <h4>🔴 Current State</h4>
+          <div class="compare-body">
+            <p style="font-size:0.85rem;"><strong>Architecture:</strong> full_text (PyMuPDF) is the primary input. DataFrames are appended after it:</p>
+            <pre><code>LLM receives:
+1. Building text content (PyMuPDF) ← PRIMARY
+2. "## Structured Table Data" ← SUPPLEMENTARY
+3. Prompt: "prioritize structured data"</code></pre>
+            <p style="font-size:0.85rem;">The AI must read through unstructured text AND structured tables, then figure out which source to trust. The prompt says to prioritize tables, but the architecture doesn't enforce this — it's a suggestion.</p>
+          </div>
+        </div>
+        <div class="compare-col target">
+          <h4>🟢 Target State</h4>
+          <div class="compare-body">
+            <p style="font-size:0.85rem;"><strong>Architecture:</strong> DataFrames are parsed into records FIRST (deterministic). AI receives only the records that need enrichment:</p>
+            <pre><code>Pipeline:
+1. Docling DataFrames → raw records (deterministic)
+2. Records with missing fields → Context Enricher LLM
+   (receives: record + relevant full_text excerpt)
+3. full_text scanned for records tables missed</code></pre>
+            <p style="font-size:0.85rem;">The AI never sees raw tables. It sees structured records with specific blank fields to fill. This is a fundamentally different (and cheaper) task.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Empirical Evidence</h3>
+      <table>
+        <thead><tr><th>Approach</th><th>Accuracy</th><th>LLM Calls</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr><td>PyMuPDF text → LLM extracts everything (E23 baseline)</td><td>28/31 (90.3%)</td><td>1-3 per building</td><td>High</td></tr>
+          <tr><td>Docling DataFrames alone, NO LLM (E25 spike)</td><td>29/31 (93.5%)</td><td>0</td><td>Zero</td></tr>
+          <tr><td>Hybrid: text + DataFrames supplementary (E26 current)</td><td>31/31 (100%)</td><td>1-3 per building</td><td>High</td></tr>
+          <tr><td><strong>Target: DataFrames primary + surgical AI + regex</strong></td><td><strong>Target: 31/31</strong></td><td><strong>~0.3 per building</strong></td><td><strong>~60% reduction</strong></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="gap3">
+      <div class="gap-header">
+        <h2><span class="num">05 /</span> GAP 3: Monolithic LLM Extraction</h2>
+        <span class="severity high">High</span>
+      </div>
+      <p class="section-subtitle">One massive prompt does 6 jobs simultaneously. Impossible to debug, optimize, or independently improve.</p>
+
+      <div class="compare-grid">
+        <div class="compare-col current">
+          <h4>🔴 Current: Single LLM Call</h4>
+          <div class="compare-body">
+            <p style="font-size:0.85rem;">The <code>building_extraction.jinja</code> prompt asks the LLM to simultaneously:</p>
+            <p style="font-size:0.85rem;">
+              ① Identify records from tables/text<br>
+              ② Map to building/room context<br>
+              ③ Normalise sample results<br>
+              ④ Map to 40+ BAR fields<br>
+              ⑤ Classify product types<br>
+              ⑥ Assess risk status
+            </p>
+            <p style="font-size:0.85rem;"><strong>Problem:</strong> When record #9 (Battery Charger) was missed, debugging required analysing the entire prompt + full context to find why. Each field error could stem from any of 6 interleaved responsibilities.</p>
+          </div>
+        </div>
+        <div class="compare-col target">
+          <h4>🟢 Target: Specialized Agents</h4>
+          <div class="compare-body">
+            <p style="font-size:0.85rem;">Six discrete steps, each independently testable:</p>
+            <p style="font-size:0.85rem;">
+              ① <strong>Table Parser</strong> [DETERMINISTIC] — DataFrame → raw records<br>
+              ② <strong>Context Enricher</strong> [LIGHT LLM] — fill fields tables can't provide<br>
+              ③ <strong>BAR Mapper</strong> [DETERMINISTIC] — field schema lookup<br>
+              ④ <strong>Classifier</strong> [REGEX+LLM] — product group/type taxonomy<br>
+              ⑤ <strong>Validator</strong> [PYDANTIC+LLM] — schema check + targeted correction<br>
+              ⑥ <strong>Recovery</strong> [REGEX] — dedup + No Access scanner
+            </p>
+            <p style="font-size:0.85rem;"><strong>Benefit:</strong> 3 of 6 steps are zero LLM cost. Each step has its own accuracy metric against ground truth.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="gap4">
+      <div class="gap-header">
+        <h2><span class="num">06 /</span> GAP 4: Export Rigidity</h2>
+        <span class="severity medium">Medium</span>
+      </div>
+      <p class="section-subtitle">Export endpoints use 13 hardcoded columns. No per-building or ACM-type export options.</p>
+
+      <p>The E5-S4 field mapping configuration was implemented in SurrealDB (<code>field_schema</code> table with 47 BAR field definitions), but the actual export endpoints (<code>api/routers/acm.py:237-439</code>) still use hardcoded column lists. The mapping infrastructure exists but isn't wired up.</p>
+
+      <p>Additionally, compliance officers need per-building exports (one file per building) and ACM-type exports (grouped by material/risk, not building). Neither is available.</p>
+    </section>
+
+    <section id="gap5">
+      <div class="gap-header">
+        <h2><span class="num">07 /</span> GAP 5: Wasted Pre-Extraction Intelligence</h2>
+        <span class="severity medium">Medium</span>
+      </div>
+      <p class="section-subtitle">4 LLM calls that systematically fail due to the completionState envelope, wasting ~43 seconds per document.</p>
+
+      <table>
+        <thead><tr><th>Stage</th><th>LLM Call</th><th>Outcome</th><th>Fallback</th><th>Wasted Time</th></tr></thead>
+        <tbody>
+          <tr><td>Document Structure</td><td><code>with_structured_output()</code></td><td>❌ ValidationError</td><td>Heuristic (works)</td><td>~8s</td></tr>
+          <tr><td>Building Inventory</td><td><code>with_structured_output()</code></td><td>❌ ValidationError</td><td>Heuristic (works)</td><td>~12s</td></tr>
+          <tr><td>Page Tagging</td><td><code>with_structured_output()</code></td><td>❌ ValidationError</td><td>Default section assignment</td><td>~15s</td></tr>
+          <tr><td>Metadata</td><td><code>with_structured_output()</code></td><td>❌ ValidationError</td><td>None (optional)</td><td>~8s</td></tr>
+        </tbody>
+      </table>
+
+      <p>With the "tables as primary" architecture, much of this intelligence becomes derivable FROM the table structure itself: which pages have tables (register pages), how many table groups exist (buildings), what column headers say (consultant format). The E27-S1 fix addresses the envelope issue, but the target architecture may eliminate these calls entirely.</p>
+    </section>
+
+    <section id="gap6">
+      <div class="gap-header">
+        <h2><span class="num">08 /</span> GAP 6: Dead Code & Feature Flag Debt</h2>
+        <span class="severity low">Low</span>
+      </div>
+      <p class="section-subtitle">Multiple dead code paths and obsolete feature flags increase cognitive load and maintenance risk.</p>
+
+      <table>
+        <thead><tr><th>Dead Code</th><th>Location</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>Legacy <code>prepare → extract → loop</code> path</td><td><code>acm_extraction.py</code></td><td>Remove entirely</td></tr>
+          <tr><td><code>should_use_orchestrator()</code> conditional</td><td><code>acm_extraction.py</code></td><td>Remove (always orchestrate)</td></tr>
+          <tr><td>MinerU HTML fallback in <code>prepare_context()</code></td><td><code>acm_extraction.py:1028-1057</code></td><td>Remove (MinerU deleted)</td></tr>
+          <tr><td><code>DOCLING_TABLE_STRUCTURE</code> flag (E24 — "DO NOT USE")</td><td><code>source_commands.py</code></td><td>Remove flag + guarded code</td></tr>
+          <tr><td><code>DOCLING_DIRECT_TABLE_EXTRACTION</code> flag</td><td><code>source_commands.py</code></td><td>Remove flag (now default <code>true</code>)</td></tr>
+          <tr><td>Legacy <code>extract_records</code> node function</td><td><code>acm_extraction.py</code></td><td>Remove (replaced by orchestrator)</td></tr>
+          <tr><td>Legacy <code>prepare_context</code> node function</td><td><code>acm_extraction.py</code></td><td>Remove (replaced by orchestrator)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- TARGET STATE -->
+    <!-- ================================================================== -->
+    <section id="target-pipeline">
+      <h2><span class="num">09 /</span> Target: Unified Pipeline v2</h2>
+      <p class="section-subtitle">The redesigned extraction pipeline — DataFrames as primary input, specialized agents, single orchestrator path.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Unified Pipeline v2: Target Architecture</div>
+        <div class="diagram-caption">Every document flows through this single path. No conditional routing. No legacy fallback.</div>
+        <div class="mermaid">
+flowchart TB
+    subgraph UPLOAD["① UPLOAD & SOURCE PROCESSING"]
+        U1["PDF Upload"]
+        U2["PyMuPDF → source.full_text"]
+        U3["Docling Direct API → acm_table_section"]
+    end
+
+    subgraph STRUCT["② LIGHTWEIGHT STRUCTURE ANALYSIS"]
+        SA1["Table-derived structure:<br/>• Which pages have tables (register pages)<br/>• Table grouping → buildings<br/>• Column headers → consultant format"]
+        SA2["Heuristic enrichment:<br/>• TOC detection (regex)<br/>• Building name extraction (regex)<br/>• Metadata from first pages"]
+    end
+
+    subgraph ORCH["③ UNIFIED ORCHESTRATOR"]
+        O1["<b>Single Path — No Conditional</b><br/>If inventory exists → per-building plans<br/>If inventory fails → single 'Whole Document' plan<br/>If no tables → FULL_LLM plan (last resort)"]
+    end
+
+    subgraph AGENTS["④ SPECIALIZED AGENT PIPELINE (per building)"]
+        direction TB
+        A1["<b>① Table Parser</b><br/><span style='color:#16a34a'>DETERMINISTIC</span><br/>DataFrame rows → raw ACMRecords<br/>Regex normalization<br/><i>~29/31 records, 60-70% fields filled</i>"]
+        A2["<b>② Context Enricher</b><br/><span style='color:#be185d'>LIGHT LLM</span><br/>Fill fields tables CAN'T provide:<br/>floor level, area descriptions, building context<br/>+ Recover sparse text records from full_text<br/><i>Uses cheap model — specific field filling</i>"]
+        A3["<b>③ BAR Field Mapper</b><br/><span style='color:#16a34a'>DETERMINISTIC</span><br/>field_schema lookup: extracted → BAR columns<br/>Enum normalization (friable, condition, risk)<br/><i>Zero LLM cost</i>"]
+        A4["<b>④ Classifier</b><br/><span style='color:#7e22ce'>REGEX + LLM FALLBACK</span><br/>ACM Product Group/Type (T1-T8)<br/>80% regex, batch LLM for ambiguous<br/><i>~0.2 LLM calls per building</i>"]
+        A5["<b>⑤ Validator + Corrector</b><br/><span style='color:#0369a1'>PYDANTIC + TARGETED LLM</span><br/>Schema validation (deterministic)<br/>Field errors → LLM with single record + error<br/><i>NOT entire building context</i>"]
+    end
+
+    subgraph POST["⑤ POST-PROCESSING"]
+        P1["Dedup (room + product + location)"]
+        P2["No-Access regex recovery"]
+        P3["Save to SurrealDB"]
+        P4["Embeddings (Ollama)"]
+    end
+
+    subgraph EXPORT["⑥ FLEXIBLE EXPORT"]
+        EX1["Per-building BAR Excel"]
+        EX2["ACM-type grouped export"]
+        EX3["Consolidated BAR"]
+        EX4["CSV"]
+    end
+
+    UPLOAD --> STRUCT
+    STRUCT --> ORCH
+    ORCH --> AGENTS
+    A1 --> A2 --> A3 --> A4 --> A5
+    AGENTS --> POST
+    P1 --> P2 --> P3 --> P4
+    POST --> EXPORT
+
+    style UPLOAD fill:#f3e8ff,stroke:#7e22ce,stroke-width:2px
+    style STRUCT fill:#fef3c7,stroke:#a16207,stroke-width:1px
+    style ORCH fill:#fce7f3,stroke:#be185d,stroke-width:2px
+    style AGENTS fill:#e0f2fe,stroke:#0369a1,stroke-width:2px
+    style POST fill:#dcfce7,stroke:#15803d,stroke-width:1px
+    style EXPORT fill:#f0f9f8,stroke:#3a8f8a,stroke-width:1px
+        </div>
+      </div>
+
+      <div class="callout green">
+        <div class="callout-title">Key Architectural Change</div>
+        <p>The AI never sees raw tables or unstructured text. It receives <strong>structured records with specific blank fields</strong> and the relevant text excerpt to fill them from. This transforms the AI task from "extract everything from this text" to "fill in these 5 fields given this context" — a fundamentally simpler, cheaper, and more reliable task.</p>
+      </div>
+    </section>
+
+    <section id="agent-design">
+      <h2><span class="num">10 /</span> Agent Design: Per-Building Pipeline</h2>
+      <p class="section-subtitle">Detailed specification of each specialized agent in the pipeline.</p>
+
+      <div class="card" style="border-top: 3px solid var(--green);">
+        <h4>Agent ① — Table Parser <span class="severity low">Deterministic</span></h4>
+        <p><strong>Input:</strong> Docling DataFrame(s) for this building's page range</p>
+        <p><strong>Process:</strong> Iterate DataFrame rows. Each row becomes a raw <code>ACMRecord</code> with fields mapped from column headers. Apply regex normalization: fix split sample numbers (<code>34511-039- 001</code> → <code>34511-039-001</code>), strip "Asbestos " prefix from hazard status, normalize "Same as" → "As Per" references.</p>
+        <p><strong>Output:</strong> List of raw <code>ACMRecord</code> objects with ~60-70% of fields populated directly from table data.</p>
+        <p><strong>LLM cost:</strong> Zero. <strong>Expected accuracy:</strong> 29/31 records identified (based on E25 evidence).</p>
+      </div>
+
+      <div class="card" style="border-top: 3px solid var(--coral);">
+        <h4>Agent ② — Context Enricher <span class="severity high">Light LLM</span></h4>
+        <p><strong>Input:</strong> Records with missing fields + relevant <code>full_text</code> excerpt for this building's page range</p>
+        <p><strong>Process:</strong> For each record with missing fields (floor_level, area_type, building_year, hygienist_recommendations, etc.), send a targeted prompt with JUST that record and the relevant text paragraph. Additionally, scan full_text for records NOT in the DataFrames (sparse text sections, "No Access" entries on continuation pages).</p>
+        <p><strong>Output:</strong> Enriched records + newly discovered records from text-only sections.</p>
+        <p><strong>LLM cost:</strong> ~0.5 calls per building (batch missing-field records into one call). Could use a cheaper model since task is "fill field X given context Y", not open-ended extraction.</p>
+        <p><strong>Key insight:</strong> This is where <code>full_text</code> matters — not as the primary extraction source, but as the context provider for fields that don't exist in table columns (narrative descriptions, recommendations, area measurements).</p>
+      </div>
+
+      <div class="card" style="border-top: 3px solid var(--teal);">
+        <h4>Agent ③ — BAR Field Mapper <span class="severity low">Deterministic</span></h4>
+        <p><strong>Input:</strong> Enriched records with extracted field names</p>
+        <p><strong>Process:</strong> Apply <code>field_schema</code> configuration (already in SurrealDB from E5-S4) to map extracted field names → BAR column positions. Normalize enum values: friable → {Friable, Non-friable, Both}, material_condition → {Good, Fair, Poor}, risk_status → {Low, Medium, High, Very High}.</p>
+        <p><strong>Output:</strong> BAR-mapped records with standardised field names and validated enum values.</p>
+        <p><strong>LLM cost:</strong> Zero.</p>
+      </div>
+
+      <div class="card" style="border-top: 3px solid #7e22ce;">
+        <h4>Agent ④ — Classifier <span class="severity medium">Regex + LLM Fallback</span></h4>
+        <p><strong>Input:</strong> BAR-mapped records missing <code>acm_product_group</code> and <code>acm_product_type</code></p>
+        <p><strong>Process:</strong> Apply regex patterns for common ACM types (vinyl tiles → T2 Non-friable, pipe lagging → T1 Friable, etc.). Collect unmatched products. If any remain, batch them into a single LLM call with the BAR taxonomy reference.</p>
+        <p><strong>Output:</strong> All records with product classification assigned.</p>
+        <p><strong>LLM cost:</strong> ~0.2 calls per building (only for ambiguous products). 80% of products match regex patterns (proven in existing E1-S9 implementation).</p>
+      </div>
+
+      <div class="card" style="border-top: 3px solid #0369a1;">
+        <h4>Agent ⑤ — Validator + Corrector <span class="severity medium">Pydantic + Targeted LLM</span></h4>
+        <p><strong>Input:</strong> Classified records</p>
+        <p><strong>Process:</strong> Pydantic validation against <code>ACMExtractionRecord</code> schema. For field errors: send a targeted LLM call with JUST the failing record + specific error message + relevant text excerpt. Max 3 retries per record. For structural errors: flag for re-extraction with different chunk boundaries.</p>
+        <p><strong>Output:</strong> Validated records ready for storage.</p>
+        <p><strong>LLM cost:</strong> ~0.1 calls per building (only records that fail validation). Current approach re-sends entire building context — target sends individual records.</p>
+        <p><strong>Key improvement:</strong> Sending "Record #9 is missing field 'product'. Here's the source text: ..." is vastly cheaper and more targeted than "Here's the entire building. Please re-extract all 31 records because one had an error."</p>
+      </div>
+
+      <h3>LLM Cost Comparison</h3>
+      <table>
+        <thead><tr><th>Agent</th><th>Current LLM Calls</th><th>Target LLM Calls</th><th>Reduction</th></tr></thead>
+        <tbody>
+          <tr><td>Pre-extraction intelligence</td><td>4 calls (all fail)</td><td>0 (table-derived + heuristic)</td><td>100%</td></tr>
+          <tr><td>Record extraction</td><td>1-3 per building (full extraction)</td><td>0 (deterministic table parsing)</td><td>100%</td></tr>
+          <tr><td>Context enrichment</td><td>N/A (part of extraction)</td><td>~0.5 per building (targeted fills)</td><td>New (but much smaller calls)</td></tr>
+          <tr><td>Classification</td><td>0-1 per building</td><td>~0.2 per building</td><td>~80%</td></tr>
+          <tr><td>Validation correction</td><td>0-3 per building (full context)</td><td>~0.1 per building (single record)</td><td>~97% token reduction</td></tr>
+          <tr><td><strong>Total per building</strong></td><td><strong>5-11 calls</strong></td><td><strong>~0.8 calls</strong></td><td><strong>~85% reduction</strong></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- REMEDIATION PLAN -->
+    <!-- ================================================================== -->
+    <section id="epic-plan">
+      <h2><span class="num">11 /</span> Epic 29: Pipeline Unification</h2>
+      <p class="section-subtitle">New epic with research spike, phased implementation, and regression gates.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Epic 29 Execution Plan</div>
+        <div class="diagram-caption">Three phases with decision gates between each</div>
+        <div class="mermaid">
+gantt
+    title Epic 29: Pipeline Unification
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %d
+
+    section Phase 1: Research & Cleanup
+    S1: Research Spike - Tables as Primary    :e29s1, 2026-03-03, 2d
+    S2: Aggressive Dead Code Cleanup          :e29s2, after e29s1, 1d
+    Decision Gate 1                           :milestone, after e29s2, 0d
+
+    section Phase 2: Core Pipeline
+    S3: Unified Orchestrator (no legacy)      :e29s3, after e29s2, 2d
+    S4: Table Parser + BAR Mapper agents      :e29s4, after e29s3, 2d
+    S5: Context Enricher + Classifier agents  :e29s5, after e29s4, 2d
+    S6: Validator + Corrector agent           :e29s6, after e29s5, 1d
+    Decision Gate 2                           :milestone, after e29s6, 0d
+
+    section Phase 3: Polish & Export
+    S7: Accuracy Validation (both benchmarks) :e29s7, after e29s6, 1d
+    S8: Flexible Export (per-building + ACM)  :e29s8, after e29s7, 2d
+    S9: Integration + Performance Testing     :e29s9, after e29s8, 1d
+        </div>
+      </div>
+
+      <h3>Decision Gates</h3>
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid var(--amber);">
+          <h4>Gate 1: Research Spike Results</h4>
+          <p style="font-size:0.88rem;"><strong>After S1 + S2.</strong> The research spike must prove that DataFrame-first extraction achieves ≥ 29/31 on Broadmeadows WITHOUT any LLM calls. If it can't, the "tables as primary" architecture needs revision before Phase 2 begins.</p>
+          <p style="font-size:0.88rem;"><strong>Pass criteria:</strong> Table Parser agent alone produces ≥ 29 records with ≥ 60% of BAR fields populated. Dead code cleanup passes all existing tests.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--amber);">
+          <h4>Gate 2: Pipeline Accuracy</h4>
+          <p style="font-size:0.88rem;"><strong>After S6.</strong> The full agent pipeline must match or exceed current accuracy: Broadmeadows 31/31, Alexander ≥ 40/43. If accuracy drops, investigate which agent is the bottleneck before proceeding to export work.</p>
+          <p style="font-size:0.88rem;"><strong>Pass criteria:</strong> Broadmeadows = 31/31. Alexander ≥ 40/43. Per-agent accuracy metrics documented.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="stories">
+      <h2><span class="num">12 /</span> Story Breakdown</h2>
+      <p class="section-subtitle">9 stories across 3 phases. Each story has clear acceptance criteria and file change scope.</p>
+
+      <h3>Phase 1: Research & Cleanup (3 days)</h3>
+
+      <div class="story-card">
+        <div class="story-id">E29-S1</div>
+        <div class="story-title">Research Spike: DataFrame-First Extraction Validation</div>
+        <div class="story-desc">Empirically validate that Docling DataFrames can be the primary extraction source. Build a standalone script that converts DataFrames → raw ACMRecords without any LLM, measure field coverage and record count against Broadmeadows and Alexander ground truth.</div>
+        <div class="story-meta">
+          <span>📊 2 SP</span>
+          <span>🎯 Gaps: GAP-2</span>
+          <span>📁 scripts/research/e29_s1_dataframe_first_spike.py</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. Broadmeadows: ≥ 29/31 records identified from DataFrames alone (no LLM)<br>
+        2. Field coverage: ≥ 60% of BAR fields populated from DataFrame columns<br>
+        3. Alexander: ≥ 35/43 records identified from DataFrames alone<br>
+        4. Document which fields CAN vs CANNOT be derived from tables<br>
+        5. Produce a "fields requiring AI enrichment" list with justification<br>
+        6. Measure processing time (target: &lt; 5s per document for table parsing)</p>
+      </div>
+
+      <div class="story-card">
+        <div class="story-id">E29-S2</div>
+        <div class="story-title">Aggressive Dead Code Cleanup</div>
+        <div class="story-desc">Remove all dead paths: legacy prepare→extract→loop, MinerU HTML fallback, DOCLING_TABLE_STRUCTURE flag, DOCLING_DIRECT_TABLE_EXTRACTION flag (promote to always-on), should_use_orchestrator() conditional. Clean compile, all tests pass.</div>
+        <div class="story-meta">
+          <span>📊 1 SP</span>
+          <span>🎯 Gaps: GAP-1, GAP-6</span>
+          <span>📁 acm_extraction.py, source_commands.py, orchestrator.py</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. Legacy <code>prepare_context()</code> and <code>extract_records()</code> nodes removed from graph<br>
+        2. <code>should_use_orchestrator()</code> conditional removed — graph always routes to orchestrate<br>
+        3. MinerU HTML fallback code removed from <code>prepare_context()</code><br>
+        4. <code>DOCLING_TABLE_STRUCTURE</code> flag and guarded code removed<br>
+        5. <code>DOCLING_DIRECT_TABLE_EXTRACTION</code> flag removed (always-on behaviour)<br>
+        6. <code>uv run ruff check .</code> passes<br>
+        7. <code>uv run pytest tests/</code> — all previously-passing tests still pass<br>
+        8. Broadmeadows extraction still produces 31/31 (regression gate)</p>
+      </div>
+
+      <h3>Phase 2: Core Pipeline (7 days)</h3>
+
+      <div class="story-card">
+        <div class="story-id">E29-S3</div>
+        <div class="story-title">Unified Orchestrator — Single Path, No Legacy</div>
+        <div class="story-desc">Redesign the orchestrator to handle ALL documents through one path. When building inventory exists: per-building plans (as today). When inventory fails: create single "Whole Document" plan covering all pages. Derive structure from Docling table metadata (page ranges, table count) instead of LLM pre-extraction intelligence. Remove 4 wasted LLM calls.</div>
+        <div class="story-meta">
+          <span>📊 3 SP</span>
+          <span>🎯 Gaps: GAP-1, GAP-5</span>
+          <span>📁 orchestrator.py, acm_extraction.py, document_structure.py, building_inventory.py, page_tagger.py</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. NO conditional edges in LangGraph — single path from tag_pages → orchestrate<br>
+        2. <code>should_use_orchestrator()</code> removed entirely<br>
+        3. When building inventory present: per-building plans (unchanged logic)<br>
+        4. When building inventory absent: single "Whole Document" plan (page 1 → last page, FULL_LLM)<br>
+        5. Pre-extraction intelligence uses table-derived structure (table page ranges → register pages)<br>
+        6. Heuristic fallbacks for building names (regex from full_text, not LLM)<br>
+        7. 4 pre-extraction LLM calls eliminated (or made optional behind a flag)<br>
+        8. Broadmeadows: 31/31 maintained<br>
+        9. Alexander: ≥ 40/43 (improves from current 0/43 by inheriting E27 fix)</p>
+      </div>
+
+      <div class="story-card">
+        <div class="story-id">E29-S4</div>
+        <div class="story-title">Table Parser + BAR Mapper Agents</div>
+        <div class="story-desc">Implement the two deterministic agents: Table Parser (DataFrame → raw ACMRecords) and BAR Field Mapper (extracted fields → BAR column schema). These replace the "extraction" part of the current LLM call with zero-cost deterministic transformations.</div>
+        <div class="story-meta">
+          <span>📊 3 SP</span>
+          <span>🎯 Gaps: GAP-2, GAP-3</span>
+          <span>📁 extractors/table_parser.py (NEW), extractors/bar_mapper.py (NEW)</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. Table Parser: DataFrame rows → raw ACMRecord list (no LLM)<br>
+        2. Table Parser: regex normalization (sample numbers, "Asbestos " prefix, "Same as" → "As Per")<br>
+        3. Table Parser: Broadmeadows → ≥ 29 raw records from 3 tables<br>
+        4. BAR Mapper: uses <code>field_schema</code> table for column mapping (not hardcoded)<br>
+        5. BAR Mapper: enum normalization for friable, condition, risk_status<br>
+        6. BAR Mapper: handles consultant-specific column name variations<br>
+        7. Unit tests for both agents with Broadmeadows DataFrame fixtures<br>
+        8. Per-agent accuracy metrics documented</p>
+      </div>
+
+      <div class="story-card">
+        <div class="story-id">E29-S5</div>
+        <div class="story-title">Context Enricher + Classifier Agents</div>
+        <div class="story-desc">Implement the two agents that use AI: Context Enricher (fills fields tables can't provide using full_text excerpts) and Classifier (ACM Product Group/Type with regex primary, LLM fallback). These are the only agents that make LLM calls, and both are surgically targeted.</div>
+        <div class="story-meta">
+          <span>📊 3 SP</span>
+          <span>🎯 Gaps: GAP-2, GAP-3</span>
+          <span>📁 extractors/context_enricher.py (NEW), extractors/classifier.py (MODIFY)</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. Context Enricher: receives records with missing fields + relevant full_text excerpt<br>
+        2. Context Enricher: batch-fills fields (floor_level, area_type, hygienist_recommendations, etc.)<br>
+        3. Context Enricher: recovers records from sparse text sections not in DataFrames<br>
+        4. Context Enricher: ≤ 1 LLM call per building (batched)<br>
+        5. Classifier: 80%+ products resolved by regex (match existing E1-S9 patterns)<br>
+        6. Classifier: remaining products batched into single LLM call<br>
+        7. Broadmeadows combined: 31/31 records, all product classifications correct<br>
+        8. LLM token usage measured and compared to current approach</p>
+      </div>
+
+      <div class="story-card">
+        <div class="story-id">E29-S6</div>
+        <div class="story-title">Validator + Corrector Agent (Targeted)</div>
+        <div class="story-desc">Redesign the validation/correction loop to send individual failing records with specific error messages, not entire building context. Maintain Pydantic schema validation, deduplication (room + product + location key), and No-Access regex recovery.</div>
+        <div class="story-meta">
+          <span>📊 2 SP</span>
+          <span>🎯 Gaps: GAP-3</span>
+          <span>📁 extractors/validator.py (NEW), acm_extraction.py (MODIFY)</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. Pydantic validation unchanged (same schema, same rules)<br>
+        2. Field errors: LLM receives SINGLE failing record + error + relevant text (not full building)<br>
+        3. Structural errors: re-chunk retry with different boundaries<br>
+        4. Max 3 retries per record (unchanged)<br>
+        5. Dedup key: room + product + location (unchanged from E26)<br>
+        6. No-Access regex recovery (unchanged from E26)<br>
+        7. Token usage per correction call reduced ≥ 80% vs current<br>
+        8. Broadmeadows: 31/31 after full pipeline</p>
+      </div>
+
+      <h3>Phase 3: Polish & Export (4 days)</h3>
+
+      <div class="story-card">
+        <div class="story-id">E29-S7</div>
+        <div class="story-title">Dual-Benchmark Accuracy Validation</div>
+        <div class="story-desc">Full pipeline validation against both benchmark documents. Per-agent accuracy metrics. LLM cost comparison vs E26 baseline. Decision gate: must match or exceed current accuracy before proceeding.</div>
+        <div class="story-meta">
+          <span>📊 1 SP</span>
+          <span>🎯 Regression Gate</span>
+          <span>📁 scripts/research/e29_s7_accuracy_validation.py, docs/reviews/e29-s7-validation-results.md</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. Broadmeadows: 31/31 (100%) — NO regression tolerated<br>
+        2. Alexander: ≥ 40/43 (baseline recovery from 0/43)<br>
+        3. Per-agent accuracy breakdown documented (Table Parser: X/31, Enricher: +Y, etc.)<br>
+        4. LLM cost comparison: token count per document vs E26 baseline<br>
+        5. Processing time comparison: seconds per document vs E26 baseline<br>
+        6. Validation report: <code>docs/reviews/e29-s7-validation-results.md</code></p>
+      </div>
+
+      <div class="story-card">
+        <div class="story-id">E29-S8</div>
+        <div class="story-title">Flexible Export: Per-Building + ACM-Type</div>
+        <div class="story-desc">Wire export endpoints to use field_schema mappings (not hardcoded columns). Add per-building export (separate file per building) and ACM-type export (grouped by material/risk). Frontend export UI with format selection.</div>
+        <div class="story-meta">
+          <span>📊 3 SP</span>
+          <span>🎯 Gaps: GAP-4</span>
+          <span>📁 api/routers/acm.py, frontend/src/components/ExportDialog.tsx (NEW)</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. Export endpoints use <code>field_schema</code> table for column mapping (not hardcoded)<br>
+        2. Per-building export: one Excel file per building with BAR columns<br>
+        3. ACM-type export: records grouped by product type / risk status<br>
+        4. Consolidated BAR export (existing, but now using field_schema)<br>
+        5. CSV export with all 47 BAR columns<br>
+        6. Frontend: export dialog with format selection (consolidated, per-building, ACM-type)<br>
+        7. All exports include site config fields (department, agency, building_type)</p>
+      </div>
+
+      <div class="story-card">
+        <div class="story-id">E29-S9</div>
+        <div class="story-title">Integration Testing + Performance Baseline</div>
+        <div class="story-desc">End-to-end integration tests for the complete unified pipeline. Performance benchmarking for production readiness. Document the new pipeline for the team.</div>
+        <div class="story-meta">
+          <span>📊 2 SP</span>
+          <span>🎯 Production Readiness</span>
+          <span>📁 tests/test_unified_pipeline.py (NEW), docs/architecture/pipeline-v2.md (NEW)</span>
+        </div>
+      </div>
+      <div class="callout" style="margin-top: 0;">
+        <div class="callout-title">Acceptance Criteria</div>
+        <p>1. E2E test: upload PDF → source processing → extraction → records in DB → export<br>
+        2. Performance: Broadmeadows &lt; 120s (current: ~207s, target: ~90s with fewer LLM calls)<br>
+        3. Performance: Alexander &lt; 300s<br>
+        4. No uncaught exceptions in pipeline for malformed/empty PDFs<br>
+        5. Pipeline architecture document updated to reflect v2<br>
+        6. Agent specifications documented with input/output schemas</p>
+      </div>
+    </section>
+
+    <section id="regression">
+      <h2><span class="num">13 /</span> Regression Strategy</h2>
+      <p class="section-subtitle">How to ensure the refactor doesn't break what's already working.</p>
+
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid var(--red);">
+          <h4>Immovable Benchmarks</h4>
+          <p style="font-size:0.88rem;">Broadmeadows: 31/31 (100%) — zero tolerance for regression. Alexander: ≥ 40/43 — must recover from current 0/43. These are validated at every story completion, not just at the end.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--amber);">
+          <h4>Per-Agent Metrics</h4>
+          <p style="font-size:0.88rem;">New capability: measure accuracy at each pipeline stage, not just the final output. Table Parser: X/31 records found. Enricher: +Y records recovered. Classifier: Z% correct. This makes debugging regressions trivial.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>Cost Regression</h4>
+          <p style="font-size:0.88rem;">Track LLM token usage per document. The new pipeline should use ≥ 60% fewer tokens than E26 baseline. If cost increases, the agent decomposition isn't working as designed.</p>
+        </div>
+      </div>
+
+      <h3>Test Strategy per Story</h3>
+      <table>
+        <thead><tr><th>Story</th><th>Test Type</th><th>Gate</th></tr></thead>
+        <tbody>
+          <tr><td>E29-S1 (Spike)</td><td>Script output comparison vs ground truth CSV</td><td>≥ 29/31 Broadmeadows, ≥ 35/43 Alexander</td></tr>
+          <tr><td>E29-S2 (Cleanup)</td><td>Existing test suite pass + full extraction run</td><td>31/31 Broadmeadows (no regression)</td></tr>
+          <tr><td>E29-S3 (Orchestrator)</td><td>Unit tests + integration extraction</td><td>31/31 Broadmeadows, ≥ 40/43 Alexander</td></tr>
+          <tr><td>E29-S4 (Parser+Mapper)</td><td>Unit tests with DataFrame fixtures</td><td>≥ 29/31 records identified deterministically</td></tr>
+          <tr><td>E29-S5 (Enricher+Classifier)</td><td>Unit tests + combined pipeline test</td><td>31/31 Broadmeadows combined</td></tr>
+          <tr><td>E29-S6 (Validator)</td><td>Unit tests + full pipeline test</td><td>31/31 final output, token cost measured</td></tr>
+          <tr><td>E29-S7 (Validation)</td><td>Comprehensive dual-benchmark</td><td>DECISION GATE — must pass before S8-S9</td></tr>
+          <tr><td>E29-S8 (Export)</td><td>Export file validation</td><td>All export types produce valid Excel/CSV</td></tr>
+          <tr><td>E29-S9 (Integration)</td><td>E2E + performance benchmarks</td><td>&lt; 120s Broadmeadows, &lt; 300s Alexander</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="risks">
+      <h2><span class="num">14 /</span> Risk Assessment</h2>
+      <p class="section-subtitle">What could go wrong and how we'll handle it.</p>
+
+      <table>
+        <thead><tr><th>Risk</th><th>Probability</th><th>Impact</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>DataFrames can't identify all records (tables miss sparse text)</td>
+            <td>Low (E25 proved 29/31)</td>
+            <td>High</td>
+            <td>Context Enricher scans full_text for unmatched records. Regex recovery remains as final safety net.</td>
+          </tr>
+          <tr>
+            <td>Column header variation across consultants breaks Table Parser</td>
+            <td>Medium</td>
+            <td>High</td>
+            <td>Research spike (S1) tests both Broadmeadows (Prensa) AND Alexander (Greencap) formats. Fuzzy column matching with configurable aliases.</td>
+          </tr>
+          <tr>
+            <td>Context Enricher LLM can't fill specific fields accurately</td>
+            <td>Low-Medium</td>
+            <td>Medium</td>
+            <td>Fields that can't be enriched are left as null/unknown — better to have a gap than a hallucination. Validation flags incomplete records.</td>
+          </tr>
+          <tr>
+            <td>Dead code cleanup breaks something unexpected</td>
+            <td>Low</td>
+            <td>Medium</td>
+            <td>S2 has explicit regression gate: 31/31 Broadmeadows must pass. Git revert is trivial if needed.</td>
+          </tr>
+          <tr>
+            <td>Orchestrator "Whole Document" fallback produces worse results than legacy path</td>
+            <td>Medium</td>
+            <td>High</td>
+            <td>S3 tests this explicitly: document WITHOUT building inventory must still produce records. The "Whole Document" plan is equivalent to legacy but using the new agent pipeline.</td>
+          </tr>
+          <tr>
+            <td>Performance regression from multiple agent calls</td>
+            <td>Low</td>
+            <td>Low</td>
+            <td>Most agents are deterministic (microseconds). Net LLM calls decrease. Performance target: &lt; 120s (current: 207s).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout green">
+        <div class="callout-title">Safety Net</div>
+        <p>The research spike (S1) runs BEFORE any production code changes. If the empirical results don't support the "tables as primary" approach, we can adjust the target architecture before investing in implementation. This is the BMAD way: measure before fixing.</p>
+      </div>
+    </section>
+
+    <div style="margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--gray-200); text-align: center; color: var(--gray-500); font-size: 0.78rem;">
+      <p>ACM-AI BMAD Architecture Audit — Epic 29: Pipeline Unification</p>
+      <p style="margin-top: 2px;">Generated March 2026 · 6 gaps · 9 stories · 20 story points · ~14 days estimated</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: 'neutral',
+    themeVariables: { fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: '12px' },
+    flowchart: { htmlLabels: true, curve: 'basis' },
+    gantt: { fontSize: 12, sectionFontSize: 13, barHeight: 24, barGap: 6 },
+  });
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar a[href^="#"]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => link.classList.remove('active'));
+        const active = document.querySelector(`.sidebar a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

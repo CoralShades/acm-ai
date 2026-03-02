@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACM-AI Solution Architecture</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #3a8f8a;
+    --teal-light: #4db3ac;
+    --teal-dark: #2d706c;
+    --teal-bg: #f0f9f8;
+    --coral: #d4614a;
+    --coral-light: #e8856f;
+    --coral-bg: #fdf4f2;
+    --navy: #2a2f45;
+    --navy-light: #3d4466;
+    --navy-bg: #f4f4f7;
+    --white: #ffffff;
+    --gray-50: #f8f9fa;
+    --gray-100: #f1f3f5;
+    --gray-200: #e9ecef;
+    --gray-300: #dee2e6;
+    --gray-400: #ced4da;
+    --gray-500: #adb5bd;
+    --gray-600: #868e96;
+    --gray-700: #495057;
+    --gray-800: #343a40;
+    --gray-900: #212529;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow-sm: 0 1px 2px rgba(42,47,69,0.06);
+    --shadow-md: 0 4px 12px rgba(42,47,69,0.08);
+    --shadow-lg: 0 12px 32px rgba(42,47,69,0.12);
+    --shadow-xl: 0 24px 48px rgba(42,47,69,0.16);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; font-size: 16px; }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--navy);
+    background: var(--gray-50);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== SIDEBAR NAV ===== */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 280px;
+    background: var(--navy);
+    color: rgba(255,255,255,0.85);
+    padding: 32px 0;
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform 0.3s ease;
+  }
+  .sidebar-brand {
+    padding: 0 24px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 16px;
+  }
+  .sidebar-brand h1 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--teal-light);
+    letter-spacing: -0.02em;
+  }
+  .sidebar-brand p {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+  .sidebar-section {
+    padding: 12px 24px 4px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.35);
+    font-weight: 600;
+  }
+  .sidebar a {
+    display: block;
+    padding: 8px 24px 8px 28px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 400;
+    transition: all 0.15s ease;
+    border-left: 3px solid transparent;
+  }
+  .sidebar a:hover, .sidebar a.active {
+    color: #fff;
+    background: rgba(255,255,255,0.06);
+    border-left-color: var(--teal-light);
+  }
+  .sidebar a.sub { padding-left: 44px; font-size: 0.8rem; }
+
+  /* ===== MAIN CONTENT ===== */
+  .main {
+    margin-left: 280px;
+    min-height: 100vh;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 50%, var(--teal-dark) 100%);
+    color: white;
+    padding: 80px 60px 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(58,143,138,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%; left: 10%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(212,97,74,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-content { position: relative; z-index: 1; max-width: 900px; }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+  .hero h1 span { color: var(--teal-light); }
+  .hero p {
+    font-size: 1.1rem;
+    color: rgba(255,255,255,0.75);
+    max-width: 680px;
+    line-height: 1.7;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 32px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+  .hero-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .hero-meta-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.45);
+    font-weight: 500;
+  }
+  .hero-meta-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.95);
+  }
+
+  /* ===== SECTIONS ===== */
+  .content { padding: 0 60px 80px; max-width: 1100px; }
+
+  section {
+    padding-top: 56px;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  h2 .num {
+    color: var(--teal);
+    font-weight: 500;
+    font-size: 0.85em;
+  }
+  .section-subtitle {
+    font-size: 0.95rem;
+    color: var(--gray-600);
+    margin-bottom: 32px;
+    line-height: 1.6;
+    max-width: 750px;
+  }
+
+  h3 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 32px 0 12px;
+    letter-spacing: -0.01em;
+  }
+
+  h4 {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--navy);
+    margin: 24px 0 8px;
+  }
+
+  p { margin-bottom: 14px; color: var(--gray-700); }
+
+  /* ===== CARDS & CALLOUTS ===== */
+  .card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    margin: 20px 0;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .card-grid .card { margin: 0; }
+
+  .callout {
+    border-left: 4px solid var(--teal);
+    background: var(--teal-bg);
+    padding: 20px 24px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 20px 0;
+  }
+  .callout.coral {
+    border-left-color: var(--coral);
+    background: var(--coral-bg);
+  }
+  .callout.navy {
+    border-left-color: var(--navy);
+    background: var(--navy-bg);
+  }
+  .callout-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+    color: var(--navy);
+  }
+  .callout p { margin-bottom: 0; font-size: 0.92rem; }
+
+  /* ===== DIAGRAM CONTAINERS ===== */
+  .diagram-container {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    margin: 24px 0;
+    box-shadow: var(--shadow-md);
+    overflow-x: auto;
+  }
+  .diagram-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .diagram-caption {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    margin-bottom: 20px;
+  }
+  .mermaid {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* ===== TABLES ===== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.88rem;
+  }
+  thead th {
+    background: var(--navy);
+    color: white;
+    padding: 10px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  thead th:first-child { border-radius: var(--radius) 0 0 0; }
+  thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+  tbody td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--gray-200);
+    color: var(--gray-700);
+  }
+  tbody tr:hover { background: var(--gray-50); }
+
+  /* ===== CODE ===== */
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    background: var(--gray-100);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--coral);
+  }
+  pre {
+    background: var(--navy);
+    color: rgba(255,255,255,0.9);
+    padding: 20px 24px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin: 16px 0;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* ===== BADGES ===== */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge-teal { background: var(--teal-bg); color: var(--teal-dark); border: 1px solid rgba(58,143,138,0.2); }
+  .badge-coral { background: var(--coral-bg); color: var(--coral); border: 1px solid rgba(212,97,74,0.2); }
+  .badge-navy { background: var(--navy-bg); color: var(--navy); border: 1px solid rgba(42,47,69,0.15); }
+
+  /* ===== TIMELINE ===== */
+  .timeline { position: relative; padding-left: 32px; margin: 24px 0; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px; top: 8px; bottom: 8px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--teal), var(--coral));
+    border-radius: 1px;
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding-left: 16px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -25px; top: 8px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--teal);
+    border: 2px solid white;
+    box-shadow: var(--shadow-sm);
+  }
+  .timeline-item.milestone::before { background: var(--coral); width: 12px; height: 12px; left: -26px; top: 7px; }
+  .timeline-date {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    font-family: var(--font-mono);
+  }
+  .timeline-title {
+    font-weight: 600;
+    color: var(--navy);
+    margin: 2px 0;
+  }
+  .timeline-desc { font-size: 0.88rem; color: var(--gray-600); }
+  .timeline-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .timeline-badge.green { color: #16a34a; }
+  .timeline-badge.amber { color: #d97706; }
+  .timeline-badge.red { color: #dc2626; }
+
+  /* ===== STAGE PILLS ===== */
+  .stage-flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    margin: 16px 0;
+  }
+  .stage-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .stage-arrow {
+    color: var(--gray-400);
+    font-size: 0.9rem;
+    font-weight: 400;
+  }
+  .stage-pill.pre { background: #e0f2fe; color: #0369a1; }
+  .stage-pill.llm { background: #fce7f3; color: #be185d; }
+  .stage-pill.val { background: #dcfce7; color: #15803d; }
+  .stage-pill.store { background: #fef3c7; color: #a16207; }
+  .stage-pill.pdf { background: #f3e8ff; color: #7e22ce; }
+
+  /* ===== STAT BLOCKS ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .stat-block {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat-number {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--teal);
+    line-height: 1;
+  }
+  .stat-number.coral { color: var(--coral); }
+  .stat-number.navy { color: var(--navy); }
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+    margin-top: 6px;
+  }
+
+  /* ===== PRINT ===== */
+  @media print {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .hero { padding: 40px; }
+    .content { padding: 0 40px; }
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; }
+    .hero { padding: 48px 24px; }
+    .content { padding: 0 24px 60px; }
+    .hero h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR NAVIGATION -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h1>ACM-AI</h1>
+    <p>Solution Architecture v2.0</p>
+  </div>
+
+  <div class="sidebar-section">Overview</div>
+  <a href="#executive-summary">Executive Summary</a>
+  <a href="#system-context">System Context</a>
+
+  <div class="sidebar-section">Architecture</div>
+  <a href="#e2e-flow">End-to-End Data Flow</a>
+  <a href="#infrastructure">Infrastructure &amp; Deployment</a>
+  <a href="#pipeline">LangGraph Pipeline</a>
+
+  <div class="sidebar-section">Pipeline Deep Dive</div>
+  <a href="#phase1" class="sub">Phase 1: Source Processing</a>
+  <a href="#phase2" class="sub">Phase 2: Pre-Extraction Intel</a>
+  <a href="#phase3" class="sub">Phase 3: Orchestration</a>
+  <a href="#phase4" class="sub">Phase 4: AI Extraction</a>
+  <a href="#phase5" class="sub">Phase 5: Post-Extraction</a>
+  <a href="#phase6" class="sub">Phase 6: Storage &amp; Export</a>
+
+  <div class="sidebar-section">AI &amp; Models</div>
+  <a href="#ai-models">AI Model Decision Tree</a>
+  <a href="#structured-output">Structured Output &amp; Fallbacks</a>
+
+  <div class="sidebar-section">Data &amp; Frontend</div>
+  <a href="#data-model">Data Model &amp; Schema</a>
+  <a href="#frontend">Frontend Architecture</a>
+
+  <div class="sidebar-section">Quality</div>
+  <a href="#accuracy-journey">Accuracy Journey</a>
+  <a href="#design-principles">Design Principles</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- HERO -->
+  <header class="hero" id="top">
+    <div class="hero-content">
+      <div class="hero-badge">Victorian Asbestos Eradication Agency</div>
+      <h1>ACM-AI <span>Solution Architecture</span></h1>
+      <p>An AI-powered compliance platform that transforms PDF asbestos registers into BAR-compliant structured data through a multi-stage intelligent extraction pipeline — processing documents from any consulting firm into standardized Victorian Government format.</p>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Extraction Accuracy</span>
+          <span class="hero-meta-value">31/31 (100%)</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Pipeline Stages</span>
+          <span class="hero-meta-value">7 Stages</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">BAR Schema Fields</span>
+          <span class="hero-meta-value">47 Columns</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Document Formats</span>
+          <span class="hero-meta-value">Prensa, Greencap, Generic</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Version</span>
+          <span class="hero-meta-value">March 2026</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ================================================================== -->
+    <!-- 1. EXECUTIVE SUMMARY -->
+    <!-- ================================================================== -->
+    <section id="executive-summary">
+      <h2><span class="num">01 /</span> Executive Summary</h2>
+      <p class="section-subtitle">A non-technical overview of what ACM-AI does, why it exists, and how it transforms government compliance workflows.</p>
+
+      <div class="callout">
+        <div class="callout-title">The Problem</div>
+        <p>Victorian Government agencies manage thousands of PDF asbestos assessment reports from multiple consulting firms (Prensa, Greencap, and others). Each report must be manually converted into a standardised Building Asbestos Register (BAR) spreadsheet with 47 columns. This process is slow, error-prone, and expensive — costing compliance officers hours per document.</p>
+      </div>
+
+      <div class="callout" style="border-left-color: var(--teal-light);">
+        <div class="callout-title">The Solution</div>
+        <p>ACM-AI automates this conversion using a hybrid approach: computer vision extracts raw tables from PDFs, then AI agents interpret, classify, and normalise the data into BAR-compliant format. The system handles any consultant format without pre-configuration, achieving 100% accuracy on benchmark documents.</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-block">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Extraction Accuracy</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-number coral">~3 min</div>
+          <div class="stat-label">Per Document</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-number navy">2000+</div>
+          <div class="stat-label">Target Documents</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-number">47</div>
+          <div class="stat-label">BAR Columns</div>
+        </div>
+      </div>
+
+      <h3>How It Works (In Brief)</h3>
+      <div class="stage-flow">
+        <span class="stage-pill pdf">📄 PDF Upload</span>
+        <span class="stage-arrow">→</span>
+        <span class="stage-pill pre">🔍 Table Extraction</span>
+        <span class="stage-arrow">→</span>
+        <span class="stage-pill pre">📋 Document Analysis</span>
+        <span class="stage-arrow">→</span>
+        <span class="stage-pill llm">🤖 AI Extraction</span>
+        <span class="stage-arrow">→</span>
+        <span class="stage-pill val">✅ Validation</span>
+        <span class="stage-arrow">→</span>
+        <span class="stage-pill store">💾 BAR Output</span>
+      </div>
+
+      <p>A compliance officer uploads an asbestos assessment PDF. The system processes the document through two parallel engines — PyMuPDF for reading-order text and Docling for structured table data. An AI pipeline then analyses the document structure, identifies buildings and rooms, extracts every ACM record, validates accuracy, and stores the results. Officers review the data in an interactive spreadsheet before exporting to BAR-compliant Excel.</p>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- 2. SYSTEM CONTEXT -->
+    <!-- ================================================================== -->
+    <section id="system-context">
+      <h2><span class="num">02 /</span> System Context</h2>
+      <p class="section-subtitle">Where ACM-AI fits within the Victorian Government compliance ecosystem and who interacts with it.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">System Context Diagram</div>
+        <div class="diagram-caption">ACM-AI's position in the VAEA compliance workflow</div>
+        <div class="mermaid">
+graph TB
+    subgraph Users["👥 Users"]
+        CO["Compliance Officer<br/><i>Uploads PDFs, reviews data,<br/>exports BAR spreadsheets</i>"]
+        ADMIN["System Administrator<br/><i>Configures models, manages<br/>extraction settings</i>"]
+        DIR["Agency Director<br/><i>Views dashboards,<br/>compliance status</i>"]
+    end
+
+    subgraph External["🏢 External Systems"]
+        PDF["Consultant PDFs<br/><i>Prensa, Greencap, Generic<br/>Asbestos Risk Assessments</i>"]
+        BAR["BAR Templates<br/><i>Victorian Government<br/>Building Asbestos Register</i>"]
+    end
+
+    subgraph ACMAI["🧠 ACM-AI Platform"]
+        direction TB
+        FE["Next.js Frontend<br/><i>AG Grid, CopilotKit Chat</i>"]
+        API["FastAPI Backend<br/><i>REST API, SSE Streaming</i>"]
+        PIPE["Extraction Pipeline<br/><i>LangGraph, Multi-Agent AI</i>"]
+        DB["SurrealDB<br/><i>Documents, Records, Graph</i>"]
+    end
+
+    subgraph AIProviders["🤖 AI Providers"]
+        OR["OpenRouter<br/><i>Claude Sonnet 4, GPT-4o,<br/>Gemini 2.0 Flash</i>"]
+        OL["Ollama (Local)<br/><i>Qwen 2.5:7b<br/>Embeddings</i>"]
+    end
+
+    CO --> FE
+    ADMIN --> FE
+    DIR --> FE
+    PDF --> ACMAI
+    FE --> API
+    API --> PIPE
+    PIPE --> DB
+    PIPE --> OR
+    PIPE --> OL
+    ACMAI --> BAR
+
+    style ACMAI fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+    style Users fill:#f4f4f7,stroke:#2a2f45,stroke-width:1px
+    style External fill:#fdf4f2,stroke:#d4614a,stroke-width:1px
+    style AIProviders fill:#fce7f3,stroke:#be185d,stroke-width:1px
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Input Documents</h4>
+          <p style="font-size:0.9rem;">Asbestos Risk Assessments (ARA) and Division 5 reports from consulting firms. Each is a 15-50 page PDF containing tables of ACM findings per building and room. Format varies significantly by consultant.</p>
+        </div>
+        <div class="card">
+          <h4>Output Format</h4>
+          <p style="font-size:0.9rem;">Victorian BAR (Building Asbestos Register) spreadsheet with 47 standardised columns. Exports can be per-building, per-site, or consolidated. Must match exact government template format for submission.</p>
+        </div>
+        <div class="card">
+          <h4>Key Challenge</h4>
+          <p style="font-size:0.9rem;">No two consulting firms use the same PDF layout, column names, or terminology. The system must handle this variation without per-consultant configuration — a single unified pipeline for all formats.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- 3. END-TO-END DATA FLOW -->
+    <!-- ================================================================== -->
+    <section id="e2e-flow">
+      <h2><span class="num">03 /</span> End-to-End Data Flow</h2>
+      <p class="section-subtitle">The complete journey of data from PDF upload to BAR-compliant export — the definitive "hero diagram" of the system.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Complete Data Flow: PDF → BAR Spreadsheet</div>
+        <div class="diagram-caption">Every document follows this unified pipeline regardless of consultant format or building count</div>
+        <div class="mermaid">
+flowchart TB
+    subgraph UPLOAD["<b>① USER UPLOAD</b>"]
+        U1["Compliance Officer<br/>uploads PDF via browser"]
+        U2["Upload Wizard captures<br/>site metadata<br/><i>(Dept, Agency, Building Type)</i>"]
+    end
+
+    subgraph SOURCE["<b>② SOURCE PROCESSING</b><br/><i>Parallel Hybrid Extraction</i>"]
+        direction LR
+        S1["<b>PyMuPDF</b><br/>Full reading-order text<br/>Page markers: --- Page N ---<br/><i>Covers ALL pages incl. page 8</i>"]
+        S2["<b>Docling Direct API</b><br/>TableFormer ACCURATE mode<br/>Row-major DataFrames<br/><i>Structured table data</i>"]
+    end
+
+    subgraph CMD["<b>③ COMMAND QUEUE</b>"]
+        C1["SurrealDB <code>command</code> table<br/>Worker polls & claims job"]
+    end
+
+    subgraph PREEX["<b>④ PRE-EXTRACTION INTELLIGENCE</b><br/><i>Stage -1: Document Understanding</i>"]
+        P1["<b>TOC & Structure</b><br/>Document type, section hierarchy<br/>Register start page"]
+        P2["<b>Building Inventory</b><br/>Per-building page ranges<br/>Complexity classification"]
+        P3["<b>Page Tagging</b><br/>Section taxonomy (0-7)<br/>Register vs policy pages"]
+        P4["<b>Metadata</b><br/>Consultant, date, site name"]
+    end
+
+    subgraph ORCH["<b>⑤ UNIFIED ORCHESTRATOR</b><br/><i>Stage 0.5: Strategy Planning</i>"]
+        O1["<b>Plan Extraction</b><br/>Assign per-building strategy:<br/>FULL_LLM | REGEX_ONLY | SKIP"]
+        O2["<b>Context Assembly</b><br/>Building content + Docling tables<br/>+ metadata → LLM prompt"]
+        O3["<b>Parallel Execution</b><br/>asyncio.gather with semaphore(3)<br/>Per-building extraction calls"]
+    end
+
+    subgraph EXTRACT["<b>⑥ AI EXTRACTION</b><br/><i>Stage 1: Per-Building LLM Calls</i>"]
+        E1["<b>Prompt Template</b><br/>building_extraction.jinja<br/>Building context + table rules"]
+        E2["<b>Claude Sonnet 4</b><br/>via OpenRouter<br/>Structured JSON output"]
+        E3["<b>JSON Parse + Validate</b><br/>Pydantic ACMExtractionResult<br/>40+ BAR fields per record"]
+    end
+
+    subgraph POSTEX["<b>⑦ POST-EXTRACTION</b><br/><i>Stages 2-2.5: Quality Assurance</i>"]
+        V1["<b>Validation</b><br/>Required fields check<br/>Enum value verification"]
+        V2["<b>LLM Correction</b><br/>Missing field recovery<br/><i>Max 3 retries with feedback</i>"]
+        V3["<b>Re-chunk Retry</b><br/>Structural failures<br/><i>Different chunk boundaries</i>"]
+        V4["<b>Deduplication</b><br/>Key: room + product + location<br/><i>Prevents record merging</i>"]
+        V5["<b>No-Access Recovery</b><br/>Regex fallback scanner<br/><i>Catches records LLM missed</i>"]
+    end
+
+    subgraph STORE["<b>⑧ STORAGE & ENRICHMENT</b><br/><i>Stage 3: Persist & Embed</i>"]
+        ST1["<b>Save to SurrealDB</b><br/>acm_record table<br/>Parent sections created"]
+        ST2["<b>Enriched Embeddings</b><br/>Hierarchical context vectors<br/><i>Building|Room|Page prefix</i>"]
+        ST3["<b>Knowledge Graph</b><br/>School→Building→Room→ACM<br/>SurrealDB RELATION tables"]
+    end
+
+    subgraph OUTPUT["<b>⑨ USER REVIEW & EXPORT</b>"]
+        EX1["<b>AG Grid Spreadsheet</b><br/>Interactive review, filtering<br/>Per-building tabs"]
+        EX2["<b>AI Chat</b><br/>CopilotKit + ACM context<br/>Query records naturally"]
+        EX3["<b>BAR Excel Export</b><br/>47-column template<br/>Per-building or consolidated"]
+    end
+
+    UPLOAD --> SOURCE
+    SOURCE --> CMD
+    S1 --> |"source.full_text"| CMD
+    S2 --> |"acm_table_section rows"| CMD
+    CMD --> PREEX
+    P1 --> P2 --> P3
+    P1 --> P4
+    PREEX --> ORCH
+    O1 --> O2 --> O3
+    ORCH --> EXTRACT
+    E1 --> E2 --> E3
+    EXTRACT --> POSTEX
+    V1 --> |"field errors"| V2
+    V1 --> |"structural errors"| V3
+    V2 --> V4
+    V3 --> V4
+    V4 --> V5
+    POSTEX --> STORE
+    ST1 --> ST2
+    ST1 --> ST3
+    STORE --> OUTPUT
+
+    style UPLOAD fill:#f3e8ff,stroke:#7e22ce,stroke-width:2px
+    style SOURCE fill:#e0f2fe,stroke:#0369a1,stroke-width:2px
+    style CMD fill:#f1f3f5,stroke:#868e96,stroke-width:1px
+    style PREEX fill:#fef3c7,stroke:#a16207,stroke-width:2px
+    style ORCH fill:#fce7f3,stroke:#be185d,stroke-width:2px
+    style EXTRACT fill:#fce7f3,stroke:#be185d,stroke-width:2px
+    style POSTEX fill:#dcfce7,stroke:#15803d,stroke-width:2px
+    style STORE fill:#fef3c7,stroke:#a16207,stroke-width:2px
+    style OUTPUT fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+        </div>
+      </div>
+
+      <div class="callout navy">
+        <div class="callout-title">Unified Pipeline Principle</div>
+        <p>Every PDF — regardless of consultant format, building count, or complexity — flows through the same orchestrated pipeline. The system makes no assumptions about input structure. Raw table extraction handles the physical structure; AI agents handle interpretation and BAR-field mapping.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- 4. INFRASTRUCTURE -->
+    <!-- ================================================================== -->
+    <section id="infrastructure">
+      <h2><span class="num">04 /</span> Infrastructure &amp; Deployment</h2>
+      <p class="section-subtitle">The physical and logical topology of all services, their connections, and deployment strategy.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Deployment Topology</div>
+        <div class="diagram-caption">Services, hosting, and connectivity</div>
+        <div class="mermaid">
+graph TB
+    subgraph Cloud["☁️ CLOUD"]
+        subgraph Vercel["Vercel"]
+            FE["Next.js Frontend<br/>Port 8502<br/><i>SSR + Static</i>"]
+        end
+        subgraph OpenRouter["OpenRouter API"]
+            OR_API["Multi-provider routing<br/><i>Anthropic → Google → OpenAI</i>"]
+        end
+    end
+
+    subgraph CF["🔗 Cloudflare Tunnel"]
+        TUN["Encrypted tunnel<br/><i>Vercel → Local Backend</i>"]
+    end
+
+    subgraph Local["🖥️ LOCAL WORKSTATION (Windows + WSL)"]
+        subgraph Python["Python Runtime"]
+            API["FastAPI Backend<br/>Port 5055<br/><i>REST API + SSE</i>"]
+            WORKER["Background Worker<br/><i>Command polling<br/>Extraction pipeline</i>"]
+            PIPE["LangGraph Pipeline<br/><i>Extraction graphs</i>"]
+        end
+        subgraph GPU["NVIDIA RTX 4090"]
+            DOCLING["Docling + TableFormer<br/><i>CUDA-accelerated<br/>table recognition</i>"]
+        end
+        subgraph Docker["Docker Containers"]
+            SURREAL["SurrealDB v2<br/>Port 8000<br/><i>Document + Vector + Graph</i>"]
+            OLLAMA["Ollama<br/>Port 11434<br/><i>Qwen 2.5:7b embeddings</i>"]
+        end
+    end
+
+    FE --> |"HTTPS"| TUN
+    TUN --> |"HTTP"| API
+    API --> WORKER
+    WORKER --> PIPE
+    PIPE --> DOCLING
+    PIPE --> OR_API
+    PIPE --> OLLAMA
+    API --> SURREAL
+    WORKER --> SURREAL
+
+    style Cloud fill:#e0f2fe,stroke:#0369a1,stroke-width:1px
+    style CF fill:#fef3c7,stroke:#a16207,stroke-width:1px
+    style Local fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+    style Python fill:#dcfce7,stroke:#15803d,stroke-width:1px
+    style GPU fill:#fce7f3,stroke:#be185d,stroke-width:1px
+    style Docker fill:#f3e8ff,stroke:#7e22ce,stroke-width:1px
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Frontend</h4>
+          <p style="font-size:0.88rem;"><strong>Next.js 15</strong> on Vercel. Server-side rendering with React. AG Grid Enterprise for spreadsheet views, CopilotKit for AI chat, AG-UI protocol for SSE streaming. Connects to backend via Cloudflare tunnel.</p>
+        </div>
+        <div class="card">
+          <h4>Backend API</h4>
+          <p style="font-size:0.88rem;"><strong>FastAPI</strong> running locally (no Docker). REST endpoints for CRUD, SSE endpoints for live extraction progress. Manages the command queue and coordinates with the background worker process.</p>
+        </div>
+        <div class="card">
+          <h4>Worker Process</h4>
+          <p style="font-size:0.88rem;"><strong>surreal-commands-worker</strong> polls the SurrealDB <code>command</code> table for pending jobs. Claims a command, runs the LangGraph extraction pipeline, updates status on completion. Handles both source processing and ACM extraction commands.</p>
+        </div>
+        <div class="card">
+          <h4>Database</h4>
+          <p style="font-size:0.88rem;"><strong>SurrealDB v2</strong> in Docker. Serves triple duty: document/record storage (SCHEMAFULL tables), vector search (MTREE index with cosine similarity), and knowledge graph (RELATION tables with traversal syntax).</p>
+        </div>
+        <div class="card">
+          <h4>GPU Processing</h4>
+          <p style="font-size:0.88rem;"><strong>RTX 4090</strong> accelerates Docling's TableFormer model (ACCURATE mode) for table structure recognition. Also powers local Ollama models for embedding generation. Critical for production throughput on 2000+ documents.</p>
+        </div>
+        <div class="card">
+          <h4>AI Routing</h4>
+          <p style="font-size:0.88rem;"><strong>OpenRouter</strong> provides multi-provider access with automatic fallback. Primary: Anthropic (Claude Sonnet 4). Provider preferences exclude Amazon Bedrock and Azure, prioritise Anthropic → Google → OpenAI.</p>
+        </div>
+      </div>
+
+      <h3>Command Queue Architecture</h3>
+      <p>The system uses SurrealDB as a lightweight job queue — no external message broker needed. Here's how a job flows:</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Command Queue Flow</div>
+        <div class="diagram-caption">SurrealDB-based job queue with worker polling</div>
+        <div class="mermaid">
+sequenceDiagram
+    participant User as Compliance Officer
+    participant FE as Next.js Frontend
+    participant API as FastAPI
+    participant DB as SurrealDB
+    participant Worker as Background Worker
+    participant Pipeline as LangGraph Pipeline
+
+    User->>FE: Upload PDF
+    FE->>API: POST /api/sources (file)
+    API->>DB: INSERT INTO command {type: 'process_source', status: 'pending'}
+    API-->>FE: 202 Accepted (source_id)
+
+    loop Poll every 2s
+        Worker->>DB: SELECT FROM command WHERE status='pending' LIMIT 1
+        DB-->>Worker: command record
+    end
+
+    Worker->>DB: UPDATE command SET status='running', claimed_by=worker_id
+    Worker->>Pipeline: process_source_command(source)
+    Note over Pipeline: PyMuPDF + Docling<br/>parallel extraction
+    Pipeline-->>Worker: source.full_text + acm_table_sections
+    Worker->>DB: UPDATE source SET full_text=...
+    Worker->>DB: UPDATE command SET status='completed'
+
+    User->>FE: Click "Extract ACM"
+    FE->>API: POST /api/acm/extract (source_id)
+    API->>DB: INSERT INTO command {type: 'acm_extract', status: 'pending'}
+
+    Worker->>DB: SELECT FROM command WHERE status='pending'
+    Worker->>Pipeline: extract_acm_from_source(source)
+    Note over Pipeline: Full 7-stage<br/>LangGraph pipeline
+    Pipeline-->>Worker: ACMExtractionOutput (records)
+    Worker->>DB: INSERT INTO acm_record [...records]
+    Worker->>DB: UPDATE command SET status='completed'
+
+    FE->>API: GET /api/acm/records?source_id=xxx
+    API->>DB: SELECT FROM acm_record WHERE source_id=xxx
+    API-->>FE: ACM records (JSON)
+    FE-->>User: AG Grid spreadsheet view
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- 5. LANGGRAPH PIPELINE STATE MACHINE -->
+    <!-- ================================================================== -->
+    <section id="pipeline">
+      <h2><span class="num">05 /</span> LangGraph Pipeline State Machine</h2>
+      <p class="section-subtitle">The complete extraction pipeline as a directed graph with conditional routing, correction loops, and fallback paths.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Extraction Pipeline Graph (Current + Target State)</div>
+        <div class="diagram-caption">LangGraph state machine showing all nodes, conditional edges, and correction loops</div>
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> extract_metadata: START
+    
+    state "Stage -1: Pre-Extraction Intelligence" as PreEx {
+        extract_metadata --> extract_structure: TOC & document type
+        extract_structure --> compile_inventory: Building identification
+        compile_inventory --> tag_page_sections: Section taxonomy
+    }
+
+    tag_page_sections --> orchestrate_extraction: Unified path
+
+    state "Stage 0.5: Orchestrator" as Orch {
+        orchestrate_extraction --> plan_strategy: Analyse buildings
+        plan_strategy --> parallel_extract: Per-building plans
+        
+        state parallel_extract {
+            [*] --> Building_A: FULL_LLM
+            [*] --> Building_B: FULL_LLM
+            [*] --> Building_C: REGEX_ONLY
+            [*] --> Building_D: SKIP
+            Building_A --> merge_results
+            Building_B --> merge_results
+            Building_C --> merge_results
+        }
+    }
+    
+    merge_results --> validate_records
+
+    state "Stage 2: Validation & Correction" as PostEx {
+        validate_records --> check_result
+        check_result --> correct_records: Field errors
+        check_result --> rechunk_retry: Structural errors
+        check_result --> deduplicate_records: All valid
+        correct_records --> validate_records_strict
+        rechunk_retry --> validate_records_strict
+        validate_records_strict --> deduplicate_records: Pass
+        validate_records_strict --> correct_records: Fail (max 3x)
+    }
+
+    deduplicate_records --> recover_no_access
+
+    state "Stage 3: Enrich & Store" as Store {
+        recover_no_access --> save_records: Add regex-recovered records
+        save_records --> generate_embeddings: SurrealDB persist
+        generate_embeddings --> update_graph: Vector index
+    }
+
+    update_graph --> [*]: COMPLETE
+        </div>
+      </div>
+
+      <h3>Pipeline Stages Overview</h3>
+      <table>
+        <thead>
+          <tr><th>Stage</th><th>ID</th><th>Node(s)</th><th>Purpose</th><th>AI Used?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="badge badge-teal">Pre-Analysis</span></td><td>-1</td><td><code>extract_metadata</code>, <code>extract_structure</code></td><td>Document type, TOC, register start page</td><td>LLM (with heuristic fallback)</td></tr>
+          <tr><td><span class="badge badge-teal">Pre-Analysis</span></td><td>-1</td><td><code>compile_inventory</code></td><td>Per-building page ranges, complexity</td><td>LLM (with regex fallback)</td></tr>
+          <tr><td><span class="badge badge-teal">Pre-Analysis</span></td><td>-1</td><td><code>tag_page_sections</code></td><td>Section taxonomy (0-7) per page</td><td>LLM (batch, 5 pages at a time)</td></tr>
+          <tr><td><span class="badge badge-navy">Orchestrator</span></td><td>0.5</td><td><code>orchestrate_extraction</code></td><td>Strategy assignment, parallel dispatch</td><td>No (rule-based planning)</td></tr>
+          <tr><td><span class="badge badge-coral">Extract</span></td><td>1</td><td><code>extract_building</code> (per building)</td><td>Raw ACM record extraction from content</td><td>Claude Sonnet 4 (primary)</td></tr>
+          <tr><td><span class="badge badge-teal">Validate</span></td><td>2</td><td><code>validate_records</code></td><td>Required field checks, enum validation</td><td>No (Pydantic rules)</td></tr>
+          <tr><td><span class="badge badge-coral">Correct</span></td><td>2.5</td><td><code>correct_records</code></td><td>Fix missing/invalid fields via LLM</td><td>LLM (up to 3 retries)</td></tr>
+          <tr><td><span class="badge badge-navy">Dedup</span></td><td>2.5</td><td><code>deduplicate_records</code></td><td>Remove duplicates (room+product+location key)</td><td>No (deterministic)</td></tr>
+          <tr><td><span class="badge badge-coral">Recovery</span></td><td>2.5</td><td><code>recover_no_access</code></td><td>Regex scan for missed "No Access" records</td><td>No (regex fallback)</td></tr>
+          <tr><td><span class="badge badge-teal">Store</span></td><td>3</td><td><code>save_records</code></td><td>Persist to SurrealDB, generate embeddings</td><td>Embedding model (Ollama)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- PIPELINE DEEP DIVES -->
+    <!-- ================================================================== -->
+    <section id="phase1">
+      <h2><span class="num">06 /</span> Phase 1: Source Processing</h2>
+      <p class="section-subtitle">The dual-engine PDF extraction that runs before any AI involvement — converting raw PDFs into machine-readable content.</p>
+
+      <h3>Why Two Extraction Engines?</h3>
+      <p>No single PDF extraction tool captures everything. PyMuPDF excels at reading-order text and page coverage (including sparse text sections), while Docling's TableFormer excels at structured table extraction with row coherence. Together they achieve what neither can alone.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Parallel Hybrid Extraction Architecture</div>
+        <div class="diagram-caption">PyMuPDF and Docling run in sequence during source processing; Docling is non-blocking</div>
+        <div class="mermaid">
+flowchart LR
+    PDF["📄 PDF File"]
+
+    subgraph PyMuPDF["<b>Engine 1: PyMuPDF</b>"]
+        PM1["Extract full text<br/>reading order"]
+        PM2["Insert page markers<br/><code>--- Page N ---</code>"]
+        PM3["Store as<br/><code>source.full_text</code>"]
+    end
+
+    subgraph Docling["<b>Engine 2: Docling Direct API</b>"]
+        DL1["DocumentConverter<br/>TableFormer ACCURATE"]
+        DL2["export_to_dataframe()<br/>Row-major DataFrames"]
+        DL3["Normalize:<br/>• Fix split sample numbers<br/>• Strip 'Asbestos' prefix"]
+        DL4["Store as<br/><code>acm_table_section</code> rows"]
+    end
+
+    PDF --> PM1 --> PM2 --> PM3
+    PDF --> DL1 --> DL2 --> DL3 --> DL4
+
+    PM3 --> |"All pages incl. sparse text"| NEXT["Ready for<br/>ACM extraction"]
+    DL4 --> |"Structured table data"| NEXT
+
+    style PyMuPDF fill:#e0f2fe,stroke:#0369a1,stroke-width:2px
+    style Docling fill:#f3e8ff,stroke:#7e22ce,stroke-width:2px
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>PyMuPDF Output</h4>
+          <p style="font-size:0.88rem;">Full document text with <code>--- Page N ---</code> markers. Captures <strong>all pages</strong> including sparse text areas that Docling's table detector misses (e.g., "No Access" entries on continuation pages). Stored as <code>source.full_text</code>.</p>
+        </div>
+        <div class="card">
+          <h4>Docling Output</h4>
+          <p style="font-size:0.88rem;">Per-table DataFrames with row-coherent data. Each register table becomes a separate <code>acm_table_section</code> row with markdown, HTML, CSV, and page number. Uses GPU-accelerated TableFormer in ACCURATE mode (~22s per document).</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Design Decision: Non-Blocking Docling</div>
+        <p>Docling runs AFTER PyMuPDF completes. If Docling fails, the pipeline continues with PyMuPDF text only — zero regression risk. This was validated empirically: PyMuPDF alone achieves 28/31, while the hybrid achieves 31/31.</p>
+      </div>
+    </section>
+
+    <section id="phase2">
+      <h2><span class="num">07 /</span> Phase 2: Pre-Extraction Intelligence</h2>
+      <p class="section-subtitle">Four LLM-powered analysis stages that understand the document before extraction begins — identifying buildings, pages, and structure.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Stage -1: Document Understanding Pipeline</div>
+        <div class="diagram-caption">Each stage feeds intelligence to the next; all have heuristic fallbacks if LLM fails</div>
+        <div class="mermaid">
+flowchart TB
+    FT["source.full_text<br/>(PyMuPDF output)"]
+
+    subgraph S16["<b>E1-S16: Structure & TOC</b><br/><i>DocumentStructure model</i>"]
+        S16A["Detect document type<br/>(SAMP, ARA, Division 5)"]
+        S16B["Extract section hierarchy<br/>(0-7 taxonomy)"]
+        S16C["Find register start page"]
+        S16D["Identify building IDs"]
+    end
+
+    subgraph S17["<b>E1-S17: Building Inventory</b><br/><i>BuildingInventory model</i>"]
+        S17A["Map buildings to page ranges"]
+        S17B["Classify complexity<br/>(simple / complex)"]
+        S17C["Create ProcessingGroups"]
+    end
+
+    subgraph S18["<b>E1-S18: Page Tagging</b><br/><i>PageTaggingResult model</i>"]
+        S18A["Tag each page with section ID<br/>(0=Cover, 4=Register, 7=Appendix)"]
+        S18B["Batch processing<br/>(5 pages per LLM call)"]
+    end
+
+    subgraph S19["<b>E1-S19: Metadata</b><br/><i>DocumentMeta model</i>"]
+        S19A["Extract consultant name"]
+        S19B["Extract report date, site name"]
+    end
+
+    FT --> S16
+    S16 --> S17
+    S17 --> S18
+    S16 --> S19
+    S18 --> ORCH["Orchestrator<br/>(Stage 0.5)"]
+    S19 --> ORCH
+
+    style S16 fill:#fef3c7,stroke:#a16207,stroke-width:1px
+    style S17 fill:#fef3c7,stroke:#a16207,stroke-width:1px
+    style S18 fill:#fef3c7,stroke:#a16207,stroke-width:1px
+    style S19 fill:#fef3c7,stroke:#a16207,stroke-width:1px
+        </div>
+      </div>
+
+      <h3>What Each Stage Produces</h3>
+      <table>
+        <thead>
+          <tr><th>Stage</th><th>Input</th><th>Output</th><th>LLM Fallback</th><th>Why It Matters</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Structure (S16)</td><td>Full text</td><td><code>DocumentStructure</code> — type, TOC, register_start_page, building_ids</td><td>Heuristic page counting</td><td>Tells the system where the data actually starts (skip policy pages)</td></tr>
+          <tr><td>Inventory (S17)</td><td>Structure output</td><td><code>BuildingInventory</code> — per-building page ranges, complexity class</td><td>Regex building detection</td><td>Enables per-building extraction instead of monolithic processing</td></tr>
+          <tr><td>Page Tags (S18)</td><td>Full text + Inventory</td><td><code>PageTaggingResult</code> — section ID (0-7) per page</td><td>Default section assignment</td><td>Lets orchestrator skip non-register pages (saves LLM cost)</td></tr>
+          <tr><td>Metadata (S19)</td><td>Full text + Structure</td><td><code>DocumentMeta</code> — consultant, date, site</td><td>None (optional enrichment)</td><td>Enriches extraction context so LLM understands format conventions</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout coral">
+        <div class="callout-title">Key Insight: Heuristic Fallbacks Are Production-Ready</div>
+        <p>Currently, all 4 pre-extraction LLM calls fail their <code>with_structured_output()</code> path due to Anthropic's grammar size limit on complex schemas, and fall back to heuristic methods. The heuristics are accurate enough for production — the LLM improvements are a P2 enhancement, not a blocker.</p>
+      </div>
+    </section>
+
+    <section id="phase3">
+      <h2><span class="num">08 /</span> Phase 3: Unified Orchestration</h2>
+      <p class="section-subtitle">How the system separates buildings, assigns extraction strategies, and coordinates parallel AI extraction calls.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Orchestrator Decision Logic</div>
+        <div class="diagram-caption">Every document flows through the orchestrator — strategy is assigned per building</div>
+        <div class="mermaid">
+flowchart TB
+    INPUT["Building Inventory<br/>+ Page Tags<br/>+ Document Structure"]
+
+    INPUT --> PLAN["<b>plan_extraction()</b><br/>Iterate over buildings"]
+
+    PLAN --> CHECK{"Does building have<br/>register pages?<br/>(section_id = 4)"}
+
+    CHECK --> |"No register pages"| SKIP["<b>SKIP</b><br/>Methodology, conclusions,<br/>appendices — ignore"]
+
+    CHECK --> |"Has register pages"| COMPLEX{"Building<br/>complexity?"}
+
+    COMPLEX --> |"simple<br/>(e.g., 'No Asbestos')"| REGEX["<b>REGEX_ONLY</b><br/>Create minimal records<br/>result='Not Detected'<br/>per room via regex"]
+
+    COMPLEX --> |"complex / unknown"| LLM["<b>FULL_LLM</b><br/>Full AI extraction<br/>Claude Sonnet 4<br/>Per-building prompt"]
+
+    LLM --> ASSEMBLE["<b>Context Assembly</b>"]
+
+    subgraph ASSEMBLE_DETAIL["Context Assembly per Building"]
+        A1["1. Extract building content<br/>from full_text using page markers"]
+        A2["2. Fetch Docling DataFrames<br/>for this building's page range"]
+        A3["3. If DataFrames exist:<br/>Append markdown tables to context"]
+        A4["4. Add supplementary prompt<br/>instruction for structured tables"]
+        A5["5. Include building metadata<br/>(name, code, page range)"]
+    end
+
+    ASSEMBLE --> ASSEMBLE_DETAIL
+    ASSEMBLE_DETAIL --> DISPATCH
+
+    DISPATCH["<b>Parallel Dispatch</b><br/>asyncio.gather(semaphore=3)<br/>Up to 3 buildings simultaneously"]
+
+    DISPATCH --> MERGE["<b>merge_building_results()</b><br/>Combine all records + stats"]
+
+    style SKIP fill:#f1f3f5,stroke:#868e96
+    style REGEX fill:#dcfce7,stroke:#15803d
+    style LLM fill:#fce7f3,stroke:#be185d
+    style ASSEMBLE_DETAIL fill:#e0f2fe,stroke:#0369a1
+        </div>
+      </div>
+
+      <h3>Context Injection: What the AI Actually Sees</h3>
+      <p>For each FULL_LLM building, the orchestrator assembles a focused context window containing:</p>
+      <div class="card">
+        <pre><code>== BUILDING: Main Hospital Building (pages 11-16) ==
+
+--- Full Text Content (from PyMuPDF) ---
+--- Page 11 ---
+Main Hospital Building
+... room-by-room text content ...
+--- Page 16 ---
+
+--- Structured Table Data (from Docling DataFrames) ---
+[TABLE from page 12 — 15 rows × 7 columns]
+| Level | Room | Feature | Item | Hazard Status | Sample No | Friability |
+|-------|------|---------|------|---------------|-----------|------------|
+| Ground | Kitchen | Ceiling | Tiles | Asbestos Detected | 34511-039-001 | Non-friable |
+...
+
+CRITICAL: Structured Table Extraction Rules:
+1. Count your rows carefully — every row is a separate ACM record
+2. Same room, different location = separate records (do NOT merge)
+3. Extract "No Access" entries as records with result="No Access"
+...</code></pre>
+      </div>
+      <p>This is the key innovation: the AI receives <strong>both</strong> reading-order text (for context and edge cases) and structured DataFrames (for accurate table data), focused on a single building's page range rather than the entire document.</p>
+    </section>
+
+    <section id="phase4">
+      <h2><span class="num">09 /</span> Phase 4: AI Extraction</h2>
+      <p class="section-subtitle">What the AI model actually does with the assembled context — transforming raw content into structured BAR-compliant records.</p>
+
+      <h3>The AI's Job: Interpretation, Not Just Extraction</h3>
+      <p>The raw tables are already extracted by Docling. The AI's role is to <strong>interpret, normalise, and map</strong> the raw data into the 47-column BAR schema. This includes:</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>🔍 Record Identification</h4>
+          <p style="font-size:0.88rem;">Each row in the register table becomes an <code>ACMExtractionRecord</code>. The AI must correctly count rows, handle merged cells, and recognise that same-room-different-location entries are separate records.</p>
+        </div>
+        <div class="card">
+          <h4>🏗️ Building Context</h4>
+          <p style="font-size:0.88rem;">The AI assigns <code>building_id</code>, <code>building_name</code>, <code>area_type</code> (Interior/Exterior) to each record based on the building context provided by the orchestrator.</p>
+        </div>
+        <div class="card">
+          <h4>🧪 Sample Interpretation</h4>
+          <p style="font-size:0.88rem;">Raw sample results like "ACM Detected", "NAD", "Not Sampled", "As Per [ref]" are normalised into BAR-compliant values: <code>result</code>, <code>friable</code>, <code>material_condition</code>, <code>sample_result</code>.</p>
+        </div>
+        <div class="card">
+          <h4>📊 BAR Field Mapping</h4>
+          <p style="font-size:0.88rem;">Consultant-specific column names (which vary between Prensa, Greencap, etc.) are mapped to standardised BAR fields. The AI handles this dynamically without per-consultant configuration.</p>
+        </div>
+        <div class="card">
+          <h4>🏷️ Product Classification</h4>
+          <p style="font-size:0.88rem;">ACM products are classified into the Victorian BAR taxonomy (T1-T8 Non-friable, T1-T6 Friable). Uses pattern-based regex for common types, LLM fallback for ambiguous items.</p>
+        </div>
+        <div class="card">
+          <h4>⚠️ Risk Assessment</h4>
+          <p style="font-size:0.88rem;">The AI derives risk status from material condition + disturbance potential. Also captures <code>hygienist_recommendations</code> and <code>additional_comments</code> from the assessment narrative.</p>
+        </div>
+      </div>
+
+      <h3>Output Schema: ACMExtractionRecord (40+ Fields)</h3>
+      <p>Each record is validated against the <code>ACMExtractionRecord</code> Pydantic model with 40+ fields covering:</p>
+      <table>
+        <thead><tr><th>Category</th><th>Fields</th><th>BAR Columns</th></tr></thead>
+        <tbody>
+          <tr><td>Location</td><td>building_id, building_name, room_id, room_name, area_type, floor_level, location</td><td>B-H</td></tr>
+          <tr><td>Material</td><td>product, material_description, extent, friable</td><td>I-M</td></tr>
+          <tr><td>ACM Classification</td><td>acm_product_group, acm_product_type</td><td>AA-AC</td></tr>
+          <tr><td>Sampling</td><td>nata_sample_number, sample_result, hygiene_company</td><td>AD-AF</td></tr>
+          <tr><td>Assessment</td><td>material_condition, disturbance_potential, risk_status</td><td>AG-AI</td></tr>
+          <tr><td>Tracking</td><td>labelled, psb_acm_id, assumed_removed, date_of_removal</td><td>AJ-AQ</td></tr>
+          <tr><td>Metadata</td><td>page_number, extraction_confidence, source_id</td><td>(internal)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="phase5">
+      <h2><span class="num">10 /</span> Phase 5: Post-Extraction Quality</h2>
+      <p class="section-subtitle">The multi-layered quality assurance pipeline that validates, corrects, deduplicates, and recovers records after AI extraction.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Post-Extraction Quality Pipeline</div>
+        <div class="diagram-caption">Five quality gates between raw AI output and final storage</div>
+        <div class="mermaid">
+flowchart TB
+    RAW["Raw AI Output<br/><i>31 records (example)</i>"]
+
+    RAW --> V1["<b>① Validation</b><br/>Pydantic schema check<br/>Required: product, result, room<br/>Enum: friable, risk_status"]
+
+    V1 --> |"Valid records"| V4
+    V1 --> |"Field errors<br/>(missing product, invalid enum)"| V2["<b>② LLM Correction</b><br/>Same content + error feedback<br/>Claude Sonnet 4 retry<br/><i>Max 3 attempts</i>"]
+    V1 --> |"Structural errors<br/>(truncation, bad parse)"| V3["<b>③ Re-chunk Retry</b><br/>Different chunk boundaries<br/>Re-extract section"]
+
+    V2 --> V1S["Re-validate"]
+    V3 --> V1S
+    V1S --> |"Pass"| V4
+    V1S --> |"Fail (< 3 attempts)"| V2
+
+    V4["<b>④ Deduplication</b><br/>Key: room + product + location<br/><i>31 raw → 30 after dedup</i>"]
+
+    V4 --> V5["<b>⑤ No-Access Recovery</b><br/>Regex scan full_text for<br/>'No Access' entries LLM missed<br/><i>30 → 32 (2 recovered)</i>"]
+
+    V5 --> FINAL["Final Record Set<br/><i>31 unique ground-truth matches</i><br/><i>(+ 1 harmless extra)</i>"]
+
+    style V1 fill:#dcfce7,stroke:#15803d
+    style V2 fill:#fce7f3,stroke:#be185d
+    style V3 fill:#fef3c7,stroke:#a16207
+    style V4 fill:#e0f2fe,stroke:#0369a1
+    style V5 fill:#f3e8ff,stroke:#7e22ce
+    style FINAL fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+        </div>
+      </div>
+
+      <h3>The Three Fixes That Achieved 100%</h3>
+      <p>The journey from 28/31 (90.3%) to 31/31 (100%) came from three targeted fixes in the post-extraction pipeline:</p>
+
+      <div class="card-grid">
+        <div class="card" style="border-top: 3px solid var(--teal);">
+          <h4>Fix 1: Dedup Key Enhancement</h4>
+          <p style="font-size:0.88rem;">Added <code>location</code> to the deduplication key (was: room + product). Previously, two records in the Switch Room with different locations (Switchboard vs Battery Charger) were merged as duplicates. Result: 31→30 after dedup (was 31→28).</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--coral);">
+          <h4>Fix 2: Prompt Engineering</h4>
+          <p style="font-size:0.88rem;">Added "CRITICAL: Structured Table Extraction Rules" to the prompt with explicit instructions to count rows, preserve same-room-different-location entries, and extract "No Access" entries. Recovered Record #9 (Battery Charger) and #30 (Lift Foyer).</p>
+        </div>
+        <div class="card" style="border-top: 3px solid var(--navy);">
+          <h4>Fix 3: Regex Recovery Fallback</h4>
+          <p style="font-size:0.88rem;">New <code>_recover_no_access_records()</code> function runs post-dedup and scans <code>full_text</code> for "No Access" entries the LLM missed. Recovered Record #31 (Disabled Toilet) which was on page 8 — a sparse text area below Docling's table detection threshold.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="phase6">
+      <h2><span class="num">11 /</span> Phase 6: Storage &amp; Export</h2>
+      <p class="section-subtitle">How validated records are persisted, enriched with embeddings, linked in the knowledge graph, and exported to BAR format.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>💾 SurrealDB Persistence</h4>
+          <p style="font-size:0.88rem;">Each record is stored in the <code>acm_record</code> SCHEMAFULL table with all 40+ fields. Parent <code>acm_table_section</code> records link records to their source tables. Cascade delete ensures records are removed when a source is deleted.</p>
+        </div>
+        <div class="card">
+          <h4>🧮 Vector Embeddings</h4>
+          <p style="font-size:0.88rem;">Enriched text (<code>Building|Room|Page|fields</code>) is embedded via Ollama (Qwen 2.5:7b) and stored as 1024-dimension vectors with MTREE cosine index. Enables semantic search like "asbestos in the kitchen".</p>
+        </div>
+        <div class="card">
+          <h4>🕸️ Knowledge Graph</h4>
+          <p style="font-size:0.88rem;">SurrealDB RELATION tables link <code>school→building→room→acm_record</code> with graph traversal. Enables queries like "show all ACM in Building A" and powers the React Flow visualisation.</p>
+        </div>
+        <div class="card">
+          <h4>📊 BAR Export</h4>
+          <p style="font-size:0.88rem;">Records export to Excel using the Victorian BAR template (47 columns). Site configuration fields (Department, Agency, Building Type) are merged from the <code>site_config</code> table. Supports per-building, per-site, and consolidated exports.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- AI MODELS -->
+    <!-- ================================================================== -->
+    <section id="ai-models">
+      <h2><span class="num">12 /</span> AI Model Decision Tree</h2>
+      <p class="section-subtitle">Which AI model is used at each pipeline stage, why, and how the system handles provider failures.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">AI Model Usage by Pipeline Stage</div>
+        <div class="diagram-caption">Model selection, routing, and fallback strategy</div>
+        <div class="mermaid">
+flowchart TB
+    subgraph PreEx["Pre-Extraction Stages"]
+        direction TB
+        PE1["Document Structure<br/>Building Inventory<br/>Page Tagging<br/>Metadata"]
+    end
+
+    subgraph Extract["Extraction Stage"]
+        EX1["Per-building<br/>ACM record extraction"]
+    end
+
+    subgraph Correct["Correction Stage"]
+        CO1["Field-level correction<br/>Missing value recovery"]
+    end
+
+    subgraph Embed["Embedding Stage"]
+        EM1["Vector embedding<br/>generation"]
+    end
+
+    subgraph Classify["Classification Stage"]
+        CL1["ACM Product Group/Type<br/>taxonomy assignment"]
+    end
+
+    PE1 --> |"Claude Sonnet 4<br/>via OpenRouter"| OR1["<b>OpenRouter</b><br/>Provider order:<br/>1. Anthropic<br/>2. Google<br/>3. OpenAI<br/><br/>Ignore:<br/>Amazon Bedrock<br/>Azure"]
+    EX1 --> |"Claude Sonnet 4<br/>via OpenRouter"| OR1
+    CO1 --> |"Claude Sonnet 4<br/>via OpenRouter"| OR1
+    EM1 --> |"Qwen 2.5:7b"| OL["<b>Ollama (Local)</b><br/>GPU-accelerated<br/>1024-dim embeddings"]
+    CL1 --> |"Regex primary<br/>LLM fallback"| HYBRID["<b>Hybrid</b><br/>Pattern matching first<br/>LLM only if ambiguous"]
+
+    style PreEx fill:#fef3c7,stroke:#a16207,stroke-width:1px
+    style Extract fill:#fce7f3,stroke:#be185d,stroke-width:2px
+    style Correct fill:#dcfce7,stroke:#15803d,stroke-width:1px
+    style Embed fill:#e0f2fe,stroke:#0369a1,stroke-width:1px
+    style Classify fill:#f3e8ff,stroke:#7e22ce,stroke-width:1px
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Stage</th><th>Model</th><th>Provider</th><th>Why This Model</th><th>Fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Structure / Inventory / Tagging</td><td>Claude Sonnet 4</td><td>OpenRouter → Anthropic</td><td>Complex document understanding requires frontier reasoning</td><td>Heuristic (regex, page counting)</td></tr>
+          <tr><td>ACM Extraction</td><td>Claude Sonnet 4</td><td>OpenRouter → Anthropic</td><td>40+ field JSON generation with nuanced interpretation</td><td>JSON parse + Pydantic validation</td></tr>
+          <tr><td>Record Correction</td><td>Claude Sonnet 4</td><td>OpenRouter → Anthropic</td><td>Needs to understand original context to fix missing fields</td><td>Auto-correction rules (deterministic)</td></tr>
+          <tr><td>Product Classification</td><td>Regex → Claude Sonnet 4</td><td>Local → OpenRouter</td><td>Common products (80%) match regex patterns; LLM for edge cases</td><td>Regex always available as primary</td></tr>
+          <tr><td>Embeddings</td><td>Qwen 2.5:7b</td><td>Ollama (local GPU)</td><td>Fast, free, 1024-dim vectors — no API cost for embeddings</td><td>None (local processing)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="structured-output">
+      <h2><span class="num">13 /</span> Structured Output &amp; Fallback Chain</h2>
+      <p class="section-subtitle">How the system handles the systematic structured output failure and why the fallback path achieves 100% accuracy.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">LLM Response Processing Chain</div>
+        <div class="diagram-caption">The proven fallback path that achieves 100% accuracy despite structured output failures</div>
+        <div class="mermaid">
+flowchart TB
+    CALL["LLM Call<br/><code>model.ainvoke(messages)</code>"]
+
+    CALL --> |"Raw text response"| PARSE["<b>parse_json_response()</b><br/>Brace-depth JSON extractor<br/>Finds JSON in text response"]
+
+    PARSE --> UNWRAP["<b>_unwrap_completion_state()</b><br/>Handle OpenRouter envelope:<br/>{completionState: 'complete',<br/> result: {records: [...]}}"]
+
+    UNWRAP --> NORMALIZE["<b>_normalize_extraction_json()</b><br/>Fix null data_issues,<br/>coerce types"]
+
+    NORMALIZE --> VALIDATE["<b>Pydantic model_validate()</b><br/>ACMExtractionResult<br/>40+ field validation"]
+
+    VALIDATE --> |"Success"| RECORDS["✅ Validated Records"]
+    VALIDATE --> |"ValidationError"| FALLBACK["Heuristic Fallback<br/>(per stage)"]
+
+    style PARSE fill:#e0f2fe,stroke:#0369a1
+    style UNWRAP fill:#fce7f3,stroke:#be185d
+    style NORMALIZE fill:#fef3c7,stroke:#a16207
+    style VALIDATE fill:#dcfce7,stroke:#15803d
+    style RECORDS fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+        </div>
+      </div>
+
+      <div class="callout coral">
+        <div class="callout-title">Known Issue: completionState Envelope</div>
+        <p>OpenRouter + Claude Sonnet 4 wraps responses in a <code>{"completionState": "complete", "result": {...}}</code> envelope that breaks Pydantic's <code>with_structured_output()</code>. The fix (E27-S1) adds <code>_unwrap_completion_state()</code> to all 4 LLM stages. This is the #1 tech debt item — eliminating the dead structured output calls saves ~43s per extraction.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- DATA MODEL -->
+    <!-- ================================================================== -->
+    <section id="data-model">
+      <h2><span class="num">14 /</span> Data Model &amp; Schema</h2>
+      <p class="section-subtitle">SurrealDB schema architecture showing document storage, ACM records, knowledge graph, and vector search.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Database Entity Relationship</div>
+        <div class="diagram-caption">SurrealDB tables, relations, and indexes</div>
+        <div class="mermaid">
+erDiagram
+    source ||--o{ acm_record : "extracted_from"
+    source ||--o{ acm_table_section : "has_tables"
+    source ||--o| site_config : "configured_with"
+
+    school ||--o{ building : "school_has_building"
+    building ||--o{ room : "building_has_room"
+    room ||--o{ acm_record : "room_has_acm"
+
+    source {
+        string id PK
+        string title
+        string full_text
+        string file_path
+        datetime created
+    }
+
+    acm_record {
+        string id PK
+        string source_id FK
+        string building_id
+        string building_name
+        string room_id
+        string room_name
+        string product
+        string material_description
+        string result
+        string friable
+        string risk_status
+        string nata_sample_number
+        string sample_result
+        string material_condition
+        string disturbance_potential
+        string acm_product_group
+        string acm_product_type
+        int page_number
+        string extraction_confidence
+        string enriched_text
+        float[] embedding
+    }
+
+    acm_table_section {
+        string id PK
+        string source_id FK
+        int page_start
+        string raw_text
+        string raw_html
+        string structured_json
+        string table_type
+    }
+
+    site_config {
+        string id PK
+        string source_id FK
+        string department
+        string agency
+        string building_type
+        string owned_or_leased
+    }
+
+    school {
+        string school_code PK
+        string school_name
+    }
+
+    building {
+        string building_code PK
+        string building_name
+        string school_code FK
+    }
+
+    room {
+        string room_code PK
+        string room_name
+        string building_code FK
+    }
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- FRONTEND -->
+    <!-- ================================================================== -->
+    <section id="frontend">
+      <h2><span class="num">15 /</span> Frontend Architecture</h2>
+      <p class="section-subtitle">The user-facing layer: interactive spreadsheet, AI chat, and real-time extraction monitoring.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>📊 AG Grid Spreadsheet</h4>
+          <p style="font-size:0.88rem;">Enterprise-grade data grid with 47+ BAR columns, per-building tabs, sorting, filtering, column visibility management, risk-status colour coding, and inline cell editing. Clickable cells open PDF viewer at the cited page.</p>
+        </div>
+        <div class="card">
+          <h4>💬 CopilotKit AI Chat</h4>
+          <p style="font-size:0.88rem;">Context-aware conversational interface powered by the AG-UI protocol. Supervisor agent backend with SSE streaming. Users can query ACM data naturally: "What asbestos is in the kitchen?" with cited responses.</p>
+        </div>
+        <div class="card">
+          <h4>📡 Live Extraction Monitor</h4>
+          <p style="font-size:0.88rem;">SSE-streamed pipeline progress showing stage transitions, per-chunk extraction stats, reasoning tokens, and tool call observability. Backed by PipelineLogger + AGUIEventEmitter infrastructure.</p>
+        </div>
+        <div class="card">
+          <h4>🕸️ Knowledge Graph</h4>
+          <p style="font-size:0.88rem;">React Flow interactive visualisation of School→Building→Room→ACM relationships. Server-side dagre layout with risk-level colour coding. Traversable entity graph for compliance auditing.</p>
+        </div>
+      </div>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Frontend Component Architecture</div>
+        <div class="diagram-caption">Key pages and their data flows</div>
+        <div class="mermaid">
+flowchart TB
+    subgraph Pages["Next.js Pages"]
+        DASH["Dashboard<br/>/"]
+        JOBS["Jobs List<br/>/jobs"]
+        JOB["Job Detail<br/>/jobs/[id]"]
+        EXTRACT["Extraction Monitor<br/>/jobs/[id]/extract"]
+        ACM["ACM Register<br/>/acm"]
+        SETTINGS["Settings<br/>/settings/*"]
+    end
+
+    subgraph Components["Key Components"]
+        GRID["ACMGrid<br/>(AG Grid)"]
+        CHAT["CopilotChat<br/>(CopilotKit)"]
+        PDF["PDFViewer<br/>(react-pdf)"]
+        GRAPH["KnowledgeGraph<br/>(React Flow)"]
+        MONITOR["ExtractionMonitor<br/>(SSE Stream)"]
+    end
+
+    subgraph API["FastAPI Backend"]
+        REST["REST API<br/>/api/acm/*<br/>/api/sources/*"]
+        SSE["SSE Endpoints<br/>/api/extraction/events<br/>/api/supervisor/stream"]
+    end
+
+    JOB --> GRID
+    JOB --> CHAT
+    JOB --> PDF
+    JOB --> GRAPH
+    EXTRACT --> MONITOR
+    GRID --> REST
+    CHAT --> SSE
+    MONITOR --> SSE
+
+    style Pages fill:#f0f9f8,stroke:#3a8f8a
+    style Components fill:#e0f2fe,stroke:#0369a1
+    style API fill:#fef3c7,stroke:#a16207
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ACCURACY JOURNEY -->
+    <!-- ================================================================== -->
+    <section id="accuracy-journey">
+      <h2><span class="num">16 /</span> Accuracy Journey</h2>
+      <p class="section-subtitle">The evolution from 26% to 100% extraction accuracy on the Broadmeadows benchmark — key milestones and what changed at each stage.</p>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-date">2026-02-10</div>
+          <div class="timeline-title">E1-S7 Baseline <span class="timeline-badge red">8/31 (26%)</span></div>
+          <div class="timeline-desc">Initial LLM extraction. Basic prompt, no table structure, no building separation.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">2026-02-22</div>
+          <div class="timeline-title">E18 Demo <span class="timeline-badge amber">26/31 (84%)</span></div>
+          <div class="timeline-desc">Max tokens increased (8192→32768), orchestrator fixes, provider routing improvements.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">2026-02-23</div>
+          <div class="timeline-title">E18-S5 Prompt Fix <span class="timeline-badge amber">28/31 (90%)</span></div>
+          <div class="timeline-desc">Prompt vocabulary improvements, NO ACCESS markers, product normalisation rules.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">2026-02-26</div>
+          <div class="timeline-title">E20-S6 Regression <span class="timeline-badge red">17/31 (55%)</span></div>
+          <div class="timeline-desc">Proved Docling content-core path breaks row coherence. Decision: DO NOT PROMOTE E24.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-date">2026-02-27</div>
+          <div class="timeline-title">E25 Research Spike <span class="timeline-badge amber">29/31 (93.5%)</span></div>
+          <div class="timeline-desc">Docling Direct API DataFrames alone (no LLM) achieve 93.5%. Validates hybrid approach.</div>
+        </div>
+        <div class="timeline-item milestone">
+          <div class="timeline-date">2026-02-28</div>
+          <div class="timeline-title">E26-S6 Final <span class="timeline-badge green">31/31 (100%)</span></div>
+          <div class="timeline-desc">Three fixes: dedup key (location), prompt engineering (table rules), regex recovery (No Access fallback). <strong>PERFECT SCORE.</strong></div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Key Lesson</div>
+        <p>Model switching alone doesn't solve extraction problems. Most accuracy issues stemmed from PDF structural challenges (merged cells, sparse text sections, row deduplication) rather than model limitations. The breakthrough came from combining better PDF tooling (Docling DataFrames) with targeted post-processing (dedup key fix, regex recovery).</p>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- DESIGN PRINCIPLES -->
+    <!-- ================================================================== -->
+    <section id="design-principles">
+      <h2><span class="num">17 /</span> Design Principles</h2>
+      <p class="section-subtitle">The architectural principles that guide every decision in ACM-AI.</p>
+
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>1. Unified Pipeline</h4>
+          <p style="font-size:0.88rem;">Every document — regardless of format, consultant, or building count — flows through the same orchestrated pipeline. No special-case routing. The system adapts to the document, not the other way around.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--coral);">
+          <h4>2. Hybrid Extraction</h4>
+          <p style="font-size:0.88rem;">Combine complementary tools (PyMuPDF + Docling) rather than relying on a single engine. Each tool covers the other's blind spots. Non-blocking design means failures in one engine don't affect the other.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--navy);">
+          <h4>3. AI Interprets, Rules Validate</h4>
+          <p style="font-size:0.88rem;">AI handles the fuzzy work (interpretation, normalisation, classification). Deterministic rules handle the precise work (validation, deduplication, schema enforcement). Never trust AI output without Pydantic validation.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>4. Graceful Degradation</h4>
+          <p style="font-size:0.88rem;">Every AI call has a non-AI fallback. Structured output fails? JSON parser. LLM misses a record? Regex recovery. Building inventory fails? Legacy extraction. The system always produces output.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--coral);">
+          <h4>5. Measure Before Fixing</h4>
+          <p style="font-size:0.88rem;">Every change is validated against ground-truth benchmarks (Broadmeadows 31 records, Alexander 43 records). No fix ships without empirical measurement. Research spikes precede implementation.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--navy);">
+          <h4>6. Design for the Officer</h4>
+          <p style="font-size:0.88rem;">End users are compliance officers, not developers. The interface uses familiar mental models (jobs, spreadsheets, exports). Technical sophistication is hidden behind a simple two-step workflow: upload, then extract.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <div style="margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--gray-200); text-align: center; color: var(--gray-500); font-size: 0.8rem;">
+      <p>ACM-AI Solution Architecture v2.0 — Victorian Asbestos Eradication Agency</p>
+      <p style="margin-top: 4px;">Generated March 2026 · VAEA Branding: <span style="color: var(--teal);">■</span> Teal #3a8f8a · <span style="color: var(--coral);">■</span> Coral #d4614a · <span style="color: var(--navy);">■</span> Navy #2a2f45</p>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  // Initialize Mermaid
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    themeVariables: {
+      primaryColor: '#e0f2fe',
+      primaryTextColor: '#0369a1',
+      primaryBorderColor: '#0369a1',
+      lineColor: '#868e96',
+      secondaryColor: '#fce7f3',
+      tertiaryColor: '#dcfce7',
+      fontFamily: 'DM Sans, system-ui, sans-serif',
+      fontSize: '13px',
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      padding: 12,
+      nodeSpacing: 30,
+      rankSpacing: 40,
+    },
+    sequence: {
+      actorMargin: 30,
+      messageMargin: 20,
+      noteMargin: 8,
+    },
+  });
+
+  // Active nav tracking
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar a[href^="#"]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => link.classList.remove('active'));
+        const activeLink = document.querySelector(`.sidebar a[href="#${entry.target.id}"]`);
+        if (activeLink) activeLink.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(section => observer.observe(section));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACM-AI — Heuristic & Deterministic Rules Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #3a8f8a; --teal-light: #4db3ac; --teal-bg: #f0f9f8;
+    --coral: #d4614a; --coral-light: #e8856f; --coral-bg: #fdf4f2;
+    --navy: #2a2f45; --navy-light: #3d4466; --navy-bg: #f4f4f7;
+    --purple: #7e22ce; --purple-bg: #f5f3ff;
+    --amber: #d97706; --amber-bg: #fffbeb;
+    --green: #16a34a; --green-bg: #f0fdf4;
+    --white: #fff; --gray-50: #f8f9fa; --gray-100: #f1f3f5; --gray-200: #e9ecef;
+    --gray-300: #dee2e6; --gray-500: #adb5bd; --gray-600: #868e96; --gray-700: #495057; --gray-800: #343a40; --gray-900: #212529;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow-sm: 0 1px 2px rgba(42,47,69,0.06);
+    --shadow-md: 0 4px 12px rgba(42,47,69,0.08);
+    --radius: 8px; --radius-lg: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font-body); color: var(--navy); background: var(--gray-50); line-height: 1.7; }
+
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 280px;
+    background: var(--navy); color: rgba(255,255,255,0.85); padding: 32px 0; overflow-y: auto; z-index: 100;
+  }
+  .sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; }
+  .sidebar-brand h1 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--teal-light); }
+  .sidebar-brand p { font-size: 0.68rem; color: rgba(255,255,255,0.4); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .sidebar-section { padding: 10px 20px 4px; font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.3); font-weight: 600; }
+  .sidebar a { display: block; padding: 5px 20px; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.78rem; border-left: 3px solid transparent; transition: all 0.15s; }
+  .sidebar a:hover, .sidebar a.active { color: #fff; background: rgba(255,255,255,0.06); border-left-color: var(--teal-light); }
+
+  .main { margin-left: 280px; min-height: 100vh; }
+
+  .hero {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--teal) 80%, var(--teal-light) 100%);
+    color: white; padding: 56px 52px 44px; position: relative;
+  }
+  .hero-badge { display: inline-block; background: rgba(77,179,172,0.2); border: 1px solid rgba(77,179,172,0.4); padding: 4px 14px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 14px; color: #a7f3d0; }
+  .hero h1 { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 10px; }
+  .hero h1 span { color: var(--coral-light); }
+  .hero p { font-size: 1rem; color: rgba(255,255,255,0.7); max-width: 700px; }
+
+  .content { padding: 0 52px 80px; max-width: 1100px; }
+  section { padding-top: 44px; }
+
+  h2 { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; margin-bottom: 6px; }
+  h2 .num { color: var(--teal); font-weight: 500; font-size: 0.85em; }
+  .section-sub { font-size: 0.88rem; color: var(--gray-600); margin-bottom: 24px; max-width: 700px; }
+  h3 { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--navy); margin: 28px 0 10px; }
+  h4 { font-weight: 600; font-size: 0.92rem; color: var(--navy); margin: 18px 0 6px; }
+  p { margin-bottom: 10px; color: var(--gray-700); font-size: 0.9rem; }
+
+  .card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 22px 26px; margin: 14px 0; box-shadow: var(--shadow-sm); }
+  .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .card-header h4 { margin: 0; }
+
+  .callout { border-left: 4px solid var(--teal); background: var(--teal-bg); padding: 16px 20px; border-radius: 0 var(--radius) var(--radius) 0; margin: 14px 0; }
+  .callout.amber { border-left-color: var(--amber); background: var(--amber-bg); }
+  .callout.purple { border-left-color: var(--purple); background: var(--purple-bg); }
+  .callout.green { border-left-color: var(--green); background: var(--green-bg); }
+  .callout.navy { border-left-color: var(--navy); background: var(--navy-bg); }
+  .callout-title { font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; color: var(--navy); }
+  .callout p { margin-bottom: 0; font-size: 0.85rem; }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 0.82rem; }
+  thead th { background: var(--navy); color: white; padding: 7px 12px; text-align: left; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  thead th:first-child { border-radius: var(--radius) 0 0 0; }
+  thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+  tbody td { padding: 7px 12px; border-bottom: 1px solid var(--gray-200); color: var(--gray-700); vertical-align: top; }
+  tbody tr:hover { background: var(--gray-50); }
+
+  code { font-family: var(--font-mono); font-size: 0.78em; background: var(--gray-100); padding: 2px 5px; border-radius: 4px; color: var(--coral); }
+  pre { background: var(--navy); color: rgba(255,255,255,0.9); padding: 16px 20px; border-radius: var(--radius); overflow-x: auto; margin: 12px 0; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.55; }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .tag.regex { background: var(--purple-bg); color: var(--purple); }
+  .tag.logic { background: var(--teal-bg); color: var(--teal); }
+  .tag.normalize { background: var(--amber-bg); color: var(--amber); }
+  .tag.routing { background: var(--coral-bg); color: var(--coral); }
+  .tag.validate { background: var(--green-bg); color: var(--green); }
+  .tag.file { background: var(--navy-bg); color: var(--gray-700); font-weight: 500; font-family: var(--font-mono); text-transform: none; font-size: 0.7rem; }
+
+  .rule-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 18px 22px; margin: 12px 0; }
+  .rule-card .rule-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .rule-card .rule-title { font-weight: 700; font-size: 0.92rem; color: var(--navy); }
+  .rule-card .rule-desc { font-size: 0.85rem; color: var(--gray-600); margin-bottom: 8px; }
+
+  @media print { .sidebar { display: none; } .main { margin-left: 0; } }
+  @media (max-width: 900px) { .sidebar { display: none; } .main { margin-left: 0; } .hero { padding: 36px 20px; } .content { padding: 0 20px 60px; } }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h1>Heuristic Rules</h1>
+    <p>ACM-AI Reference</p>
+  </div>
+  <div class="sidebar-section">Core Regex Patterns</div>
+  <a href="#page-markers">Page Markers</a>
+  <a href="#building-room">Building & Room Headers</a>
+  <a href="#content-detection">Content Detection</a>
+  <div class="sidebar-section">Pipeline Heuristics</div>
+  <a href="#stage-structure">Stage: Document Structure</a>
+  <a href="#stage-inventory">Stage: Building Inventory</a>
+  <a href="#stage-tagging">Stage: Page Tagging</a>
+  <a href="#stage-routing">Stage: Strategy Routing</a>
+  <a href="#stage-preprocess">Stage: Preprocessing</a>
+  <div class="sidebar-section">Data Normalizations</div>
+  <a href="#table-normalization">Table Data Fixes</a>
+  <a href="#enum-normalization">Enum Normalization</a>
+  <a href="#product-normalization">Product Vocabulary</a>
+  <a href="#action-normalization">Action Classification</a>
+  <div class="sidebar-section">Classification</div>
+  <a href="#product-taxonomy">Product Taxonomy Regex</a>
+  <a href="#friability">Friability Rules</a>
+  <div class="sidebar-section">Post-Processing</div>
+  <a href="#dedup">Deduplication</a>
+  <a href="#no-access-recovery">No-Access Recovery</a>
+  <a href="#validation">Pydantic Validation</a>
+  <div class="sidebar-section">Quick Reference</div>
+  <a href="#files-index">Files Index</a>
+  <a href="#summary-table">Master Rule Table</a>
+</nav>
+
+<div class="main">
+  <header class="hero">
+    <div class="hero-badge">Living Reference Document</div>
+    <h1>Heuristic & Deterministic <span>Rules Reference</span></h1>
+    <p>Every regex pattern, normalization rule, routing decision, fallback, and deterministic workflow in the ACM-AI extraction pipeline. 60+ rules across 15+ files.</p>
+  </header>
+
+  <div class="content">
+
+    <!-- ================================================================== -->
+    <!-- CORE REGEX PATTERNS -->
+    <!-- ================================================================== -->
+    <section id="page-markers">
+      <h2><span class="num">01 /</span> Page Marker Patterns</h2>
+      <p class="section-sub">Page markers appear in Docling/PyMuPDF output to delimit PDF pages. Used by nearly every pipeline stage.</p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">_PAGE_PATTERN</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">document_structure.py</span>
+        </div>
+        <div class="rule-desc">The canonical page boundary pattern. <strong>Single source of truth</strong> — all other files import this. Do NOT redefine.</div>
+        <pre><code>_PAGE_PATTERN = re.compile(r"(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+", re.IGNORECASE)</code></pre>
+        <p>Matches: <code>--- Page 5 ---</code>, <code>——— Page 12 ———</code>, <code>--- page 1 ---</code></p>
+        <p><strong>Used by:</strong> document_structure.py, building_inventory.py, page_tagger.py, acm_extraction.py (chunking)</p>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Extended page_pattern (acm_extraction.py)</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">acm_extraction.py ~L248</span>
+        </div>
+        <div class="rule-desc">Extended pattern for chunking that supports additional formats including HTML comments.</div>
+        <pre><code># Supports 3 formats:
+# 1. Dashes: "--- Page 5 ---" or "——— Page 5 ———"
+# 2. HTML comment: "&lt;!-- Page 5 --&gt;"
+# 3. Simple: "Page 5" at line start
+page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|&lt;!--\s*Page\s+(\d+)\s*--&gt;|(?:^|\n)Page\s+(\d+)(?:\s|$))"</code></pre>
+        <p><strong>Special handling:</strong> Multiple capture groups — extract page number via <code>int(next(g for g in match.groups() if g is not None))</code></p>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">_extract_total_pages()</span>
+          <span class="tag logic">Logic</span>
+          <span class="tag file">document_structure.py</span>
+        </div>
+        <div class="rule-desc">Counts total pages by finding all page markers and returning the highest page number found.</div>
+        <pre><code>def _extract_total_pages(content: str) -> int:
+    matches = list(_PAGE_PATTERN.finditer(content))
+    if not matches:
+        return 1
+    return max(int(m.group(1)) for m in matches)</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">_split_into_pages()</span>
+          <span class="tag logic">Logic</span>
+          <span class="tag file">page_tagger.py</span>
+        </div>
+        <div class="rule-desc">Splits full_text into per-page chunks. Each page runs from its marker to the next marker (or end of content).</div>
+        <pre><code>def _split_into_pages(content: str) -> List[Tuple[int, str]]:
+    matches = list(_PAGE_PATTERN.finditer(content))
+    if not matches:
+        return [(1, content)]
+    pages = []
+    for i, match in enumerate(matches):
+        page_num = int(match.group(1))
+        start = match.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+        page_text = content[start:end].strip()
+        if page_text:
+            pages.append((page_num, page_text))
+    return pages</code></pre>
+      </div>
+    </section>
+
+    <section id="building-room">
+      <h2><span class="num">02 /</span> Building & Room Header Patterns</h2>
+      <p class="section-sub">Two sets of patterns exist: one in acm_extractor.py (line-by-line parsing) and custom ones in building_inventory.py (structure analysis). They differ intentionally.</p>
+
+      <div class="callout amber">
+        <div class="callout-title">Important: Two Pattern Sets</div>
+        <p>The acm_extractor.py patterns match room headers AS buildings (and vice versa). The building_inventory.py patterns use <code>\s+[-–]\s+</code> (space-dash-space) for buildings vs <code>-R####</code> prefix requirement for rooms to distinguish them correctly.</p>
+      </div>
+
+      <h3>Set A: Regex Parser Patterns (acm_extractor.py ~L32-51)</h3>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">BUILDING_PATTERN</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">acm_extractor.py L32</span>
+        </div>
+        <pre><code>BUILDING_PATTERN = re.compile(
+    r"^#+\s*(?:Building[:\s]*)?([A-Z]\d{2,3}[A-Z]?)\s*[-–]\s*(.+?)(?:\s*[-–]\s*(\d{4}))?(?:\s*[-–]\s*(.+))?$",
+    re.IGNORECASE | re.MULTILINE
+)
+# Matches: "## B00A - Other-Dse Admin - 1924 - Brick"
+# Groups: (1) building_id=B00A, (2) name=Other-Dse Admin, (3) year=1924, (4) construction=Brick</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">ROOM_PATTERN</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">acm_extractor.py L38</span>
+        </div>
+        <pre><code>ROOM_PATTERN = re.compile(
+    r"^#+\s*(?:Room[:\s]*)?([A-Z0-9]+-?R?\d+)\s*[-–]\s*(.+?)(?:\s*[-–]\s*([\d.]+)\s*m²)?$",
+    re.IGNORECASE | re.MULTILINE
+)
+# Matches: "### B00A-R0001 - Main Office - 32.5 m²"
+# Groups: (1) room_id=B00A-R0001, (2) name=Main Office, (3) area_m2=32.5</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">AREA_TYPE_PATTERN</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">acm_extractor.py L44</span>
+        </div>
+        <pre><code>AREA_TYPE_PATTERN = re.compile(
+    r"^#+\s*(?:Area\s*Type[:\s]*)?(\bExterior\b|\bInterior\b|\bGrounds\b)",
+    re.IGNORECASE | re.MULTILINE
+)
+# Matches: "## Interior" or "## Area Type: Exterior"</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">SCHOOL_PATTERN</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">acm_extractor.py L48</span>
+        </div>
+        <pre><code>SCHOOL_PATTERN = re.compile(
+    r"^#\s*(.+?)(?:\s*[-–]\s*(?:Asbestos|ACM|SAMP))?.*?$",
+    re.IGNORECASE | re.MULTILINE
+)
+# Extracts school/site name from H1 header</code></pre>
+      </div>
+
+      <h3>Set B: Inventory Patterns (building_inventory.py)</h3>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">_BUILDING_HEADER</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">building_inventory.py</span>
+        </div>
+        <div class="rule-desc">Custom pattern for inventory stage. Uses <code>\s+[-–]\s+</code> (space-dash-space) to distinguish from room headers.</div>
+        <pre><code># Matches SAMP format: "B00A - Admin Block - 1924"
+# Does NOT match rooms (they use B00A-R0001 with no space before dash)
+_BUILDING_HEADER = re.compile(r"([A-Z]\d{2,3}[A-Z]?)\s+[-–]\s+(.+?)(?:\s+[-–]\s+(\d{4}))?")
+
+# For ARA format: detects "Building Name:" header blocks
+# Uses _detect_ara_buildings() function</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">_ROOM_HEADER</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">building_inventory.py</span>
+        </div>
+        <div class="rule-desc">Requires <code>-R####</code> prefix to positively identify rooms vs buildings.</div>
+        <pre><code># Matches: "B00A-R0001 - External Movement" or "B00A-R0001 - Office - 32.5 m²"
+_ROOM_HEADER = re.compile(r"([A-Z]\d{2,3}[A-Z]?-R\d{3,4})\s*[-–]\s*(.+?)(?:\s*[-–]\s*([\d.]+)\s*m²)?")
+</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">ROOM_ENTRY_PATTERN (orchestrator.py)</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">orchestrator.py</span>
+        </div>
+        <div class="rule-desc">Broader pattern used during extraction that also matches tab-separated entries.</div>
+        <pre><code># Broadened to match dash, en-dash, AND tab separators
+ROOM_ENTRY_PATTERN = re.compile(r"([A-Z]\d{2,3}[A-Z]?-R\d+)(?:\s*[-–\t]\s*)(.+)")
+</code></pre>
+      </div>
+    </section>
+
+    <section id="content-detection">
+      <h2><span class="num">03 /</span> Content Detection Patterns</h2>
+      <p class="section-sub">Patterns used to identify document features: addresses, report references, building IDs.</p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Building ID Detection (D-series + B-series)</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">document_structure.py heuristic</span>
+        </div>
+        <pre><code># SAMP B-series: B000, B00A, B12C
+r"\b(B\d{2,3}[A-Z]?)\b"
+
+# D-series: D01, D02
+r"\b(D\d{1,3})\b"
+
+# Deduplication: uses set() to avoid O(n²) list scan</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Australian Address Patterns</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">metadata_extractor.py (E1-S19)</span>
+        </div>
+        <pre><code>ADDRESS_PATTERN = r"(\d+[-/]?\d*)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Street|St|Road|Rd|Avenue|Ave|Drive|Dr|Lane|Ln|Court|Ct|Crescent|Cres|Boulevard|Blvd|Way|Place|Pl))"
+
+SUBURB_STATE_POSTCODE = r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:VIC|NSW|QLD|SA|WA|TAS|NT|ACT)\s+(\d{4})"</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Report Reference Patterns</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">metadata_extractor.py</span>
+        </div>
+        <pre><code>REPORT_REF_PATTERNS = [
+    r"(?:Report\s+(?:No|Number|Ref)\.?[:\s]+)([\w\-/]+)",
+    r"(?:Reference[:\s]+)([\w\-/]+)",
+    r"(?:Job\s+(?:No|Number)\.?[:\s]+)([\w\-/]+)",
+]</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- PIPELINE STAGE HEURISTICS -->
+    <!-- ================================================================== -->
+    <section id="stage-structure">
+      <h2><span class="num">04 /</span> Stage: Document Structure Heuristic</h2>
+      <p class="section-sub">Runs when LLM structured output fails (currently fails 100% of the time due to completionState envelope). Extracts document structure using regex only.</p>
+      <p><span class="tag file">document_structure.py → _heuristic_fallback()</span></p>
+
+      <table>
+        <thead><tr><th>What It Extracts</th><th>How</th><th>Accuracy</th></tr></thead>
+        <tbody>
+          <tr><td><code>total_pages</code></td><td><code>_extract_total_pages()</code> — highest page marker number</td><td>100%</td></tr>
+          <tr><td><code>register_start_page</code></td><td>Scan for first page containing building header regex (B### or D##)</td><td>High (SAMP), moderate (ARA)</td></tr>
+          <tr><td><code>building_ids</code></td><td>Regex scan: <code>\b(B\d{2,3}[A-Z]?)\b</code> and <code>\b(D\d{1,3})\b</code></td><td>High</td></tr>
+          <tr><td><code>document_type</code></td><td>Set to <code>UNKNOWN</code> (can't determine SAMP vs ARA without LLM)</td><td>N/A — cosmetic field, doesn't affect downstream</td></tr>
+          <tr><td><code>sections</code></td><td>Not populated by heuristic — empty list</td><td>N/A</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout green">
+        <div class="callout-title">Impact Assessment</div>
+        <p><strong>Minimal accuracy loss.</strong> <code>document_type=UNKNOWN</code> is cosmetic. <code>register_start_page</code> and <code>building_ids</code> are detected correctly for SAMP format. Content trimming and building detection work correctly with heuristic output.</p>
+      </div>
+    </section>
+
+    <section id="stage-inventory">
+      <h2><span class="num">05 /</span> Stage: Building Inventory Heuristic</h2>
+      <p class="section-sub">Compiles building-level metadata (page ranges, rooms, complexity). Even when LLM succeeds, heuristic ALWAYS runs as cross-validation and merges discoveries.</p>
+      <p><span class="tag file">building_inventory.py → _heuristic_fallback()</span></p>
+
+      <h3>Step-by-Step Logic</h3>
+      <div class="card">
+        <p><strong>1. Trim to Register:</strong> <code>_trim_to_register()</code> — uses <code>register_start_page</code> from DocumentStructure to discard cover/TOC pages.</p>
+        <p><strong>2. Find Buildings:</strong> Scan trimmed content for <code>_BUILDING_HEADER</code> matches. For ARA format, also run <code>_detect_ara_buildings()</code> which looks for "Building Name:" header blocks.</p>
+        <p><strong>3. Find Rooms:</strong> For each building section, scan for <code>_ROOM_HEADER</code> matches. Extract room_id, name, area_m2.</p>
+        <p><strong>4. Map Page Ranges:</strong></p>
+        <pre><code># _find_page_at_position(content, char_position) → page number
+# Finds the closest _PAGE_PATTERN marker BEFORE the character position
+# _find_page_end(building) → last page of this building
+# Uses room page data + checks for content after page markers
+# Avoids counting trailing markers that belong to next building</code></pre>
+        <p><strong>5. Classify Complexity:</strong></p>
+        <pre><code>def _classify_complexity(building_text: str) -> Tuple[BuildingComplexity, int]:
+    # "No Asbestos" at BUILDING level → SIMPLE
+    # (NOT individual row "Not Detected" — that's per-record)
+    if re.search(r"no\s+asbestos", building_text, re.IGNORECASE):
+        return BuildingComplexity.SIMPLE, 0
+    # Count ACM items (rows in register tables)
+    acm_count = len(re.findall(r"R\d{3,4}", building_text))
+    if acm_count > 20:
+        return BuildingComplexity.COMPLEX, acm_count
+    return BuildingComplexity.COMPLEX, acm_count</code></pre>
+        <p><strong>6. Create Processing Groups:</strong> Group buildings by page proximity, targeting 3-5 pages per group. Isolate large buildings (B009) into their own group.</p>
+      </div>
+
+      <h3>Fields NOT Available from Heuristic</h3>
+      <table>
+        <thead><tr><th>Field</th><th>Requires LLM?</th><th>Impact</th></tr></thead>
+        <tbody>
+          <tr><td><code>purpose</code></td><td>Yes — text comprehension</td><td>Informational only, not used downstream</td></tr>
+          <tr><td><code>area_m2</code></td><td>Yes — unless in header</td><td>Informational only</td></tr>
+          <tr><td><code>levels</code></td><td>Yes — text comprehension</td><td>Informational only</td></tr>
+          <tr><td><code>construction_type</code></td><td>Partially — present in header for some formats</td><td>Informational only</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="stage-tagging">
+      <h2><span class="num">06 /</span> Stage: Page-Level Section Tagging Heuristic</h2>
+      <p class="section-sub">Tags each page with a section_id (0-7) using keyword matching and upstream data.</p>
+      <p><span class="tag file">page_tagger.py → _heuristic_tag_all() → _heuristic_tag_page()</span></p>
+
+      <h3>Section Taxonomy (0-7)</h3>
+      <table>
+        <thead><tr><th>ID</th><th>Section</th><th>Heuristic Detection</th><th>Confidence</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Cover / TOC</td><td>Page 1-2 (no other markers), or contains "Table of Contents" / "Contents"</td><td>0.7 / 0.9</td></tr>
+          <tr><td>1</td><td>Introduction</td><td>Contains "Introduction" heading</td><td>0.8</td></tr>
+          <tr><td>2</td><td>Site Description</td><td>Contains "Site Description" heading</td><td>0.8</td></tr>
+          <tr><td>3</td><td>Methodology</td><td>Contains "Methodology" heading</td><td>0.8</td></tr>
+          <tr><td>4</td><td><strong>Register (ACM data)</strong></td><td>Contains building headers (B###) OR ACM table data OR falls within BuildingInventory page ranges</td><td>0.9 / 0.85</td></tr>
+          <tr><td>5</td><td>Findings / Summary</td><td>Contains "Findings" or "Summary" heading after register</td><td>0.7</td></tr>
+          <tr><td>6</td><td>Conclusions / Recommendations</td><td>Contains "Conclusion" or "Recommendation" heading</td><td>0.7</td></tr>
+          <tr><td>7</td><td>Appendix</td><td>Contains "Appendix" heading, or after all register content</td><td>0.7</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Cross-Validation with Upstream Data</h3>
+      <div class="callout">
+        <div class="callout-title">Multi-Source Confidence</div>
+        <p>The heuristic combines data from BOTH upstream stages for high accuracy:<br>
+        • <code>DocumentStructure.sections</code> → ground truth anchors (if section(id=4, page_start=13, page_end=30) exists, pages 13-30 pre-tagged as register)<br>
+        • <code>BuildingInventory.buildings[].page_start/page_end</code> → confirms register pages at 0.85 confidence<br>
+        • <code>DocumentStructure.register_start_page</code> → strong anchor for section 4 start</p>
+      </div>
+    </section>
+
+    <section id="stage-routing">
+      <h2><span class="num">07 /</span> Stage: Extraction Strategy Routing</h2>
+      <p class="section-sub">Decides how each building gets extracted: LLM, regex-only, or skip.</p>
+      <p><span class="tag file">orchestrator.py → plan_extraction() → _determine_strategy()</span></p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Strategy Selection Logic</span>
+          <span class="tag routing">Routing</span>
+          <span class="tag logic">Logic</span>
+        </div>
+        <pre><code>def _determine_strategy(building, page_tags) -> ExtractionStrategy:
+    # No page tags available → safe default
+    if not page_tags:
+        return ExtractionStrategy.FULL_LLM
+
+    # Check if ANY of this building's pages are register pages
+    building_pages = [
+        tag for tag in page_tags.pages
+        if building.page_start <= tag.page_number <= building.page_end
+    ]
+    register_pages = [p for p in building_pages if p.section_id == 4]
+
+    # No register content → skip entirely
+    if not register_pages:
+        return ExtractionStrategy.SKIP
+
+    # Simple "No Asbestos" buildings → regex extraction only
+    if building.complexity == "simple":
+        return ExtractionStrategy.REGEX_ONLY
+
+    # Complex buildings → full LLM extraction
+    return ExtractionStrategy.FULL_LLM</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">should_use_orchestrator()</span>
+          <span class="tag routing">Routing</span>
+          <span class="tag file">orchestrator.py</span>
+        </div>
+        <div class="rule-desc"><strong>⚠️ GAP-1 Target: REMOVE THIS.</strong> Currently gates the dual-path conditional edge.</div>
+        <pre><code>def should_use_orchestrator(state: ExtractionState) -> bool:
+    # Returns True if building_inventory is not None AND has 1+ buildings
+    # Returns False → routes to legacy prepare → extract → loop path
+    return (
+        state.get("building_inventory") is not None
+        and len(state["building_inventory"].buildings) > 0
+    )</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">_SAMP_BUILDING_ID Detection</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag file">orchestrator.py</span>
+        </div>
+        <div class="rule-desc">Determines if a building ID matches SAMP format (vs ARA which uses name-based IDs).</div>
+        <pre><code># SAMP IDs: B00A, B009, D01 — match this pattern
+_SAMP_BUILDING_ID = re.compile(r"^[A-Z]\d{2,3}[A-Z]?$")
+
+# ARA buildings (non-SAMP ID) → always FULL_LLM
+# SAMP buildings → may get REGEX_ONLY if classified SIMPLE</code></pre>
+      </div>
+    </section>
+
+    <section id="stage-preprocess">
+      <h2><span class="num">08 /</span> Stage: SAMP Preprocessing</h2>
+      <p class="section-sub">Text transformations applied BEFORE LLM extraction to improve accuracy. Applied in <code>_preprocess_samp_format()</code>.</p>
+      <p><span class="tag file">acm_extraction.py → _preprocess_samp_format()</span></p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">NO_ACCESS_PHRASES → Marker Injection</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag normalize">Normalize</span>
+          <span class="tag file">acm_extraction.py (E18-S5, Fix A)</span>
+        </div>
+        <div class="rule-desc">Detects "No Access" entries in text and injects visible markers so the LLM doesn't skip them.</div>
+        <pre><code>NO_ACCESS_PHRASES = [
+    "No access", "No Access", "NO ACCESS",
+    "Height restriction", "Height Restriction",
+    "Restricted access", "Restricted Access",
+    "Live Electrical Hazard",
+    "Not accessible", "Not Accessible",
+    "Locked", "Unable to access",
+]
+
+# Single-pass combined alternation regex (Fix C1 — prevents double markers)
+pattern = "|".join(re.escape(phrase) for phrase in NO_ACCESS_PHRASES)
+combined_re = re.compile(f"({pattern})", re.IGNORECASE)
+
+# Injects: "&gt;&gt;&gt; NO ACCESS ENTRY: {matched_phrase}"
+# before each matched line</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">PRODUCT_NORMALIZATIONS — Vocabulary Mapping</span>
+          <span class="tag normalize">Normalize</span>
+          <span class="tag file">acm_extraction.py (E18-S5, Fix B)</span>
+        </div>
+        <div class="rule-desc">Normalizes product names in the raw text BEFORE LLM sees it. Fixes common variations.</div>
+        <pre><code>PRODUCT_NORMALIZATIONS = {
+    "Fuses": "Fuse cartridge",       # Plural → canonical
+    "Fuse": "Fuse cartridge",        # Standalone (not "Fuse cartridge" which already correct)
+    "Flange mastic": "Flange joints", # Product name variation
+}
+# Applied via regex with word boundaries to avoid partial matches</code></pre>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- DATA NORMALIZATIONS -->
+    <!-- ================================================================== -->
+    <section id="table-normalization">
+      <h2><span class="num">09 /</span> Docling Table Data Normalizations</h2>
+      <p class="section-sub">Applied to DataFrames immediately after Docling extraction, BEFORE any LLM processing.</p>
+      <p><span class="tag file">source processing (E26) → extract_docling_tables()</span></p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Fix Split Sample Numbers</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag normalize">Normalize</span>
+        </div>
+        <div class="rule-desc">ALL sample numbers from Docling have embedded spaces: <code>34511-039- 001</code>. 100% fixable.</div>
+        <pre><code># Applied to every cell in every DataFrame
+df = df.map(
+    lambda v: re.sub(r"(\d+)-\s+(\d+)", r"\1-\2", str(v))
+    if isinstance(v, str) else v
+)
+# "34511-039- 001" → "34511-039-001"</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Strip "Asbestos " Prefix from Hazard Status</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag normalize">Normalize</span>
+        </div>
+        <div class="rule-desc">Docling outputs "Asbestos Negative" / "Asbestos Positive" — strip the prefix.</div>
+        <pre><code># Applied to columns with "hazard" or "status" in name
+for col in df.columns:
+    if "hazard" in col.lower() or "status" in col.lower():
+        df[col] = df[col].apply(
+            lambda v: re.sub(r"^Asbestos\s+", "", str(v))
+            if isinstance(v, str) else v
+        )
+# "Asbestos Negative" → "Negative"</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">"Same as" ↔ "As Per" Normalization</span>
+          <span class="tag normalize">Normalize</span>
+        </div>
+        <div class="rule-desc">Docling uses "Same as 34511-039-XXX" where BAR ground truth uses "As Per 34511-039-XXX". Semantic equivalence.</div>
+        <pre><code># Deferred to orchestrator/BAR mapper layer (not in source processing)
+# Simple string replacement: "Same as" → "As Per"</code></pre>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Column-to-BAR Positional Mapping</span>
+          <span class="tag logic">Logic</span>
+        </div>
+        <div class="rule-desc">Column headers vary per table ("Level / Location Building" vs "Level"). Column POSITION is consistent.</div>
+        <pre><code># Semantic column mapping by position (E25 finding):
+# cols 0-3 = location data (Level, Room, Feature, Item)
+# col 4    = hazard type + status
+# col 5    = sample number
+# col 6    = friability
+# Regardless of actual header text</code></pre>
+      </div>
+    </section>
+
+    <section id="enum-normalization">
+      <h2><span class="num">10 /</span> Enum Value Normalization</h2>
+      <p class="section-sub">Normalizes consultant-specific wording to BAR-standard enum values.</p>
+      <p><span class="tag file">normalizers/ (E1-S12) + acm_schemas.py (E2-S11)</span></p>
+
+      <h3>Sample Result</h3>
+      <table>
+        <thead><tr><th>Raw Input</th><th>Normalized Output</th></tr></thead>
+        <tbody>
+          <tr><td>"positive", "pos"</td><td><code>Positive</code></td></tr>
+          <tr><td>"negative", "neg"</td><td><code>Negative</code></td></tr>
+          <tr><td>"presumed", "presumed positive", "assumed", "not sampled"</td><td><code>Assumed Positive</code></td></tr>
+          <tr><td>"assumed negative"</td><td><code>Assumed Negative</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Material Condition</h3>
+      <table>
+        <thead><tr><th>Raw Input</th><th>Normalized Output</th></tr></thead>
+        <tbody>
+          <tr><td>"good"</td><td><code>Good</code></td></tr>
+          <tr><td>"fair"</td><td><code>Fair</code></td></tr>
+          <tr><td>"poor"</td><td><code>Poor</code></td></tr>
+          <tr><td>"-", "n/a"</td><td><code>None</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Disturbance Potential</h3>
+      <table>
+        <thead><tr><th>Raw Input</th><th>Normalized Output</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>"low"</td><td><code>Low</code></td><td></td></tr>
+          <tr><td>"medium"</td><td><code>Moderate</code></td><td><strong>BAR uses "Moderate" not "Medium"!</strong></td></tr>
+          <tr><td>"high"</td><td><code>High</code></td><td></td></tr>
+          <tr><td>"-"</td><td><code>None</code></td><td></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Business Rules (Negative Result Cascade)</h3>
+      <div class="callout navy">
+        <div class="callout-title">Conditional Defaults</div>
+        <p>If Sample Result is <code>Negative</code> or <code>Assumed Negative</code>:<br>
+        → Set Condition to <code>N/A (negative)</code> or <code>N/A (assumed negative)</code><br>
+        → Set Disturbance Potential to <code>N/A (negative)</code> or <code>N/A (assumed negative)</code></p>
+      </div>
+
+      <h3>Pydantic Validators (acm_schemas.py)</h3>
+      <pre><code>@field_validator("result", mode="before")
+@classmethod
+def validate_result(cls, v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return v
+    normalized = v.strip().title()
+    allowed = {"Positive", "Assumed Positive", "Negative", "Assumed Negative", "Unknown"}
+    if normalized not in allowed:
+        raise ValueError(f"result must be one of {sorted(allowed)}, got '{v}'")
+    return normalized
+
+@field_validator("quantity", mode="before")
+@classmethod
+def validate_quantity(cls, v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return v
+    match = re.match(r"^\s*(-?\d+(?:\.\d+)?)", str(v))
+    if match and float(match.group(1)) < 0:
+        raise ValueError(f"quantity cannot be negative, got '{v}'")
+    return v</code></pre>
+    </section>
+
+    <section id="product-normalization">
+      <h2><span class="num">11 /</span> Product Vocabulary Normalization</h2>
+      <p class="section-sub">Synonym mappings used for testing and matching, defined in E18-S5 and test fixtures.</p>
+      <p><span class="tag file">test_broadmeadows_e2e.py, _preprocess_samp_format()</span></p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">PRODUCT_SYNONYMS (test matching)</span>
+          <span class="tag normalize">Normalize</span>
+        </div>
+        <pre><code>PRODUCT_SYNONYMS = {
+    "flange joints": "flange mastic",
+    "flange mastic": "flange joints",
+    "fuse cartridge": "fuses",
+    "fuses": "fuse cartridge",
+    "internal lining": "internal lining",
+    # ... covers common variations
+}</code></pre>
+        <p>Used in Tier 2.5 matching: if exact match fails, try synonym-normalized version.</p>
+      </div>
+    </section>
+
+    <section id="action-normalization">
+      <h2><span class="num">12 /</span> Hygienist Action Classification</h2>
+      <p class="section-sub">Regex-based classification of free-text hygienist recommendations into canonical action codes.</p>
+      <p><span class="tag file">normalizers/ → consultant_wording_rules.json (E1-S12)</span></p>
+
+      <table>
+        <thead><tr><th>Regex Pattern</th><th>Canonical Action</th></tr></thead>
+        <tbody>
+          <tr><td><code>\bLeave undisturbed\b|\bno action\b|\bMonitor\b|\bmanage.*in\s*situ\b</code></td><td><code>leave_undisturbed_and_manage</code></td></tr>
+          <tr><td><code>\bMaintain.*into an AMP\b</code></td><td><code>maintain_in_situ</code></td></tr>
+          <tr><td><code>\bRemove (under|by) .*licensed asbestos removal contractor\b</code></td><td><code>remove_prior_to_refurb_or_demolition</code></td></tr>
+          <tr><td><code>\bprior to demolition or refurbishment\b</code></td><td><code>remove_prior_to_refurb_or_demolition</code></td></tr>
+          <tr><td><code>\bRestrict access\b|\bASAP\b</code></td><td><code>restrict_access_immediately</code></td></tr>
+          <tr><td><code>\bwithin\s*3\s*months\b|\bnext few months\b</code></td><td><code>remedial_within_months</code></td></tr>
+          <tr><td><code>\bConfirm status\b|\bNot Sampled\b|\bPresumed\b</code></td><td><code>confirm_status_sampling</code></td></tr>
+          <tr><td><code>\bHeight restriction\b|\bRestricted Access\b|\bLive Electrical Hazard\b</code></td><td><code>height_or_access_restriction</code></td></tr>
+          <tr><td><code>\bcontrolled bonded asbestos removal conditions\b</code></td><td><code>remove_prior_to_refurb_or_demolition</code></td></tr>
+          <tr><td><em>(no match)</em></td><td><code>review_required</code></td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Rules:</strong> Case-insensitive (<code>re.IGNORECASE</code>). Checked in priority order — first match wins. Stores both raw text (in <code>hygienist_recommendations</code>) and canonical code (in <code>normalized_action</code>).</p>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- CLASSIFICATION -->
+    <!-- ================================================================== -->
+    <section id="product-taxonomy">
+      <h2><span class="num">13 /</span> Product Taxonomy Regex Classification</h2>
+      <p class="section-sub">60+ regex patterns that classify ACM products into BAR taxonomy groups. Primary method (~80% hit rate); LLM fallback for ambiguous items.</p>
+      <p><span class="tag file">normalizers/taxonomy.py (E1-S9)</span></p>
+
+      <h3>Non-Friable Taxonomy (T1-T8)</h3>
+      <table>
+        <thead><tr><th>Pattern</th><th>Group</th><th>Product Type</th></tr></thead>
+        <tbody>
+          <tr><td><code>vinyl\s*(sheet|flooring)</code></td><td>T3 Vinyl products</td><td>Vinyl sheet</td></tr>
+          <tr><td><code>vinyl\s*tile</code></td><td>T3 Vinyl products</td><td>Vinyl Tiles</td></tr>
+          <tr><td><code>linoleum</code></td><td>T3 Vinyl products</td><td>Vinyl sheet</td></tr>
+          <tr><td><code>(fibre|fiber)\s*cement|fc\s*sheet</code></td><td>T1 Cement products</td><td>Flat Sheeting</td></tr>
+          <tr><td><code>corrugated.*roof</code></td><td>T1 Cement products</td><td>Corrugated Roof Sheeting</td></tr>
+          <tr><td><code>weatherboard</code></td><td>T1 Cement products</td><td>Weatherboards</td></tr>
+          <tr><td><code>mastic</code></td><td>T4 Gasket, friction products</td><td>Mastic</td></tr>
+          <tr><td><code>gasket</code></td><td>T4 Gasket, friction products</td><td>Gasket(s)</td></tr>
+          <tr><td><code>bitumen|bituminous</code></td><td>T2 Bitumen products</td><td>Bituminous Membrane</td></tr>
+          <tr><td><code>malthoid</code></td><td>T2 Bitumen products</td><td>Malthoid</td></tr>
+          <tr><td><code>millboard</code></td><td>T8 Insulation</td><td>Millboard</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Friable Taxonomy (T1-T6)</h3>
+      <table>
+        <thead><tr><th>Pattern</th><th>Group</th><th>Product Type</th></tr></thead>
+        <tbody>
+          <tr><td><code>lagging</code></td><td>T3 Insulation products (f)</td><td>Lagging</td></tr>
+          <tr><td><code>vermiculite</code></td><td>T3 Insulation products (f)</td><td>Vermiculite</td></tr>
+        </tbody>
+      </table>
+
+      <p><em>Full list: 60+ patterns in <code>normalizers/taxonomy.py → CLASSIFICATION_PATTERNS</code></em></p>
+
+      <h3>Classification Flow</h3>
+      <pre><code>def classify_product(item_description: str, friability: str) -> tuple[str, str]:
+    # 1. Select taxonomy based on friability
+    if friability == "Friable":
+        taxonomy = FRIABLE_TAXONOMY      # T1-T6
+    else:
+        taxonomy = NONFRIABLE_TAXONOMY   # T1-T8 (default)
+
+    # 2. Try regex patterns (primary)
+    for pattern, ftype, group, ptype in CLASSIFICATION_PATTERNS:
+        if re.search(pattern, item_description, re.IGNORECASE):
+            if ftype matches friability:
+                return (group, ptype)  # confidence: 0.9
+
+    # 3. LLM fallback for ambiguous items (confidence: varies)
+    return await _llm_classify(item_description, friability)
+    # If LLM confidence < 0.7 → flag for manual review</code></pre>
+    </section>
+
+    <section id="friability">
+      <h2><span class="num">14 /</span> Friability Rules</h2>
+      <p class="section-sub">Handled by <code>taxonomy._normalize_friability()</code> — do NOT duplicate this logic elsewhere.</p>
+      <p><span class="tag file">normalizers/taxonomy.py</span></p>
+
+      <table>
+        <thead><tr><th>Raw Input</th><th>Normalized</th><th>Taxonomy</th></tr></thead>
+        <tbody>
+          <tr><td>"Friable", "friable", "F"</td><td><code>Friable</code></td><td>T1-T6 Friable</td></tr>
+          <tr><td>"Non-friable", "Non Friable", "NF", "non-friable"</td><td><code>Non-friable</code></td><td>T1-T8 Non-friable</td></tr>
+          <tr><td>null, empty, unknown</td><td>Default: <code>Non-friable</code></td><td>T1-T8 Non-friable</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- POST-PROCESSING -->
+    <!-- ================================================================== -->
+    <section id="dedup">
+      <h2><span class="num">15 /</span> Deduplication</h2>
+      <p class="section-sub">Removes duplicate records using a composite key. Critical fix in E26 added <code>location</code> to the key.</p>
+      <p><span class="tag file">acm_extraction.py → deduplicate stage</span></p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">Dedup Composite Key</span>
+          <span class="tag logic">Logic</span>
+        </div>
+        <pre><code># Pre-E26: room + product + sample_number (3 fields)
+# PROBLEM: Record #8 (Switch Room/Switchboard/Fuse) and
+#          Record #9 (Switch Room/Battery Charger/Fuse) had
+#          identical keys because both shared room + product + empty sample.
+
+# Post-E26 (current): room + product + location + sample_number (4 fields)
+dedup_key = f"{record.room_name}|{record.product}|{record.location}|{record.sample_number}"
+
+# On duplicate detection: keep record with higher confidence, merge data_issues</code></pre>
+      </div>
+
+      <div class="callout amber">
+        <div class="callout-title">E26 Fix Impact</div>
+        <p>Adding <code>location</code> to the dedup key changed Broadmeadows from 31 raw → 28 after dedup (losing 3 real records) to 31 raw → 30 after dedup (only losing 1 true duplicate). This single change recovered 2 records.</p>
+      </div>
+    </section>
+
+    <section id="no-access-recovery">
+      <h2><span class="num">16 /</span> No-Access Record Recovery</h2>
+      <p class="section-sub">Post-dedup regex scan that catches "No Access" entries the LLM missed. Added in E26-S6 (Fix 3).</p>
+      <p><span class="tag file">acm_extraction.py → _recover_no_access_records()</span></p>
+
+      <div class="rule-card">
+        <div class="rule-header">
+          <span class="rule-title">_recover_no_access_records()</span>
+          <span class="tag regex">Regex</span>
+          <span class="tag logic">Logic</span>
+        </div>
+        <div class="rule-desc">Runs post-dedup, pre-save. Scans <code>full_text</code> for "No Access" entries the LLM missed.</div>
+        <pre><code># Scans source.full_text for patterns like:
+# "Room Adjacent Disabled Toilet" + "No Access" within nearby lines
+# "Lift Foyer" + "No access - Height restriction"
+
+# Creates new ACMExtractionRecord with:
+#   result = "Assumed Positive"
+#   data_issues = "No access - recovered by regex fallback"
+
+# Dedup check: only adds if (room + product + location) key
+# not already present in extracted records
+
+# E26 result: recovered Record #31 (Disabled Toilet)
+# Also caught false-positive Ceiling Space record (already extracted — harmless)</code></pre>
+      </div>
+    </section>
+
+    <section id="validation">
+      <h2><span class="num">17 /</span> Pydantic Schema Validation</h2>
+      <p class="section-sub">Validates extracted records against the ACMExtractionRecord schema. Failed records go to corrective LLM loop.</p>
+      <p><span class="tag file">acm_schemas.py, acm_extraction.py → validate_records</span></p>
+
+      <h3>Required Fields</h3>
+      <table>
+        <thead><tr><th>Field</th><th>Required?</th><th>On Failure</th></tr></thead>
+        <tbody>
+          <tr><td><code>building_id</code></td><td>Yes</td><td>Record rejected</td></tr>
+          <tr><td><code>room_id</code> or <code>room_name</code></td><td>Yes (at least one)</td><td>Record rejected</td></tr>
+          <tr><td><code>product</code></td><td>Yes</td><td>Record rejected</td></tr>
+          <tr><td><code>result</code></td><td>Yes</td><td>Sent to corrective loop</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Confidence Assignment</h3>
+      <pre><code># high:   All required fields present, clear source text
+# medium: Required fields present but some ambiguity
+# low:    Required fields inferred from context, uncertain
+
+# Invalid records logged but NOT saved (with full context for debugging)
+# extraction_status: "valid" | "invalid" | "no_acm_data"</code></pre>
+
+      <h3>Token Estimation (for chunking decisions)</h3>
+      <pre><code># Simple character-based heuristic (avoids tokenizer dependency):
+# 1 token ≈ 4 characters for English prose
+# 1 token ≈ 3 characters for structured table data (denser)
+# Safety margin: use 80% of model context window</code></pre>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- QUICK REFERENCE -->
+    <!-- ================================================================== -->
+    <section id="files-index">
+      <h2><span class="num">18 /</span> Files Index</h2>
+      <p class="section-sub">Every file containing heuristic or deterministic rules, and what's in each.</p>
+
+      <table>
+        <thead><tr><th>File</th><th>Rules Contained</th><th>Sections</th></tr></thead>
+        <tbody>
+          <tr><td><code>extractors/document_structure.py</code></td><td>_PAGE_PATTERN, _extract_total_pages(), _heuristic_fallback(), building ID regex, register_start_page detection</td><td>§01, §04</td></tr>
+          <tr><td><code>extractors/building_inventory.py</code></td><td>_BUILDING_HEADER, _ROOM_HEADER, _heuristic_fallback(), _classify_complexity(), _find_page_end(), _trim_to_register(), _detect_ara_buildings(), processing groups</td><td>§02, §05</td></tr>
+          <tr><td><code>extractors/page_tagger.py</code></td><td>_heuristic_tag_all(), _heuristic_tag_page(), _split_into_pages(), section keyword detection, cross-validation with upstream stages</td><td>§01, §06</td></tr>
+          <tr><td><code>extractors/orchestrator.py</code></td><td>_determine_strategy(), should_use_orchestrator(), ROOM_ENTRY_PATTERN, _SAMP_BUILDING_ID, ExtractionStrategy enum, parallel extraction semaphore</td><td>§07</td></tr>
+          <tr><td><code>extractors/acm_extractor.py</code></td><td>BUILDING_PATTERN, ROOM_PATTERN, AREA_TYPE_PATTERN, SCHOOL_PATTERN, PAGE_PATTERN, line-by-line regex parser, ParseContext state</td><td>§02, §03</td></tr>
+          <tr><td><code>graphs/acm_extraction.py</code></td><td>_preprocess_samp_format(), NO_ACCESS_PHRASES, PRODUCT_NORMALIZATIONS, _chunk_content(), extended page_pattern, dedup logic, _recover_no_access_records(), conditional graph edges</td><td>§08, §15, §16</td></tr>
+          <tr><td><code>extractors/normalizers/taxonomy.py</code></td><td>CLASSIFICATION_PATTERNS (60+), classify_product(), _normalize_friability(), friable/non-friable taxonomy selection</td><td>§13, §14</td></tr>
+          <tr><td><code>extractors/normalizers/</code> (E1-S12)</td><td>normalize_enum_value(), action classification regex, consultant_wording_rules.json patterns</td><td>§10, §12</td></tr>
+          <tr><td><code>extractors/acm_schemas.py</code></td><td>Pydantic field_validators for result, condition, disturbance_potential, quantity, friability</td><td>§10, §17</td></tr>
+          <tr><td><code>extractors/metadata_extractor.py</code></td><td>ADDRESS_PATTERN, SUBURB_STATE_POSTCODE, REPORT_REF_PATTERNS</td><td>§03</td></tr>
+          <tr><td><code>source processing (E26)</code></td><td>Docling DataFrame normalizations: split sample fix, hazard prefix strip</td><td>§09</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="summary-table">
+      <h2><span class="num">19 /</span> Master Rule Table</h2>
+      <p class="section-sub">All 60+ rules in one sortable reference.</p>
+
+      <table>
+        <thead><tr><th>#</th><th>Rule</th><th>Type</th><th>File</th><th>Epic</th><th>Impact</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>_PAGE_PATTERN (canonical)</td><td>Regex</td><td>document_structure.py</td><td>E1-S16</td><td>All stages depend on this</td></tr>
+          <tr><td>2</td><td>Extended page_pattern (3 formats)</td><td>Regex</td><td>acm_extraction.py</td><td>E3-S4</td><td>Chunking, page tracking</td></tr>
+          <tr><td>3</td><td>BUILDING_PATTERN (markdown)</td><td>Regex</td><td>acm_extractor.py</td><td>E1-S3</td><td>Regex parser extraction</td></tr>
+          <tr><td>4</td><td>_BUILDING_HEADER (inventory)</td><td>Regex</td><td>building_inventory.py</td><td>E1-S17</td><td>Building detection</td></tr>
+          <tr><td>5</td><td>ROOM_PATTERN (markdown)</td><td>Regex</td><td>acm_extractor.py</td><td>E1-S3</td><td>Room detection</td></tr>
+          <tr><td>6</td><td>_ROOM_HEADER (inventory)</td><td>Regex</td><td>building_inventory.py</td><td>E1-S17</td><td>Room detection</td></tr>
+          <tr><td>7</td><td>ROOM_ENTRY_PATTERN (broad)</td><td>Regex</td><td>orchestrator.py</td><td>E1-S20</td><td>Extraction matching</td></tr>
+          <tr><td>8</td><td>AREA_TYPE_PATTERN</td><td>Regex</td><td>acm_extractor.py</td><td>E1-S3</td><td>Interior/Exterior detection</td></tr>
+          <tr><td>9</td><td>SCHOOL_PATTERN</td><td>Regex</td><td>acm_extractor.py</td><td>E1-S3</td><td>Site name extraction</td></tr>
+          <tr><td>10</td><td>Building ID (B/D-series)</td><td>Regex</td><td>document_structure.py</td><td>E1-S16</td><td>Structure heuristic</td></tr>
+          <tr><td>11</td><td>ADDRESS_PATTERN</td><td>Regex</td><td>metadata_extractor.py</td><td>E1-S19</td><td>Metadata extraction</td></tr>
+          <tr><td>12</td><td>SUBURB_STATE_POSTCODE</td><td>Regex</td><td>metadata_extractor.py</td><td>E1-S19</td><td>Metadata extraction</td></tr>
+          <tr><td>13</td><td>REPORT_REF_PATTERNS (3)</td><td>Regex</td><td>metadata_extractor.py</td><td>E1-S19</td><td>Metadata extraction</td></tr>
+          <tr><td>14</td><td>_SAMP_BUILDING_ID</td><td>Regex</td><td>orchestrator.py</td><td>E1-S20</td><td>Format detection</td></tr>
+          <tr><td>15</td><td>NO_ACCESS_PHRASES (10)</td><td>Regex</td><td>acm_extraction.py</td><td>E18-S5</td><td>Marker injection</td></tr>
+          <tr><td>16</td><td>PRODUCT_NORMALIZATIONS (3)</td><td>Normalize</td><td>acm_extraction.py</td><td>E18-S5</td><td>Vocabulary fix</td></tr>
+          <tr><td>17</td><td>Split sample fix</td><td>Regex</td><td>source processing</td><td>E26</td><td>DataFrame cleanup</td></tr>
+          <tr><td>18</td><td>"Asbestos " prefix strip</td><td>Regex</td><td>source processing</td><td>E26</td><td>DataFrame cleanup</td></tr>
+          <tr><td>19</td><td>"Same as" → "As Per"</td><td>Normalize</td><td>orchestrator layer</td><td>E26</td><td>Value equivalence</td></tr>
+          <tr><td>20</td><td>Sample Result normalization</td><td>Normalize</td><td>normalizers/</td><td>E1-S12</td><td>Enum compliance</td></tr>
+          <tr><td>21</td><td>Condition normalization</td><td>Normalize</td><td>normalizers/</td><td>E1-S12</td><td>Enum compliance</td></tr>
+          <tr><td>22</td><td>Disturbance Potential → Moderate</td><td>Normalize</td><td>normalizers/</td><td>E1-S12</td><td>BAR uses "Moderate" not "Medium"</td></tr>
+          <tr><td>23</td><td>Friability normalization</td><td>Normalize</td><td>taxonomy.py</td><td>E1-S9</td><td>Taxonomy selection</td></tr>
+          <tr><td>24</td><td>Negative result cascade</td><td>Logic</td><td>acm_schemas.py</td><td>E2-S11</td><td>Condition/DP auto-set</td></tr>
+          <tr><td>25</td><td>Action classification (9 patterns)</td><td>Regex</td><td>normalizers/</td><td>E1-S12</td><td>Recommendation codes</td></tr>
+          <tr><td>26</td><td>CLASSIFICATION_PATTERNS (60+)</td><td>Regex</td><td>taxonomy.py</td><td>E1-S9</td><td>Product group/type</td></tr>
+          <tr><td>27</td><td>Dedup key (room+product+location+sample)</td><td>Logic</td><td>acm_extraction.py</td><td>E26-S6</td><td>Record deduplication</td></tr>
+          <tr><td>28</td><td>_recover_no_access_records()</td><td>Regex</td><td>acm_extraction.py</td><td>E26-S6</td><td>Missing record recovery</td></tr>
+          <tr><td>29</td><td>Strategy routing (FULL_LLM/REGEX/SKIP)</td><td>Logic</td><td>orchestrator.py</td><td>E1-S20</td><td>Per-building extraction</td></tr>
+          <tr><td>30</td><td>should_use_orchestrator()</td><td>Logic</td><td>orchestrator.py</td><td>E1-S20</td><td>Dual-path gate (⚠️ remove)</td></tr>
+          <tr><td>31</td><td>_classify_complexity()</td><td>Logic</td><td>building_inventory.py</td><td>E1-S17</td><td>Building routing</td></tr>
+          <tr><td>32</td><td>_trim_to_register()</td><td>Logic</td><td>building_inventory.py</td><td>E1-S17</td><td>Content trimming</td></tr>
+          <tr><td>33</td><td>Processing group creation</td><td>Logic</td><td>building_inventory.py</td><td>E1-S17</td><td>3-5 pages per group</td></tr>
+          <tr><td>34</td><td>Section keyword detection (8 sections)</td><td>Regex</td><td>page_tagger.py</td><td>E1-S18</td><td>Page classification</td></tr>
+          <tr><td>35</td><td>Token estimation heuristic</td><td>Logic</td><td>E1-S23</td><td>E1-S23</td><td>Chunking decisions</td></tr>
+          <tr><td>36</td><td>Column positional mapping</td><td>Logic</td><td>E25 finding</td><td>E25</td><td>BAR field mapping</td></tr>
+          <tr><td>37</td><td>PRODUCT_SYNONYMS (test matching)</td><td>Normalize</td><td>test_broadmeadows_e2e.py</td><td>E18-S5</td><td>Accuracy measurement</td></tr>
+          <tr><td>38</td><td>Pydantic field validators (5)</td><td>Validate</td><td>acm_schemas.py</td><td>E2-S11</td><td>Schema enforcement</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div style="margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--gray-200); text-align: center; color: var(--gray-500); font-size: 0.76rem;">
+      <p>ACM-AI Heuristic & Deterministic Rules Reference — Living Document</p>
+      <p style="margin-top: 2px;">Generated March 2026 · 38+ catalogued rules · 11 source files · Epics E1–E26</p>
+      <p style="margin-top: 2px;">Update this document when rules are added, modified, or removed.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar a[href^="#"]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => link.classList.remove('active'));
+        const active = document.querySelector(`.sidebar a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
