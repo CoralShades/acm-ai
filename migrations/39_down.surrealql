@@ -1,0 +1,5 @@
+-- Rollback migration 39: Remove SF Item__c alignment fields (E30-S3)
+
+REMOVE FIELD IF EXISTS labelled_sf      ON TABLE acm_record;
+REMOVE FIELD IF EXISTS assea_risk_level ON TABLE acm_record;
+REMOVE FIELD IF EXISTS date_identified  ON TABLE acm_record;
