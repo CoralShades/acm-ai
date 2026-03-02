@@ -107,7 +107,7 @@
         "migrations/40.surrealql",
         "tests/test_acm_record.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e30-s3-acm-record-sf-item-alignment.md",
       "implementedDate": null
     },
     {

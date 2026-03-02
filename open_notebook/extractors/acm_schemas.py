@@ -27,6 +27,7 @@ RESULT_VALUES = {
     "Assumed Positive",
     "Negative",
     "Assumed Negative",
+    "Negative - Treated as Positive",  # NEW (V3 / E30-S3)
     "Not Sampled",
     "No Access",
     "Unknown",

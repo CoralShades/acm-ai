@@ -13,7 +13,7 @@ from enum import Enum
 from typing import ClassVar, List, Literal, Optional
 
 from loguru import logger
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, ConfigDict, Field, field_validator
 
 
 class ExtractionConfidence(str, Enum):
@@ -67,18 +67,33 @@ class ACMRecord(ObjectModel):
 
     table_name: ClassVar[str] = "acm_record"
 
+    model_config = ConfigDict(populate_by_name=True)
+
     # Foreign key to source document
     source_id: str  # Will be record<source> in DB
 
     # School identification
-    school_name: str
+    school_name: Optional[str] = None
     school_code: Optional[str] = None
 
     # Building hierarchy
-    building_id: str
-    building_name: Optional[str] = None
-    building_year: Optional[int] = None
-    building_construction: Optional[str] = None
+    building_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("building_id", "Building_Code__c"),
+        description="Building identifier (BAR: building_id / SF: Building_Code__c)",
+    )
+    building_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_name", "Building_Name__c"),
+    )
+    building_year: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_year", "Building_Year__c"),
+    )
+    building_construction: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_construction", "Building_Construction__c"),
+    )
     building_address: Optional[str] = Field(
         default=None,
         description="Street address of the building (from report header/metadata)",
@@ -97,33 +112,80 @@ class ACMRecord(ObjectModel):
     )
 
     # Room hierarchy
-    room_id: Optional[str] = None
-    room_name: Optional[str] = None
-    room_area: Optional[float] = None
-    area_type: Optional[str] = None  # "Interior", "Exterior", "Grounds"
+    room_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("room_id", "Room_ID__c"),
+    )
+    room_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("room_name", "Room_or_Area__c"),
+    )
+    room_area: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("room_area", "Room_Area__c"),
+    )
+    area_type: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("area_type", "Internal_External__c"),
+        description="Area type: 'Interior', 'Exterior', 'Grounds' (BAR) / 'Internal', 'External' (SF)",
+    )
     floor_level: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("floor_level", "Level__c"),
         description="Floor level (e.g., 'Ground', 'Level 1', 'Roof')",
     )
 
     # Inspection metadata
     date_of_inspection: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("date_of_inspection", "Survey_Date__c"),
         description="Date of the inspection/audit (from report header or metadata)",
     )
 
     # ACM item data
-    product: str
-    material_description: str
-    extent: Optional[str] = None
-    location: Optional[str] = None
-    friable: Optional[str] = None  # "Friable", "Non Friable"
-    material_condition: Optional[str] = None
-    risk_status: Optional[str] = None  # "Low", "Medium", "High"
-    result: str  # "Detected", "Not Detected", etc.
+    product: str = Field(
+        ...,
+        validation_alias=AliasChoices("product", "Item_Name__c"),
+        description="ACM product name",
+    )
+    material_description: str = Field(
+        ...,
+        validation_alias=AliasChoices("material_description", "Material_Description__c"),
+        description="Detailed description of the ACM material",
+    )
+    extent: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("extent", "Extent__c"),
+    )
+    location: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("location", "Location_in_Room__c"),
+    )
+    friable: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("friable", "Friability_of_Material__c"),
+        description="Friability: 'Friable' or 'Non Friable'",
+    )
+    material_condition: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("material_condition", "Condition__c"),
+    )
+    risk_status: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("risk_status", "Risk_Rating__c"),
+        description="Risk level: 'Low', 'Medium', 'High'",
+    )
+    result: str = Field(
+        ...,
+        validation_alias=AliasChoices("result", "Sample_Analysis_Result_Material_Status__c"),
+        description="Asbestos sample result",
+    )
 
     # Citation support
-    page_number: Optional[int] = None
+    page_number: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("page_number", "Page_Number__c"),
+    )
 
     # Bounding box for provenance linking (MinerU integration)
     table_bbox: Optional[dict] = Field(
@@ -135,63 +197,103 @@ class ACMRecord(ObjectModel):
     # All optional for backwards compatibility with existing records
     disturbance_potential: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("disturbance_potential", "Disturbance_Potential_of_Material__c"),
         description="Likelihood of material disturbance (e.g., 'Low', 'Medium', 'High')",
     )
     sample_no: Optional[str] = Field(
-        default=None, description="Sample identification number from lab testing"
+        default=None,
+        validation_alias=AliasChoices("sample_no", "NATA_Endorsed_Sample_no__c"),
+        description="Sample identification number from lab testing",
     )
     sample_result: Optional[str] = Field(
         default=None, description="Laboratory analysis result for the sample"
     )
     identifying_company: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("identifying_company", "Identifying_Hygiene_Consulting_Company__c"),
         description="Hygiene consulting company that performed the inspection",
     )
     quantity: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("quantity", "Quantity__c"),
         description="Amount or extent of the material (e.g., '10 m²', '5 linear meters')",
     )
     acm_labelled: Optional[bool] = Field(
-        default=None, description="Whether the ACM has been labeled on-site"
+        default=None,
+        validation_alias=AliasChoices("acm_labelled", "ACM_Labelled__c"),
+        description="Whether the ACM has been labeled on-site",
     )
     acm_label_details: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("acm_label_details", "Labelled_Details__c"),
         description="Details about the ACM labeling (e.g., label type, date)",
     )
     hygienist_recommendations: Optional[str] = Field(
-        default=None, description="Recommendations from the hygienist for this material"
+        default=None,
+        validation_alias=AliasChoices("hygienist_recommendations", "Hygienist_Recommendations__c"),
+        description="Recommendations from the hygienist for this material",
     )
     psb_supplied_acm_id: Optional[str] = Field(
-        default=None, description="Unique identifier supplied by PSB (if applicable)"
+        default=None,
+        validation_alias=AliasChoices("psb_supplied_acm_id", "ID_provided_by_metro__c"),
+        description="Unique identifier supplied by PSB (if applicable)",
     )
     removal_status: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("removal_status", "Removal_Status__c"),
         description="Removal status (e.g., 'N/A', 'Pending', 'Complete', 'Encapsulated')",
     )
     date_of_removal: Optional[str] = Field(
-        default=None, description="Date when the material was removed (if applicable)"
+        default=None,
+        validation_alias=AliasChoices("date_of_removal", "Removed_Date__c"),
+        description="Date when the material was removed (if applicable)",
     )
     quantity_removed: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("quantity_removed", "Quantity_Removed__c"),
         description="Quantity of material removed (e.g., '10 m²', '5 linear meters')",
     )
     removal_notification_no: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("removal_notification_no", "Asbestos_Removal_Notification_No__c"),
         description="Removal notification number for regulatory compliance",
     )
     epa_certificate_no: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("epa_certificate_no", "EPA_Waste_Transport_Certificate_No__c"),
         description="EPA clearance certificate number after removal",
     )
     no_access: Optional[bool] = Field(
-        default=False, description="Record has no access to the location"
+        default=False,
+        validation_alias=AliasChoices("no_access", "No_Access__c"),
+        description="Record has no access to the location",
     )
     smf_present: Optional[str] = Field(
-        default=None, description="Synthetic Mineral Fibre present (Yes/No/Unknown)"
+        default=None,
+        validation_alias=AliasChoices("smf_present", "SMF_Present__c"),
+        description="Synthetic Mineral Fibre present (Yes/No/Unknown)",
     )
     additional_comments: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("additional_comments", "Additional_Comments__c"),
         description="Additional comments or notes about the ACM item",
+    )
+
+    # New SF Item__c fields (E30-S3)
+    labelled_sf: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("labelled_sf", "Labelled__c"),
+        description="SF picklist: 'Yes', 'No', 'Unknown' (maps to acm_labelled bool)",
+    )
+    assea_risk_level: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("assea_risk_level", "ASSEA_Survey_Guide_Risk_Level__c"),
+        description="ASSEA Survey Guide risk level (separate from BAR risk_status)",
+    )
+    date_identified: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("date_identified", "Date_Identified__c"),
+        description="Date the ACM was first identified/recorded",
     )
 
     # Extraction metadata
@@ -213,10 +315,13 @@ class ACMRecord(ObjectModel):
     # Product Classification fields (E1-S9: Victorian BAR taxonomy)
     acm_product_group: Optional[str] = Field(
         default=None,
+        validation_alias=AliasChoices("acm_product_group", "ACM_Classification__c"),
         description="BAR taxonomy product group (e.g., 'T3 Vinyl products')",
     )
     acm_product_type: Optional[str] = Field(
-        default=None, description="BAR taxonomy product type (e.g., 'Vinyl Tiles')"
+        default=None,
+        validation_alias=AliasChoices("acm_product_type", "ACM_Sub_Classification__c"),
+        description="BAR taxonomy product type (e.g., 'Vinyl Tiles')",
     )
     classification_confidence: Optional[float] = Field(
         default=None, description="Confidence score for the classification (0.0-1.0)"
@@ -266,9 +371,11 @@ class ACMRecord(ObjectModel):
     @field_validator("school_name")
     @classmethod
     def validate_school_name(cls, v):
-        if not v or not v.strip():
-            raise InvalidInputError("school_name cannot be empty")
-        return v.strip()
+        if v is not None:
+            v = v.strip()
+            if not v:
+                return None
+        return v
 
     @field_validator("building_id")
     @classmethod

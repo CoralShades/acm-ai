@@ -1,5 +1,6 @@
-import re
 import os
+import re
+
 
 def parse_sf_file(filepath):
     """Parse a Salesforce object descriptor file and return structured field data."""
