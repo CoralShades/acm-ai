@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
-> **Project:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-03-01)
-> **Status:** Epics 1-28 complete; Epic 29 planned (pipeline unification reconciliation)
-> **Change Log:** 2026-03-01 - Epic 29 added (Pipeline Unification, 8 stories, measure-first gates, reconciled from audit + SCP + YAML); 2026-02-28 - Epic 28 closed (36/43 partial-success gate); 2026-02-26 - Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 - Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 - Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 - Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 - E15 + E16 added, E9-S3/E10-S1 promoted
+> **Project:** ACM-AI v3.0
+> **Date:** 2025-12-07 (Updated: 2026-03-03)
+> **Status:** Epics 1-28 complete; E29 S1-S4 done (S5-S8 archived); V3 epics 30-34 planned (SF alignment, multi-provider extraction, AI processing, frontend, integration)
+> **Change Log:** 2026-03-03 - V3 Epics 30-34 added (33 stories, 97 SP, SF alignment + multi-provider extraction + two-view UI). Source: Party Mode plan, multi-agent audit, PRD v3.0, Architecture v3.0, UX Design spec; 2026-03-01 - Epic 29 added (Pipeline Unification, 8 stories, measure-first gates, reconciled from audit + SCP + YAML); 2026-02-28 - Epic 28 closed (36/43 partial-success gate); 2026-02-26 - Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 - Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 - Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 - Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 - E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
 
@@ -37,7 +37,12 @@
 | E26 | Docling Direct API Integration | P0 | 7 | Done (PROMOTE — 31/31, flag=true) |
 | E27 | Structured Output Resilience | P1 | 4 | Done |
 | E28 | Alexander District Hospital — Not Sampled Record Recovery | P1 | 3 | Done (partial success gate) |
-| E29 | Pipeline Unification — Unified Agent Pipeline | P0 | 8 | Planned |
+| E29 | Pipeline Unification — Unified Agent Pipeline | P0 | 8 | S1-S4 Done; S5-S8 Archived |
+| **E30** | **V3 Foundation — Schema + Config** | **P0** | **8** | **Planned** |
+| **E31** | **V3 Multi-Provider Extraction** | **P0** | **6** | **Planned** |
+| **E32** | **V3 AI Processing & Validation** | **P0** | **6** | **Planned** |
+| **E33** | **V3 Frontend & UX** | **P0** | **8** | **Planned** |
+| **E34** | **V3 Integration, Streaming & Polish** | **P0** | **5** | **Planned** |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2744,3 +2749,1147 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 - [ ] Per-building and ACM-type exports remain schema-driven
 - [ ] Integration tests cover upload -> extract -> validate -> save -> export
 - [ ] PRD, architecture, epics, and sprint tracker updated to final E29 state
+
+---
+
+# V3 Epics (E30-E34)
+
+> **Added:** 2026-03-03
+> **Source Documents:** Party Mode Plan (`V3/output/v3-party-mode-plan.md`), Multi-Agent Audit (`V3/output/e30-multi-agent-audit-unified.md`), PRD v3.0, Architecture v3.0, UX Design Spec (`_bmad-output/planning-artifacts/v3-ux-design.md`), Tech Research (`V3/output/tech-research-extraction-providers.md`), SCP-V3 (`V3/output/SCP-V3-scope-expansion.md`)
+> **Scope:** Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, AI capability routing, SSE streaming, provenance tracking
+> **Foundation:** E29 S1-S4 (JSON parser, benchmark harness, unified orchestrator, capability registry)
+> **Total:** 33 stories, 97 SP, ~32-42 days estimated
+
+## V3 Epic Summary
+
+| Epic | Title | Stories | SP | Critical Path? |
+|------|-------|--------:|---:|:--------------:|
+| E30 | V3 Foundation — Schema + Config | 8 | 29 | **YES** — gates all others |
+| E31 | V3 Multi-Provider Extraction | 6 | 15 | YES — gates E32 |
+| E32 | V3 AI Processing & Validation | 6 | 16 | YES — gates E33 advanced |
+| E33 | V3 Frontend & UX | 8 | 25 | Partial (S1-S2 can start after E30) |
+| E34 | V3 Integration, Streaming & Polish | 5 | 12 | No (parallelizable) |
+| **TOTAL** | | **33** | **97** | |
+
+## V3 Dependency Graph
+
+```
+                    E30: Foundation & SF Schema
+                    ┌─────────────────────────────┐
+                    │ S1: Schema Config Loader     │
+                    │ S2: Building Record Model    │ ← blocked by S1
+                    │ S3: ACM SF Alignment         │ ← blocked by S1
+                    │ S4: Dependent Picklist Valid. │ ← blocked by S1
+                    │ S5: Data Migration           │ ← blocked by S2, S3
+                    │ S6: BAR→SF Vocabulary        │ ← blocked by S3
+                    │ S7: Two-Phase Prompts        │ ← blocked by S1, S2, S3
+                    │ S8: Anthropic Direct API     │ ← blocked by S1
+                    └────────────┬────────────────┘
+                                 │
+                    ═══ SCHEMA FREEZE GATE ═══
+                                 │
+              ┌──────────────────┼──────────────────┐
+              ▼                  ▼                   ▼
+   E31: Multi-Provider    E33-S1,S2: Core UI    (E34-S5: Docs)
+   ┌─────────────────┐    ┌────────────────┐
+   │ S1: MinerU Setup│    │ S1: Upload Wiz │
+   │ S2: Adapters    │    │ S2: Bldg/Item  │
+   │ S3: Consensus   │    │     Grid       │
+   │ S4: Raw Storage │    └───────┬────────┘
+   │ S5: Pipeline    │            │
+   │ S6: Benchmark   │            │
+   └────────┬────────┘            │
+            │                     │
+            ▼                     │
+   E32: AI Processing             │
+   ┌─────────────────┐            │
+   │ S1: Bldg Extract│            │
+   │ S2: Item Extract│            │
+   │ S3: Validation  │            │
+   │ S4: Classifier  │            │
+   │ S5: E2E Test    │            │
+   │ S6: Ollama Spike│            │
+   └────────┬────────┘            │
+            │                     │
+            ▼                     ▼
+   E33-S3 through S8: Advanced UI
+   ┌────────────────────────────┐
+   │ S3: Picklist Editors       │
+   │ S4: Validation Badges      │
+   │ S5: Raw Table Review       │
+   │ S6: Provenance Viewer      │
+   │ S7: Building Detail Page   │
+   │ S8: SF Export UI           │
+   └────────────┬───────────────┘
+                │
+                ▼
+   E34: Integration & Polish
+   ┌────────────────────────────┐
+   │ S1: EventBus + SSE        │
+   │ S2: Record Streaming      │
+   │ S3: Bulk Operations       │
+   │ S4: Performance           │
+   │ S5: Artifact Update       │
+   └────────────────────────────┘
+```
+
+### Schema Freeze Gate
+
+**Location:** After E30-S6 (BAR→SF Vocabulary Transition) completes.
+**Rule:** No downstream epic (E31, E32, E33, E34) may begin implementation until:
+1. All E30 stories S1-S6 are **Done** (schema stable)
+2. SF field names, picklist values, and dependency chains are finalized
+3. Pydantic models (BuildingRecord, ACMRecord) pass validation against SF schema configs
+4. E30-S7 and E30-S8 may proceed in parallel with downstream epics (they don't modify schema)
+
+**Rationale:** The audit (J22) and Party Mode (Section 3) both identified that schema instability causes cascading rework in prompts, validators, tests, and frontend contracts.
+
+---
+
+## Epic 30: V3 Foundation — Schema + Config
+
+> **Goal:** Establish the Salesforce schema infrastructure, split flat ACMRecord into Building + Item models, implement dependent picklist validation, and transition vocabulary from BAR to SF.
+> **Dependencies:** E29 S1-S4 (completed)
+> **Gates downstream:** SCHEMA FREEZE after S6 completion
+> **Total:** 8 stories, 29 SP
+> **FRs:** FR-1401, FR-1402, FR-1403, FR-1404, FR-1405, FR-1408, FR-1409, FR-1410, FR-1411, FR-1412
+> **Audit findings addressed:** W1-W12, M1-M14, J1-J22
+
+### E30-S1: SF Schema Config Loader [5 SP]
+
+**As a** developer,
+**I want** Salesforce object metadata loaded from JSON configs into the field_schema table,
+**So that** all downstream components reference a single source of truth for SF field definitions, picklist values, and dependency chains.
+
+**Story Points:** 5
+**Risk Level:** HIGH
+**Dependencies:** None (first story in V3)
+
+**Acceptance Criteria:**
+- [ ] Parse `V3/output/building_fields_summary.md` (143 fields, 18 picklists) into structured `BuildingFieldConfig`
+- [ ] Parse `V3/output/item_fields_summary.md` (154 fields, 23 picklists) into structured `ItemFieldConfig`
+- [ ] Build dependency chain mappings: Friability → ACM_Classification → ACM_Sub_Classification (18 groups × 2 friability = 36 valid combos)
+- [ ] Build dependency chain mappings: Building_Type → Building_Category (114 → 13 values)
+- [ ] New SurrealDB migration evolving `field_schema` table with: `version`, `building_fields`, `item_fields`, `picklists`, `dependencies` columns
+- [ ] Startup loader populates `field_schema` on API boot (idempotent — only updates if version changes)
+- [ ] API endpoint `GET /api/acm/field-schema` returns current SF schema config (backward compatible with existing `/api/acm/field-config`)
+- [ ] Unit tests for config parsing (valid configs, malformed configs, missing fields)
+- [ ] 294-value `Item_Name__c` picklist loaded and queryable by product group
+
+**Files Affected:**
+- `open_notebook/extractors/parsers/config_loader.py` — REWRITE: SF schema parsing replaces BAR schema
+- `open_notebook/database/repository.py` — Update field_schema CRUD
+- `migrations/38.surrealql` — NEW: field_schema evolution
+- `api/routers/acm.py` — Update field-config endpoint
+- `V3/output/building_fields_summary.md` — INPUT (read-only)
+- `V3/output/item_fields_summary.md` — INPUT (read-only)
+- `tests/test_config_loader.py` — NEW/UPDATE
+
+---
+
+### E30-S2: Building Record Table + Domain Model [5 SP]
+
+**As a** developer,
+**I want** a first-class `BuildingRecord` entity with its own SurrealDB table and Pydantic model mapped to SF Building__c fields,
+**So that** building-level data is persisted independently of ACM item records with proper master-detail relationships.
+
+**Story Points:** 5
+**Risk Level:** HIGH
+**Dependencies:** E30-S1 (schema config must be loaded first)
+
+**Acceptance Criteria:**
+- [ ] New `building_record` table in SurrealDB with 29+ extractable SF Building__c fields (Building_Name__c, Building_Address__c, Suburb__c, State__c, Postcode__c, Construction_Type__c, Estimated_Year_Build_New__c, Number_of_Levels__c, Est_Building_Size_m2__c, Date_of_Inspection__c, Roof_Type__c, etc.)
+- [ ] `BuildingRecord(ObjectModel)` Pydantic model in domain layer with SF field aliases
+- [ ] `internal_id` field for server-generated building IDs (pattern: `BLD#{source_short}_{seq:03d}`)
+- [ ] FK: `acm_record.building_id` updated from freeform string to `record<building_record>` (additive — old string preserved as `legacy_building_id`)
+- [ ] CRUD API endpoints: `GET/POST/PUT/DELETE /api/acm/buildings/{source_id}`
+- [ ] Building-filtered ACM record queries: `GET /api/acm/records?building_id=building_record:xxx`
+- [ ] `source_id` FK on building_record links to source table
+- [ ] Embedding fields preserved (no SF mapping but critical for semantic search)
+- [ ] Unit tests for BuildingRecord CRUD and FK constraints
+- [ ] Migration includes indexes on `source_id` and `internal_id`
+
+**Files Affected:**
+- `open_notebook/domain/acm.py` — ADD BuildingRecord model
+- `migrations/39.surrealql` — NEW: building_record table + FK update
+- `api/routers/acm.py` — ADD building CRUD endpoints
+- `open_notebook/database/repository.py` — ADD building record queries
+- `tests/test_building_record.py` — NEW
+
+---
+
+### E30-S3: ACM Record SF Item__c Alignment [3 SP]
+
+**As a** developer,
+**I want** the existing ACMRecord model aligned with Salesforce Item__c field names via Pydantic aliases,
+**So that** records are stored with both internal names and SF API names, enabling seamless export and dual-schema coexistence during cutover.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E30-S1 (schema config for field name mappings)
+
+**Acceptance Criteria:**
+- [ ] Pydantic `Field(alias="...")` added for 35+ SF Item__c field mappings (e.g., `product` → `Item_Name__c`, `friable` → `Friability_of_Material__c`, `material_condition` → `Condition__c`)
+- [ ] Additive migration — new SF-named columns alongside existing BAR columns (no data loss)
+- [ ] Missing SF fields added: `Internal_External__c`, `Labelled__c` (converted from bool to picklist "Yes"/"No"), `ASSEA_Survey_Guide_Risk_Level__c`, `Date_Identified__c`
+- [ ] `school_name`/`school_code` made optional (present in BAR, absent from SF model)
+- [ ] New enum value for `result` field: "Negative - Treated as Positive" (SF-specific, not in current BAR enum)
+- [ ] Existing BAR field names continue to work (backward compatibility during cutover)
+- [ ] Unit tests verifying both BAR and SF field access patterns
+- [ ] Embedding fields (`content_embedding`, `contextual_embedding`) preserved unchanged
+
+**Files Affected:**
+- `open_notebook/domain/acm.py` — UPDATE: ACMRecord with SF aliases + new fields
+- `open_notebook/extractors/acm_schemas.py` — UPDATE: ACMExtractionRecord SF alignment
+- `migrations/40.surrealql` — NEW: additive SF columns on acm_record
+- `tests/test_acm_record.py` — UPDATE fixtures with SF field names
+
+---
+
+### E30-S4: Dependent Picklist Validator [5 SP]
+
+**As a** developer,
+**I want** a SalesforcePicklistValidator that enforces SF dependency chain constraints,
+**So that** extracted records have valid, case-sensitive picklist values that pass SF Data Loader validation on import.
+
+**Story Points:** 5
+**Risk Level:** HIGH
+**Dependencies:** E30-S1 (dependency chain definitions from schema config)
+
+**Acceptance Criteria:**
+- [ ] `SalesforcePicklistValidator` class with chain validation methods
+- [ ] **ACM chain:** Friability_of_Material__c → ACM_Classification__c → ACM_Sub_Classification__c (18 classification groups × 2 friability = 36 valid combinations)
+- [ ] **Building chain:** Building_Type__c → Building_Category__c (114 building types → 13 categories, NO SubCategory — confirmed absent from SF schema per Q1 resolution)
+- [ ] Strict case-sensitive matching against exact SF picklist values (e.g., "Stable" not "stable", "GOOD" not "Good")
+- [ ] **WARN policy** during extraction/editing: inline AG Grid badges (red/orange/yellow) surface validation failures without blocking
+- [ ] **REJECT policy** on export: export button grayed out with "X validation errors" message until all resolved
+- [ ] Business rule BAR-001 carried forward: Negative result → Condition = "N/A (negative)", Disturbance = "N/A (negative)"
+- [ ] Validator loads dependency chain definitions from `field_schema` table at runtime (not hardcoded)
+- [ ] Exhaustive unit tests: all 36 valid Friability×Classification combos, all invalid combos, all 114 BuildingType→Category mappings
+- [ ] Integration with existing `acm_validator.py` (extend, don't replace)
+
+**Files Affected:**
+- `open_notebook/extractors/validators/sf_picklist_validator.py` — NEW
+- `open_notebook/extractors/validators/acm_validator.py` — UPDATE: integrate SF chain validation
+- `open_notebook/extractors/parsers/config_loader.py` — READ: dependency chain definitions
+- `tests/test_sf_picklist_validator.py` — NEW (exhaustive combo tests)
+
+---
+
+### E30-S5: Data Migration Script [3 SP]
+
+**As a** operator,
+**I want** existing ACM records migrated to the new normalized schema (building fields extracted to building_record, vocabulary updated),
+**So that** existing data works seamlessly with V3 without re-extraction.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E30-S2 (building_record table), E30-S3 (SF field alignment)
+
+**Acceptance Criteria:**
+- [ ] Migration script extracts building-level fields from existing `acm_record` rows into new `building_record` entries
+- [ ] Groups records by `building_id` (legacy string) and creates one `building_record` per unique building
+- [ ] Updates `acm_record.building_id` FK from string to `record<building_record>` reference
+- [ ] Preserves `legacy_building_id` string for rollback
+- [ ] "Good" → "Stable" condition vocabulary migration applied to all existing records
+- [ ] Rollback script provided (restores original building_id strings, reverts vocabulary)
+- [ ] Dry-run mode: reports what would change without modifying data
+- [ ] Tested against Broadmeadows (31 records) and Alexander (43 records) benchmark data
+- [ ] Idempotent: safe to run multiple times
+
+**Files Affected:**
+- `scripts/v3_data_migration.py` — NEW
+- `scripts/v3_data_migration_rollback.py` — NEW
+- `tests/test_v3_data_migration.py` — NEW
+
+---
+
+### E30-S6: BAR→SF Vocabulary Transition [2 SP]
+
+**As a** developer,
+**I want** all BAR vocabulary references updated to SF vocabulary across validators, normalizers, prompts, and test fixtures,
+**So that** the codebase speaks a single consistent Salesforce language.
+
+**Story Points:** 2
+**Risk Level:** MEDIUM
+**Dependencies:** E30-S3 (SF field alignment defines target vocabulary)
+
+**Acceptance Criteria:**
+- [ ] "Good" → "Stable" in all validators, normalizers, prompt templates, and test fixtures
+- [ ] "T3 Vinyl products" → "Vinyl products" and other BAR→SF group name mappings
+- [ ] BAR field name references updated in: `acm_validator.py`, `acm_schemas.py`, `config_loader.py`
+- [ ] All 33+ test files updated with SF vocabulary in fixtures and assertions
+- [ ] Prompt templates (`classification.jinja`, `correction.jinja`) updated for SF vocabulary
+- [ ] Existing benchmarks (Broadmeadows 31/31) pass with updated vocabulary
+- [ ] Automated find-and-replace script provided for bulk updates where safe
+
+**Files Affected:**
+- `open_notebook/extractors/validators/acm_validator.py` — UPDATE
+- `open_notebook/extractors/acm_schemas.py` — UPDATE
+- `prompts/acm/classification.jinja` — UPDATE
+- `prompts/acm/correction.jinja` — UPDATE
+- `tests/` — UPDATE (33+ files, fixture vocabulary)
+
+> **SCHEMA FREEZE GATE** — E30-S1 through S6 must all be Done before any E31/E32/E33/E34 work begins. E30-S7 and S8 may proceed in parallel with downstream epics.
+
+---
+
+### E30-S7: Two-Phase Extraction Prompts [3 SP]
+
+**As a** developer,
+**I want** separate extraction prompt templates for Building__c and Item__c fields using SF vocabulary and constrained picklist values,
+**So that** the AI extracts building-level and item-level data in two distinct calls per building with SF-compliant output.
+
+**Story Points:** 3
+**Risk Level:** HIGH
+**Dependencies:** E30-S1 (schema config), E30-S2 (BuildingRecord model), E30-S3 (SF field names)
+
+**Acceptance Criteria:**
+- [ ] New `prompts/acm/v3_building_extraction.jinja` — extracts Building__c fields only (building name, address, construction type, etc.)
+- [ ] Updated `prompts/acm/v3_item_extraction.jinja` — extracts Item__c fields with SF vocabulary
+- [ ] Dynamic picklist injection: prompt receives valid picklist values from field_schema at runtime (not hardcoded)
+- [ ] `Item_Name__c` subsetting: 294 values filtered by selected product group / ACM_Classification context (FR-1411)
+- [ ] Structured output schema: Pydantic `BuildingExtractionResult` and `ACMItemExtractionResult`
+- [ ] Broadmeadows benchmark: 31/31 maintained or improved with new prompts
+- [ ] Alexander benchmark: no regression from current baseline
+- [ ] Worked examples included in prompt templates (SF vocabulary, not BAR)
+
+**Files Affected:**
+- `prompts/acm/v3_building_extraction.jinja` — NEW
+- `prompts/acm/v3_item_extraction.jinja` — NEW
+- `open_notebook/extractors/acm_schemas.py` — ADD BuildingExtractionResult, ACMItemExtractionResult
+- `open_notebook/extractors/orchestrator.py` — UPDATE: two-phase call pattern
+- `tests/test_extraction_prompts.py` — NEW
+
+---
+
+### E30-S8: Anthropic Claude Direct API + OpenRouter Fallback [3 SP]
+
+**As a** developer,
+**I want** extraction to use Anthropic Claude Sonnet directly as the default provider with OpenRouter as a fully supported fallback,
+**So that** extraction reliability is maximized while preserving provider flexibility (FR-1409 revised).
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E30-S1 (capability registry needs schema config)
+
+**Acceptance Criteria:**
+- [ ] Direct `ChatAnthropic` client for extraction operations (not via Esperanto/OpenRouter by default)
+- [ ] OpenRouter fallback path fully preserved: Anthropic direct → OpenRouter (same or alt model)
+- [ ] Admin toggle in settings: switch between Anthropic direct vs OpenRouter-only for extraction
+- [ ] Capability registry extended with `ModelCapability` enum (EXTRACTION, CLASSIFICATION, ENRICHMENT, EMBEDDING, CHAT, SEARCH) and `ModelPolicy` routing
+- [ ] Non-extraction tasks (chat, search, enrichment) continue via Esperanto/OpenRouter unchanged
+- [ ] Feature flag for transition period: `V3_USE_DIRECT_ANTHROPIC=true` (default)
+- [ ] `_apply_openrouter_preferences()` behavior updated to respect new routing policy
+- [ ] Benchmarks pass with both Anthropic direct and OpenRouter extraction paths
+
+**Files Affected:**
+- `api/model_provisioning.py` — UPDATE: add direct Anthropic path + capability routing
+- `open_notebook/graphs/utils.py` — UPDATE: model selection respects capability policy
+- `open_notebook/graphs/acm_extraction.py` — UPDATE: use new provider routing
+- `open_notebook/extractors/strategy_registry.py` — UPDATE: ModelCapability enum, ModelPolicy
+- `tests/test_model_provisioning.py` — NEW/UPDATE
+
+---
+
+## Epic 31: V3 Multi-Provider Extraction
+
+> **Goal:** Add MinerU 2.x (hybrid backend) as a second extraction provider alongside Docling, build consensus layer for merging results.
+> **Dependencies:** E30 Schema Freeze Gate (S1-S6 must be Done)
+> **Total:** 6 stories, 15 SP
+> **FRs:** FR-1501, FR-1502, FR-1503, FR-1504, FR-1505, FR-1506
+> **Audit findings addressed:** Tech Research recommendations, Party Mode consensus decisions
+
+### E31-S1: MinerU 2.x Integration + Validation [2 SP]
+
+**As a** developer,
+**I want** MinerU 2.x installed in the main venv and validated against benchmark documents,
+**So that** we confirm PyTorch compatibility and establish a second extraction provider baseline.
+
+**Story Points:** 2
+**Risk Level:** MEDIUM
+**Dependencies:** E30 Schema Freeze Gate
+
+**Acceptance Criteria:**
+- [ ] `pip install mineru[all]` in main `.venv/` — no dependency conflicts with torch 2.10.0+cu126, Docling, LangChain
+- [ ] Verify hybrid backend (default since v2.7.0): pipeline + VLM auto-routing
+- [ ] Verify CUDA 12.6 compatibility (torch handles internally; flag if VLM backend requires 12.8+)
+- [ ] Run MinerU on Broadmeadows PDF — capture HTML output, compare to Docling DataFrames
+- [ ] Run MinerU on Alexander PDF — capture output, note cross-page table stitching behavior
+- [ ] Docling regression check: existing Docling extraction still works after MinerU install
+- [ ] Document: chosen backend, VRAM usage, processing speed per document
+- [ ] Fallback plan documented: if torch constraint is hard, subprocess bridge pattern ready
+
+**Files Affected:**
+- `pyproject.toml` — ADD mineru dependency
+- `scripts/research/validate_mineru_v2.py` — NEW: validation script
+- `CLAUDE.md` — UPDATE: MinerU 2.x venv status
+
+---
+
+### E31-S2: Provider Adapter Framework [3 SP]
+
+**As a** developer,
+**I want** an ExtractionProvider protocol with concrete adapters for Docling and MinerU,
+**So that** extraction providers are interchangeable and new providers can be added without modifying core pipeline code.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E31-S1 (MinerU must be validated)
+
+**Acceptance Criteria:**
+- [ ] `ExtractionProvider` protocol class: `provider_id`, `extract()`, `supports_table_extraction()`, `get_field_confidence()`
+- [ ] `NormalizedExtractionResult` schema: provider-agnostic result format with `NormalizedRecord[]`, confidence scores, bbox data
+- [ ] `DoclingAdapter` — refactor existing `_extract_tables_with_docling()` into adapter (structure-based HTML tables)
+- [ ] `MinerUAdapter` — wraps MinerU 2.x `DocumentConverter` (handles hybrid output: VLM image-based markdown + pipeline HTML)
+- [ ] Result normalizer handles both HTML tables (Docling/pipeline) and structured markdown (VLM)
+- [ ] Provider registry: register/discover/configure adapters
+- [ ] Unit tests for each adapter with mock PDF input
+- [ ] Adapter isolation: provider failure doesn't crash pipeline
+
+**Files Affected:**
+- `open_notebook/extractors/providers/__init__.py` — NEW
+- `open_notebook/extractors/providers/base.py` — NEW: ExtractionProvider protocol, NormalizedExtractionResult
+- `open_notebook/extractors/providers/docling_adapter.py` — NEW: wrap existing Docling
+- `open_notebook/extractors/providers/mineru_adapter.py` — NEW: MinerU 2.x adapter
+- `tests/test_provider_adapters.py` — NEW
+
+---
+
+### E31-S3: Consensus Layer Core [3 SP]
+
+**As a** developer,
+**I want** a consensus engine that merges results from multiple extraction providers using record matching and confidence-weighted voting,
+**So that** the system produces higher-accuracy extractions than any single provider.
+
+**Story Points:** 3
+**Risk Level:** HIGH
+**Dependencies:** E31-S2 (adapters produce NormalizedExtractionResult)
+
+**Acceptance Criteria:**
+- [ ] `RecordMatcher` with 3-stage matching: (1) key-field anchor on `(building_id, room_id, product, page)` ~75%, (2) fuzzy string via `rapidfuzz` Jaro-Winkler >= 0.85 ~20%, (3) row position fallback ~5%
+- [ ] `ConsensusEngine` with per-field confidence-weighted voting: each provider emits (value, confidence), winner = argmax(weighted_sum)
+- [ ] `ConflictResolver` with escalation chain: L1 weighted majority → L2 provider priority hierarchy → L3 LLM arbitration (high-stakes fields only) → L4 human escalation queue
+- [ ] Confidence tier assignment: HIGH (all agree) → MEDIUM (2/3 agree) → LOW (1 provider only) → CONTESTED (disagree on high-stakes field)
+- [ ] Match thresholds: >= 0.85 = confirmed, 0.65-0.84 = probable (flag), < 0.65 = distinct records
+- [ ] `consensus_metadata` added to ACMExtractionRecord: `{tier, scores, votes}`
+- [ ] Unit tests for each matching stage, voting, and conflict resolution scenarios
+- [ ] False positive test: similar-but-different records must NOT be merged
+
+**Files Affected:**
+- `open_notebook/extractors/consensus/__init__.py` — NEW
+- `open_notebook/extractors/consensus/matcher.py` — NEW
+- `open_notebook/extractors/consensus/engine.py` — NEW
+- `open_notebook/extractors/consensus/resolver.py` — NEW
+- `open_notebook/extractors/acm_schemas.py` — UPDATE: add consensus_metadata
+- `tests/test_record_matcher.py` — NEW
+- `tests/test_consensus_engine.py` — NEW
+
+---
+
+### E31-S4: Raw Extraction Table + Storage [2 SP]
+
+**As a** developer,
+**I want** per-provider raw extraction results stored in a dedicated table before consensus merging,
+**So that** full provenance is maintained and officers can inspect what each provider extracted.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E31-S2 (adapter output format defined)
+
+**Acceptance Criteria:**
+- [ ] New `raw_extraction_table` in SurrealDB: `{id, source_id, provider_id, extraction_backend, page_number, raw_html, raw_markdown, structured_json, bbox, confidence, officer_edits[], created_at}`
+- [ ] Store per-provider raw output after each extraction run
+- [ ] Link to `acm_table_section` via consensus merge (provider_results JSONB column added to acm_table_section)
+- [ ] `consensus_tier` and `consensus_scores` columns added to `acm_table_section`
+- [ ] CRUD API: `GET /api/acm/raw-extractions/{source_id}` with provider filtering
+- [ ] Unit tests for raw extraction storage and retrieval
+
+**Files Affected:**
+- `migrations/41.surrealql` — NEW: raw_extraction_table + acm_table_section evolution
+- `open_notebook/domain/acm.py` — ADD RawExtractionTable model
+- `open_notebook/database/repository.py` — ADD raw extraction queries
+- `api/routers/acm.py` — ADD raw extraction endpoints
+- `tests/test_raw_extraction_storage.py` — NEW
+
+---
+
+### E31-S5: Pipeline Integration [3 SP]
+
+**As a** developer,
+**I want** dual-provider extraction wired into the orchestrator with consensus merging and telemetry,
+**So that** the full extraction pipeline uses both Docling and MinerU with automatic consensus.
+
+**Story Points:** 3
+**Risk Level:** HIGH
+**Dependencies:** E31-S3 (consensus engine), E31-S4 (raw storage)
+
+**Acceptance Criteria:**
+- [ ] Orchestrator runs providers sequentially: Docling first (~4 GB VRAM, ~22s), then MinerU hybrid (~10 GB, ~15-20s)
+- [ ] Sequential GPU execution to prevent VRAM contention (FR-1504)
+- [ ] Raw results stored in `raw_extraction_table` per provider
+- [ ] Consensus engine merges results into unified `acm_table_section`
+- [ ] Consensus telemetry emitted via PipelineLogger: `consensus.tier`, `consensus.agreement_count`, `consensus.provider_votes`
+- [ ] Strategy registry extended with `F9_PROVIDER_CONFLICT` and `F10_CONSENSUS_ARBITRATION` fallback IDs
+- [ ] Feature flag: `V3_DUAL_PROVIDER=true` (default) — can disable MinerU to fall back to Docling-only
+- [ ] Integration test: upload PDF → dual extraction → consensus → merged table sections
+
+**Files Affected:**
+- `open_notebook/extractors/orchestrator.py` — UPDATE: dual-provider wiring
+- `open_notebook/extractors/strategy_registry.py` — UPDATE: F9/F10 fallback IDs
+- `commands/source_commands.py` — UPDATE: dual-provider extraction trigger
+- `tests/test_dual_provider_pipeline.py` — NEW
+
+---
+
+### E31-S6: Dual-Provider Benchmark [2 SP]
+
+**As a** QA engineer,
+**I want** benchmark validation proving consensus extraction equals or exceeds single-provider accuracy,
+**So that** we have evidence the dual-provider approach adds value.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E31-S5 (full pipeline operational)
+
+**Acceptance Criteria:**
+- [ ] Broadmeadows: consensus >= 31/31 (at least as good as Docling alone)
+- [ ] Alexander: measure MinerU improvement delta AFTER completionState fix baseline (~40/43). **Note:** Alexander 0/43 is a completionState wrapper JSON parsing bug (E27-related), NOT extraction — fix separately
+- [ ] Per-provider accuracy breakdown: Docling alone vs MinerU alone vs consensus
+- [ ] Per-field accuracy report for high-stakes fields (result, friable, condition, product)
+- [ ] Results documented in benchmark report
+- [ ] CI benchmark script: `pytest tests/benchmarks/ -m v3_benchmark`
+
+**Files Affected:**
+- `tests/benchmarks/test_v3_dual_provider.py` — NEW
+- `docs/benchmarks/v3-dual-provider-report.md` — NEW
+- `tests/conftest.py` — UPDATE: benchmark fixtures
+
+---
+
+## Epic 32: V3 AI Processing & Validation
+
+> **Goal:** Implement two-phase Building + Item extraction with Claude Sonnet, SF-aligned validation with correction loop, classifier update, and Ollama model evaluation.
+> **Dependencies:** E30 (schema), E31 (providers — consensus-merged tables feed AI extraction)
+> **Total:** 6 stories, 16 SP
+> **FRs:** FR-1409, FR-1410, FR-1411, FR-1412, FR-1801, FR-1802, FR-1803, FR-1804
+
+### E32-S1: Building__c AI Extraction Node [3 SP]
+
+**As a** developer,
+**I want** a new orchestrator node that extracts Building__c fields from consensus-merged tables using Claude Sonnet,
+**So that** building-level data is extracted in a dedicated AI call with structured Pydantic output.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E31-S5 (consensus-merged tables available), E30-S7 (building extraction prompt)
+
+**Acceptance Criteria:**
+- [ ] New `extract_building_node` in orchestrator graph
+- [ ] Uses `v3_building_extraction.jinja` prompt with dynamic picklist injection
+- [ ] Output: `BuildingExtractionResult` Pydantic model → persisted as `building_record`
+- [ ] Building ID generation: `BLD#{source_short}_{seq:03d}` (server-side, deterministic)
+- [ ] Uses direct ChatAnthropic (default) or OpenRouter fallback per capability policy
+- [ ] Per-building execution: one AI call per building section
+- [ ] Error handling: provider failure skips building + preserves partial results
+- [ ] Unit tests with mock Claude responses
+
+**Files Affected:**
+- `open_notebook/graphs/acm_extraction.py` — ADD extract_building_node
+- `open_notebook/extractors/orchestrator.py` — UPDATE: wire building extraction
+- `open_notebook/domain/acm.py` — READ: BuildingRecord model
+- `tests/test_building_extraction.py` — NEW
+
+---
+
+### E32-S2: Item__c AI Extraction Node [3 SP]
+
+**As a** developer,
+**I want** a new orchestrator node that extracts Item__c fields per building using Claude Sonnet,
+**So that** ACM item records are extracted with SF vocabulary and linked to their parent building record.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E32-S1 (building records must exist first — two-phase pattern)
+
+**Acceptance Criteria:**
+- [ ] New `extract_items_node` in orchestrator graph
+- [ ] Uses `v3_item_extraction.jinja` prompt with dynamic picklist injection
+- [ ] `Item_Name__c` subsetting by product group / ACM_Classification context (FR-1411)
+- [ ] Output: `ACMItemExtractionResult[]` → persisted as `acm_record` with `building_id` FK
+- [ ] Per-building execution: one AI call per building, extracting all items
+- [ ] Batching: ~15 items/call target (token-aware, typical building section 3-8K tokens)
+- [ ] Link each acm_record to its raw_extraction_table row via `raw_row_id` FK
+- [ ] Unit tests with mock Claude responses
+
+**Files Affected:**
+- `open_notebook/graphs/acm_extraction.py` — ADD extract_items_node
+- `open_notebook/extractors/orchestrator.py` — UPDATE: wire item extraction
+- `tests/test_item_extraction.py` — NEW
+
+---
+
+### E32-S3: SF Validation + Correction Loop [3 SP]
+
+**As a** developer,
+**I want** extracted records validated against SF schema with an AI correction loop for invalid values,
+**So that** records meet SF Data Loader requirements before human review.
+
+**Story Points:** 3
+**Risk Level:** HIGH
+**Dependencies:** E30-S4 (picklist validator), E32-S1 + E32-S2 (records to validate)
+
+**Acceptance Criteria:**
+- [ ] Pydantic validation against SF schema on every extracted record
+- [ ] Picklist validation: exact case-sensitive match against SF values via SalesforcePicklistValidator
+- [ ] Dependency chain enforcement: Friability→Classification→SubClassification, BuildingType→Category
+- [ ] AI correction loop: invalid values → single-record context re-extraction (max 3 retries, Claude Sonnet)
+- [ ] Business rule: Negative result → Condition = "N/A (negative)", Disturbance = "N/A (negative)" (FR-1412)
+- [ ] Validation results stored per-record: `validation_status`, `validation_errors[]`, `correction_attempts`
+- [ ] Dedup: detect and merge duplicate records from correction retries
+- [ ] Unit tests for correction loop with mock AI responses
+
+**Files Affected:**
+- `open_notebook/extractors/validators/sf_picklist_validator.py` — READ
+- `open_notebook/graphs/acm_extraction.py` — ADD validation + correction nodes
+- `open_notebook/extractors/orchestrator.py` — UPDATE: validation stage
+- `tests/test_sf_validation_loop.py` — NEW
+
+---
+
+### E32-S4: Classifier Update (SF Taxonomy) [2 SP]
+
+**As a** developer,
+**I want** regex classification patterns updated from BAR taxonomy to SF ACM_Classification/ACM_Sub_Classification values,
+**So that** the 3-tier classification cascade (regex → Ollama → Claude) uses correct SF vocabulary.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E30-S6 (BAR→SF vocabulary transition complete)
+
+**Acceptance Criteria:**
+- [ ] Update 60+ regex patterns from BAR product group/type to SF ACM_Classification/ACM_Sub_Classification
+- [ ] 18 classification groups × friability mapping validated
+- [ ] Regex-first cascade maintained: regex (80% hit rate) → Ollama fallback → Claude last resort
+- [ ] `prompts/acm/classification.jinja` updated for SF vocabulary
+- [ ] Unit tests for all 18 classification groups
+- [ ] Benchmark: classification accuracy maintained or improved vs BAR baseline
+
+**Files Affected:**
+- `open_notebook/extractors/validators/acm_validator.py` — UPDATE: SF classification patterns
+- `prompts/acm/classification.jinja` — UPDATE: SF vocabulary
+- `tests/test_classifier.py` — UPDATE: SF taxonomy assertions
+
+---
+
+### E32-S5: Extraction Pipeline E2E Test [3 SP]
+
+**As a** QA engineer,
+**I want** an end-to-end test covering the full V3 pipeline from upload to validated records,
+**So that** we have confidence the entire extraction chain works correctly with SF schema.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E32-S1 through E32-S4 (full pipeline operational)
+
+**Acceptance Criteria:**
+- [ ] E2E test: upload → dual-provider extract → consensus → AI Building extraction → AI Item extraction → validation → correction → save
+- [ ] Broadmeadows: 31/31, all picklist values valid SF values, all dependency chains valid
+- [ ] Alexander: >= 42/43 (after completionState fix baseline)
+- [ ] Verify BuildingRecord + ACMRecord created with correct FKs
+- [ ] Verify raw_extraction_table populated with per-provider data
+- [ ] Verify consensus_metadata populated on merged records
+- [ ] All exported field names match SF API names
+- [ ] No story >5 SP in the pipeline produces a build failure
+- [ ] SF object-level correctness assertions (Building__c + Item__c as separate validated entities)
+
+**Files Affected:**
+- `tests/test_v3_e2e_pipeline.py` — NEW
+- `tests/conftest.py` — UPDATE: V3 fixtures
+
+---
+
+### E32-S6: Ollama Model Evaluation Spike [2 SP]
+
+**As a** developer,
+**I want** to evaluate local Ollama models for classification and enrichment tasks,
+**So that** we can reduce cloud API costs for non-extraction operations.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E30-S8 (capability registry with ModelCapability enum)
+
+**Acceptance Criteria:**
+- [ ] Test `llama3.1:8b`, `qwen2.5:7b`, `mistral:7b` for classification tasks (ACM_Classification from product text)
+- [ ] Test same models for enrichment tasks (Room description normalization, Location standardization)
+- [ ] Benchmark accuracy vs Claude Sonnet on 50-record sample (Broadmeadows subset)
+- [ ] Document: latency per model, VRAM usage, accuracy per task type
+- [ ] Select 1-2 models for production use (update capability registry default)
+- [ ] Spike results documented in `docs/spikes/ollama-model-evaluation.md`
+
+**Files Affected:**
+- `scripts/research/ollama_model_eval.py` — NEW
+- `docs/spikes/ollama-model-evaluation.md` — NEW
+
+---
+
+## Epic 33: V3 Frontend & UX
+
+> **Goal:** Build the V3 user interface: upload wizard, building/item two-view grid, dependent picklist editors, provenance viewer, raw table review, building detail page, and SF export dialog.
+> **Dependencies:** E30 (schema — API contracts), E32 (AI processing produces data for grids). E33-S1 and S2 can start after E30 Schema Freeze Gate (API contracts defined). E33-S3 through S8 require E32 completion.
+> **Total:** 8 stories, 25 SP
+> **FRs:** FR-1601, FR-1602, FR-1603, FR-1604, FR-1605, FR-1606, FR-1607, FR-1608, FR-1609, FR-1610
+> **UX Reference:** `_bmad-output/planning-artifacts/v3-ux-design.md` (Sally's complete UI flow spec)
+
+### E33-S1: Upload Wizard + Extraction Progress [3 SP]
+
+**As an** asbestos compliance officer,
+**I want** a multi-step upload wizard that shows real-time extraction progress,
+**So that** I can upload SAMPs and see building-by-building completion status as extraction runs.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E30 Schema Freeze Gate (API contracts), E34-S1 (SSE infrastructure — can develop in parallel with mock SSE)
+
+**Acceptance Criteria:**
+- [ ] 3-step wizard: (1) Drop PDF zone with drag-and-drop, (2) Select extraction mode (Quick = Docling only, Thorough = dual-provider), (3) Confirm and extract
+- [ ] SSE-powered progress page with: overall percentage, current stage label, building-by-building completion cards
+- [ ] Building cards show: building name, record count, status (extracting/validating/complete/error)
+- [ ] Route: `/upload` → `/extraction/:id` (progress) → `/source/:id` (results)
+- [ ] Error toast for non-fatal issues ("MinerU failed for pages 12-15, using Docling only")
+- [ ] Error modal for fatal issues (PDF unreadable, all providers failed)
+- [ ] Responsive: works on 1024px+ screens
+- [ ] Unit tests for wizard step transitions
+
+**Files Affected:**
+- `frontend/src/app/upload/page.tsx` — NEW
+- `frontend/src/app/extraction/[id]/page.tsx` — NEW
+- `frontend/src/components/acm/UploadWizard.tsx` — NEW
+- `frontend/src/components/acm/ExtractionProgress.tsx` — NEW
+- `frontend/src/hooks/useExtractionSSE.ts` — NEW
+
+---
+
+### E33-S2: Building Grid + Item Grid (Two-View) [5 SP]
+
+**As an** asbestos compliance officer,
+**I want** a two-view layout with a building list sidebar and per-building item grid,
+**So that** I can work through buildings one at a time, matching my Salesforce workflow.
+
+**Story Points:** 5
+**Risk Level:** HIGH
+**Dependencies:** E30 Schema Freeze Gate (data contracts), E30-S2 (BuildingRecord API)
+
+**Acceptance Criteria:**
+- [ ] Building list sidebar: building name, internal ID (BLD#NNN), record count, validation status badge
+- [ ] Clicking a building loads its ACM items in the main AG Grid
+- [ ] AG Grid columns generated from `field_schema` API (SF field names as headers)
+- [ ] BuildingRecord data displayed in sidebar detail section (address, construction type, year, etc.)
+- [ ] ACMRecord data in main grid (product, room, location, result, condition, etc.)
+- [ ] Column sorting, filtering, text search across grid
+- [ ] Row grouping by room/area
+- [ ] Risk status color coding (Low=green, Medium=yellow, High=red)
+- [ ] Column pinning (Building/Room pinned left)
+- [ ] Zustand store for selected building state, React Query for data fetching
+- [ ] Route: `/source/:id` with building selection via sidebar
+- [ ] TypeScript interfaces for BuildingRecord and ACMRecord API responses
+- [ ] Empty state: "No buildings extracted yet" when source has no building records
+
+**Files Affected:**
+- `frontend/src/app/source/[id]/page.tsx` — UPDATE: two-view layout
+- `frontend/src/components/acm/BuildingSidebar.tsx` — NEW
+- `frontend/src/components/acm/ItemGrid.tsx` — NEW
+- `frontend/src/stores/buildingStore.ts` — NEW
+- `frontend/src/lib/types/building.ts` — NEW
+- `frontend/src/hooks/useBuildings.ts` — NEW
+- `frontend/src/hooks/useACMItems.ts` — NEW
+
+---
+
+### E33-S3: Dependent Picklist Cell Editors [3 SP]
+
+**As an** asbestos compliance officer,
+**I want** AG Grid cells with cascading dropdown editors that enforce SF dependency chains,
+**So that** I can only select valid picklist combinations when editing records.
+
+**Story Points:** 3
+**Risk Level:** HIGH
+**Dependencies:** E32 (AI processing produces editable records), E30-S4 (validator defines chains)
+
+**Acceptance Criteria:**
+- [ ] Custom AG Grid cell editor: `DependentPicklistEditor`
+- [ ] **ACM chain:** Friability → Classification → SubClassification. Changing Friability filters Classification options; changing Classification filters SubClassification options
+- [ ] **Building chain:** Building_Type → Building_Category. Changing Building_Type filters Category options
+- [ ] `getValues()` callback queries `field_schema` API for valid values based on controller field selection
+- [ ] Invalid combinations visually prevented (grayed-out options, not just warned)
+- [ ] Works for both inline editing and Record Wizard modal
+- [ ] Unit tests for cascading filter logic
+- [ ] Accessibility: keyboard navigation through dropdowns
+
+**Files Affected:**
+- `frontend/src/components/acm/DependentPicklistEditor.tsx` — NEW
+- `frontend/src/components/acm/ItemGrid.tsx` — UPDATE: register cell editors
+- `frontend/src/hooks/useFieldSchema.ts` — NEW: fetch dependency chain data
+- `tests/playwright/test_dependent_picklist.spec.ts` — NEW
+
+---
+
+### E33-S4: SF Validation Badges + Record Wizard [3 SP]
+
+**As an** asbestos compliance officer,
+**I want** inline validation badges in the AG Grid and a record editing wizard with SF picklist guidance,
+**So that** I can see and fix validation errors before exporting to Salesforce.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E30-S4 (validator), E33-S2 (grid), E33-S3 (picklist editors)
+
+**Acceptance Criteria:**
+- [ ] Inline validation badges in AG Grid cells: red (invalid value), orange (dependency chain violation), yellow (warning/low confidence)
+- [ ] Badge tooltip shows specific error: "Invalid Condition value: 'Good'. Valid values: Poor, Fair, Stable, Unknown, N/A (negative), N/A (assumed negative)"
+- [ ] Record wizard modal for editing: opens from row double-click or "Edit" button
+- [ ] Wizard shows all fields with SF picklist dropdowns and dependency chain guidance
+- [ ] Bulk "Fix all" operation: "Fix all invalid Condition values" → applies mapping rules (e.g., "Good" → "Stable")
+- [ ] Validation error count shown in building sidebar badge
+- [ ] Export button disabled with "X validation errors" tooltip when errors exist
+- [ ] Unit tests for badge rendering and wizard field validation
+
+**Files Affected:**
+- `frontend/src/components/acm/ValidationBadge.tsx` — NEW
+- `frontend/src/components/acm/RecordWizard.tsx` — NEW
+- `frontend/src/components/acm/ItemGrid.tsx` — UPDATE: badge cell renderers
+- `frontend/src/components/acm/BuildingSidebar.tsx` — UPDATE: error count badge
+
+---
+
+### E33-S5: Raw Table Review (Opt-In) [3 SP]
+
+**As an** asbestos compliance officer,
+**I want** to optionally review and edit the raw extracted tables before AI processing,
+**So that** I can correct OCR errors at the source for higher downstream accuracy.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E31-S4 (raw extraction storage), E33-S2 (grid infrastructure)
+
+**Acceptance Criteria:**
+- [ ] Route: `/source/:id/raw` — AG Grid showing raw extraction output per provider
+- [ ] Editable cells: officer corrections saved to `raw_extraction_table.officer_edits[]`
+- [ ] Provider tabs: switch between Docling raw, MinerU raw, and consensus merged
+- [ ] Edit history tracked: `{user, field, old_value, new_value, timestamp}`
+- [ ] "Re-process" button: re-run AI extraction using officer-corrected raw data
+- [ ] Opt-in: raw review is NOT in the default flow (Upload → Progress → Building Grid)
+- [ ] Accessible via "Review Raw Tables" button on building grid page
+
+**Files Affected:**
+- `frontend/src/app/source/[id]/raw/page.tsx` — NEW
+- `frontend/src/components/acm/RawTableGrid.tsx` — NEW
+- `frontend/src/hooks/useRawExtractions.ts` — NEW
+
+---
+
+### E33-S6: Provenance Viewer [3 SP]
+
+**As an** asbestos compliance officer,
+**I want** to click any extracted record and see the source PDF location with the relevant region highlighted,
+**So that** I can verify extraction accuracy and trace any value back to its source.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E31-S4 (bbox data in raw extraction), E33-S2 (grid row interaction)
+
+**Acceptance Criteria:**
+- [ ] Slide-over panel triggered from "Source" button on any AG Grid row
+- [ ] Top section: PDF.js rendering of the source page with bbox overlay highlighting the relevant table region
+- [ ] Bottom section: extraction lineage table showing: provider, extraction backend, model, confidence, consensus tier, edit history
+- [ ] Lazy-load pages: only render the page containing the target bbox (don't load entire 50-page PDF)
+- [ ] Cell-level provenance: click individual field to see per-field provider agreement
+- [ ] Route: `/source/:id/provenance/:recordId` (also accessible as panel overlay)
+- [ ] Responsive: works in slide-over panel and full-page modes
+
+**Files Affected:**
+- `frontend/src/components/acm/ProvenanceViewer.tsx` — NEW
+- `frontend/src/components/acm/PDFPageViewer.tsx` — NEW
+- `frontend/src/components/acm/LineageTable.tsx` — NEW
+- `frontend/src/hooks/useProvenance.ts` — NEW
+
+---
+
+### E33-S7: Building Detail Page [3 SP]
+
+**As an** asbestos compliance officer,
+**I want** a dedicated building detail page for viewing and editing Building__c fields,
+**So that** I can review and correct building-level information (address, construction type, year built) separate from ACM items.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E30-S2 (BuildingRecord API), E33-S2 (building sidebar navigation)
+
+**Acceptance Criteria:**
+- [ ] Building detail view accessible from building sidebar click or dedicated route
+- [ ] Displays all 29+ Building__c fields in a structured form layout (grouped: identity, location, construction, inspection)
+- [ ] Editable fields with SF picklist dropdowns where applicable (Building_Type, Roof_Type, etc.)
+- [ ] BuildingType → Category dependent picklist cascading on edit
+- [ ] Save button persists changes via `PUT /api/acm/buildings/{id}`
+- [ ] Validation badges on invalid fields (same pattern as item grid)
+- [ ] Navigation: building detail ↔ item grid for the same building
+- [ ] Responsive form layout with proper accessibility labels
+
+**Files Affected:**
+- `frontend/src/app/source/[id]/building/[buildingId]/page.tsx` — NEW
+- `frontend/src/components/acm/BuildingDetailForm.tsx` — NEW
+- `frontend/src/hooks/useBuildingDetail.ts` — NEW
+
+---
+
+### E33-S8: Salesforce-Ready Export UI [2 SP]
+
+**As an** asbestos compliance officer,
+**I want** to export extracted data as SF Data Loader-ready CSV files (Building__c.csv + Item__c.csv),
+**So that** I can import records directly into Salesforce without manual reformatting.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E30-S2 (BuildingRecord), E30-S3 (SF field alignment), E33-S4 (validation must pass before export)
+
+**Acceptance Criteria:**
+- [ ] Export dialog accessible from building grid toolbar: `/source/:id/export`
+- [ ] Two-file CSV export: `Building__c.csv` + `Item__c.csv` with exact SF API field names as headers
+- [ ] Excel export: two-sheet workbook with Building__c and Item__c tabs
+- [ ] External ID linkage: `Building__c.External_ID__c` referenced by `Item__c.Building__r.External_ID__c` for parent-child Data Loader matching
+- [ ] Site config merge: officer-configured fields (Department__c, Organisation__c) merged into all export records
+- [ ] Export blocked when validation errors exist (grayed button with "X errors" message)
+- [ ] Selected buildings: option to export only selected buildings (not entire source)
+- [ ] BAR backward compatibility: "Export as BAR Excel" option retained alongside SF export
+
+**Files Affected:**
+- `frontend/src/components/acm/ExportDialog.tsx` — NEW
+- `api/routers/acm.py` — ADD SF export endpoints
+- `open_notebook/extractors/exporters/sf_export.py` — NEW
+- `tests/test_sf_export.py` — NEW
+
+---
+
+## Epic 34: V3 Integration, Streaming & Polish
+
+> **Goal:** Full SSE streaming infrastructure, record-by-record AG Grid updates, bulk operations, performance optimization, and canonical artifact updates.
+> **Dependencies:** E30-E33 (builds on all prior epics). E34-S1 can start early (SSE infrastructure needed by E33-S1). E34-S5 can start after E30.
+> **Total:** 5 stories, 10 SP
+> **FRs:** FR-1701, FR-1702, FR-1703, FR-1704
+
+### E34-S1: PipelineEventBus + SSE Endpoints [3 SP]
+
+**As a** developer,
+**I want** an in-memory event bus relaying pipeline events to SSE endpoints,
+**So that** the frontend can subscribe to real-time extraction, AI processing, and bulk operation events.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E30 Schema Freeze Gate (event schema must be stable)
+
+**Acceptance Criteria:**
+- [ ] `PipelineEventBus` — in-memory `asyncio.Queue`-based event bus (no external message broker)
+- [ ] Three SSE endpoint categories: (1) extraction pipeline, (2) AI processing, (3) bulk operations
+- [ ] Event types: `extraction.started`, `extraction.provider_complete`, `extraction.consensus_complete`, `ai.building_extracted`, `ai.items_extracted`, `ai.validation_complete`, `bulk.progress`, `bulk.complete`
+- [ ] Zustand `V3StreamingState` store in frontend: subscribes to SSE, updates reactive state
+- [ ] SSE triggers React Query refetch on relevant events (e.g., `ai.building_extracted` refetches building list)
+- [ ] Auto-reconnect on SSE connection drop
+- [ ] Event filtering by operation ID (multiple extractions can run concurrently)
+- [ ] Unit tests for event bus pub/sub and SSE serialization
+
+**Files Affected:**
+- `open_notebook/extractors/pipeline_event_bus.py` — NEW
+- `api/routers/acm.py` — ADD SSE endpoints
+- `frontend/src/stores/streamingStore.ts` — NEW
+- `frontend/src/hooks/useV3SSE.ts` — NEW
+- `tests/test_pipeline_event_bus.py` — NEW
+
+---
+
+### E34-S2: Record-by-Record Streaming [2 SP]
+
+**As an** asbestos compliance officer,
+**I want** records to appear in the AG Grid as they're validated (not all at once when extraction finishes),
+**So that** I can start reviewing completed buildings while extraction continues on remaining buildings.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E34-S1 (SSE infrastructure), E33-S2 (grid)
+
+**Acceptance Criteria:**
+- [ ] Records appear in AG Grid incrementally as each building completes validation
+- [ ] Building sidebar status updates in real-time: "Extracting" → "Validating" → "Complete"
+- [ ] Building completion SSE events trigger React Query refetch for that building's records
+- [ ] Officers can edit completed building records while other buildings are still processing
+- [ ] Progress percentage based on buildings-completed / total-buildings ratio
+- [ ] Estimated time remaining based on avg time per building
+
+**Files Affected:**
+- `frontend/src/components/acm/BuildingSidebar.tsx` — UPDATE: real-time status
+- `frontend/src/components/acm/ItemGrid.tsx` — UPDATE: incremental data loading
+- `frontend/src/hooks/useV3SSE.ts` — UPDATE: building completion events
+
+---
+
+### E34-S3: Bulk Operations [2 SP]
+
+**As an** asbestos compliance officer,
+**I want** bulk editing, validation, and export operations on multiple selected records,
+**So that** I can efficiently fix common issues and export groups of buildings at once.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E33-S2 (grid), E33-S4 (validation), E34-S1 (SSE for progress)
+
+**Acceptance Criteria:**
+- [ ] Multi-select in AG Grid (checkbox column, select all, select by building)
+- [ ] Bulk edit: change a field value for all selected records (e.g., set Department for all)
+- [ ] Bulk validate: re-run SF validation for selected records
+- [ ] Bulk export: export only selected buildings
+- [ ] SSE progress for bulk operations (percentage, records processed / total)
+- [ ] Undo support for bulk edits (one-level undo via edit history)
+
+**Files Affected:**
+- `frontend/src/components/acm/BulkOperationsBar.tsx` — NEW
+- `api/routers/acm.py` — ADD bulk endpoints
+- `frontend/src/components/acm/ItemGrid.tsx` — UPDATE: multi-select
+
+---
+
+### E34-S4: Performance Optimization [2 SP]
+
+**As a** developer,
+**I want** the full V3 pipeline to meet performance targets,
+**So that** officers experience acceptable processing times for real-world documents.
+
+**Story Points:** 2
+**Risk Level:** MEDIUM
+**Dependencies:** E31-S5 (dual-provider pipeline), E32-S5 (E2E test baseline)
+
+**Acceptance Criteria:**
+- [ ] Broadmeadows (20 pages, 1 building): < 120s total pipeline
+- [ ] Alexander (48 pages, 6 buildings): < 300s total pipeline
+- [ ] GPU memory management: sequential Docling → MinerU execution, explicit `torch.cuda.empty_cache()` between providers
+- [ ] No memory leaks over 10 consecutive document extractions
+- [ ] Profiling report: identify top-3 bottlenecks and optimization opportunities
+- [ ] Performance regression test added to CI
+
+**Files Affected:**
+- `tests/test_v3_performance.py` — NEW
+- `open_notebook/extractors/orchestrator.py` — UPDATE: GPU memory management
+- `docs/benchmarks/v3-performance-report.md` — NEW
+
+---
+
+### E34-S5: Canonical Artifact Update [3 SP]
+
+**As a** project maintainer,
+**I want** all planning documents updated to reflect V3 implementation reality,
+**So that** PRD, architecture, epics, sprint-status, and frontend types are accurate and consistent.
+
+**Story Points:** 3
+**Risk Level:** LOW
+**Dependencies:** All V3 epics (this runs last or in parallel with E34-S1-S4)
+
+**Acceptance Criteria:**
+- [ ] PRD updated to v3.1 with implementation-verified FRs (mark any deferred/changed FRs)
+- [ ] Architecture doc updated with implementation-verified component names and file paths
+- [ ] Epics and stories updated with actual SP spent and completion dates
+- [ ] `sprint-status.yaml` updated with E30-E34 entries
+- [ ] Frontend TypeScript interfaces verified against actual API response shapes
+- [ ] BMAD story files created in `docs/sprint-artifacts/` for all E30-E34 stories
+- [ ] CLAUDE.md updated with V3-specific patterns and conventions
+- [ ] README updated with V3 feature summary
+
+**Files Affected:**
+- `_bmad-output/project-planning-artifacts/acm-ai/03-prd.md` — UPDATE
+- `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md` — UPDATE
+- `_bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md` — UPDATE
+- `docs/sprint-artifacts/sprint-status.yaml` — UPDATE
+- `frontend/src/lib/types/` — VERIFY
+- `docs/sprint-artifacts/e30-*.md` through `e34-*.md` — NEW
+- `CLAUDE.md` — UPDATE
+- `README.md` — UPDATE
+
+---
+
+## V3 Cross-Epic Dependencies
+
+| Dependency | Source | Target | Type |
+|------------|--------|--------|------|
+| SF schema stability | E30-S6 | E31, E32, E33, E34 | **GATE** — schema freeze |
+| Schema config loaded | E30-S1 | E30-S2, S3, S4, S7, S8 | Sequential |
+| Building record model | E30-S2 | E30-S5, E32-S1, E33-S2, E33-S7 | Sequential |
+| SF field alignment | E30-S3 | E30-S5, E30-S6, E30-S7 | Sequential |
+| Picklist validator | E30-S4 | E32-S3, E33-S3, E33-S4 | Sequential |
+| MinerU validated | E31-S1 | E31-S2 | Sequential |
+| Provider adapters | E31-S2 | E31-S3, E31-S4, E31-S5 | Sequential |
+| Consensus engine | E31-S3 | E31-S5 | Sequential |
+| Raw storage | E31-S4 | E31-S5, E33-S5, E33-S6 | Sequential |
+| Full pipeline | E31-S5 | E31-S6, E32-S1 | Sequential |
+| Building extraction | E32-S1 | E32-S2 | Sequential (two-phase) |
+| Item extraction | E32-S2 | E32-S3 | Sequential |
+| AI pipeline complete | E32-S3 | E32-S5, E33-S3, E33-S4 | Sequential |
+| SSE infrastructure | E34-S1 | E33-S1, E34-S2, E34-S3 | Parallel (can develop with mock SSE) |
+| Grid infrastructure | E33-S2 | E33-S3, S4, S5, S6, S7, S8 | Sequential |
+
+## V3 FR Traceability Matrix
+
+| FR | Story | Status |
+|----|-------|--------|
+| FR-1401 (Building in building_record) | E30-S2 | Planned |
+| FR-1402 (ACM mapped to Item__c) | E30-S3 | Planned |
+| FR-1403 (Friability→Class→SubClass chain) | E30-S4 | Planned |
+| FR-1404 (BuildingType→Category chain) | E30-S4 | Planned |
+| FR-1405 (Exact SF picklist values) | E30-S4, E30-S6 | Planned |
+| FR-1406 (Building__c CSV export) | E33-S8 | Planned |
+| FR-1407 (Item__c CSV export) | E33-S8 | Planned |
+| FR-1408 (SF schema from JSON config) | E30-S1 | Planned |
+| FR-1409 (Anthropic Claude Sonnet default) | E30-S8 | Planned |
+| FR-1410 (Two-phase extraction) | E30-S7, E32-S1, E32-S2 | Planned |
+| FR-1411 (Item_Name subsets by Product Group) | E30-S7, E32-S2 | Planned |
+| FR-1412 (Negative → Condition N/A) | E32-S3 | Planned |
+| FR-1501 (2+ extraction providers) | E31-S2 | Planned |
+| FR-1502 (Per-field confidence scoring) | E31-S3 | Planned |
+| FR-1503 (Raw per-provider results) | E31-S4 | Planned |
+| FR-1504 (Sequential GPU execution) | E31-S5 | Planned |
+| FR-1505 (Provider adapter interface) | E31-S2 | Planned |
+| FR-1506 (Cross-page table stitching) | E31-S1, E31-S2 | Planned |
+| FR-1601 (Upload wizard) | E33-S1 | Planned |
+| FR-1602 (SSE extraction progress) | E33-S1, E34-S1 | Planned |
+| FR-1603 (Two-view building/item layout) | E33-S2 | Planned |
+| FR-1604 (Dependent picklist cascading) | E33-S3 | Planned |
+| FR-1605 (Inline SF validation badges) | E33-S4 | Planned |
+| FR-1606 (Raw table review opt-in) | E33-S5 | Planned |
+| FR-1607 (Provenance viewer) | E33-S6 | Planned |
+| FR-1608 (Record wizard with picklist guidance) | E33-S4 | Planned |
+| FR-1609 (Bulk operations) | E34-S3 | Planned |
+| FR-1610 (Building ID auto-assignment) | E32-S1 | Planned |
+| FR-1701 (SSE endpoints) | E34-S1 | Planned |
+| FR-1702 (Record-by-record streaming) | E34-S2 | Planned |
+| FR-1703 (Full extraction lineage) | E31-S4, E33-S6 | Planned |
+| FR-1704 (PipelineEventBus) | E34-S1 | Planned |
+| FR-1801 (Capability registry) | E30-S8 | Planned |
+| FR-1802 (Ollama local for embeddings) | E32-S6 | Planned |
+| FR-1803 (AI model invisible to users) | E30-S8 | Planned |
+| FR-1804 (Structured output via Pydantic) | E30-S7, E32-S1, E32-S2 | Planned |
+
+## Audit Finding Coverage
+
+| Finding | Description | Story |
+|---------|-------------|-------|
+| J11 | Missing: Data Migration Script | E30-S5 |
+| J12 | Missing: BAR→SF Value Migration | E30-S6 |
+| J13 | Missing: Canonical Artifact Update | E34-S5 |
+| J14 | Missing: Frontend Building Detail Page | E33-S7 |
+| W1 | Flat ACMRecord must split | E30-S2, E30-S3 |
+| W2 | No building_record table | E30-S2 |
+| W3 | BAR vocabulary, not SF | E30-S6 |
+| W4 | building_id is freeform string | E30-S2 |
+| W5 | field_schema/site_config BAR-configured | E30-S1 |
+| W6 | No dependent picklist validation | E30-S4 |
+| W7 | Building views are derived | E30-S2 |
+| W8 | Esperanto multi-provider abstraction | E30-S8 |
+| W10 | Extraction not per-building two-phase | E30-S7, E32-S1, E32-S2 |
+| W11 | Export is single-object | E33-S8 |
+| W12 | Prompts BAR-oriented | E30-S7 |

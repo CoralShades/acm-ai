@@ -143,3 +143,47 @@
 3. Blockers: None
 4. Last files modified: _bmad-output/project-planning-artifacts/acm-ai/04-architecture.md, V3/output/v3-architecture-section.md, V3/output/task_plan.md, V3/output/progress.md
 5. Next action: BMAD Epics & Stories v3.0 (/bmad:mmm:create-epics-and-stories)
+
+---
+
+## Session: 2026-03-03 — Epics & Stories v3.0 (BMAD /create-epics-and-stories)
+
+### Status: IN PROGRESS
+
+### Context
+- All pre-read documents loaded (Party Mode plan, audit, PRD v3.0, arch v3.0, UX design, SCP, tech research)
+- Primary source: Party Mode plan Section 3 (Epic Boundary Recommendations) with 32 stories, 89 SP
+- Secondary adjustments: Audit findings J11-J14 (missing stories), UX design detail, prompt constraints
+- Epic numbering: E30-E34 (E1-28 done, E29 S1-S4 done, S5-S8+R1/R2 archived)
+
+### Key Adjustments from Party Mode Baseline
+- Added E33-S7 (Building Detail Page) per audit finding J14
+- Split E33-S7 (SF Export) into E33-S8 to make room
+- Adjusted some SP estimates down to respect max 5 SP constraint
+- All stories have full AC, dependencies, files affected, risk levels
+- FR traceability added to each story
+
+### Completed
+- All 33 stories written with full ACs, SP, dependencies, files affected, risk levels
+- Epic header/overview table updated (E30-E34 added)
+- V3 Dependency Graph (text diagram) added
+- Schema Freeze Gate specification written
+- FR Traceability Matrix covering all 36 V3 FRs
+- Audit Finding Coverage matrix (J11-J14, W1-W12)
+- Cross-Epic Dependencies table
+
+### Key Decisions
+1. **SP Distribution:** E30:29, E31:15, E32:16, E33:25, E34:12 = 97 SP total
+2. **E33-S7 added** (Building Detail Page) per audit finding J14 — was missing from Party Mode plan
+3. **E33-S8 split** from E33-S7 (SF Export UI as separate story)
+4. **Some SP adjusted down** from Party Mode: E30-S3 (4→3), E30-S7 (4→3), E32-S1 (4→3), E32-S2 (4→3), E33-S1 (4→3) to stay within the max 5 SP constraint and reflect refined scope understanding
+5. **SP total 97** (vs Party Mode's 89) — accounts for audit upward revisions and added stories (S7, S8 in E33)
+6. **Schema Freeze Gate** explicitly documented between E30-S6 and all downstream epics
+7. **E34-S1 can start early** (SSE infrastructure needed by E33-S1, parallel development with mock SSE)
+
+### Reboot Check
+1. Last milestone: Epics & Stories v3.0 COMPLETE — 33 stories across 5 epics, 97 SP
+2. Current task: None (Epics & Stories complete)
+3. Blockers: None
+4. Last files modified: _bmad-output/project-planning-artifacts/acm-ai/05-epics-and-stories.md, V3/output/task_plan.md, V3/output/progress.md
+5. Next action: BMAD Sprint Planning (/bmad:mmm:sprint-planning)

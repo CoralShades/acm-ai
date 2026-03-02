@@ -191,3 +191,79 @@
 - [x] SSE event types enumerated (15 event types across 3 categories)
 - [x] Migration strategy documented (6 additive migrations, rollback plan)
 - [x] All audit findings (W1-W12) addressed (§14.11 traceability matrix)
+
+## Phase: Epics & Stories v3.0 (BMAD /create-epics-and-stories)
+
+### 0. Pre-Read & Context Gathering
+- [x] Load Party Mode plan (primary epic/story source)
+- [x] Load Multi-Agent Audit (story estimates, missing stories J11-J14)
+- [x] Load PRD v3.0 (FR traceability)
+- [x] Load Architecture v3.0 (file impact, data model)
+- [x] Load UX Design spec (frontend story detail)
+- [x] Load SCP-V3 (archival decisions, carry-forward items)
+- [x] Load Tech Research (provider implementation estimates)
+- [x] Load current 05-epics-and-stories.md (format, existing content)
+
+### 1. Epic 30: V3 Foundation — Schema + Config (8 stories)
+- [x] E30-S1: SF Schema Config Loader (5 SP)
+- [x] E30-S2: Building Record Table + Domain Model (5 SP)
+- [x] E30-S3: ACM Record SF Item__c Alignment (3 SP)
+- [x] E30-S4: Dependent Picklist Validator (5 SP)
+- [x] E30-S5: Data Migration Script (3 SP)
+- [x] E30-S6: BAR→SF Vocabulary Transition (2 SP)
+- [x] E30-S7: Two-Phase Extraction Prompts (3 SP)
+- [x] E30-S8: Anthropic Claude Direct API + OpenRouter Fallback (3 SP)
+- [x] Schema Freeze Gate documentation
+
+### 2. Epic 31: Multi-Provider Extraction (6 stories)
+- [x] E31-S1: MinerU 2.x Integration + Validation (2 SP)
+- [x] E31-S2: Provider Adapter Framework (3 SP)
+- [x] E31-S3: Consensus Layer Core (3 SP)
+- [x] E31-S4: Raw Extraction Table + Storage (2 SP)
+- [x] E31-S5: Pipeline Integration (3 SP)
+- [x] E31-S6: Dual-Provider Benchmark (2 SP)
+
+### 3. Epic 32: AI Processing & Validation (6 stories)
+- [x] E32-S1: Building__c AI Extraction Node (3 SP)
+- [x] E32-S2: Item__c AI Extraction Node (3 SP)
+- [x] E32-S3: SF Validation + Correction Loop (3 SP)
+- [x] E32-S4: Classifier Update (SF Taxonomy) (2 SP)
+- [x] E32-S5: Extraction Pipeline E2E Test (3 SP)
+- [x] E32-S6: Ollama Model Evaluation Spike (2 SP)
+
+### 4. Epic 33: Frontend & UX (8 stories)
+- [x] E33-S1: Upload Wizard + Extraction Progress (3 SP)
+- [x] E33-S2: Building Grid + Item Grid (Two-View) (5 SP)
+- [x] E33-S3: Dependent Picklist Cell Editors (3 SP)
+- [x] E33-S4: SF Validation Badges + Record Wizard (3 SP)
+- [x] E33-S5: Raw Table Review (Opt-In) (3 SP)
+- [x] E33-S6: Provenance Viewer (3 SP)
+- [x] E33-S7: Building Detail Page (3 SP)
+- [x] E33-S8: Salesforce-Ready Export UI (2 SP)
+
+### 5. Epic 34: Integration, Streaming & Polish (5 stories)
+- [x] E34-S1: PipelineEventBus + SSE Endpoints (3 SP)
+- [x] E34-S2: Record-by-Record Streaming (2 SP)
+- [x] E34-S3: Bulk Operations (2 SP)
+- [x] E34-S4: Performance Optimization (2 SP)
+- [x] E34-S5: Canonical Artifact Update (3 SP)
+
+### 6. Appendices
+- [x] Epic Overview table (E30-E34)
+- [x] Dependency graph (text diagram)
+- [x] SP summary table
+- [x] Schema freeze gate specification
+- [x] FR traceability matrix
+- [x] Audit finding coverage matrix
+
+### 7. Verification
+- [x] 05-epics-and-stories.md updated with V3 epics
+- [x] Each epic has 5-10 well-defined stories (E30:8, E31:6, E32:6, E33:8, E34:5 = 33 stories)
+- [x] Each story has AC, SP, dependencies, files, risk
+- [x] Schema freeze gate present (after E30-S6)
+- [x] Migration/cutover stories exist (E30-S5=J11, E30-S6=J12)
+- [x] Total SP realistic: 97 SP (target was 80-120)
+- [x] Dependency graph is clear and acyclic
+- [x] No story exceeds 5 SP (max is 5 SP on E30-S1, S2, S4, E33-S2)
+- [x] All audit findings J1-J22 addressed (J11→E30-S5, J12→E30-S6, J13→E34-S5, J14→E33-S7)
+- [x] FR traceability matrix covers all 36 V3 FRs
