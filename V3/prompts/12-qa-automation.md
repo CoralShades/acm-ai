@@ -1,5 +1,7 @@
 # 12: QA Automation — Test Generation Template
 
+> **Ralph Integration**: The `ralph-qa` agent runs this step automatically. It maps every AC to a test, writes missing tests, runs the suite, and returns PASS/FAIL verdict to the `/ralph-run` orchestrator. Manual use of this template is still supported.
+
 > **BMAD Command:** `/bmad-bmm-qa-automate`
 > **Agent:** Quinn — 🧪 QA Engineer
 > **Depends On:** 11-dev-story (implementation complete, in `review` status)

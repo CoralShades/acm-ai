@@ -1,5 +1,7 @@
 # 13: Code Review — Reusable Template
 
+> **Ralph Integration**: The `ralph-reviewer` agent runs this step automatically. Returns APPROVED or CHANGES_REQUESTED with specific file:line issues. Fix cycles are managed by the `/ralph-run` orchestrator (max 2 retry cycles). Manual use of this template is still supported.
+
 > **BMAD Command:** `/bmad-bmm-code-review`
 > **Agent:** Amelia — 💻 Developer Agent
 > **Depends On:** 11-dev-story (implementation) + optionally 12-qa-automation (tests)

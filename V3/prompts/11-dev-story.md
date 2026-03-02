@@ -1,5 +1,7 @@
 # 11: Dev Story — Reusable Implementation Template
 
+> **Ralph Integration**: The specialist agent (`backend-specialist` or `frontend-specialist`) is auto-selected by `storyType` from `prd.json`. Commit is handled by the `/ralph-run` orchestrator after QA + Review pass. Manual use of this template is still supported.
+
 > **BMAD Command:** `/bmad-bmm-dev-story`
 > **Agent:** Amelia — 💻 Developer Agent
 > **Depends On:** 10-create-story (story tech spec must exist)

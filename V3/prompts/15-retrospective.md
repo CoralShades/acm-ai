@@ -1,5 +1,7 @@
 # 15: Retrospective — Epic Completion Review
 
+> **Ralph Integration**: Retrospectives run per-epic (after all stories in an epic are `passes: true` in `prd.json`). The `/ralph-run` orchestrator does not auto-trigger retros — run this manually after each epic completes.
+
 > **BMAD Command:** `/bmad-bmm-retrospective`
 > **Agent:** Bob — 🏃 Scrum Master
 > **Depends On:** All stories in the epic are `done`

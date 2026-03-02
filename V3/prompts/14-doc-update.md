@@ -1,5 +1,7 @@
 # 14: Tech Writer Documentation Update
 
+> **Ralph Integration**: The `docs-specialist` agent auto-runs after each story commit in the `/ralph-run` cycle. Updates `sprint-status.yaml` and `v3-progress.md`. Full doc rewrites (architecture, API reference) are still manual per-epic tasks.
+
 > **BMAD Command:** (agent-based — no direct command)
 > **Agent:** Paige — 📚 Technical Writer
 > **Load:** `/bmad-agent-bmm-tech-writer`, then use code `WD` (Write Document)

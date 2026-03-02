@@ -1,5 +1,7 @@
 # 10: Create Story — Reusable Template
 
+> **Ralph Integration**: The `ralph-sm` agent automates this step. Context is injected from `prd.json` (story data, dependencies, key files). Run via `/ralph-run` which spawns `ralph-sm` for the SM phase. Manual use of this template is still supported for one-off stories.
+
 > **BMAD Command:** `/bmad-bmm-create-story`
 > **Agent:** Bob — 🏃 Scrum Master
 > **Depends On:** 09-sprint-planning (sprint plan exists)
