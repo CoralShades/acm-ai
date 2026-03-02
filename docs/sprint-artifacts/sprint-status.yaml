@@ -420,7 +420,7 @@ development_status:
   # FRs: FR-1401..FR-1412
   # ─────────────────────────────────────────────────────
   epic-30: backlog
-  e30-s1-sf-schema-config-loader: backlog            # 5 SP. No deps. FIRST V3 STORY — unblocks S2,S3,S4,S7,S8
+  e30-s1-sf-schema-config-loader: done                # 5 SP. No deps. FIRST V3 STORY — completed 2026-03-03
   e30-s2-building-record-table-domain-model: backlog  # 5 SP. Blocked by S1. New building_record table + BuildingRecord model
   e30-s3-acm-record-sf-item-alignment: backlog        # 3 SP. Blocked by S1. Pydantic SF aliases for Item__c fields
   e30-s4-dependent-picklist-validator: backlog         # 5 SP. Blocked by S1. SalesforcePicklistValidator + dependency chains
