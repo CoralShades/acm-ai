@@ -30,6 +30,12 @@ Copy and replace `{PLACEHOLDERS}`:
 
 ## Implement: {EPIC_ID}-{STORY_ID} — {STORY_TITLE}
 
+## Pre-Read Documents
+
+- `docs/sprint-artifacts/{STORY_FILE}.md` — Story tech spec (from Step 10)
+- `docs/sprint-artifacts/sprint-status.yaml` — Current sprint status
+- `_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md` — Architecture context
+
 ### Story Tech Spec
 Read the full tech spec at: `docs/sprint-artifacts/{STORY_FILE}.md`
 
