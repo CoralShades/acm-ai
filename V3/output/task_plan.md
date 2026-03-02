@@ -101,3 +101,93 @@
 - [x] All FR-1800 series present (5 matches — 4 FRs + traceability)
 - [x] Existing FRs untouched (FR-100–FR-1100 series verified present)
 - [x] Each new FR has testable acceptance criteria (spot-checked, all have pipe-delimited AC column)
+
+## Phase: Architecture v3.0 (BMAD /create-architecture workflow)
+
+### 0. Pre-Read & Research
+- [x] Load all pre-read documents (PRD v3.0, Party Mode, current arch, e29 delta, tech research, solution arch, audit, SF field summaries)
+- [x] Read current codebase files (acm.py, orchestrator.py, acm_extraction.py, acm router, model_provisioning)
+- [x] Analyze current architecture doc structure for update strategy (3 agents completed)
+
+### 1. Section 1: Data Model — Building__c + Item__c Split
+- [x] Mermaid ER diagram with SF API field names
+- [x] building_record table (SF Building__c)
+- [x] acm_record evolution (SF Item__c with Pydantic aliases)
+- [x] raw_extraction table (per-provider provenance)
+- [x] extraction_provenance model
+- [x] field_schema evolution (SF picklists, dependency chains, versioning)
+- [x] Address W4 (building_id FK), W5 (SF field names), labelled bool→picklist risk
+
+### 2. Section 2: Extraction Pipeline — Dual-Provider Architecture
+- [x] Pipeline flow diagram (PDF → providers → consensus → AI → validation)
+- [x] Provider adapter interface (ExtractionProvider protocol)
+- [x] Result normalization format (NormalizedExtractionResult)
+- [x] Consensus voting algorithm (3-stage matching, per-field voting)
+- [x] Confidence scoring (HIGH/MEDIUM/LOW/CONTESTED)
+- [x] Storage model for multi-provider results
+- [x] Integration with E29 orchestrator (capability registry F9/F10)
+- [x] Feature flags for provider enablement
+
+### 3. Section 3: AI Processing + Batching
+- [x] Two-phase extraction: Building__c → Item__c per building
+- [x] Smart batching (per-building, token budget)
+- [x] Multi-provider routing (capability registry extension)
+- [x] Pydantic structured output contracts per provider
+- [x] Fallback and retry strategy (Anthropic → OpenRouter)
+
+### 4. Section 4: Dependent Picklist Validation
+- [x] Friability → Classification → SubClassification chain (36 combos)
+- [x] BuildingType → Category chain (114→13)
+- [x] SalesforcePicklistValidator class design
+- [x] Warn vs reject policy
+- [x] Integration with E29-S6 validator
+
+### 5. Section 5: Provenance Data Model
+- [x] Per-record lineage (page, bbox, provider, model, confidence, consensus)
+- [x] Edit history design
+- [x] UI interaction (click-to-source)
+- [x] Storage design (embedded vs separate table)
+
+### 6. Section 6: SSE + Real-Time Architecture
+- [x] Event types enumeration
+- [x] SSE endpoint design (extend existing endpoints)
+- [x] AG-UI event protocol for frontend
+- [x] Worker/command integration (PipelineEventBus)
+- [x] Frontend state management (Zustand streaming store)
+
+### 7. Section 7: Frontend Architecture
+- [x] Page flow diagram
+- [x] Component architecture for new views
+- [x] AG Grid configuration (two-view + dependent picklists)
+- [x] Provenance viewer panel design
+- [x] State management for multi-step wizard
+
+### 8. Section 8: Export Architecture
+- [x] Building__c.csv + Item__c.csv format
+- [x] Two-sheet Excel export
+- [x] External ID linkage
+- [x] BAR backward compatibility
+
+### 9. Section 9: Migration Strategy
+- [x] Additive migration approach
+- [x] Data migration script design
+- [x] BAR → SF vocabulary mapping
+- [x] Rollback plan
+
+### 10. Section 10: API Design
+- [x] New building CRUD endpoints
+- [x] Raw extraction CRUD
+- [x] Provenance query endpoints
+- [x] SF export endpoints
+- [x] Multi-provider extraction trigger
+- [x] SSE subscription endpoints
+
+### 11. Verification
+- [x] All 10 sections present (13 sub-sections under §14)
+- [x] Mermaid ER diagram with SF API field names (196 __c references)
+- [x] Provider adapter interface designed (ExtractionProvider protocol)
+- [x] Consensus layer algorithm specified (3-stage matching, 4-level conflict resolution)
+- [x] Provenance data model fully defined (6-layer chain)
+- [x] SSE event types enumerated (15 event types across 3 categories)
+- [x] Migration strategy documented (6 additive migrations, rollback plan)
+- [x] All audit findings (W1-W12) addressed (§14.11 traceability matrix)

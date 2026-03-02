@@ -98,3 +98,48 @@
 3. Blockers: None
 4. Last files modified: _bmad-output/project-planning-artifacts/acm-ai/03-prd.md, V3/output/task_plan.md, V3/output/progress.md
 5. Next action: BMAD Architecture v3.0 (/bmad:mmm:create-architecture)
+
+---
+
+## Session: 2026-03-02 — Architecture v3.0 (BMAD /create-architecture workflow)
+
+### Status: COMPLETE
+
+### Completed
+- Architecture v3.0 created as Section 14 of 04-architecture.md (appended to existing v1.3 content)
+- All 10 required architecture sections written with full technical detail
+- 3 parallel research agents used to analyze: V3 technical docs, SF field summaries + codebase, current architecture structure
+- V3 architecture section standalone copy saved to V3/output/v3-architecture-section.md
+
+### Changes Made to 04-architecture.md
+1. **Header:** Updated to v3.0, dated 2026-03-02, added v3.0 change log entry
+2. **Section 14.0:** V3 Architecture Overview — key changes, supersession map
+3. **Section 14.1:** Data Model — Mermaid ER with SF API field names, BuildingRecord + ACMRecord Pydantic models, type change migration table, embedding preservation
+4. **Section 14.2:** Extraction Pipeline — 5-phase flow diagram, ExtractionProvider protocol, NormalizedExtractionResult, consensus layer (3-stage matching, 4-level conflict resolution), feature flags
+5. **Section 14.3:** AI Processing — two-phase extraction (Building__c then Item__c), ModelCapability enum, ModelPolicy, direct ChatAnthropic + OpenRouter fallback, structured output via tool_use, batching strategy
+6. **Section 14.4:** Dependent Picklist Validation — SalesforcePicklistValidator class, ACM chain (36 combos), Building chain (114→13), WARN/REJECT policy, Negative→N/A business rule
+7. **Section 14.5:** Provenance — 6-layer provenance chain, EditHistoryEntry model, click-to-source UI flow
+8. **Section 14.6:** SSE — 15 event types across 3 categories, PipelineEventBus, V3StreamingState Zustand store, SSE→React Query refetch pattern
+9. **Section 14.7:** Frontend — page flow, 10 new components, AG Grid two-view config (building + item), DependentPicklistEditor cell editor
+10. **Section 14.8:** Export — SF Data Loader format, External ID linkage, validation gate, BAR backward compatibility, SFExportService
+11. **Section 14.9:** Migration — 6 additive migrations (38-43), data migration script, vocabulary mapping, rollback plan, schema freeze gate
+12. **Section 14.10:** API Design — 15 new V3 endpoints (building CRUD, raw extraction, SF schema, export, admin, SSE), TypeScript response types
+13. **Section 14.11:** Audit Finding Traceability — W1-W12 mapped to architecture sections
+14. **Section 14.12:** V3 File Impact Summary — 28 files (NEW/CRITICAL/HIGH/MEDIUM/REWRITE)
+
+### Verification Results
+- All 10 architecture sections present (13 sub-sections under §14)
+- Mermaid ER diagram with SF API field names (196 __c references)
+- ExtractionProvider protocol designed with NormalizedExtractionResult
+- Consensus layer: 3-stage matching + 4-level conflict resolution + 4 confidence tiers
+- Provenance: 6-layer chain (PDF → raw → consensus → AI → validation → edit)
+- SSE: 15 event types across extraction/AI processing/bulk categories
+- Migration: 6 additive migrations, vocabulary mapping, rollback plan
+- All audit findings W1-W12 + Amelia's risks addressed in §14.11
+
+### Reboot Check
+1. Last milestone: Architecture v3.0 complete — all 10 sections, verification passed
+2. Current task: None (Architecture complete)
+3. Blockers: None
+4. Last files modified: _bmad-output/project-planning-artifacts/acm-ai/04-architecture.md, V3/output/v3-architecture-section.md, V3/output/task_plan.md, V3/output/progress.md
+5. Next action: BMAD Epics & Stories v3.0 (/bmad:mmm:create-epics-and-stories)
