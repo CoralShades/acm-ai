@@ -34,14 +34,14 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-01
+updated: 2026-03-02
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-03-01
+  last_reconciled: 2026-03-02
   reconciled_branches: [main, ACMV3]
   notes: "E29 planning reconciliation 2026-03-01: unified pipeline execution order finalized (8 stories, 4 gates). E29 added as backlog epic pending story artifact drafting. E28 closeout retained: Alexander 29/43→36/43 (+7), Broadmeadows 31/31 maintained."
 
@@ -372,25 +372,27 @@ development_status:
   e28-s3-validation-closeout: done  # Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are validation matching issues, not extraction failures. Report: docs/reviews/e28-validation-results.md.
 
   # Epic 29: Pipeline Unification — Unified Agent Pipeline (P0)
-  # 4/8 stories complete + 2 recovery stories drafted — Gate 2 FAIL, recovery loop in progress
+  # S1-S4 complete. S5-S8 + R1/R2 archived 2026-03-02 — superseded by V3 scope expansion.
   # Reconciled plan: V3/epic-29-pipeline-unification.reconciled.yaml
   # Execution contract: V3/epic-29-execution-contract.md
   # Architecture delta: docs/architecture/e29-architecture-delta.md
   # Story index: docs/sprint-artifacts/e29-story-specs.md
   # Gate tracking: docs/sprint-artifacts/e29-gate-decisions.md
   # Recovery spec: docs/sprint-artifacts/e29-gate2-recovery-spec.md
-  epic-29: in-progress
+  # V3 SCP: V3/output/SCP-V3-scope-expansion.md
+  epic-29: in-progress  # S1-S4 done, S5-S8+R1/R2 archived. Epic stays in-progress until V3 replanning completes.
   e29-s1-json-parser-resilience: done  # Phase 1. 1 SP. QA verified 2026-03-01: 34/34 tests pass, all 5 AC verified, ruff clean. TruncationError(ValueError) subclass, brace-depth scan, multi-block selection.
   e29-s2-benchmark-harness-baseline-capture: done  # Phase 1. 3 SP. QA verified 2026-03-01: 30/30 tests pass, 7/8 AC PASS (AC-6 partial: token=0 OpenRouter limitation). Gate 1 PASS — 6/6 criteria. Baseline: Broadmeadows 77.4%, Alexander 69.8%, Aldavilla 0%.
   e29-s3-unified-orchestrator-path: done  # Phase 2. 3 SP. Code complete 2026-03-01. Unconditional tag_pages→orchestrate edge, synthetic plan. AC-1..AC-5 verified. AC-6/AC-7 (benchmarks) are gate-level criteria — Gate 2 FAIL does not invalidate story per PM sign-off.
   e29-s4-capability-registry-fallback-contract: done  # Phase 2. 2 SP. Code complete 2026-03-01. Registry 33/33 tests, orchestrator 61/61 tests. AC-1..AC-6 verified. AC-7/AC-8 (benchmarks) are gate-level criteria — Gate 2 FAIL does not invalidate story per PM sign-off.
-  e29-s5-agent-decomposition-table-parser-bar-mapper: drafted  # Phase 3. 3 SP. BLOCKED by Gate 2 FAIL. table_parser.py + bar_mapper.py. Unblocks when Gate 2 rerun passes after R1+R2.
-  e29-s6-agent-decomposition-enricher-classifier-validator: drafted  # Phase 3. 3 SP. BLOCKED by Gate 2 FAIL (transitive via S5). classifier.py + context_enricher.py + validator.py. Gate 3 exit.
-  e29-s7-validation-gate-legacy-cleanup: drafted  # Phase 4. 2 SP. BLOCKED by Gate 2 FAIL (transitive via S5→S6). Legacy deletion. Broadmeadows 31/31, Alexander >=40/43 stretch.
-  e29-s8-export-hardening-integration-doc-alignment: drafted  # Phase 4. 2 SP. BLOCKED by Gate 2 FAIL (transitive via S5→S6→S7). Export filtering, E2E tests, doc alignment. Gate 4 exit.
-  # --- Gate 2 Recovery Stories (PM-authorized 2026-03-01) ---
-  e29-r1-benchmark-fidelity: review  # Recovery. 2 SP. Seed Docling tables, improve matching normalization, pin baseline artifacts. Must complete before R2.
-  e29-r2-match-gap-remediation: review  # Recovery. 2 SP. Fix RoomMeta typing, normalize room/location names, improve material matching. Depends on R1. Gate 2 rerun: Broadmeadows 30/31, Alexander 42/43.
+  e29-s5-agent-decomposition-table-parser-bar-mapper: archived  # Superseded by V3 scope expansion — see SCP-V3. Phase 3. 3 SP. Was BLOCKED by Gate 2 FAIL. Agent decomposition approach replaced by V3 multi-provider extraction design.
+  e29-s6-agent-decomposition-enricher-classifier-validator: archived  # Superseded by V3 scope expansion — see SCP-V3. Phase 3. 3 SP. Was BLOCKED by Gate 2 FAIL. Agent decomposition approach replaced by V3 multi-provider extraction design.
+  e29-s7-validation-gate-legacy-cleanup: archived  # Superseded by V3 scope expansion — see SCP-V3. Phase 4. 2 SP. Legacy cleanup will be addressed in V3 extraction epics.
+  e29-s8-export-hardening-integration-doc-alignment: archived  # Superseded by V3 scope expansion — see SCP-V3. Phase 4. 2 SP. Export hardening and doc alignment will be addressed in V3 epics.
+  # --- Gate 2 Recovery Stories (PM-authorized 2026-03-01, archived 2026-03-02) ---
+  e29-r1-benchmark-fidelity: archived  # Fixes incorporated into V3 extraction epics. Recovery. 2 SP. Benchmark fidelity improvements carry forward as V3 input.
+  e29-r2-match-gap-remediation: archived  # Fixes incorporated into V3 extraction epics. Recovery. 2 SP. Match-gap remediation findings carry forward as V3 input.
+  epic-29-retrospective: optional  # V3 scope expansion supersedes remaining E29 work. Retro recommended before V3 planning.
 
   # Cleanup
   cleanup-dead-extraction-agent: done  # 2026-02-26: Removed use-extraction-agent.ts dead CopilotKit hook

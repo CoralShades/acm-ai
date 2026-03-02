@@ -8,14 +8,7 @@
 
 ---
 
-## Pre-Read Documents
 
-The agent should read these before starting:
-- `docs/sprint-artifacts/sprint-status.yaml` — current sprint status
-- `V3/SCP-20260301-SF-salesforce-alignment.md` — E30 proposal being archived
-- `V3/sprint-change-proposal-20260301-unified-pipeline.md` — E29 original SCP
-- `V3/epic-29-pipeline-unification.reconciled.yaml` — E29 reconciled plan
-- `V3/output/e30-multi-agent-audit-unified.md` — E30 audit findings (preserve as V3 input)
 
 ---
 
@@ -23,6 +16,13 @@ The agent should read these before starting:
 
 ```text
 /bmad-bmm-correct-course
+
+## Pre-Read Documents
+- `docs/sprint-artifacts/sprint-status.yaml` — current sprint status
+- `V3/SCP-20260301-SF-salesforce-alignment.md` — E30 proposal being archived
+- `V3/sprint-change-proposal-20260301-unified-pipeline.md` — E29 original SCP
+- `V3/epic-29-pipeline-unification.reconciled.yaml` — E29 reconciled plan
+- `V3/output/e30-multi-agent-audit-unified.md` — E30 audit findings (preserve as V3 input)
 
 ## Course Correction: V3 Scope Expansion
 
