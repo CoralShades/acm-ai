@@ -4,7 +4,7 @@
 > **Date:** 2025-12-07 (Updated: 2026-03-02)
 > **Status:** v3.0 - V3 Scope Expansion (Salesforce Alignment, Multi-Provider Extraction, Consensus Layer, Two-View UI)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 32 new stories across 5 epics (89 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
+> **Change Log:** 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -246,12 +246,13 @@ This document covers MVP requirements (Epics 1-20, 29) and V3 scope expansion (E
 | FR-1608 | Record wizard with SF picklist guidance | P1 | Modal dialog for editing individual records; dependent picklist dropdowns cascade correctly; SF field names shown alongside human-readable labels; save validates against SF schema |
 | FR-1609 | Bulk operations (multi-select, bulk edit, bulk validate) | P1 | Multi-select checkboxes in AG Grid; bulk edit changes field for all selected records; bulk validate re-runs SF validation; bulk export generates CSV for selected buildings; SSE progress for bulk operations |
 | FR-1610 | Building ID auto-assignment (BLD#NNN) during extraction | P0 | Server-side building ID generated during extraction: `BLD#{source_short}_{seq:03d}`; deterministic, generated in orchestrator; NOT the SF `Building_Name__c` field |
+| FR-1611 | Building detail page with editable Building__c fields and child ACM item grid | P1 | Dedicated building detail view displaying all 29+ Building__c fields in grouped form layout; editable fields with SF picklist dropdowns; BuildingType → Category dependent picklist cascading; save persists via PUT /api/acm/buildings/{id}; validation badges on invalid fields |
 
 ### 2.15 Streaming & Observability (FR-1700 Series)
 
 > **Added:** 2026-03-02 (V3 Scope Expansion — Party Mode Synthesis)
 > **Source:** [v3-party-mode-plan.md](../../../V3/output/v3-party-mode-plan.md) § PRD Delta
-> **Epic:** E34 — Integration, Streaming & Polish
+> **Epic:** E31 (SSE infrastructure: FR-1701, FR-1704) + E34 (streaming, lineage: FR-1702, FR-1703)
 
 | ID | Requirement | Priority | Acceptance Criteria |
 |----|-------------|----------|---------------------|
@@ -1267,12 +1268,12 @@ V3 transforms ACM-AI from a BAR-centric extraction tool into a Salesforce-aligne
 
 | Epic | Scope | Stories | SP | Dependencies |
 |------|-------|--------:|---:|-------------|
-| E30: Foundation & SF Schema | SF schema config, building record model, dependent picklist validation, data migration, extraction prompts, Anthropic direct API | 8 | 20 | E29 complete |
-| E31: Multi-Provider Extraction | MinerU 2.x integration, provider adapters, consensus layer, raw storage, pipeline integration | 6 | 17 | E30 (schema freeze) |
-| E32: AI Processing & Validation | Two-phase extraction, SF validation + correction, classifier update, Ollama evaluation | 6 | 18 | E30, E31 |
-| E33: Frontend & UX | Upload wizard, building/item grid, picklist editors, validation badges, provenance viewer, export | 7 | 22 | E30, E32 |
-| E34: Integration & Polish | EventBus + SSE, record streaming, bulk operations, performance, artifact update | 5 | 12 | E30-E33 |
-| **TOTAL** | | **32** | **89** | |
+| E30: Foundation & SF Schema | SF schema config, building record model, dependent picklist validation, data migration, extraction prompts, Anthropic direct API | 8 | 29 | E29 complete |
+| E31: Multi-Provider Extraction | MinerU 2.x integration, provider adapters, consensus layer, raw storage, pipeline integration, SSE infrastructure | 7 | 18 | E30 (schema freeze) |
+| E32: AI Processing & Validation | Two-phase extraction, SF validation + correction, classifier update, Ollama evaluation | 6 | 16 | E30, E31 |
+| E33: Frontend & UX | Upload wizard, building/item grid, picklist editors, validation badges, provenance viewer, building detail, export | 8 | 25 | E30, E32 |
+| E34: Integration & Polish | Record streaming, bulk operations, performance, artifact update | 4 | 9 | E30-E33 |
+| **TOTAL** | | **33** | **97** | |
 
 ### 11.3 V3 Dependency Graph
 
@@ -1285,7 +1286,7 @@ E31 (Multi-Provider) ───────────────────�
                                                        │
                       E33-S1,S2 (Core UI) ─────────────┤  ← can start after E30
                                                        │
-                      E33-S3-S7 (Advanced UI) ─────────┤  ← after E32
+                      E33-S3-S8 (Advanced UI) ─────────┤  ← after E32
                                                        │
                       E34 (Integration) ───────────────┘  ← after E32+E33-S2
 
@@ -1325,6 +1326,7 @@ source
 |-----------|------|-----------------|--------|
 | FR-1401–FR-1412 | E30 | SCP-20260301-SF-salesforce-alignment.md | APPROVED |
 | FR-1501–FR-1506 | E31 | v3-party-mode-plan.md § PRD Delta | NEW |
-| FR-1601–FR-1610 | E33 | v3-party-mode-plan.md § PRD Delta | NEW |
-| FR-1701–FR-1704 | E34 | v3-party-mode-plan.md § PRD Delta | NEW |
+| FR-1601–FR-1611 | E33 | v3-party-mode-plan.md § PRD Delta + readiness fix | NEW |
+| FR-1701, FR-1704 | E31 | Moved from E34 to E31-S7 (SSE timing fix) | NEW |
+| FR-1702, FR-1703 | E34 | v3-party-mode-plan.md § PRD Delta | NEW |
 | FR-1801–FR-1804 | E32 | v3-party-mode-plan.md § PRD Delta | NEW |

@@ -2623,7 +2623,7 @@ The provenance viewer (E33-S6) uses the chain:
 #### 14.6.3 PipelineEventBus
 
 ```python
-# open_notebook/extractors/pipeline_event_bus.py (NEW — E34-S1)
+# open_notebook/extractors/pipeline_event_bus.py (NEW — E31-S7)
 class PipelineEventBus:
     """In-memory event bus for worker->SSE relay. No external broker."""
 
@@ -2782,7 +2782,7 @@ class DependentPicklistEditor implements ICellEditorComp {
 
 ### 14.8 Export Architecture
 
-> **Addresses:** FR-1406, FR-1407, E33-S7
+> **Addresses:** FR-1406, FR-1407, E33-S8
 
 #### 14.8.1 Salesforce Data Loader Format
 
@@ -2817,7 +2817,7 @@ The existing BAR Excel export (Section 4.1 `/api/acm/export/excel`) is preserved
 #### 14.8.3 Export Service Design
 
 ```python
-# api/services/sf_export_service.py (NEW — E33-S7)
+# api/services/sf_export_service.py (NEW — E33-S8)
 class SFExportService:
     """Generates SF Data Loader compatible exports."""
 
@@ -2941,9 +2941,9 @@ No schema changes permitted after the gate without explicit review. This prevent
 
 | Method | Path | Description | Story |
 |--------|------|-------------|-------|
-| GET | `/api/acm/export/sf/building` | Building__c Data Loader CSV | E33-S7 |
-| GET | `/api/acm/export/sf/item` | Item__c Data Loader CSV | E33-S7 |
-| GET | `/api/acm/export/sf/excel` | Two-sheet Excel (Building + Item) | E33-S7 |
+| GET | `/api/acm/export/sf/building` | Building__c Data Loader CSV | E33-S8 |
+| GET | `/api/acm/export/sf/item` | Item__c Data Loader CSV | E33-S8 |
+| GET | `/api/acm/export/sf/excel` | Two-sheet Excel (Building + Item) | E33-S8 |
 
 **Admin & AI Config:**
 
@@ -2956,9 +2956,9 @@ No schema changes permitted after the gate without explicit review. This prevent
 
 | Method | Path | Description | Story |
 |--------|------|-------------|-------|
-| GET | `/api/acm/extraction-progress/{cmd_id}/stream` | Extraction pipeline SSE (extended with provider/consensus events) | E34-S1 |
-| GET | `/api/acm/ai-progress/{cmd_id}/stream` | AI processing SSE (building extraction/validation events) | E34-S1 |
-| GET | `/api/acm/bulk-progress/{op_id}/stream` | Bulk operation SSE | E34-S3 |
+| GET | `/api/acm/extraction-progress/{cmd_id}/stream` | Extraction pipeline SSE (extended with provider/consensus events) | E31-S7 |
+| GET | `/api/acm/ai-progress/{cmd_id}/stream` | AI processing SSE (building extraction/validation events) | E31-S7 |
+| GET | `/api/acm/bulk-progress/{op_id}/stream` | Bulk operation SSE | E34-S2 |
 
 #### 14.10.2 V3 TypeScript Response Types
 

@@ -39,10 +39,10 @@
 | E28 | Alexander District Hospital — Not Sampled Record Recovery | P1 | 3 | Done (partial success gate) |
 | E29 | Pipeline Unification — Unified Agent Pipeline | P0 | 8 | S1-S4 Done; S5-S8 Archived |
 | **E30** | **V3 Foundation — Schema + Config** | **P0** | **8** | **Planned** |
-| **E31** | **V3 Multi-Provider Extraction** | **P0** | **6** | **Planned** |
+| **E31** | **V3 Multi-Provider Extraction** | **P0** | **7** | **Planned** |
 | **E32** | **V3 AI Processing & Validation** | **P0** | **6** | **Planned** |
 | **E33** | **V3 Frontend & UX** | **P0** | **8** | **Planned** |
-| **E34** | **V3 Integration, Streaming & Polish** | **P0** | **5** | **Planned** |
+| **E34** | **V3 Integration, Streaming & Polish** | **P0** | **4** | **Planned** |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2790,7 +2790,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
                                  │
               ┌──────────────────┼──────────────────┐
               ▼                  ▼                   ▼
-   E31: Multi-Provider    E33-S1,S2: Core UI    (E34-S5: Docs)
+   E31: Multi-Provider    E33-S1,S2: Core UI    (E34-S4: Docs)
    ┌─────────────────┐    ┌────────────────┐
    │ S1: MinerU Setup│    │ S1: Upload Wiz │
    │ S2: Adapters    │    │ S2: Bldg/Item  │
@@ -2798,6 +2798,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
    │ S4: Raw Storage │    └───────┬────────┘
    │ S5: Pipeline    │            │
    │ S6: Benchmark   │            │
+   │ S7: SSE Infra   │            │
    └────────┬────────┘            │
             │                     │
             ▼                     │
@@ -2825,11 +2826,10 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
                 ▼
    E34: Integration & Polish
    ┌────────────────────────────┐
-   │ S1: EventBus + SSE        │
-   │ S2: Record Streaming      │
-   │ S3: Bulk Operations       │
-   │ S4: Performance           │
-   │ S5: Artifact Update       │
+   │ S1: Record Streaming      │
+   │ S2: Bulk Operations       │
+   │ S3: Performance           │
+   │ S4: Artifact Update       │
    └────────────────────────────┘
 ```
 
@@ -3081,7 +3081,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 - [ ] Non-extraction tasks (chat, search, enrichment) continue via Esperanto/OpenRouter unchanged
 - [ ] Feature flag for transition period: `V3_USE_DIRECT_ANTHROPIC=true` (default)
 - [ ] `_apply_openrouter_preferences()` behavior updated to respect new routing policy
-- [ ] Benchmarks pass with both Anthropic direct and OpenRouter extraction paths
+- [ ] Broadmeadows 31/31 accuracy maintained. Alexander ≥40/43 baseline. No regression from current pipeline. Both Anthropic direct and OpenRouter extraction paths verified
 
 **Files Affected:**
 - `api/model_provisioning.py` — UPDATE: add direct Anthropic path + capability routing
@@ -3096,8 +3096,8 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 > **Goal:** Add MinerU 2.x (hybrid backend) as a second extraction provider alongside Docling, build consensus layer for merging results.
 > **Dependencies:** E30 Schema Freeze Gate (S1-S6 must be Done)
-> **Total:** 6 stories, 15 SP
-> **FRs:** FR-1501, FR-1502, FR-1503, FR-1504, FR-1505, FR-1506
+> **Total:** 7 stories, 18 SP
+> **FRs:** FR-1501, FR-1502, FR-1503, FR-1504, FR-1505, FR-1506, FR-1701, FR-1704
 > **Audit findings addressed:** Tech Research recommendations, Party Mode consensus decisions
 
 ### E31-S1: MinerU 2.x Integration + Validation [2 SP]
@@ -3254,7 +3254,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 **Acceptance Criteria:**
 - [ ] Broadmeadows: consensus >= 31/31 (at least as good as Docling alone)
-- [ ] Alexander: measure MinerU improvement delta AFTER completionState fix baseline (~40/43). **Note:** Alexander 0/43 is a completionState wrapper JSON parsing bug (E27-related), NOT extraction — fix separately
+- [ ] Alexander: ≥40/43 baseline (post-completionState fix), ≥42/43 stretch goal. **Note:** Alexander 0/43 is a completionState wrapper JSON parsing bug (E27-related), NOT extraction — fix separately. Measure MinerU improvement delta after baseline established
 - [ ] Per-provider accuracy breakdown: Docling alone vs MinerU alone vs consensus
 - [ ] Per-field accuracy report for high-stakes fields (result, friable, condition, product)
 - [ ] Results documented in benchmark report
@@ -3264,6 +3264,37 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 - `tests/benchmarks/test_v3_dual_provider.py` — NEW
 - `docs/benchmarks/v3-dual-provider-report.md` — NEW
 - `tests/conftest.py` — UPDATE: benchmark fixtures
+
+---
+
+### E31-S7: PipelineEventBus + SSE Infrastructure [3 SP]
+
+**As a** developer,
+**I want** an in-memory event bus relaying pipeline events to SSE endpoints,
+**So that** the frontend can subscribe to real-time extraction, AI processing, and bulk operation events.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E31-S5 (Pipeline Integration — SSE events need providers wired in)
+**Satisfies:** FR-1701 (SSE endpoints), FR-1704 (PipelineEventBus)
+
+**Acceptance Criteria:**
+- [ ] `PipelineEventBus` — in-memory `asyncio.Queue`-based event bus (no external message broker)
+- [ ] Three SSE endpoint categories: (1) extraction pipeline, (2) AI processing, (3) bulk operations
+- [ ] Event types: `extraction.started`, `extraction.provider_complete`, `extraction.consensus_complete`, `ai.building_extracted`, `ai.items_extracted`, `ai.validation_complete`, `bulk.progress`, `bulk.complete`
+- [ ] Zustand `V3StreamingState` store in frontend: subscribes to SSE, updates reactive state
+- [ ] SSE triggers React Query refetch on relevant events (e.g., `ai.building_extracted` refetches building list)
+- [ ] Auto-reconnect on SSE connection drop
+- [ ] Event filtering by operation ID (multiple extractions can run concurrently)
+- [ ] Extends existing E27 SSE infrastructure (`/api/agui/extraction/{id}/stream`)
+- [ ] Unit tests for event bus pub/sub and SSE serialization
+
+**Files Affected:**
+- `open_notebook/extractors/pipeline_event_bus.py` — NEW
+- `api/routers/acm.py` — ADD SSE endpoints
+- `frontend/src/stores/streamingStore.ts` — NEW
+- `frontend/src/hooks/useV3SSE.ts` — NEW
+- `tests/test_pipeline_event_bus.py` — NEW
 
 ---
 
@@ -3395,7 +3426,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 **Acceptance Criteria:**
 - [ ] E2E test: upload → dual-provider extract → consensus → AI Building extraction → AI Item extraction → validation → correction → save
 - [ ] Broadmeadows: 31/31, all picklist values valid SF values, all dependency chains valid
-- [ ] Alexander: >= 42/43 (after completionState fix baseline)
+- [ ] Alexander: ≥40/43 baseline (post-completionState fix), ≥42/43 stretch goal
 - [ ] Verify BuildingRecord + ACMRecord created with correct FKs
 - [ ] Verify raw_extraction_table populated with per-provider data
 - [ ] Verify consensus_metadata populated on merged records
@@ -3438,7 +3469,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 > **Goal:** Build the V3 user interface: upload wizard, building/item two-view grid, dependent picklist editors, provenance viewer, raw table review, building detail page, and SF export dialog.
 > **Dependencies:** E30 (schema — API contracts), E32 (AI processing produces data for grids). E33-S1 and S2 can start after E30 Schema Freeze Gate (API contracts defined). E33-S3 through S8 require E32 completion.
 > **Total:** 8 stories, 25 SP
-> **FRs:** FR-1601, FR-1602, FR-1603, FR-1604, FR-1605, FR-1606, FR-1607, FR-1608, FR-1609, FR-1610
+> **FRs:** FR-1406, FR-1407, FR-1601, FR-1602, FR-1603, FR-1604, FR-1605, FR-1606, FR-1607, FR-1608, FR-1609, FR-1610, FR-1611
 > **UX Reference:** `_bmad-output/planning-artifacts/v3-ux-design.md` (Sally's complete UI flow spec)
 
 ### E33-S1: Upload Wizard + Extraction Progress [3 SP]
@@ -3449,7 +3480,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 **Story Points:** 3
 **Risk Level:** MEDIUM
-**Dependencies:** E30 Schema Freeze Gate (API contracts), E34-S1 (SSE infrastructure — can develop in parallel with mock SSE)
+**Dependencies:** E30 Schema Freeze Gate (API contracts), E31-S7 (SSE infrastructure — can develop in parallel with mock SSE)
 
 **Acceptance Criteria:**
 - [ ] 3-step wizard: (1) Drop PDF zone with drag-and-drop, (2) Select extraction mode (Quick = Docling only, Thorough = dual-provider), (3) Confirm and extract
@@ -3624,6 +3655,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 **Story Points:** 3
 **Risk Level:** MEDIUM
 **Dependencies:** E30-S2 (BuildingRecord API), E33-S2 (building sidebar navigation)
+**Satisfies:** FR-1611 (Building detail page with editable Building__c fields)
 
 **Acceptance Criteria:**
 - [ ] Building detail view accessible from building sidebar click or dedicated route
@@ -3651,6 +3683,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 **Story Points:** 2
 **Risk Level:** LOW
 **Dependencies:** E30-S2 (BuildingRecord), E30-S3 (SF field alignment), E33-S4 (validation must pass before export)
+**Satisfies:** FR-1406 (Building__c CSV export), FR-1407 (Item__c CSV export)
 
 **Acceptance Criteria:**
 - [ ] Export dialog accessible from building grid toolbar: `/source/:id/export`
@@ -3672,41 +3705,13 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 ## Epic 34: V3 Integration, Streaming & Polish
 
-> **Goal:** Full SSE streaming infrastructure, record-by-record AG Grid updates, bulk operations, performance optimization, and canonical artifact updates.
-> **Dependencies:** E30-E33 (builds on all prior epics). E34-S1 can start early (SSE infrastructure needed by E33-S1). E34-S5 can start after E30.
-> **Total:** 5 stories, 10 SP
-> **FRs:** FR-1701, FR-1702, FR-1703, FR-1704
+> **Goal:** Record-by-record AG Grid streaming, bulk operations, performance optimization, and canonical artifact updates.
+> **Dependencies:** E30-E33 (builds on all prior epics). E34-S4 can start after E30.
+> **Total:** 4 stories, 9 SP
+> **FRs:** FR-1702, FR-1703
+> **Note:** SSE infrastructure (FR-1701, FR-1704) moved to E31-S7 to resolve E33-S1 timing dependency.
 
-### E34-S1: PipelineEventBus + SSE Endpoints [3 SP]
-
-**As a** developer,
-**I want** an in-memory event bus relaying pipeline events to SSE endpoints,
-**So that** the frontend can subscribe to real-time extraction, AI processing, and bulk operation events.
-
-**Story Points:** 3
-**Risk Level:** MEDIUM
-**Dependencies:** E30 Schema Freeze Gate (event schema must be stable)
-
-**Acceptance Criteria:**
-- [ ] `PipelineEventBus` — in-memory `asyncio.Queue`-based event bus (no external message broker)
-- [ ] Three SSE endpoint categories: (1) extraction pipeline, (2) AI processing, (3) bulk operations
-- [ ] Event types: `extraction.started`, `extraction.provider_complete`, `extraction.consensus_complete`, `ai.building_extracted`, `ai.items_extracted`, `ai.validation_complete`, `bulk.progress`, `bulk.complete`
-- [ ] Zustand `V3StreamingState` store in frontend: subscribes to SSE, updates reactive state
-- [ ] SSE triggers React Query refetch on relevant events (e.g., `ai.building_extracted` refetches building list)
-- [ ] Auto-reconnect on SSE connection drop
-- [ ] Event filtering by operation ID (multiple extractions can run concurrently)
-- [ ] Unit tests for event bus pub/sub and SSE serialization
-
-**Files Affected:**
-- `open_notebook/extractors/pipeline_event_bus.py` — NEW
-- `api/routers/acm.py` — ADD SSE endpoints
-- `frontend/src/stores/streamingStore.ts` — NEW
-- `frontend/src/hooks/useV3SSE.ts` — NEW
-- `tests/test_pipeline_event_bus.py` — NEW
-
----
-
-### E34-S2: Record-by-Record Streaming [2 SP]
+### E34-S1: Record-by-Record Streaming [2 SP]
 
 **As an** asbestos compliance officer,
 **I want** records to appear in the AG Grid as they're validated (not all at once when extraction finishes),
@@ -3714,7 +3719,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 **Story Points:** 2
 **Risk Level:** LOW
-**Dependencies:** E34-S1 (SSE infrastructure), E33-S2 (grid)
+**Dependencies:** E31-S7 (SSE infrastructure), E33-S2 (grid)
 
 **Acceptance Criteria:**
 - [ ] Records appear in AG Grid incrementally as each building completes validation
@@ -3731,7 +3736,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 ---
 
-### E34-S3: Bulk Operations [2 SP]
+### E34-S2: Bulk Operations [2 SP]
 
 **As an** asbestos compliance officer,
 **I want** bulk editing, validation, and export operations on multiple selected records,
@@ -3739,7 +3744,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 **Story Points:** 2
 **Risk Level:** LOW
-**Dependencies:** E33-S2 (grid), E33-S4 (validation), E34-S1 (SSE for progress)
+**Dependencies:** E33-S2 (grid), E33-S4 (validation), E31-S7 (SSE for progress)
 
 **Acceptance Criteria:**
 - [ ] Multi-select in AG Grid (checkbox column, select all, select by building)
@@ -3756,7 +3761,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 ---
 
-### E34-S4: Performance Optimization [2 SP]
+### E34-S3: Performance Optimization [2 SP]
 
 **As a** developer,
 **I want** the full V3 pipeline to meet performance targets,
@@ -3781,7 +3786,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 ---
 
-### E34-S5: Canonical Artifact Update [3 SP]
+### E34-S4: Canonical Artifact Update [3 SP]
 
 **As a** project maintainer,
 **I want** all planning documents updated to reflect V3 implementation reality,
@@ -3789,7 +3794,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 **Story Points:** 3
 **Risk Level:** LOW
-**Dependencies:** All V3 epics (this runs last or in parallel with E34-S1-S4)
+**Dependencies:** All V3 epics (this runs last or in parallel with E34-S1-S3)
 
 **Acceptance Criteria:**
 - [ ] PRD updated to v3.1 with implementation-verified FRs (mark any deferred/changed FRs)
@@ -3830,7 +3835,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 | Building extraction | E32-S1 | E32-S2 | Sequential (two-phase) |
 | Item extraction | E32-S2 | E32-S3 | Sequential |
 | AI pipeline complete | E32-S3 | E32-S5, E33-S3, E33-S4 | Sequential |
-| SSE infrastructure | E34-S1 | E33-S1, E34-S2, E34-S3 | Parallel (can develop with mock SSE) |
+| SSE infrastructure | E31-S7 | E33-S1, E34-S1, E34-S2 | Parallel (can develop with mock SSE) |
 | Grid infrastructure | E33-S2 | E33-S3, S4, S5, S6, S7, S8 | Sequential |
 
 ## V3 FR Traceability Matrix
@@ -3856,19 +3861,20 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 | FR-1505 (Provider adapter interface) | E31-S2 | Planned |
 | FR-1506 (Cross-page table stitching) | E31-S1, E31-S2 | Planned |
 | FR-1601 (Upload wizard) | E33-S1 | Planned |
-| FR-1602 (SSE extraction progress) | E33-S1, E34-S1 | Planned |
+| FR-1602 (SSE extraction progress) | E33-S1, E31-S7 | Planned |
 | FR-1603 (Two-view building/item layout) | E33-S2 | Planned |
 | FR-1604 (Dependent picklist cascading) | E33-S3 | Planned |
 | FR-1605 (Inline SF validation badges) | E33-S4 | Planned |
 | FR-1606 (Raw table review opt-in) | E33-S5 | Planned |
 | FR-1607 (Provenance viewer) | E33-S6 | Planned |
 | FR-1608 (Record wizard with picklist guidance) | E33-S4 | Planned |
-| FR-1609 (Bulk operations) | E34-S3 | Planned |
+| FR-1609 (Bulk operations) | E34-S2 | Planned |
 | FR-1610 (Building ID auto-assignment) | E32-S1 | Planned |
-| FR-1701 (SSE endpoints) | E34-S1 | Planned |
-| FR-1702 (Record-by-record streaming) | E34-S2 | Planned |
+| FR-1611 (Building detail page) | E33-S7 | Planned |
+| FR-1701 (SSE endpoints) | E31-S7 | Planned |
+| FR-1702 (Record-by-record streaming) | E34-S1 | Planned |
 | FR-1703 (Full extraction lineage) | E31-S4, E33-S6 | Planned |
-| FR-1704 (PipelineEventBus) | E34-S1 | Planned |
+| FR-1704 (PipelineEventBus) | E31-S7 | Planned |
 | FR-1801 (Capability registry) | E30-S8 | Planned |
 | FR-1802 (Ollama local for embeddings) | E32-S6 | Planned |
 | FR-1803 (AI model invisible to users) | E30-S8 | Planned |
@@ -3880,7 +3886,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 |---------|-------------|-------|
 | J11 | Missing: Data Migration Script | E30-S5 |
 | J12 | Missing: BAR→SF Value Migration | E30-S6 |
-| J13 | Missing: Canonical Artifact Update | E34-S5 |
+| J13 | Missing: Canonical Artifact Update | E34-S4 |
 | J14 | Missing: Frontend Building Detail Page | E33-S7 |
 | W1 | Flat ACMRecord must split | E30-S2, E30-S3 |
 | W2 | No building_record table | E30-S2 |

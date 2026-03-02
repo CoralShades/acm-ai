@@ -180,9 +180,9 @@ Phase 5: Review & Export
 
 **Dependencies**: E29 S1-S4 (completed). No external dependencies.
 
-### Epic 31: Multi-Provider Extraction (17 SP, 6 stories)
+### Epic 31: Multi-Provider Extraction (18 SP, 7 stories)
 
-**Goal**: Add MinerU 2.x (hybrid backend) as second extraction provider, build consensus layer.
+**Goal**: Add MinerU 2.x (hybrid backend) as second extraction provider, build consensus layer, establish SSE infrastructure.
 
 | # | Story | SP | Description |
 |---|-------|----|-------------|
@@ -191,7 +191,8 @@ Phase 5: Review & Export
 | E31-S3 | Consensus Layer Core | 3 | RecordMatcher (stages 1-3). ConsensusEngine (per-field weighted voting). ConflictResolver (weighted majority + provider priority). Confidence tier assignment. |
 | E31-S4 | Raw Extraction Table + Storage | 2 | New raw_extraction_table migration. Store per-provider raw output. Link to acm_table_section via consensus merge. Provider metadata JSONB. |
 | E31-S5 | Pipeline Integration | 3 | Wire providers into orchestrator (parallel sequential execution). Emit consensus telemetry via PipelineLogger. Strategy registry F9/F10 fallbacks. |
-| E31-S6 | Dual-Provider Benchmark | 2 | Broadmeadows: 31/31 (consensus >= single-provider). Alexander: measure MinerU improvement delta AFTER completionState fix baseline (~40/43). **Note**: Alexander 0/43 is a completionState wrapper JSON parsing bug (E27-related), NOT an extraction issue — MinerU has zero effect on this. Fix completionState separately (prerequisite). Per-provider accuracy breakdown documented. |
+| E31-S6 | Dual-Provider Benchmark | 2 | Broadmeadows: 31/31 (consensus >= single-provider). Alexander: ≥40/43 baseline (post-completionState fix), ≥42/43 stretch goal. **Note**: Alexander 0/43 is a completionState wrapper JSON parsing bug (E27-related), NOT an extraction issue — MinerU has zero effect on this. Fix completionState separately (prerequisite). Per-provider accuracy breakdown documented. |
+| E31-S7 | PipelineEventBus + SSE Infrastructure | 3 | In-memory event bus (asyncio.Queue). Three SSE endpoint categories (extraction, AI processing, bulk). Zustand streaming store. SSE triggers React Query refetch. Extends existing E27 SSE infrastructure. Moved from E34 to resolve E33-S1 timing dependency. |
 
 **Dependencies**: E30 (schema freeze).
 
@@ -226,17 +227,17 @@ Phase 5: Review & Export
 
 **Dependencies**: E30 (schema), E32 (AI processing produces data for grid).
 
-### Epic 34: Integration, Streaming & Polish (12 SP, 5 stories)
+### Epic 34: Integration, Streaming & Polish (9 SP, 4 stories)
 
-**Goal**: Full SSE streaming, AG-UI integration, performance, documentation.
+**Goal**: Record streaming, bulk operations, performance, documentation.
+**Note**: SSE infrastructure (PipelineEventBus + SSE Endpoints) moved to E31-S7 to resolve E33-S1 timing dependency.
 
 | # | Story | SP | Description |
 |---|-------|----|-------------|
-| E34-S1 | PipelineEventBus + SSE Endpoints | 3 | In-memory event bus. Three SSE endpoint categories (extraction, AI processing, bulk). Zustand streaming store. SSE triggers React Query refetch. |
-| E34-S2 | Record-by-Record Streaming | 2 | Records appear in AG Grid as validated. Officers work on completed buildings while extraction continues. Building completion events. |
-| E34-S3 | Bulk Operations | 2 | Multi-select in AG Grid. Bulk edit (change field for selected records). Bulk validate (re-run SF validation). Bulk export (selected buildings). SSE progress. |
-| E34-S4 | Performance Optimization | 2 | Broadmeadows < 120s total pipeline. Alexander < 300s. GPU memory management. Provider execution optimization. |
-| E34-S5 | Canonical Artifact Update | 3 | PRD v3.0, Architecture doc v3.0, Epics-and-stories v3.0, Sprint-status.yaml, Frontend type contracts. BMAD story files for all stories. |
+| E34-S1 | Record-by-Record Streaming | 2 | Records appear in AG Grid as validated. Officers work on completed buildings while extraction continues. Building completion events. |
+| E34-S2 | Bulk Operations | 2 | Multi-select in AG Grid. Bulk edit (change field for selected records). Bulk validate (re-run SF validation). Bulk export (selected buildings). SSE progress. |
+| E34-S3 | Performance Optimization | 2 | Broadmeadows < 120s total pipeline. Alexander < 300s. GPU memory management. Provider execution optimization. |
+| E34-S4 | Canonical Artifact Update | 3 | PRD v3.0, Architecture doc v3.0, Epics-and-stories v3.0, Sprint-status.yaml, Frontend type contracts. BMAD story files for all stories. |
 
 **Dependencies**: E30-E33 (builds on all prior epics).
 
@@ -246,12 +247,12 @@ Phase 5: Review & Export
 
 | Epic | Stories | SP | Duration Est. | Critical Path? |
 |------|---------|---:|:------------:|:--------------:|
-| E30: Foundation & SF Schema | 8 | 20 | 8-10 days | **YES** — gates all others |
-| E31: Multi-Provider Extraction | 6 | **17** | 6-8 days | YES — gates E32 |
-| E32: AI Processing & Validation | 6 | 18 | 6-8 days | YES — gates E33 |
-| E33: Frontend & UX | 7 | 22 | 8-10 days | Partial (S1-S2 gate S3-S7) |
-| E34: Integration & Polish | 5 | 12 | 4-5 days | No (parallelizable) |
-| **TOTAL** | **32** | **89** | **~32-42 days** | |
+| E30: Foundation & SF Schema | 8 | 29 | 8-10 days | **YES** — gates all others |
+| E31: Multi-Provider Extraction | 7 | **18** | 6-8 days | YES — gates E32 |
+| E32: AI Processing & Validation | 6 | 16 | 6-8 days | YES — gates E33 |
+| E33: Frontend & UX | 8 | 25 | 8-10 days | Partial (S1-S2 gate S3-S8) |
+| E34: Integration & Polish | 4 | 9 | 4-5 days | No (parallelizable) |
+| **TOTAL** | **33** | **97** | **~32-42 days** | |
 
 ### Parallelization Opportunities
 
@@ -264,7 +265,7 @@ E31 (Providers) ─────────────────────�
                                                        │
                       E33-S1,S2 (Core UI) ─────────────┤  ← can start after E30
                                                        │
-                      E33-S3-S7 (Advanced UI) ─────────┤  ← after E32
+                      E33-S3-S8 (Advanced UI) ─────────┤  ← after E32
                                                        │
                       E34 (Integration) ───────────────┘  ← after E32+E33-S2
 
@@ -428,7 +429,7 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
 | Consensus-merged tables | E31-S5 | E32-S1 (AI extraction needs merged tables) | Sequential |
 | AI-processed records | E32-S1, S2 | E33-S2 (grid needs data) | Sequential |
 | Field schema API | E30-S1 | E33-S3 (picklist editors need schema) | Sequential |
-| SSE infrastructure | E34-S1 | E33-S1 (progress page needs SSE) | Parallel (E34-S1 can start early) |
+| SSE infrastructure | E31-S7 | E33-S1 (progress page needs SSE) | Parallel (E31-S7 can start after E31-S5) |
 
 ---
 
@@ -562,5 +563,5 @@ Provider Registry
 ---
 
 *Generated 2026-03-02 by Party Mode Multi-Agent Session*
-*32 stories · 89 SP · 5 epics · ~32-42 days estimated*
+*33 stories · 97 SP · 5 epics · ~32-42 days estimated*
 *Next step: BMAD Planning Cycle — PRD v3.0 → Architecture v3.0 → Epics & Stories → Sprint Planning*
