@@ -76,6 +76,9 @@ P0: Extract HTML to Markdown (pre-step)
 08: Check Implementation Readiness ← gate check
  |
  v
+08b: Readiness Fixes ← resolve CONDITIONAL GO issues (if any)
+ |
+ v
 09: Sprint Planning ← needs approved readiness
  |
  v
@@ -114,6 +117,7 @@ P0: Extract HTML to Markdown (pre-step)
 | 06 | [06-create-ux.md](./06-create-ux.md) | `/bmad-bmm-create-ux-design` | Sally (UX) | UI/UX for wizard, raw tables, provenance |
 | 07 | [07-create-epics.md](./07-create-epics.md) | `/bmad-bmm-create-epics-and-stories` | John (PM) | V3 epic structure |
 | 08 | [08-readiness-check.md](./08-readiness-check.md) | `/bmad-bmm-check-implementation-readiness` | Winston (Arch) | Gate: all artifacts aligned |
+| 08b | [08b-readiness-fixes.md](./08b-readiness-fixes.md) | (direct edits) | Any | Resolve CONDITIONAL GO issues |
 
 ### Implementation Phase (Phase 4)
 | # | File | BMAD Command | Agent | Purpose |
