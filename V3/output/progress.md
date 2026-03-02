@@ -32,6 +32,16 @@
 - Capability registry routing table added (6 task types × providers)
 - Totals updated: 32 stories, 90 SP, ~32-42 days
 
+### MinerU Audit Corrections (same session)
+- CRITICAL: Torch constraint was WRONG (`<2.7`). Actual: `>2.6.0,<3` — our torch 2.10.0 is COMPATIBLE
+- Risk R1 ELIMINATED (no torch conflict)
+- MinerU has 3 backends since v2.7.0: pipeline, VLM, hybrid. Selected: hybrid (default)
+- E31-S1 simplified from 3→2 SP (no subprocess bridge needed)
+- E31-S6 Alexander benchmark separated: completionState fix first (E27 bug), then MinerU delta
+- Consensus normalizer must handle VLM image-based output (not just HTML tables)
+- CUDA 12.6 compat added as low-risk R11
+- Totals revised: 32 stories, 89 SP, ~32-42 days
+
 ### Next Steps
 1. BMAD: PRD v3.0 (/bmad:mmm:edit-prd)
 2. BMAD: Architecture v3.0 (/bmad:mmm:create-architecture)
@@ -39,8 +49,8 @@
 4. BMAD: Sprint Planning (/bmad:mmm:sprint-planning)
 
 ### Reboot Check
-1. Last milestone: v3-party-mode-plan.md updated with Q1-Q6 resolutions + AI provider clarification
+1. Last milestone: v3-party-mode-plan.md updated with MinerU audit corrections (torch compat, 3 backends, Alexander fix)
 2. Current task: None (planning complete)
 3. Blockers: None
-4. Last files modified: V3/output/v3-party-mode-plan.md, V3/output/progress.md
+4. Last files modified: V3/output/v3-party-mode-plan.md, V3/output/progress.md, V3/output/findings.md
 5. Next action: Begin BMAD planning cycle (PRD v3.0)

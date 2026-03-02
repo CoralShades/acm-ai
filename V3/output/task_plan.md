@@ -29,3 +29,20 @@
 - [x] Update E30-S8: OpenRouter fallback preservation
 - [x] Update totals: 32 stories, 90 SP
 - [x] Update planning support files (progress.md, findings.md)
+
+## Phase: MinerU Audit Corrections
+
+- [x] CORRECTION 1: Fix torch constraint — `>2.6.0,<3` (compatible), not `<2.7`
+- [x] CORRECTION 2: Add 3 MinerU backends (pipeline/VLM/hybrid), select hybrid
+- [x] CORRECTION 3: Separate Alexander benchmark — completionState bug vs MinerU delta
+- [x] CORRECTION 4: Add CUDA 12.6 verification checkpoint (low risk R11)
+- [x] Eliminate Risk R1 (torch conflict)
+- [x] Update Q3 resolution (no subprocess bridge needed)
+- [x] Simplify E31-S1 from 3→2 SP
+- [x] Update E31-S2 adapter description (VLM output normalization)
+- [x] Update E31-S6 benchmark (separate Alexander targets)
+- [x] Update consensus layer design (VLM image-based output handling)
+- [x] Update raw_extraction_table schema (extraction_backend field)
+- [x] Update Pipeline Phase 1 (hybrid backend)
+- [x] Update totals: 32 stories, 89 SP
+- [x] Update planning support files

@@ -19,9 +19,10 @@
 | Storage model | Unified `acm_table_section` + `provider_results` JSONB column | One row per consensus table, per-provider raw output for provenance |
 | Voting algorithm | Per-field confidence-weighted voting (stages 1-3 only for V1) | Stage 1: key-field anchor, Stage 2: fuzzy string, Stage 3: row position. Skip embedding semantic for V1 |
 | Confidence thresholds | HIGH (all agree), MEDIUM (2/3 agree), LOW (1 provider), CONTESTED (disagree on high-stakes field) | Tier assignment drives UI badges and human review priority |
-| MinerU 2.x torch constraint | Test `--dry-run` first. Fallback: subprocess bridge | `torch 2.10` vs `mineru` constraint `<2.7`. Risk: medium. Mitigation: subprocess bridge adds ~2s latency |
-| PaddlePaddle isolation | Subprocess bridge (not Docker) for local dev | Docker for production. Subprocess keeps dev simple |
-| GPU sharing | Sequential execution: Docling first (~22s), then MinerU (~14s) | 24 GB VRAM sufficient for either. Avoid fragmentation. Total: ~36s dual-provider |
+| MinerU 2.x torch constraint | **COMPATIBLE — no conflict.** Direct install in main venv | MinerU pyproject.toml requires `torch>2.6.0,<3`. Our torch 2.10.0+cu126 satisfies both bounds. Verified 2026-03-02 from MinerU master branch |
+| PaddlePaddle isolation | **Likely unnecessary.** MinerU pyproject.toml shows NEITHER `paddlepaddle` NOR `paddleocr2torch` as direct deps | Verify at install time (E31-S1). If any transitive paddle dep surfaces, subprocess bridge is proven fallback |
+| MinerU backend | **hybrid** (default since v2.7.0) — `mineru[all]` | Three backends: pipeline (fast, ~6GB), VLM (1.2B param vision model, ~10GB, highest accuracy), hybrid (auto-routes simple→pipeline, complex→VLM). Hybrid maximizes consensus diversity: Docling = structure-based, MinerU VLM = vision-based |
+| GPU sharing | Sequential execution: Docling first (~4 GB, ~22s), then MinerU hybrid (~10 GB, ~15-20s) | 24 GB RTX 4090 sufficient for either. Avoid fragmentation. Total: ~37-42s dual-provider |
 | E29 interaction | Extends `strategy_registry.py` with `F9_PROVIDER_CONFLICT`, `F10_CONSENSUS_ARBITRATION` | Clean fit with existing fallback contract |
 | Implement now vs later | Docling + MinerU 2.x NOW. Google Doc AI FUTURE epic | Zero cloud dependency, fine-tunable, cross-page stitching (MinerU), ~6.5 SP vs 8-12 SP |
 
@@ -115,8 +116,8 @@ source
 
 ```
 Phase 1: PDF Processing
-  PDF → PyMuPDF (text) + Docling (tables) + MinerU (tables)
-  → raw_extraction_table (per-provider)
+  PDF → PyMuPDF (text) + Docling (structure-based tables) + MinerU hybrid (vision-based VLM + pipeline)
+  → raw_extraction_table (per-provider, includes VLM image-based output)
   → Consensus Layer (merge → unified tables)
   → acm_table_section (consensus-merged)
 
@@ -179,18 +180,18 @@ Phase 5: Review & Export
 
 **Dependencies**: E29 S1-S4 (completed). No external dependencies.
 
-### Epic 31: Multi-Provider Extraction (18 SP, 6 stories)
+### Epic 31: Multi-Provider Extraction (17 SP, 6 stories)
 
-**Goal**: Add MinerU 2.x as second extraction provider, build consensus layer.
+**Goal**: Add MinerU 2.x (hybrid backend) as second extraction provider, build consensus layer.
 
 | # | Story | SP | Description |
 |---|-------|----|-------------|
-| E31-S1 | MinerU 2.x Integration + Validation | 3 | Install MinerU in main venv (or subprocess bridge if torch conflict). Verify no dependency conflicts. Run on Broadmeadows, compare to Docling. |
-| E31-S2 | Provider Adapter Framework | 3 | ExtractionProvider protocol. DoclingAdapter (refactor existing). MinerUAdapter. NormalizedExtractionResult schema. Provider registry. |
+| E31-S1 | MinerU 2.x Integration + Validation | 2 | Install `mineru[all]` (hybrid backend) in main venv. Verify torch 2.10.0 + CUDA 12.6 compatibility. Test hybrid vs pipeline vs VLM accuracy on Broadmeadows. Compare to Docling. Select backend for production. |
+| E31-S2 | Provider Adapter Framework | 3 | ExtractionProvider protocol. DoclingAdapter (refactor existing, structure-based HTML). MinerUAdapter (handles hybrid: VLM image-based markdown + pipeline HTML). NormalizedExtractionResult schema must normalize both output types. Provider registry. |
 | E31-S3 | Consensus Layer Core | 3 | RecordMatcher (stages 1-3). ConsensusEngine (per-field weighted voting). ConflictResolver (weighted majority + provider priority). Confidence tier assignment. |
 | E31-S4 | Raw Extraction Table + Storage | 2 | New raw_extraction_table migration. Store per-provider raw output. Link to acm_table_section via consensus merge. Provider metadata JSONB. |
 | E31-S5 | Pipeline Integration | 3 | Wire providers into orchestrator (parallel sequential execution). Emit consensus telemetry via PipelineLogger. Strategy registry F9/F10 fallbacks. |
-| E31-S6 | Dual-Provider Benchmark | 2 | Broadmeadows: 31/31 (consensus >= single-provider). Alexander: >= 42/43 (cross-page stitching improvement). Per-provider accuracy breakdown documented. |
+| E31-S6 | Dual-Provider Benchmark | 2 | Broadmeadows: 31/31 (consensus >= single-provider). Alexander: measure MinerU improvement delta AFTER completionState fix baseline (~40/43). **Note**: Alexander 0/43 is a completionState wrapper JSON parsing bug (E27-related), NOT an extraction issue — MinerU has zero effect on this. Fix completionState separately (prerequisite). Per-provider accuracy breakdown documented. |
 
 **Dependencies**: E30 (schema freeze).
 
@@ -246,11 +247,11 @@ Phase 5: Review & Export
 | Epic | Stories | SP | Duration Est. | Critical Path? |
 |------|---------|---:|:------------:|:--------------:|
 | E30: Foundation & SF Schema | 8 | 20 | 8-10 days | **YES** — gates all others |
-| E31: Multi-Provider Extraction | 6 | 18 | 6-8 days | YES — gates E32 |
-| E32: AI Processing & Validation | **6** | **18** | 6-8 days | YES — gates E33 |
+| E31: Multi-Provider Extraction | 6 | **17** | 6-8 days | YES — gates E32 |
+| E32: AI Processing & Validation | 6 | 18 | 6-8 days | YES — gates E33 |
 | E33: Frontend & UX | 7 | 22 | 8-10 days | Partial (S1-S2 gate S3-S7) |
 | E34: Integration & Polish | 5 | 12 | 4-5 days | No (parallelizable) |
-| **TOTAL** | **32** | **90** | **~32-42 days** | |
+| **TOTAL** | **32** | **89** | **~32-42 days** | |
 
 ### Parallelization Opportunities
 
@@ -277,16 +278,17 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
 
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|------|:---------:|:------:|------------|
-| R1 | **MinerU 2.x torch constraint blocks main-venv install** | Medium | High | Subprocess bridge fallback (adds ~2-3 SP). Test `--dry-run` in E31-S1 before committing to integration approach. |
+| ~~R1~~ | ~~MinerU 2.x torch constraint~~ | **ELIMINATED** | — | MinerU requires `torch>2.6.0,<3`. Our torch 2.10.0+cu126 is compatible. No subprocess bridge needed. |
 | R2 | **SF schema complexity causes prompt regression** | Medium | High | Schema freeze gate between E30 and E31/E32. Benchmark gated: Broadmeadows 31/31 at every story. |
-| R3 | **Consensus layer adds latency beyond target** | Medium | Medium | Sequential GPU execution. Record matching < 1s. Net latency ≈ max(Docling, MinerU) + 1s. Target: < 40s dual-provider. |
+| R3 | **Consensus layer adds latency beyond target** | Medium | Medium | Sequential GPU execution. Record matching < 1s. Net latency ≈ max(Docling, MinerU hybrid) + 1s. Target: < 42s dual-provider. |
 | R4 | **33+ test files need BAR→SF fixture updates** | High | Medium | E30-S6 dedicated story for vocabulary transition. Automate with find-and-replace scripts where possible. |
 | R5 | **AG Grid dependent picklist cascading is complex** | Medium | Medium | AG Grid Enterprise has built-in support via `getValues()`. Prototype in E33-S3 before committing to full implementation. |
 | R6 | **PDF.js provenance viewer performance on large PDFs** | Low | Medium | Lazy-load pages. Only render the page containing the target bbox. Don't load entire 50-page PDF into memory. |
 | R7 | **Consensus false positives (different records matched as same)** | Low | High | Conservative threshold (0.85). MEDIUM tier flags for human review. Unit tests with edge cases. |
 | R8 | **E29 S1-S4 code needs refactoring for SF alignment** | Medium | Medium | E30-S8 (Anthropic direct) and E30-S4 (validator) explicitly address E29 integration points. |
-| R9 | **Production PDF format diversity breaks extraction** | High | High | Design for 3 providers, implement 2. MinerU cross-page stitching addresses the biggest gap. Fine-tuning available for new formats. |
+| R9 | **Production PDF format diversity breaks extraction** | High | High | Design for 3 providers, implement 2. MinerU hybrid (VLM + pipeline) maximizes format coverage. Fine-tuning available for new formats. |
 | R10 | **Sprint duration exceeds estimate** | Medium | Medium | Parallelization (E33-S1,S2 alongside E31). Schema freeze gate prevents cascading delays. |
+| R11 | **CUDA 12.6 compatibility with MinerU VLM backend** | Low | Medium | Torch handles CUDA compatibility internally. Verify in E31-S1 install step. Our CUDA 12.6 should work but one source claims 12.8+ needed. |
 
 ---
 
@@ -296,7 +298,7 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
 |---|----------|:------:|------------|
 | Q1 | **Building_Sub_Category__c** — Does this dependency chain (BuildingType→Category→SubCategory) exist? | **RESOLVED** | **NO.** `Building_Sub_Category__c` does not exist as a field in `building_fields_summary.md`. The chain is `Building_Type__c → Building_Category__c` only (2 levels). Simplified in E30-S4 accordingly. |
 | Q2 | **Validation policy: warn vs reject** | **RESOLVED** | **WARN during extraction/editing, REJECT on export.** Officers must fix all validation errors before generating SF Data Loader CSV. Inline AG Grid badges (red/orange/yellow) during editing. Export button grayed out with "X validation errors" message until resolved. |
-| Q3 | **MinerU 2.x torch compatibility** | **RESOLVED** | **Keep as test task in E31-S1.** If torch 2.10 conflicts with MinerU's `<2.7` constraint, use subprocess bridge pattern (already proven with `.venv-mineru/`). Budget 3 SP contingency for bridge. |
+| Q3 | **MinerU 2.x torch compatibility** | **RESOLVED** | **NO CONFLICT.** MinerU requires `torch>2.6.0,<3` (verified from pyproject.toml master branch 2026-03-02). Our torch 2.10.0+cu126 satisfies both bounds. Direct `pip install mineru[all]` in main venv. No subprocess bridge needed. Verify CUDA 12.6 compat in E31-S1. |
 | Q4 | **Google Doc AI procurement** | **RESOLVED** | **Confirmed deferred.** Not in V3 scope. Future epic only. |
 | Q5 | **Cell-level bbox storage** | **RESOLVED** | **Accepted.** ~250KB per document is negligible. Proceed with cell-level storage. |
 | Q6 | **E29 R1/R2 carry-forward** | **RESOLVED** | **Review during E32 story writing.** Not blocking V3 planning. Carry forward applicable fixes as needed. |
@@ -437,6 +439,7 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
 DEFINE TABLE raw_extraction_table SCHEMAFULL;
 DEFINE FIELD source_id ON raw_extraction_table TYPE record<source>;
 DEFINE FIELD provider_id ON raw_extraction_table TYPE string;      -- "docling", "mineru", "google_docai"
+DEFINE FIELD extraction_backend ON raw_extraction_table TYPE option<string>;  -- "pipeline", "vlm", "hybrid", null (for non-MinerU providers)
 DEFINE FIELD page_number ON raw_extraction_table TYPE int;
 DEFINE FIELD raw_html ON raw_extraction_table TYPE option<string>;
 DEFINE FIELD raw_markdown ON raw_extraction_table TYPE option<string>;
@@ -491,12 +494,13 @@ DEFINE FIELD edit_history ON acm_record TYPE option<array<object>>; -- [{user, f
 
 ```
 Provider Registry
-  ├── DoclingAdapter  → NormalizedExtractionResult
-  ├── MinerUAdapter   → NormalizedExtractionResult
+  ├── DoclingAdapter  → NormalizedExtractionResult  (structure-based: HTML tables)
+  ├── MinerUAdapter   → NormalizedExtractionResult  (hybrid: VLM image-based markdown + pipeline HTML)
   └── (Future: GoogleDocAIAdapter)
            │
     Result Normalizer
     Provider-specific → NormalizedRecord[]
+    (Must handle: HTML tables from Docling/pipeline, structured markdown from VLM, mixed output from hybrid)
            │
     Record Matcher (3 stages)
     Stage 1: Key-field anchor (page, building, room, product) — ~75%
@@ -558,5 +562,5 @@ Provider Registry
 ---
 
 *Generated 2026-03-02 by Party Mode Multi-Agent Session*
-*32 stories · 90 SP · 5 epics · ~32-42 days estimated*
+*32 stories · 89 SP · 5 epics · ~32-42 days estimated*
 *Next step: BMAD Planning Cycle — PRD v3.0 → Architecture v3.0 → Epics & Stories → Sprint Planning*
