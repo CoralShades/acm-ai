@@ -161,7 +161,7 @@ Phase 5: Review & Export
 
 ## 3. Epic Boundary Recommendations
 
-### Epic 30: Foundation & SF Schema (20 SP, 8 stories)
+### Epic 30: Foundation & SF Schema (29 SP, 8 stories)
 
 **Goal**: SF schema infrastructure, data model split, dependent picklist validation.
 
@@ -169,11 +169,11 @@ Phase 5: Review & Export
 |---|-------|----|-------------|
 | E30-S1 | SF Schema Config Loader | 5 | Parse building_list.txt + item_list.txt → JSON configs. Load into field_schema table. Dependency chain mappings. Startup loading. |
 | E30-S2 | Building Record Table + Domain Model | 5 | New migration: building_record with 29 extractable SF fields. BuildingRecord Pydantic model. Master-detail FK: acm_record.building_id → building_record.id. CRUD API endpoints. |
-| E30-S3 | ACM Record SF Item__c Alignment | 4 | Additive migration (new SF fields alongside old). Pydantic aliases for 35+ fields. 294-value Item_Name picklist. Dual-schema coexistence during cutover. |
+| E30-S3 | ACM Record SF Item__c Alignment | 3 | Additive migration (new SF fields alongside old). Pydantic aliases for 35+ fields. 294-value Item_Name picklist. Dual-schema coexistence during cutover. |
 | E30-S4 | Dependent Picklist Validator | 5 | SalesforcePicklistValidator class. Friability→Classification→SubClassification (18 groups × 2 friability = 36 combos). BuildingType→Category (114→13, **NO SubCategory** — confirmed absent from SF schema). Strict case-sensitive. WARN during editing, REJECT on export. |
 | E30-S5 | Data Migration Script | 3 | Migrate existing acm_record building fields to building_record. "Good"→"Stable" vocabulary migration. Rollback plan. |
 | E30-S6 | BAR→SF Vocabulary Transition | 2 | Cross-cutting: update BAR field names→SF names in validators, normalizers, test fixtures (33+ files). "Good"→"Stable", "T3 Vinyl products"→"Vinyl products". |
-| E30-S7 | Two-Phase Extraction Prompts | 4 | New Building__c extraction prompt (SF field names, constrained picklists). Updated Item__c extraction prompt (SF vocabulary, dynamic picklist injection, Item_Name subsetting by Product Group). |
+| E30-S7 | Two-Phase Extraction Prompts | 3 | New Building__c extraction prompt (SF field names, constrained picklists). Updated Item__c extraction prompt (SF vocabulary, dynamic picklist injection, Item_Name subsetting by Product Group). |
 | E30-S8 | Anthropic Claude Direct API + OpenRouter Fallback | 3 | Add direct ChatAnthropic extraction path as DEFAULT. Preserve OpenRouter as FALLBACK (admin toggle). Capability registry extension with `ModelPolicy` routing. Esperanto retained for non-extraction tasks. Feature-flag for transition. Benchmarks pass. |
 
 **Schema Freeze Gate after E30-S6** — all downstream epics depend on stable SF schema.
@@ -196,14 +196,14 @@ Phase 5: Review & Export
 
 **Dependencies**: E30 (schema freeze).
 
-### Epic 32: AI Processing & Validation (18 SP, 6 stories)
+### Epic 32: AI Processing & Validation (16 SP, 6 stories)
 
 **Goal**: Two-phase Building + Item extraction, SF-aligned validation, correction loop, Ollama model evaluation.
 
 | # | Story | SP | Description |
 |---|-------|----|-------------|
-| E32-S1 | Building__c AI Extraction Node | 4 | New orchestrator node: extract Building__c fields per building using Claude Sonnet. Pydantic BuildingExtractionResult. Store as building_record. |
-| E32-S2 | Item__c AI Extraction Node | 4 | New orchestrator node: extract Item__c fields per building using Claude Sonnet. Pydantic ACMItemExtractionResult. Link to building_record via FK. Item_Name subsetting by Product Group. |
+| E32-S1 | Building__c AI Extraction Node | 3 | New orchestrator node: extract Building__c fields per building using Claude Sonnet. Pydantic BuildingExtractionResult. Store as building_record. |
+| E32-S2 | Item__c AI Extraction Node | 3 | New orchestrator node: extract Item__c fields per building using Claude Sonnet. Pydantic ACMItemExtractionResult. Link to building_record via FK. Item_Name subsetting by Product Group. |
 | E32-S3 | SF Validation + Correction Loop | 3 | Pydantic validation against SF schema. Picklist validation (exact case-sensitive). Dependency chain enforcement. AI correction with single-record context (max 3 retries). Negative→N/A business rule. |
 | E32-S4 | Classifier Update (SF Taxonomy) | 2 | Update regex patterns from BAR taxonomy to SF ACM_Classification/ACM_Sub_Classification values. 18 classification groups × friability. |
 | E32-S5 | Extraction Pipeline E2E Test | 3 | Upload→extract (dual provider)→consensus→AI extraction→validation→correction→save. Broadmeadows 31/31, Alexander >= 42/43. All picklist values valid SF values. |
@@ -211,19 +211,20 @@ Phase 5: Review & Export
 
 **Dependencies**: E30 (schema), E31 (providers).
 
-### Epic 33: Frontend & UX (22 SP, 7 stories)
+### Epic 33: Frontend & UX (25 SP, 8 stories)
 
 **Goal**: Upload wizard, building/item views, provenance, raw tables, export.
 
 | # | Story | SP | Description |
 |---|-------|----|-------------|
-| E33-S1 | Upload Wizard + Extraction Progress | 4 | 3-step wizard: drop PDF, select provider mode (Quick/Thorough), extract. SSE-powered progress page with stage labels, building cards. |
-| E33-S2 | Building Grid + Item Grid (Two-View) | 4 | Building list sidebar. Item grid per building. AG Grid columns from field_schema. BuildingRecord + ACMRecord data contracts. |
+| E33-S1 | Upload Wizard + Extraction Progress | 3 | 3-step wizard: drop PDF, select provider mode (Quick/Thorough), extract. SSE-powered progress page with stage labels, building cards. |
+| E33-S2 | Building Grid + Item Grid (Two-View) | 5 | Building list sidebar. Item grid per building. AG Grid columns from field_schema. BuildingRecord + ACMRecord data contracts. |
 | E33-S3 | Dependent Picklist Cell Editors | 3 | AG Grid custom cell editors for SF dependent picklists. Friability→Classification→SubClassification cascading. BuildingType→Category cascading. |
 | E33-S4 | SF Validation Badges + Record Wizard | 3 | Inline validation badges in AG Grid (red/orange/yellow). Record wizard modal for editing with SF picklist guidance. Bulk "Fix all" operations. |
 | E33-S5 | Raw Table Review (Opt-In) | 3 | Editable AG Grid showing raw extraction output. Officer corrections saved to raw_extraction_table.officer_edits[]. Link to AI processing. |
 | E33-S6 | Provenance Viewer | 3 | PDF.js rendering with bbox overlay. Extraction lineage table: provider, model, confidence, edit history. Slide-over panel from record row "Source" button. |
-| E33-S7 | Salesforce-Ready Export | 2 | Building__c.csv + Item__c.csv with exact SF API field names. Excel with two sheets. External ID for parent-child Data Loader matching. Site config merge. |
+| E33-S7 | Building Detail Page | 3 | Dedicated building detail view with 29+ editable Building__c fields, grouped form layout, BuildingType→Category cascading, SF picklist dropdowns, validation badges. |
+| E33-S8 | Salesforce-Ready Export | 2 | Building__c.csv + Item__c.csv with exact SF API field names. Excel with two sheets. External ID for parent-child Data Loader matching. Site config merge. |
 
 **Dependencies**: E30 (schema), E32 (AI processing produces data for grid).
 
@@ -399,23 +400,23 @@ Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
    └────────┬────────┘            │
             │                     │
             ▼                     ▼
-   E33-S3 through S7: Advanced UI
+   E33-S3 through S8: Advanced UI
    ┌────────────────────────────┐
    │ S3: Picklist Editors       │
    │ S4: Validation Badges      │
    │ S5: Raw Table Review       │
    │ S6: Provenance Viewer      │
-   │ S7: SF Export              │
+   │ S7: Building Detail        │
+   │ S8: SF Export              │
    └────────────┬───────────────┘
                 │
                 ▼
    E34: Integration & Polish
    ┌────────────────────────────┐
-   │ S1: EventBus + SSE        │
-   │ S2: Record Streaming      │
-   │ S3: Bulk Operations       │
-   │ S4: Performance           │
-   │ S5: Artifact Update       │
+   │ S1: Record Streaming      │
+   │ S2: Bulk Operations       │
+   │ S3: Performance           │
+   │ S4: Artifact Update       │
    └────────────────────────────┘
 ```
 

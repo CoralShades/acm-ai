@@ -2765,10 +2765,10 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 | Epic | Title | Stories | SP | Critical Path? |
 |------|-------|--------:|---:|:--------------:|
 | E30 | V3 Foundation — Schema + Config | 8 | 29 | **YES** — gates all others |
-| E31 | V3 Multi-Provider Extraction | 6 | 15 | YES — gates E32 |
+| E31 | V3 Multi-Provider Extraction | 7 | 18 | YES — gates E32 |
 | E32 | V3 AI Processing & Validation | 6 | 16 | YES — gates E33 advanced |
 | E33 | V3 Frontend & UX | 8 | 25 | Partial (S1-S2 can start after E30) |
-| E34 | V3 Integration, Streaming & Polish | 5 | 12 | No (parallelizable) |
+| E34 | V3 Integration, Streaming & Polish | 4 | 9 | No (parallelizable) |
 | **TOTAL** | | **33** | **97** | |
 
 ## V3 Dependency Graph
