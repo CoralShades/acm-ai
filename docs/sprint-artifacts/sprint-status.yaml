@@ -423,7 +423,7 @@ development_status:
   e30-s1-sf-schema-config-loader: done                # 5 SP. No deps. FIRST V3 STORY — completed 2026-03-03
   e30-s2-building-record-table-domain-model: backlog  # 5 SP. Blocked by S1. New building_record table + BuildingRecord model
   e30-s3-acm-record-sf-item-alignment: done            # 3 SP. Blocked by S1. Pydantic SF aliases for Item__c fields — completed 2026-03-03
-  e30-s4-dependent-picklist-validator: backlog         # 5 SP. Blocked by S1. SalesforcePicklistValidator + dependency chains
+  e30-s4-dependent-picklist-validator: done             # 5 SP. SalesforcePicklistValidator + dependency chains. 187 tests.
   e30-s5-data-migration-script: backlog               # 3 SP. Blocked by S2, S3. Migrate existing records to new schema
   e30-s6-bar-sf-vocabulary-transition: backlog         # 2 SP. Blocked by S3. BAR→SF vocab in validators, prompts, 33+ test files
   # ═══ SCHEMA FREEZE GATE after S6 ═══ — E31/E32/E33/E34 blocked until S1-S6 done
