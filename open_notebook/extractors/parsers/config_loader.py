@@ -368,7 +368,7 @@ def _build_default_config() -> FieldSchemaConfig:
             "Condition": [
                 "Poor",
                 "Fair",
-                "Good",
+                "Stable",
                 "Unknown",
                 "N/A (negative)",
                 "N/A (assumed negative)",

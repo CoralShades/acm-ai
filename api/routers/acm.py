@@ -1659,7 +1659,7 @@ async def classify_acm_item(request: ClassifyRequest):
         POST /api/acm/classify
         {"item_description": "Vinyl floor tiles", "friability": "Non-friable"}
 
-    Returns the product group (e.g., "T3 Vinyl products") and product type
+    Returns the product group (e.g., "Vinyl products") and product type
     (e.g., "Vinyl Tiles") with a confidence score.
     """
     try:

@@ -197,8 +197,8 @@ Asbestos-containing material
 - material_description: "Vinyl Tiles"
 - extent: "2m2"
 - location: "Throughout"
-- friable: "Non Friable"
-- material_condition: "Minimal Damage"
+- friable: "Non-friable"
+- material_condition: "Stable"
 - risk_status: "Low"
 - result: "Positive"
 - sample_result: "Positive"
@@ -288,7 +288,7 @@ Current Label: None
 - product: "Eaves"
 - material_description: "Flat Cement Sheeting - Painted White"
 - friable: "Non-friable"
-- material_condition: "Good"
+- material_condition: "Stable"
 - disturbance_potential: "Low"
 - risk_status: "Low"
 - result: "Assumed Positive"
@@ -336,7 +336,7 @@ Negative
    - "Presumed Negative" → sample_result: "Assumed Negative", result: "Assumed Negative"
    - "Previously Sampled" followed by status → use that status
 6. **Risk assessment fields** (only for positive/presumed positive items):
-   - `Condition:` → material_condition (map: "Good Condition"→"Good", "Fair Condition"→"Fair", "Poor Condition"→"Poor")
+   - `Condition:` → material_condition (map: "Good Condition"→"Stable", "Stable"→"Stable", "Fair Condition"→"Fair", "Poor Condition"→"Poor")
    - `Friability:` → friable (map: "Non-Friable"→"Non-friable", "Friable"→"Friable")
    - `Dist. Potential:` → disturbance_potential (map: "Low"→"Low", "Medium"→"Moderate", "High"→"High")
    - `Risk Rating:` → risk_status (extract Low/Medium/High from the value)

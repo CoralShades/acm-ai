@@ -60,7 +60,7 @@ class TestFriableValidator:
 
     def test_non_friable_variant(self):
         req = ACMRecordUpdateRequest(friable="non-friable")
-        assert req.friable == "Non Friable"
+        assert req.friable == "Non-friable"
 
     def test_invalid_raises(self):
         with pytest.raises(ValidationError, match="friable must be one of"):
@@ -85,7 +85,7 @@ class TestRiskStatusValidator:
 
 class TestMaterialConditionValidator:
     def test_valid_values(self):
-        for val in ["Good", "Fair", "Poor", "Damaged"]:
+        for val in ["Stable", "Fair", "Poor", "Unknown"]:
             req = ACMRecordUpdateRequest(material_condition=val)
             assert req.material_condition == val
 

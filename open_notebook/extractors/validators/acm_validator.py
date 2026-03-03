@@ -105,7 +105,7 @@ def _normalize_enum_for_validation(field_name: str, raw_value: str) -> Optional[
         if lowered in {"friable", "f"}:
             return "Friable"
         if lowered in {"non friable", "nonfriable", "nf"}:
-            return "Non Friable"
+            return "Non-friable"
         if lowered in {"none", "n/a", "na", "unknown", "-"}:
             return None
         return raw_value.strip()

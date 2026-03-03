@@ -27,7 +27,7 @@ class TestValidateEnumFields:
         """Valid canonical BAR enum values should produce no issues."""
         record = {
             "sample_result": "Positive",
-            "material_condition": "Good",
+            "material_condition": "Stable",
             "friable": "Non-friable",
             "disturbance_potential": "High",
         }
@@ -145,7 +145,7 @@ class TestValidateBusinessRules:
         """Negative result should flag non-N/A condition."""
         record = {
             "sample_result": "Negative",
-            "material_condition": "Good",
+            "material_condition": "Stable",
             "disturbance_potential": "Low",
         }
         issues = validate_business_rules(record)
@@ -200,7 +200,7 @@ class TestValidateBusinessRules:
         """Missing sample_result should skip business rule checks."""
         record = {
             "sample_result": None,
-            "material_condition": "Good",
+            "material_condition": "Stable",
         }
         issues = validate_business_rules(record)
         assert len(issues) == 0
@@ -243,7 +243,7 @@ class TestValidateACMRecord:
             "product": "Floor Tiles",
             "material_description": "Vinyl tiles",
             "sample_result": "Positive",
-            "material_condition": "Good",
+            "material_condition": "Stable",
             "friable": "Non-friable",
             "disturbance_potential": "Low",
         }
@@ -273,7 +273,7 @@ class TestValidateACMRecord:
             "product": "Floor Tiles",
             "material_description": "Vinyl tiles",
             "sample_result": "Negative",
-            "material_condition": "Good",  # BAR says should be N/A (negative)
+            "material_condition": "Stable",  # BAR says should be N/A (negative)
             "disturbance_potential": "Low",  # BAR says should be N/A (negative)
         }
         result = validate_acm_record(record)
@@ -475,7 +475,7 @@ class TestCorrectiveLoopRouter:
             material_description="Vinyl tiles",
             result="Positive",
             sample_result="Bonded",  # Invalid enum
-            material_condition="Good",
+            material_condition="Stable",
             friable="Non-friable",
             disturbance_potential="Low",
         )
@@ -501,7 +501,7 @@ class TestCorrectiveLoopRouter:
             material_description="Vinyl tiles",
             result="Positive",
             sample_result="Positive",
-            material_condition="Good",
+            material_condition="Stable",
             friable="Non-friable",
             disturbance_potential="Low",
         )
@@ -527,7 +527,7 @@ class TestCorrectiveLoopRouter:
             material_description="Vinyl tiles",
             result="Positive",
             sample_result="Bonded",  # Still invalid after max attempts
-            material_condition="Good",
+            material_condition="Stable",
             friable="Non-friable",
             disturbance_potential="Low",
         )
@@ -553,7 +553,7 @@ class TestCorrectiveLoopRouter:
             material_description="Vinyl tiles",
             result="Positive",
             sample_result="Bonded",  # Has issues, but loop disabled
-            material_condition="Good",
+            material_condition="Stable",
             friable="Non Friable",
             disturbance_potential="Low",
         )

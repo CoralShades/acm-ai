@@ -341,7 +341,7 @@ class ACMRecord(ObjectModel):
     acm_product_group: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("acm_product_group", "ACM_Classification__c"),
-        description="BAR taxonomy product group (e.g., 'T3 Vinyl products')",
+        description="SF taxonomy product group (e.g., 'Vinyl products')",
     )
     acm_product_type: Optional[str] = Field(
         default=None,

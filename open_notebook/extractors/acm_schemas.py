@@ -32,13 +32,12 @@ RESULT_VALUES = {
     "No Access",
     "Unknown",
 }
-FRIABLE_VALUES = {"Friable", "Non Friable"}
+FRIABLE_VALUES = {"Friable", "Non-friable"}
 RISK_STATUS_VALUES = {"Low", "Medium", "High"}
 MATERIAL_CONDITION_VALUES = {
-    "Good",
+    "Stable",
     "Fair",
     "Poor",
-    "Damaged",
     "Unknown",
     "N/A (negative)",
     "N/A (assumed negative)",
@@ -181,10 +180,10 @@ class ACMExtractionRecord(BaseModel):
         description="Specific location within room (e.g., 'Ceiling', 'Under stairs')",
     )
     friable: Optional[str] = Field(
-        default=None, description="Friability: 'Friable' or 'Non Friable'"
+        default=None, description="Friability: 'Friable' or 'Non-friable'"
     )
     material_condition: Optional[str] = Field(
-        default=None, description="Condition: 'Good', 'Fair', 'Poor', 'Damaged'"
+        default=None, description="Condition: 'Stable', 'Fair', 'Poor', 'Unknown'"
     )
     risk_status: Optional[str] = Field(
         default=None, description="Risk level: 'Low', 'Medium', 'High'"
@@ -282,7 +281,7 @@ class ACMExtractionRecord(BaseModel):
         if lowered in {"friable", "f"}:
             return "Friable"
         if lowered in {"non friable", "nonfriable", "nf"}:
-            return "Non Friable"
+            return "Non-friable"
 
         for valid in FRIABLE_VALUES:
             if lowered == valid.lower():

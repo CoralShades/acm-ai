@@ -575,12 +575,10 @@ class ACMRecordCreateRequest(BaseModel):
         if v is None:
             return v
         stripped = v.strip()
-        valid = {"Friable", "Non Friable"}
+        valid = {"Friable", "Non-friable"}
         for val in valid:
-            if val.lower() == stripped.lower():
+            if val.lower().replace("-", " ") == stripped.lower().replace("-", " "):
                 return val
-        if stripped.lower() in ("non-friable", "nonfriable"):
-            return "Non Friable"
         raise ValueError(f"friable must be one of {sorted(valid)}, got '{v}'")
 
     @field_validator("risk_status", mode="before")
@@ -600,7 +598,7 @@ class ACMRecordCreateRequest(BaseModel):
         if v is None:
             return v
         normalized = v.strip().title()
-        valid = {"Good", "Fair", "Poor", "Damaged"}
+        valid = {"Stable", "Fair", "Poor", "Unknown"}
         if normalized not in valid:
             raise ValueError(
                 f"material_condition must be one of {sorted(valid)}, got '{v}'"
@@ -745,12 +743,10 @@ class ACMRecordUpdateRequest(BaseModel):
         if v is None:
             return v
         stripped = v.strip()
-        valid = {"Friable", "Non Friable"}
+        valid = {"Friable", "Non-friable"}
         for val in valid:
-            if val.lower() == stripped.lower():
+            if val.lower().replace("-", " ") == stripped.lower().replace("-", " "):
                 return val
-        if stripped.lower() in ("non-friable", "nonfriable"):
-            return "Non Friable"
         raise ValueError(f"friable must be one of {sorted(valid)}, got '{v}'")
 
     @field_validator("risk_status", mode="before")
@@ -770,7 +766,7 @@ class ACMRecordUpdateRequest(BaseModel):
         if v is None:
             return v
         normalized = v.strip().title()
-        valid = {"Good", "Fair", "Poor", "Damaged"}
+        valid = {"Stable", "Fair", "Poor", "Unknown"}
         if normalized not in valid:
             raise ValueError(
                 f"material_condition must be one of {sorted(valid)}, got '{v}'"
@@ -941,7 +937,7 @@ class ClassifyResponse(BaseModel):
     """Response from classification request."""
 
     product_group: Optional[str] = Field(
-        None, description="BAR taxonomy product group (e.g., 'T3 Vinyl products')"
+        None, description="SF taxonomy product group (e.g., 'Vinyl products')"
     )
     product_type: Optional[str] = Field(
         None, description="BAR taxonomy product type (e.g., 'Vinyl Tiles')"

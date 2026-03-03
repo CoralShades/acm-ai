@@ -45,63 +45,63 @@ Classify the following ACM item into the correct product group and product type 
 {% if friability == 'Friable' %}
 **Example 1:**
 - Input: "Pipe lagging in boiler room"
-- Output: {"product_group": "T3 Insulation products", "product_type": "Lagging", "confidence": 0.95}
+- Output: {"product_group": "Insulation products", "product_type": "Lagging", "confidence": 0.95}
 
 **Example 2:**
 - Input: "Vermiculite in ceiling void"
-- Output: {"product_group": "T3 Insulation products", "product_type": "Vermiculite", "confidence": 0.95}
+- Output: {"product_group": "Insulation products", "product_type": "Vermiculite", "confidence": 0.95}
 
 **Example 3:**
 - Input: "Gasket around pipe flange"
-- Output: {"product_group": "T4 Gasket products", "product_type": "Gasket(s)", "confidence": 0.90}
+- Output: {"product_group": "Gasket products", "product_type": "Gasket(s)", "confidence": 0.90}
 
 **Example 4:**
 - Input: "Unknown fibrous debris"
-- Output: {"product_group": "T6 Other", "product_type": "Debris", "confidence": 0.70}
+- Output: {"product_group": "Other", "product_type": "Debris", "confidence": 0.70}
 {% else %}
 **Example 1:**
 - Input: "Floor tiles - vinyl"
-- Output: {"product_group": "T3 Vinyl products", "product_type": "Vinyl Tiles", "confidence": 0.95}
+- Output: {"product_group": "Vinyl products", "product_type": "Vinyl Tiles", "confidence": 0.95}
 
 **Example 2:**
 - Input: "Flat sheeting to eaves"
-- Output: {"product_group": "T1 Cement products", "product_type": "Flat Sheeting", "confidence": 0.95}
+- Output: {"product_group": "Cement products", "product_type": "Flat Sheeting", "confidence": 0.95}
 
 **Example 3:**
 - Input: "Corrugated roof sheeting"
-- Output: {"product_group": "T1 Cement products", "product_type": "Corrugated Roof Sheeting", "confidence": 0.95}
+- Output: {"product_group": "Cement products", "product_type": "Corrugated Roof Sheeting", "confidence": 0.95}
 
 **Example 4:**
 - Input: "Mastic around window frame"
-- Output: {"product_group": "T4 Gasket, friction products and adhesives", "product_type": "Mastic", "confidence": 0.90}
+- Output: {"product_group": "Gasket, friction products and adhesives", "product_type": "Mastic", "confidence": 0.90}
 
 **Example 5:**
 - Input: "Bitumen membrane under tiles"
-- Output: {"product_group": "T2 Bitumen products", "product_type": "Bituminous Membrane", "confidence": 0.90}
+- Output: {"product_group": "Bitumen products", "product_type": "Bituminous Membrane", "confidence": 0.90}
 
 **Example 6:**
 - Input: "Millboard behind heater"
-- Output: {"product_group": "T8 Insulation", "product_type": "Millboard", "confidence": 0.90}
+- Output: {"product_group": "Insulation", "product_type": "Millboard", "confidence": 0.90}
 {% endif %}
 
 ## Classification Guidelines
 
 1. **Match the most specific product type** from the taxonomy that fits the description
 2. **Consider common aliases and variations:**
-   - "Fibro", "FC sheet", "fibre cement" → T1 Cement products / Flat Sheeting
-   - "Linoleum" → T3 Vinyl products / Vinyl sheet
-   - "Lagging", "pipe insulation" → T8 Insulation (non-friable) or T3 Insulation products (friable)
+   - "Fibro", "FC sheet", "fibre cement" → Cement products / Flat Sheeting
+   - "Linoleum" → Vinyl products / Vinyl sheet
+   - "Lagging", "pipe insulation" → Insulation (non-friable) or Insulation products (friable)
 3. **When uncertain**, prefer:
    - "Unknown" product type within the matched group
    - Lower confidence score (0.5-0.7)
 4. **If no clear match**, use the appropriate "Other" category:
-   - Non-friable: T7 Other
-   - Friable: T6 Other
+   - Non-friable: Other
+   - Friable: Other
 
 ## Output Format
 
 Return ONLY a JSON object with these fields:
-- `product_group`: The full product group name (e.g., "T3 Vinyl products")
+- `product_group`: The full product group name (e.g., "Vinyl products")
 - `product_type`: The specific product type (e.g., "Vinyl Tiles")
 - `confidence`: A float between 0.0 and 1.0 indicating classification confidence
 - `reasoning`: Brief explanation of why this classification was chosen
