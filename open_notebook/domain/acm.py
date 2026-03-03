@@ -92,7 +92,9 @@ class ACMRecord(ObjectModel):
     )
     building_construction: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("building_construction", "Building_Construction__c"),
+        validation_alias=AliasChoices(
+            "building_construction", "Building_Construction__c"
+        ),
     )
     building_address: Optional[str] = Field(
         default=None,
@@ -109,6 +111,13 @@ class ACMRecord(ObjectModel):
     building_type: Optional[str] = Field(
         default=None,
         description="Type of building (e.g., 'Permanent', 'Demountable', 'Heritage')",
+    )
+
+    # FK to building_record table (E30-S2, optional until E30-S5 data migration)
+    building_record_id: Optional[str] = Field(
+        default=None,
+        description="FK to building_record table (record<building_record> in DB). "
+        "Populated by E30-S5 data migration.",
     )
 
     # Room hierarchy
@@ -150,7 +159,9 @@ class ACMRecord(ObjectModel):
     )
     material_description: str = Field(
         ...,
-        validation_alias=AliasChoices("material_description", "Material_Description__c"),
+        validation_alias=AliasChoices(
+            "material_description", "Material_Description__c"
+        ),
         description="Detailed description of the ACM material",
     )
     extent: Optional[str] = Field(
@@ -177,7 +188,9 @@ class ACMRecord(ObjectModel):
     )
     result: str = Field(
         ...,
-        validation_alias=AliasChoices("result", "Sample_Analysis_Result_Material_Status__c"),
+        validation_alias=AliasChoices(
+            "result", "Sample_Analysis_Result_Material_Status__c"
+        ),
         description="Asbestos sample result",
     )
 
@@ -197,7 +210,9 @@ class ACMRecord(ObjectModel):
     # All optional for backwards compatibility with existing records
     disturbance_potential: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("disturbance_potential", "Disturbance_Potential_of_Material__c"),
+        validation_alias=AliasChoices(
+            "disturbance_potential", "Disturbance_Potential_of_Material__c"
+        ),
         description="Likelihood of material disturbance (e.g., 'Low', 'Medium', 'High')",
     )
     sample_no: Optional[str] = Field(
@@ -210,7 +225,9 @@ class ACMRecord(ObjectModel):
     )
     identifying_company: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("identifying_company", "Identifying_Hygiene_Consulting_Company__c"),
+        validation_alias=AliasChoices(
+            "identifying_company", "Identifying_Hygiene_Consulting_Company__c"
+        ),
         description="Hygiene consulting company that performed the inspection",
     )
     quantity: Optional[str] = Field(
@@ -230,7 +247,9 @@ class ACMRecord(ObjectModel):
     )
     hygienist_recommendations: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("hygienist_recommendations", "Hygienist_Recommendations__c"),
+        validation_alias=AliasChoices(
+            "hygienist_recommendations", "Hygienist_Recommendations__c"
+        ),
         description="Recommendations from the hygienist for this material",
     )
     psb_supplied_acm_id: Optional[str] = Field(
@@ -255,12 +274,16 @@ class ACMRecord(ObjectModel):
     )
     removal_notification_no: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("removal_notification_no", "Asbestos_Removal_Notification_No__c"),
+        validation_alias=AliasChoices(
+            "removal_notification_no", "Asbestos_Removal_Notification_No__c"
+        ),
         description="Removal notification number for regulatory compliance",
     )
     epa_certificate_no: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("epa_certificate_no", "EPA_Waste_Transport_Certificate_No__c"),
+        validation_alias=AliasChoices(
+            "epa_certificate_no", "EPA_Waste_Transport_Certificate_No__c"
+        ),
         description="EPA clearance certificate number after removal",
     )
     no_access: Optional[bool] = Field(
@@ -287,7 +310,9 @@ class ACMRecord(ObjectModel):
     )
     assea_risk_level: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("assea_risk_level", "ASSEA_Survey_Guide_Risk_Level__c"),
+        validation_alias=AliasChoices(
+            "assea_risk_level", "ASSEA_Survey_Guide_Risk_Level__c"
+        ),
         description="ASSEA Survey Guide risk level (separate from BAR risk_status)",
     )
     date_identified: Optional[str] = Field(
@@ -620,12 +645,357 @@ class ACMRecord(ObjectModel):
         return " | ".join(parts) if parts else ""
 
     def _prepare_save_data(self) -> dict:
-        """Override to ensure source_id and parent_table_id are proper record format."""
+        """Override to ensure source_id, parent_table_id, and building_record_id are proper record format."""
         data = super()._prepare_save_data()
         if data.get("source_id"):
             data["source_id"] = ensure_record_id(data["source_id"])
         if data.get("parent_table_id"):
             data["parent_table_id"] = ensure_record_id(data["parent_table_id"])
+        if data.get("building_record_id"):
+            data["building_record_id"] = ensure_record_id(data["building_record_id"])
+        return data
+
+
+class BuildingRecord(ObjectModel):
+    """
+    Domain model for Building records.
+
+    Represents a physical building extracted from SAMP documents.
+    Maps to the Salesforce Building__c object with AliasChoices
+    for dual BAR/SF field name support.
+
+    Linked to ACMRecords via acm_record.building_record_id FK.
+    """
+
+    table_name: ClassVar[str] = "building_record"
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    # --- Core identification ---
+    internal_id: str = Field(
+        ...,
+        description="Server-generated ID: BLD#{source_short}_{seq:03d}",
+    )
+    source_id: str = Field(
+        ...,
+        description="FK to source document (record<source> in DB)",
+    )
+    building_code: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_code", "Building_Code__c"),
+        description="Original building identifier from PDF (was building_id on ACMRecord)",
+    )
+
+    # --- Fields also on ACMRecord (building-level) ---
+    building_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_name", "Building_Name__c"),
+    )
+    building_year: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_year", "Estimated_Year_Build_New__c"),
+        description="Year built (SF picklist, stored as string)",
+    )
+    building_construction: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_construction", "Construction_Type__c"),
+    )
+    building_address: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_address", "Building_Address__c"),
+    )
+    suburb: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("suburb", "Suburb__c"),
+    )
+    postcode: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("postcode", "Postcode__c"),
+    )
+    building_type: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_type", "Building_Type__c"),
+    )
+
+    # --- Additional SF Building__c fields ---
+    building_category: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_category", "Building_Category__c"),
+        description="Dependent on Building_Type__c",
+    )
+    building_address_lga: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "building_address_lga", "Building_Address_LGA__c"
+        ),
+    )
+    building_address_region: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "building_address_region", "Building_Address_Region__c"
+        ),
+    )
+    roof_type: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("roof_type", "Roof_Type__c"),
+    )
+    number_of_levels: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("number_of_levels", "Number_of_Levels__c"),
+    )
+    est_building_size_m2: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "est_building_size_m2", "Est_Building_Size_m2__c"
+        ),
+    )
+    frequency_of_use: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("frequency_of_use", "Frequency_of_Use__c"),
+    )
+    daily_duration: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("daily_duration", "Daily_Duration__c"),
+    )
+    level_of_activity: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("level_of_activity", "Level_of_Activity__c"),
+    )
+    public_access: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("public_access", "Public_Access__c"),
+    )
+    mobile_plant: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("mobile_plant", "Mobile_Plant__c"),
+    )
+    owned_or_leased: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("owned_or_leased", "Owned_or_Leased__c"),
+    )
+    asbestos_register_available: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "asbestos_register_available", "Asbestos_Register_Available__c"
+        ),
+    )
+    audit_report_available: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "audit_report_available", "Audit_Report_Available__c"
+        ),
+    )
+    date_of_audit_report: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "date_of_audit_report", "Date_of_Audit_Report__c"
+        ),
+    )
+    no_identified_acms: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("no_identified_acms", "No_Identified_ACMs__c"),
+    )
+    no_identified_acms_note: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "no_identified_acms_note", "No_Identified_ACMs_Note__c"
+        ),
+    )
+    site_name: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("site_name", "Site_Name__c"),
+    )
+    school_uid: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("school_uid", "School_UID__c"),
+    )
+    building_unique_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_unique_id", "Building_Unique_ID__c"),
+    )
+    external_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("external_id", "External_ID__c"),
+    )
+    building_out_of_scope: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "building_out_of_scope", "Building_Out_Of_Scope_New__c"
+        ),
+    )
+    building_out_of_scope_comments: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "building_out_of_scope_comments", "Building_Out_Of_Scope_Comments__c"
+        ),
+    )
+    demolished_status: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("demolished_status", "Demolished_Status__c"),
+    )
+    demolition_date: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("demolition_date", "Demolition_Date__c"),
+    )
+    demolition_type: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("demolition_type", "Demolition_Type__c"),
+    )
+    demolition_comments: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("demolition_comments", "Demolition_Comments__c"),
+    )
+    additional_comments: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("additional_comments", "Additional_Comments__c"),
+    )
+    within_your_portfolio: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "within_your_portfolio", "Within_Your_Portfolio__c"
+        ),
+    )
+    psb_district_region: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("psb_district_region", "PSB_District_Region__c"),
+    )
+    state: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("state", "State__c"),
+    )
+    country: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("country", "Country__c"),
+    )
+    gps_coordinates: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "gps_coordinates", "GPS_Coordinates_provided_by_metro__c"
+        ),
+    )
+    capital_works_project_details: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "capital_works_project_details",
+            "Capital_Works_Project_Provide_Details__c",
+        ),
+    )
+    possible_capital_works_project: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "possible_capital_works_project", "Possible_Capital_Works_Project__c"
+        ),
+    )
+
+    # --- Embedding fields (AC8) ---
+    embedding: Optional[List[float]] = Field(
+        default=None, description="Vector embedding for semantic search"
+    )
+    embedding_text: Optional[str] = Field(
+        default=None, description="Combined text used to generate the embedding"
+    )
+    embedding_model: Optional[str] = Field(
+        default=None, description="Model ID used to generate the embedding"
+    )
+    embedded_at: Optional[datetime] = Field(
+        default=None, description="Timestamp when embedding was generated"
+    )
+    enriched_text: Optional[str] = Field(
+        default=None, description="Contextually enriched text for embedding"
+    )
+
+    # --- Validators ---
+    @field_validator("source_id", mode="before")
+    @classmethod
+    def validate_source_id(cls, v):
+        if not v:
+            raise InvalidInputError("source_id is required")
+        if isinstance(v, str) and not v.startswith("source:"):
+            return f"source:{v}"
+        return str(v)
+
+    @field_validator("internal_id")
+    @classmethod
+    def validate_internal_id(cls, v):
+        if not v or not v.strip():
+            raise InvalidInputError("internal_id cannot be empty")
+        v = v.strip()
+        if not v.startswith("BLD#"):
+            raise InvalidInputError(f"internal_id must start with 'BLD#', got '{v}'")
+        return v
+
+    # --- Class methods ---
+    @classmethod
+    async def get_by_source(cls, source_id: str) -> List["BuildingRecord"]:
+        """Get all building records for a specific source document."""
+        if not source_id:
+            raise InvalidInputError("source_id is required")
+        try:
+            result = await repo_query(
+                "SELECT * FROM building_record WHERE source_id = $source_id ORDER BY internal_id",
+                {"source_id": ensure_record_id(source_id)},
+            )
+            return [cls(**record) for record in result]
+        except Exception as e:
+            logger.error(f"Error fetching building records for source {source_id}: {e}")
+            raise DatabaseOperationError(e)
+
+    @classmethod
+    async def get_by_internal_id(cls, internal_id: str) -> Optional["BuildingRecord"]:
+        """Get a building record by its internal_id."""
+        if not internal_id:
+            raise InvalidInputError("internal_id is required")
+        try:
+            result = await repo_query(
+                "SELECT * FROM building_record WHERE internal_id = $internal_id LIMIT 1",
+                {"internal_id": internal_id},
+            )
+            return cls(**result[0]) if result else None
+        except Exception as e:
+            logger.error(
+                f"Error fetching building record by internal_id {internal_id}: {e}"
+            )
+            raise DatabaseOperationError(e)
+
+    @classmethod
+    async def delete_by_source(cls, source_id: str) -> int:
+        """Delete all building records for a source. Returns count of deleted records."""
+        if not source_id:
+            raise InvalidInputError("source_id is required")
+        try:
+            result = await repo_query(
+                "DELETE building_record WHERE source_id = $source_id RETURN BEFORE",
+                {"source_id": ensure_record_id(source_id)},
+            )
+            return len(result) if result else 0
+        except Exception as e:
+            logger.error(f"Error deleting building records for source {source_id}: {e}")
+            raise DatabaseOperationError(e)
+
+    @classmethod
+    async def generate_internal_id(cls, source_id: str) -> str:
+        """Generate BLD#{source_short}_{seq:03d} for a new building.
+
+        source_short = first 8 chars of source name (uppercase, spaces to underscore).
+        seq = count of existing BuildingRecords for this source + 1.
+        """
+        from open_notebook.domain.notebook import Source
+
+        if isinstance(source_id, str) and not source_id.startswith("source:"):
+            source_id = f"source:{source_id}"
+        source = await Source.get(source_id)
+        source_short = (
+            source.name[:8].upper().replace(" ", "_") if source.name else "UNKNOWN"
+        )
+        existing = await cls.get_by_source(source_id)
+        seq = len(existing) + 1
+        return f"BLD#{source_short}_{seq:03d}"
+
+    def _prepare_save_data(self) -> dict:
+        """Override to ensure source_id is proper record format."""
+        data = super()._prepare_save_data()
+        if data.get("source_id"):
+            data["source_id"] = ensure_record_id(data["source_id"])
         return data
 
 

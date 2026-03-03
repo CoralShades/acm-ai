@@ -61,12 +61,14 @@
         "AC9: Unit tests for BuildingRecord CRUD and FK constraints",
         "AC10: Migration includes indexes on source_id and internal_id"
       ],
-      "passes": false,
-      "notes": "Splits flat ACMRecord into Building + Item model. FK design is critical.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["E30-S1"],
+      "dependencies": [
+        "E30-S1"
+      ],
       "keyFiles": [
         "open_notebook/domain/acm.py",
         "migrations/39.surrealql",
@@ -74,8 +76,8 @@
         "open_notebook/database/repository.py",
         "tests/test_building_record.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e30-s2-building-record-table-domain-model.md",
+      "implementedDate": "2026-03-03"
     },
     {
       "id": "E30-S3",
@@ -100,7 +102,9 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E30-S1"],
+      "dependencies": [
+        "E30-S1"
+      ],
       "keyFiles": [
         "open_notebook/domain/acm.py",
         "open_notebook/extractors/acm_schemas.py",
@@ -135,7 +139,9 @@
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["E30-S1"],
+      "dependencies": [
+        "E30-S1"
+      ],
       "keyFiles": [
         "open_notebook/extractors/validators/sf_picklist_validator.py",
         "open_notebook/extractors/validators/acm_validator.py",
@@ -169,7 +175,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E30-S2", "E30-S3"],
+      "dependencies": [
+        "E30-S2",
+        "E30-S3"
+      ],
       "keyFiles": [
         "scripts/v3_data_migration.py",
         "scripts/v3_data_migration_rollback.py",
@@ -200,7 +209,9 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E30-S3"],
+      "dependencies": [
+        "E30-S3"
+      ],
       "keyFiles": [
         "open_notebook/extractors/validators/acm_validator.py",
         "open_notebook/extractors/acm_schemas.py",
@@ -233,7 +244,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["GATE:SCHEMA_FREEZE", "E31-S2"],
+      "dependencies": [
+        "GATE:SCHEMA_FREEZE",
+        "E31-S2"
+      ],
       "keyFiles": [
         "prompts/acm/v3_building_extraction.jinja",
         "prompts/acm/v3_item_extraction.jinja",
@@ -267,7 +281,9 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E30-S1"],
+      "dependencies": [
+        "E30-S1"
+      ],
       "keyFiles": [
         "api/model_provisioning.py",
         "open_notebook/graphs/utils.py",
@@ -301,7 +317,9 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["GATE:SCHEMA_FREEZE"],
+      "dependencies": [
+        "GATE:SCHEMA_FREEZE"
+      ],
       "keyFiles": [
         "pyproject.toml",
         "scripts/research/validate_mineru_v2.py",
@@ -333,7 +351,9 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E31-S1"],
+      "dependencies": [
+        "E31-S1"
+      ],
       "keyFiles": [
         "open_notebook/extractors/providers/__init__.py",
         "open_notebook/extractors/providers/base.py",
@@ -367,7 +387,9 @@
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["E31-S2"],
+      "dependencies": [
+        "E31-S2"
+      ],
       "keyFiles": [
         "open_notebook/extractors/consensus/__init__.py",
         "open_notebook/extractors/consensus/matcher.py",
@@ -401,7 +423,9 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E31-S2"],
+      "dependencies": [
+        "E31-S2"
+      ],
       "keyFiles": [
         "migrations/41.surrealql",
         "open_notebook/domain/acm.py",
@@ -435,7 +459,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E31-S3", "E31-S4"],
+      "dependencies": [
+        "E31-S3",
+        "E31-S4"
+      ],
       "keyFiles": [
         "open_notebook/extractors/orchestrator.py",
         "open_notebook/extractors/strategy_registry.py",
@@ -466,7 +493,9 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E31-S5"],
+      "dependencies": [
+        "E31-S5"
+      ],
       "keyFiles": [
         "tests/benchmarks/test_v3_dual_provider.py",
         "docs/benchmarks/v3-dual-provider-report.md",
@@ -499,7 +528,9 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E31-S5"],
+      "dependencies": [
+        "E31-S5"
+      ],
       "keyFiles": [
         "open_notebook/extractors/pipeline_event_bus.py",
         "api/routers/acm.py",
@@ -533,7 +564,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E31-S5", "E30-S7"],
+      "dependencies": [
+        "E31-S5",
+        "E30-S7"
+      ],
       "keyFiles": [
         "open_notebook/graphs/acm_extraction.py",
         "open_notebook/extractors/orchestrator.py",
@@ -566,7 +600,9 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E32-S1"],
+      "dependencies": [
+        "E32-S1"
+      ],
       "keyFiles": [
         "open_notebook/graphs/acm_extraction.py",
         "open_notebook/extractors/orchestrator.py",
@@ -598,7 +634,10 @@
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["E32-S2", "E30-S4"],
+      "dependencies": [
+        "E32-S2",
+        "E30-S4"
+      ],
       "keyFiles": [
         "open_notebook/extractors/validators/sf_picklist_validator.py",
         "open_notebook/graphs/acm_extraction.py",
@@ -629,7 +668,9 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E30-S6"],
+      "dependencies": [
+        "E30-S6"
+      ],
       "keyFiles": [
         "open_notebook/extractors/validators/acm_validator.py",
         "prompts/acm/classification.jinja",
@@ -661,7 +702,12 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E32-S1", "E32-S2", "E32-S3", "E32-S4"],
+      "dependencies": [
+        "E32-S1",
+        "E32-S2",
+        "E32-S3",
+        "E32-S4"
+      ],
       "keyFiles": [
         "tests/test_v3_e2e_pipeline.py",
         "tests/conftest.py"
@@ -690,7 +736,9 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E30-S8"],
+      "dependencies": [
+        "E30-S8"
+      ],
       "keyFiles": [
         "scripts/research/ollama_model_eval.py",
         "docs/spikes/ollama-model-evaluation.md"
@@ -721,7 +769,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["GATE:SCHEMA_FREEZE", "E31-S7"],
+      "dependencies": [
+        "GATE:SCHEMA_FREEZE",
+        "E31-S7"
+      ],
       "keyFiles": [
         "frontend/src/app/upload/page.tsx",
         "frontend/src/app/extraction/[id]/page.tsx",
@@ -760,7 +811,10 @@
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["GATE:SCHEMA_FREEZE", "E30-S2"],
+      "dependencies": [
+        "GATE:SCHEMA_FREEZE",
+        "E30-S2"
+      ],
       "keyFiles": [
         "frontend/src/app/source/[id]/page.tsx",
         "frontend/src/components/acm/BuildingSidebar.tsx",
@@ -796,7 +850,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["GATE:AI_COMPLETE", "E30-S4"],
+      "dependencies": [
+        "GATE:AI_COMPLETE",
+        "E30-S4"
+      ],
       "keyFiles": [
         "frontend/src/components/acm/DependentPicklistEditor.tsx",
         "frontend/src/components/acm/ItemGrid.tsx",
@@ -829,7 +886,11 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E33-S2", "E33-S3", "E30-S4"],
+      "dependencies": [
+        "E33-S2",
+        "E33-S3",
+        "E30-S4"
+      ],
       "keyFiles": [
         "frontend/src/components/acm/ValidationBadge.tsx",
         "frontend/src/components/acm/RecordWizard.tsx",
@@ -861,7 +922,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E31-S4", "E33-S2"],
+      "dependencies": [
+        "E31-S4",
+        "E33-S2"
+      ],
       "keyFiles": [
         "frontend/src/app/source/[id]/raw/page.tsx",
         "frontend/src/components/acm/RawTableGrid.tsx",
@@ -892,7 +956,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E31-S4", "E33-S2"],
+      "dependencies": [
+        "E31-S4",
+        "E33-S2"
+      ],
       "keyFiles": [
         "frontend/src/components/acm/ProvenanceViewer.tsx",
         "frontend/src/components/acm/PDFPageViewer.tsx",
@@ -925,7 +992,10 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["E30-S2", "E33-S2"],
+      "dependencies": [
+        "E30-S2",
+        "E33-S2"
+      ],
       "keyFiles": [
         "frontend/src/app/source/[id]/building/[buildingId]/page.tsx",
         "frontend/src/components/acm/BuildingDetailForm.tsx",
@@ -957,7 +1027,11 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E30-S2", "E30-S3", "E33-S4"],
+      "dependencies": [
+        "E30-S2",
+        "E30-S3",
+        "E33-S4"
+      ],
       "keyFiles": [
         "frontend/src/components/acm/ExportDialog.tsx",
         "api/routers/acm.py",
@@ -988,7 +1062,10 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E31-S7", "E33-S2"],
+      "dependencies": [
+        "E31-S7",
+        "E33-S2"
+      ],
       "keyFiles": [
         "frontend/src/components/acm/BuildingSidebar.tsx",
         "frontend/src/components/acm/ItemGrid.tsx",
@@ -1018,7 +1095,11 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E33-S2", "E33-S4", "E31-S7"],
+      "dependencies": [
+        "E33-S2",
+        "E33-S4",
+        "E31-S7"
+      ],
       "keyFiles": [
         "frontend/src/components/acm/BulkOperationsBar.tsx",
         "api/routers/acm.py",
@@ -1048,7 +1129,10 @@
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["E31-S5", "E32-S5"],
+      "dependencies": [
+        "E31-S5",
+        "E32-S5"
+      ],
       "keyFiles": [
         "tests/test_v3_performance.py",
         "open_notebook/extractors/orchestrator.py",
@@ -1080,7 +1164,9 @@
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["GATE:UI_COMPLETE"],
+      "dependencies": [
+        "GATE:UI_COMPLETE"
+      ],
       "keyFiles": [
         "_bmad-output/project-planning-artifacts/acm-ai/03-prd.md",
         "_bmad-output/project-planning-artifacts/acm-ai/04-architecture.md",
@@ -1099,7 +1185,12 @@
       "name": "Schema Freeze",
       "triggerStory": "E30-S6",
       "unlocked": false,
-      "blocksEpics": ["E31", "E32", "E33", "E34"],
+      "blocksEpics": [
+        "E31",
+        "E32",
+        "E33",
+        "E34"
+      ],
       "description": "All SF schema definitions finalized. BAR->SF vocabulary locked."
     },
     {

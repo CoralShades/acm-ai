@@ -36,6 +36,10 @@ from api.models import (
     BackfillParentsResponse,
     BatchClassifyRequest,
     BatchClassifyResponse,
+    BuildingRecordCreateRequest,
+    BuildingRecordListResponse,
+    BuildingRecordResponse,
+    BuildingRecordUpdateRequest,
     BuildingResponse,
     BuildingUpdateRequest,
     BusinessRuleResponse,
@@ -59,8 +63,9 @@ from api.models import (
     TaxonomyResponse,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.domain.acm import ACMRecord, ACMTableSection
+from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
 from open_notebook.domain.site_config import SiteConfig
+from open_notebook.exceptions import NotFoundError
 
 router = APIRouter()
 
@@ -69,6 +74,9 @@ router = APIRouter()
 async def list_acm_records(
     source_id: str = Query(..., description="Source ID to filter by (required)"),
     building_id: Optional[str] = Query(None, description="Filter by building ID"),
+    building_record_id: Optional[str] = Query(
+        None, description="Filter by building_record FK (e.g., building_record:xxx)"
+    ),
     room_id: Optional[str] = Query(None, description="Filter by room ID"),
     risk_status: Optional[str] = Query(
         None, description="Filter by risk status (Low/Medium/High)"
@@ -80,7 +88,7 @@ async def list_acm_records(
     List ACM records with filtering and pagination.
 
     Returns records for the specified source, with optional filtering
-    by building, room, and risk status.
+    by building, room, risk status, and building_record FK.
     """
     try:
         # Build query conditions
@@ -90,6 +98,10 @@ async def list_acm_records(
         if building_id:
             conditions.append("building_id = $building_id")
             params["building_id"] = building_id
+
+        if building_record_id:
+            conditions.append("building_record_id = $building_record_id")
+            params["building_record_id"] = ensure_record_id(building_record_id)
 
         if room_id:
             conditions.append("room_id = $room_id")
@@ -2120,3 +2132,81 @@ async def get_sf_field_schema():
             status_code=500,
             detail=f"SF schema not available: {e}",
         )
+
+
+# --- Building Record CRUD (E30-S2) ---
+
+
+@router.get("/buildings", response_model=BuildingRecordListResponse)
+async def list_building_records(
+    source_id: str = Query(..., description="Source ID to filter by (required)"),
+):
+    """List all building records for a source."""
+    try:
+        buildings = await BuildingRecord.get_by_source(source_id)
+        return BuildingRecordListResponse(
+            buildings=[BuildingRecordResponse(**b.model_dump()) for b in buildings],
+            total=len(buildings),
+        )
+    except Exception as e:
+        logger.error(f"Error listing building records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/buildings/{building_id:path}", response_model=BuildingRecordResponse)
+async def get_building_record(building_id: str):
+    """Get a single building record by ID."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        return BuildingRecordResponse(**building.model_dump())
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Building record not found")
+    except Exception as e:
+        logger.error(f"Error getting building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/buildings", response_model=BuildingRecordResponse, status_code=201)
+async def create_building_record(request: BuildingRecordCreateRequest):
+    """Create a new building record. internal_id is auto-generated."""
+    try:
+        internal_id = await BuildingRecord.generate_internal_id(request.source_id)
+        data = request.model_dump(exclude_none=True)
+        data["internal_id"] = internal_id
+        building = BuildingRecord(**data)
+        await building.save()
+        return BuildingRecordResponse(**building.model_dump())
+    except Exception as e:
+        logger.error(f"Error creating building record: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/buildings/{building_id:path}", response_model=BuildingRecordResponse)
+async def update_building_record(
+    building_id: str, request: BuildingRecordUpdateRequest
+):
+    """Update an existing building record."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        update_data = request.model_dump(exclude_none=True)
+        for key, value in update_data.items():
+            setattr(building, key, value)
+        await building.save()
+        return BuildingRecordResponse(**building.model_dump())
+    except Exception as e:
+        logger.error(f"Error updating building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/buildings/{building_id:path}")
+async def delete_building_record(building_id: str):
+    """Delete a building record."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        await building.delete()
+        return {"deleted": True, "id": building_id}
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Building record not found")
+    except Exception as e:
+        logger.error(f"Error deleting building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
