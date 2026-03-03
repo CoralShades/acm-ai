@@ -134,8 +134,8 @@
         "AC9: Exhaustive unit tests: all 36 valid Friability*Classification combos, all 114 BuildingType->Category mappings",
         "AC10: Integration with existing acm_validator.py"
       ],
-      "passes": false,
-      "notes": "36 combos + 114 mappings. Needs architect guidance.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
@@ -148,8 +148,8 @@
         "open_notebook/extractors/parsers/config_loader.py",
         "tests/test_sf_picklist_validator.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e30-s4-dependent-picklist-validator.md",
+      "implementedDate": "2026-03-03"
     },
     {
       "id": "E30-S5",

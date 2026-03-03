@@ -5,6 +5,7 @@ Validates ACM extraction records against BAR enum values and business rules.
 Used by the corrective RAG loop to identify fields needing correction.
 
 Story: E1-S15 Corrective RAG Validation Loop
+Story: E30-S4 Dependent Picklist Validator (SF chain integration)
 """
 
 from typing import Optional
@@ -31,6 +32,7 @@ class ValidationResult(BaseModel):
 
     is_valid: bool
     issues: list[ValidationIssue] = []
+    chain_warnings: list[ValidationIssue] = []  # WARN-policy SF chain issues (non-blocking)
 
 
 class CorrectionStats(BaseModel):
@@ -302,10 +304,52 @@ def validate_required_fields(record: dict) -> list[ValidationIssue]:
     return issues
 
 
+def validate_sf_chains(record: dict) -> list[ValidationIssue]:
+    """Validate SF dependent picklist chains if SF schema is available.
+
+    Runs the SalesforcePicklistValidator with WARN policy (non-blocking)
+    and converts ChainValidationIssues to ValidationIssues for compatibility
+    with the existing validation pipeline.
+
+    Args:
+        record: Dict of ACM record field values.
+
+    Returns:
+        List of ValidationIssue for chain validation failures (WARN-policy,
+        non-blocking — should not flip is_valid to False).
+    """
+    try:
+        from open_notebook.extractors.validators.sf_picklist_validator import (
+            SalesforcePicklistValidator,
+            ValidationPolicy,
+        )
+
+        validator = SalesforcePicklistValidator()
+        result = validator.validate_all_chains(record, ValidationPolicy.WARN)
+        issues: list[ValidationIssue] = []
+        for chain_issue in result.issues:
+            issues.append(
+                ValidationIssue(
+                    field_name=chain_issue.dependent_field,
+                    current_value=chain_issue.dependent_value,
+                    expected_format="sf_chain",
+                    valid_values=chain_issue.valid_values,
+                    issue_type="sf_chain_mismatch",
+                )
+            )
+        return issues
+    except (ImportError, OSError) as e:
+        logger.debug(f"SF chain validation skipped: {e}")
+        return []
+
+
 def validate_acm_record(record: dict) -> ValidationResult:
-    """Validate a full ACM record against enums, business rules, and required fields.
+    """Validate a full ACM record against enums, business rules, required fields,
+    and SF dependent picklist chains.
 
     Orchestrates all validators and returns a combined result.
+    SF chain issues use WARN policy (non-blocking) — they are surfaced in
+    chain_warnings but do NOT flip is_valid to False.
 
     Args:
         record: Dict of ACM record field values.
@@ -319,6 +363,9 @@ def validate_acm_record(record: dict) -> ValidationResult:
     all_issues.extend(validate_enum_fields(record))
     all_issues.extend(validate_business_rules(record))
 
+    # SF chain issues are WARN-policy: surfaced but non-blocking
+    chain_warnings = validate_sf_chains(record)
+
     is_valid = len(all_issues) == 0
 
     if not is_valid:
@@ -326,5 +373,14 @@ def validate_acm_record(record: dict) -> ValidationResult:
             f"Record validation failed with {len(all_issues)} issues: "
             f"{[i.field_name for i in all_issues]}"
         )
+    if chain_warnings:
+        logger.debug(
+            f"Record has {len(chain_warnings)} SF chain warnings (non-blocking): "
+            f"{[i.field_name for i in chain_warnings]}"
+        )
 
-    return ValidationResult(is_valid=is_valid, issues=all_issues)
+    return ValidationResult(
+        is_valid=is_valid,
+        issues=all_issues,
+        chain_warnings=chain_warnings,
+    )
