@@ -62,10 +62,10 @@ As a data pipeline engineer, I want all BAR-specific vocabulary replaced with Sa
 ---
 
 ## Dev Agent Record
-- **Status**: Not Started
-- **Started**: --
-- **Completed**: --
-- **Build**: --
-- **Tests**: --
-- **Review**: --
-- **Notes**: Gate trigger for SCHEMA_FREEZE
+- **Status**: Completed
+- **Started**: 2026-03-03
+- **Completed**: 2026-03-03
+- **Build**: PASS
+- **Tests**: PASS (17 files updated)
+- **Review**: Verified — Good→Stable, Non Friable→Non-friable, T-prefix stripped via _strip_t_prefix()
+- **Notes**: Gate trigger for SCHEMA_FREEZE — **GATE UNLOCKED**. F4 (product type sentence case) NOT in scope — Title Case remains in CLASSIFICATION_PATTERNS.
