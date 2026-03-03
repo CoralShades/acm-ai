@@ -204,8 +204,8 @@
         "AC6: Existing benchmarks (Broadmeadows 31/31) pass with updated vocabulary",
         "AC7: Automated find-and-replace script provided for bulk updates"
       ],
-      "passes": false,
-      "notes": "Triggers GATE:SCHEMA_FREEZE when complete (with S1-S5).",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -218,8 +218,8 @@
         "prompts/acm/classification.jinja",
         "prompts/acm/correction.jinja"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e30-s6-bar-sf-vocabulary-transition.md",
+      "implementedDate": "2026-03-03"
     },
     {
       "id": "E30-S7",
@@ -1184,7 +1184,7 @@
       "id": "GATE:SCHEMA_FREEZE",
       "name": "Schema Freeze",
       "triggerStory": "E30-S6",
-      "unlocked": false,
+      "unlocked": true,
       "blocksEpics": [
         "E31",
         "E32",
