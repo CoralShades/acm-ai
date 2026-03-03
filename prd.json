@@ -71,7 +71,7 @@
       ],
       "keyFiles": [
         "open_notebook/domain/acm.py",
-        "migrations/39.surrealql",
+        "migrations/40.surrealql",
         "api/routers/acm.py",
         "open_notebook/database/repository.py",
         "tests/test_building_record.py"

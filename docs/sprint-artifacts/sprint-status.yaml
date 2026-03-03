@@ -419,15 +419,15 @@ development_status:
   # Dependencies: E29 S1-S4 (completed)
   # FRs: FR-1401..FR-1412
   # ─────────────────────────────────────────────────────
-  epic-30: backlog
+  epic-30: in-progress  # 5/8 stories done; S5, S7, S8 remaining
   e30-s1-sf-schema-config-loader: done                # 5 SP. No deps. FIRST V3 STORY — completed 2026-03-03
-  e30-s2-building-record-table-domain-model: backlog  # 5 SP. Blocked by S1. New building_record table + BuildingRecord model
+  e30-s2-building-record-table-domain-model: done     # 5 SP. Commit 59ac749d. Migration 40 (implemented after S3, so used 40 not 39). 2026-03-03
   e30-s3-acm-record-sf-item-alignment: done            # 3 SP. Blocked by S1. Pydantic SF aliases for Item__c fields — completed 2026-03-03
   e30-s4-dependent-picklist-validator: done             # 5 SP. SalesforcePicklistValidator + dependency chains. 187 tests.
   e30-s5-data-migration-script: backlog               # 3 SP. Blocked by S2, S3. Migrate existing records to new schema
   e30-s6-bar-sf-vocabulary-transition: done             # 2 SP. Good→Stable, Non Friable→Non-friable, T-prefix stripping. GATE:SCHEMA_FREEZE unlocked.
   # ═══ SCHEMA FREEZE GATE UNLOCKED 2026-03-03 ═══ — E31/E32/E33/E34 now eligible
-  e30-s7-two-phase-extraction-prompts: backlog        # 3 SP. Blocked by S1,S2,S3. CAN proceed in parallel with E31 (post-freeze)
+  e30-s7-two-phase-extraction-prompts: backlog        # 3 SP. Blocked by GATE:SCHEMA_FREEZE + E31-S2 (needs adapter output shapes). Post-freeze but waits on E31-S2.
   e30-s8-anthropic-direct-api-openrouter-fallback: backlog  # 3 SP. Blocked by S1. CAN proceed in parallel with E31 (post-freeze)
   epic-30-retrospective: optional
 
@@ -528,24 +528,27 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 28
-# Total Stories: 176
-# Stories Done: 152 (86%)
+# Total Epics: 33  (+5 V3 epics: E30–E34)
+# Total Stories: 209  (176 pre-V3 + 33 V3)
+# Stories Done: 157 (75%)  — 152 pre-V3 + 5 from E30 (S1,S2,S3,S4,S6)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
-# Stories Ready-For-Dev: 1 (E29-S2)
-# Stories Drafted: 6 (E29-S3..E29-S8)
-# Stories Backlog: 0
+# Stories Ready-For-Dev: 0
+# Stories Drafted: 0
+# Stories Backlog: 28  (E30: S5,S7,S8; E31: 7; E32: 6; E33: 8; E34: 4)
 # Stories Archived: 12 (E8-S1..S10, E24-S2, E24-S4)
 #
-# Last Updated: 2026-03-01  # Gate 1 QA: S1 verified DONE (34/34 tests, all AC pass). S2 not implemented — Gate 1 FAIL. S2 must be built before Gate 1 re-eval.
+# Last Updated: 2026-03-03
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28
-# IN-PROGRESS EPICS: E29
-# BACKLOG EPICS: none
+# IN-PROGRESS EPICS: E29, E30
+# BACKLOG EPICS: E31, E32, E33, E34
 # ARCHIVED EPICS: E8 (all 10 stories archived)
+#
+# V3 STATUS: GATE:SCHEMA_FREEZE UNLOCKED 2026-03-03 (trigger: E30-S6)
+# V3 Done: 5/33 stories (E30-S1,S2,S3,S4,S6). Next: E30-S5 (data migration) or E31-S1 (MinerU).
 #
 # EXTRACTION ACCURACY STATUS:
 # ===========================
