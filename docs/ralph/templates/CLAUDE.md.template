@@ -1,0 +1,43 @@
+# CLAUDE.md — {{PROJECT_NAME}}
+
+## Project Overview
+{{PROJECT_DESCRIPTION}}
+
+## Tech Stack
+{{STACK_DESCRIPTION}}
+
+## Essential Commands
+
+### Development
+```bash
+{{DEV_COMMAND}}              # Start development server
+{{TEST_COMMAND}}             # Run tests
+{{LINT_COMMAND}}             # Lint code
+{{BUILD_COMMAND}}            # Production build
+```
+
+## Architecture
+{{ARCHITECTURE_DESCRIPTION}}
+
+## Key Directories
+```
+{{DIRECTORY_STRUCTURE}}
+```
+
+## Ralph Loop Configuration
+When running a Ralph loop on this repo:
+- **Max iterations**: {{MAX_ITERATIONS}}
+- **Completion promise**: `<promise>COMPLETE</promise>`
+- **Blocked signal**: `<promise>BLOCKED</promise>`
+- **Test command**: `{{TEST_COMMAND}}`
+- **Lint command**: `{{LINT_COMMAND}}`
+
+## Code Style
+{{CODE_STYLE_DESCRIPTION}}
+
+## Do NOT
+- Modify files outside the current story scope
+- Skip writing tests
+- Ignore linter/analyzer errors
+- Change database schemas without explicit approval in the story
+- {{ADDITIONAL_GUARDRAILS}}

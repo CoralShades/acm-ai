@@ -1,0 +1,61 @@
+#!/bin/bash
+# Ralph Loop — Simple Pattern
+# Spawns fresh Claude Code instances until all stories pass or blocked.
+# Adapted from snarktank/ralph.
+set -euo pipefail
+
+MAX_ITERATIONS="${1:-50}"
+MODEL="${2:-sonnet}"
+PROMPT_FILE="PROMPT.md"
+COMPLETION_PROMISE="<promise>COMPLETE</promise>"
+BLOCKED_SIGNAL="<promise>BLOCKED</promise>"
+
+# Force OAuth — remove API key so CLI uses subscription
+unset ANTHROPIC_API_KEY
+# Allow spawning child instances
+unset CLAUDECODE
+
+cd "$(dirname "$0")/.."
+
+if [ ! -f prd.json ]; then
+  echo "ERROR: prd.json not found. Generate it first."
+  exit 1
+fi
+
+echo "=== Ralph Loop: $MAX_ITERATIONS iterations, model: $MODEL ==="
+
+for i in $(seq 1 "$MAX_ITERATIONS"); do
+  echo ""
+  echo "=== Iteration $i of $MAX_ITERATIONS ==="
+
+  # Check if all stories pass
+  REMAINING=$(jq '[.stories[] | select(.passes == false)] | length' prd.json 2>/dev/null || echo "0")
+  if [ "$REMAINING" -eq 0 ]; then
+    echo "All stories complete!"
+    exit 0
+  fi
+  echo "Stories remaining: $REMAINING"
+
+  # Spawn fresh Claude Code instance
+  OUTPUT=$(claude \
+    -p "$(cat "$PROMPT_FILE")" \
+    --dangerously-skip-permissions \
+    --model "$MODEL" \
+    2>&1 | tee /dev/stderr) || true
+
+  # Check completion signals
+  if echo "$OUTPUT" | grep -qF "$COMPLETION_PROMISE"; then
+    echo "=== Ralph completed all stories! ==="
+    exit 0
+  fi
+
+  if echo "$OUTPUT" | grep -qF "$BLOCKED_SIGNAL"; then
+    echo "=== Ralph blocked — needs human intervention ==="
+    exit 1
+  fi
+
+  sleep 2
+done
+
+echo "=== Max iterations ($MAX_ITERATIONS) reached ==="
+exit 2
