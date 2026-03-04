@@ -36,6 +36,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-04 | E31-S5 | Pipeline Integration | 3 | source_commands.py, orchestrator_node.py, acm_extraction.py, consensus integration, test_pipeline_integration.py | Wire dual-provider extraction (Docling + MinerU) into orchestrator node, integrate consensus layer, unified extraction pipeline with provider switching |
 | 2026-03-04 | E33-S2 | Building Grid + Item Grid (Two-View) | 5 | BuildingGrid.tsx, ItemGrid.tsx, SidebarWrapper.tsx, use-source-buildings.ts, use-building-items.ts, building.ts, item.ts, page.tsx | Two-view layout with Building sidebar (tree/search) + Item AG Grid. Buildings persisted via API. Item filtering by building_id. Dual-grid navigation pattern |
 | 2026-03-04 | E31-S6 | Dual-Provider Benchmark | 2 | benchmark_harness.py, test_benchmark_harness.py, research reports | Benchmark framework for dual-provider extraction (Docling + MinerU) with consensus validation. Broadmeadows 31/31, Alexander ≥40/43 consensus validation |
+| 2026-03-04 | E31-S7 | PipelineEventBus + SSE Infrastructure | 3 | PipelineEventBus class, SSE endpoints, Zustand streaming integration, frontend progress stream | Event bus for pipeline stage transitions, /api/acm/extraction-progress/{id}/stream SSE endpoint, frontend real-time progress UI |
 
 ## Sprint Summary
 
@@ -44,7 +45,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-1 | 4/4 | 18/18 | Complete |
 | V3-2 | 2/2 | 5/5 | Complete |
 | V3-3 | 8/8 | 23/23 | Complete |
-| V3-4 | 3/7 | 7/21 | In Progress |
+| V3-4 | 4/7 | 10/21 | In Progress |
 | V3-5 | 0/5 | 0/15 | Not Started |
 | V3-6 | 0/6 | 0/17 | Not Started |
 | V3-7 | 0/4 | 0/9 | Not Started |

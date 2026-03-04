@@ -445,7 +445,7 @@ development_status:
   e31-s4-raw-extraction-table-storage: done           # 2 SP. V3-3. New raw_extraction SurrealDB table, RawExtraction domain class, GET /api/acm/raw-extractions/{source_id} endpoint, _store_raw_extractions() wiring in source_commands.py, 30 unit tests
   e31-s5-pipeline-integration: done                    # 3 SP. V3-4. Wire dual-provider into orchestrator + consensus. Completed 2026-03-04.
   e31-s6-dual-provider-benchmark: done                # 2 SP. Blocked by S5. Broadmeadows 31/31, Alexander ≥40/43 consensus validation. Completed 2026-03-04.
-  e31-s7-pipeline-event-bus-sse-infrastructure: backlog  # 3 SP. Blocked by S5. PipelineEventBus + SSE endpoints + Zustand streaming
+  e31-s7-pipeline-event-bus-sse-infrastructure: done     # 3 SP. V3-4. PipelineEventBus + SSE endpoints + Zustand streaming. Completed 2026-03-04.
   e31-s8-pre-extraction-quality-hardening: backlog    # 3 SP. V3-5. Fix page markers, LLM structure retry, metadata quality. Deps: E30-S9
   epic-31-retrospective: optional
 
