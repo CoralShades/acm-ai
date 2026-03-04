@@ -495,8 +495,8 @@
         "AC7: Feature flag V3_DUAL_PROVIDER=true (default) -- can disable MinerU to fall back to Docling-only",
         "AC8: Integration test: upload PDF -> dual extraction -> consensus -> merged table sections"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -511,7 +511,7 @@
         "tests/test_dual_provider_pipeline.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e31-s5-pipeline-integration.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S6",
