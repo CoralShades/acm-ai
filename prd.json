@@ -951,8 +951,8 @@
         "AC7: Export button disabled with X validation errors tooltip when errors exist",
         "AC8: Unit tests for badge rendering and wizard field validation"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -968,7 +968,7 @@
         "frontend/src/components/acm/BuildingSidebar.tsx"
       ],
       "techSpecFile": "docs/sprint-artifacts/e33-s4-sf-validation-badges-record-wizard.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E33-S5",
