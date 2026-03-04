@@ -17,6 +17,7 @@ from open_notebook.extractors.parsers.field_config import (
 from open_notebook.extractors.validators.sf_picklist_validator import (
     SalesforcePicklistValidator,
     ValidationPolicy,
+    _normalize_to_sf_value,
 )
 
 # ---------------------------------------------------------------------------
@@ -589,3 +590,187 @@ class TestEdgeCases:
         }
         issues = validator.validate_building_chain(record, ValidationPolicy.REJECT)
         assert len(issues) == 0
+
+
+# ---------------------------------------------------------------------------
+# E32-S4: Sub-classification casing normalization
+# ---------------------------------------------------------------------------
+
+
+class TestSubClassificationNormalization:
+    """Tests for _normalize_to_sf_value and its application in Chain 2.
+
+    Story: E32-S4 — Classifier Update: SF Taxonomy Sentence Case Normalization.
+    taxonomy.py outputs product types in Title Case (e.g., "Flat Sheeting")
+    while Salesforce ACM_Sub_Classification__c may use different casing.
+    The normalizer resolves this at the validation boundary.
+    """
+
+    def test_title_case_sub_classification_passes(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """Record with ACM_Sub_Classification__c='Flat Sheeting' passes chain 2."""
+        record = {
+            "Friability_of_Material__c": "Non-friable",
+            "ACM_Classification__c": "Cement products",
+            "ACM_Sub_Classification__c": "Flat Sheeting",
+        }
+        issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
+        sub_issues = [
+            i for i in issues if i.dependent_field == "ACM_Sub_Classification__c"
+        ]
+        assert len(sub_issues) == 0, (
+            f"'Flat Sheeting' should pass chain 2 via normalization: {sub_issues}"
+        )
+
+    @pytest.mark.parametrize(
+        "sub_classification,classification",
+        [
+            ("Ceiling Tiles", "Cement products"),
+            ("Vinyl Tiles", "Vinyl products"),
+            ("Ridge Capping", "Cement products"),
+            ("Corrugated Roof Sheeting", "Cement products"),
+            ("Clutch Plates", "Gasket, friction products and adhesives"),
+            ("Internal Lining", "Cement products"),
+            ("Water Tanks", "Cement products"),
+        ],
+    )
+    def test_multiple_title_case_types_pass(
+        self,
+        validator: SalesforcePicklistValidator,
+        sub_classification: str,
+        classification: str,
+    ):
+        """Title Case taxonomy output passes chain 2 for multiple product types."""
+        record = {
+            "Friability_of_Material__c": "Non-friable",
+            "ACM_Classification__c": classification,
+            "ACM_Sub_Classification__c": sub_classification,
+        }
+        issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
+        sub_issues = [
+            i for i in issues if i.dependent_field == "ACM_Sub_Classification__c"
+        ]
+        assert len(sub_issues) == 0, (
+            f"'{sub_classification}' under '{classification}' should pass: {sub_issues}"
+        )
+
+    def test_already_correct_case_passes(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """'Brake pads' (already SF-canonical casing) still passes (idempotent)."""
+        record = {
+            "Friability_of_Material__c": "Non-friable",
+            "ACM_Classification__c": "Gasket, friction products and adhesives",
+            "ACM_Sub_Classification__c": "Brake pads",
+        }
+        issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
+        sub_issues = [
+            i for i in issues if i.dependent_field == "ACM_Sub_Classification__c"
+        ]
+        assert len(sub_issues) == 0, (
+            f"'Brake pads' (exact match) should still pass: {sub_issues}"
+        )
+
+    def test_acronym_values_pass(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """Acronym-containing values ('CAF gasket(s)', 'SMF insulation') pass without corruption."""
+        # CAF gasket(s) — exact match in Gasket classification
+        record_caf = {
+            "Friability_of_Material__c": "Non-friable",
+            "ACM_Classification__c": "Gasket, friction products and adhesives",
+            "ACM_Sub_Classification__c": "CAF gasket(s)",
+        }
+        issues_caf = validator.validate_acm_chain(record_caf, ValidationPolicy.REJECT)
+        sub_issues_caf = [
+            i for i in issues_caf if i.dependent_field == "ACM_Sub_Classification__c"
+        ]
+        assert len(sub_issues_caf) == 0, (
+            f"'CAF gasket(s)' should pass without corruption: {sub_issues_caf}"
+        )
+
+        # SMF insulation — case-insensitive match to "SMF Insulation" in Insulation Products
+        record_smf = {
+            "Friability_of_Material__c": "Non-friable",
+            "ACM_Classification__c": "Insulation Products",
+            "ACM_Sub_Classification__c": "SMF insulation",
+        }
+        issues_smf = validator.validate_acm_chain(record_smf, ValidationPolicy.REJECT)
+        sub_issues_smf = [
+            i for i in issues_smf if i.dependent_field == "ACM_Sub_Classification__c"
+        ]
+        assert len(sub_issues_smf) == 0, (
+            f"'SMF insulation' should normalize to 'SMF Insulation' and pass: {sub_issues_smf}"
+        )
+
+    def test_truly_invalid_sub_classification_still_fails(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """'TOTALLY MADE UP VALUE' has no case-insensitive match and still fails."""
+        record = {
+            "Friability_of_Material__c": "Non-friable",
+            "ACM_Classification__c": "Cement products",
+            "ACM_Sub_Classification__c": "TOTALLY MADE UP VALUE",
+        }
+        issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
+        sub_issues = [
+            i for i in issues if i.dependent_field == "ACM_Sub_Classification__c"
+        ]
+        assert len(sub_issues) == 1, (
+            f"Truly invalid value should still produce exactly 1 sub issue: {sub_issues}"
+        )
+        assert sub_issues[0].issue_type == "invalid_chain_value"
+
+    def test_controller_fields_not_normalized(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """'cement products' (lowercase Classification) still fails — controller not normalized."""
+        record = {
+            "Friability_of_Material__c": "Non-friable",
+            "ACM_Classification__c": "cement products",
+            "ACM_Sub_Classification__c": "Flat Sheeting",
+        }
+        issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
+        # Chain 1: "cement products" (lowercase) should fail against the controller chain
+        assert len(issues) >= 1, (
+            "Lowercase 'cement products' as classification should still fail chain 1"
+        )
+
+    def test_friability_still_case_sensitive(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """'non-friable' (lowercase) still fails — friability controller not normalized."""
+        record = {
+            "Friability_of_Material__c": "non-friable",
+            "ACM_Classification__c": "Cement products",
+        }
+        issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
+        assert len(issues) >= 1, (
+            "'non-friable' (lowercase) should still fail — friability is not normalized"
+        )
+
+    def test_normalize_to_sf_value_helper(self):
+        """Direct unit tests for _normalize_to_sf_value()."""
+        valid_values = ["Flat sheeting", "Corrugated roof sheeting", "CAF gasket(s)"]
+
+        # Exact match: returns unchanged
+        assert _normalize_to_sf_value("Flat sheeting", valid_values) == "Flat sheeting"
+
+        # Case-insensitive match: returns the canonical SF value
+        assert _normalize_to_sf_value("Flat Sheeting", valid_values) == "Flat sheeting"
+        assert (
+            _normalize_to_sf_value("CORRUGATED ROOF SHEETING", valid_values)
+            == "Corrugated roof sheeting"
+        )
+
+        # Acronym value: exact match preserved unchanged
+        assert (
+            _normalize_to_sf_value("CAF gasket(s)", valid_values) == "CAF gasket(s)"
+        )
+
+        # No match: returns the original value (will fail validation)
+        assert (
+            _normalize_to_sf_value("TOTALLY MADE UP", valid_values)
+            == "TOTALLY MADE UP"
+        )

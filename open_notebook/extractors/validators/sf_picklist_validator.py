@@ -72,6 +72,32 @@ _BAR_TO_SF_VALUE: dict[str, dict[str, str]] = {
 }
 
 
+def _normalize_to_sf_value(value: str, valid_values: list[str]) -> str:
+    """Normalize a value to its SF-canonical casing using case-insensitive lookup.
+
+    If the value is already an exact match, return it unchanged.
+    If a case-insensitive match exists in valid_values, return the canonical SF value.
+    If no match found, return the original value (will fail validation as expected).
+
+    This handles the mismatch between taxonomy.py Title Case output and the
+    sentence case used in Salesforce ACM_Sub_Classification__c picklist values.
+
+    Args:
+        value: The value to normalize.
+        valid_values: The list of canonical SF picklist values for this controller.
+
+    Returns:
+        The canonical SF value if a case-insensitive match is found, else value.
+    """
+    if value in valid_values:
+        return value
+    value_lower = value.lower()
+    for sf_value in valid_values:
+        if sf_value.lower() == value_lower:
+            return sf_value
+    return value
+
+
 def _get_field_value(record: dict, sf_api_name: str) -> Optional[str]:
     """Get a field value from a record, trying SF API name first, then aliases.
 
@@ -206,6 +232,11 @@ class SalesforcePicklistValidator:
                     # Classification not found in chain — skip (already caught above)
                     pass
                 elif isinstance(valid_values, list):
+                    # Normalize taxonomy Title Case output to SF-canonical casing.
+                    # taxonomy.py may return "Flat Sheeting" while SF stores "Flat sheeting".
+                    sub_classification = _normalize_to_sf_value(
+                        sub_classification, valid_values
+                    )
                     if sub_classification not in valid_values:
                         issues.append(
                             ChainValidationIssue(
