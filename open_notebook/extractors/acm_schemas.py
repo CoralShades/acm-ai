@@ -362,6 +362,16 @@ class ACMExtractionRecord(BaseModel):
                 raise ValueError(f"quantity cannot be negative, got '{v}'")
         return v
 
+    # Consensus layer metadata (populated by ConsensusEngine — E31-S3)
+    consensus_metadata: Optional[dict] = Field(
+        default=None,
+        description=(
+            "Populated by the ConsensusEngine when multiple providers are used. "
+            "Contains tier, providers, match_method, field_votes, conflict_level, "
+            "and resolver_used. None for single-provider extractions."
+        ),
+    )
+
     # Extraction metadata
     extraction_confidence: str = Field(
         default="medium", description="Confidence level: 'high', 'medium', 'low'"

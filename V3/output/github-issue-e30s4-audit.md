@@ -15,19 +15,18 @@ Discovered during E30-S4 audit (2026-03-03). Full findings in `V3/prompts/findin
 | F1: "Good"→"Stable" | FIXED | ✅ Resolved | register_enums.json + enums.py both use "Stable" |
 | F2: Dual validation path | HIGH | ⚠️ Partially addressed | sf_picklist_validator.py has `_BAR_TO_SF_VALUE` normalization + WARN policy. "Not Sampled"/"No Access" BAR→SF mapping not yet explicit. |
 | F3: 4 missing SF groups | HIGH | ⚠️ Partially addressed | T-prefix stripped at runtime via `_strip_t_prefix()`. 4 taxonomy groups (Textiles-NF, Bitumen-f, Coatings-f, Plastics-f) still absent from JSONs. SF schema is authoritative via E30-S4. |
-| **F4: Product type casing** | **HIGH** | **❌ NOT FIXED — New story needed** | `CLASSIFICATION_PATTERNS` still outputs Title Case ("Flat Sheeting"); SF expects sentence case ("Flat sheeting"). Every product type fails strict case validation. |
+| **F4: Product type casing** | **HIGH** | **✅ FIXED — E32-S4** | `_normalize_to_sf_value()` added to `sf_picklist_validator.py`; applied in Chain 2 (Sub-Classification only). Case-insensitive lookup normalizes taxonomy Title Case output to SF-canonical casing at validation boundary. |
 | F5: primary_classification rotated | MEDIUM | ⚠️ Not addressed | No code comment gate. Current code is safe (uses `product_group_header`). |
 | F6: Missing consultant action | LOW | ❌ Not fixed | Low priority — fallback handles it. |
 | F7: No BAR enum for ACM fields | MEDIUM | ✅ Mitigated | SF schema (E30-S4) is now the authoritative source for ACM chain validation. |
 | F8: SpecificUses gap | LOW | ✅ Deferred | Correct — out of scope. |
 
-### Critical Remaining Gap: F4
+### F4 Resolved: E32-S4
 
-**Story needed:** Product Type Casing Normalization (E30-S9 or E32-S4)
-
-`taxonomy.py` CLASSIFICATION_PATTERNS (lines 139–579) outputs ~60 product types in Title Case. Salesforce `ACM_Sub_Classification__c` uses sentence case. E30-S4 AC4 requires strict case-sensitive matching — every chain validation will report false positives until fixed.
-
-**Recommended fix:** Option (b) — add `_sf_sentence_case()` normalization in `sf_picklist_validator.py` between `classify_product()` output and chain lookup. Lowest risk, doesn't touch 60+ regex patterns.
+**Fixed in E32-S4:** `_normalize_to_sf_value()` helper added to `sf_picklist_validator.py`.
+Applied in Chain 2 (Classification → SubClassification) only. Uses case-insensitive lookup
+to map taxonomy Title Case output to SF-canonical casing at the validation boundary.
+Controller fields (Friability, Classification, Building Type) remain strict case-sensitive.
 
 ---
 

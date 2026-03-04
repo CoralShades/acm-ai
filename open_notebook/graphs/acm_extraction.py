@@ -22,7 +22,7 @@ from pydantic import ValidationError
 from typing_extensions import TypedDict
 
 from open_notebook.database.repository import save_source_intelligence
-from open_notebook.domain.acm import ACMRecord, ACMTableSection
+from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
 from open_notebook.domain.models import Model
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.acm_debug import (
@@ -40,6 +40,7 @@ from open_notebook.extractors.acm_schemas import (
     BuildingRoomContext,
     ExtractionStatus,
 )
+from open_notebook.extractors.acm_schemas_v3 import BuildingExtractionResult
 from open_notebook.extractors.agui_event_emitter import AGUIEventEmitter
 from open_notebook.extractors.building_inventory import (
     BuildingInventory,
@@ -57,9 +58,13 @@ from open_notebook.extractors.metadata_extractor import (
 from open_notebook.extractors.normalizers.content import normalize_docling_text
 from open_notebook.extractors.normalizers.enums import normalize_enum_value
 from open_notebook.extractors.orchestrator import (
+    BuildingExtractionPlan,
+    ExtractionStrategy,
     OrchestratorStats,
+    _extract_building_content,
     _get_docling_tables,
     _inject_docling_tables,
+    _v3_extract_building_meta,
     orchestrate_extraction,
 )
 from open_notebook.extractors.page_tagger import (
@@ -443,6 +448,8 @@ class ExtractionState(TypedDict):
     pipeline_logger: Optional[PipelineLogger]
     # AG-UI event emitter (E17-S1)
     agui_emitter: Optional[AGUIEventEmitter]
+    # E32-S1: Building__c extraction results (record IDs of persisted BuildingRecords)
+    building_records: List[str]
 
 
 def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
@@ -1003,9 +1010,7 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
                 inventory.model_dump(mode="json") if inventory else None
             ),
             "page_tags": page_tags.model_dump(mode="json") if page_tags else None,
-            "total_pages": (
-                doc_structure.total_pages if doc_structure else None
-            ),
+            "total_pages": (doc_structure.total_pages if doc_structure else None),
             "total_buildings": inventory.total_buildings if inventory else None,
             "document_type": (
                 doc_structure.document_type.value if doc_structure else None
@@ -1034,6 +1039,145 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
         await agui.emit_step_finished("save_intelligence")
 
     return {}
+
+
+async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
+    """Phase 1 Building__c extraction: one AI call per building section.
+
+    Iterates over state["building_inventory"].buildings and calls
+    _v3_extract_building_meta() for each building, mapping results to
+    BuildingRecord domain objects and persisting them to the DB.
+
+    Story: E32-S1 Building__c AI Extraction Node
+    """
+    source: Source = state["source"]
+    content: str = source.full_text or ""
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
+    schema_bundle = state.get(
+        "schema_bundle"
+    )  # may be None — _v3_extract_building_meta handles None
+    pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
+
+    if agui:
+        await agui.emit_step_started("extract_building")
+
+    if not inventory or not inventory.buildings:
+        logger.info(
+            f"[E32-S1] No building inventory for source {source.id} — skipping building extraction"
+        )
+        if agui:
+            await agui.emit_step_finished("extract_building", buildings=0)
+        return {"building_records": []}
+
+    if pl:
+        pl.stage_progress(
+            StageId.ORCHESTRATOR,
+            f"Building extraction: {inventory.total_buildings} buildings",
+        )
+
+    saved_ids: List[str] = []
+    source_id_str = str(source.id)
+
+    for building_meta in inventory.buildings:
+        try:
+            # Slice document content to this building's page range
+            page_start = building_meta.page_start
+            page_end = building_meta.page_end or page_start
+            building_content = _extract_building_content(content, page_start, page_end)
+
+            if not building_content.strip():
+                logger.warning(
+                    f"[E32-S1] Empty content for building {building_meta.building_id} "
+                    f"(pages {page_start}-{page_end}) — skipping"
+                )
+                continue
+
+            # Construct a minimal BuildingExtractionPlan so _v3_extract_building_meta
+            # can access building_id and page_range for logging/prompt context
+            plan = BuildingExtractionPlan(
+                building_id=building_meta.building_id,
+                building_name=building_meta.name,
+                page_range=(page_start, page_end),
+                strategy=ExtractionStrategy.FULL_LLM,
+            )
+
+            # Phase 1 LLM call — returns BuildingExtractionResult or None on failure
+            result = await _v3_extract_building_meta(
+                building_content=building_content,
+                plan=plan,
+                state=state,
+                schema_bundle=schema_bundle,
+            )
+
+            if result is None:
+                logger.warning(
+                    f"[E32-S1] Phase 1 returned None for building {building_meta.building_id} — skipping"
+                )
+                continue
+
+            # Generate server-side internal ID: BLD#{source_short}_{seq:03d}
+            internal_id = await BuildingRecord.generate_internal_id(source_id_str)
+
+            # Map BuildingExtractionResult fields to BuildingRecord domain model
+            record = BuildingRecord(
+                internal_id=internal_id,
+                source_id=source_id_str,
+                building_code=building_meta.building_id,
+                building_name=result.building_name,
+                building_type=result.building_type,
+                building_category=result.building_category,
+                building_address=result.building_address,
+                suburb=result.suburb,
+                postcode=result.postcode,
+                building_year=result.estimated_year_built,
+                building_construction=result.construction_type,
+                date_of_audit_report=result.date_of_audit,
+                frequency_of_use=result.frequency_of_use,
+            )
+
+            saved_record = await record.save()
+            if not saved_record or not saved_record.id:
+                logger.warning(
+                    f"[E32-S1] BuildingRecord.save() returned no ID for building "
+                    f"{building_meta.building_id} — record may not have persisted"
+                )
+                continue
+            record_id = str(saved_record.id)
+            saved_ids.append(record_id)
+
+            logger.info(
+                f"[E32-S1] Saved BuildingRecord {internal_id} for building "
+                f"{building_meta.building_id} (confidence={result.extraction_confidence})"
+            )
+
+        except Exception as e:
+            logger.warning(
+                f"[E32-S1] Failed to extract/save building {building_meta.building_id}: {e} "
+                "(skipping — partial results preserved)"
+            )
+            continue
+
+    logger.info(
+        f"[E32-S1] Building extraction complete for source {source_id_str}: "
+        f"{len(saved_ids)}/{len(inventory.buildings)} buildings saved"
+    )
+
+    if pl:
+        pl.stage_progress(
+            StageId.ORCHESTRATOR,
+            f"Building extraction: {len(saved_ids)}/{len(inventory.buildings)} saved",
+            buildings_saved=len(saved_ids),
+        )
+
+    if agui:
+        await agui.emit_step_finished(
+            "extract_building",
+            buildings=len(saved_ids),
+            total=len(inventory.buildings),
+        )
+
+    return {"building_records": saved_ids}
 
 
 async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
@@ -2177,11 +2321,11 @@ def should_correct(state: dict) -> str:
         }
         validation = validate_acm_record(record_dict)
         if not validation.is_valid:
-            # Filter to only correctable issues (enum + business rule)
+            # Filter to only correctable issues (enum + business rule + SF enum)
             correctable = [
                 i
                 for i in validation.issues
-                if i.issue_type in ("enum_mismatch", "business_rule")
+                if i.issue_type in ("enum_mismatch", "business_rule", "invalid_sf_enum")
             ]
             if correctable:
                 return "correct"
@@ -2984,7 +3128,12 @@ agent_state.add_node("extract_metadata", extract_metadata_node)  # E1-S19: Stage
 agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
 agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
 agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
-agent_state.add_node("save_intelligence", save_intelligence_node)  # E30-S9: Persist pre-extraction intelligence
+agent_state.add_node(
+    "save_intelligence", save_intelligence_node
+)  # E30-S9: Persist pre-extraction intelligence
+agent_state.add_node(
+    "extract_building", extract_building_node
+)  # E32-S1: Building__c Phase 1 extraction
 agent_state.add_node(
     "orchestrate", orchestrate_with_logging
 )  # E1-S20: Agentic orchestrator (wrapped with E1-S21 logging)
@@ -3003,7 +3152,9 @@ agent_state.add_edge("structure", "inventory")
 agent_state.add_edge("inventory", "tag_pages")
 # E30-S9: Persist pre-extraction intelligence before orchestrator
 agent_state.add_edge("tag_pages", "save_intelligence")
-agent_state.add_edge("save_intelligence", "orchestrate")
+# E32-S1: Building__c extraction runs between save_intelligence and orchestrate
+agent_state.add_edge("save_intelligence", "extract_building")
+agent_state.add_edge("extract_building", "orchestrate")
 agent_state.add_edge("orchestrate", "validate")
 # Legacy edges removed — prepare/extract nodes kept but unreachable (AC-5)
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}

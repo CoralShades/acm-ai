@@ -210,6 +210,10 @@ def pydantic_to_openrouter_schema(model_class: type) -> dict:
 # Module-level cache for ACM extraction schema (E27-S4)
 _ACM_EXTRACTION_JSON_SCHEMA: dict | None = None
 
+# Module-level caches for V3 schemas (E30-S7)
+_V3_BUILDING_JSON_SCHEMA: dict | None = None
+_V3_ITEM_JSON_SCHEMA: dict | None = None
+
 
 def _get_acm_extraction_schema() -> dict:
     """Lazily generate and cache the JSON Schema for ACMExtractionResult."""
@@ -221,6 +225,26 @@ def _get_acm_extraction_schema() -> dict:
             ACMExtractionResult
         )
     return _ACM_EXTRACTION_JSON_SCHEMA
+
+
+def _get_v3_building_schema() -> dict:
+    """Lazily generate and cache JSON Schema for BuildingExtractionResult (E30-S7)."""
+    global _V3_BUILDING_JSON_SCHEMA
+    if _V3_BUILDING_JSON_SCHEMA is None:
+        from open_notebook.extractors.acm_schemas_v3 import BuildingExtractionResult
+
+        _V3_BUILDING_JSON_SCHEMA = pydantic_to_openrouter_schema(BuildingExtractionResult)
+    return _V3_BUILDING_JSON_SCHEMA
+
+
+def _get_v3_item_schema() -> dict:
+    """Lazily generate and cache JSON Schema for ACMItemExtractionResult (E30-S7)."""
+    global _V3_ITEM_JSON_SCHEMA
+    if _V3_ITEM_JSON_SCHEMA is None:
+        from open_notebook.extractors.acm_schemas_v3 import ACMItemExtractionResult
+
+        _V3_ITEM_JSON_SCHEMA = pydantic_to_openrouter_schema(ACMItemExtractionResult)
+    return _V3_ITEM_JSON_SCHEMA
 
 
 def _inject_response_format(

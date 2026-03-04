@@ -39,6 +39,8 @@ class FallbackId(str, Enum):
     F6_CORRECTION_EXHAUSTED = "fallback.correction_exhausted"
     F7_LLM_ERROR = "fallback.llm_error"
     F8_DOCLING_FAILURE = "fallback.docling_failure"
+    F9_PROVIDER_CONFLICT = "fallback.provider_conflict"
+    F10_CONSENSUS_ARBITRATION = "fallback.consensus_arbitration"
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +140,22 @@ FALLBACK_MATRIX: dict[FallbackId, FallbackContract] = {
         behavior="Continue with PyMuPDF full_text only (Docling tables unavailable)",
         severity="non-fatal (degraded)",
         telemetry_tag="fallback.docling_failure",
+        retry_eligible=False,
+    ),
+    FallbackId.F9_PROVIDER_CONFLICT: FallbackContract(
+        id=FallbackId.F9_PROVIDER_CONFLICT,
+        detection="Two providers return tables for same page with row_divergence > 0.40",
+        behavior="Set consensus_tier='multi_provider_conflict'; prefer MinerU HTML + Docling markdown",
+        severity="non-fatal (degraded confidence)",
+        telemetry_tag="fallback.provider_conflict",
+        retry_eligible=False,
+    ),
+    FallbackId.F10_CONSENSUS_ARBITRATION: FallbackContract(
+        id=FallbackId.F10_CONSENSUS_ARBITRATION,
+        detection="MinerU result used to arbitrate table on page where both providers returned tables",
+        behavior="MinerU HTML chosen as primary raw_html; consensus_tier='multi_provider_agreement'",
+        severity="informational",
+        telemetry_tag="fallback.consensus_arbitration",
         retry_eligible=False,
     ),
 }

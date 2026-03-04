@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 34,
-  "totalStoryPoints": 100,
+  "totalStories": 36,
+  "totalStoryPoints": 108,
   "sprints": 7,
   "stories": [
     {
@@ -239,8 +239,8 @@
         "AC7: Alexander benchmark: no regression from current baseline",
         "AC8: Worked examples included in prompt templates (SF vocabulary)"
       ],
-      "passes": false,
-      "notes": "Benefits from seeing adapter output shapes from E31-S2.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -255,8 +255,8 @@
         "open_notebook/extractors/orchestrator.py",
         "tests/test_extraction_prompts.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e30-s7-two-phase-extraction-prompts.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E30-S8",
@@ -277,7 +277,7 @@
         "AC8: Broadmeadows 31/31 accuracy maintained; Alexander >=40/43 baseline"
       ],
       "passes": false,
-      "notes": "Deferred to V3-4 \u00e2\u20ac\u201d Ollama-first approach per client priority. Not on critical path.",
+      "notes": "BLOCKED: Deferred to last \u2014 Ollama-first sprint priority. No downstream dependents.",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -423,8 +423,8 @@
         "AC7: Unit tests for each matching stage, voting, and conflict resolution",
         "AC8: False positive test: similar-but-different records must NOT be merged"
       ],
-      "passes": false,
-      "notes": "Core consensus algorithm. Needs architect guidance.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
@@ -440,8 +440,8 @@
         "tests/test_record_matcher.py",
         "tests/test_consensus_engine.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e31-s3-consensus-layer-core.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S4",
@@ -495,8 +495,8 @@
         "AC7: Feature flag V3_DUAL_PROVIDER=true (default) -- can disable MinerU to fall back to Docling-only",
         "AC8: Integration test: upload PDF -> dual extraction -> consensus -> merged table sections"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -510,8 +510,8 @@
         "commands/source_commands.py",
         "tests/test_dual_provider_pipeline.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e31-s5-pipeline-integration.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S6",
@@ -529,8 +529,8 @@
         "AC5: Results documented in benchmark report",
         "AC6: CI benchmark script: pytest tests/benchmarks/ -m v3_benchmark"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -542,8 +542,8 @@
         "docs/benchmarks/v3-dual-provider-report.md",
         "tests/conftest.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e31-s6-dual-provider-benchmark.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S7",
@@ -564,8 +564,8 @@
         "AC8: Extends existing E27 SSE infrastructure",
         "AC9: Unit tests for event bus pub/sub and SSE serialization"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -579,8 +579,8 @@
         "frontend/src/hooks/useV3SSE.ts",
         "tests/test_pipeline_event_bus.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e31-s7-pipeline-event-bus-sse-infrastructure.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E32-S1",
@@ -600,8 +600,8 @@
         "AC7: Error handling: provider failure skips building + preserves partial results",
         "AC8: Unit tests with mock Claude responses"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -615,8 +615,8 @@
         "open_notebook/domain/acm.py",
         "tests/test_building_extraction.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e32-s1-building-extraction-node.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E32-S2",
@@ -706,8 +706,8 @@
         "AC4: Existing E30-S4 test suite passes \u00e2\u20ac\u201d no regression (187+ tests)",
         "AC5: F4 finding in V3/output/github-issue-e30s4-audit.md updated to FIXED"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -720,7 +720,7 @@
         "V3/output/github-issue-e30s4-audit.md"
       ],
       "techSpecFile": "docs/sprint-artifacts/e32-s4-classifier-update-sf-taxonomy.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E32-S5",
@@ -790,6 +790,28 @@
       "implementedDate": "2026-03-04"
     },
     {
+      "id": "E32-S7",
+      "title": "SF-First Validation Pipeline",
+      "epicId": "E32",
+      "storyPoints": 5,
+      "priority": "P0",
+      "risk": "HIGH",
+      "complexity": "complex",
+      "status": "backlog",
+      "dependencies": [
+        "E30-S4",
+        "E32-S4"
+      ],
+      "acceptanceCriteria": [
+        "SF flat enum validation is the primary blocking validator for sample_result, material_condition, friable, disturbance_potential",
+        "BAR validate_enum_fields() demoted to bar_warnings (non-blocking, audit-only)",
+        "SF chain validation promoted from WARN to REJECT policy (blocking)",
+        "Negative - Treated as Positive passes SF validation without correction",
+        "Not Sampled and No Access flagged as needs_user_review (not rejected or auto-corrected)",
+        "Graceful degradation: if SF schema unavailable, BAR path used as fallback"
+      ]
+    },
+    {
       "id": "E33-S1",
       "title": "Upload Wizard + Extraction Progress",
       "epic": "E33",
@@ -849,8 +871,8 @@
         "AC12: TypeScript interfaces for BuildingRecord and ACMRecord API responses",
         "AC13: Empty state: No buildings extracted yet"
       ],
-      "passes": false,
-      "notes": "Two-view AG Grid. Needs architect guidance.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
@@ -867,8 +889,8 @@
         "frontend/src/hooks/useBuildings.ts",
         "frontend/src/hooks/useACMItems.ts"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e33-s2-building-grid-item-grid-two-view.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E33-S3",
@@ -1220,6 +1242,40 @@
       ],
       "techSpecFile": null,
       "implementedDate": null
+    },
+    {
+      "id": "E31-S8",
+      "title": "Pre-Extraction Quality Hardening",
+      "epic": "E31",
+      "sprint": "V3-5",
+      "storyPoints": 3,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "acceptanceCriteria": [
+        "AC1: Page detection uses provider-native page metadata (Docling page boundaries, PyMuPDF page markers) instead of regex-only \u00e2\u20ac\u201d total_pages > 0 for Broadmeadows PDF",
+        "AC2: LLM structure extraction has retry logic (max 2 attempts) before heuristic fallback \u00e2\u20ac\u201d logged when fallback activates",
+        "AC3: Metadata extraction field_confidence dict persisted to source_intelligence record (extends E30-S9 schema)",
+        "AC4: consultant_name extraction improved: cover page window bounded to first 3 pages (not entire document when page markers missing)",
+        "AC5: Existing extraction tests pass \u00e2\u20ac\u201d no regression on Broadmeadows 31/31 record count"
+      ],
+      "passes": false,
+      "notes": "Addresses 3 pre-existing extraction quality gaps found in Broadmeadows demo audit. Improves data quality for source_intelligence (E30-S9). See previous session extraction error audit.",
+      "model": "sonnet",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "E30-S9"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/document_structure.py",
+        "open_notebook/extractors/metadata_extractor.py",
+        "open_notebook/extractors/building_inventory.py",
+        "open_notebook/extractors/page_tagger.py",
+        "open_notebook/graphs/acm_extraction.py",
+        "open_notebook/database/repository.py"
+      ],
+      "techSpecFile": null,
+      "implementedDate": null
     }
   ],
   "gates": [
@@ -1240,7 +1296,7 @@
       "id": "GATE:EXTRACTION_COMPLETE",
       "name": "Extraction Complete",
       "triggerStory": "E31-S6",
-      "unlocked": false,
+      "unlocked": true,
       "blocksEpics": [],
       "description": "Multi-provider extraction pipeline operational with consensus layer."
     },
