@@ -755,7 +755,7 @@
         "tests/test_v3_e2e_pipeline.py",
         "tests/conftest.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e32-s5-extraction-pipeline-e2e-test.md",
       "implementedDate": null
     },
     {

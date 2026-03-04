@@ -120,6 +120,7 @@ ignore = [
 markers = [
     "integration: marks tests as integration tests requiring external services (ANTHROPIC_API_KEY, DB, etc.)",
     "v3_benchmark: marks tests as V3 dual-provider benchmark quality gates (require benchmark fixtures)",
+    "v3_e2e: V3 end-to-end accuracy tests (require RUN_E2E_LLM=true)",
 ]
 
 [tool.mypy]
