@@ -119,6 +119,7 @@ ignore = [
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests requiring external services (ANTHROPIC_API_KEY, DB, etc.)",
+    "v3_benchmark: marks tests as V3 dual-provider benchmark quality gates (require benchmark fixtures)",
 ]
 
 [tool.mypy]

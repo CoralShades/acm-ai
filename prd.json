@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 35,
-  "totalStoryPoints": 103,
+  "totalStories": 36,
+  "totalStoryPoints": 108,
   "sprints": 7,
   "stories": [
     {
@@ -542,7 +542,7 @@
         "docs/benchmarks/v3-dual-provider-report.md",
         "tests/conftest.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e31-s6-dual-provider-benchmark.md",
       "implementedDate": null
     },
     {
@@ -788,6 +788,25 @@
       ],
       "techSpecFile": "docs/sprint-artifacts/e32-s6-ollama-model-evaluation-spike.md",
       "implementedDate": "2026-03-04"
+    },
+    {
+      "id": "E32-S7",
+      "title": "SF-First Validation Pipeline",
+      "epicId": "E32",
+      "storyPoints": 5,
+      "priority": "P0",
+      "risk": "HIGH",
+      "complexity": "complex",
+      "status": "backlog",
+      "dependencies": ["E30-S4", "E32-S4"],
+      "acceptanceCriteria": [
+        "SF flat enum validation is the primary blocking validator for sample_result, material_condition, friable, disturbance_potential",
+        "BAR validate_enum_fields() demoted to bar_warnings (non-blocking, audit-only)",
+        "SF chain validation promoted from WARN to REJECT policy (blocking)",
+        "Negative - Treated as Positive passes SF validation without correction",
+        "Not Sampled and No Access flagged as needs_user_review (not rejected or auto-corrected)",
+        "Graceful degradation: if SF schema unavailable, BAR path used as fallback"
+      ]
     },
     {
       "id": "E33-S1",
