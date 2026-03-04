@@ -688,10 +688,11 @@ async def provision_extraction_fallback_model(
     if os.getenv("OPENAI_API_KEY"):
         candidates.append(("openai", "gpt-4o"))
 
-    # Ollama local fallbacks
+    # Ollama local fallbacks — qwen2.5:7b recommended (E32-S6 spike: 98% enrichment, 0.78s/call)
     if os.getenv("OLLAMA_API_BASE"):
         candidates.extend(
             [
+                ("ollama", "qwen2.5:7b"),    # spike winner: best enrichment speed+accuracy
                 ("ollama", "qwen2.5:32b"),
                 ("ollama", "qwen3:32b"),
             ]

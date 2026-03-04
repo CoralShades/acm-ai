@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 33,
-  "totalStoryPoints": 97,
+  "totalStories": 34,
+  "totalStoryPoints": 100,
   "sprints": 7,
   "stories": [
     {
@@ -290,6 +290,47 @@
         "open_notebook/graphs/acm_extraction.py",
         "open_notebook/extractors/strategy_registry.py",
         "tests/test_model_provisioning.py"
+      ],
+      "techSpecFile": null,
+      "implementedDate": null
+    },
+    {
+      "id": "E30-S9",
+      "title": "Persist Pre-Extraction Intelligence",
+      "epic": "E30",
+      "sprint": "V3-3",
+      "storyPoints": 3,
+      "riskLevel": "MEDIUM",
+      "storyType": "both",
+      "acceptanceCriteria": [
+        "AC1: Migration 41 creates source_intelligence table with SCHEMAFULL, unique index on source_id",
+        "AC2: save_source_intelligence() upserts all 4 pre-extraction models (DocumentMeta, DocumentStructure, BuildingInventory, PageTaggingResult)",
+        "AC3: get_source_intelligence() returns persisted data for a source_id or null",
+        "AC4: save_intelligence graph node runs between tag_pages and orchestrate \u00e2\u20ac\u201d non-blocking (catches all exceptions)",
+        "AC5: GET /api/acm/source-intelligence/{source_id} returns 200 with data or 404",
+        "AC6: Intelligence tab visible in source detail page with Brain icon",
+        "AC7: Document Overview section shows type badge, total pages, buildings count, register page range",
+        "AC8: Building Inventory section uses Radix Accordion with per-building details (rooms table)",
+        "AC9: Page Analysis section shows scrollable table with confidence badges",
+        "AC10: Hook polls every 5s during extraction, stops when done; skeleton + empty states"
+      ],
+      "passes": false,
+      "notes": "GitHub Issue #85 \u00e2\u20ac\u201d persist transient pre-extraction analysis for frontend display",
+      "model": "sonnet",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "GATE:SCHEMA_FREEZE"
+      ],
+      "keyFiles": [
+        "migrations/41.surrealql",
+        "open_notebook/database/repository.py",
+        "open_notebook/graphs/acm_extraction.py",
+        "api/routers/acm.py",
+        "api/models.py",
+        "frontend/src/components/acm/SourceIntelligencePanel.tsx",
+        "frontend/src/lib/hooks/use-source-intelligence.ts",
+        "frontend/src/app/(dashboard)/sources/[id]/page.tsx"
       ],
       "techSpecFile": null,
       "implementedDate": null
@@ -730,8 +771,8 @@
         "AC5: Select 1-2 models for production use (update capability registry default)",
         "AC6: Spike results documented in docs/spikes/ollama-model-evaluation.md"
       ],
-      "passes": false,
-      "notes": "Independent spike \u00e2\u20ac\u201d dependency on E30-S8 removed (Ollama-first approach). Runs after MinerU setup.",
+      "passes": true,
+      "notes": "Completed. 4-model Ollama eval (llama3.1:8b, qwen2.5:7b, mistral:7b, phi4). qwen2.5:7b recommended for enrichment (98% acc, 0.78s/call). AC3 skipped: API credits depleted.",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -742,8 +783,8 @@
         "scripts/research/ollama_model_eval.py",
         "docs/spikes/ollama-model-evaluation.md"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e32-s6-ollama-model-evaluation-spike.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E33-S1",

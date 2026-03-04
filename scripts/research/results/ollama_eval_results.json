@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "timestamp": "2026-03-04T05:40:00Z",
+    "phase": "Phase 2 \u2014 4 models (3 originally planned + phi4)",
+    "sample_size": 50,
+    "notes": [
+      "llama3.1:8b, qwen2.5:7b, mistral:7b: Phase 2 run with max_tokens=2048",
+      "phi4:latest: Phase 1 run with max_tokens=512 (non-reasoning model, results valid)",
+      "qwen3:latest EXCLUDED: reasoning model, ~60s/call at max_tokens=2048, impractical for production",
+      "deepseek-r1:8b EXCLUDED: reasoning model, 100% JSON parse error at max_tokens=512",
+      "claude-sonnet-4-20250514 SKIPPED: AC3 skipped \u2014 Anthropic API credits depleted"
+    ]
+  },
+  "excluded_models": [
+    {
+      "model_name": "qwen3:latest",
+      "reason": "Reasoning model. With max_tokens=2048, generates ~60s/call <think> blocks. Unsuitable for production batch extraction. Phase 1 cls=10%, enrich=53%, 27/50 classification errors."
+    },
+    {
+      "model_name": "deepseek-r1:8b",
+      "reason": "Reasoning model. <think> blocks exceed max_tokens=512. 100% error rate both tasks."
+    },
+    {
+      "model_name": "claude-sonnet-4-20250514",
+      "reason": "AC3 SKIPPED \u2014 Anthropic API credits depleted."
+    }
+  ],
+  "results": [
+    {
+      "model_name": "llama3.1:8b",
+      "provider": "ollama",
+      "vram_bytes": 6099999744,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.28,
+        "mean_latency_s": 1.77,
+        "p95_latency_s": 4.33,
+        "error_count": 0
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 0.91,
+        "mean_latency_s": 0.8,
+        "p95_latency_s": 0.9,
+        "error_count": 0
+      }
+    },
+    {
+      "model_name": "qwen2.5:7b",
+      "provider": "ollama",
+      "vram_bytes": 5560000000,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.24,
+        "mean_latency_s": 0.94,
+        "p95_latency_s": 1.05,
+        "error_count": 0
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 0.98,
+        "mean_latency_s": 0.78,
+        "p95_latency_s": 0.86,
+        "error_count": 0
+      }
+    },
+    {
+      "model_name": "mistral:7b",
+      "provider": "ollama",
+      "vram_bytes": 5780000000,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.26,
+        "mean_latency_s": 1.61,
+        "p95_latency_s": 1.33,
+        "error_count": 0
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 1.0,
+        "mean_latency_s": 0.96,
+        "p95_latency_s": 1.12,
+        "error_count": 0
+      }
+    },
+    {
+      "model_name": "phi4:latest",
+      "provider": "ollama",
+      "vram_bytes": 10879120725,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.2733333333333333,
+        "mean_latency_s": 4.642,
+        "p95_latency_s": 12.414,
+        "error_count": 0
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 0.95,
+        "mean_latency_s": 1.041,
+        "p95_latency_s": 1.158,
+        "error_count": 0
+      }
+    }
+  ]
+}
