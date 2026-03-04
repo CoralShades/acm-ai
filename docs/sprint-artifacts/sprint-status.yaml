@@ -460,7 +460,7 @@ development_status:
   e32-s2-item-ai-extraction-node: backlog              # 3 SP. Blocked by S1. Item__c extraction with Item_Name subsetting
   e32-s3-sf-validation-correction-loop: done           # 3 SP. V3-5. SF Validation + Correction Loop. Completed 2026-03-04.
   e32-s4-classifier-update-sf-taxonomy: done           # 2 SP. Blocked by E30-S6. Tech spec: Option B+ SF-schema normalization. Completed 2026-03-04.
-  e32-s5-extraction-pipeline-e2e-test: backlog         # 3 SP. Blocked by S1-S4. Full V3 E2E: upload→extract→consensus→AI→validate
+  e32-s5-extraction-pipeline-e2e-test: done            # 3 SP. Extraction Pipeline E2E Test. tests/test_v3_e2e_pipeline.py (8 test classes, 16 always-run tests). Completed 2026-03-04. GATE:AI_COMPLETE unlocked.
   e32-s6-ollama-model-evaluation-spike: done           # 2 SP. Dep on E30-S8 REMOVED. Ollama-first approach. Completed 2026-03-04.
   e32-s7-sf-first-validation-pipeline: backlog
   epic-32-retrospective: optional

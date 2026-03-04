@@ -39,6 +39,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-04 | E33-S1 | Upload Wizard + Extraction Progress | 3 | UploadWizard.tsx, ExtractionProgress.tsx, upload.ts, use-upload-progress.ts, /api/acm/upload, PipelineEventBus, SSE stream consumer | Multi-step upload wizard, real-time extraction progress via SSE stream, stage-by-stage pipeline visibility, frontend progress UI integrated with PipelineEventBus |
 | 2026-03-04 | E31-S6 | Dual-Provider Benchmark | 2 | benchmark_harness.py, test_benchmark_harness.py, research reports | Benchmark framework for dual-provider extraction (Docling + MinerU) with consensus validation. Broadmeadows 31/31, Alexander ≥40/43 consensus validation |
 | 2026-03-04 | E31-S7 | PipelineEventBus + SSE Infrastructure | 3 | PipelineEventBus class, SSE endpoints, Zustand streaming integration, frontend progress stream | Event bus for pipeline stage transitions, /api/acm/extraction-progress/{id}/stream SSE endpoint, frontend real-time progress UI |
+| 2026-03-04 | E32-S5 | Extraction Pipeline E2E Test | 3 | tests/test_v3_e2e_pipeline.py, test_raw_extraction_storage.py, test_consensus_engine.py, acm_extractor.py | 8 test classes, 16 always-run tests covering full V3 pipeline FK integrity, raw extraction storage, consensus field population, SF field name conformance. GATE:AI_COMPLETE unlocked |
 
 ## Sprint Summary
 
@@ -48,7 +49,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-2 | 2/2 | 5/5 | Complete |
 | V3-3 | 8/8 | 23/23 | Complete |
 | V3-4 | 4/7 | 10/21 | In Progress |
-| V3-5 | 0/5 | 0/15 | Not Started |
+| V3-5 | 1/5 | 3/15 | In Progress |
 | V3-6 | 0/6 | 0/17 | Not Started |
 | V3-7 | 0/4 | 0/9 | Not Started |
 
@@ -58,5 +59,5 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 |------|--------|---------------|---------------|
 | SCHEMA_FREEZE | **UNLOCKED** | E30-S6 | 2026-03-03 |
 | EXTRACTION_COMPLETE | **UNLOCKED** | E31-S6 | 2026-03-04 |
-| AI_COMPLETE | Locked | E32-S5 | — |
+| AI_COMPLETE | **UNLOCKED** | E32-S5 | 2026-03-04 |
 | UI_COMPLETE | Locked | E33-S8 | — |
