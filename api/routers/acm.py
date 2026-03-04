@@ -52,6 +52,8 @@ from api.models import (
     NormalizeRequest,
     NormalizeResponse,
     ParentContextResponse,
+    RawExtractionListResponse,
+    RawExtractionResponse,
     RawTableResponse,
     ReEmbedRequest,
     ReEmbedResponse,
@@ -68,7 +70,12 @@ from open_notebook.database.repository import (
     get_source_intelligence,
     repo_query,
 )
-from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
+from open_notebook.domain.acm import (
+    ACMRecord,
+    ACMTableSection,
+    BuildingRecord,
+    RawExtraction,
+)
 from open_notebook.domain.site_config import SiteConfig
 from open_notebook.exceptions import NotFoundError
 
@@ -1470,6 +1477,62 @@ async def list_raw_tables_for_job(source_id: str):
         raise
     except Exception as e:
         logger.error(f"Error loading raw tables for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/raw-extractions/{source_id}",
+    response_model=RawExtractionListResponse,
+)
+async def list_raw_extractions(
+    source_id: str,
+    provider: Optional[str] = Query(
+        None,
+        description="Filter by provider_id (e.g. 'docling', 'mineru')",
+    ),
+    page_number: Optional[int] = Query(
+        None,
+        description="Filter by page number (1-based)",
+    ),
+):
+    """
+    List per-provider raw extraction outputs for a source document.
+
+    Returns one record per provider per page. Use the provider query param
+    to narrow results to a single provider's output.
+    """
+    try:
+        extractions = await RawExtraction.get_by_source(
+            source_id,
+            provider=provider,
+            page_number=page_number,
+        )
+
+        items = [
+            RawExtractionResponse(
+                id=str(e.id or ""),
+                source_id=str(e.source_id),
+                provider_id=e.provider_id,
+                extraction_backend=e.extraction_backend,
+                page_number=e.page_number,
+                raw_html=e.raw_html,
+                raw_markdown=e.raw_markdown,
+                structured_json=e.structured_json,
+                bbox=e.bbox,
+                confidence=e.confidence,
+                officer_edits=e.officer_edits,
+                created_at=str(e.created_at) if e.created_at else None,
+            )
+            for e in extractions
+        ]
+
+        return RawExtractionListResponse(
+            extractions=items,
+            total=len(items),
+            source_id=source_id,
+        )
+    except Exception as e:
+        logger.error(f"Error listing raw extractions for source {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

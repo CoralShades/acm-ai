@@ -1019,6 +1019,14 @@ class ACMTableSection(ObjectModel):
         default=None,
         description="Type of table section: 'register', 'lab_report', or 'metadata'",
     )
+    consensus_tier: Optional[str] = Field(
+        default=None,
+        description="How consensus was reached: 'single_provider' | 'multi_provider_agreement' | 'multi_provider_conflict' | 'manual_override'",
+    )
+    consensus_scores: Optional[dict] = Field(
+        default=None,
+        description="Per-provider confidence scores and agreement score: {provider_id: float, ..., agreement: float}",
+    )
 
     @field_validator("source_id", mode="before")
     @classmethod
@@ -1076,6 +1084,147 @@ class ACMTableSection(ObjectModel):
             return len(result) if result else 0
         except Exception as e:
             logger.error(f"Error deleting table sections for source {source_id}: {e}")
+            raise DatabaseOperationError(e)
+
+    def _prepare_save_data(self) -> dict:
+        """Override to ensure source_id is proper record format."""
+        data = super()._prepare_save_data()
+        if data.get("source_id"):
+            data["source_id"] = ensure_record_id(data["source_id"])
+        return data
+
+
+class RawExtraction(ObjectModel):
+    """Per-provider raw extraction output stored before consensus merge (E31-S4).
+
+    One row per provider per page per extraction run. Stores the raw HTML,
+    markdown, and structured JSON emitted by a provider adapter, along with
+    bounding box and confidence data for provenance tracking.
+
+    The officer_edits field accumulates an audit trail of manual corrections
+    applied to this raw extraction row.
+    """
+
+    table_name: ClassVar[str] = "raw_extraction"
+
+    # FK to source document
+    source_id: str
+
+    # Provider identification
+    provider_id: str = Field(
+        ...,
+        description="Stable provider ID from ProviderRegistry (e.g. 'docling', 'mineru')",
+    )
+    extraction_backend: str = Field(
+        ...,
+        description="Provider + version string (e.g. 'docling:2.x', 'mineru:2.7')",
+    )
+
+    # Page-level data
+    page_number: int = Field(
+        ...,
+        description="1-based page number from NormalizedTable.page",
+    )
+
+    # Raw outputs
+    raw_html: Optional[str] = None
+    raw_markdown: Optional[str] = None
+    structured_json: Optional[str] = Field(
+        default=None,
+        description="JSON-serialised column headers + row data from NormalizedTable",
+    )
+
+    # Provenance
+    bbox: Optional[dict] = Field(
+        default=None,
+        description="Bounding box dict {x, y, width, height, page} from NormalizedTable.bbox",
+    )
+    confidence: Optional[float] = Field(
+        default=None,
+        description="Overall table confidence (0.0-1.0) from the provider",
+    )
+
+    # Audit trail
+    officer_edits: List[dict] = Field(
+        default_factory=list,
+        description="Ordered list of officer edit events applied to this raw row",
+    )
+
+    # Timestamp
+    created_at: Optional[datetime] = None
+
+    @field_validator("source_id", mode="before")
+    @classmethod
+    def validate_source_id(cls, v):
+        if not v:
+            raise InvalidInputError("source_id is required")
+        if isinstance(v, str) and not v.startswith("source:"):
+            return f"source:{v}"
+        return str(v)
+
+    @field_validator("provider_id")
+    @classmethod
+    def validate_provider_id(cls, v):
+        if not v or not v.strip():
+            raise InvalidInputError("provider_id cannot be empty")
+        return v.strip()
+
+    @field_validator("page_number")
+    @classmethod
+    def validate_page_number(cls, v):
+        if v < -1:
+            raise InvalidInputError("page_number must be >= -1 (-1 means unknown)")
+        return v
+
+    @classmethod
+    async def get_by_source(
+        cls,
+        source_id: str,
+        provider: Optional[str] = None,
+        page_number: Optional[int] = None,
+    ) -> List["RawExtraction"]:
+        """Get raw extractions for a source, with optional provider and page filters."""
+        if not source_id:
+            raise InvalidInputError("source_id is required")
+        try:
+            conditions = ["source_id = $source_id"]
+            params: dict = {"source_id": ensure_record_id(source_id)}
+
+            if provider:
+                conditions.append("provider_id = $provider_id")
+                params["provider_id"] = provider
+
+            if page_number is not None:
+                conditions.append("page_number = $page_number")
+                params["page_number"] = page_number
+
+            where_clause = " AND ".join(conditions)
+            result = await repo_query(
+                f"SELECT * FROM raw_extraction WHERE {where_clause} ORDER BY page_number, provider_id",
+                params,
+            )
+            return [cls(**record) for record in result]
+        except Exception as e:
+            logger.error(
+                f"Error fetching raw extractions for source {source_id}: {e}"
+            )
+            raise DatabaseOperationError(e)
+
+    @classmethod
+    async def delete_by_source(cls, source_id: str) -> int:
+        """Delete all raw extractions for a source. Returns count deleted."""
+        if not source_id:
+            raise InvalidInputError("source_id is required")
+        try:
+            result = await repo_query(
+                "DELETE raw_extraction WHERE source_id = $source_id RETURN BEFORE",
+                {"source_id": ensure_record_id(source_id)},
+            )
+            return len(result) if result else 0
+        except Exception as e:
+            logger.error(
+                f"Error deleting raw extractions for source {source_id}: {e}"
+            )
             raise DatabaseOperationError(e)
 
     def _prepare_save_data(self) -> dict:

@@ -1,0 +1,42 @@
+-- Migration 42: Raw extraction table + consensus columns on acm_table_section (E31-S4)
+-- Stores per-provider raw output from each extraction run before consensus merge.
+
+DEFINE TABLE IF NOT EXISTS raw_extraction SCHEMAFULL;
+
+-- Foreign key to source document
+DEFINE FIELD IF NOT EXISTS source_id           ON TABLE raw_extraction TYPE record<source>;
+
+-- Provider identification
+DEFINE FIELD IF NOT EXISTS provider_id         ON TABLE raw_extraction TYPE string;
+DEFINE FIELD IF NOT EXISTS extraction_backend  ON TABLE raw_extraction TYPE string;
+
+-- Page-level data
+DEFINE FIELD IF NOT EXISTS page_number         ON TABLE raw_extraction TYPE int;
+
+-- Raw outputs from the provider
+DEFINE FIELD IF NOT EXISTS raw_html            ON TABLE raw_extraction TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS raw_markdown        ON TABLE raw_extraction TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS structured_json     ON TABLE raw_extraction TYPE option<string>;
+
+-- Provenance / quality fields
+DEFINE FIELD IF NOT EXISTS bbox                ON TABLE raw_extraction TYPE option<object>;
+DEFINE FIELD IF NOT EXISTS confidence          ON TABLE raw_extraction TYPE option<float>;
+
+-- Officer correction audit trail (array of edit event objects)
+DEFINE FIELD IF NOT EXISTS officer_edits       ON TABLE raw_extraction TYPE array DEFAULT [];
+
+-- Timestamps
+DEFINE FIELD IF NOT EXISTS created_at          ON TABLE raw_extraction TYPE option<datetime> DEFAULT time::now();
+
+-- Indexes for common query patterns
+DEFINE INDEX IF NOT EXISTS idx_raw_extraction_source_id
+    ON TABLE raw_extraction
+    FIELDS source_id;
+
+DEFINE INDEX IF NOT EXISTS idx_raw_extraction_source_provider
+    ON TABLE raw_extraction
+    FIELDS source_id, provider_id;
+
+-- Additive columns on acm_table_section for consensus merge metadata (E31-S3 prep)
+DEFINE FIELD IF NOT EXISTS consensus_tier   ON TABLE acm_table_section TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS consensus_scores ON TABLE acm_table_section TYPE option<object>;

@@ -641,6 +641,31 @@ class RawTableResponse(BaseModel):
     building_name: Optional[str] = None
 
 
+class RawExtractionResponse(BaseModel):
+    """Response model for a single raw extraction record (E31-S4)."""
+
+    id: str
+    source_id: str
+    provider_id: str
+    extraction_backend: str
+    page_number: int
+    raw_html: Optional[str] = None
+    raw_markdown: Optional[str] = None
+    structured_json: Optional[str] = None
+    bbox: Optional[Dict[str, Any]] = None
+    confidence: Optional[float] = None
+    officer_edits: List[Dict[str, Any]] = Field(default_factory=list)
+    created_at: Optional[str] = None
+
+
+class RawExtractionListResponse(BaseModel):
+    """Response for GET /api/acm/raw-extractions/{source_id} (E31-S4)."""
+
+    extractions: List[RawExtractionResponse]
+    total: int
+    source_id: str
+
+
 class ACMSearchResultResponse(BaseModel):
     """Single ACM search result with similarity score."""
 

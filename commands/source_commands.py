@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from surreal_commands import CommandInput, CommandOutput, command
 
 from open_notebook.database.repository import ensure_record_id, repo_create
+from open_notebook.domain.acm import RawExtraction
 from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
 from open_notebook.extractors.pipeline_events import StageId
@@ -177,6 +178,65 @@ async def _store_docling_tables(source_id: str, tables: List[Dict[str, Any]]) ->
         )
 
 
+async def _store_raw_extractions(
+    source_id: str,
+    extraction_result,  # NormalizedExtractionResult
+) -> int:
+    """
+    Persist per-provider raw extraction outputs to the raw_extraction table.
+
+    Called immediately after provider.extract() succeeds, before
+    _store_docling_tables. Returns count of rows stored.
+    """
+    import json
+
+    stored = 0
+    provider_id = extraction_result.provider_id
+    backend_label = f"{provider_id}:2.x"
+
+    for table in extraction_result.tables:
+        bbox_dict = None
+        if table.bbox is not None:
+            bbox_dict = {
+                "x": table.bbox.x,
+                "y": table.bbox.y,
+                "width": table.bbox.width,
+                "height": table.bbox.height,
+                "page": table.bbox.page,
+            }
+
+        # Serialise column + row count into structured_json
+        structured = json.dumps(
+            {
+                "columns": table.columns,
+                "row_count": table.row_count,
+                "col_count": table.col_count,
+                "table_index": table.table_index,
+            }
+        )
+
+        raw = RawExtraction(
+            source_id=source_id,
+            provider_id=provider_id,
+            extraction_backend=backend_label,
+            page_number=table.page,
+            raw_html=table.html,
+            raw_markdown=table.markdown,
+            structured_json=structured,
+            bbox=bbox_dict,
+            confidence=None,  # NormalizedTable has no top-level confidence in E31-S2
+            officer_edits=[],
+        )
+        await raw.save()
+        stored += 1
+
+    logger.info(
+        f"Stored {stored} raw extractions for source {source_id} "
+        f"(provider={provider_id})"
+    )
+    return stored
+
+
 @command(
     "process_source",
     app="open_notebook",
@@ -295,6 +355,8 @@ async def process_source_command(
                     extraction_result = provider.extract(
                         pdf_path, pipeline_logger=docling_pl
                     )
+                    # E31-S4: Persist raw per-provider outputs before converting to acm_table_section
+                    await _store_raw_extractions(str(processed_source.id), extraction_result)
                     docling_tables = [
                         {
                             "table_index": t.table_index,

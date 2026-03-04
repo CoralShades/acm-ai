@@ -474,7 +474,7 @@
         "api/routers/acm.py",
         "tests/test_raw_extraction_storage.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e31-s4-raw-extraction-table-storage.md",
       "implementedDate": null
     },
     {
