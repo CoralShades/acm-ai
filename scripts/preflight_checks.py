@@ -180,7 +180,11 @@ def check_stale_deps() -> tuple[str, str, str]:
     content = pyproject.read_text(encoding="utf-8")
     # magic-pdf intentionally removed from main venv (lives in .venv-mineru)
     if "magic-pdf" in content:
-        return WARN, label, "magic-pdf still listed in pyproject.toml (move to .venv-mineru)"
+        return (
+            WARN,
+            label,
+            "magic-pdf still listed in pyproject.toml (move to .venv-mineru)",
+        )
     return PASS, label, "no stale deps detected"
 
 
@@ -194,8 +198,16 @@ def check_mineru_venv() -> tuple[str, str, str]:
     if exists:
         return PASS, label, "present and functional"
     if enabled:
-        return FAIL, label, "MINERU_ENABLED=true but .venv-mineru not found — run /e25-setup-mineru"
-    return WARN, label, "not present (MINERU_ENABLED=false — run /e25-setup-mineru to enable)"
+        return (
+            FAIL,
+            label,
+            "MINERU_ENABLED=true but .venv-mineru not found — run /e25-setup-mineru",
+        )
+    return (
+        WARN,
+        label,
+        "not present (MINERU_ENABLED=false — run /e25-setup-mineru to enable)",
+    )
 
 
 def check_torch_distinfo() -> tuple[str, str, str]:

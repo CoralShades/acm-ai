@@ -419,7 +419,7 @@ development_status:
   # Dependencies: E29 S1-S4 (completed)
   # FRs: FR-1401..FR-1412
   # ─────────────────────────────────────────────────────
-  epic-30: done  # 8/9 stories done (S8 deferred to V4). Completed 2026-03-04.
+  epic-30: done  # 9/9 stories done. Completed 2026-03-05.
   e30-s1-sf-schema-config-loader: done                # 5 SP. No deps. FIRST V3 STORY — completed 2026-03-03
   e30-s2-building-record-table-domain-model: done     # 5 SP. Commit 59ac749d. Migration 40 (implemented after S3, so used 40 not 39). 2026-03-03
   e30-s3-acm-record-sf-item-alignment: done            # 3 SP. Blocked by S1. Pydantic SF aliases for Item__c fields — completed 2026-03-03

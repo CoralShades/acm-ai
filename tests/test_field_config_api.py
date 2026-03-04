@@ -74,7 +74,9 @@ class TestUpdateFieldConfig:
     def mock_db(self):
         from unittest.mock import AsyncMock, patch
 
-        with patch("api.routers.acm.repo_query", new_callable=AsyncMock, return_value=[]):
+        with patch(
+            "api.routers.acm.repo_query", new_callable=AsyncMock, return_value=[]
+        ):
             yield
 
     def test_update_field_config_toggle_active(self, client):
@@ -117,7 +119,9 @@ class TestResetFieldConfig:
     def mock_db(self):
         from unittest.mock import AsyncMock, patch
 
-        with patch("api.routers.acm.repo_query", new_callable=AsyncMock, return_value=[]):
+        with patch(
+            "api.routers.acm.repo_query", new_callable=AsyncMock, return_value=[]
+        ):
             yield
 
     def test_reset_returns_default_config(self, client):

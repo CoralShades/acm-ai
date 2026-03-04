@@ -26,6 +26,8 @@ SAMPLE_RESULT_SYNONYMS: dict[str, str] = {
     "assumed": "Assumed Positive",
     "assumed positive": "Assumed Positive",
     "not sampled": "Assumed Positive",
+    "negative - treated as positive": "Negative - Treated as Positive",
+    "treated as positive": "Negative - Treated as Positive",
 }
 
 # Condition synonyms → canonical SF values (E30-S6: "Good" → "Stable")

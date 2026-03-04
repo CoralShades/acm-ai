@@ -103,9 +103,7 @@ class TestSFFieldParsing:
         )
 
         config = _parse_sf_field_table(BUILDING_MD_CONTENT, "Building__c")
-        bldg_type = next(
-            f for f in config.fields if f.api_name == "Building_Type__c"
-        )
+        bldg_type = next(f for f in config.fields if f.api_name == "Building_Type__c")
         assert bldg_type.is_restricted_picklist is True
 
     def test_boolean_column_parsing(self):
@@ -116,9 +114,7 @@ class TestSFFieldParsing:
 
         config = _parse_sf_field_table(BUILDING_MD_CONTENT, "Building__c")
         # Building_Type__c has Nillable='' (empty = False/not nillable)
-        bldg_type = next(
-            f for f in config.fields if f.api_name == "Building_Type__c"
-        )
+        bldg_type = next(f for f in config.fields if f.api_name == "Building_Type__c")
         assert bldg_type.nillable is False
 
     def test_formula_field_calc_true(self):

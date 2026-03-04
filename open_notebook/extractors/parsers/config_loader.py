@@ -463,13 +463,9 @@ def _parse_sf_field_table_from_path(
         with open(file_path, encoding="utf-8") as f:
             content = f.read()
     except FileNotFoundError as e:
-        raise SFSchemaLoadError(
-            f"SF schema file not found: {file_path}"
-        ) from e
+        raise SFSchemaLoadError(f"SF schema file not found: {file_path}") from e
     except OSError as e:
-        raise SFSchemaLoadError(
-            f"Cannot read SF schema file {file_path}: {e}"
-        ) from e
+        raise SFSchemaLoadError(f"Cannot read SF schema file {file_path}: {e}") from e
 
     return _parse_sf_field_table(content, object_name)
 
@@ -655,7 +651,7 @@ def _extract_picklist_values(markdown_content: str) -> dict[str, list[str]]:
     if not picklist_section_match:
         return picklists
 
-    section_text = markdown_content[picklist_section_match.start():]
+    section_text = markdown_content[picklist_section_match.start() :]
     lines = section_text.splitlines()
 
     current_api_name: Optional[str] = None
@@ -1658,9 +1654,7 @@ def get_item_names_by_product_group(acm_classification: str) -> list[str]:
         lookup_group = lookup_group[:-4]
         # Normalize case for matching (e.g. "Insulation products (f)" -> "Insulation Products")
         # Find best match in existing keys
-        non_friable_groups = {
-            g for g in set(ITEM_NAME_TO_PRODUCT_GROUP.values())
-        }
+        non_friable_groups = {g for g in set(ITEM_NAME_TO_PRODUCT_GROUP.values())}
         matched = next(
             (g for g in non_friable_groups if g.lower() == lookup_group.lower()),
             None,

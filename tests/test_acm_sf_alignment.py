@@ -90,10 +90,10 @@ class TestSFNames:
         """Mix of BAR and SF names must resolve correctly."""
         data = {
             "source_id": "source:test001",
-            "Building_Code__c": "B01",       # SF name
+            "Building_Code__c": "B01",  # SF name
             "product": "Vinyl Floor Tiles",  # BAR name
             "Material_Description__c": "Grey/white mottled vinyl tiles",  # SF name
-            "result": "Positive",            # BAR name
+            "result": "Positive",  # BAR name
         }
         record = ACMRecord.model_validate(data)
         assert record.building_id == "B01"
@@ -122,18 +122,27 @@ class TestSFNames:
             "Sample_Analysis_Result_Material_Status__c": ("result", "Negative"),
             "Extent__c": ("extent", "Whole ceiling"),
             "NATA_Endorsed_Sample_no__c": ("sample_no", "S001"),
-            "Identifying_Hygiene_Consulting_Company__c": ("identifying_company", "Acme Hygiene"),
+            "Identifying_Hygiene_Consulting_Company__c": (
+                "identifying_company",
+                "Acme Hygiene",
+            ),
             "Quantity__c": ("quantity", "10 m²"),
             "ACM_Labelled__c": ("acm_labelled", True),
             "Labelled_Details__c": ("acm_label_details", "Yellow sticker"),
             "Level__c": ("floor_level", "Ground"),
             "Survey_Date__c": ("date_of_inspection", "2024-01-15"),
-            "Hygienist_Recommendations__c": ("hygienist_recommendations", "Monitor annually"),
+            "Hygienist_Recommendations__c": (
+                "hygienist_recommendations",
+                "Monitor annually",
+            ),
             "ID_provided_by_metro__c": ("psb_supplied_acm_id", "PSB-123"),
             "Removal_Status__c": ("removal_status", "N/A"),
             "Removed_Date__c": ("date_of_removal", "2023-06-01"),
             "Quantity_Removed__c": ("quantity_removed", "5 m²"),
-            "Asbestos_Removal_Notification_No__c": ("removal_notification_no", "ARN-001"),
+            "Asbestos_Removal_Notification_No__c": (
+                "removal_notification_no",
+                "ARN-001",
+            ),
             "EPA_Waste_Transport_Certificate_No__c": ("epa_certificate_no", "EPA-001"),
             "No_Access__c": ("no_access", True),
             "Additional_Comments__c": ("additional_comments", "See report"),

@@ -104,7 +104,9 @@ def _vote_field(
 
     # Accumulate weights per normalised value string
     value_weights: Dict[str, float] = {}  # normalised_value -> cumulative weight
-    value_canonical: Dict[str, Any] = {}  # normalised_value -> original value (first seen)
+    value_canonical: Dict[
+        str, Any
+    ] = {}  # normalised_value -> original value (first seen)
 
     for provider_id, value in votes.items():
         if value is None:
@@ -126,7 +128,9 @@ def _vote_field(
 
     total_weight = sum(value_weights.values())
     winner_norm = max(value_weights, key=lambda k: value_weights[k])
-    winner_score = value_weights[winner_norm] / total_weight if total_weight > 0 else 0.0
+    winner_score = (
+        value_weights[winner_norm] / total_weight if total_weight > 0 else 0.0
+    )
 
     return FieldVoteResult(
         winner=value_canonical[winner_norm],

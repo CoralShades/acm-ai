@@ -705,8 +705,15 @@ class TestPipelineOrchestratorPath:
 
     @pytest.mark.asyncio
     async def test_orchestrator_runs_when_inventory_present(self, mock_source):
-        """Verify orchestrator path is taken when building inventory exists."""
+        """Verify orchestrator path is taken when building inventory exists.
+
+        With E32-S2, extract_items_node runs before orchestrate. When it returns
+        zero records (e.g., DB not available), the conditional router falls back to
+        orchestrate — ensuring the orchestrator path still produces records.
+        """
         extraction_records = _make_extraction_records()
+
+        from open_notebook.extractors.acm_schemas_v3 import ACMItemExtractionResult
 
         with (
             patch(
@@ -728,6 +735,32 @@ class TestPipelineOrchestratorPath:
                 "open_notebook.graphs.acm_extraction.tag_pages",
                 new_callable=AsyncMock,
                 return_value=_make_page_tags(),
+            ),
+            # E32-S1/S2: mock Phase 1 and Phase 2 LLM calls in the E32 nodes
+            # so they complete without a live DB or LLM credits
+            patch(
+                "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
+                new=AsyncMock(return_value=None),
+            ),
+            patch(
+                "open_notebook.graphs.acm_extraction._v3_extract_items",
+                new=AsyncMock(
+                    return_value=ACMItemExtractionResult(records=[], status="valid")
+                ),
+            ),
+            # E32-S1: mock BuildingRecord DB operations
+            patch(
+                "open_notebook.graphs.acm_extraction.BuildingRecord.generate_internal_id",
+                new=AsyncMock(return_value="BLD#TEST_001"),
+            ),
+            patch(
+                "open_notebook.domain.acm.BuildingRecord.save",
+                new=AsyncMock(return_value=None),
+            ),
+            # E32-S2: mock BuildingRecord lookup
+            patch(
+                "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
+                new=AsyncMock(return_value=[]),
             ),
             # Mock LLM at utils level (orchestrator does lazy import from there)
             patch(
@@ -758,7 +791,7 @@ class TestPipelineOrchestratorPath:
 
             result = await extract_acm_from_source(mock_source, force=False)
 
-        # Orchestrator should produce records
+        # Orchestrator (fallback) should produce records
         assert result.total_records > 0
         assert result.status == "success"
         assert result.error is None

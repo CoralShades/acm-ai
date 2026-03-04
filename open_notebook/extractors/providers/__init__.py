@@ -73,8 +73,7 @@ class ProviderRegistry:
         if provider_id not in self._providers:
             available = ", ".join(self.list_providers()) or "(none)"
             raise KeyError(
-                f"Provider '{provider_id}' not found. "
-                f"Available providers: {available}"
+                f"Provider '{provider_id}' not found. Available providers: {available}"
             )
         return self._providers[provider_id]
 

@@ -271,7 +271,9 @@ def build_picklist_context(
     item_name_values = _select_item_name_groups(acm_classification)
 
     # Estimated_Year_Built: show range note instead of all 230 years
-    estimated_year_built_note = "4-digit year between 1700-2029 (e.g., 1960, 1975, 2005)"
+    estimated_year_built_note = (
+        "4-digit year between 1700-2029 (e.g., 1960, 1975, 2005)"
+    )
 
     return {
         "building_type_options": _format_picklist(building_type_values),

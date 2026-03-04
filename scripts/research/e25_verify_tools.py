@@ -201,7 +201,12 @@ def check_pandas_tabulate() -> tuple[str, str, str, bool]:
 
         df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
         md = df.to_markdown(index=False)
-        return PASS, label, f"pandas={pd.__version__}, to_markdown()={len(md)} chars", True
+        return (
+            PASS,
+            label,
+            f"pandas={pd.__version__}, to_markdown()={len(md)} chars",
+            True,
+        )
     except ImportError as e:
         return FAIL, label, f"import failed: {e}", True
     except Exception as e:
@@ -303,7 +308,9 @@ def print_results(results: Results) -> bool:
     if mineru_status == PASS:
         print("  + MinerU available (3-way comparison possible)")
     else:
-        print("  MinerU not available (2-way comparison: PyMuPDF vs Docling Direct API)")
+        print(
+            "  MinerU not available (2-way comparison: PyMuPDF vs Docling Direct API)"
+        )
 
     print("")
     return not has_critical_failure

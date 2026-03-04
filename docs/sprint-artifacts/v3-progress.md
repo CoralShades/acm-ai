@@ -48,6 +48,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-05 | E34-S2 | Bulk Operations | 2 | BulkOperationsPanel.tsx, useBulkOperations.ts, bulk-operations API, AG Grid multi-select integration | Multi-select records in grid, bulk edit/validate/export. Integrates with field schema API for bulk field updates. |
 | 2026-03-05 | E34-S3 | Performance Optimization | 2 | Performance tuning across extraction pipeline | Broadmeadows <120s, Alexander <300s target benchmarks. Pipeline throughput and latency optimization. |
 | 2026-03-05 | E34-S4 | Canonical Artifact Update | 3 | CLAUDE.md, README.md, PRD, architecture, epics, sprint-status.yaml, prd.json | Documentation audit — all V3 canonical artifacts reconciled with ground truth. V3 Architecture Patterns added to CLAUDE.md. |
+| 2026-03-05 | E30-S8 | Ollama + Anthropic Direct + OpenRouter Provider Priority | 3 | open_notebook/graphs/utils.py, tests/test_openrouter_provider_routing.py | provision_extraction_fallback_model() uses ACM_ANTHROPIC_API_KEY. Priority: Ollama→Anthropic→OpenRouter. No bare env var bleed. |
 
 ## Sprint Summary
 
@@ -61,7 +62,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-6 | 5/5 | 14/14 | Complete |
 | V3-7 | 4/4 | 9/9 | Complete |
 
-**Total: 36/37 stories done (97%). E30-S8 deferred to V4 (Ollama-first provider priority).**
+**Total: 37/37 stories done (100%). V3 complete.**
 
 ## Gate Milestones
 

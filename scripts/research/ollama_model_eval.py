@@ -1070,9 +1070,7 @@ def run_eval_for_model(
     vram_bytes: Optional[int] = None
     if provider == "ollama":
         vram_bytes = get_ollama_vram(model_name)
-        vram_display = (
-            f"{vram_bytes / 1e9:.2f} GB" if vram_bytes else "unknown"
-        )
+        vram_display = f"{vram_bytes / 1e9:.2f} GB" if vram_bytes else "unknown"
         print(f"  VRAM: {vram_display}")
 
     # Classification task

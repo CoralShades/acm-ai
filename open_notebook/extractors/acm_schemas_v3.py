@@ -35,7 +35,9 @@ class BuildingExtractionResult(BaseModel):
     # Audit details
     date_of_audit: Optional[str] = None  # Date_of_Audit_Report__c
     frequency_of_use: Optional[str] = None  # Frequency_of_Use__c (picklist)
-    identifying_company: Optional[str] = None  # Identifying_Hygiene_Consulting_Company__c
+    identifying_company: Optional[str] = (
+        None  # Identifying_Hygiene_Consulting_Company__c
+    )
 
     # Quality metadata
     extraction_confidence: str = "medium"  # "high" | "medium" | "low"
@@ -52,9 +54,13 @@ class ACMItemRecord(BaseModel):
     location_in_room: Optional[str] = None  # Location_in_Room__c
 
     # ACM classification chain
-    friability_of_material: Optional[str] = None  # Friability_of_Material__c (Non-friable | Friable)
+    friability_of_material: Optional[str] = (
+        None  # Friability_of_Material__c (Non-friable | Friable)
+    )
     acm_classification: Optional[str] = None  # ACM_Classification__c (product group)
-    acm_sub_classification: Optional[str] = None  # ACM_Sub_Classification__c (product type)
+    acm_sub_classification: Optional[str] = (
+        None  # ACM_Sub_Classification__c (product type)
+    )
     item_name: Optional[str] = None  # Item_Name__c (subsetted list)
     if_other_item_name: Optional[str] = None  # If_Other_Item_Name__c (free text)
 

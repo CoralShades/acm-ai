@@ -244,6 +244,53 @@ def _get_v3_item_schema() -> dict:
     return _V3_ITEM_JSON_SCHEMA
 
 
+def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
+    """Apply Ollama-specific extraction settings: format=json and num_ctx.
+
+    Separated from _inject_response_format so it can be called without a
+    JSON schema (e.g. in provision_extraction_fallback_model where the schema
+    is applied later by the calling extraction function).
+
+    - format="json": forces Ollama to emit pure JSON, preventing qwen2.5/phi4
+      from returning conversational tutorial text instead of extraction data.
+    - num_ctx: sets the context window to 32768 (or OLLAMA_NUM_CTX env var),
+      replacing the Ollama default of 8192 which truncates large SAMP docs.
+
+    No-op for non-Ollama models.
+    """
+    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
+    if not is_ollama:
+        return lc_model
+
+    model_name = (
+        getattr(lc_model, "model_name", "") or getattr(lc_model, "model", "") or ""
+    )
+
+    # ChatOllama.format is a first-class Pydantic field — NOT part of
+    # model_kwargs. Setting model_kwargs["format"] is silently ignored because
+    # ChatOllama builds its request payload from self.format directly
+    # (see langchain_ollama/chat_models.py: params["format"] = self.format).
+    object.__setattr__(lc_model, "format", "json")
+
+    # Set num_ctx for extraction models. Ollama defaults to 8192 tokens which
+    # is far too small for 50k+ char SAMP documents. Use env var OLLAMA_NUM_CTX
+    # if set, otherwise default to 32768 (adequate for qwen2.5:7b/32b and
+    # phi4:14b without OOM risk on 16GB VRAM).
+    num_ctx_env = os.getenv("OLLAMA_NUM_CTX")
+    num_ctx_target = int(num_ctx_env) if num_ctx_env else 32768
+    # Only raise num_ctx — never lower it if already configured larger.
+    current_num_ctx = getattr(lc_model, "num_ctx", None) or 0
+    if num_ctx_target > current_num_ctx:
+        object.__setattr__(lc_model, "num_ctx", num_ctx_target)
+
+    logger.debug(
+        f"Applied Ollama extraction settings: "
+        f"format=json, num_ctx={getattr(lc_model, 'num_ctx', None)} "
+        f"for model {model_name}"
+    )
+    return lc_model
+
+
 def _inject_response_format(
     lc_model: BaseChatModel,
     schema_dict: dict,
@@ -253,15 +300,16 @@ def _inject_response_format(
 
     Stage-specific — called AFTER provision_langchain_model() and BEFORE
     model.ainvoke(). Applies to OpenRouter models (json_schema) and Ollama
-    models (format=json).
+    models (format=json + num_ctx).
 
     This enforces schema validation at the OpenRouter layer, so the LLM
     returns JSON that conforms to the given schema. Combined with
     Response Healing plugin (E27-S3), this provides production-grade
     structured output without with_structured_output().
 
-    For Ollama, injects format="json" into model_kwargs to enable JSON mode
-    and prevent conversational responses.
+    For Ollama, delegates to _apply_ollama_extraction_settings() which sets
+    format="json" (first-class ChatOllama field, not model_kwargs) and
+    num_ctx=32768 to handle large SAMP documents.
 
     Args:
         lc_model: LangChain model (already provisioned with OpenRouter prefs)
@@ -271,25 +319,16 @@ def _inject_response_format(
     Returns:
         The same model with response_format injected into extra_body.
     """
+    # Ollama: delegate to shared helper (also used by fallback model path)
+    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
+    if is_ollama:
+        return _apply_ollama_extraction_settings(lc_model)
+
     base_url = (
         getattr(lc_model, "openai_api_base", None)
         or getattr(lc_model, "base_url", None)
         or ""
     )
-    model_name = (
-        getattr(lc_model, "model_name", "") or getattr(lc_model, "model", "") or ""
-    )
-
-    # Class-based detection is reliable regardless of base_url (works for
-    # remote Ollama, avoids false-positives with LM Studio/vLLM at localhost).
-    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
-
-    if is_ollama:
-        existing_kwargs = getattr(lc_model, "model_kwargs", {}) or {}
-        new_kwargs = {**existing_kwargs, "format": "json"}
-        object.__setattr__(lc_model, "model_kwargs", new_kwargs)
-        logger.debug(f"Injected Ollama format=json for model {model_name}")
-        return lc_model
 
     if "openrouter.ai" not in str(base_url).lower():
         return lc_model
@@ -339,11 +378,15 @@ def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
 
     if not boundaries:
         if len(content) > max_chars:
-            logger.warning(
+            logger.info(
                 f"Content ({len(content)} chars) exceeds budget "
-                f"({max_chars} chars) but no room boundaries found. Hard-truncating."
+                f"({max_chars} chars) and no room boundaries found. "
+                f"Splitting into character-based chunks."
             )
-            return [content[:max_chars]]
+            return [
+                content[i : i + max_chars]
+                for i in range(0, len(content), max_chars)
+            ]
         return [content]
 
     # Build (start, end) segments: preamble + each room
@@ -878,7 +921,15 @@ async def provision_extraction_fallback_model(
                 f"Fallback model is not a LanguageModel: {model}"
             )
             lc_model = model.to_langchain()
-            return _apply_openrouter_preferences(lc_model)
+            lc_model = _apply_openrouter_preferences(lc_model)
+            # Apply format=json and num_ctx for Ollama fallback models.
+            # _inject_response_format returns early after applying Ollama
+            # settings so the empty schema args are never used.  For non-Ollama
+            # fallbacks (Anthropic, OpenRouter) the caller is responsible for
+            # injecting the schema via _inject_response_format after selecting
+            # the schema appropriate to the extraction stage.
+            lc_model = _apply_ollama_extraction_settings(lc_model)
+            return lc_model
         except Exception as fallback_error:
             logger.warning(
                 f"Fallback candidate {provider}/{model_name} failed: {fallback_error}"

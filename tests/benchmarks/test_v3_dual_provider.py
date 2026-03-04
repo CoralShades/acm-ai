@@ -10,6 +10,7 @@ gracefully so the CI gate always produces a clear green/red signal.
 
 Story: E31-S6
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -104,7 +105,9 @@ async def _real_provision_model(content, model_id, default_type, **kwargs):
         from langchain_openai import ChatOpenAI
 
         model_name = os.environ.get("BENCHMARK_MODEL", "anthropic/claude-sonnet-4")
-        allowed = {k: v for k, v in kwargs.items() if k in ("temperature", "max_tokens")}
+        allowed = {
+            k: v for k, v in kwargs.items() if k in ("temperature", "max_tokens")
+        }
         return ChatOpenAI(
             model=model_name,
             openai_api_key=openrouter_key,
@@ -117,7 +120,9 @@ async def _real_provision_model(content, model_id, default_type, **kwargs):
         from langchain_anthropic import ChatAnthropic
 
         model_name = os.environ.get("BENCHMARK_MODEL", "claude-haiku-4-5-20251001")
-        allowed = {k: v for k, v in kwargs.items() if k in ("temperature", "max_tokens")}
+        allowed = {
+            k: v for k, v in kwargs.items() if k in ("temperature", "max_tokens")
+        }
         return ChatAnthropic(model=model_name, **allowed)
 
     raise RuntimeError(
@@ -178,8 +183,7 @@ def _run_mocked_extraction(
         return [
             t
             for t in docling_tables
-            if t.get("page_start", 0) >= page_start
-            and t.get("page_end", 0) <= page_end
+            if t.get("page_start", 0) >= page_start and t.get("page_end", 0) <= page_end
         ]
 
     # MinerU table data (mineru_tables arg) is NOT injected here.
@@ -296,11 +300,12 @@ class TestDualProviderConsensus:
         matched = len(match_result.matched_pairs)
 
         assert matched >= min_matched, (
-            f"{doc_key}: consensus matched {matched}/{gt_count}, "
-            f"need >= {min_matched}"
+            f"{doc_key}: consensus matched {matched}/{gt_count}, need >= {min_matched}"
         )
 
-    def test_consensus_field_accuracy(self, doc_key, min_matched, gt_count, monkeypatch):
+    def test_consensus_field_accuracy(
+        self, doc_key, min_matched, gt_count, monkeypatch
+    ):
         """AC4: High-stakes field accuracy >= 80% on consensus output.
 
         Current limitation: exercises env-flag routing with dual-provider flags

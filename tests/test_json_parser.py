@@ -122,7 +122,9 @@ class TestMultiBlock:
     def test_largest_by_raw_length(self):
         """Selection is by raw string length, not key count."""
         short_keys = '{"a": 1, "b": 2}'
-        long_value = '{"x": "this is a much longer string value that makes the object bigger"}'
+        long_value = (
+            '{"x": "this is a much longer string value that makes the object bigger"}'
+        )
         text = f"{short_keys}\n{long_value}"
         result = parse_json_response(text)
         assert "x" in result
@@ -204,7 +206,9 @@ class TestBackwardCompat:
 
     def test_nested_json(self):
         """Mirrors test_qwen_extraction.py::test_nested_json."""
-        text = '{"records": [{"building_id": "B1", "data_issues": []}], "status": "valid"}'
+        text = (
+            '{"records": [{"building_id": "B1", "data_issues": []}], "status": "valid"}'
+        )
         result = parse_json_response(text)
         assert len(result["records"]) == 1
 
@@ -252,7 +256,7 @@ class TestEdgeCases:
 
     def test_just_braces_invalid_json(self):
         """A single pair of braces with invalid content inside."""
-        text = '{not valid json at all}'
+        text = "{not valid json at all}"
         # Brace scan extracts it, json.loads fails, no valid objects → ValueError
         with pytest.raises(ValueError, match="No JSON object found"):
             parse_json_response(text)

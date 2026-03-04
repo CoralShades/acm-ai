@@ -17,6 +17,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv(PROJECT_ROOT / ".env")
 except ImportError:
     pass
@@ -80,10 +81,12 @@ def run_single_model(model_name: str, provider: str, sample: list[dict]) -> dict
     if provider == "ollama":
         print("  Warm-up...", flush=True)
         try:
-            lc.invoke([
-                SystemMessage(content="You are helpful."),
-                HumanMessage(content="Say 'ready'"),
-            ])
+            lc.invoke(
+                [
+                    SystemMessage(content="You are helpful."),
+                    HumanMessage(content="Say 'ready'"),
+                ]
+            )
         except Exception as e:
             print(f"  Warm-up failed: {e}")
 
@@ -103,10 +106,12 @@ def run_single_model(model_name: str, provider: str, sample: list[dict]) -> dict
         )
         try:
             t0 = time.perf_counter()
-            resp = lc.invoke([
-                SystemMessage(content=CLASSIFICATION_SYSTEM),
-                HumanMessage(content=user),
-            ])
+            resp = lc.invoke(
+                [
+                    SystemMessage(content=CLASSIFICATION_SYSTEM),
+                    HumanMessage(content=user),
+                ]
+            )
             t = time.perf_counter() - t0
             parsed = parse_json(resp.content)
             score = score_classification(parsed, rec)
@@ -114,8 +119,7 @@ def run_single_model(model_name: str, provider: str, sample: list[dict]) -> dict
             cls_lats.append(t)
             cls_str = parsed.get("acm_classification", "?")[:30]
             print(
-                f"  cls[{i:02d}] score={score:.2f} t={t:.1f}s "
-                f"pred={cls_str!r}",
+                f"  cls[{i:02d}] score={score:.2f} t={t:.1f}s pred={cls_str!r}",
                 flush=True,
             )
         except Exception as e:
@@ -135,10 +139,12 @@ def run_single_model(model_name: str, provider: str, sample: list[dict]) -> dict
         )
         try:
             t0 = time.perf_counter()
-            resp = lc.invoke([
-                SystemMessage(content=ENRICHMENT_SYSTEM),
-                HumanMessage(content=user),
-            ])
+            resp = lc.invoke(
+                [
+                    SystemMessage(content=ENRICHMENT_SYSTEM),
+                    HumanMessage(content=user),
+                ]
+            )
             t = time.perf_counter() - t0
             parsed = parse_json(resp.content)
             score = score_enrichment(parsed, rec)
@@ -146,8 +152,7 @@ def run_single_model(model_name: str, provider: str, sample: list[dict]) -> dict
             enr_lats.append(t)
             loc_str = parsed.get("location_normalized", "?")[:30]
             print(
-                f"  enr[{i:02d}] score={score:.2f} t={t:.1f}s "
-                f"loc={loc_str!r}",
+                f"  enr[{i:02d}] score={score:.2f} t={t:.1f}s loc={loc_str!r}",
                 flush=True,
             )
         except Exception as e:
@@ -264,7 +269,8 @@ def main() -> None:
     threshold = 0.75
     ollama_results = [r for r in all_results if r["provider"] == "ollama"]
     passing = [
-        r for r in ollama_results
+        r
+        for r in ollama_results
         if r["classification"]["accuracy"] >= threshold
         and r["enrichment"]["accuracy"] >= threshold
     ]
@@ -273,7 +279,8 @@ def main() -> None:
             passing,
             key=lambda r: (
                 r["classification"]["accuracy"] + r["enrichment"]["accuracy"]
-            ) / 2,
+            )
+            / 2,
         )
         print(f"Models meeting >=75% threshold: {[r['model_name'] for r in passing]}")
         print(f"Recommended: {best['model_name']}")
@@ -283,7 +290,8 @@ def main() -> None:
                 ollama_results,
                 key=lambda r: (
                     r["classification"]["accuracy"] + r["enrichment"]["accuracy"]
-                ) / 2,
+                )
+                / 2,
             )
             print(
                 f"No model met 75% threshold. Best: {best['model_name']} "

@@ -30,9 +30,7 @@ async def run_sf_schema_provisioning() -> None:
     """
     try:
         # Check if current version is already loaded
-        existing = await repo_query(
-            f"SELECT version FROM {SF_SCHEMA_RECORD_ID}"
-        )
+        existing = await repo_query(f"SELECT version FROM {SF_SCHEMA_RECORD_ID}")
         if existing and existing[0].get("version") == SF_SCHEMA_VERSION:
             logger.info(
                 f"SF schema already at version {SF_SCHEMA_VERSION}, "

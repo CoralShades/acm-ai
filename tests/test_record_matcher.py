@@ -55,7 +55,9 @@ def make_candidate(
     )
 
 
-def make_group(candidates: List[CandidateRow], method: str = "single_provider", score: float = 1.0) -> MatchGroup:
+def make_group(
+    candidates: List[CandidateRow], method: str = "single_provider", score: float = 1.0
+) -> MatchGroup:
     """Create a MatchGroup from a list of CandidateRows."""
     return MatchGroup(rows=list(candidates), match_method=method, match_score=score)
 
@@ -144,14 +146,20 @@ class TestStage1KeyAnchor:
 
     def test_stage1_empty_optional_fields_match(self):
         """room_id=None and sample_no=None match correctly (both use empty string in key)."""
-        candidate = make_record(building_id="B1", product="Floor Tiles", room_id=None, sample_no=None)
-        row = make_candidate(building_id="B1", product="Floor Tiles", room_id=None, sample_no=None)
+        candidate = make_record(
+            building_id="B1", product="Floor Tiles", room_id=None, sample_no=None
+        )
+        row = make_candidate(
+            building_id="B1", product="Floor Tiles", room_id=None, sample_no=None
+        )
         group = make_group([row])
         assert _stage1_key_anchor(candidate, group) == 1.0
 
     def test_stage1_partial_key_mismatch(self):
         """Same building_id + product but different sample_no scores 0.0."""
-        candidate = make_record(building_id="B1", product="Ceiling Tiles", sample_no="S1")
+        candidate = make_record(
+            building_id="B1", product="Ceiling Tiles", sample_no="S1"
+        )
         row = make_candidate(building_id="B1", product="Ceiling Tiles", sample_no="S99")
         group = make_group([row])
         assert _stage1_key_anchor(candidate, group) == 0.0
@@ -222,7 +230,9 @@ class TestStage2JaroWinkler:
 
     def test_stage2_identical_returns_1(self):
         """Identical records return score 1.0."""
-        candidate = make_record(building_id="B1", product="Ceiling Tiles", sample_no="S1")
+        candidate = make_record(
+            building_id="B1", product="Ceiling Tiles", sample_no="S1"
+        )
         row = make_candidate(building_id="B1", product="Ceiling Tiles", sample_no="S1")
         group = make_group([row])
         score = _stage2_jaro_winkler(candidate, group)
@@ -371,14 +381,20 @@ class TestRecordMatcherMatchGroups:
 
     def test_two_providers_identical_records_merged(self):
         """Two providers with identical records → one MatchGroup with 2 rows."""
-        record_a = make_record(building_id="B1", product="Ceiling Tiles", sample_no="S1")
-        record_b = make_record(building_id="B1", product="Ceiling Tiles", sample_no="S1")
+        record_a = make_record(
+            building_id="B1", product="Ceiling Tiles", sample_no="S1"
+        )
+        record_b = make_record(
+            building_id="B1", product="Ceiling Tiles", sample_no="S1"
+        )
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", [record_a]),
-            ("mineru", [record_b]),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", [record_a]),
+                ("mineru", [record_b]),
+            ]
+        )
 
         assert len(groups) == 1
         assert len(groups[0].rows) == 2
@@ -391,10 +407,12 @@ class TestRecordMatcherMatchGroups:
         record_b = make_record(building_id="Z9", product="Boiler Cladding")
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", [record_a]),
-            ("mineru", [record_b]),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", [record_a]),
+                ("mineru", [record_b]),
+            ]
+        )
 
         assert len(groups) == 2
         # Each group has exactly 1 row
@@ -414,10 +432,12 @@ class TestRecordMatcherMatchGroups:
         ]
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", records_a),
-            ("mineru", records_b),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", records_a),
+                ("mineru", records_b),
+            ]
+        )
 
         # At least 3 groups (B1 merged, B2 solo, B3 solo, B4 new solo)
         assert len(groups) >= 3
@@ -437,10 +457,12 @@ class TestRecordMatcherMatchGroups:
         ]
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", records_a),
-            ("mineru", records_b),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", records_a),
+                ("mineru", records_b),
+            ]
+        )
 
         for group in groups:
             provider_ids = [r.provider_id for r in group.rows]
@@ -462,13 +484,17 @@ class TestRecordMatcherMatchGroups:
         separated by Stage 1 and only potentially re-merged by Stage 2 if scores allow.
         """
         record_a = make_record(building_id="B1", room_id="101", product="Ceiling Tiles")
-        record_b = make_record(building_id="Z9", room_id="999", product="Boiler Cladding")
+        record_b = make_record(
+            building_id="Z9", room_id="999", product="Boiler Cladding"
+        )
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", [record_a]),
-            ("mineru", [record_b]),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", [record_a]),
+                ("mineru", [record_b]),
+            ]
+        )
 
         # Must NOT merge — composite keys are sufficiently different (JW < 0.65)
         assert len(groups) == 2, (
@@ -482,10 +508,12 @@ class TestRecordMatcherMatchGroups:
         record_b = make_record(building_id="B2", product="Ceiling Tiles")
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", [record_a]),
-            ("mineru", [record_b]),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", [record_a]),
+                ("mineru", [record_b]),
+            ]
+        )
 
         # The composite key includes building_id, so different building_ids won't match exactly.
         # Verify Stage 1 does not merge them.
@@ -493,20 +521,28 @@ class TestRecordMatcherMatchGroups:
         # Stage 1 MUST NOT produce a match (this is the AC8 assertion).
         stage1_score = _stage1_key_anchor(
             record_a,
-            make_group([make_candidate(building_id="B2", product="Ceiling Tiles")])
+            make_group([make_candidate(building_id="B2", product="Ceiling Tiles")]),
         )
-        assert stage1_score == 0.0, "Stage 1 must not merge records with different building_id"
+        assert stage1_score == 0.0, (
+            "Stage 1 must not merge records with different building_id"
+        )
 
     def test_all_rows_accounted_for(self):
         """Total rows in output groups equals total input rows across all providers."""
-        records_a = [make_record(building_id=f"B{i}", product="Ceiling Tiles") for i in range(4)]
-        records_b = [make_record(building_id=f"B{i}", product="Ceiling Tiles") for i in range(3)]
+        records_a = [
+            make_record(building_id=f"B{i}", product="Ceiling Tiles") for i in range(4)
+        ]
+        records_b = [
+            make_record(building_id=f"B{i}", product="Ceiling Tiles") for i in range(3)
+        ]
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", records_a),
-            ("mineru", records_b),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", records_a),
+                ("mineru", records_b),
+            ]
+        )
 
         total_rows = sum(len(g.rows) for g in groups)
         assert total_rows == len(records_a) + len(records_b)
@@ -530,10 +566,12 @@ class TestRecordMatcherMatchGroups:
         # so they will be merged by Stage 2
         if jw_score >= RecordMatcher.PROBABLE_THRESHOLD:
             matcher = RecordMatcher()
-            groups = matcher.match_groups([
-                ("docling", [record_a]),
-                ("mineru", [record_b]),
-            ])
+            groups = matcher.match_groups(
+                [
+                    ("docling", [record_a]),
+                    ("mineru", [record_b]),
+                ]
+            )
             # If JW score is high enough, they merge into one group
             assert len(groups) == 1
             assert len(groups[0].rows) == 2
@@ -565,7 +603,11 @@ class TestRecordMatcherMatchGroups:
             page_number=1,  # Same page — Stage 3 can fire
         )
 
-        from open_notebook.extractors.consensus.matcher import _jaro_winkler, _composite_key
+        from open_notebook.extractors.consensus.matcher import (
+            _composite_key,
+            _jaro_winkler,
+        )
+
         jw = _jaro_winkler(_composite_key(record_a), _composite_key(record_b))
         assert jw < RecordMatcher.PROBABLE_THRESHOLD, (
             f"Precondition failed: JW score {jw:.3f} is not below PROBABLE_THRESHOLD "
@@ -573,10 +615,12 @@ class TestRecordMatcherMatchGroups:
         )
 
         matcher = RecordMatcher()
-        groups = matcher.match_groups([
-            ("docling", [record_a]),
-            ("mineru", [record_b]),
-        ])
+        groups = matcher.match_groups(
+            [
+                ("docling", [record_a]),
+                ("mineru", [record_b]),
+            ]
+        )
 
         # Stage 3 should have merged them into ONE group (same page, row_index alignment)
         assert len(groups) == 1, (

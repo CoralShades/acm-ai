@@ -46,12 +46,7 @@ SIMPLE_HTML = (
     "</table>"
 )
 
-SIMPLE_MARKDOWN = (
-    "| Name | Value |\n"
-    "| --- | --- |\n"
-    "| alpha | 1 |\n"
-    "| beta | 2 |"
-)
+SIMPLE_MARKDOWN = "| Name | Value |\n| --- | --- |\n| alpha | 1 |\n| beta | 2 |"
 
 
 # ---------------------------------------------------------------------------
@@ -233,7 +228,9 @@ class TestDoclingAdapter:
         """When docling not importable, extract() raises ProviderError."""
         adapter = DoclingAdapter()
 
-        with patch.dict(sys.modules, {"docling": None, "docling.document_converter": None}):
+        with patch.dict(
+            sys.modules, {"docling": None, "docling.document_converter": None}
+        ):
             with pytest.raises(ProviderError) as exc_info:
                 adapter.extract("/fake/path.pdf")
 
@@ -246,7 +243,9 @@ class TestDoclingAdapter:
         # Build mock DataFrame
         import pandas as pd
 
-        mock_df = pd.DataFrame({"Col A": ["val1", "val2"], "Hazard Status": ["ACM", "NAD"]})
+        mock_df = pd.DataFrame(
+            {"Col A": ["val1", "val2"], "Hazard Status": ["ACM", "NAD"]}
+        )
 
         mock_table = MagicMock()
         mock_table.export_to_dataframe.return_value = mock_df
@@ -484,7 +483,9 @@ class TestProviderRegistry:
 
         with patch.dict(os.environ, {}, clear=False):
             # Remove ACM_EXTRACTION_PROVIDER if set
-            env = {k: v for k, v in os.environ.items() if k != "ACM_EXTRACTION_PROVIDER"}
+            env = {
+                k: v for k, v in os.environ.items() if k != "ACM_EXTRACTION_PROVIDER"
+            }
             with patch.dict(os.environ, env, clear=True):
                 default = registry.get_default()
         assert default.provider_id == "mineru"
@@ -513,9 +514,7 @@ class TestProviderRegistry:
         registry.set_default("docling")
 
         env_without = {
-            k: v
-            for k, v in os.environ.items()
-            if k != "ACM_EXTRACTION_PROVIDER"
+            k: v for k, v in os.environ.items() if k != "ACM_EXTRACTION_PROVIDER"
         }
         with patch.dict(os.environ, env_without, clear=True):
             default = registry.get_default()
@@ -646,9 +645,15 @@ class TestAdapterIsolation:
         adapter = DoclingAdapter()
 
         # Simulate ImportError by patching builtins.__import__
-        original_import = __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
+        original_import = (
+            __builtins__.__import__
+            if hasattr(__builtins__, "__import__")
+            else __import__
+        )
 
-        with patch.dict(sys.modules, {"docling": None, "docling.document_converter": None}):
+        with patch.dict(
+            sys.modules, {"docling": None, "docling.document_converter": None}
+        ):
             with pytest.raises(ProviderError) as exc_info:
                 adapter.extract("/fake/path.pdf")
 

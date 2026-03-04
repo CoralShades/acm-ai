@@ -132,8 +132,9 @@ class TestExtractionStateHasOperationId:
     """Verify ExtractionState includes operation_id key."""
 
     def test_extraction_state_operation_id_key(self):
-        from open_notebook.graphs.acm_extraction import ExtractionState
         import typing
+
+        from open_notebook.graphs.acm_extraction import ExtractionState
         hints = typing.get_type_hints(ExtractionState)
         assert "operation_id" in hints, (
             "ExtractionState must include 'operation_id' key for E34-S1 streaming"

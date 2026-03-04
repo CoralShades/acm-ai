@@ -164,9 +164,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                         f"Updated source {source_id} command to acm_extract: {command_id}"
                     )
             except Exception as e:
-                logger.warning(
-                    f"Failed to update source command for {source_id}: {e}"
-                )
+                logger.warning(f"Failed to update source command for {source_id}: {e}")
         # --- End command update ---
 
         # Validate source_id format

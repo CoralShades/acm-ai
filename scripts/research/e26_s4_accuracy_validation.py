@@ -83,7 +83,6 @@ def _extract_pdf_text(pdf_path: Path) -> str:
     return "\n\n".join(pages)
 
 
-
 def _categorize_record(sample_no: str, result: str) -> str:
     """Categorize a record for per-category reporting."""
     if sample_no.upper().startswith("AS PER"):
@@ -222,10 +221,7 @@ def _check_record_9(extracted_records) -> bool:
         room = _normalize(r.room_name or "")
         location = _normalize(r.location or "")
         product = _normalize(r.product or r.material_description or "")
-        if (
-            "switch room" in room
-            and ("battery" in location or "battery" in product)
-        ):
+        if "switch room" in room and ("battery" in location or "battery" in product):
             return True
         if (
             "switch room" in room
@@ -236,7 +232,9 @@ def _check_record_9(extracted_records) -> bool:
     return False
 
 
-def _check_specific_record(extracted_records, room_substr: str, loc_substr: str) -> bool:
+def _check_specific_record(
+    extracted_records, room_substr: str, loc_substr: str
+) -> bool:
     """Check if a specific record was captured by room+location substring match."""
     for r in extracted_records:
         room = _normalize(r.room_name or "")
@@ -256,22 +254,27 @@ def _load_register_tables():
         filepath = DOCLING_TABLES_DIR / filename
         if filepath.exists():
             raw_text = filepath.read_text(encoding="utf-8")
-            tables.append({
-                "page_start": page,
-                "page_end": page,
-                "raw_text": raw_text,
-                "table_type": "docling_direct_api",
-            })
+            tables.append(
+                {
+                    "page_start": page,
+                    "page_end": page,
+                    "raw_text": raw_text,
+                    "table_type": "docling_direct_api",
+                }
+            )
     return tables
 
 
 def _make_docling_tables_mock(tables):
     """Create a mock for _get_docling_tables that returns register tables."""
+
     async def mock_get_docling_tables(source_id, page_start, page_end):
         return [
-            t for t in tables
+            t
+            for t in tables
             if t["page_start"] >= page_start and t["page_end"] <= page_end
         ]
+
     return mock_get_docling_tables
 
 
@@ -291,7 +294,9 @@ def _load_expected_records_from_csv(csv_path):
                     "result": row["Sample Result"].strip(),
                     "level": row.get("Level", "").strip(),
                     "internal_external": row.get("Internal / External", "").strip(),
-                    "category": _categorize_record(sample_no, row["Sample Result"].strip()),
+                    "category": _categorize_record(
+                        sample_no, row["Sample Result"].strip()
+                    ),
                 }
             )
     return records
@@ -405,9 +410,13 @@ async def run_validation():
 
     # Load Docling register tables from E25 research output
     register_tables = _load_register_tables()
-    print(f"  Docling register tables loaded: {len(register_tables)} (pages {[t['page_start'] for t in register_tables]})")
+    print(
+        f"  Docling register tables loaded: {len(register_tables)} (pages {[t['page_start'] for t in register_tables]})"
+    )
     if not register_tables:
-        print("  WARNING: No Docling tables found — extraction will run without Docling context")
+        print(
+            "  WARNING: No Docling tables found — extraction will run without Docling context"
+        )
 
     # 2. Load ground truth
     print("\n[2/6] Loading ground truth...")
@@ -417,7 +426,9 @@ async def run_validation():
     nata_count = sum(1 for r in expected if r["category"] == "nata_sampled")
     as_per_count = sum(1 for r in expected if r["category"] == "as_per")
     not_sampled_count = sum(1 for r in expected if r["category"] == "not_sampled")
-    print(f"  NATA-sampled: {nata_count}, As Per: {as_per_count}, Not Sampled: {not_sampled_count}")
+    print(
+        f"  NATA-sampled: {nata_count}, As Per: {as_per_count}, Not Sampled: {not_sampled_count}"
+    )
 
     # 3. Extract PDF text
     print("\n[3/6] Extracting PDF text (PyMuPDF)...")
@@ -457,15 +468,22 @@ async def run_validation():
     pct = 100 * total_matched / total_expected
 
     # Per-category breakdown
-    nata_matched = sum(1 for i in found_indices if expected[i]["category"] == "nata_sampled")
-    as_per_matched = sum(1 for i in found_indices if expected[i]["category"] == "as_per")
-    not_sampled_matched = sum(1 for i in found_indices if expected[i]["category"] == "not_sampled")
+    nata_matched = sum(
+        1 for i in found_indices if expected[i]["category"] == "nata_sampled"
+    )
+    as_per_matched = sum(
+        1 for i in found_indices if expected[i]["category"] == "as_per"
+    )
+    not_sampled_matched = sum(
+        1 for i in found_indices if expected[i]["category"] == "not_sampled"
+    )
 
     # Specific record checks
     record_9_found = _check_record_9(extracted_records)
     record_30_found = _check_specific_record(extracted_records, "lift foyer", "lift")
-    record_31_found = _check_specific_record(extracted_records, "main foyer", "disabled toilet") or \
-                      _check_specific_record(extracted_records, "foyer", "toilet")
+    record_31_found = _check_specific_record(
+        extracted_records, "main foyer", "disabled toilet"
+    ) or _check_specific_record(extracted_records, "foyer", "toilet")
 
     # Count Docling tables injected (from orchestrator stats)
     orch_stats = result.orchestrator_stats or {}
@@ -488,7 +506,9 @@ async def run_validation():
     print(f"  'Not Sampled': {not_sampled_matched}/{not_sampled_count}")
     print(f"  Record #9 (Battery Charger): {'FOUND' if record_9_found else 'MISSING'}")
     print(f"  Record #30 (Lift Foyer): {'FOUND' if record_30_found else 'MISSING'}")
-    print(f"  Record #31 (Disabled Toilet): {'FOUND' if record_31_found else 'MISSING'}")
+    print(
+        f"  Record #31 (Disabled Toilet): {'FOUND' if record_31_found else 'MISSING'}"
+    )
     print(f"  Duration: {elapsed:.1f}s")
 
     if missing:
@@ -528,28 +548,50 @@ async def run_validation():
             register_tables=None,  # No Docling tables for Alexander
         )
 
-        print(f"  Alexander extraction: {alex_result.status}, {len(alex_records)} records, {alexander_elapsed:.1f}s")
+        print(
+            f"  Alexander extraction: {alex_result.status}, {len(alex_records)} records, {alexander_elapsed:.1f}s"
+        )
 
-        alex_found, alex_missing = _match_extracted_to_expected(alex_records, alexander_expected)
+        alex_found, alex_missing = _match_extracted_to_expected(
+            alex_records, alexander_expected
+        )
         alexander_matched = len(alex_found)
         alex_pct = 100 * alexander_matched / alexander_expected_count
 
         # Per-category breakdown for Alexander
-        alex_nata = sum(1 for r in alexander_expected if r["category"] == "nata_sampled")
+        alex_nata = sum(
+            1 for r in alexander_expected if r["category"] == "nata_sampled"
+        )
         alex_as_per = sum(1 for r in alexander_expected if r["category"] == "as_per")
-        alex_not_sampled = sum(1 for r in alexander_expected if r["category"] == "not_sampled")
-        alex_nata_matched = sum(1 for idx in alex_found if alexander_expected[idx]["category"] == "nata_sampled")
-        alex_as_per_matched = sum(1 for idx in alex_found if alexander_expected[idx]["category"] == "as_per")
-        alex_ns_matched = sum(1 for idx in alex_found if alexander_expected[idx]["category"] == "not_sampled")
+        alex_not_sampled = sum(
+            1 for r in alexander_expected if r["category"] == "not_sampled"
+        )
+        alex_nata_matched = sum(
+            1
+            for idx in alex_found
+            if alexander_expected[idx]["category"] == "nata_sampled"
+        )
+        alex_as_per_matched = sum(
+            1 for idx in alex_found if alexander_expected[idx]["category"] == "as_per"
+        )
+        alex_ns_matched = sum(
+            1
+            for idx in alex_found
+            if alexander_expected[idx]["category"] == "not_sampled"
+        )
 
-        print(f"  Alexander result: {alexander_matched}/{alexander_expected_count} ({alex_pct:.1f}%)")
+        print(
+            f"  Alexander result: {alexander_matched}/{alexander_expected_count} ({alex_pct:.1f}%)"
+        )
         print(f"  NATA-sampled: {alex_nata_matched}/{alex_nata}")
         print(f"  'As Per': {alex_as_per_matched}/{alex_as_per}")
         print(f"  'Not Sampled': {alex_ns_matched}/{alex_not_sampled}")
         if alex_missing:
             print(f"  Missing ({len(alex_missing)}):")
             for i, rec in enumerate(alex_missing, 1):
-                print(f"    {i}. {rec['room']} / {rec['location']} / {rec['item']} (sample: {rec['sample_no']}, cat: {rec['category']})")
+                print(
+                    f"    {i}. {rec['room']} / {rec['location']} / {rec['item']} (sample: {rec['sample_no']}, cat: {rec['category']})"
+                )
 
         print(f"\n  ALEXANDER EXTRACTED RECORDS ({len(alex_records)}):")
         for i, r in enumerate(alex_records, 1):
@@ -588,19 +630,27 @@ async def run_validation():
         print(f"\n  Result: PROMOTE")
         print(f"  Broadmeadows: {total_matched}/31 >= 30/31 threshold")
         if alexander_matched is not None:
-            print(f"  Alexander: {alexander_matched}/{alexander_expected_count} — no regression")
+            print(
+                f"  Alexander: {alexander_matched}/{alexander_expected_count} — no regression"
+            )
     elif broadmeadows_decision == "INVESTIGATE":
         decision = "INVESTIGATE"
         print(f"\n  Result: INVESTIGATE")
-        print(f"  Broadmeadows: {total_matched}/31 — above baseline but below 30/31 target")
+        print(
+            f"  Broadmeadows: {total_matched}/31 — above baseline but below 30/31 target"
+        )
     elif not alexander_pass:
         decision = "INVESTIGATE"
         print(f"\n  Result: INVESTIGATE (Alexander regression)")
-        print(f"  Alexander: {alexander_matched}/{alexander_expected_count} — regression detected")
+        print(
+            f"  Alexander: {alexander_matched}/{alexander_expected_count} — regression detected"
+        )
     else:
         decision = "ROLLBACK"
         print(f"\n  Result: ROLLBACK")
-        print(f"  Broadmeadows: {total_matched}/31 — regression from E23 baseline (28/31)")
+        print(
+            f"  Broadmeadows: {total_matched}/31 — regression from E23 baseline (28/31)"
+        )
 
     # Save results to JSON
     results = {
@@ -635,7 +685,9 @@ async def run_validation():
             "total_matched": alexander_matched,
             "total_expected": alexander_expected_count,
             "duration_s": round(alexander_elapsed, 1) if alexander_elapsed else None,
-        } if alexander_matched is not None else None,
+        }
+        if alexander_matched is not None
+        else None,
         "decision": decision,
     }
 

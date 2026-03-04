@@ -33,9 +33,7 @@ def _make_source(file_path: Optional[str] = None, url: Optional[str] = None):
     return source
 
 
-def _make_mock_table(
-    df: pd.DataFrame, page_no: int = 1, html: str = "<table></table>"
-):
+def _make_mock_table(df: pd.DataFrame, page_no: int = 1, html: str = "<table></table>"):
     """Create a mock Docling table object."""
     table = MagicMock()
     table.export_to_dataframe.return_value = df

@@ -93,7 +93,11 @@ PRODUCT_SYNONYMS: dict[str, list[str]] = {
     "vinyl sheet": ["vinyl sheet flooring", "sheet vinyl"],
     "vinyl tiles": ["vinyl floor tiles", "floor tiles"],
     "flat sheeting": ["flat sheet", "cement sheet", "fibro sheet"],
-    "floor covering": ["floor coverings", "flooring", "floor covering (beneath carpet)"],
+    "floor covering": [
+        "floor coverings",
+        "flooring",
+        "floor covering (beneath carpet)",
+    ],
     "ceiling": ["ceiling tiles", "ceiling panels", "ceiling lining", "porch ceiling"],
     "heater flue": ["heater"],
     "electrical board": ["electrical distribution board"],
@@ -102,7 +106,11 @@ PRODUCT_SYNONYMS: dict[str, list[str]] = {
     "wall(s)": ["wall", "walls", "wall lining"],
     "eaves": ["eave", "eave lining"],
     "debris": ["ground debris", "on ground debris"],
-    "expansion joint": ["expansion joints", "construction joint", "construction joints"],
+    "expansion joint": [
+        "expansion joints",
+        "construction joint",
+        "construction joints",
+    ],
     "shower cubicle": ["shower cubicles", "shower lining"],
     "infill panels": ["infill panel", "infill"],
     "stored item(s)": ["stored items", "stored item"],
@@ -175,10 +183,7 @@ def get_benchmark_configs() -> dict[str, BenchmarkConfig]:
         ),
         "aldavilla": BenchmarkConfig(
             name="Aldavilla Public School",
-            pdf_path=PROJECT_ROOT
-            / "docs"
-            / "samplePDF"
-            / "4601_AsbestosRegister.pdf",
+            pdf_path=PROJECT_ROOT / "docs" / "samplePDF" / "4601_AsbestosRegister.pdf",
             ground_truth_path=GROUND_TRUTH_DIR / "aldavilla_4601.json",
             expected_records=4,
             expected_buildings=10,
@@ -238,8 +243,7 @@ async def _mock_get_docling_tables(
     return [
         t
         for t in _docling_fixture_cache
-        if t.get("page_start", 0) >= page_start
-        and t.get("page_end", 0) <= page_end
+        if t.get("page_start", 0) >= page_start and t.get("page_end", 0) <= page_end
     ]
 
 
@@ -299,9 +303,7 @@ def _get_field(record, field_name: str) -> str:
     return str(getattr(record, field_name, "") or "").strip()
 
 
-def match_records(
-    ground_truth: list[dict], extracted: list[object]
-) -> MatchResult:
+def match_records(ground_truth: list[dict], extracted: list[object]) -> MatchResult:
     """Match extracted records against ground truth using 3-tier strategy.
 
     Tier 1: Match by sample_no (most reliable)
@@ -403,9 +405,7 @@ def match_records(
         else:
             unmatched_gt.append(gt_rec)
 
-    unmatched_ext = [
-        extracted[i] for i in range(len(extracted)) if i not in consumed
-    ]
+    unmatched_ext = [extracted[i] for i in range(len(extracted)) if i not in consumed]
     return MatchResult(
         matched_pairs=matched_pairs,
         unmatched_gt=unmatched_gt,
@@ -447,9 +447,9 @@ def calculate_field_accuracy(
                 gt_val
             ) == _normalize_building(ext_val):
                 total_matches += 1
-            elif f == "room_name" and _normalize_room(
-                gt_val
-            ) == _normalize_room(ext_val):
+            elif f == "room_name" and _normalize_room(gt_val) == _normalize_room(
+                ext_val
+            ):
                 total_matches += 1
 
     return total_matches / total_checks if total_checks > 0 else 0.0
@@ -518,9 +518,7 @@ def _create_llm_model(**kwargs):
     if openrouter_key:
         from langchain_openai import ChatOpenAI
 
-        model_name = os.environ.get(
-            "BENCHMARK_MODEL", "anthropic/claude-sonnet-4"
-        )
+        model_name = os.environ.get("BENCHMARK_MODEL", "anthropic/claude-sonnet-4")
         return ChatOpenAI(
             model=model_name,
             openai_api_key=openrouter_key,
@@ -532,9 +530,7 @@ def _create_llm_model(**kwargs):
     if anthropic_key:
         from langchain_anthropic import ChatAnthropic
 
-        model_name = os.environ.get(
-            "BENCHMARK_MODEL", "claude-haiku-4-5-20251001"
-        )
+        model_name = os.environ.get("BENCHMARK_MODEL", "claude-haiku-4-5-20251001")
         return ChatAnthropic(model=model_name, **allowed_kwargs)
 
     raise RuntimeError(
@@ -663,9 +659,7 @@ async def run_extraction(
 
     # Use extraction_time_ms from output if available, else wall-clock
     latency_s = (
-        result.extraction_time_ms / 1000.0
-        if result.extraction_time_ms
-        else elapsed
+        result.extraction_time_ms / 1000.0 if result.extraction_time_ms else elapsed
     )
 
     return extracted_records, result, latency_s
@@ -793,15 +787,13 @@ def generate_report(results: list[BenchmarkResult]) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def run_benchmark(
-    doc_name: str, config: BenchmarkConfig
-) -> BenchmarkResult:
+async def run_benchmark(doc_name: str, config: BenchmarkConfig) -> BenchmarkResult:
     """Run a single benchmark document E2E."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  Benchmark: {config.name}")
     print(f"  PDF: {config.pdf_path.name}")
     print(f"  Ground truth: {config.ground_truth_path.name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Load ground truth
     try:
@@ -849,8 +841,7 @@ async def run_benchmark(
 
     # Token/cost from output or accumulator
     token_usage = int(
-        _token_accumulator.get("prompt", 0)
-        + _token_accumulator.get("completion", 0)
+        _token_accumulator.get("prompt", 0) + _token_accumulator.get("completion", 0)
     )
     cost_usd = _token_accumulator.get("cost", 0.0)
 
@@ -858,7 +849,7 @@ async def run_benchmark(
     match_result = match_records(gt_records, extracted)
     print(
         f"  Matched: {len(match_result.matched_pairs)}/{len(gt_records)} "
-        f"(recall {len(match_result.matched_pairs)/len(gt_records):.1%})"
+        f"(recall {len(match_result.matched_pairs) / len(gt_records):.1%})"
     )
 
     # Calculate metrics
@@ -890,9 +881,7 @@ async def main():
     parser.add_argument(
         "--all", action="store_true", help="Run all benchmark documents"
     )
-    parser.add_argument(
-        "--doc", type=str, help="Run a single document by name"
-    )
+    parser.add_argument("--doc", type=str, help="Run a single document by name")
     parser.add_argument(
         "--report-only",
         action="store_true",
@@ -934,8 +923,7 @@ async def main():
     if args.doc:
         if args.doc not in configs:
             print(
-                f"Unknown document: {args.doc}. "
-                f"Available: {', '.join(configs.keys())}"
+                f"Unknown document: {args.doc}. Available: {', '.join(configs.keys())}"
             )
             sys.exit(1)
         docs_to_run = {args.doc: configs[args.doc]}
@@ -948,8 +936,7 @@ async def main():
 
     # Check API keys
     if not (
-        os.environ.get("OPENROUTER_API_KEY")
-        or os.environ.get("ANTHROPIC_API_KEY")
+        os.environ.get("OPENROUTER_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
     ):
         print("ERROR: No LLM API key. Set OPENROUTER_API_KEY or ANTHROPIC_API_KEY.")
         sys.exit(1)
@@ -998,9 +985,9 @@ async def main():
     print(f"Report written to {report_file}")
 
     # Print summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("  BENCHMARK SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for r in results:
         status = "PASS" if r.error is None else f"FAIL: {r.error}"
         print(

@@ -2599,12 +2599,35 @@ async def get_sf_field_schema():
 async def list_building_records(
     source_id: str = Query(..., description="Source ID to filter by (required)"),
 ):
-    """List all building records for a source."""
+    """List all building records for a source, with ACM item counts."""
     try:
         buildings = await BuildingRecord.get_by_source(source_id)
+
+        # Compute record_count per building via a single query
+        record_counts: dict[str, int] = {}
+        if buildings:
+            from open_notebook.database.repository import repo_query
+
+            rows = await repo_query(
+                "SELECT building_record_id, count() AS cnt "
+                "FROM acm_record WHERE source_id = $source_id "
+                "AND building_record_id != NONE "
+                "GROUP BY building_record_id",
+                {"source_id": source_id},
+            )
+            for row in rows:
+                bid = str(row.get("building_record_id", ""))
+                record_counts[bid] = row.get("cnt", 0)
+
+        responses = []
+        for b in buildings:
+            data = b.model_dump()
+            data["record_count"] = record_counts.get(str(b.id), 0)
+            responses.append(BuildingRecordResponse(**data))
+
         return BuildingRecordListResponse(
-            buildings=[BuildingRecordResponse(**b.model_dump()) for b in buildings],
-            total=len(buildings),
+            buildings=responses,
+            total=len(responses),
         )
     except Exception as e:
         logger.error(f"Error listing building records: {e}")

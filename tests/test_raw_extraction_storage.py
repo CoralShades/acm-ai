@@ -287,12 +287,16 @@ class TestRawExtractionsEndpoint:
         assert data["extractions"][0]["provider_id"] == "docling"
 
     @patch("api.routers.acm.RawExtraction.get_by_source", new_callable=AsyncMock)
-    def test_list_raw_extractions_provider_filter_passed_through(self, mock_get, client):
+    def test_list_raw_extractions_provider_filter_passed_through(
+        self, mock_get, client
+    ):
         """provider query param is forwarded to get_by_source."""
         mock_get.return_value = []
         response = client.get("/api/acm/raw-extractions/source:abc?provider=mineru")
         assert response.status_code == 200
-        mock_get.assert_called_once_with("source:abc", provider="mineru", page_number=None)
+        mock_get.assert_called_once_with(
+            "source:abc", provider="mineru", page_number=None
+        )
 
     @patch("api.routers.acm.RawExtraction.get_by_source", new_callable=AsyncMock)
     def test_list_raw_extractions_empty_source(self, mock_get, client):

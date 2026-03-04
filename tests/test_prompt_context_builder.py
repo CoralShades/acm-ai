@@ -109,9 +109,7 @@ class TestSelectItemNameGroups:
 
     def test_gasket_group_friable(self):
         """Gasket (f) group returns same items."""
-        result = _select_item_name_groups(
-            "Gasket, friction products and adhesives (f)"
-        )
+        result = _select_item_name_groups("Gasket, friction products and adhesives (f)")
         assert "Gasket(s)" in result
         assert "Expansion joint" in result
 
@@ -212,7 +210,9 @@ class TestBuildPicklistContext:
         """All returned values are strings (newline-joined)."""
         picklists = build_picklist_context(schema_bundle=None)
         for key, value in picklists.items():
-            assert isinstance(value, str), f"Key {key!r} returned non-string: {type(value)}"
+            assert isinstance(value, str), (
+                f"Key {key!r} returned non-string: {type(value)}"
+            )
 
     def test_friability_options(self):
         """Contains 'Non-friable' and 'Friable'."""
@@ -325,7 +325,10 @@ class TestBuildPicklistContext:
         # Should use mock data for available picklists
         assert "School" in picklists["building_type_options"]
         assert "Classroom" in picklists["building_type_options"]
-        assert "Educational and training facilities" in picklists["building_category_options"]
+        assert (
+            "Educational and training facilities"
+            in picklists["building_category_options"]
+        )
         assert "Non-friable" in picklists["friability_options"]
         assert "Friable" in picklists["friability_options"]
 

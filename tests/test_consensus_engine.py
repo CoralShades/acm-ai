@@ -195,11 +195,22 @@ class TestAssignTier:
         row_b = make_candidate(provider_id="mineru")
         group = make_group([row_a, row_b])
         field_votes = {
-            "result": make_fvr("Positive", 1.0, False, {"docling": "Positive", "mineru": "Positive"}),
-            "building_id": make_fvr("B1", 1.0, False, {"docling": "B1", "mineru": "B1"}),
-            "product": make_fvr("Ceiling Tiles", 1.0, False, {"docling": "Ceiling Tiles", "mineru": "Ceiling Tiles"}),
+            "result": make_fvr(
+                "Positive", 1.0, False, {"docling": "Positive", "mineru": "Positive"}
+            ),
+            "building_id": make_fvr(
+                "B1", 1.0, False, {"docling": "B1", "mineru": "B1"}
+            ),
+            "product": make_fvr(
+                "Ceiling Tiles",
+                1.0,
+                False,
+                {"docling": "Ceiling Tiles", "mineru": "Ceiling Tiles"},
+            ),
             # Fourth field disagrees — but NOT a key field (room_name)
-            "room_name": make_fvr("Classroom", 0.5, True, {"docling": "Classroom", "mineru": "Office"}),
+            "room_name": make_fvr(
+                "Classroom", 0.5, True, {"docling": "Classroom", "mineru": "Office"}
+            ),
         }
         # 3/4 = 0.75 >= 0.67 → MEDIUM (and none of the key fields are contested)
         assert _assign_tier(field_votes, group) == "MEDIUM"
@@ -212,10 +223,12 @@ class TestAssignTier:
         # 1 out of 4 fields agrees; contested fields are non-key fields only
         # so CONTESTED is not triggered
         field_votes = {
-            "result": make_fvr("Positive", 1.0, False),     # agrees (key field, not contested)
-            "room_name": make_fvr("Classroom", 0.5, True),   # contested non-key
-            "location": make_fvr("Ceiling", 0.5, True),      # contested non-key
-            "extent": make_fvr("Whole room", 0.5, True),     # contested non-key
+            "result": make_fvr(
+                "Positive", 1.0, False
+            ),  # agrees (key field, not contested)
+            "room_name": make_fvr("Classroom", 0.5, True),  # contested non-key
+            "location": make_fvr("Ceiling", 0.5, True),  # contested non-key
+            "extent": make_fvr("Whole room", 0.5, True),  # contested non-key
         }
         # 1/4 = 0.25 < 0.67 and no key fields are contested → LOW
         assert _assign_tier(field_votes, group) == "LOW"
@@ -300,11 +313,15 @@ class TestConsensusEngineMerge:
     def test_merge_two_providers_agree(self):
         """Two providers agree on all fields → tier='HIGH'."""
         record_a = make_record(
-            building_id="B1", product="Ceiling Tiles", result="Positive",
+            building_id="B1",
+            product="Ceiling Tiles",
+            result="Positive",
             room_id="R101",
         )
         record_b = make_record(
-            building_id="B1", product="Ceiling Tiles", result="Positive",
+            building_id="B1",
+            product="Ceiling Tiles",
+            result="Positive",
             room_id="R101",
         )
         row_a = CandidateRow(provider_id="docling", record=record_a, row_index=0)
@@ -327,8 +344,12 @@ class TestConsensusEngineMerge:
         (no remaining contested fields after L2), tier depends on agreement_rate.
         The consensus_metadata conflict_level shows the highest escalation reached (L2).
         """
-        record_a = make_record(building_id="B1", product="Ceiling Tiles", result="Positive")
-        record_b = make_record(building_id="B1", product="Ceiling Tiles", result="Negative")
+        record_a = make_record(
+            building_id="B1", product="Ceiling Tiles", result="Positive"
+        )
+        record_b = make_record(
+            building_id="B1", product="Ceiling Tiles", result="Negative"
+        )
         row_a = CandidateRow(provider_id="docling", record=record_a, row_index=0)
         row_b = CandidateRow(provider_id="mineru", record=record_b, row_index=0)
         group = make_group([row_a, row_b], method="key_field_anchor", score=1.0)
@@ -348,8 +369,12 @@ class TestConsensusEngineMerge:
     def test_merge_sets_extraction_confidence(self):
         """extraction_confidence is updated from tier (HIGH→'high', etc.)."""
         # HIGH case
-        record_a = make_record(building_id="B1", product="Ceiling Tiles", result="Positive")
-        record_b = make_record(building_id="B1", product="Ceiling Tiles", result="Positive")
+        record_a = make_record(
+            building_id="B1", product="Ceiling Tiles", result="Positive"
+        )
+        record_b = make_record(
+            building_id="B1", product="Ceiling Tiles", result="Positive"
+        )
         row_a = CandidateRow(provider_id="docling", record=record_a, row_index=0)
         row_b = CandidateRow(provider_id="mineru", record=record_b, row_index=0)
         group = make_group([row_a, row_b])
@@ -367,7 +392,15 @@ class TestConsensusEngineMerge:
         result = run_async(engine.merge([group]))
 
         meta = result[0].consensus_metadata
-        required_keys = {"tier", "providers", "match_method", "match_score", "field_votes", "conflict_level", "resolver_used"}
+        required_keys = {
+            "tier",
+            "providers",
+            "match_method",
+            "match_score",
+            "field_votes",
+            "conflict_level",
+            "resolver_used",
+        }
         assert required_keys.issubset(set(meta.keys())), (
             f"Missing keys: {required_keys - set(meta.keys())}"
         )
@@ -439,8 +472,10 @@ class TestConflictResolver:
         resolver = self._make_resolver()
         field_votes = {
             "result": FieldVoteResult(
-                winner="Positive", score=1.0, contested=False,
-                votes={"docling": "Positive"}
+                winner="Positive",
+                score=1.0,
+                contested=False,
+                votes={"docling": "Positive"},
             ),
         }
         # Make a minimal group
@@ -467,7 +502,12 @@ class TestConflictResolver:
             votes={"docling": "Positive", "mineru": "Negative"},
         )
         field_votes = {"result": fvr}
-        group = make_group([make_candidate(provider_id="docling"), make_candidate(provider_id="mineru")])
+        group = make_group(
+            [
+                make_candidate(provider_id="docling"),
+                make_candidate(provider_id="mineru"),
+            ]
+        )
         resolved = run_async(resolver.resolve(field_votes, group, {}))
 
         assert resolved["result"].winner == "Positive"
@@ -485,7 +525,12 @@ class TestConflictResolver:
             votes={"docling": "Positive", "mineru": "Negative"},
         )
         field_votes = {"result": fvr}
-        group = make_group([make_candidate(provider_id="docling"), make_candidate(provider_id="mineru")])
+        group = make_group(
+            [
+                make_candidate(provider_id="docling"),
+                make_candidate(provider_id="mineru"),
+            ]
+        )
         resolved = run_async(resolver.resolve(field_votes, group, {}))
 
         # L2 should pick docling (higher priority)
@@ -502,10 +547,12 @@ class TestConflictResolver:
             votes={"docling": "Positive", "unknown_provider": "Negative"},
         )
         field_votes = {"result": fvr}
-        group = make_group([
-            make_candidate(provider_id="docling"),
-            make_candidate(provider_id="unknown_provider"),
-        ])
+        group = make_group(
+            [
+                make_candidate(provider_id="docling"),
+                make_candidate(provider_id="unknown_provider"),
+            ]
+        )
         resolved = run_async(resolver.resolve(field_votes, group, {}))
 
         # L2: docling wins over unknown_provider
@@ -571,10 +618,12 @@ class TestConflictResolver:
 
         with patch.object(resolver, "_l3_llm_stub", mock_l3_stub):
             field_votes = {"some_field": fvr}
-            group = make_group([
-                make_candidate(provider_id="unknown_a"),
-                make_candidate(provider_id="unknown_b"),
-            ])
+            group = make_group(
+                [
+                    make_candidate(provider_id="unknown_a"),
+                    make_candidate(provider_id="unknown_b"),
+                ]
+            )
             resolved = run_async(resolver.resolve(field_votes, group, {}))
 
         # L4 was reached — result should remain contested (flagged for human review)
@@ -602,7 +651,12 @@ class TestConflictResolver:
                 votes={"docling": "B1", "mineru": "B2"},
             ),
         }
-        group = make_group([make_candidate(provider_id="docling"), make_candidate(provider_id="mineru")])
+        group = make_group(
+            [
+                make_candidate(provider_id="docling"),
+                make_candidate(provider_id="mineru"),
+            ]
+        )
         resolved = run_async(resolver.resolve(field_votes, group, {}))
 
         # L2 is the highest level reached across all fields
@@ -623,7 +677,12 @@ class TestConflictResolver:
             votes={"docling": "Positive", "mineru": "Negative"},
         )
         field_votes = {"result": fvr}
-        group = make_group([make_candidate(provider_id="docling"), make_candidate(provider_id="mineru")])
+        group = make_group(
+            [
+                make_candidate(provider_id="docling"),
+                make_candidate(provider_id="mineru"),
+            ]
+        )
         resolved = run_async(resolver.resolve(field_votes, group, {}))
 
         assert resolved["result"].resolver_used == "priority_hierarchy"
@@ -638,7 +697,12 @@ class TestConflictResolver:
             votes={"docling": "Positive", "mineru": "Negative"},
         )
         field_votes = {"result": fvr}
-        group = make_group([make_candidate(provider_id="docling"), make_candidate(provider_id="mineru")])
+        group = make_group(
+            [
+                make_candidate(provider_id="docling"),
+                make_candidate(provider_id="mineru"),
+            ]
+        )
         resolved = run_async(resolver.resolve(field_votes, group, {}))
 
         assert resolved["result"].conflict_level == "L1"
@@ -705,7 +769,9 @@ class TestConsensusMetadataFieldVotes:
 
     def test_field_votes_contain_conflict_level_and_resolver_used(self):
         """Each entry in consensus_metadata['field_votes'] has conflict_level and resolver_used."""
-        record = make_record(building_id="B1", product="Ceiling Tiles", result="Positive")
+        record = make_record(
+            building_id="B1", product="Ceiling Tiles", result="Positive"
+        )
         row = CandidateRow(provider_id="docling", record=record, row_index=0)
         group = make_group([row])
 
@@ -714,5 +780,9 @@ class TestConsensusMetadataFieldVotes:
 
         meta = result[0].consensus_metadata
         for field_name, field_data in meta["field_votes"].items():
-            assert "conflict_level" in field_data, f"Missing conflict_level for field '{field_name}'"
-            assert "resolver_used" in field_data, f"Missing resolver_used for field '{field_name}'"
+            assert "conflict_level" in field_data, (
+                f"Missing conflict_level for field '{field_name}'"
+            )
+            assert "resolver_used" in field_data, (
+                f"Missing resolver_used for field '{field_name}'"
+            )

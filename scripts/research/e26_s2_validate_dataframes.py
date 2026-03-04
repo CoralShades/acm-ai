@@ -175,7 +175,9 @@ def validate_extraction_results(tables: list[dict]) -> dict:
     asbestos_prefix_count = 0
     for t in register_tables:
         csv_text = t.get("csv", "")
-        asbestos_prefix_count += len(re.findall(r"Asbestos\s+(Negative|Positive|Assumed)", csv_text))
+        asbestos_prefix_count += len(
+            re.findall(r"Asbestos\s+(Negative|Positive|Assumed)", csv_text)
+        )
 
     results["hazard_status_clean"] = {
         "expected": "No 'Asbestos ' prefix after normalization",
@@ -240,7 +242,11 @@ async def validate_storage(source_id: str) -> dict:
     if query_results and isinstance(query_results, list):
         for item in query_results:
             if isinstance(item, dict) and "result" in item:
-                records = item["result"] if isinstance(item["result"], list) else [item["result"]]
+                records = (
+                    item["result"]
+                    if isinstance(item["result"], list)
+                    else [item["result"]]
+                )
             elif isinstance(item, dict):
                 records.append(item)
             elif isinstance(item, list):
@@ -252,24 +258,34 @@ async def validate_storage(source_id: str) -> dict:
     }
 
     for rec in records:
-        storage_results["records"].append({
-            "id": rec.get("id", "?"),
-            "page_start": rec.get("page_start"),
-            "page_end": rec.get("page_end"),
-            "table_type": rec.get("table_type"),
-            "has_raw_html": bool(rec.get("raw_html")),
-            "has_raw_text": bool(rec.get("raw_text")),
-            "has_structured_json": bool(rec.get("structured_json")),
-            "building_name": rec.get("building_name"),
-        })
+        storage_results["records"].append(
+            {
+                "id": rec.get("id", "?"),
+                "page_start": rec.get("page_start"),
+                "page_end": rec.get("page_end"),
+                "table_type": rec.get("table_type"),
+                "has_raw_html": bool(rec.get("raw_html")),
+                "has_raw_text": bool(rec.get("raw_text")),
+                "has_structured_json": bool(rec.get("structured_json")),
+                "building_name": rec.get("building_name"),
+            }
+        )
 
-    storage_results["all_have_html"] = all(r["has_raw_html"] for r in storage_results["records"])
-    storage_results["all_have_text"] = all(r["has_raw_text"] for r in storage_results["records"])
-    storage_results["all_have_json"] = all(r["has_structured_json"] for r in storage_results["records"])
+    storage_results["all_have_html"] = all(
+        r["has_raw_html"] for r in storage_results["records"]
+    )
+    storage_results["all_have_text"] = all(
+        r["has_raw_text"] for r in storage_results["records"]
+    )
+    storage_results["all_have_json"] = all(
+        r["has_structured_json"] for r in storage_results["records"]
+    )
     storage_results["all_type_correct"] = all(
         r["table_type"] == "docling_direct_api" for r in storage_results["records"]
     )
-    storage_results["pages"] = sorted(set(r["page_start"] for r in storage_results["records"]))
+    storage_results["pages"] = sorted(
+        set(r["page_start"] for r in storage_results["records"])
+    )
 
     return storage_results
 
@@ -300,7 +316,9 @@ async def main():
 
     print(f"  Extracted {len(tables)} tables in {extraction_time:.2f}s")
     for t in tables:
-        print(f"  Table {t['table_index']}: page={t['page']}, rows={t['rows']}, cols={len(t['columns'])}")
+        print(
+            f"  Table {t['table_index']}: page={t['page']}, rows={t['rows']}, cols={len(t['columns'])}"
+        )
     print()
 
     # -----------------------------------------------------------------------
@@ -315,15 +333,21 @@ async def main():
             continue
         if isinstance(val, dict) and "pass" in val:
             status = "PASS" if val["pass"] else "FAIL"
-            print(f"  [{status}] {key}: expected={val.get('expected')}, actual={val.get('actual')}")
+            print(
+                f"  [{status}] {key}: expected={val.get('expected')}, actual={val.get('actual')}"
+            )
         elif isinstance(val, dict):
             for subkey, subval in val.items():
                 if isinstance(subval, dict) and "pass" in subval:
                     status = "PASS" if subval["pass"] else "FAIL"
-                    print(f"  [{status}] {key}.{subkey}: {subval.get('all_populated', '?')}")
+                    print(
+                        f"  [{status}] {key}.{subkey}: {subval.get('all_populated', '?')}"
+                    )
 
     print(f"\n  Overall: {'ALL PASS' if validation['all_pass'] else 'SOME FAILURES'}")
-    print(f"  Extraction time: {extraction_time:.2f}s (E25 spike: {E25_EXPECTED['processing_time_e25']}s)")
+    print(
+        f"  Extraction time: {extraction_time:.2f}s (E25 spike: {E25_EXPECTED['processing_time_e25']}s)"
+    )
     print()
 
     # -----------------------------------------------------------------------
@@ -382,7 +406,11 @@ async def main():
     if battery_charger_query and isinstance(battery_charger_query, list):
         for item in battery_charger_query:
             if isinstance(item, dict) and "result" in item:
-                battery_results = item["result"] if isinstance(item["result"], list) else [item["result"]]
+                battery_results = (
+                    item["result"]
+                    if isinstance(item["result"], list)
+                    else [item["result"]]
+                )
             elif isinstance(item, dict):
                 battery_results.append(item)
             elif isinstance(item, list):
@@ -412,7 +440,9 @@ async def main():
     if page8_query and isinstance(page8_query, list):
         for item in page8_query:
             if isinstance(item, dict) and "result" in item:
-                page8_results = item["result"] if isinstance(item["result"], list) else []
+                page8_results = (
+                    item["result"] if isinstance(item["result"], list) else []
+                )
             elif isinstance(item, list):
                 page8_results = item
 
@@ -448,7 +478,9 @@ async def main():
     record_9_found = len(battery_results) > 0
     page_8_clear = len(page8_results) == 0
 
-    overall_pass = validation["all_pass"] and storage_pass and record_9_found and page_8_clear
+    overall_pass = (
+        validation["all_pass"] and storage_pass and record_9_found and page_8_clear
+    )
 
     verdict = "PASS" if overall_pass else "FAIL"
 
@@ -474,14 +506,24 @@ async def main():
     print("=" * 70)
     print()
     print(f"Tables: {len(tables)}/{E25_EXPECTED['total_tables']}")
-    print(f"Register tables: {len([t for t in tables if t['page'] in [5,6,7]])}/{E25_EXPECTED['register_tables']}")
-    print(f"Register rows: {sum(t['rows'] for t in tables if t['page'] in [5,6,7])}/{E25_EXPECTED['total_register_rows']}")
-    print(f"'Same as' rows: {validation['same_as_rows']['actual']}/{E25_EXPECTED['same_as_rows']}")
-    print(f"'Assumed positive': {validation['assumed_positive_rows']['actual']}/{E25_EXPECTED['assumed_positive_rows']}")
+    print(
+        f"Register tables: {len([t for t in tables if t['page'] in [5, 6, 7]])}/{E25_EXPECTED['register_tables']}"
+    )
+    print(
+        f"Register rows: {sum(t['rows'] for t in tables if t['page'] in [5, 6, 7])}/{E25_EXPECTED['total_register_rows']}"
+    )
+    print(
+        f"'Same as' rows: {validation['same_as_rows']['actual']}/{E25_EXPECTED['same_as_rows']}"
+    )
+    print(
+        f"'Assumed positive': {validation['assumed_positive_rows']['actual']}/{E25_EXPECTED['assumed_positive_rows']}"
+    )
     print(f"Record #9 (Battery Charger): {'FOUND' if record_9_found else 'NOT FOUND'}")
     print(f"Page 8 gap: {'CONFIRMED' if page_8_clear else 'UNEXPECTED TABLES'}")
     print(f"Storage: {storage['total_stored']}/{E25_EXPECTED['total_tables']} stored")
-    print(f"Extraction time: {extraction_time:.2f}s (E25: {E25_EXPECTED['processing_time_e25']}s)")
+    print(
+        f"Extraction time: {extraction_time:.2f}s (E25: {E25_EXPECTED['processing_time_e25']}s)"
+    )
     print()
     print(f"Results saved to: {output_file}")
 
