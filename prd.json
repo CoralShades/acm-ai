@@ -170,8 +170,8 @@
         "AC8: Tested against Broadmeadows (31 records) and Alexander (43 records) benchmark data",
         "AC9: Idempotent: safe to run multiple times"
       ],
-      "passes": false,
-      "notes": "On critical path to Schema Freeze.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -185,7 +185,7 @@
         "tests/test_v3_data_migration.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e30-s5-data-migration-script.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E30-S6",
@@ -277,7 +277,7 @@
         "AC8: Broadmeadows 31/31 accuracy maintained; Alexander >=40/43 baseline"
       ],
       "passes": false,
-      "notes": "Deferred to V3-4 — Ollama-first approach per client priority. Not on critical path.",
+      "notes": "Deferred to V3-4 \u00e2\u20ac\u201d Ollama-first approach per client priority. Not on critical path.",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -312,8 +312,8 @@
         "AC7: Document: chosen backend, VRAM usage, processing speed per document",
         "AC8: Fallback plan documented if torch constraint is hard"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -325,8 +325,8 @@
         "scripts/research/validate_mineru_v2.py",
         "CLAUDE.md"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e31-s1-mineru-2x-integration-validation.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S2",
@@ -659,7 +659,7 @@
         "AC1: Product types from classify_product() pass SF chain validation after normalization",
         "AC2: All 133 ACM_Sub_Classification__c values have correct case in SF chain lookups",
         "AC3: Case-sensitive matching still enforced for controller values (Friability_of_Material__c, ACM_Classification__c)",
-        "AC4: Existing E30-S4 test suite passes — no regression (187+ tests)",
+        "AC4: Existing E30-S4 test suite passes \u00e2\u20ac\u201d no regression (187+ tests)",
         "AC5: F4 finding in V3/output/github-issue-e30s4-audit.md updated to FIXED"
       ],
       "passes": false,
@@ -731,7 +731,7 @@
         "AC6: Spike results documented in docs/spikes/ollama-model-evaluation.md"
       ],
       "passes": false,
-      "notes": "Independent spike — dependency on E30-S8 removed (Ollama-first approach). Runs after MinerU setup.",
+      "notes": "Independent spike \u00e2\u20ac\u201d dependency on E30-S8 removed (Ollama-first approach). Runs after MinerU setup.",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",

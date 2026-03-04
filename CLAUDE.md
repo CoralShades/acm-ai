@@ -160,40 +160,58 @@ extract_acm_records(
 - Consider Docker containerization for MinerU isolation in production
 - Fallback mechanism ensures data extraction works even if MinerU dependencies are unavailable
 
-## Secondary Python Environment: MinerU
+## Python Environments: MinerU 2.x (E31-S1 Validated)
 
-MinerU requires `paddlepaddle-gpu` which conflicts with `torch 2.10.0+cu126` in the main venv.
-It runs in an isolated venv at `.venv-mineru/` — managed by pip directly (not uv/pyproject.toml).
+MinerU 2.x (`mineru>=2.7.0`) installs directly into the main `.venv/` alongside Docling and PyTorch.
+The `paddlepaddle-gpu` conflict that drove the two-venv pattern was specific to MinerU 1.x (`magic-pdf`).
+
+**IMPORTANT — `[all]` extras conflict:** `mineru[all]` includes `vllm` which pins `torchvision` to versions
+incompatible with `torchvision>=0.25.0` in the project. Use `mineru>=2.7.0` (without `[all]`) instead.
+The `[pipeline]` and `[vlm]` extras can be added individually if specific backends are needed.
 
 ### Venv Summary
 
 | Venv | Path | Purpose | Manager |
 |------|------|---------|---------|
-| Main | `.venv/` | All production services — API, worker, Docling/TableFormer | `uv` (pyproject.toml) |
-| MinerU | `.venv-mineru/` | MinerU table extraction — spike research + optional backend | `pip` (standalone) |
+| Main | `.venv/` | All production services — API, worker, Docling/TableFormer, MinerU 2.x | `uv` (pyproject.toml) |
+| MinerU (legacy) | `.venv-mineru/` | MinerU 1.x (`magic-pdf`) — deprecated if MinerU 2.x confirmed in main venv | `pip` (standalone) |
 
 ### Interpreter Paths
 
-| Platform | Main venv | MinerU venv |
-|----------|-----------|-------------|
-| Windows | `.venv\Scripts\python.exe` | `.venv-mineru\Scripts\python.exe` |
-| WSL/Linux | `.venv/bin/python` | `.venv-mineru/bin/python` |
+| Platform | Main venv | MinerU 1.x legacy venv |
+|----------|-----------|-------------------------|
+| Windows | `.venv\Scripts\python.exe` | `.venv-mineru\Scripts\python.exe` (deprecated) |
+| WSL/Linux | `.venv/bin/python` | `.venv-mineru/bin/python` (deprecated) |
 
 ### Rules for All AI Coding Tools
 
 - **Always `uv run ...`** for all main project work (API, tests, lint, workers)
-- **`.venv-mineru` only** for: `scripts/mineru_runner.py`, `scripts/research/` spike scripts
+- **`import mineru`** directly in main project code — no subprocess bridge needed for MinerU 2.x
+- **Never** add `mineru[all]` to `pyproject.toml` — use `mineru>=2.7.0` to avoid `vllm`/`torchvision` conflict
 - **Never** `uv pip install magic-pdf` or `paddlepaddle` into the main venv
-- **Never** import `magic_pdf` or `paddle` directly in main project code — use `scripts/mineru_runner.py` via subprocess
+- `scripts/mineru_runner.py` — legacy bridge for MinerU 1.x, deprecated
 
-### Backend Integration Pattern
+### MinerU 2.x API
 
-See `scripts/mineru_runner.py` for the subprocess bridge interface.
-Enable via environment variables: `MINERU_ENABLED=true` + `MINERU_VENV_PATH=.venv-mineru`
+```python
+from mineru import MinerUDocumentConverter
+
+converter = MinerUDocumentConverter()
+result = converter.convert("/path/to/file.pdf")
+```
+
+Enable via environment variables: `MINERU_ENABLED=true` (no separate venv path needed)
+
+### Legacy Subprocess Bridge (Deprecated)
+
+`scripts/mineru_runner.py` was the MinerU 1.x subprocess bridge via `.venv-mineru/`.
+It is deprecated now that MinerU 2.x installs in the main venv.
+See E31-S1 validation results at `scripts/research/e31_s1_validation_results.json`.
 
 ### One-Time Setup (Windows)
 
-See `/e25-setup-mineru` command or Phase 1 of the MinerU venv plan.
+MinerU 2.x installs automatically via `uv sync` — no separate setup step required.
+(Legacy: `/e25-setup-mineru` command set up the old `.venv-mineru/` venv.)
 
 ## Database
 
