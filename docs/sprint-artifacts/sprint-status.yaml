@@ -419,7 +419,7 @@ development_status:
   # Dependencies: E29 S1-S4 (completed)
   # FRs: FR-1401..FR-1412
   # ─────────────────────────────────────────────────────
-  epic-30: in-progress  # 6/8 stories done; S7, S8 remaining
+  epic-30: in-progress  # 8/9 stories done (S9 added); only S8 remaining (deferred V3-4)
   e30-s1-sf-schema-config-loader: done                # 5 SP. No deps. FIRST V3 STORY — completed 2026-03-03
   e30-s2-building-record-table-domain-model: done     # 5 SP. Commit 59ac749d. Migration 40 (implemented after S3, so used 40 not 39). 2026-03-03
   e30-s3-acm-record-sf-item-alignment: done            # 3 SP. Blocked by S1. Pydantic SF aliases for Item__c fields — completed 2026-03-03
@@ -434,18 +434,19 @@ development_status:
 
   # ─────────────────────────────────────────────────────
   # Epic 31: V3 Multi-Provider Extraction (P0)
-  # 7 stories, 18 SP
+  # 8 stories, 21 SP
   # Dependencies: E30 Schema Freeze Gate (S1-S6 done)
   # FRs: FR-1501..FR-1506, FR-1701, FR-1704
   # ─────────────────────────────────────────────────────
-  epic-31: backlog
+  epic-31: in-progress
   e31-s1-mineru-2x-integration-validation: done        # 2 SP. V3-3. MinerU 2.x installed in main venv, validation results in scripts/research/e31_s1_validation_results.json
   e31-s2-provider-adapter-framework: done             # 3 SP. V3-3. ExtractionProvider Protocol, DoclingAdapter, MinerUAdapter, ProviderRegistry, normalizer. source_commands.py wired. Commit f1152678.
-  e31-s3-consensus-layer-core: drafted                 # 3 SP. Blocked by S2 (DONE). RecordMatcher + ConsensusEngine + ConflictResolver. Tech spec: docs/sprint-artifacts/e31-s3-consensus-layer-core.md
+  e31-s3-consensus-layer-core: done                    # 3 SP. V3-3. RecordMatcher (3-stage matching) + ConsensusEngine (confidence-weighted voting) + ConflictResolver (L1-L4 escalation). 78 tests. Completed 2026-03-04.
   e31-s4-raw-extraction-table-storage: done           # 2 SP. V3-3. New raw_extraction SurrealDB table, RawExtraction domain class, GET /api/acm/raw-extractions/{source_id} endpoint, _store_raw_extractions() wiring in source_commands.py, 30 unit tests
   e31-s5-pipeline-integration: backlog                 # 3 SP. Blocked by S3, S4. Wire dual-provider into orchestrator + consensus
   e31-s6-dual-provider-benchmark: backlog              # 2 SP. Blocked by S5. Broadmeadows 31/31, Alexander ≥40/43 consensus validation
   e31-s7-pipeline-event-bus-sse-infrastructure: backlog  # 3 SP. Blocked by S5. PipelineEventBus + SSE endpoints + Zustand streaming
+  e31-s8-pre-extraction-quality-hardening: backlog    # 3 SP. V3-5. Fix page markers, LLM structure retry, metadata quality. Deps: E30-S9
   epic-31-retrospective: optional
 
   # ─────────────────────────────────────────────────────
@@ -472,7 +473,7 @@ development_status:
   # ─────────────────────────────────────────────────────
   epic-33: backlog
   e33-s1-upload-wizard-extraction-progress: backlog    # 3 SP. Post schema freeze + E31-S7 (SSE). Upload wizard + SSE progress
-  e33-s2-building-grid-item-grid-two-view: backlog     # 5 SP. Post schema freeze + E30-S2 (API). Building sidebar + Item AG Grid
+  e33-s2-building-grid-item-grid-two-view: done        # 5 SP. Post schema freeze + E30-S2 (API). Building sidebar + Item AG Grid
   e33-s3-dependent-picklist-cell-editors: backlog      # 3 SP. Blocked by E32, E30-S4. AG Grid cascading picklist editors
   e33-s4-sf-validation-badges-record-wizard: backlog   # 3 SP. Blocked by S2, S3, E30-S4. Inline badges + record wizard modal
   e33-s5-raw-table-review: backlog                     # 3 SP. Blocked by E31-S4, S2. Raw extraction AG Grid (opt-in)
@@ -549,7 +550,7 @@ development_status:
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # V3 STATUS: GATE:SCHEMA_FREEZE UNLOCKED 2026-03-03 (trigger: E30-S6)
-# V3 Done: 12/34 stories (E30-S1,S2,S3,S4,S5,S6,S7,S9; E31-S1,S2,S4; E32-S6). Next: E31-S3, E33-S2.
+# V3 Done: 13/34 stories (E30-S1,S2,S3,S4,S5,S6,S7,S9; E31-S1,S2,S4; E32-S6; E33-S2). Next: E31-S3, E33-S1.
 #
 # EXTRACTION ACCURACY STATUS:
 # ===========================

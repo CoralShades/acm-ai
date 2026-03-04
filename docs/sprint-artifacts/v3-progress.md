@@ -30,7 +30,10 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-04 | E31-S2 | Provider Adapter Framework | 3 | providers/base.py, docling_adapter.py, mineru_adapter.py, normalizer.py, __init__.py (registry), source_commands.py wired | ExtractionProvider Protocol, two adapters, ProviderRegistry, normalizer. Commit f1152678 |
 | 2026-03-04 | E30-S9 | Persist Pre-Extraction Intelligence | 3 | 41.surrealql, repository.py, acm_extraction.py, models.py, acm.py, intelligence.ts, use-source-intelligence.ts, SourceIntelligencePanel.tsx, page.tsx, acm.ts | GitHub #85. source_intelligence table, save_intelligence graph node (tag_pages→save_intelligence→orchestrate), GET API, Intelligence tab with 4 sections |
 | 2026-03-04 | E32-S6 | Ollama Model Evaluation Spike | 2 | ollama_model_eval.py, ollama-model-evaluation.md, open_notebook/graphs/utils.py | 4 models evaluated (llama3.1:8b, qwen2.5:7b, mistral:7b, phi4:latest). Recommended: qwen2.5:7b (98% enrichment, 0.78s/call). Updated model selection in utils.py. |
+| 2026-03-04 | E31-S3 | Consensus Layer Core | 3 | consensus/engine.py, consensus/matcher.py, consensus/resolver.py, consensus/__init__.py, acm_schemas.py, test_consensus_engine.py, test_record_matcher.py | RecordMatcher (key-field anchor + Jaro-Winkler + row position), ConsensusEngine (confidence-weighted voting), ConflictResolver (L1-L4 escalation, L3 LLM stub). 78 tests |
+| 2026-03-04 | E32-S4 | Classifier Update (SF Taxonomy) | 2 | sf_picklist_validator.py, test_sf_picklist_validator.py | Option B+ SF-schema normalization: _normalize_to_sf_value() for case-sensitive chain lookups. All 187+ existing tests pass |
 | 2026-03-04 | E31-S4 | Raw Extraction Table + Storage | 2 | 42.surrealql, raw_extraction.py, raw_extraction_service.py, raw_extraction_router.py, source_commands.py, test_raw_extraction*.py (30 tests) | New raw_extraction table stores per-provider extraction outputs, RawExtraction domain model, GET /api/acm/raw-extractions/{source_id} endpoint, _store_raw_extractions() wiring |
+| 2026-03-04 | E33-S2 | Building Grid + Item Grid (Two-View) | 5 | BuildingGrid.tsx, ItemGrid.tsx, SidebarWrapper.tsx, use-source-buildings.ts, use-building-items.ts, building.ts, item.ts, page.tsx | Two-view layout with Building sidebar (tree/search) + Item AG Grid. Buildings persisted via API. Item filtering by building_id. Dual-grid navigation pattern |
 
 ## Sprint Summary
 
@@ -38,9 +41,9 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 |--------|-------------|---------|--------|
 | V3-1 | 4/4 | 18/18 | Complete |
 | V3-2 | 2/2 | 5/5 | Complete |
-| V3-3 | 6/8 | 15/23 | In Progress |
-| V3-4 | 0/6 | 0/17 | Not Started |
-| V3-5 | 0/4 | 0/13 | Not Started |
+| V3-3 | 8/8 | 23/23 | Complete |
+| V3-4 | 1/6 | 2/16 | In Progress |
+| V3-5 | 0/5 | 0/15 | Not Started |
 | V3-6 | 0/6 | 0/17 | Not Started |
 | V3-7 | 0/4 | 0/9 | Not Started |
 
