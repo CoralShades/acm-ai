@@ -68,3 +68,53 @@ export function useBulkFix() {
     },
   })
 }
+
+/**
+ * Mutation hook for bulk-editing a single field across multiple ACM records (E34-S2).
+ * Publishes SSE progress events via PipelineEventBus.
+ */
+export function useBulkEdit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (args: {
+      sourceId: string
+      body: { record_ids: string[]; field: string; value: unknown; operation_id: string }
+    }) => {
+      const res = await fetch(
+        `/api/acm/bulk-edit?source_id=${encodeURIComponent(args.sourceId)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(args.body),
+        }
+      )
+      if (!res.ok) throw new Error(await res.text())
+      return res.json() as Promise<{ updated_count: number; operation_id: string }>
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['acm', 'items'] })
+    },
+  })
+}
+
+/**
+ * Mutation hook for re-running SF validation on selected ACM records (E34-S2).
+ */
+export function useBulkValidate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: { record_ids: string[] }) => {
+      const res = await fetch('/api/acm/bulk-validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      return res.json() as Promise<{ fixed_count: number; remaining_errors: number }>
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['acm', 'items'] })
+      queryClient.invalidateQueries({ queryKey: ['acm', 'validation-summary'] })
+    },
+  })
+}

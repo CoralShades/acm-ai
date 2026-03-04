@@ -1483,6 +1483,35 @@ class BulkFixResponse(BaseModel):
     remaining_errors: int
 
 
+class BulkEditRequest(BaseModel):
+    """Body for POST /api/acm/bulk-edit (E34-S2)."""
+
+    record_ids: List[str]
+    field: str
+    value: Any
+    operation_id: str
+
+
+class BulkEditResponse(BaseModel):
+    """Response for POST /api/acm/bulk-edit (E34-S2)."""
+
+    updated_count: int
+    operation_id: str
+
+
+class BulkValidateRequest(BaseModel):
+    """Body for POST /api/acm/bulk-validate (E34-S2)."""
+
+    record_ids: List[str]
+
+
+class BulkValidateResponse(BaseModel):
+    """Response for POST /api/acm/bulk-validate (E34-S2)."""
+
+    fixed_count: int
+    remaining_errors: int
+
+
 class SourceIntelligenceResponse(BaseModel):
     """Pre-extraction intelligence persisted from the LangGraph pipeline (E30-S9)."""
 

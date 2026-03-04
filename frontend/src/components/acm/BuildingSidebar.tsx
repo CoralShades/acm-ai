@@ -78,7 +78,7 @@ function BuildingDetailPanel({ building }: { building: BuildingRecord }) {
 
 export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
   const { data, isLoading, isError } = useBuildings(sourceId)
-  const { selectedBuildingId, setSelectedBuilding, buildingStatus } = useBuildingStore()
+  const { selectedBuildingId, setSelectedBuilding, buildingStatus, selectedBuildingIds, toggleBuildingSelection } = useBuildingStore()
   const { data: validationSummary } = useValidationSummary(sourceId)
 
   // Build a quick lookup map: building_id -> error_count
@@ -158,6 +158,15 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
                         : 'border-l-2 border-transparent',
                     ].join(' ')}
                   >
+                    {/* Building selection checkbox for bulk export (E34-S2) */}
+                    <input
+                      type="checkbox"
+                      checked={selectedBuildingIds.has(building.internal_id)}
+                      onChange={() => toggleBuildingSelection(building.internal_id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 mr-1 h-3.5 w-3.5 shrink-0 cursor-pointer"
+                      aria-label={`Select ${building.building_name ?? building.internal_id} for export`}
+                    />
                     {/* Main clickable area — selects the building */}
                     <button
                       type="button"

@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useCallback, useState } from 'react'
+import { useMemo, useCallback, useState, useRef } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, ModelUpdatedEvent, RowDoubleClickedEvent, ICellRendererParams } from 'ag-grid-community'
+import type { ColDef, ModelUpdatedEvent, RowDoubleClickedEvent, ICellRendererParams, GridApi, GridReadyEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { useACMItems, useFieldSchema, useUpdateACMRecord } from '@/lib/hooks/useACMItems'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -22,6 +22,7 @@ interface ItemGridProps {
   buildingId: string
   quickFilterText: string
   enableGrouping: boolean
+  onSelectionChanged?: (records: ACMRecord[]) => void
 }
 
 // Custom cell renderer for risk status badges
@@ -44,7 +45,7 @@ function RiskStatusRenderer({ value }: { value: string | null | undefined }) {
 
 // fieldApiToRecordKey is now imported from @/lib/utils/acm-field-mapping (E33-S3)
 
-export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping }: ItemGridProps) {
+export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping, onSelectionChanged }: ItemGridProps) {
   const { data: acmData, isLoading: isLoadingItems } = useACMItems(sourceId, buildingId)
   const { data: fieldSchema, isLoading: isLoadingSchema } = useFieldSchema()
   const [visibleCount, setVisibleCount] = useState<number | null>(null)
@@ -57,12 +58,41 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
   // Provenance panel state (E33-S6)
   const [provenanceRecordId, setProvenanceRecordId] = useState<string | null>(null)
 
+  // Grid API ref for programmatic selection access (E34-S2)
+  const gridApiRef = useRef<GridApi<ACMRecord> | null>(null)
+
+  const onGridReady = useCallback((event: GridReadyEvent<ACMRecord>) => {
+    gridApiRef.current = event.api
+  }, [])
+
+  const onSelectionChangedCb = useCallback(() => {
+    if (gridApiRef.current && onSelectionChanged) {
+      onSelectionChanged(gridApiRef.current.getSelectedRows())
+    }
+  }, [onSelectionChanged])
+
   const records = acmData?.records ?? []
   const totalCount = acmData?.total ?? 0
 
   // Build column definitions from SF field schema.
   // Falls back to a minimal set of hardcoded columns when schema is unavailable.
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(() => {
+    // Checkbox selection column (E34-S2)
+    const checkboxCol: ColDef<ACMRecord> = {
+      colId: 'selection',
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
+      width: 40,
+      minWidth: 40,
+      maxWidth: 40,
+      pinned: 'left' as const,
+      sortable: false,
+      filter: false,
+      resizable: false,
+      suppressMovable: true,
+      headerName: '',
+    }
+
     // Action column — "Source" button to open Provenance Viewer (E33-S6)
     const sourceActionCol: ColDef<ACMRecord> = {
       headerName: '',
@@ -95,6 +125,7 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
     if (!fieldSchema) {
       // Fallback columns when schema hasn't loaded yet
       return [
+        checkboxCol,
         { field: 'building_id', headerName: 'Building', pinned: 'left' as const, width: 160, sortable: true, filter: true, resizable: true },
         {
           field: 'room_id', headerName: 'Room ID', pinned: enableGrouping ? undefined : ('left' as const),
@@ -159,7 +190,7 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
       return colDef
     })
 
-    return [...dataCols, sourceActionCol]
+    return [checkboxCol, ...dataCols, sourceActionCol]
   }, [fieldSchema, enableGrouping, setProvenanceRecordId])
 
   const defaultColDef = useMemo<ColDef>(
@@ -260,8 +291,9 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
           defaultColDef={defaultColDef}
           loading={isLoading}
           animateRows={true}
-          rowSelection="single"
-          suppressRowClickSelection={true}
+          rowSelection="multiple"
+          onGridReady={onGridReady}
+          onSelectionChanged={onSelectionChangedCb}
           pagination={true}
           paginationPageSize={100}
           paginationPageSizeSelector={[50, 100, 250]}

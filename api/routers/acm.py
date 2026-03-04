@@ -12,7 +12,7 @@ import math
 import re
 import zipfile
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -45,7 +45,11 @@ from api.models import (
     BuildingResponse,
     BuildingUpdateRequest,
     BuildingValidationSummary,
+    BulkEditRequest,
+    BulkEditResponse,
     BulkFixResponse,
+    BulkValidateRequest,
+    BulkValidateResponse,
     BusinessRuleResponse,
     ClassifyRequest,
     ClassifyResponse,
@@ -401,6 +405,9 @@ def _get_record_value(record: ACMRecord, field: str | None) -> str:
 @router.get("/export/csv")
 async def export_acm_records(
     source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[List[str]] = Query(
+        None, description="Filter to specific building IDs"
+    ),
 ):
     """
     Export ACM records as CSV file.
@@ -411,6 +418,10 @@ async def export_acm_records(
     try:
         # Get all records for source
         records = await ACMRecord.get_by_source(source_id)
+
+        # Filter to requested buildings if specified
+        if building_ids:
+            records = [r for r in records if r.get("building_id") in building_ids]
 
         if not records:
             raise HTTPException(
@@ -465,6 +476,9 @@ RISK_COLORS = {
 @router.get("/export/excel")
 async def export_acm_excel(
     source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[List[str]] = Query(
+        None, description="Filter to specific building IDs"
+    ),
 ):
     """
     Export ACM records as formatted Excel file.
@@ -475,6 +489,10 @@ async def export_acm_excel(
     try:
         # Get all records for source
         records = await ACMRecord.get_by_source(source_id)
+
+        # Filter to requested buildings if specified
+        if building_ids:
+            records = [r for r in records if r.get("building_id") in building_ids]
 
         if not records:
             raise HTTPException(
@@ -2798,6 +2816,119 @@ async def bulk_fix_records(
     except Exception as e:
         logger.error(f"Error running bulk-fix for {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-edit", response_model=BulkEditResponse)
+async def bulk_edit_records(
+    request: BulkEditRequest,
+    source_id: str = Query(..., description="Source ID for authorization"),
+):
+    """Set a single field to the same value on all specified records.
+
+    Publishes bulk.progress events (one per record) and bulk.complete at end.
+    Source_id is required for authorization but only records matching record_ids
+    are updated.
+    """
+    # Whitelist check: only allow editable ACMRecord fields, not system/immutable ones.
+    _immutable_fields = {"id", "source_id", "created", "updated", "table_bbox"}
+    allowed_fields = frozenset(
+        f for f in ACMRecord.model_fields if f not in _immutable_fields
+    )
+    if request.field not in allowed_fields:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Field '{request.field}' is not a valid editable ACMRecord field.",
+        )
+
+    from open_notebook.extractors.pipeline_event_bus import (
+        V3PipelineEvent,
+        get_event_bus,
+    )
+
+    bus = get_event_bus()
+    total = len(request.record_ids)
+    updated = 0
+
+    for record_id in request.record_ids:
+        try:
+            rid = ensure_record_id(record_id)
+            await repo_query(
+                f"UPDATE $rid SET `{request.field}` = $val, updated = time::now();",
+                {"rid": rid, "val": request.value},
+            )
+            updated += 1
+        except Exception as e:
+            logger.warning(f"Failed to update record {record_id}: {e}")
+
+        await bus.publish(
+            V3PipelineEvent(
+                type="bulk.progress",
+                operation_id=request.operation_id,
+                data={
+                    "processed": updated,
+                    "total": total,
+                    "percent": round((updated / max(total, 1)) * 100),
+                },
+            )
+        )
+
+    await bus.publish(
+        V3PipelineEvent(
+            type="bulk.complete",
+            operation_id=request.operation_id,
+            data={"updated_count": updated, "field": request.field},
+        )
+    )
+
+    return BulkEditResponse(updated_count=updated, operation_id=request.operation_id)
+
+
+@router.post("/bulk-validate", response_model=BulkValidateResponse)
+async def bulk_validate_records(request: BulkValidateRequest):
+    """Re-run SF validation on the specified records only.
+
+    Equivalent to the existing /bulk-fix but scoped to explicit record_ids.
+    """
+    from open_notebook.extractors.validators.acm_validator import validate_acm_record
+
+    fixed_count = 0
+    for record_id in request.record_ids:
+        try:
+            rid = ensure_record_id(record_id)
+            rows = await repo_query("SELECT * FROM $rid;", {"rid": rid})
+            if not rows:
+                continue
+            record_dict = dict(rows[0])
+            result = validate_acm_record(record_dict)
+
+            if result.is_valid:
+                await repo_query(
+                    "UPDATE $rid SET validation_status = 'valid', "
+                    "validation_errors = [], updated = time::now();",
+                    {"rid": rid},
+                )
+                fixed_count += 1
+            else:
+                error_msgs = [
+                    e.message if hasattr(e, "message") else str(e)
+                    for e in result.errors
+                ]
+                await repo_query(
+                    "UPDATE $rid SET validation_status = 'invalid', "
+                    "validation_errors = $errors, updated = time::now();",
+                    {"rid": rid, "errors": error_msgs},
+                )
+        except Exception as e:
+            logger.warning(f"Failed to validate record {record_id}: {e}")
+
+    remaining_rows = await repo_query(
+        "SELECT count() as cnt FROM acm_record "
+        "WHERE id IN $ids AND array::len(validation_errors) > 0 GROUP ALL;",
+        {"ids": [ensure_record_id(r) for r in request.record_ids]},
+    )
+    remaining = remaining_rows[0].get("cnt", 0) if remaining_rows else 0
+
+    return BulkValidateResponse(fixed_count=fixed_count, remaining_errors=remaining)
 
 
 @router.get("/provenance/{record_id}", response_model=ProvenanceResponse)

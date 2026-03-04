@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { AppShell } from '@/components/layout/AppShell'
 import { BuildingSidebar } from '@/components/acm/BuildingSidebar'
 import { ItemGrid } from '@/components/acm/ItemGrid'
+import { BulkOperationsBar } from '@/components/acm/BulkOperationsBar'
 import { ExportDialog } from '@/components/acm/ExportDialog'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
@@ -12,8 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useBuildingStore } from '@/lib/stores/buildingStore'
 import { useBuildings } from '@/lib/hooks/useBuildings'
-import { useValidationSummary, useBulkFix } from '@/lib/hooks/useACMItems'
+import { useValidationSummary, useBulkFix, useFieldSchema } from '@/lib/hooks/useACMItems'
 import { useV3BuildingStream } from '@/lib/hooks/useV3BuildingStream'
+import type { ACMRecord } from '@/lib/types/acm'
 import { ArrowLeft, Table2, Wrench, Download } from 'lucide-react'
 
 /**
@@ -27,7 +29,9 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   const [enableGrouping, setEnableGrouping] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [commandId, setCommandId] = useState<string | null>(null)
+  const [selectedRecords, setSelectedRecords] = useState<ACMRecord[]>([])
   const { selectedBuildingId, setSelectedBuilding } = useBuildingStore()
+  const { data: fieldSchema } = useFieldSchema()
 
   // Read commandId from sessionStorage to subscribe to the active extraction SSE stream
   useEffect(() => {
@@ -60,6 +64,11 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   useEffect(() => {
     setSelectedBuilding(null)
   }, [sourceId, setSelectedBuilding])
+
+  // Clear record selection when the viewed building changes (E34-S2)
+  useEffect(() => {
+    setSelectedRecords([])
+  }, [selectedBuildingId])
 
   const handleBulkFix = () => {
     bulkFix.mutate({ sourceId })
@@ -143,6 +152,16 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
           </div>
         )}
 
+        {/* Bulk operations bar — visible when records are selected (E34-S2) */}
+        {selectedRecords.length > 0 && (
+          <BulkOperationsBar
+            sourceId={sourceId}
+            selectedRecords={selectedRecords}
+            onClearSelection={() => setSelectedRecords([])}
+            schema={fieldSchema ?? null}
+          />
+        )}
+
         {/* Two-panel body */}
         <div className="flex flex-1 overflow-hidden min-h-0">
           <BuildingSidebar sourceId={sourceId} />
@@ -153,6 +172,7 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
                 buildingId={selectedBuildingId}
                 quickFilterText={quickFilter}
                 enableGrouping={enableGrouping}
+                onSelectionChanged={(recs) => setSelectedRecords(recs)}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
