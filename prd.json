@@ -1304,9 +1304,9 @@
         "tests/test_ollama_chunking.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e32-s8-ollama-token-budget-chunking.md",
-      "status": "done",
       "implementedDate": "2026-03-05",
-      "notes": "Replaces hard-truncation (_truncate_content_for_ollama) with multi-pass budget chunking. ACM records in content beyond the token limit are no longer silently dropped."
+      "notes": "Completed",
+      "passes": true
     }
   ],
   "gates": [

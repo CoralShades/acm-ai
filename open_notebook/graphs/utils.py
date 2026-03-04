@@ -160,10 +160,7 @@ def pydantic_to_openrouter_schema(model_class: type) -> dict:
         result = {}
         for k, v in node.items():
             if k == "properties" and isinstance(v, dict):
-                result[k] = {
-                    pk: _resolve_refs(pv, defs)
-                    for pk, pv in v.items()
-                }
+                result[k] = {pk: _resolve_refs(pv, defs) for pk, pv in v.items()}
             elif k == "items":
                 result[k] = _resolve_refs(v, defs)
             elif k in ("anyOf", "oneOf", "allOf") and isinstance(v, list):
@@ -221,9 +218,7 @@ def _get_acm_extraction_schema() -> dict:
     if _ACM_EXTRACTION_JSON_SCHEMA is None:
         from open_notebook.extractors.acm_schemas import ACMExtractionResult
 
-        _ACM_EXTRACTION_JSON_SCHEMA = pydantic_to_openrouter_schema(
-            ACMExtractionResult
-        )
+        _ACM_EXTRACTION_JSON_SCHEMA = pydantic_to_openrouter_schema(ACMExtractionResult)
     return _ACM_EXTRACTION_JSON_SCHEMA
 
 
@@ -233,7 +228,9 @@ def _get_v3_building_schema() -> dict:
     if _V3_BUILDING_JSON_SCHEMA is None:
         from open_notebook.extractors.acm_schemas_v3 import BuildingExtractionResult
 
-        _V3_BUILDING_JSON_SCHEMA = pydantic_to_openrouter_schema(BuildingExtractionResult)
+        _V3_BUILDING_JSON_SCHEMA = pydantic_to_openrouter_schema(
+            BuildingExtractionResult
+        )
     return _V3_BUILDING_JSON_SCHEMA
 
 
@@ -255,12 +252,16 @@ def _inject_response_format(
     """Inject response_format: json_schema into model's extra_body.
 
     Stage-specific — called AFTER provision_langchain_model() and BEFORE
-    model.ainvoke(). Only applies to OpenRouter models.
+    model.ainvoke(). Applies to OpenRouter models (json_schema) and Ollama
+    models (format=json).
 
     This enforces schema validation at the OpenRouter layer, so the LLM
     returns JSON that conforms to the given schema. Combined with
     Response Healing plugin (E27-S3), this provides production-grade
     structured output without with_structured_output().
+
+    For Ollama, injects format="json" into model_kwargs to enable JSON mode
+    and prevent conversational responses.
 
     Args:
         lc_model: LangChain model (already provisioned with OpenRouter prefs)
@@ -275,6 +276,21 @@ def _inject_response_format(
         or getattr(lc_model, "base_url", None)
         or ""
     )
+    model_name = (
+        getattr(lc_model, "model_name", "") or getattr(lc_model, "model", "") or ""
+    )
+
+    # Class-based detection is reliable regardless of base_url (works for
+    # remote Ollama, avoids false-positives with LM Studio/vLLM at localhost).
+    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
+
+    if is_ollama:
+        existing_kwargs = getattr(lc_model, "model_kwargs", {}) or {}
+        new_kwargs = {**existing_kwargs, "format": "json"}
+        object.__setattr__(lc_model, "model_kwargs", new_kwargs)
+        logger.debug(f"Injected Ollama format=json for model {model_name}")
+        return lc_model
+
     if "openrouter.ai" not in str(base_url).lower():
         return lc_model
 
@@ -297,10 +313,114 @@ def _inject_response_format(
     object.__setattr__(lc_model, "model_kwargs", new_kwargs)
 
     logger.debug(
-        f"Injected response_format: json_schema ({schema_name}) "
-        f"into model extra_body"
+        f"Injected response_format: json_schema ({schema_name}) into model extra_body"
     )
     return lc_model
+
+
+# Boundary patterns for Ollama token-budget content splitting (E32-S8)
+_BUDGET_ROOM_RE = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
+_BUDGET_ARA_RE = re.compile(r"(?:^|\n)(\d+)\.\s", re.MULTILINE)
+
+
+def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
+    """Split content at room/item boundaries to fit within max_chars per chunk.
+
+    Boundary detection:
+    - SAMP format: B###-R#### room headers
+    - ARA format: numbered items like "1. " at start of line
+
+    If a single boundary segment exceeds max_chars, that segment is
+    hard-truncated with a WARNING (graceful degrade — never silently drops).
+    """
+    boundaries = list(_BUDGET_ROOM_RE.finditer(content))
+    if not boundaries:
+        boundaries = list(_BUDGET_ARA_RE.finditer(content))
+
+    if not boundaries:
+        if len(content) > max_chars:
+            logger.warning(
+                f"Content ({len(content)} chars) exceeds budget "
+                f"({max_chars} chars) but no room boundaries found. Hard-truncating."
+            )
+            return [content[:max_chars]]
+        return [content]
+
+    # Build (start, end) segments: preamble + each room
+    segments: list[tuple[int, int]] = []
+    if boundaries[0].start() > 0:
+        segments.append((0, boundaries[0].start()))
+    for i, match in enumerate(boundaries):
+        end = boundaries[i + 1].start() if i + 1 < len(boundaries) else len(content)
+        segments.append((match.start(), end))
+
+    # Greedily accumulate into budget-sized chunks
+    chunks: list[str] = []
+    chunk_start = segments[0][0]
+    chunk_end = segments[0][0]
+
+    for seg_start, seg_end in segments:
+        seg_len = seg_end - seg_start
+        current_chunk_len = chunk_end - chunk_start
+
+        if seg_len > max_chars:
+            # Single oversized segment — flush current chunk, then truncate
+            if chunk_end > chunk_start:
+                chunks.append(content[chunk_start:chunk_end])
+            logger.warning(
+                f"Single room/item content ({seg_len} chars) exceeds budget "
+                f"({max_chars} chars). Hard-truncating this segment."
+            )
+            chunks.append(content[seg_start : seg_start + max_chars])
+            chunk_start = seg_end
+            chunk_end = seg_end
+        elif current_chunk_len > 0 and current_chunk_len + seg_len > max_chars:
+            # Adding this segment would overflow — flush and start fresh
+            chunks.append(content[chunk_start:chunk_end])
+            chunk_start = seg_start
+            chunk_end = seg_end
+        else:
+            chunk_end = seg_end
+
+    # Flush final chunk
+    if chunk_end > chunk_start:
+        chunks.append(content[chunk_start:chunk_end])
+
+    return chunks if chunks else [content]
+
+
+def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
+    """Split content into Ollama token-budget chunks (E32-S8).
+
+    Returns [content] unchanged for non-Ollama models or content within budget.
+    For Ollama, splits at room/item boundaries to stay within the effective
+    context window. If a single room still exceeds the budget, hard-truncates
+    that room with a WARNING (graceful degrade — never silently drops records).
+
+    Limit priority:
+      1. OLLAMA_MAX_CONTENT_CHARS env var (explicit override)
+      2. model.num_ctx * 3.5 chars/token (model-size aware)
+      3. 8192 * 3.5 = 28672 chars (default fallback)
+    """
+    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
+    if not is_ollama:
+        return [content]
+
+    env_override = os.getenv("OLLAMA_MAX_CONTENT_CHARS")
+    if env_override:
+        max_chars = int(env_override)
+    else:
+        num_ctx = getattr(lc_model, "num_ctx", None) or 8192
+        max_chars = int(num_ctx * 3.5)
+
+    if len(content) <= max_chars:
+        return [content]
+
+    logger.info(
+        f"Ollama content ({len(content)} chars) exceeds budget ({max_chars} chars). "
+        f"Splitting into budget chunks."
+    )
+    return _split_content_by_char_budget(content, max_chars)
 
 
 async def _verify_provider_routing(
@@ -335,22 +455,18 @@ async def _verify_provider_routing(
             )
         else:
             logger.info(
-                f"[{stage_name}] Provider: {actual_provider} | "
-                f"Model: {actual_model}"
+                f"[{stage_name}] Provider: {actual_provider} | Model: {actual_model}"
             )
         return {"provider_name": actual_provider, "model": actual_model}
 
     # Method 2: Query Generation API (definitive, async)
     if not gen_id:
-        gen_id = (
-            metadata.get("id")
-            or (getattr(response, "additional_kwargs", {}) or {}).get("id")
-        )
+        gen_id = metadata.get("id") or (
+            getattr(response, "additional_kwargs", {}) or {}
+        ).get("id")
 
     if not gen_id:
-        logger.debug(
-            f"[{stage_name}] No generation ID — cannot verify provider"
-        )
+        logger.debug(f"[{stage_name}] No generation ID — cannot verify provider")
         return None
 
     api_key = os.getenv("OPENROUTER_API_KEY")
@@ -515,7 +631,6 @@ def _is_qwen_model(model: "BaseChatModel") -> bool:
     if not isinstance(model_name, str):
         return False
     return "qwen2.5" in model_name.lower()
-
 
 
 class TruncationError(ValueError):
@@ -716,7 +831,10 @@ async def provision_extraction_fallback_model(
     if os.getenv("OLLAMA_API_BASE"):
         candidates.extend(
             [
-                ("ollama", "qwen2.5:7b"),    # spike winner: best enrichment speed+accuracy
+                (
+                    "ollama",
+                    "qwen2.5:7b",
+                ),  # spike winner: best enrichment speed+accuracy
                 ("ollama", "qwen2.5:32b"),
                 ("ollama", "qwen3:32b"),
             ]

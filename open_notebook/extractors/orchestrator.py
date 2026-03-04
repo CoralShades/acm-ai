@@ -53,6 +53,7 @@ from open_notebook.graphs.utils import (
     _get_v3_item_schema,
     _inject_response_format,
     _is_qwen_model,
+    _ollama_split_by_budget,
     _verify_provider_routing,
     is_auth_error,
     is_provider_schema_error,
@@ -546,120 +547,51 @@ async def _llm_extract_building(
             model, _get_acm_extraction_schema(), "ACMExtractionResult"
         )
 
-        is_qwen = _is_qwen_model(model)
-        model_family = "qwen" if is_qwen else "default"
+        # E32-S8: Split into Ollama token-budget chunks (multi-pass extraction)
+        budget_chunks = _ollama_split_by_budget(chunk_content, model)
 
-        prompter = Prompter(prompt_template="acm/building_extraction")
-        system_prompt = prompter.render(
-            data={
-                "building_context": prompt_ctx,
-                "content": chunk_content,
-                "input_format": input_format,
-                "model_family": model_family,
-            }
-        )
+        for budget_chunk_idx, budget_chunk in enumerate(budget_chunks):
+            is_qwen = _is_qwen_model(model)
+            model_family = "qwen" if is_qwen else "default"
 
-        from langchain_core.messages import HumanMessage, SystemMessage
+            prompter = Prompter(prompt_template="acm/building_extraction")
+            system_prompt = prompter.render(
+                data={
+                    "building_context": prompt_ctx,
+                    "content": budget_chunk,
+                    "input_format": input_format,
+                    "model_family": model_family,
+                }
+            )
 
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(
-                content="Extract ACM records from the building content provided."
-            ),
-        ]
+            from langchain_core.messages import HumanMessage, SystemMessage
 
-        async def _invoke(active_model, active_is_qwen: bool) -> ACMExtractionResult:
-            response_text = ""
-            try:
-                raw_response = await active_model.ainvoke(
-                    messages,
-                    config=runnable_config,
-                )
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(
+                    content="Extract ACM records from the building content provided."
+                ),
+            ]
 
-                # E27-S3: Verify provider routing (non-blocking)
+            async def _invoke(
+                active_model, active_is_qwen: bool
+            ) -> ACMExtractionResult:
+                response_text = ""
                 try:
-                    await _verify_provider_routing(
-                        raw_response,
-                        f"orchestrator/{plan.building_id}",
-                    )
-                except Exception:
-                    pass
-
-                response_text = (
-                    raw_response.content
-                    if hasattr(raw_response, "content")
-                    else str(raw_response)
-                )
-                parsed = parse_json_response(response_text)
-                # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
-                _normalize_extraction_json(parsed)
-                result_local: ACMExtractionResult = ACMExtractionResult.model_validate(
-                    parsed
-                )
-                logger.info(
-                    f"Building {plan.building_id} direct JSON: "
-                    f"{len(result_local.records)} records"
-                )
-                return result_local
-            except (ValueError, ValidationError) as parse_err:
-                # E29-S4: F3 — JSON parse failure telemetry
-                emit_fallback_telemetry(
-                    FallbackId.F3_JSON_PARSE,
-                    plan.building_name or plan.building_id,
-                    str(parse_err),
-                )
-                logger.error(
-                    f"Building {plan.building_id} JSON parsing failed: {parse_err}. "
-                    f"Response preview: {response_text[:200] if response_text else 'N/A'}"
-                )
-                raise
-
-        try:
-            result = await _invoke(model, is_qwen)
-        except Exception as invoke_err:
-            if is_auth_error(invoke_err):
-                failed_model_name = (
-                    getattr(model, "model_name", None)
-                    or getattr(model, "model", None)
-                    or str(model_id or "unknown")
-                )
-                fallback_model = await provision_extraction_fallback_model(
-                    str(failed_model_name),
-                    temperature=0.1,
-                    max_tokens=32768,
-                )
-                if fallback_model is None:
-                    raise
-
-                model = fallback_model
-                is_qwen = _is_qwen_model(model)
-                logger.warning(
-                    "Building extraction auth failure for model "
-                    f"'{failed_model_name}', switched to fallback model "
-                    f"'{getattr(model, 'model_name', getattr(model, 'model', 'unknown'))}'"
-                )
-                result = await _invoke(model, is_qwen)
-            elif is_provider_schema_error(invoke_err):
-                # Provider (e.g. Amazon Bedrock, Google Vertex AI) rejected
-                # the structured output request. Fall back to direct invocation
-                # with manual JSON parsing, mirroring the Qwen pattern.
-                logger.warning(
-                    f"Building {plan.building_id}: Provider schema/compat error "
-                    f"detected ({invoke_err}). Falling back to direct "
-                    "invocation with manual JSON parsing."
-                )
-                pl = state.get("pipeline_logger")
-                if pl:
-                    pl._log(
-                        f"  Provider error detected — falling back to direct "
-                        f"JSON parsing for {plan.building_id}",
-                        level="warning",
-                    )
-                try:
-                    raw_response = await model.ainvoke(
+                    raw_response = await active_model.ainvoke(
                         messages,
                         config=runnable_config,
                     )
+
+                    # E27-S3: Verify provider routing (non-blocking)
+                    try:
+                        await _verify_provider_routing(
+                            raw_response,
+                            f"orchestrator/{plan.building_id}",
+                        )
+                    except Exception:
+                        pass
+
                     response_text = (
                         raw_response.content
                         if hasattr(raw_response, "content")
@@ -668,43 +600,120 @@ async def _llm_extract_building(
                     parsed = parse_json_response(response_text)
                     # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
                     _normalize_extraction_json(parsed)
-                    result = ACMExtractionResult.model_validate(parsed)
+                    result_local: ACMExtractionResult = (
+                        ACMExtractionResult.model_validate(parsed)
+                    )
                     logger.info(
-                        f"Building {plan.building_id} schema-error fallback "
-                        f"succeeded: {len(result.records)} records"
+                        f"Building {plan.building_id} direct JSON: "
+                        f"{len(result_local.records)} records"
                     )
-                    if pl:
-                        pl._log(
-                            f"  Fallback succeeded: {len(result.records)} records "
-                            f"from {plan.building_id}"
-                        )
-                except (ValueError, ValidationError) as fallback_err:
+                    return result_local
+                except (ValueError, ValidationError) as parse_err:
+                    # E29-S4: F3 — JSON parse failure telemetry
+                    emit_fallback_telemetry(
+                        FallbackId.F3_JSON_PARSE,
+                        plan.building_name or plan.building_id,
+                        str(parse_err),
+                    )
                     logger.error(
-                        f"Building {plan.building_id} schema-error fallback "
-                        f"JSON parsing failed: {fallback_err}"
+                        f"Building {plan.building_id} JSON parsing failed: {parse_err}. "
+                        f"Response preview: {response_text[:200] if response_text else 'N/A'}"
                     )
+                    raise
+
+            try:
+                result = await _invoke(model, is_qwen)
+            except Exception as invoke_err:
+                if is_auth_error(invoke_err):
+                    failed_model_name = (
+                        getattr(model, "model_name", None)
+                        or getattr(model, "model", None)
+                        or str(model_id or "unknown")
+                    )
+                    fallback_model = await provision_extraction_fallback_model(
+                        str(failed_model_name),
+                        temperature=0.1,
+                        max_tokens=32768,
+                    )
+                    if fallback_model is None:
+                        raise
+
+                    model = fallback_model
+                    is_qwen = _is_qwen_model(model)
+                    logger.warning(
+                        "Building extraction auth failure for model "
+                        f"'{failed_model_name}', switched to fallback model "
+                        f"'{getattr(model, 'model_name', getattr(model, 'model', 'unknown'))}'"
+                    )
+                    result = await _invoke(model, is_qwen)
+                elif is_provider_schema_error(invoke_err):
+                    # Provider (e.g. Amazon Bedrock, Google Vertex AI) rejected
+                    # the structured output request. Fall back to direct invocation
+                    # with manual JSON parsing, mirroring the Qwen pattern.
+                    logger.warning(
+                        f"Building {plan.building_id}: Provider schema/compat error "
+                        f"detected ({invoke_err}). Falling back to direct "
+                        "invocation with manual JSON parsing."
+                    )
+                    pl = state.get("pipeline_logger")
                     if pl:
                         pl._log(
-                            f"  Fallback JSON parsing FAILED: {fallback_err}",
-                            level="error",
+                            f"  Provider error detected — falling back to direct "
+                            f"JSON parsing for {plan.building_id}",
+                            level="warning",
                         )
+                    try:
+                        raw_response = await model.ainvoke(
+                            messages,
+                            config=runnable_config,
+                        )
+                        response_text = (
+                            raw_response.content
+                            if hasattr(raw_response, "content")
+                            else str(raw_response)
+                        )
+                        parsed = parse_json_response(response_text)
+                        # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
+                        _normalize_extraction_json(parsed)
+                        result = ACMExtractionResult.model_validate(parsed)
+                        logger.info(
+                            f"Building {plan.building_id} schema-error fallback "
+                            f"succeeded: {len(result.records)} records"
+                        )
+                        if pl:
+                            pl._log(
+                                f"  Fallback succeeded: {len(result.records)} records "
+                                f"from {plan.building_id}"
+                            )
+                    except (ValueError, ValidationError) as fallback_err:
+                        logger.error(
+                            f"Building {plan.building_id} schema-error fallback "
+                            f"JSON parsing failed: {fallback_err}"
+                        )
+                        if pl:
+                            pl._log(
+                                f"  Fallback JSON parsing FAILED: {fallback_err}",
+                                level="error",
+                            )
+                        raise
+                else:
+                    # E29-S4: F7 — LLM provider error telemetry
+                    emit_fallback_telemetry(
+                        FallbackId.F7_LLM_ERROR,
+                        plan.building_name or plan.building_id,
+                        str(invoke_err),
+                    )
                     raise
-            else:
-                # E29-S4: F7 — LLM provider error telemetry
-                emit_fallback_telemetry(
-                    FallbackId.F7_LLM_ERROR,
-                    plan.building_name or plan.building_id,
-                    str(invoke_err),
+
+            if len(sub_chunks) > 1 or len(budget_chunks) > 1:
+                logger.info(
+                    f"Building {plan.building_id} chunk "
+                    f"{chunk_idx + 1}/{len(sub_chunks)} "
+                    f"budget {budget_chunk_idx + 1}/{len(budget_chunks)}: "
+                    f"{len(result.records)} records"
                 )
-                raise
 
-        if len(sub_chunks) > 1:
-            logger.info(
-                f"Building {plan.building_id} sub-chunk {chunk_idx + 1}/{len(sub_chunks)}: "
-                f"{len(result.records)} records"
-            )
-
-        all_records.extend(result.records)
+            all_records.extend(result.records)
 
     return all_records
 
@@ -774,7 +783,9 @@ async def _v3_extract_building_meta(
             else str(raw_response)
         )
         parsed = parse_json_response(response_text)
-        result: BuildingExtractionResult = BuildingExtractionResult.model_validate(parsed)
+        result: BuildingExtractionResult = BuildingExtractionResult.model_validate(
+            parsed
+        )
         logger.info(
             f"V3 Phase 1 [{plan.building_id}]: building_name={result.building_name!r}, "
             f"confidence={result.extraction_confidence}"
@@ -818,7 +829,9 @@ async def _v3_extract_items(
         picklists = build_picklist_context(
             schema_bundle, acm_classification=acm_classification
         )
-        building_meta_dict = building_meta.model_dump() if building_meta is not None else {}
+        building_meta_dict = (
+            building_meta.model_dump() if building_meta is not None else {}
+        )
 
         model = await provision_langchain_model(
             building_content,
@@ -845,7 +858,9 @@ async def _v3_extract_items(
 
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content="Extract all ACM item records from the building content."),
+            HumanMessage(
+                content="Extract all ACM item records from the building content."
+            ),
         ]
 
         raw_response = await model.ainvoke(messages, config=runnable_config)
@@ -937,7 +952,8 @@ def _normalize_v3_records(
             material_description=item.acm_sub_classification,
             friable=item.friability_of_material,
             # Sample and assessment
-            result=item.sample_result or ("Assumed Positive" if item.no_access else "Unknown"),
+            result=item.sample_result
+            or ("Assumed Positive" if item.no_access else "Unknown"),
             sample_result=item.sample_result,
             sample_no=item.nata_sample_no,
             material_condition=item.condition,
