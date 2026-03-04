@@ -22,7 +22,7 @@ import type {
   ProvenanceData,
 } from '@/lib/types/acm'
 import type { SourceIntelligence } from '@/lib/types/intelligence'
-import type { BuildingListResponse } from '@/lib/types/building'
+import type { BuildingListResponse, BuildingRecord, BuildingRecordUpdateRequest } from '@/lib/types/building'
 import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
 
 export const acmApi = {
@@ -238,6 +238,29 @@ export const acmApi = {
     const response = await apiClient.get<BuildingListResponse>('/acm/buildings', {
       params: { source_id: sourceId },
     })
+    return response.data
+  },
+
+  /**
+   * Get a single building record by ID (E33-S7).
+   * GET /api/acm/buildings/{building_id}
+   */
+  getBuilding: async (buildingId: string): Promise<BuildingRecord> => {
+    const response = await apiClient.get<BuildingRecord>(
+      `/acm/buildings/${encodeURIComponent(buildingId)}`
+    )
+    return response.data
+  },
+
+  /**
+   * Update a building record (E33-S7).
+   * PUT /api/acm/buildings/{building_id}
+   */
+  updateBuilding: async (buildingId: string, data: BuildingRecordUpdateRequest): Promise<BuildingRecord> => {
+    const response = await apiClient.put<BuildingRecord>(
+      `/acm/buildings/${encodeURIComponent(buildingId)}`,
+      data
+    )
     return response.data
   },
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { Building2 } from 'lucide-react'
+import { Building2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useBuildings } from '@/lib/hooks/useBuildings'
@@ -134,43 +134,58 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
               const errorCount = validationErrorMap.get(building.id) ?? 0
               return (
                 <li key={building.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBuilding(building.id)}
+                  <div
                     className={[
-                      'w-full text-left px-3 py-3 transition-colors hover:bg-muted/50',
+                      'flex items-start gap-1 px-3 py-3 transition-colors hover:bg-muted/50',
                       isSelected
                         ? 'bg-primary/10 border-l-2 border-primary'
                         : 'border-l-2 border-transparent',
                     ].join(' ')}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">
-                          {building.building_name ?? building.building_code ?? building.internal_id}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                          {building.internal_id}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {building.record_count} item{building.record_count !== 1 ? 's' : ''}
-                        </p>
-                        {errorCount > 0 && (
-                          <span className="inline-flex items-center mt-1 text-xs bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 px-1.5 py-0.5 rounded-full">
-                            {errorCount} error{errorCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
+                    {/* Main clickable area — selects the building */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBuilding(building.id)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {building.building_name ?? building.building_code ?? building.internal_id}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                            {building.internal_id}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {building.record_count} item{building.record_count !== 1 ? 's' : ''}
+                          </p>
+                          {errorCount > 0 && (
+                            <span className="inline-flex items-center mt-1 text-xs bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 px-1.5 py-0.5 rounded-full">
+                              {errorCount} error{errorCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          className={[
+                            'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium shrink-0',
+                            validationBadgeClasses[status],
+                          ].join(' ')}
+                        >
+                          {validationBadgeLabel[status]}
+                        </span>
                       </div>
-                      <span
-                        className={[
-                          'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium shrink-0',
-                          validationBadgeClasses[status],
-                        ].join(' ')}
-                      >
-                        {validationBadgeLabel[status]}
-                      </span>
-                    </div>
-                  </button>
+                    </button>
+
+                    {/* Details link — navigates to building detail page (E33-S7) */}
+                    <Link
+                      href={`/source/${sourceId}/building/${encodeURIComponent(building.id)}`}
+                      title="View building details"
+                      className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      aria-label={`Edit details for ${building.building_name ?? building.internal_id}`}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </li>
               )
             })}

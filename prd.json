@@ -1071,7 +1071,7 @@
         "frontend/src/components/acm/BuildingDetailForm.tsx",
         "frontend/src/hooks/useBuildingDetail.ts"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e33-s7-building-detail-page.md",
       "implementedDate": null
     },
     {
