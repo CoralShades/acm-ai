@@ -459,8 +459,8 @@
         "AC5: CRUD API: GET /api/acm/raw-extractions/{source_id} with provider filtering",
         "AC6: Unit tests for raw extraction storage and retrieval"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -475,7 +475,7 @@
         "tests/test_raw_extraction_storage.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e31-s4-raw-extraction-table-storage.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S5",
