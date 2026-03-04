@@ -671,7 +671,7 @@
         "AC8: Unit tests for correction loop with mock AI responses"
       ],
       "passes": false,
-      "notes": "AI correction loop. Needs architect guidance.",
+      "notes": "AI correction loop. Needs architect guidance. See docs/issues/v3-continuation-sf-validation-pipeline.md for exact 5-file fix scope: redirect Path A enum authority from register_enums.json to SF picklists, fix correction loop to provide SF-valid values to LLM.",
       "model": "sonnet",
       "complexity": "complex",
       "priority": "P0",
@@ -680,10 +680,13 @@
         "E30-S4"
       ],
       "keyFiles": [
+        "open_notebook/extractors/validators/acm_validator.py",
         "open_notebook/extractors/validators/sf_picklist_validator.py",
+        "open_notebook/extractors/normalizers/enums.py",
+        "open_notebook/extractors/parsers/config_loader.py",
+        "prompts/acm/correction.jinja",
         "open_notebook/graphs/acm_extraction.py",
-        "open_notebook/extractors/orchestrator.py",
-        "tests/test_sf_validation_loop.py"
+        "docs/issues/v3-continuation-sf-validation-pipeline.md"
       ],
       "techSpecFile": null,
       "implementedDate": null

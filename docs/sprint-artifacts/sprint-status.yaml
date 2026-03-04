@@ -440,7 +440,7 @@ development_status:
   # ─────────────────────────────────────────────────────
   epic-31: backlog
   e31-s1-mineru-2x-integration-validation: done        # 2 SP. V3-3. MinerU 2.x installed in main venv, validation results in scripts/research/e31_s1_validation_results.json
-  e31-s2-provider-adapter-framework: drafted           # 3 SP. Blocked by S1. ExtractionProvider protocol + DoclingAdapter + MinerUAdapter. Tech spec: docs/sprint-artifacts/e31-s2-provider-adapter-framework.md
+  e31-s2-provider-adapter-framework: done             # 3 SP. V3-3. ExtractionProvider Protocol, DoclingAdapter, MinerUAdapter, ProviderRegistry, normalizer. source_commands.py wired. Commit f1152678.
   e31-s3-consensus-layer-core: backlog                 # 3 SP. Blocked by S2. RecordMatcher + ConsensusEngine + ConflictResolver
   e31-s4-raw-extraction-table-storage: done           # 2 SP. V3-3. New raw_extraction SurrealDB table, RawExtraction domain class, GET /api/acm/raw-extractions/{source_id} endpoint, _store_raw_extractions() wiring in source_commands.py, 30 unit tests
   e31-s5-pipeline-integration: backlog                 # 3 SP. Blocked by S3, S4. Wire dual-provider into orchestrator + consensus
@@ -549,7 +549,7 @@ development_status:
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # V3 STATUS: GATE:SCHEMA_FREEZE UNLOCKED 2026-03-03 (trigger: E30-S6)
-# V3 Done: 9/34 stories (E30-S1,S2,S3,S4,S5,S6,S9; E31-S1; E32-S6). Next: E31-S2, E32-S4, or E33-S2.
+# V3 Done: 11/34 stories (E30-S1,S2,S3,S4,S5,S6,S9; E31-S1,S2,S4; E32-S6). Next: E31-S3, E30-S7, or E33-S2.
 #
 # EXTRACTION ACCURACY STATUS:
 # ===========================

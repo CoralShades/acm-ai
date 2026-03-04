@@ -69,8 +69,8 @@
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-commit.sh\"",
-            "timeout": 30
+            "command": "echo '[auto-commit] DISABLED — use /commit or git commit manually'",
+            "timeout": 5
           }
         ]
       }

@@ -16,6 +16,9 @@
 6. [The Runtime Configuration Files — The Live Rulebooks](#6-the-runtime-configuration-files)
 7. [The Validation System — Two Paths, One Goal](#7-the-validation-system)
 8. [V3 Target — What Changes](#8-v3-target-what-changes)
+9. [The 5-Table Data Flow — How AI Extraction Links to Raw Tables](#9-the-5-table-data-flow--how-ai-extraction-links-to-raw-tables)
+10. [Pre-Extraction Intelligence — Page Count, TOC, Building Metadata](#10-pre-extraction-intelligence--page-count-toc-building-metadata)
+11. [Persisted Pre-Extraction Intelligence (E30-S9)](#11-persisted-pre-extraction-intelligence-e30-s9)
 
 ---
 
@@ -770,4 +773,257 @@ This protects downstream stories (E31-E34) from being broken by schema changes.
 
 ---
 
-*Document generated 2026-03-03. References: V3/output/github-issue-e30s4-audit.md, V3/output/picklist-dependency-mappings.md, V3/prompts/findings.md.*
+## 9. The 5-Table Data Flow — How AI Extraction Links to Raw Tables
+
+> **Added:** 2026-03-04. Answers: "Does AI replace the old table? How do you trace where a record came from?"
+
+### 9a. The Layered Model (Nothing Gets Replaced)
+
+The V3 architecture uses **separate tables at each layer** — raw extraction output is **never overwritten**. Each layer links back via foreign keys:
+
+```
+PDF (source)
+  │
+  ├─→ raw_extraction_table        ← Layer 1: Raw per-provider output
+  │     (one row per provider per page)
+  │     Has: raw_html, raw_markdown, bbox, officer_edits[]
+  │     Links: source_id FK → source
+  │
+  ├─→ acm_table_section           ← Layer 2: Consensus-merged tables
+  │     (merged from raw_extraction_table rows)
+  │     Has: consensus_tier, consensus_scores, provider_results
+  │     Links: source_id FK → source
+  │
+  ├─→ building_record              ← Layer 3: AI-extracted Building__c
+  │     (one per building, Phase 3 Step A)
+  │     Has: SF Building fields, extraction_provider, extraction_model
+  │     Links: source_id FK → source
+  │
+  └─→ acm_record                   ← Layer 4: AI-extracted Item__c
+        (one per ACM item, Phase 3 Step B)
+        Has: SF Item fields, consensus_metadata, edit_history[]
+        Links: building_id FK → building_record
+               raw_row_id FK → raw_extraction_table  (provenance!)
+               parent_table_id FK → acm_table_section
+```
+
+### 9b. Provenance Tracking — Every Record Knows Its Origin
+
+Every `acm_record` carries:
+- `raw_row_id` FK → the exact `raw_extraction_table` row it came from
+- `parent_table_id` FK → the `acm_table_section` it belongs to
+- `consensus_metadata` → `{tier, scores, votes}` showing provider agreement
+- `edit_history[]` → `[{user, field, old_value, new_value, timestamp}]` tracking manual changes
+
+Every `raw_extraction_table` row carries:
+- `bbox` → `{x, y, width, height}` coordinates on the PDF page
+- `page_number` → which page of the PDF
+- `officer_edits[]` → corrections made to raw data before AI re-processing
+
+### 9c. Manual Change Paths
+
+| Path | Story | How It Works |
+|------|-------|-------------|
+| **Picklist editing** | E33-S3 | AG Grid inline editors with cascading SF picklists. Changes saved to `acm_record.edit_history[]` |
+| **Record Wizard** | E33-S4 | Modal form for full-record editing. Bulk Fix All for common issues |
+| **Raw Table Review** | E33-S5 | Edit raw provider output, corrections saved to `raw_extraction_table.officer_edits[]`, can re-run AI extraction from corrected raw data |
+| **Chat-based corrections** | **NOT in V3 plan** | No story exists for chat-driven record corrections — flagged as a gap |
+
+---
+
+## 10. Pre-Extraction Intelligence — Page Count, TOC, Building Metadata
+
+> **Added:** 2026-03-04. Answers: "Where do page count, TOC, and building metadata get saved? How do they link to extraction?"
+
+### 10a. The Structure Analysis Phase (Phase 2 in the Pipeline)
+
+Before any AI extraction happens, the pipeline runs 4 analysis nodes that build up an understanding of the document. These produce **transient Pydantic models** that flow through the LangGraph state — they are NOT persisted to the database as separate tables. They live in the graph state dict and are consumed by downstream nodes.
+
+```
+extract_metadata → extract_structure → compile_inventory → tag_pages
+       │                  │                    │                │
+       ▼                  ▼                    ▼                ▼
+  DocumentMeta      DocumentStructure    BuildingInventory  PageTaggingResult
+  (consultant,      (doc type, TOC,      (per-building      (per-page section
+   site, date)       sections, pages)     page ranges,       labels, register
+                                          rooms, years)      vs cover vs summary)
+```
+
+### 10b. What Each Model Contains
+
+**DocumentStructure** (from `document_structure.py`):
+```python
+class DocumentStructure:
+    document_type: DocumentType    # SAMP, ARA, Division_5, Unknown
+    toc_present: bool              # Was a table of contents found?
+    total_pages: int               # Total page count from PDF
+    register_start_page: int       # Where does the asbestos register section begin?
+    building_ids: list[str]        # ["B00A", "B00B", "B00C", ...]
+    sections: list[Section]        # Hierarchical TOC: [{section_id: 4, title: "Asbestos Register", page_start: 12, page_end: 45}]
+    metadata: dict                 # Extra metadata (document format, indicators found)
+```
+
+**BuildingMeta** (from `building_inventory.py` — one per building):
+```python
+class BuildingMeta:
+    building_id: str              # "B00A"
+    name: str                     # "Main Block"
+    year: int                     # 1965 (from header "B00A - Main Block - 1965 - Brick")
+    construction: str             # "Brick"
+    purpose: str                  # "Education"
+    area_m2: float                # 450.0
+    levels: int                   # 2
+    page_start: int               # 12 (first page of this building's register)
+    page_end: int                 # 18 (last page)
+    complexity: BuildingComplexity # SIMPLE or COMPLEX
+    rooms: list[RoomMeta]         # [{room_id: "B00A-R0001", name: "External Movement", area_m2: 15.0}]
+    acm_item_count_estimate: int  # 25 (estimated from room count * avg items/room)
+```
+
+**PageTag** (from `page_tagger.py` — one per page):
+```python
+class PageTag:
+    page_number: int              # 12
+    section_id: int               # 4 (= Asbestos Register)
+    section_title: str            # "Asbestos Register"
+    confidence: float             # 0.95
+    page_type: PageType           # ASBESTOS_REGISTER, COVER_PAGE, SUMMARY, APPENDIX, etc.
+    subsection: SubSectionTag     # Optional: which subsection within the section
+    content_summary: str          # "Building B00A rooms R0001-R0015, 12 ACM items"
+```
+
+### 10c. How This Data Flows Into AI Extraction
+
+The critical handoff is from `BuildingInventory` → `orchestrator.py`. Here's the flow:
+
+```
+1. compile_inventory() runs
+   → Produces BuildingInventory with list of BuildingMeta objects
+   → Each BuildingMeta has: name, year, construction, page_start, page_end, complexity, rooms
+
+2. Orchestrator receives BuildingInventory from graph state
+   → For each BuildingMeta:
+     a. Slices the raw Markdown content to page_start..page_end
+     b. Fetches pre-extracted Docling tables from acm_table_section for those pages
+     c. Uses complexity to decide extraction strategy (REGEX_ONLY vs FULL_LLM)
+     d. Injects building metadata into the LLM prompt:
+        "Building: Main Block, Year: 1965, Construction: Brick, Pages: 12-18"
+
+3. AI Extraction nodes run per-building:
+   Step A (Building__c extraction):
+     → LLM receives: building header text + page range + Docling tables
+     → Returns: BuildingExtractionResult (name, type, category, year, address...)
+     → Saved as building_record in SurrealDB
+
+   Step B (Item__c extraction):
+     → LLM receives: building's table HTML + page range + picklist values from field_schema
+     → Returns: ACMItemExtractionResult[] (one per ACM row)
+     → Saved as acm_record[] with building_id FK → building_record
+```
+
+### 10d. What Gets Persisted vs What's Transient
+
+| Data | Persisted? | Where | When |
+|------|:----------:|-------|------|
+| `DocumentStructure` (TOC, page count, sections) | **No** | LangGraph state only | Created in Phase 2, consumed by orchestrator, discarded after pipeline completes |
+| `BuildingInventory` (building list + metadata) | **No** | LangGraph state only | Same — transient |
+| `PageTaggingResult` (per-page labels) | **No** | LangGraph state only | Same — transient |
+| `DocumentMeta` (consultant, site, date) | **Partial** | Some fields copied to `source` record | `auto_populate_site_config()` copies site-level metadata to `site_config` table |
+| `raw_extraction_table` (raw table HTML) | **Yes** | SurrealDB table | Created in Phase 1 (Docling/MinerU extraction) |
+| `acm_table_section` (merged tables) | **Yes** | SurrealDB table | Created in Phase 1 after consensus |
+| `building_record` (AI-extracted building) | **Yes** | SurrealDB table | Created in Phase 3 Step A |
+| `acm_record` (AI-extracted items) | **Yes** | SurrealDB table | Created in Phase 3 Step B |
+
+### 10e. The Gap: Building Metadata Is Not Persisted Separately
+
+The `BuildingMeta` data (year, construction, levels, area, purpose) extracted during `compile_inventory()` is **transient** — it exists in the graph state and gets passed to the LLM prompt, but the structured `BuildingMeta` object itself is not saved to the database.
+
+What IS saved:
+- The LLM re-extracts building fields from the PDF text and saves them in `building_record` (the AI's interpretation)
+- The `building_record` has fields like `Estimated_Year_Build_New__c`, `Construction_Type__c`, etc.
+
+What's NOT saved:
+- The regex-extracted `BuildingMeta` from the inventory phase (the structural pre-analysis)
+- This means there's no "before AI" vs "after AI" comparison for building metadata specifically
+
+This is a minor gap — the `building_record` fields come from the AI extraction prompt which receives the `BuildingMeta` data as context, so the AI output should be at least as good as the regex extraction. But if you wanted to compare "what the structure analysis found" vs "what the AI extracted", that data isn't persisted today.
+
+---
+
+---
+
+## 11. Persisted Pre-Extraction Intelligence (E30-S9)
+
+> **Implemented:** 2026-03-04. **Story:** E30-S9 (3 SP, V3-3). **GitHub Issue:** [#85](https://github.com/CoralShades/acm-ai/issues/85)
+> **Design doc:** `docs/issues/v3-persist-pre-extraction-intelligence.md`
+
+### The Problem (Section 10e above)
+
+The 4 transient models (`DocumentMeta`, `DocumentStructure`, `BuildingInventory`, `PageTaggingResult`) were discarded after pipeline completion. This meant:
+- No pre-AI vs post-AI building metadata comparison
+- No frontend access to document overview (page count, TOC, building list)
+- No re-extraction optimization (Phase 2 must rerun from scratch)
+- No stored building page ranges for provenance
+
+### The Solution
+
+**Migration 41** creates a `source_intelligence` table storing all 4 models as JSON per source:
+
+```
+source_intelligence
+├── source_id FK → source (UNIQUE)
+├── document_meta: object       (DocumentMeta JSON, ~500 bytes)
+├── document_structure: object  (DocumentStructure JSON, ~2 KB)
+├── building_inventory: object  (BuildingInventory JSON, ~5-20 KB)
+├── page_tags: object           (PageTaggingResult JSON, ~5-50 KB)
+├── total_pages: int            (denormalized)
+├── total_buildings: int        (denormalized)
+├── document_type: string       (SAMP/ARA/Division_5)
+├── register_page_range: object ({start, end})
+└── created_at, updated_at
+```
+
+### Graph Wiring
+
+A new `save_intelligence` node was inserted into the extraction graph between `tag_pages` and `orchestrate`:
+
+```
+extract_metadata → structure → inventory → tag_pages → save_intelligence → orchestrate → ...
+```
+
+The node is **non-blocking** — it catches all exceptions and logs a warning, so the pipeline continues even if persistence fails. The data is saved early (before the expensive orchestrator/LLM step), so the frontend can display it during extraction.
+
+### API
+
+- `GET /api/acm/source-intelligence/{source_id}` — Returns 200 with data or 404 if not yet extracted.
+- Backend: `save_source_intelligence()` (upsert) and `get_source_intelligence()` (select) in `repository.py`.
+
+### Frontend — Intelligence Tab
+
+A new "Intelligence" tab (Brain icon) appears on the source detail page when data exists or extraction is running. It contains 4 sections:
+
+1. **Document Overview** — grid of info cards: document type badge, total pages, buildings count, register page range, consultant, site info
+2. **Building Inventory** — Radix `Accordion` (type="multiple"), one item per building; trigger shows ID + name + year + page range; content shows construction details, rooms table
+3. **Table of Contents** — structured list of sections with IDs and page numbers
+4. **Page Analysis** — scrollable table: page number, section, page type, confidence badge (color-coded green/yellow/orange/red), content summary
+
+The hook (`useSourceIntelligence`) polls every 5 seconds during extraction via `refetchInterval: 5000`, stops when extraction completes. Skeleton loading states and empty state are provided.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `migrations/41.surrealql` | Table definition |
+| `open_notebook/database/repository.py` | `save_source_intelligence`, `get_source_intelligence` |
+| `open_notebook/graphs/acm_extraction.py` | `save_intelligence_node`, graph edge wiring |
+| `api/models.py` | `SourceIntelligenceResponse` |
+| `api/routers/acm.py` | `GET /source-intelligence/{source_id}` |
+| `frontend/src/lib/types/intelligence.ts` | TS interfaces for all 4 models |
+| `frontend/src/lib/hooks/use-source-intelligence.ts` | React Query hook |
+| `frontend/src/components/acm/SourceIntelligencePanel.tsx` | Panel with 4 sections |
+| `frontend/src/app/(dashboard)/sources/[id]/page.tsx` | Tab integration |
+
+---
+
+*Document updated 2026-03-04. Sections 9-11: data flow layering, provenance tracking, structure analysis phase, building metadata flow, persisted pre-extraction intelligence (E30-S9 implemented).*
+*References: V3/output/github-issue-e30s4-audit.md, V3/output/picklist-dependency-mappings.md, V3/prompts/findings.md, 04-architecture.md §14, GitHub #85.*
