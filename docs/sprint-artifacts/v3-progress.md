@@ -47,6 +47,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-05 | E34-S1 | Record-by-Record Streaming | 2 | streaming utilities (backend), RecordStreamingConsumer.tsx (frontend), useRecordStreaming.ts, acm.ts API | SSE-based streaming of validated records from backend to frontend grid. Records appear as they complete validation. Real-time row addition with status indication. |
 | 2026-03-05 | E34-S2 | Bulk Operations | 2 | BulkOperationsPanel.tsx, useBulkOperations.ts, bulk-operations API, AG Grid multi-select integration | Multi-select records in grid, bulk edit/validate/export. Integrates with field schema API for bulk field updates. |
 | 2026-03-05 | E34-S3 | Performance Optimization | 2 | Performance tuning across extraction pipeline | Broadmeadows <120s, Alexander <300s target benchmarks. Pipeline throughput and latency optimization. |
+| 2026-03-05 | E34-S4 | Canonical Artifact Update | 3 | CLAUDE.md, README.md, PRD, architecture, epics, sprint-status.yaml, prd.json | Documentation audit — all V3 canonical artifacts reconciled with ground truth. V3 Architecture Patterns added to CLAUDE.md. |
 
 ## Sprint Summary
 
@@ -55,10 +56,12 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-1 | 4/4 | 18/18 | Complete |
 | V3-2 | 2/2 | 5/5 | Complete |
 | V3-3 | 8/8 | 23/23 | Complete |
-| V3-4 | 5/8 | 12/23 | In Progress |
-| V3-5 | 2/5 | 6/15 | In Progress |
-| V3-6 | 3/6 | 9/17 | In Progress |
-| V3-7 | 3/4 | 6/9 | In Progress |
+| V3-4 | 8/8 | 23/23 | Complete |
+| V3-5 | 5/5 | 15/15 | Complete |
+| V3-6 | 5/5 | 14/14 | Complete |
+| V3-7 | 4/4 | 9/9 | Complete |
+
+**Total: 36/37 stories done (97%). E30-S8 deferred to V4 (Ollama-first provider priority).**
 
 ## Gate Milestones
 
@@ -67,4 +70,4 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | SCHEMA_FREEZE | **UNLOCKED** | E30-S6 | 2026-03-03 |
 | EXTRACTION_COMPLETE | **UNLOCKED** | E31-S6 | 2026-03-04 |
 | AI_COMPLETE | **UNLOCKED** | E32-S5 | 2026-03-04 |
-| UI_COMPLETE | Locked | E33-S8 | — |
+| UI_COMPLETE | **UNLOCKED** | E33-S8 | 2026-03-05 |
