@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { acmApi } from '@/lib/api/acm'
+import type { ACMRecordUpdateRequest } from '@/lib/types/acm'
 
 export const ACM_ITEMS_QUERY_KEYS = {
   byBuilding: (sourceId: string, buildingId: string | null) =>
     ['acm', 'items', sourceId, buildingId] as const,
   fieldSchema: () => ['acm', 'field-schema'] as const,
+  validationSummary: (sourceId: string) => ['acm', 'validation-summary', sourceId] as const,
 }
 
 export function useACMItems(sourceId: string, buildingId: string | null) {
@@ -22,5 +24,47 @@ export function useFieldSchema() {
     queryKey: ACM_ITEMS_QUERY_KEYS.fieldSchema(),
     queryFn: () => acmApi.getFieldSchema(),
     staleTime: Infinity, // schema is session-stable
+  })
+}
+
+/**
+ * Query hook for per-building validation error counts (E33-S4).
+ */
+export function useValidationSummary(sourceId: string) {
+  return useQuery({
+    queryKey: ACM_ITEMS_QUERY_KEYS.validationSummary(sourceId),
+    queryFn: () => acmApi.getValidationSummary(sourceId),
+    enabled: !!sourceId,
+    staleTime: 30 * 1000,
+  })
+}
+
+/**
+ * Mutation hook for updating a single ACM record (E33-S4).
+ * Invalidates all ACM queries on success.
+ */
+export function useUpdateACMRecord() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ recordId, data }: { recordId: string; data: ACMRecordUpdateRequest }) =>
+      acmApi.update(recordId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['acm'] })
+    },
+  })
+}
+
+/**
+ * Mutation hook for bulk-fixing auto-correctable validation issues (E33-S4).
+ * Invalidates all ACM queries on success.
+ */
+export function useBulkFix() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sourceId, buildingId }: { sourceId: string; buildingId?: string }) =>
+      acmApi.bulkFix(sourceId, buildingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['acm'] })
+    },
   })
 }

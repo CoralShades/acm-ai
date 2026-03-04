@@ -2,13 +2,15 @@
 
 import { useMemo, useCallback, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, ModelUpdatedEvent } from 'ag-grid-community'
+import type { ColDef, ModelUpdatedEvent, RowDoubleClickedEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
-import { useACMItems, useFieldSchema } from '@/lib/hooks/useACMItems'
+import { useACMItems, useFieldSchema, useUpdateACMRecord } from '@/lib/hooks/useACMItems'
 import type { ACMRecord } from '@/lib/types/acm'
 import { fieldApiToRecordKey } from '@/lib/utils/acm-field-mapping'
 import { DependentPicklistEditor } from './DependentPicklistEditor'
 import type { DependentPicklistEditorParams } from './DependentPicklistEditor'
+import { ValidationBadge } from './ValidationBadge'
+import { RecordWizard } from './RecordWizard'
 
 // Register AG Grid modules (idempotent — safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -44,6 +46,11 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
   const { data: acmData, isLoading: isLoadingItems } = useACMItems(sourceId, buildingId)
   const { data: fieldSchema, isLoading: isLoadingSchema } = useFieldSchema()
   const [visibleCount, setVisibleCount] = useState<number | null>(null)
+
+  // RecordWizard state
+  const [wizardRecord, setWizardRecord] = useState<ACMRecord | null>(null)
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const updateRecord = useUpdateACMRecord()
 
   const records = acmData?.records ?? []
   const totalCount = acmData?.total ?? 0
@@ -89,10 +96,13 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
         ...(isGroupField && !enableGrouping && { pinned: 'left' as const, width: 160 }),
       }
 
-      // Risk status colour renderer
+      // Risk status colour renderer (takes priority over ValidationBadge)
       if (String(recordKey) === RISK_FIELD) {
         colDef.cellRenderer = RiskStatusRenderer
         colDef.width = 110
+      } else {
+        // Validation badge renderer on all other data columns
+        colDef.cellRenderer = ValidationBadge
       }
 
       // Dependent picklist cell editor (AC1-AC3)
@@ -140,6 +150,29 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
       setVisibleCount(count)
     }
   }, [])
+
+  const onRowDoubleClicked = useCallback((event: RowDoubleClickedEvent<ACMRecord>) => {
+    if (event.data) {
+      setWizardRecord(event.data)
+      setWizardOpen(true)
+    }
+  }, [])
+
+  const handleWizardSave = useCallback(
+    (data: Parameters<typeof updateRecord.mutate>[0]['data']) => {
+      if (!wizardRecord) return
+      updateRecord.mutate(
+        { recordId: wizardRecord.id, data },
+        {
+          onSuccess: () => {
+            setWizardOpen(false)
+            setWizardRecord(null)
+          },
+        }
+      )
+    },
+    [wizardRecord, updateRecord]
+  )
 
   const isLoading = isLoadingItems || isLoadingSchema
 
@@ -199,6 +232,7 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
           domLayout="normal"
           alwaysShowHorizontalScroll={true}
           onModelUpdated={onModelUpdated}
+          onRowDoubleClicked={onRowDoubleClicked}
           // Row grouping configuration (toggled by parent toolbar)
           {...(enableGrouping
             ? {
@@ -217,7 +251,21 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
       <div className="text-xs text-muted-foreground mt-2 flex items-center gap-4 shrink-0">
         <span>Arrow keys to navigate</span>
         <span>Space to expand/collapse groups</span>
+        <span>Double-click row to edit</span>
       </div>
+
+      {/* Record edit wizard */}
+      <RecordWizard
+        record={wizardRecord}
+        open={wizardOpen}
+        onOpenChange={(open) => {
+          setWizardOpen(open)
+          if (!open) setWizardRecord(null)
+        }}
+        onSave={handleWizardSave}
+        schema={fieldSchema ?? null}
+        isSaving={updateRecord.isPending}
+      />
     </div>
   )
 }

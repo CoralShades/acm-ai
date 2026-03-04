@@ -10,7 +10,9 @@ import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useBuildingStore } from '@/lib/stores/buildingStore'
-import { ArrowLeft, Table2 } from 'lucide-react'
+import { useValidationSummary, useBulkFix } from '@/lib/hooks/useACMItems'
+import { acmApi } from '@/lib/api/acm'
+import { ArrowLeft, Table2, Wrench, Download } from 'lucide-react'
 
 /**
  * SourceACMViewContent — inner content for the two-panel ACM register view.
@@ -21,12 +23,41 @@ import { ArrowLeft, Table2 } from 'lucide-react'
 function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   const [quickFilter, setQuickFilter] = useState('')
   const [enableGrouping, setEnableGrouping] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const { selectedBuildingId, setSelectedBuilding } = useBuildingStore()
+
+  // Validation summary for Fix All + Export guard
+  const { data: validationSummary } = useValidationSummary(sourceId)
+  const bulkFix = useBulkFix()
+
+  const totalErrors = (validationSummary?.buildings ?? []).reduce(
+    (sum, b) => sum + b.error_count,
+    0
+  )
 
   // Reset selected building when navigating to a different source
   useEffect(() => {
     setSelectedBuilding(null)
   }, [sourceId, setSelectedBuilding])
+
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      const blob = await acmApi.exportExcel(sourceId)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `acm-register-${sourceId}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleBulkFix = () => {
+    bulkFix.mutate({ sourceId })
+  }
 
   return (
     <AppShell>
@@ -59,6 +90,36 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
               onClick={() => setEnableGrouping((v) => !v)}
             >
               Group by Room
+            </Button>
+
+            {/* Fix All button — only visible when there are validation errors */}
+            {totalErrors > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkFix}
+                disabled={bulkFix.isPending}
+                title={`Auto-fix ${totalErrors} validation issue${totalErrors !== 1 ? 's' : ''}`}
+              >
+                <Wrench className="h-4 w-4 mr-1" />
+                {bulkFix.isPending ? 'Fixing…' : `Fix All (${totalErrors})`}
+              </Button>
+            )}
+
+            {/* Export button — disabled when validation errors exist */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={isExporting || totalErrors > 0}
+              title={
+                totalErrors > 0
+                  ? `Export disabled: ${totalErrors} validation error${totalErrors !== 1 ? 's' : ''} must be resolved first`
+                  : 'Export ACM register as Excel'
+              }
+            >
+              <Download className="h-4 w-4 mr-1" />
+              {isExporting ? 'Exporting…' : 'Export'}
             </Button>
           </div>
         </div>

@@ -478,6 +478,11 @@ class ACMRecordResponse(BaseModel):
     floor_level: Optional[str] = None
     no_access: Optional[bool] = None
     smf_present: Optional[str] = None
+    # Validation fields (E33-S4)
+    validation_status: Optional[str] = (
+        None  # "valid", "corrected", "failed_correction", "invalid"
+    )
+    validation_errors: List[str] = Field(default_factory=list)
     created: Optional[str] = None
     updated: Optional[str] = None
 
@@ -1434,6 +1439,26 @@ class BuildingRecordListResponse(BaseModel):
 
     buildings: List[BuildingRecordResponse]
     total: int
+
+
+class BuildingValidationSummary(BaseModel):
+    """Per-building validation error count (E33-S4)."""
+
+    building_id: str
+    error_count: int
+
+
+class ValidationSummaryResponse(BaseModel):
+    """Response for GET /api/acm/validation-summary (E33-S4)."""
+
+    buildings: List[BuildingValidationSummary]
+
+
+class BulkFixResponse(BaseModel):
+    """Response for POST /api/acm/bulk-fix (E33-S4)."""
+
+    fixed_count: int
+    remaining_errors: int
 
 
 class SourceIntelligenceResponse(BaseModel):

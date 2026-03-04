@@ -251,4 +251,35 @@ export const acmApi = {
     )
     return response.data
   },
+
+  /**
+   * Get per-building validation error counts (E33-S4).
+   * GET /api/acm/validation-summary?source_id=X
+   */
+  getValidationSummary: async (
+    sourceId: string
+  ): Promise<{ buildings: { building_id: string; error_count: number }[] }> => {
+    const response = await apiClient.get<{
+      buildings: { building_id: string; error_count: number }[]
+    }>('/acm/validation-summary', { params: { source_id: sourceId } })
+    return response.data
+  },
+
+  /**
+   * Bulk fix auto-correctable validation issues (E33-S4).
+   * POST /api/acm/bulk-fix?source_id=X&building_id=Y
+   */
+  bulkFix: async (
+    sourceId: string,
+    buildingId?: string
+  ): Promise<{ fixed_count: number; remaining_errors: number }> => {
+    const params: Record<string, string> = { source_id: sourceId }
+    if (buildingId) params.building_id = buildingId
+    const response = await apiClient.post<{ fixed_count: number; remaining_errors: number }>(
+      '/acm/bulk-fix',
+      null,
+      { params }
+    )
+    return response.data
+  },
 }

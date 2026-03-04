@@ -967,7 +967,7 @@
         "frontend/src/components/acm/ItemGrid.tsx",
         "frontend/src/components/acm/BuildingSidebar.tsx"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e33-s4-sf-validation-badges-record-wizard.md",
       "implementedDate": null
     },
     {

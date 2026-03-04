@@ -43,6 +43,8 @@ from api.models import (
     BuildingRecordUpdateRequest,
     BuildingResponse,
     BuildingUpdateRequest,
+    BuildingValidationSummary,
+    BulkFixResponse,
     BusinessRuleResponse,
     ClassifyRequest,
     ClassifyResponse,
@@ -67,6 +69,7 @@ from api.models import (
     SourceIntelligenceResponse,
     TaxonomyGroupResponse,
     TaxonomyResponse,
+    ValidationSummaryResponse,
 )
 from open_notebook.database.repository import (
     ensure_record_id,
@@ -2372,4 +2375,124 @@ async def get_source_intelligence_endpoint(source_id: str):
         raise
     except Exception as e:
         logger.error(f"Error fetching intelligence for {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Validation Summary + Bulk Fix (E33-S4) ---
+
+
+@router.get("/validation-summary", response_model=ValidationSummaryResponse)
+async def get_validation_summary(
+    source_id: str = Query(..., description="Source ID"),
+):
+    """Return per-building validation error counts for the sidebar badges.
+
+    Queries all acm_record rows for this source that have one or more
+    validation_errors and groups results by building_id.
+    """
+    try:
+        sid = ensure_record_id(source_id)
+        query = """
+            SELECT building_id,
+                   count() as error_count
+            FROM acm_record
+            WHERE source_id = $source_id
+              AND array::len(validation_errors) > 0
+            GROUP BY building_id;
+        """
+        rows = await repo_query(query, {"source_id": sid})
+        buildings = [
+            BuildingValidationSummary(
+                building_id=r.get("building_id", ""),
+                error_count=r.get("error_count", 0),
+            )
+            for r in rows
+        ]
+        return ValidationSummaryResponse(buildings=buildings)
+    except Exception as e:
+        logger.error(f"Error fetching validation summary for {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-fix", response_model=BulkFixResponse)
+async def bulk_fix_records(
+    source_id: str = Query(..., description="Source ID"),
+    building_id: Optional[str] = Query(None, description="Optional building filter"),
+):
+    """Re-validate and auto-correct fixable records.
+
+    Loads all records for the source (optionally filtered to a building)
+    that currently have validation_errors, runs validate_acm_record() on
+    each one (which applies normalizations as side-effects to the dict),
+    and persists any records that now pass validation back to SurrealDB.
+    """
+    from open_notebook.extractors.validators.acm_validator import validate_acm_record
+
+    try:
+        sid = ensure_record_id(source_id)
+
+        conditions = [
+            "source_id = $source_id",
+            "array::len(validation_errors) > 0",
+        ]
+        params: dict = {"source_id": sid}
+
+        if building_id:
+            conditions.append("building_id = $building_id")
+            params["building_id"] = building_id
+
+        where_clause = " AND ".join(conditions)
+        fetch_query = f"SELECT * FROM acm_record WHERE {where_clause};"
+        records = await repo_query(fetch_query, params)
+
+        fixed_count = 0
+        for rec in records:
+            record_dict = dict(rec)
+            result = validate_acm_record(record_dict)
+
+            if result.is_valid:
+                record_id = rec.get("id", "")
+                if not record_id:
+                    continue
+
+                # Build SET clause for normalised enum fields that may have changed
+                set_parts = [
+                    "validation_status = 'valid'",
+                    "validation_errors = []",
+                    "updated = time::now()",
+                ]
+                update_params: dict = {"record_id": ensure_record_id(str(record_id))}
+
+                for field_name in [
+                    "sample_result",
+                    "material_condition",
+                    "friable",
+                    "disturbance_potential",
+                ]:
+                    if field_name in record_dict:
+                        set_parts.append(f"{field_name} = ${field_name}")
+                        update_params[field_name] = record_dict[field_name]
+
+                set_clause = ", ".join(set_parts)
+                update_query = f"UPDATE $record_id SET {set_clause};"
+                await repo_query(update_query, update_params)
+                fixed_count += 1
+
+        # Count records still failing validation
+        remaining_query = (
+            "SELECT count() as cnt FROM acm_record "
+            "WHERE source_id = $source_id "
+            "AND array::len(validation_errors) > 0 "
+            "GROUP ALL;"
+        )
+        remaining_rows = await repo_query(remaining_query, {"source_id": sid})
+        remaining_count = remaining_rows[0].get("cnt", 0) if remaining_rows else 0
+
+        return BulkFixResponse(
+            fixed_count=fixed_count,
+            remaining_errors=remaining_count,
+        )
+
+    except Exception as e:
+        logger.error(f"Error running bulk-fix for {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

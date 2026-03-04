@@ -59,6 +59,9 @@ export interface ACMRecord {
   additional_comments?: string | null
   created?: string | null
   updated?: string | null
+  // Validation fields (E33-S4) — populated by SF validation pipeline (E32-S7)
+  validation_status?: string | null  // "valid" | "corrected" | "failed_correction" | "invalid"
+  validation_errors?: string[] | null // Validation error strings
 }
 
 export interface ACMRecordListResponse {

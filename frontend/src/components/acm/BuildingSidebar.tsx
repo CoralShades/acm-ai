@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useBuildings } from '@/lib/hooks/useBuildings'
 import { useBuildingStore } from '@/lib/stores/buildingStore'
+import { useValidationSummary } from '@/lib/hooks/useACMItems'
 import type { BuildingRecord, BuildingValidationStatus } from '@/lib/types/building'
 
 interface BuildingSidebarProps {
@@ -63,6 +64,12 @@ function BuildingDetailPanel({ building }: { building: BuildingRecord }) {
 export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
   const { data, isLoading, isError } = useBuildings(sourceId)
   const { selectedBuildingId, setSelectedBuilding } = useBuildingStore()
+  const { data: validationSummary } = useValidationSummary(sourceId)
+
+  // Build a quick lookup map: building_id -> error_count
+  const validationErrorMap = new Map<string, number>(
+    (validationSummary?.buildings ?? []).map((b) => [b.building_id, b.error_count])
+  )
 
   const buildings = data?.buildings ?? []
 
@@ -124,6 +131,7 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
             {buildings.map((building) => {
               const isSelected = building.id === selectedBuildingId
               const status = deriveValidationStatus(building)
+              const errorCount = validationErrorMap.get(building.id) ?? 0
               return (
                 <li key={building.id}>
                   <button
@@ -147,6 +155,11 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {building.record_count} item{building.record_count !== 1 ? 's' : ''}
                         </p>
+                        {errorCount > 0 && (
+                          <span className="inline-flex items-center mt-1 text-xs bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 px-1.5 py-0.5 rounded-full">
+                            {errorCount} error{errorCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
                       <span
                         className={[
