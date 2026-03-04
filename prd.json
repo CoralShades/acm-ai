@@ -1258,8 +1258,8 @@
         "AC4: consultant_name extraction improved: cover page window bounded to first 3 pages (not entire document when page markers missing)",
         "AC5: Existing extraction tests pass \u00e2\u20ac\u201d no regression on Broadmeadows 31/31 record count"
       ],
-      "passes": false,
-      "notes": "Addresses 3 pre-existing extraction quality gaps found in Broadmeadows demo audit. Improves data quality for source_intelligence (E30-S9). See previous session extraction error audit.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P1",
@@ -1275,7 +1275,7 @@
         "open_notebook/database/repository.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e31-s8-pre-extraction-quality-hardening.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E32-S8",
