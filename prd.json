@@ -387,8 +387,8 @@
         "AC7: Unit tests for each adapter with mock PDF input",
         "AC8: Adapter isolation: provider failure doesn't crash pipeline"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -402,8 +402,8 @@
         "open_notebook/extractors/providers/mineru_adapter.py",
         "tests/test_provider_adapters.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e31-s2-provider-adapter-framework.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S3",

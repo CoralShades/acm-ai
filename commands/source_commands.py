@@ -12,6 +12,8 @@ from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.extractors.providers import get_provider_registry
+from open_notebook.extractors.providers.base import ProviderError
 from open_notebook.observability.langfuse_config import (
     append_langfuse_callback,
     build_langfuse_metadata,
@@ -288,11 +290,23 @@ async def process_source_command(
                     command_id=docling_command_id,
                 )
                 try:
-                    docling_tables = await _extract_tables_with_docling(
-                        str(processed_source.id),
-                        pdf_path,
-                        pipeline_logger=docling_pl,
+                    # E31-S2: Use provider registry instead of inline Docling call
+                    provider = get_provider_registry().get_default()
+                    extraction_result = provider.extract(
+                        pdf_path, pipeline_logger=docling_pl
                     )
+                    docling_tables = [
+                        {
+                            "table_index": t.table_index,
+                            "page": t.page,
+                            "rows": t.row_count,
+                            "columns": t.columns,
+                            "csv": t.csv,
+                            "markdown": t.markdown,
+                            "html": t.html,
+                        }
+                        for t in extraction_result.tables
+                    ]
                     if docling_tables:
                         await _store_docling_tables(
                             str(processed_source.id), docling_tables
@@ -301,12 +315,19 @@ async def process_source_command(
                             f"Stored {len(docling_tables)} Docling tables "
                             f"for source {processed_source.id}"
                         )
-                except Exception as e:
+                except ProviderError as e:
                     docling_pl.stage_fail(
                         StageId.DOCLING_EXTRACTION,
                         error=str(e),
                     )
                     logger.error(f"Docling table extraction failed: {e}")
+                    # Non-fatal — PyMuPDF text is already saved
+                except Exception as e:
+                    docling_pl.stage_fail(
+                        StageId.DOCLING_EXTRACTION,
+                        error=str(e),
+                    )
+                    logger.error(f"Unexpected error during table extraction: {e}")
                     # Non-fatal — PyMuPDF text is already saved
 
         # 4. Gather processing results (notebook associations handled by source_graph)

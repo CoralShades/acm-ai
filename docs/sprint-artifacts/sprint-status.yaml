@@ -440,7 +440,7 @@ development_status:
   # ─────────────────────────────────────────────────────
   epic-31: backlog
   e31-s1-mineru-2x-integration-validation: done        # 2 SP. V3-3. MinerU 2.x installed in main venv, validation results in scripts/research/e31_s1_validation_results.json
-  e31-s2-provider-adapter-framework: backlog           # 3 SP. Blocked by S1. ExtractionProvider protocol + DoclingAdapter + MinerUAdapter
+  e31-s2-provider-adapter-framework: drafted           # 3 SP. Blocked by S1. ExtractionProvider protocol + DoclingAdapter + MinerUAdapter. Tech spec: docs/sprint-artifacts/e31-s2-provider-adapter-framework.md
   e31-s3-consensus-layer-core: backlog                 # 3 SP. Blocked by S2. RecordMatcher + ConsensusEngine + ConflictResolver
   e31-s4-raw-extraction-table-storage: backlog         # 2 SP. Blocked by S2. New raw_extraction_table + per-provider storage
   e31-s5-pipeline-integration: backlog                 # 3 SP. Blocked by S3, S4. Wire dual-provider into orchestrator + consensus

@@ -35,7 +35,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 |--------|-------------|---------|--------|
 | V3-1 | 4/4 | 18/18 | Complete |
 | V3-2 | 2/2 | 5/5 | Complete |
-| V3-3 | 3/8 | 7/20 | In Progress |
+| V3-3 | 4/8 | 10/20 | In Progress |
 | V3-4 | 0/6 | 0/17 | Not Started |
 | V3-5 | 0/4 | 0/13 | Not Started |
 | V3-6 | 0/6 | 0/17 | Not Started |

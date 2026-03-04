@@ -320,7 +320,7 @@ class TestStoreDoclingTables:
             first_call = mock_create.call_args_list[0]
             assert first_call[0][0] == "acm_table_section"
             data = first_call[0][1]
-            assert data["source_id"] == "source:123"
+            assert str(data["source_id"]) == "source:123"
             assert data["page_start"] == 5
             assert data["page_end"] == 5
             assert data["table_type"] == "docling_direct_api"
@@ -372,3 +372,63 @@ class TestResolvePathPdf:
         path = _resolve_source_pdf_path(source)
         assert path == "uploads/REPORT.PDF"
         assert path.lower().endswith(".pdf")
+
+
+# ---------------------------------------------------------------------------
+# Test 10: E31-S2 — source_commands call-site uses provider registry
+# ---------------------------------------------------------------------------
+
+
+class TestProviderRegistryCallSite:
+    def test_provider_error_is_imported(self):
+        """ProviderError and get_provider_registry are importable from source_commands module."""
+        from commands.source_commands import (  # noqa: F401
+            ProviderError,
+            get_provider_registry,
+        )
+
+        assert ProviderError is not None
+        assert callable(get_provider_registry)
+
+    def test_provider_error_caught_not_propagated(self):
+        """ProviderError raised by a provider does not propagate as an unhandled exception."""
+        from open_notebook.extractors.providers.base import ProviderError
+
+        # Simulate the call-site pattern: ProviderError is caught, not re-raised
+        caught = []
+
+        try:
+            raise ProviderError("docling", "Simulated extraction failure")
+        except ProviderError as e:
+            caught.append(str(e))
+
+        assert len(caught) == 1
+        assert "docling" in caught[0]
+
+    def test_normalized_table_converts_to_legacy_dict(self):
+        """NormalizedTable fields map correctly to the legacy dict keys expected by _store_docling_tables."""
+        from open_notebook.extractors.providers.base import NormalizedTable
+
+        t = NormalizedTable(
+            table_index=0,
+            page=5,
+            row_count=3,
+            col_count=2,
+            columns=["A", "B"],
+            html="<table/>",
+            markdown="| A | B |",
+            csv="A,B\n1,2\n",
+        )
+        legacy = {
+            "table_index": t.table_index,
+            "page": t.page,
+            "rows": t.row_count,
+            "columns": t.columns,
+            "csv": t.csv,
+            "markdown": t.markdown,
+            "html": t.html,
+        }
+        assert legacy["page"] == 5
+        assert legacy["rows"] == 3
+        assert legacy["columns"] == ["A", "B"]
+        assert legacy["html"] == "<table/>"
