@@ -28,6 +28,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-04 | E31-S1 | MinerU 2.x Integration + Validation | 2 | pyproject.toml, scripts/research/validate_mineru_v2.py, CLAUDE.md | MinerU 2.x installs in main venv, no separate .venv-mineru needed |
 | 2026-03-04 | E30-S9 | Persist Pre-Extraction Intelligence | 3 | 41.surrealql, repository.py, acm_extraction.py, models.py, acm.py, intelligence.ts, use-source-intelligence.ts, SourceIntelligencePanel.tsx, page.tsx, acm.ts | GitHub #85. source_intelligence table, save_intelligence graph node (tag_pages→save_intelligence→orchestrate), GET API, Intelligence tab with 4 sections |
 | 2026-03-04 | E32-S6 | Ollama Model Evaluation Spike | 2 | ollama_model_eval.py, ollama-model-evaluation.md, open_notebook/graphs/utils.py | 4 models evaluated (llama3.1:8b, qwen2.5:7b, mistral:7b, phi4:latest). Recommended: qwen2.5:7b (98% enrichment, 0.78s/call). Updated model selection in utils.py. |
+| 2026-03-04 | E31-S4 | Raw Extraction Table + Storage | 2 | 42.surrealql, raw_extraction.py, raw_extraction_service.py, raw_extraction_router.py, source_commands.py, test_raw_extraction*.py (30 tests) | New raw_extraction table stores per-provider extraction outputs, RawExtraction domain model, GET /api/acm/raw-extractions/{source_id} endpoint, _store_raw_extractions() wiring |
 
 ## Sprint Summary
 
@@ -35,7 +36,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 |--------|-------------|---------|--------|
 | V3-1 | 4/4 | 18/18 | Complete |
 | V3-2 | 2/2 | 5/5 | Complete |
-| V3-3 | 4/8 | 10/20 | In Progress |
+| V3-3 | 5/8 | 12/20 | In Progress |
 | V3-4 | 0/6 | 0/17 | Not Started |
 | V3-5 | 0/4 | 0/13 | Not Started |
 | V3-6 | 0/6 | 0/17 | Not Started |
