@@ -184,7 +184,7 @@
         "scripts/v3_data_migration_rollback.py",
         "tests/test_v3_data_migration.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e30-s5-data-migration-script.md",
       "implementedDate": null
     },
     {
@@ -262,7 +262,7 @@
       "id": "E30-S8",
       "title": "Anthropic Claude Direct API + OpenRouter Fallback",
       "epic": "E30",
-      "sprint": "V3-2",
+      "sprint": "V3-4",
       "storyPoints": 3,
       "riskLevel": "MEDIUM",
       "storyType": "backend",
@@ -277,7 +277,7 @@
         "AC8: Broadmeadows 31/31 accuracy maintained; Alexander >=40/43 baseline"
       ],
       "passes": false,
-      "notes": "Not on critical path. Completes in V3-2.",
+      "notes": "Deferred to V3-4 — Ollama-first approach per client priority. Not on critical path.",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -731,12 +731,12 @@
         "AC6: Spike results documented in docs/spikes/ollama-model-evaluation.md"
       ],
       "passes": false,
-      "notes": "Independent spike -- only needs E30-S8.",
+      "notes": "Independent spike — dependency on E30-S8 removed (Ollama-first approach). Runs after MinerU setup.",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
       "dependencies": [
-        "E30-S8"
+        "GATE:SCHEMA_FREEZE"
       ],
       "keyFiles": [
         "scripts/research/ollama_model_eval.py",
