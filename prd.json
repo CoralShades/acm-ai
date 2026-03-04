@@ -845,7 +845,7 @@
         "frontend/src/components/acm/ExtractionProgress.tsx",
         "frontend/src/hooks/useExtractionSSE.ts"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e33-s1-upload-wizard-extraction-progress.md",
       "implementedDate": null
     },
     {
