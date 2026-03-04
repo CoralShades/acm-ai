@@ -12,8 +12,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PDFPageViewer } from './PDFPageViewer'
+import dynamic from 'next/dynamic'
 import type { PDFBbox } from './PDFPageViewer'
+
+// Lazy-load PDFPageViewer — pdfjs-dist v5 requires deferred client evaluation in webpack
+const PDFPageViewer = dynamic(
+  () => import('./PDFPageViewer').then((m) => ({ default: m.PDFPageViewer })),
+  { ssr: false, loading: () => <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Loading PDF viewer...</div> }
+)
 import { LineageTable } from './LineageTable'
 import { useProvenance } from '@/lib/hooks/useProvenance'
 import { cn } from '@/lib/utils'
