@@ -45,6 +45,8 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-05 | E33-S5 | Raw Table Review | 3 | RawTableReview.tsx, raw-table-review hook, /source/:id raw table tab, AG Grid with sorting/filtering | Opt-in raw extraction table viewer, shows provider outputs (Docling/MinerU) side-by-side, integrated into two-view layout |
 | 2026-03-05 | E33-S4 | SF Validation Badges + Record Wizard | 3 | ValidationBadges.tsx, RecordWizard.tsx, BulkFixPanel.tsx, ValidationErrorSummary.tsx, use-validation-badges.ts, useRecordWizard.ts | Inline validation badges in AG Grid (pass/warn/fail), record wizard modal for field edits, bulk fix feature, error count in building sidebar. V3-6 |
 | 2026-03-05 | E34-S1 | Record-by-Record Streaming | 2 | streaming utilities (backend), RecordStreamingConsumer.tsx (frontend), useRecordStreaming.ts, acm.ts API | SSE-based streaming of validated records from backend to frontend grid. Records appear as they complete validation. Real-time row addition with status indication. |
+| 2026-03-05 | E34-S2 | Bulk Operations | 2 | BulkOperationsPanel.tsx, useBulkOperations.ts, bulk-operations API, AG Grid multi-select integration | Multi-select records in grid, bulk edit/validate/export. Integrates with field schema API for bulk field updates. |
+| 2026-03-05 | E34-S3 | Performance Optimization | 2 | Performance tuning across extraction pipeline | Broadmeadows <120s, Alexander <300s target benchmarks. Pipeline throughput and latency optimization. |
 
 ## Sprint Summary
 
@@ -56,7 +58,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-4 | 5/8 | 12/23 | In Progress |
 | V3-5 | 2/5 | 6/15 | In Progress |
 | V3-6 | 3/6 | 9/17 | In Progress |
-| V3-7 | 1/4 | 2/9 | In Progress |
+| V3-7 | 3/4 | 6/9 | In Progress |
 
 ## Gate Milestones
 
