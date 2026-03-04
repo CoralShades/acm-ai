@@ -987,8 +987,8 @@
         "AC6: Opt-in: raw review is NOT in the default flow",
         "AC7: Accessible via Review Raw Tables button on building grid page"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -1001,8 +1001,8 @@
         "frontend/src/components/acm/RawTableGrid.tsx",
         "frontend/src/hooks/useRawExtractions.ts"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e33-s5-raw-table-review.md",
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E33-S6",

@@ -666,6 +666,29 @@ class RawExtractionListResponse(BaseModel):
     source_id: str
 
 
+class OfficerEditEntry(BaseModel):
+    """A single officer edit event recorded against a raw extraction row (E33-S5)."""
+
+    field: str = Field(..., description="Column name or key being corrected")
+    old_value: str = Field(..., description="Original value before correction")
+    new_value: str = Field(..., description="Corrected value after edit")
+    user: str = Field(..., description="User identifier from auth context")
+    timestamp: str = Field(..., description="ISO 8601 timestamp generated on frontend")
+
+
+class PatchRawExtractionRequest(BaseModel):
+    """Request body for PATCH /api/acm/raw-extractions/{source_id}/{extraction_id} (E33-S5)."""
+
+    structured_json: Optional[str] = Field(
+        default=None,
+        description="Full updated JSON string if cell values were changed",
+    )
+    edits: List[OfficerEditEntry] = Field(
+        default_factory=list,
+        description="Edit history entries to append to officer_edits",
+    )
+
+
 class ACMSearchResultResponse(BaseModel):
     """Single ACM search result with similarity score."""
 

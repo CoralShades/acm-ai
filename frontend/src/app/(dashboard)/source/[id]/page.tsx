@@ -42,9 +42,9 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
           <h1 className="text-lg font-semibold truncate">ACM Register</h1>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/jobs/${sourceId}?tab=raw-tables`}>
+              <Link href={`/source/${sourceId}/raw`}>
                 <Table2 className="h-4 w-4 mr-1" />
-                Raw Tables
+                Review Raw Tables
               </Link>
             </Button>
             <Input

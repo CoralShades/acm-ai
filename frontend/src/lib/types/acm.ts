@@ -222,6 +222,47 @@ export const FREQUENCY_OPTIONS = [
 
 export const PUBLIC_ACCESS_OPTIONS = ['YES', 'NO'] as const
 
+// Raw Extraction types (E31-S4 raw_extraction table)
+export interface OfficerEdit {
+  field: string
+  old_value: string
+  new_value: string
+  user: string
+  timestamp: string // ISO 8601
+}
+
+export interface RawExtractionRecord {
+  id: string
+  source_id: string
+  provider_id: string // "docling" | "mineru"
+  extraction_backend: string
+  page_number: number
+  raw_html: string | null
+  raw_markdown: string | null
+  structured_json: string | null // JSON string: { headers: string[], rows: string[][] }
+  bbox: Record<string, number> | null
+  confidence: number | null
+  officer_edits: OfficerEdit[]
+  created_at: string | null
+}
+
+export interface RawExtractionListResponse {
+  source_id: string
+  total: number
+  extractions: RawExtractionRecord[]
+}
+
+export interface PatchRawExtractionRequest {
+  structured_json?: string
+  edits: OfficerEdit[]
+}
+
+// Shape of parsed structured_json content
+export interface StructuredJsonContent {
+  headers: string[]
+  rows: string[][]
+}
+
 export interface CommandJobStatusResponse {
   job_id: string
   status: 'new' | 'running' | 'completed' | 'failed' | 'canceled'

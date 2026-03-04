@@ -16,6 +16,9 @@ import type {
   SiteConfigTemplate,
   CommandJobStatusResponse,
   ACMRawTable,
+  RawExtractionListResponse,
+  RawExtractionRecord,
+  PatchRawExtractionRequest,
 } from '@/lib/types/acm'
 import type { SourceIntelligence } from '@/lib/types/intelligence'
 import type { BuildingListResponse } from '@/lib/types/building'
@@ -71,11 +74,13 @@ export const acmApi = {
   },
 
   /**
-   * Trigger ACM extraction for a source
+   * Trigger ACM extraction for a source.
+   * Pass { force: true } to clear existing records and re-run extraction.
    */
-  extract: async (sourceId: string): Promise<ACMExtractResponse> => {
+  extract: async (sourceId: string, opts?: { force?: boolean }): Promise<ACMExtractResponse> => {
     const response = await apiClient.post<ACMExtractResponse>('/acm/extract', {
       source_id: sourceId,
+      force: opts?.force ?? false,
     })
     return response.data
   },
@@ -215,6 +220,35 @@ export const acmApi = {
    */
   getFieldSchema: async (): Promise<SFFieldSchemaConfig> => {
     const response = await apiClient.get<SFFieldSchemaConfig>('/acm/field-schema')
+    return response.data
+  },
+
+  /**
+   * List raw extractions for a source (E31-S4 raw_extraction table).
+   * Optionally filter by provider: "docling" | "mineru"
+   */
+  rawExtractions: async (sourceId: string, provider?: string): Promise<RawExtractionListResponse> => {
+    const params: Record<string, string> = {}
+    if (provider) params.provider = provider
+    const response = await apiClient.get<RawExtractionListResponse>(
+      `/acm/raw-extractions/${encodeURIComponent(sourceId)}`,
+      { params }
+    )
+    return response.data
+  },
+
+  /**
+   * Patch officer edits onto a raw extraction row.
+   */
+  patchRawExtraction: async (
+    sourceId: string,
+    extractionId: string,
+    body: PatchRawExtractionRequest
+  ): Promise<RawExtractionRecord> => {
+    const response = await apiClient.patch<RawExtractionRecord>(
+      `/acm/raw-extractions/${encodeURIComponent(sourceId)}/${encodeURIComponent(extractionId)}`,
+      body
+    )
     return response.data
   },
 }

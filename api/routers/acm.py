@@ -7,6 +7,7 @@ listing, filtering, extraction, and export.
 
 import csv
 import io
+import json as _json
 import math
 import re
 from datetime import date
@@ -51,7 +52,9 @@ from api.models import (
     FieldSchemaConfigUpdateRequest,
     NormalizeRequest,
     NormalizeResponse,
+    OfficerEditEntry,  # noqa: F401 — imported for re-export / forward ref
     ParentContextResponse,
+    PatchRawExtractionRequest,
     RawExtractionListResponse,
     RawExtractionResponse,
     RawTableResponse,
@@ -1533,6 +1536,70 @@ async def list_raw_extractions(
         )
     except Exception as e:
         logger.error(f"Error listing raw extractions for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch(
+    "/raw-extractions/{source_id}/{extraction_id}",
+    response_model=RawExtractionResponse,
+)
+async def patch_raw_extraction(
+    source_id: str,
+    extraction_id: str,
+    body: PatchRawExtractionRequest,
+):
+    """Append officer edits and optionally update structured_json for a raw extraction row.
+
+    Verifies that the extraction record belongs to the given source_id before
+    applying changes. Returns the updated RawExtractionResponse on success.
+    """
+    try:
+        try:
+            extraction = await RawExtraction.get(extraction_id)
+        except NotFoundError:
+            raise HTTPException(status_code=404, detail="Raw extraction not found")
+
+        # Normalize source_id: add 'source:' prefix if not present so the
+        # comparison works whether the caller passes "s1" or "source:s1".
+        normalized_source_id = (
+            source_id if source_id.startswith("source:") else f"source:{source_id}"
+        )
+        if str(extraction.source_id) != normalized_source_id:
+            raise HTTPException(status_code=403, detail="source_id mismatch")
+
+        if body.structured_json is not None:
+            try:
+                _json.loads(body.structured_json)
+            except ValueError:
+                raise HTTPException(
+                    status_code=422, detail="structured_json is not valid JSON"
+                )
+            extraction.structured_json = body.structured_json
+
+        extraction.officer_edits = extraction.officer_edits + [
+            e.model_dump() for e in body.edits
+        ]
+
+        await extraction.save()
+
+        return RawExtractionResponse(
+            id=str(extraction.id or ""),
+            source_id=str(extraction.source_id),
+            provider_id=extraction.provider_id,
+            extraction_backend=extraction.extraction_backend,
+            page_number=extraction.page_number,
+            raw_html=extraction.raw_html,
+            raw_markdown=extraction.raw_markdown,
+            structured_json=extraction.structured_json,
+            bbox=extraction.bbox,
+            confidence=extraction.confidence,
+            officer_edits=extraction.officer_edits,
+            created_at=str(extraction.created_at) if extraction.created_at else None,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error patching raw extraction {extraction_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
