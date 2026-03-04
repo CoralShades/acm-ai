@@ -278,7 +278,7 @@
         "AC8: Broadmeadows 31/31 accuracy maintained; Alexander >=40/43 baseline."
       ],
       "passes": false,
-      "notes": "",
+      "notes": "BLOCKED: Deferred to V4 - Ollama-first sprint priority. No downstream dependents.",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
