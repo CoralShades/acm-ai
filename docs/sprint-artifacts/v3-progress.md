@@ -42,6 +42,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-04 | E32-S5 | Extraction Pipeline E2E Test | 3 | tests/test_v3_e2e_pipeline.py, test_raw_extraction_storage.py, test_consensus_engine.py, acm_extractor.py | 8 test classes, 16 always-run tests covering full V3 pipeline FK integrity, raw extraction storage, consensus field population, SF field name conformance. GATE:AI_COMPLETE unlocked |
 | 2026-03-05 | E32-S8 | Ollama Token-Budget Content Chunking | 2 | open_notebook/graphs/utils.py, open_notebook/extractors/orchestrator.py, tests/test_ollama_chunking.py | Replaces _truncate_content_for_ollama hard-cut with _ollama_split_by_budget multi-pass loop. Records beyond budget no longer silently dropped. 11 unit tests. |
 | 2026-03-05 | E31-S8 | Pre-Extraction Quality Hardening | 3 | acm_extractor.py, mineru_adapter.py, docling_adapter.py, page_tagger.py, building_inventory.py, prompt_context_builder.py, orchestrator.py, test_extraction.py | PyMuPDF page-count fallback (AC1), LLM retry logic with exponential backoff (AC2), field_confidence top-level column in extraction results (AC3), cover page detection window bounded to 3 pages (AC4) |
+| 2026-03-05 | E33-S5 | Raw Table Review | 3 | RawTableReview.tsx, raw-table-review hook, /source/:id raw table tab, AG Grid with sorting/filtering | Opt-in raw extraction table viewer, shows provider outputs (Docling/MinerU) side-by-side, integrated into two-view layout |
 
 ## Sprint Summary
 
@@ -52,7 +53,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-3 | 8/8 | 23/23 | Complete |
 | V3-4 | 5/8 | 12/23 | In Progress |
 | V3-5 | 2/5 | 6/15 | In Progress |
-| V3-6 | 0/6 | 0/17 | Not Started |
+| V3-6 | 1/6 | 3/17 | In Progress |
 | V3-7 | 0/4 | 0/9 | Not Started |
 
 ## Gate Milestones

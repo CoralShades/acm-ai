@@ -478,7 +478,7 @@ development_status:
   e33-s2-building-grid-item-grid-two-view: done        # 5 SP. Post schema freeze + E30-S2 (API). Building sidebar + Item AG Grid
   e33-s3-dependent-picklist-cell-editors: backlog      # 3 SP. Blocked by E32, E30-S4. AG Grid cascading picklist editors
   e33-s4-sf-validation-badges-record-wizard: backlog   # 3 SP. Blocked by S2, S3, E30-S4. Inline badges + record wizard modal
-  e33-s5-raw-table-review: backlog                     # 3 SP. Blocked by E31-S4, S2. Raw extraction AG Grid (opt-in)
+  e33-s5-raw-table-review: done                        # 3 SP. V3-6. Raw extraction AG Grid (opt-in). Completed 2026-03-05.
   e33-s6-provenance-viewer: backlog                    # 3 SP. Blocked by E31-S4, S2. PDF.js + bbox overlay + lineage table
   e33-s7-building-detail-page: backlog                 # 3 SP. Blocked by E30-S2, S2. Building__c detail form with picklist editing
   e33-s8-salesforce-ready-export-ui: backlog           # 2 SP. Blocked by E30-S2, E30-S3, S4. Building__c + Item__c CSV/Excel export
