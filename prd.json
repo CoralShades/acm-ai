@@ -1108,7 +1108,7 @@
         "open_notebook/extractors/exporters/sf_export.py",
         "tests/test_sf_export.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e33-s8-salesforce-ready-export-ui.md",
       "implementedDate": null
     },
     {

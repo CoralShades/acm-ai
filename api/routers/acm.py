@@ -10,6 +10,7 @@ import io
 import json as _json
 import math
 import re
+import zipfile
 from datetime import date
 from typing import Optional
 
@@ -557,6 +558,306 @@ async def export_acm_excel(
         raise
     except Exception as e:
         logger.error(f"Error exporting ACM records to Excel: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/export/sf-csv")
+async def export_sf_csv(
+    source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[str] = Query(
+        None,
+        description="Comma-separated building internal_ids to restrict export (AC7)",
+    ),
+):
+    """Export as ZIP containing Building__c.csv + Item__c.csv with SF API field names.
+
+    Returns a ZIP archive with two CSV files:
+    - Building__c.csv — one row per building, SF API names as headers
+    - Item__c.csv     — one row per ACM item, linked via Building__r.External_ID__c
+
+    Building ID filtering (AC7): pass building_ids as comma-separated internal_ids
+    to restrict the export to only those buildings and their items.
+    """
+    from open_notebook.extractors.exporters.sf_export import (
+        BUILDING_SF_MAPPING,
+        ITEM_SF_MAPPING,
+        building_to_sf_row,
+        generate_external_id,
+        get_building_sf_headers,
+        get_item_sf_headers,
+        item_to_sf_row,
+    )
+
+    try:
+        # Resolve optional building filter
+        building_id_filter: set[str] | None = None
+        if building_ids:
+            building_id_filter = {
+                bid.strip() for bid in building_ids.split(",") if bid.strip()
+            }
+
+        # Fetch building records
+        buildings = await BuildingRecord.get_by_source(source_id)
+        if not buildings:
+            raise HTTPException(
+                status_code=404, detail="No building records found for source"
+            )
+
+        if building_id_filter:
+            buildings = [b for b in buildings if b.internal_id in building_id_filter]
+
+        # Fetch site config (AC5)
+        site_config = None
+        try:
+            site_config = await SiteConfig.get_by_source(source_id)
+        except Exception as sc_err:
+            logger.warning(f"Could not load site config for {source_id}: {sc_err}")
+
+        # Pre-compute External_ID__c for each building (keyed by building DB id string)
+        building_ext_id: dict[str, str] = {}
+        for b in buildings:
+            eid = generate_external_id(b, source_id)
+            building_ext_id[str(b.id) if b.id else b.internal_id] = eid
+
+        # Also index by building_code so ACMRecord.building_id can resolve the parent
+        building_code_to_ext_id: dict[str, str] = {}
+        for b in buildings:
+            if b.building_code:
+                building_code_to_ext_id[b.building_code] = generate_external_id(
+                    b, source_id
+                )
+            building_code_to_ext_id[b.internal_id] = generate_external_id(b, source_id)
+
+        # Fetch ACM records
+        all_records = await ACMRecord.get_by_source(source_id)
+        # Filter by building_record_id or building_id if a building filter was requested
+        if building_id_filter:
+            allowed_building_codes = {
+                b.building_code for b in buildings if b.building_code
+            } | {b.internal_id for b in buildings}
+            all_records = [
+                r for r in all_records if r.building_id in allowed_building_codes
+            ]
+
+        # Build Building CSV bytes
+        building_buf = io.StringIO()
+        b_writer = csv.DictWriter(
+            building_buf, fieldnames=get_building_sf_headers(), extrasaction="ignore"
+        )
+        b_writer.writeheader()
+        for b in buildings:
+            row = building_to_sf_row(b, source_id, site_config)
+            b_writer.writerow(row)
+        building_csv_bytes = building_buf.getvalue().encode("utf-8-sig")
+
+        # Build Item CSV bytes
+        item_buf = io.StringIO()
+        i_writer = csv.DictWriter(
+            item_buf, fieldnames=get_item_sf_headers(), extrasaction="ignore"
+        )
+        i_writer.writeheader()
+        for record in all_records:
+            parent_ext_id = building_code_to_ext_id.get(record.building_id, "")
+            row = item_to_sf_row(record, parent_ext_id)
+            i_writer.writerow(row)
+        item_csv_bytes = item_buf.getvalue().encode("utf-8-sig")
+
+        # Package both CSVs into a ZIP
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("Building__c.csv", building_csv_bytes)
+            zf.writestr("Item__c.csv", item_csv_bytes)
+        zip_buf.seek(0)
+
+        # Get source title for filename
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        source_title = source.title if source else source_id
+        filename = f"sf_export_{source_title}_{date.today()}.zip".replace(" ", "_")
+
+        return StreamingResponse(
+            zip_buf,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting SF CSV for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/export/sf-excel")
+async def export_sf_excel(
+    source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[str] = Query(
+        None,
+        description="Comma-separated building internal_ids to restrict export (AC7)",
+    ),
+):
+    """Export as XLSX workbook with Building__c and Item__c sheets.
+
+    Returns a single Excel file with two sheets:
+    - Sheet 1 "Building__c" — one row per building, SF API names as headers
+    - Sheet 2 "Item__c"     — one row per ACM item, linked via Building__r.External_ID__c
+
+    Building ID filtering (AC7): pass building_ids as comma-separated internal_ids
+    to restrict the export to only those buildings and their items.
+    """
+    from open_notebook.extractors.exporters.sf_export import (
+        building_to_sf_row,
+        generate_external_id,
+        get_building_sf_headers,
+        get_item_sf_headers,
+        item_to_sf_row,
+    )
+
+    try:
+        # Resolve optional building filter
+        building_id_filter: set[str] | None = None
+        if building_ids:
+            building_id_filter = {
+                bid.strip() for bid in building_ids.split(",") if bid.strip()
+            }
+
+        # Fetch building records
+        buildings = await BuildingRecord.get_by_source(source_id)
+        if not buildings:
+            raise HTTPException(
+                status_code=404, detail="No building records found for source"
+            )
+
+        if building_id_filter:
+            buildings = [b for b in buildings if b.internal_id in building_id_filter]
+
+        # Fetch site config (AC5)
+        site_config = None
+        try:
+            site_config = await SiteConfig.get_by_source(source_id)
+        except Exception as sc_err:
+            logger.warning(f"Could not load site config for {source_id}: {sc_err}")
+
+        # Pre-compute External_ID__c per building_code / internal_id
+        building_code_to_ext_id: dict[str, str] = {}
+        for b in buildings:
+            ext_id = generate_external_id(b, source_id)
+            if b.building_code:
+                building_code_to_ext_id[b.building_code] = ext_id
+            building_code_to_ext_id[b.internal_id] = ext_id
+
+        # Fetch ACM records
+        all_records = await ACMRecord.get_by_source(source_id)
+        if building_id_filter:
+            allowed_building_codes = {
+                b.building_code for b in buildings if b.building_code
+            } | {b.internal_id for b in buildings}
+            all_records = [
+                r for r in all_records if r.building_id in allowed_building_codes
+            ]
+
+        # --- Excel workbook ---
+        wb = Workbook()
+
+        # Shared cell styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill_blue = PatternFill(
+            start_color="4472C4", end_color="4472C4", fill_type="solid"
+        )
+        header_fill_green = PatternFill(
+            start_color="375623", end_color="375623", fill_type="solid"
+        )
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        # --- Sheet 1: Building__c ---
+        ws_bld = wb.active
+        ws_bld.title = "Building__c"
+        b_headers = get_building_sf_headers()
+        for col_idx, header in enumerate(b_headers, 1):
+            cell = ws_bld.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill_blue
+            cell.alignment = header_alignment
+            cell.border = thin_border
+            ws_bld.column_dimensions[get_column_letter(col_idx)].width = max(
+                12, len(header) + 2
+            )
+
+        for row_idx, b in enumerate(buildings, 2):
+            b_row = building_to_sf_row(b, source_id, site_config)
+            for col_idx, header in enumerate(b_headers, 1):
+                cell = ws_bld.cell(
+                    row=row_idx, column=col_idx, value=b_row.get(header, "")
+                )
+                cell.border = thin_border
+
+        ws_bld.freeze_panes = "A2"
+        if buildings:
+            ws_bld.auto_filter.ref = ws_bld.dimensions
+
+        # --- Sheet 2: Item__c ---
+        ws_itm = wb.create_sheet(title="Item__c")
+        i_headers = get_item_sf_headers()
+        for col_idx, header in enumerate(i_headers, 1):
+            cell = ws_itm.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill_green
+            cell.alignment = header_alignment
+            cell.border = thin_border
+            ws_itm.column_dimensions[get_column_letter(col_idx)].width = max(
+                12, len(header) + 2
+            )
+
+        for row_idx, record in enumerate(all_records, 2):
+            parent_ext_id = building_code_to_ext_id.get(record.building_id, "")
+            i_row = item_to_sf_row(record, parent_ext_id)
+            for col_idx, header in enumerate(i_headers, 1):
+                cell = ws_itm.cell(
+                    row=row_idx, column=col_idx, value=i_row.get(header, "")
+                )
+                cell.border = thin_border
+
+                # Color code Risk_Status__c column
+                if header == "Risk_Status__c" and i_row.get(header) in RISK_COLORS:
+                    cell.fill = PatternFill(
+                        start_color=RISK_COLORS[i_row[header]],
+                        end_color=RISK_COLORS[i_row[header]],
+                        fill_type="solid",
+                    )
+
+        ws_itm.freeze_panes = "A2"
+        if all_records:
+            ws_itm.auto_filter.ref = ws_itm.dimensions
+
+        # Save workbook to bytes buffer
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Get source title for filename
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        source_title = source.title if source else source_id
+        filename = f"sf_export_{source_title}_{date.today()}.xlsx".replace(" ", "_")
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting SF Excel for source {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

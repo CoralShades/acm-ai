@@ -108,6 +108,32 @@ export const acmApi = {
   },
 
   /**
+   * Export as SF-ready CSV (ZIP with Building__c.csv + Item__c.csv)
+   */
+  exportSfCsv: async (sourceId: string, buildingIds?: string[]): Promise<Blob> => {
+    const params: Record<string, string> = { source_id: sourceId }
+    if (buildingIds?.length) params.building_ids = buildingIds.join(',')
+    const response = await apiClient.get('/acm/export/sf-csv', {
+      params,
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  /**
+   * Export as SF-ready Excel (2-sheet XLSX)
+   */
+  exportSfExcel: async (sourceId: string, buildingIds?: string[]): Promise<Blob> => {
+    const params: Record<string, string> = { source_id: sourceId }
+    if (buildingIds?.length) params.building_ids = buildingIds.join(',')
+    const response = await apiClient.get('/acm/export/sf-excel', {
+      params,
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  /**
    * Get job status for an extraction command
    */
   getJobStatus: async (jobId: string): Promise<CommandJobStatusResponse> => {

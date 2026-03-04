@@ -5,13 +5,13 @@ import Link from 'next/link'
 import { AppShell } from '@/components/layout/AppShell'
 import { BuildingSidebar } from '@/components/acm/BuildingSidebar'
 import { ItemGrid } from '@/components/acm/ItemGrid'
+import { ExportDialog } from '@/components/acm/ExportDialog'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useBuildingStore } from '@/lib/stores/buildingStore'
 import { useValidationSummary, useBulkFix } from '@/lib/hooks/useACMItems'
-import { acmApi } from '@/lib/api/acm'
 import { ArrowLeft, Table2, Wrench, Download } from 'lucide-react'
 
 /**
@@ -23,7 +23,7 @@ import { ArrowLeft, Table2, Wrench, Download } from 'lucide-react'
 function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   const [quickFilter, setQuickFilter] = useState('')
   const [enableGrouping, setEnableGrouping] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const { selectedBuildingId, setSelectedBuilding } = useBuildingStore()
 
   // Validation summary for Fix All + Export guard
@@ -39,21 +39,6 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   useEffect(() => {
     setSelectedBuilding(null)
   }, [sourceId, setSelectedBuilding])
-
-  const handleExport = async () => {
-    setIsExporting(true)
-    try {
-      const blob = await acmApi.exportExcel(sourceId)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `acm-register-${sourceId}.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
-    } finally {
-      setIsExporting(false)
-    }
-  }
 
   const handleBulkFix = () => {
     bulkFix.mutate({ sourceId })
@@ -106,20 +91,15 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
               </Button>
             )}
 
-            {/* Export button — disabled when validation errors exist */}
+            {/* Export button — opens ExportDialog */}
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExport}
-              disabled={isExporting || totalErrors > 0}
-              title={
-                totalErrors > 0
-                  ? `Export disabled: ${totalErrors} validation error${totalErrors !== 1 ? 's' : ''} must be resolved first`
-                  : 'Export ACM register as Excel'
-              }
+              onClick={() => setExportOpen(true)}
+              title="Export ACM register"
             >
               <Download className="h-4 w-4 mr-1" />
-              {isExporting ? 'Exporting…' : 'Export'}
+              Export
             </Button>
           </div>
         </div>
@@ -143,6 +123,14 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
           </div>
         </div>
       </div>
+
+      {/* Export dialog */}
+      <ExportDialog
+        sourceId={sourceId}
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        totalErrors={totalErrors}
+      />
     </AppShell>
   )
 }
