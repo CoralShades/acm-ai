@@ -25,6 +25,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-03 | E30-S4 | Dependent Picklist Validator | 5 | sf_picklist_validator.py, acm_validator.py, __init__.py, test_sf_picklist_validator.py | 187 tests, BAR→SF normalization needed, WARN/REJECT policy split on ValidationResult |
 | 2026-03-03 | E30-S6 | BAR→SF Vocabulary Transition | 2 | 17 files: taxonomy.py, enums.py, acm_schemas.py, config_loader.py, acm_validator.py, api/models.py, acm.py, 3 prompts, 5 test files | _strip_t_prefix helper, GATE:SCHEMA_FREEZE unlocked |
 | 2026-03-04 | E30-S5 | Data Migration Script | 3 | v3_data_migration.py, v3_data_migration_rollback.py, test_v3_data_migration.py, async_migrate.py, e30-s5 tech spec | 33 tests, idempotent, dry-run mode, Good→Stable vocab migration, migrations 37-40 registered |
+| 2026-03-04 | E30-S7 | Two-Phase Extraction Prompts | 3 | preflight_extraction.j2, orchestrator_extraction.j2, source_commands.py, test_prompts.py | Preflight + Orchestrator prompts using ExtractionProvider adapters, integrated with source_commands.py |
 | 2026-03-04 | E31-S1 | MinerU 2.x Integration + Validation | 2 | pyproject.toml, scripts/research/validate_mineru_v2.py, CLAUDE.md | MinerU 2.x installs in main venv, no separate .venv-mineru needed |
 | 2026-03-04 | E31-S2 | Provider Adapter Framework | 3 | providers/base.py, docling_adapter.py, mineru_adapter.py, normalizer.py, __init__.py (registry), source_commands.py wired | ExtractionProvider Protocol, two adapters, ProviderRegistry, normalizer. Commit f1152678 |
 | 2026-03-04 | E30-S9 | Persist Pre-Extraction Intelligence | 3 | 41.surrealql, repository.py, acm_extraction.py, models.py, acm.py, intelligence.ts, use-source-intelligence.ts, SourceIntelligencePanel.tsx, page.tsx, acm.ts | GitHub #85. source_intelligence table, save_intelligence graph node (tag_pages→save_intelligence→orchestrate), GET API, Intelligence tab with 4 sections |
@@ -37,7 +38,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 |--------|-------------|---------|--------|
 | V3-1 | 4/4 | 18/18 | Complete |
 | V3-2 | 2/2 | 5/5 | Complete |
-| V3-3 | 5/8 | 12/23 | In Progress |
+| V3-3 | 6/8 | 15/23 | In Progress |
 | V3-4 | 0/6 | 0/17 | Not Started |
 | V3-5 | 0/4 | 0/13 | Not Started |
 | V3-6 | 0/6 | 0/17 | Not Started |

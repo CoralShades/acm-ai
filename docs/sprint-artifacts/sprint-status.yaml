@@ -427,7 +427,7 @@ development_status:
   e30-s5-data-migration-script: done                   # 3 SP. Building extraction + FK linkage + Good→Stable vocab. 33 tests. 2026-03-04
   e30-s6-bar-sf-vocabulary-transition: done             # 2 SP. Good→Stable, Non Friable→Non-friable, T-prefix stripping. GATE:SCHEMA_FREEZE unlocked.
   # ═══ SCHEMA FREEZE GATE UNLOCKED 2026-03-03 ═══ — E31/E32/E33/E34 now eligible
-  e30-s7-two-phase-extraction-prompts: backlog        # 3 SP. Blocked by GATE:SCHEMA_FREEZE + E31-S2 (needs adapter output shapes). Post-freeze but waits on E31-S2.
+  e30-s7-two-phase-extraction-prompts: done           # 3 SP. Two-phase extraction prompts (preflight + orchestrator). Completed 2026-03-04.
   e30-s8-anthropic-direct-api-openrouter-fallback: backlog  # 3 SP. DEFERRED to V3-4 — Ollama-first approach per client priority
   e30-s9-persist-pre-extraction-intelligence: done    # 3 SP. V3-3. GitHub #85. Persist 4 pre-extraction models (DocumentMeta, DocumentStructure, BuildingInventory, PageTaggingResult) to source_intelligence table. Migration 41, save_intelligence graph node, GET API, Intelligence tab.
   epic-30-retrospective: optional
@@ -549,7 +549,7 @@ development_status:
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
 # V3 STATUS: GATE:SCHEMA_FREEZE UNLOCKED 2026-03-03 (trigger: E30-S6)
-# V3 Done: 11/34 stories (E30-S1,S2,S3,S4,S5,S6,S9; E31-S1,S2,S4; E32-S6). Next: E31-S3, E30-S7, or E33-S2.
+# V3 Done: 12/34 stories (E30-S1,S2,S3,S4,S5,S6,S7,S9; E31-S1,S2,S4; E32-S6). Next: E31-S3, E33-S2.
 #
 # EXTRACTION ACCURACY STATUS:
 # ===========================
