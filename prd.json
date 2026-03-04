@@ -267,10 +267,10 @@
       "riskLevel": "MEDIUM",
       "storyType": "backend",
       "acceptanceCriteria": [
-        "AC0 (Security): ACM pipeline reads API keys ONLY from ACM_ANTHROPIC_API_KEY and ACM_OPENROUTER_API_KEY env vars (or DB model.api_key field). The bare ANTHROPIC_API_KEY and OPENAI_API_KEY env vars must NOT be read by any ACM extraction code path — these are reserved for Claude Code host tooling.",
-        "AC1 (Priority order): Provider selection follows: 1) Ollama (if OLLAMA_API_BASE set) → 2) Anthropic direct (if ACM_ANTHROPIC_API_KEY set or DB key present) → 3) OpenRouter (if ACM_OPENROUTER_API_KEY set or DB key present). First available wins.",
+        "AC0 (Security): ACM pipeline reads API keys ONLY from ACM_ANTHROPIC_API_KEY and ACM_OPENROUTER_API_KEY env vars (or DB model.api_key field). The bare ANTHROPIC_API_KEY and OPENAI_API_KEY env vars must NOT be read by any ACM extraction code path \u2014 these are reserved for Claude Code host tooling.",
+        "AC1 (Priority order): Provider selection follows: 1) Ollama (if OLLAMA_API_BASE set) \u2192 2) Anthropic direct (if ACM_ANTHROPIC_API_KEY set or DB key present) \u2192 3) OpenRouter (if ACM_OPENROUTER_API_KEY set or DB key present). First available wins.",
         "AC2 (Ollama primary): When OLLAMA_API_BASE is configured, Ollama qwen2.5:7b is always tried first before any cloud provider.",
-        "AC3 (Anthropic direct): ChatAnthropic client instantiated with api_key from ACM_ANTHROPIC_API_KEY env var or model.api_key field — never from the bare ANTHROPIC_API_KEY env var.",
+        "AC3 (Anthropic direct): ChatAnthropic client instantiated with api_key from ACM_ANTHROPIC_API_KEY env var or model.api_key field \u2014 never from the bare ANTHROPIC_API_KEY env var.",
         "AC4 (OpenRouter fallback): OpenRouter used only when both Ollama and Anthropic direct are unavailable or fail auth. Key from ACM_OPENROUTER_API_KEY or DB.",
         "AC5 (DB key storage): model table supports optional api_key field. If set, it takes precedence over env var for that provider. API endpoint PATCH /api/models/{id} allows setting/updating the key.",
         "AC6 (No env bleed): uv run pytest tests/test_openrouter_provider_routing.py confirms no bare ANTHROPIC_API_KEY/OPENAI_API_KEY reads in extraction code path.",
@@ -278,7 +278,7 @@
         "AC8: Broadmeadows 31/31 accuracy maintained; Alexander >=40/43 baseline."
       ],
       "passes": false,
-      "notes": "",
+      "notes": "BLOCKED: Deferred to last - Ollama-first sprint priority. No downstream dependents.",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -307,7 +307,7 @@
         "AC1: Migration 41 creates source_intelligence table with SCHEMAFULL, unique index on source_id",
         "AC2: save_source_intelligence() upserts all 4 pre-extraction models (DocumentMeta, DocumentStructure, BuildingInventory, PageTaggingResult)",
         "AC3: get_source_intelligence() returns persisted data for a source_id or null",
-        "AC4: save_intelligence graph node runs between tag_pages and orchestrate â€” non-blocking (catches all exceptions)",
+        "AC4: save_intelligence graph node runs between tag_pages and orchestrate \u00e2\u20ac\u201d non-blocking (catches all exceptions)",
         "AC5: GET /api/acm/source-intelligence/{source_id} returns 200 with data or 404",
         "AC6: Intelligence tab visible in source detail page with Brain icon",
         "AC7: Document Overview section shows type badge, total pages, buildings count, register page range",
@@ -704,7 +704,7 @@
         "AC1: Product types from classify_product() pass SF chain validation after normalization",
         "AC2: All 133 ACM_Sub_Classification__c values have correct case in SF chain lookups",
         "AC3: Case-sensitive matching still enforced for controller values (Friability_of_Material__c, ACM_Classification__c)",
-        "AC4: Existing E30-S4 test suite passes â€” no regression (187+ tests)",
+        "AC4: Existing E30-S4 test suite passes \u00e2\u20ac\u201d no regression (187+ tests)",
         "AC5: F4 finding in V3/output/github-issue-e30s4-audit.md updated to FIXED"
       ],
       "passes": true,
@@ -1161,8 +1161,8 @@
         "AC5: SSE progress for bulk operations (percentage, records processed / total)",
         "AC6: Undo support for bulk edits (one-level undo via edit history)"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -1177,7 +1177,7 @@
         "frontend/src/components/acm/ItemGrid.tsx"
       ],
       "techSpecFile": "docs/sprint-artifacts/e34-s2-bulk-operations.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E34-S3",
@@ -1258,11 +1258,11 @@
       "riskLevel": "MEDIUM",
       "storyType": "backend",
       "acceptanceCriteria": [
-        "AC1: Page detection uses provider-native page metadata (Docling page boundaries, PyMuPDF page markers) instead of regex-only â€” total_pages > 0 for Broadmeadows PDF",
-        "AC2: LLM structure extraction has retry logic (max 2 attempts) before heuristic fallback â€” logged when fallback activates",
+        "AC1: Page detection uses provider-native page metadata (Docling page boundaries, PyMuPDF page markers) instead of regex-only \u00e2\u20ac\u201d total_pages > 0 for Broadmeadows PDF",
+        "AC2: LLM structure extraction has retry logic (max 2 attempts) before heuristic fallback \u00e2\u20ac\u201d logged when fallback activates",
         "AC3: Metadata extraction field_confidence dict persisted to source_intelligence record (extends E30-S9 schema)",
         "AC4: consultant_name extraction improved: cover page window bounded to first 3 pages (not entire document when page markers missing)",
-        "AC5: Existing extraction tests pass â€” no regression on Broadmeadows 31/31 record count"
+        "AC5: Existing extraction tests pass \u00e2\u20ac\u201d no regression on Broadmeadows 31/31 record count"
       ],
       "passes": true,
       "notes": "Completed",
