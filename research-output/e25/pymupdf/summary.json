@@ -1,0 +1,106 @@
+{
+  "method": "pymupdf",
+  "duration_seconds": 0.088,
+  "total_chars": 34369,
+  "total_lines": 1658,
+  "total_pages": 19,
+  "tables_found": 0,
+  "tables": [],
+  "pages": [
+    {
+      "page": 1,
+      "char_count": 176,
+      "line_count": 11
+    },
+    {
+      "page": 2,
+      "char_count": 1631,
+      "line_count": 30
+    },
+    {
+      "page": 3,
+      "char_count": 1905,
+      "line_count": 38
+    },
+    {
+      "page": 4,
+      "char_count": 120,
+      "line_count": 9
+    },
+    {
+      "page": 5,
+      "char_count": 3249,
+      "line_count": 305
+    },
+    {
+      "page": 6,
+      "char_count": 2985,
+      "line_count": 297
+    },
+    {
+      "page": 7,
+      "char_count": 3008,
+      "line_count": 295
+    },
+    {
+      "page": 8,
+      "char_count": 916,
+      "line_count": 95
+    },
+    {
+      "page": 9,
+      "char_count": 126,
+      "line_count": 7
+    },
+    {
+      "page": 10,
+      "char_count": 1441,
+      "line_count": 27
+    },
+    {
+      "page": 11,
+      "char_count": 2456,
+      "line_count": 129
+    },
+    {
+      "page": 12,
+      "char_count": 1181,
+      "line_count": 60
+    },
+    {
+      "page": 13,
+      "char_count": 1940,
+      "line_count": 54
+    },
+    {
+      "page": 14,
+      "char_count": 1551,
+      "line_count": 28
+    },
+    {
+      "page": 15,
+      "char_count": 113,
+      "line_count": 7
+    },
+    {
+      "page": 16,
+      "char_count": 2322,
+      "line_count": 56
+    },
+    {
+      "page": 17,
+      "char_count": 2645,
+      "line_count": 63
+    },
+    {
+      "page": 18,
+      "char_count": 1737,
+      "line_count": 52
+    },
+    {
+      "page": 19,
+      "char_count": 4554,
+      "line_count": 58
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+-- Rollback migration 42: Remove raw_extraction table + consensus columns (E31-S4)
+
+REMOVE INDEX IF EXISTS idx_raw_extraction_source_provider ON TABLE raw_extraction;
+REMOVE INDEX IF EXISTS idx_raw_extraction_source_id ON TABLE raw_extraction;
+REMOVE TABLE IF EXISTS raw_extraction;
+
+REMOVE FIELD IF EXISTS consensus_tier   ON TABLE acm_table_section;
+REMOVE FIELD IF EXISTS consensus_scores ON TABLE acm_table_section;

@@ -7,6 +7,15 @@ echo.
 
 cd /d "%~dp0"
 
+echo Running preflight checks...
+uv run python scripts\preflight_checks.py
+if %errorlevel% neq 0 (
+    echo PREFLIGHT FAILED — fix issues above before starting.
+    pause
+    exit /b 1
+)
+echo.
+
 echo Choose your Ollama configuration:
 echo.
 echo   [1] CPU-only    (office laptops, VMs, no GPU)

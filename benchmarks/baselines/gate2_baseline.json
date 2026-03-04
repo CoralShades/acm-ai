@@ -1,0 +1,166 @@
+{
+  "gate": "gate2",
+  "timestamp": "2026-03-01T19:42:21+11:00",
+  "model": "anthropic/claude-sonnet-4.6",
+  "git_sha": "cbae0483613e442177799f315c574a7bdec9fad3",
+  "immutable": true,
+  "results": [
+    {
+      "document_name": "Alexander District Hospital",
+      "ground_truth_count": 43,
+      "extracted_count": 63,
+      "matched_count": 31,
+      "recall": 0.7209302325581395,
+      "precision": 0.49206349206349204,
+      "field_accuracy": 0.5622119815668203,
+      "latency_s": 209.734,
+      "token_usage": 0,
+      "cost_usd": 0.0,
+      "error": null,
+      "unmatched_gt": [
+        {
+          "building_name": "Mortuary Buildings",
+          "room_name": "Shower Room",
+          "location": "Cubicle - Behind Ceramic Tile",
+          "product": "Shower Cubicle",
+          "sample_no": "Not Sampled",
+          "sample_result": "Assumed Positive",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "Mortuary Buildings",
+          "room_name": "Shower Room",
+          "location": "Cubicle - Beneath Shower Tray",
+          "product": "Shower Cubicle",
+          "sample_no": "Not Sampled",
+          "sample_result": "Assumed Positive",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "VMO Accommodations",
+          "room_name": "Exterior",
+          "location": "Debris",
+          "product": "Debris",
+          "sample_no": "J169642-001-020",
+          "sample_result": "Positive",
+          "friable": "Friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Exterior",
+          "location": "Porch Ceiling",
+          "product": "Porch ceiling",
+          "sample_no": "As Per 35766/11",
+          "sample_result": "Positive",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Bathroom Adjacent Labour Ward",
+          "location": "Shower Cubicle - Beneath Shower Tray",
+          "product": "Shower Cubicle",
+          "sample_no": "Not Sampled",
+          "sample_result": "Assumed Positive",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Multi Purpose Area  Adjacent CCSD",
+          "location": "Fire Door",
+          "product": "Fire Door(s)",
+          "sample_no": "Not Sampled",
+          "sample_result": "Assumed Positive",
+          "friable": "Friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Rear Exit Foyer Adjacent Medical Records",
+          "location": "Floor",
+          "product": "Floor covering (beneath carpet)",
+          "sample_no": "35766/07 35766/08X",
+          "sample_result": "Positive",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Ward 12",
+          "location": "Shower Cubicle - Beneath Shower Tray",
+          "product": "Shower Cubicle",
+          "sample_no": "Not Sampled",
+          "sample_result": "Assumed Positive",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "West Passage",
+          "location": "Adjacent CCSD Fire Door",
+          "product": "Fire Door(s)",
+          "sample_no": "Not Sampled",
+          "sample_result": "Assumed Positive",
+          "friable": "Friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Workshop",
+          "location": "Infill Panels",
+          "product": "Infill panels",
+          "sample_no": "J169642-001-017",
+          "sample_result": "Negative",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Workshop",
+          "location": "Stored Item",
+          "product": "Stored item(s)",
+          "sample_no": "As Per J169642-001-017",
+          "sample_result": "Assumed Negative",
+          "friable": "Non-friable"
+        },
+        {
+          "building_name": "Old Alexandra Hospital",
+          "room_name": "Workshop",
+          "location": "Above Flue Boxing Heater",
+          "product": "Heater flue",
+          "sample_no": "As Per J169642-001-017",
+          "sample_result": "Assumed Negative",
+          "friable": "Non-friable"
+        }
+      ],
+      "unmatched_extracted": [
+        "Shower Room/Flat sheeting",
+        "Shower Room/Flat sheeting",
+        "External/Debris",
+        "External/Eaves",
+        "External/Ductwork",
+        "External/Ceiling",
+        "External/Eaves",
+        "North Courtyard/Eaves",
+        "South Courtyard/Eaves",
+        "All rooms/Floor Covering",
+        "Bathroom Adjacent Labour Ward/Bath Tub Housing",
+        "Bathroom Adjacent Labour Ward/Shower Cubicle",
+        "CCSD/Fire Door",
+        "Compressor Room/Wall",
+        "Former Laundry/Stored Item",
+        "Former Laundry/Electrical Distribution Board",
+        "Hallway Adjacent Rear Exit/Ceiling",
+        "Medical Records/Floor Covering",
+        "Multi Purpose Area/Fire Door",
+        "Non Essential Switchboard Room/Door Lining",
+        "Non Essential Switchboard Room/Floor Covering",
+        "Nurses Station/Sink Lining",
+        "Rear Exit Foyer Adjacent Medical Records/Ceiling",
+        "Rear Exit Foyer Adjacent Medical Records/Floor Covering",
+        "Rear Exit Foyer Adjacent Medical Records/Floor Covering Adhesive",
+        "Ward 12/Floor Covering",
+        "Workshop/Heater",
+        "External/Ceiling",
+        "External/Eaves",
+        "Multi Purpose Area - Adjacent CCSD/Fire Door",
+        "Ward 12/Shower Cubicle",
+        "West Passage - Adjacent CCSD/Fire Door"
+      ]
+    }
+  ]
+}

@@ -55,19 +55,28 @@ echo "  ACM-AI - Starting All Services"
 echo "========================================"
 echo ""
 
-# [0/5] Sync Python dependencies (must happen BEFORE service manager)
-echo "[0/5] Syncing Python dependencies..."
+# [0/7] Sync Python dependencies (must happen BEFORE service manager)
+echo "[0/7] Syncing Python dependencies..."
 UV_LINK_MODE=copy uv sync --quiet
 echo "Dependencies synced."
 echo ""
 
-# [1/5] Clear ports - kill any processes on our ports
-echo "[1/5] Clearing ports and fixing conflicts..."
+# [1/7] Preflight checks
+echo "[1/7] Running preflight checks..."
+if ! uv run python scripts/preflight_checks.py; then
+    echo ""
+    echo "PREFLIGHT FAILED — fix issues above before starting."
+    exit 1
+fi
+echo ""
+
+# [2/7] Clear ports - kill any processes on our ports
+echo "[2/7] Clearing ports and fixing conflicts..."
 uv run python scripts/service_manager.py fix --auto-fix 2>/dev/null || true
 echo ""
 
-# [2/5] Start SurrealDB
-echo "[2/5] Starting SurrealDB..."
+# [3/7] Start SurrealDB
+echo "[3/7] Starting SurrealDB..."
 if docker compose ps surrealdb 2>/dev/null | grep -q "running"; then
     echo "SurrealDB is already running."
 else
@@ -76,8 +85,8 @@ else
 fi
 echo ""
 
-# [3/5] Start API Server
-echo "[3/5] Starting API Server (port 5055)..."
+# [4/7] Start API Server
+echo "[4/7] Starting API Server (port 5055)..."
 cd "$SCRIPT_DIR"
 # API_RELOAD=false: Uvicorn's StatReload blocks the event loop on WSL2's slow /mnt/* filesystem
 API_RELOAD=false nohup uv run python run_api.py > /tmp/acm-ai-api.log 2>&1 &
@@ -86,8 +95,8 @@ echo "API launched (PID: $(cat /tmp/acm-ai-api.pid))"
 wait_health "http://localhost:5055/health" "API Server"
 echo ""
 
-# [4/5] Start Background Worker
-echo "[4/5] Starting Background Worker..."
+# [5/7] Start Background Worker
+echo "[5/7] Starting Background Worker..."
 cd "$SCRIPT_DIR"
 nohup uv run python run_worker.py --import-modules commands > /tmp/acm-ai-worker.log 2>&1 &
 echo $! > /tmp/acm-ai-worker.pid
@@ -95,8 +104,8 @@ echo "Worker started (PID: $(cat /tmp/acm-ai-worker.pid))"
 sleep 2
 echo ""
 
-# [5/5] Start Frontend (API is confirmed healthy before this point)
-echo "[5/5] Starting Frontend (port 8502)..."
+# [6/7] Start Frontend (API is confirmed healthy before this point)
+echo "[6/7] Starting Frontend (port 8502)..."
 cd "$SCRIPT_DIR/frontend"
 PORT=8502 nohup npm run dev -- -p 8502 > /tmp/acm-ai-frontend.log 2>&1 &
 echo $! > /tmp/acm-ai-frontend.pid
@@ -120,7 +129,7 @@ echo "  To stop: ./stop-all.sh"
 echo "========================================"
 echo ""
 
-# Post-startup health verification
-echo "Verifying service health..."
+# [7/7] Post-startup health verification
+echo "[7/7] Verifying service health..."
 cd "$SCRIPT_DIR"
 uv run python scripts/service_manager.py status 2>/dev/null || true

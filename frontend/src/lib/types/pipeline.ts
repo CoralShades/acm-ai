@@ -2,15 +2,17 @@
  * Pipeline Types - Backend PipelineRunState models
  */
 
-export type StageId = 'STRUCTURE' | 'PREFLIGHT' | 'ORCHESTRATOR' | 'EXTRACT' | 'VALIDATE' | 'CORRECT' | 'STORE'
+export type StageId = 'STRUCTURE' | 'PREFLIGHT' | 'ORCHESTRATOR' | 'DOCLING_EXTRACTION' | 'EXTRACT' | 'VALIDATE' | 'CORRECT' | 'NO_ACCESS_RECOVERY' | 'STORE'
 
 export const PIPELINE_STAGE_ORDER: StageId[] = [
   'STRUCTURE',
   'PREFLIGHT',
   'ORCHESTRATOR',
+  'DOCLING_EXTRACTION',
   'EXTRACT',
   'VALIDATE',
   'CORRECT',
+  'NO_ACCESS_RECOVERY',
   'STORE',
 ]
 
@@ -18,9 +20,11 @@ export const PIPELINE_STAGE_LABELS: Record<StageId, string> = {
   STRUCTURE: 'Document Structure',
   PREFLIGHT: 'Preflight',
   ORCHESTRATOR: 'Orchestrator',
+  DOCLING_EXTRACTION: 'Docling Tables',
   EXTRACT: 'Extract',
   VALIDATE: 'Validate',
   CORRECT: 'Correct',
+  NO_ACCESS_RECOVERY: 'Recovery Scan',
   STORE: 'Store',
 }
 

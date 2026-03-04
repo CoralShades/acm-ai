@@ -31,3 +31,6 @@ echo.
 
 echo Verification:
 uv run python scripts/service_manager.py status 2>nul
+echo.
+echo Running shutdown cleanup...
+uv run python scripts\shutdown_cleanup.py

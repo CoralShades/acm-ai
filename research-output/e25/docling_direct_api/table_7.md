@@ -1,0 +1,7 @@
+| Site Address                     | 15 Dimboola Road, Broadmeadows, Victoria   | 15 Dimboola Road, Broadmeadows, Victoria_1   | 15 Dimboola Road, Broadmeadows, Victoria_2   |
+|:---------------------------------|:-------------------------------------------|:---------------------------------------------|:---------------------------------------------|
+| Year of Construction Completion: | 1985                                       | External walls:                              | Brick                                        |
+| Approximate area:                | 6,272m 2                                   | Internal walls:                              | Plaster                                      |
+| Levels:                          | 2                                          | Ceiling:                                     | Plaster                                      |
+| Roof type:                       | Metal                                      | Floor and coverings:                         | Carpet, vinyl                                |
+| Assessment Time:                 | During normal business hours               | Site Occupation:                             | Occupied                                     |

@@ -1,0 +1,63 @@
+# prd.json Template
+
+Copy this JSON structure to `prd.json` at your project root. Replace all `{{PLACEHOLDER}}` values.
+
+```json
+{
+  "version": "1.0",
+  "project": "{{PROJECT_NAME}}",
+  "generatedAt": "{{ISO_TIMESTAMP}}",
+  "totalStories": 1,
+  "totalStoryPoints": 3,
+  "sprints": 1,
+  "stories": [
+    {
+      "id": "E1-S1",
+      "title": "{{STORY_TITLE}}",
+      "epic": "E1",
+      "sprint": "S1",
+      "storyPoints": 3,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "acceptanceCriteria": [
+        "AC1: {{FIRST_CRITERION}}",
+        "AC2: {{SECOND_CRITERION}}"
+      ],
+      "passes": false,
+      "notes": "",
+      "model": "sonnet",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [],
+      "keyFiles": ["{{PATH_TO_KEY_FILE}}"],
+      "techSpecFile": null,
+      "implementedDate": null
+    }
+  ],
+  "gates": [
+    {
+      "id": "GATE:{{GATE_NAME}}",
+      "name": "{{GATE_DISPLAY_NAME}}",
+      "triggerStory": "E1-S1",
+      "unlocked": false,
+      "blocksEpics": [],
+      "description": "{{GATE_DESCRIPTION}}"
+    }
+  ],
+  "metadata": {
+    "source": "ralph-bridge",
+    "artifacts": []
+  }
+}
+```
+
+## Field Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique story ID (format: `E{epic}-S{story}`) |
+| `passes` | boolean | `true` when story is complete and verified |
+| `notes` | string | Empty, or prefixed: `BLOCKED:`, `DEFERRED:`, `Manual:` |
+| `dependencies` | string[] | Story IDs (`E1-S2`) or gate IDs (`GATE:NAME`) |
+| `techSpecFile` | string\|null | Path to generated tech spec, or null |
+| `implementedDate` | string\|null | ISO date string when completed |

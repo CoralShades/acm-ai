@@ -7,6 +7,7 @@ Welcome to the Open Notebook development documentation! This section provides co
 ### Getting Started
 - **[Architecture Overview](architecture.md)** - Understanding the system design and components
 - **[API Reference](api-reference.md)** - Complete REST API documentation
+- **[TUI Monitor Guide](tui-monitor.md)** - Terminal dashboard for service control, database inspection, and job management
 - **[Contributing Guide](contributing.md)** - Development workflow and standards
 
 ### Development Setup
@@ -46,6 +47,7 @@ Open Notebook is built with a modern Python stack using:
 | **AI Graphs** | LangChain processing workflows | `open_notebook/graphs/` |
 | **Next.js Frontend** | Modern React-based web interface | `frontend/` |
 | **Commands** | Background job processing | `commands/` |
+| **TUI Monitor** | Terminal dashboard with 8 tabs | `tui/` |
 
 ## 🔧 Development Workflow
 

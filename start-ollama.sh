@@ -6,6 +6,13 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+echo "Running preflight checks..."
+if ! uv run python scripts/preflight_checks.py; then
+    echo "PREFLIGHT FAILED — fix issues above before starting."
+    exit 1
+fi
+echo ""
+
 echo "========================================"
 echo "  ACM-AI - Ollama Local AI Setup"
 echo "========================================"

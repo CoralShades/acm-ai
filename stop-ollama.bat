@@ -17,4 +17,7 @@ echo.
 echo Note: Model data is preserved in Docker volume 'acm-ai-ollama-data'
 echo To remove models: docker volume rm acm-ai-ollama-data
 echo.
+echo Running shutdown cleanup...
+uv run python scripts\shutdown_cleanup.py
+echo.
 pause

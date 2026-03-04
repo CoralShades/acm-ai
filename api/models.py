@@ -575,12 +575,10 @@ class ACMRecordCreateRequest(BaseModel):
         if v is None:
             return v
         stripped = v.strip()
-        valid = {"Friable", "Non Friable"}
+        valid = {"Friable", "Non-friable"}
         for val in valid:
-            if val.lower() == stripped.lower():
+            if val.lower().replace("-", " ") == stripped.lower().replace("-", " "):
                 return val
-        if stripped.lower() in ("non-friable", "nonfriable"):
-            return "Non Friable"
         raise ValueError(f"friable must be one of {sorted(valid)}, got '{v}'")
 
     @field_validator("risk_status", mode="before")
@@ -600,7 +598,7 @@ class ACMRecordCreateRequest(BaseModel):
         if v is None:
             return v
         normalized = v.strip().title()
-        valid = {"Good", "Fair", "Poor", "Damaged"}
+        valid = {"Stable", "Fair", "Poor", "Unknown"}
         if normalized not in valid:
             raise ValueError(
                 f"material_condition must be one of {sorted(valid)}, got '{v}'"
@@ -628,6 +626,44 @@ class ParentContextResponse(BaseModel):
     page_end: int
     table_type: Optional[str] = None
     raw_text: Optional[str] = None
+
+
+class RawTableResponse(BaseModel):
+    """Raw table preview payload for job extraction diagnostics."""
+
+    id: str
+    source_id: str
+    page_start: int
+    page_end: int
+    table_type: Optional[str] = None
+    raw_html: Optional[str] = None
+    raw_text: Optional[str] = None
+    building_name: Optional[str] = None
+
+
+class RawExtractionResponse(BaseModel):
+    """Response model for a single raw extraction record (E31-S4)."""
+
+    id: str
+    source_id: str
+    provider_id: str
+    extraction_backend: str
+    page_number: int
+    raw_html: Optional[str] = None
+    raw_markdown: Optional[str] = None
+    structured_json: Optional[str] = None
+    bbox: Optional[Dict[str, Any]] = None
+    confidence: Optional[float] = None
+    officer_edits: List[Dict[str, Any]] = Field(default_factory=list)
+    created_at: Optional[str] = None
+
+
+class RawExtractionListResponse(BaseModel):
+    """Response for GET /api/acm/raw-extractions/{source_id} (E31-S4)."""
+
+    extractions: List[RawExtractionResponse]
+    total: int
+    source_id: str
 
 
 class ACMSearchResultResponse(BaseModel):
@@ -732,12 +768,10 @@ class ACMRecordUpdateRequest(BaseModel):
         if v is None:
             return v
         stripped = v.strip()
-        valid = {"Friable", "Non Friable"}
+        valid = {"Friable", "Non-friable"}
         for val in valid:
-            if val.lower() == stripped.lower():
+            if val.lower().replace("-", " ") == stripped.lower().replace("-", " "):
                 return val
-        if stripped.lower() in ("non-friable", "nonfriable"):
-            return "Non Friable"
         raise ValueError(f"friable must be one of {sorted(valid)}, got '{v}'")
 
     @field_validator("risk_status", mode="before")
@@ -757,7 +791,7 @@ class ACMRecordUpdateRequest(BaseModel):
         if v is None:
             return v
         normalized = v.strip().title()
-        valid = {"Good", "Fair", "Poor", "Damaged"}
+        valid = {"Stable", "Fair", "Poor", "Unknown"}
         if normalized not in valid:
             raise ValueError(
                 f"material_condition must be one of {sorted(valid)}, got '{v}'"
@@ -928,7 +962,7 @@ class ClassifyResponse(BaseModel):
     """Response from classification request."""
 
     product_group: Optional[str] = Field(
-        None, description="BAR taxonomy product group (e.g., 'T3 Vinyl products')"
+        None, description="SF taxonomy product group (e.g., 'Vinyl products')"
     )
     product_type: Optional[str] = Field(
         None, description="BAR taxonomy product type (e.g., 'Vinyl Tiles')"
@@ -1130,3 +1164,267 @@ class FieldMappingUpdateRequest(BaseModel):
         None, description="Column mappings"
     )
     notes: Optional[str] = None
+
+
+# =============================================================================
+# SF Field Schema Config Models (E30-S1 — V3 Foundation)
+# =============================================================================
+
+
+class SFFieldDefResponse(BaseModel):
+    """Single Salesforce field definition."""
+
+    api_name: str = Field(..., description="Salesforce API name (primary key)")
+    label: str = Field(..., description="Human-readable label")
+    field_type: str = Field(
+        ..., description="Field type: string, picklist, boolean, etc."
+    )
+    length: Optional[int] = Field(None, description="Max field length")
+    nillable: bool = Field(..., description="Whether the field can be null")
+    custom: bool = Field(..., description="Whether this is a custom field")
+    calc: bool = Field(..., description="Whether this is a formula/rollup field")
+    updateable: bool = Field(
+        ..., description="Whether the field can be updated via API"
+    )
+    notes: Optional[str] = Field(None, description="Additional notes from SF schema")
+    is_restricted_picklist: bool = Field(
+        ..., description="Whether this is a restricted picklist"
+    )
+    is_dependent: bool = Field(
+        ..., description="Whether this picklist depends on a controller field"
+    )
+    controller_field: Optional[str] = Field(
+        None, description="API name of the controller field (if dependent)"
+    )
+
+
+class SFDependencyChainResponse(BaseModel):
+    """A dependent picklist chain mapping."""
+
+    controller_api_name: str = Field(..., description="Controller picklist API name")
+    dependent_api_name: str = Field(..., description="Dependent picklist API name")
+    mapping: Dict[str, Any] = Field(
+        ..., description="controller_value -> valid dependent value(s)"
+    )
+
+
+class SFFieldSchemaObjectResponse(BaseModel):
+    """Field schema for a single Salesforce object."""
+
+    object_name: str = Field(..., description="Salesforce object API name")
+    object_label: str = Field(..., description="Salesforce object label")
+    total_fields: int = Field(..., description="Total number of fields")
+    custom_fields: int = Field(..., description="Number of custom fields")
+    picklist_fields: int = Field(..., description="Number of picklist fields")
+    fields: List[SFFieldDefResponse] = Field(..., description="All field definitions")
+    picklists: Dict[str, List[str]] = Field(
+        ..., description="Picklist api_name -> [values]"
+    )
+    version: str = Field(..., description="Schema version")
+
+
+class SFFieldSchemaConfigResponse(BaseModel):
+    """Full SF schema bundle response."""
+
+    version: str = Field(..., description="Schema version")
+    building_fields: SFFieldSchemaObjectResponse = Field(
+        ..., description="Building__c field schema"
+    )
+    item_fields: SFFieldSchemaObjectResponse = Field(
+        ..., description="Item__c field schema"
+    )
+    picklists: Dict[str, List[str]] = Field(
+        ..., description="Combined picklists from both objects"
+    )
+    dependencies: List[SFDependencyChainResponse] = Field(
+        ..., description="All dependency chains"
+    )
+    loaded_at: Optional[str] = Field(
+        None, description="ISO timestamp when schema was loaded"
+    )
+
+
+# =============================================================================
+# Building Record Models (E30-S2 — V3 Foundation)
+# =============================================================================
+
+
+class BuildingRecordCreateRequest(BaseModel):
+    """Request to create a new BuildingRecord. internal_id is auto-generated."""
+
+    source_id: str = Field(..., description="FK to source document")
+    building_code: Optional[str] = Field(
+        None, description="Original building code from PDF"
+    )
+    building_name: Optional[str] = None
+    building_year: Optional[str] = None
+    building_construction: Optional[str] = None
+    building_address: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    building_type: Optional[str] = None
+    building_category: Optional[str] = None
+    building_address_lga: Optional[str] = None
+    building_address_region: Optional[str] = None
+    roof_type: Optional[str] = None
+    number_of_levels: Optional[int] = None
+    est_building_size_m2: Optional[float] = None
+    frequency_of_use: Optional[str] = None
+    daily_duration: Optional[str] = None
+    level_of_activity: Optional[str] = None
+    public_access: Optional[str] = None
+    mobile_plant: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    asbestos_register_available: Optional[str] = None
+    audit_report_available: Optional[str] = None
+    date_of_audit_report: Optional[str] = None
+    no_identified_acms: Optional[int] = None
+    no_identified_acms_note: Optional[str] = None
+    site_name: Optional[str] = None
+    school_uid: Optional[str] = None
+    building_unique_id: Optional[str] = None
+    external_id: Optional[str] = None
+    building_out_of_scope: Optional[bool] = None
+    building_out_of_scope_comments: Optional[str] = None
+    demolished_status: Optional[str] = None
+    demolition_date: Optional[str] = None
+    demolition_type: Optional[str] = None
+    demolition_comments: Optional[str] = None
+    additional_comments: Optional[str] = None
+    within_your_portfolio: Optional[str] = None
+    psb_district_region: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    gps_coordinates: Optional[str] = None
+    capital_works_project_details: Optional[str] = None
+    possible_capital_works_project: Optional[str] = None
+
+
+class BuildingRecordUpdateRequest(BaseModel):
+    """Request to update a BuildingRecord. All fields optional."""
+
+    building_code: Optional[str] = None
+    building_name: Optional[str] = None
+    building_year: Optional[str] = None
+    building_construction: Optional[str] = None
+    building_address: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    building_type: Optional[str] = None
+    building_category: Optional[str] = None
+    building_address_lga: Optional[str] = None
+    building_address_region: Optional[str] = None
+    roof_type: Optional[str] = None
+    number_of_levels: Optional[int] = None
+    est_building_size_m2: Optional[float] = None
+    frequency_of_use: Optional[str] = None
+    daily_duration: Optional[str] = None
+    level_of_activity: Optional[str] = None
+    public_access: Optional[str] = None
+    mobile_plant: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    asbestos_register_available: Optional[str] = None
+    audit_report_available: Optional[str] = None
+    date_of_audit_report: Optional[str] = None
+    no_identified_acms: Optional[int] = None
+    no_identified_acms_note: Optional[str] = None
+    site_name: Optional[str] = None
+    school_uid: Optional[str] = None
+    building_unique_id: Optional[str] = None
+    external_id: Optional[str] = None
+    building_out_of_scope: Optional[bool] = None
+    building_out_of_scope_comments: Optional[str] = None
+    demolished_status: Optional[str] = None
+    demolition_date: Optional[str] = None
+    demolition_type: Optional[str] = None
+    demolition_comments: Optional[str] = None
+    additional_comments: Optional[str] = None
+    within_your_portfolio: Optional[str] = None
+    psb_district_region: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    gps_coordinates: Optional[str] = None
+    capital_works_project_details: Optional[str] = None
+    possible_capital_works_project: Optional[str] = None
+
+
+class BuildingRecordResponse(BaseModel):
+    """Single building record in API responses."""
+
+    id: str
+    internal_id: str
+    source_id: str
+    building_code: Optional[str] = None
+    building_name: Optional[str] = None
+    building_year: Optional[str] = None
+    building_construction: Optional[str] = None
+    building_address: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    building_type: Optional[str] = None
+    building_category: Optional[str] = None
+    building_address_lga: Optional[str] = None
+    building_address_region: Optional[str] = None
+    roof_type: Optional[str] = None
+    number_of_levels: Optional[int] = None
+    est_building_size_m2: Optional[float] = None
+    frequency_of_use: Optional[str] = None
+    daily_duration: Optional[str] = None
+    level_of_activity: Optional[str] = None
+    public_access: Optional[str] = None
+    mobile_plant: Optional[str] = None
+    owned_or_leased: Optional[str] = None
+    asbestos_register_available: Optional[str] = None
+    audit_report_available: Optional[str] = None
+    date_of_audit_report: Optional[str] = None
+    no_identified_acms: Optional[int] = None
+    no_identified_acms_note: Optional[str] = None
+    site_name: Optional[str] = None
+    school_uid: Optional[str] = None
+    building_unique_id: Optional[str] = None
+    external_id: Optional[str] = None
+    building_out_of_scope: Optional[bool] = None
+    building_out_of_scope_comments: Optional[str] = None
+    demolished_status: Optional[str] = None
+    demolition_date: Optional[str] = None
+    demolition_type: Optional[str] = None
+    demolition_comments: Optional[str] = None
+    additional_comments: Optional[str] = None
+    within_your_portfolio: Optional[str] = None
+    psb_district_region: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    gps_coordinates: Optional[str] = None
+    capital_works_project_details: Optional[str] = None
+    possible_capital_works_project: Optional[str] = None
+    embedding: Optional[list] = None
+    embedding_text: Optional[str] = None
+    embedding_model: Optional[str] = None
+    embedded_at: Optional[str] = None
+    enriched_text: Optional[str] = None
+    created: Optional[str] = None
+    updated: Optional[str] = None
+
+
+class BuildingRecordListResponse(BaseModel):
+    """Response for building record list endpoint."""
+
+    buildings: List[BuildingRecordResponse]
+    total: int
+
+
+class SourceIntelligenceResponse(BaseModel):
+    """Pre-extraction intelligence persisted from the LangGraph pipeline (E30-S9)."""
+
+    id: Optional[str] = None
+    source_id: str
+    document_meta: Optional[Dict[str, Any]] = None
+    document_structure: Optional[Dict[str, Any]] = None
+    building_inventory: Optional[Dict[str, Any]] = None
+    page_tags: Optional[Dict[str, Any]] = None
+    total_pages: Optional[int] = None
+    total_buildings: Optional[int] = None
+    document_type: Optional[str] = None
+    register_page_range: Optional[Dict[str, Any]] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

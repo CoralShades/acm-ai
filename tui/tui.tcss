@@ -1,0 +1,181 @@
+Screen {
+    layout: vertical;
+}
+
+#tab-content {
+    height: 1fr;
+}
+
+/* Dashboard layout */
+#dashboard-columns {
+    height: 1fr;
+}
+
+.column-left {
+    width: 1fr;
+    padding: 0 1;
+}
+
+.column-right {
+    width: 1fr;
+    padding: 0 1;
+}
+
+.section-header {
+    height: 1;
+    margin: 1 0 0 0;
+    text-style: bold;
+}
+
+.info-panel {
+    height: auto;
+    max-height: 12;
+    padding: 0 1;
+}
+
+DataTable {
+    height: auto;
+    max-height: 12;
+}
+
+/* Logs layout */
+#logs-columns {
+    height: 1fr;
+}
+
+#logs-sidebar {
+    width: 24;
+    border-right: solid $accent;
+}
+
+#logs-content {
+    width: 1fr;
+}
+
+#log-viewer {
+    height: 1fr;
+}
+
+#log-file-list {
+    height: 1fr;
+}
+
+#log-filter {
+    dock: top;
+    height: 3;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Error details */
+#error-details {
+    height: 1fr;
+    min-height: 8;
+}
+
+#error-summary-table {
+    max-height: 10;
+}
+
+/* GPU panel */
+#gpu-panel {
+    height: auto;
+    padding: 1;
+}
+
+/* Ollama layout */
+#ollama-top {
+    height: auto;
+    max-height: 14;
+}
+
+.button-row {
+    height: auto;
+    padding: 1 0;
+}
+
+.button-row Button {
+    margin: 0 1;
+}
+
+#ollama-status {
+    height: auto;
+    min-height: 4;
+    padding: 0 1;
+}
+
+#ollama-models {
+    height: 1fr;
+    min-height: 6;
+}
+
+/* Service action rows */
+.svc-row {
+    height: 3;
+    padding: 0 1;
+}
+
+.svc-row Button {
+    margin: 0 1;
+    min-width: 10;
+}
+
+.svc-row .svc-label {
+    width: 1fr;
+}
+
+.port-row {
+    height: 3;
+    padding: 0 1;
+}
+
+.port-row Button {
+    margin: 0 1;
+}
+
+.port-row .svc-label {
+    width: 1fr;
+}
+
+/* Database tab */
+#db-columns {
+    height: 1fr;
+}
+
+#db-counts-table {
+    height: 1fr;
+    min-height: 10;
+}
+
+/* Extraction tab */
+#extraction-stats {
+    height: auto;
+    max-height: 6;
+    padding: 0 1;
+}
+
+#jobs-table {
+    height: 1fr;
+    min-height: 8;
+}
+
+.action-bar {
+    height: auto;
+    padding: 1 0;
+}
+
+.action-bar Button {
+    margin: 0 1;
+}
+
+/* Footer bar */
+#footer-bar {
+    dock: bottom;
+    height: 1;
+    background: $accent;
+    color: $text;
+    text-style: bold;
+    padding: 0 1;
+}

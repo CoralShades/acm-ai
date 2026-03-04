@@ -70,6 +70,7 @@ Technical documentation for developers and contributors.
 Resources for extending and contributing to Open Notebook.
 - **[Architecture](development/architecture.md)** - System design overview
 - **[API Reference](development/api-reference.md)** - REST API documentation
+- **[TUI Monitor](development/tui-monitor.md)** - Terminal dashboard for service control and monitoring
 - **[Contributing](development/contributing.md)** - How to contribute
 
 ---

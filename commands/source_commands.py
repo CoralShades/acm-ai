@@ -1,3 +1,5 @@
+import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -5,9 +7,24 @@ from loguru import logger
 from pydantic import BaseModel
 from surreal_commands import CommandInput, CommandOutput, command
 
-from open_notebook.database.repository import ensure_record_id
+from open_notebook.database.repository import ensure_record_id, repo_create
+from open_notebook.domain.acm import RawExtraction
 from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
+from open_notebook.extractors.pipeline_events import StageId
+from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.extractors.providers import get_provider_registry
+from open_notebook.extractors.providers.base import ProviderError
+from open_notebook.observability.langfuse_config import (
+    append_langfuse_callback,
+    build_langfuse_metadata,
+    flush_langfuse_handler,
+    get_langfuse_handler,
+)
+
+DOCLING_DIRECT_TABLE_EXTRACTION = (
+    os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "true").lower() == "true"
+)
 
 try:
     from open_notebook.graphs.source import source_graph
@@ -42,6 +59,182 @@ class SourceProcessingOutput(CommandOutput):
     insights_created: int = 0
     processing_time: float
     error_message: Optional[str] = None
+
+
+def _resolve_source_pdf_path(source: Source) -> Optional[str]:
+    """Resolve the PDF path from a processed source."""
+    if source.asset and source.asset.file_path:
+        return str(source.asset.file_path)
+    return None
+
+
+async def _extract_tables_with_docling(
+    source_id: str,
+    pdf_path: str,
+    pipeline_logger: Optional[PipelineLogger] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Run Docling Direct API on PDF, return list of table dicts.
+    Runs AFTER PyMuPDF text extraction (does not replace it).
+
+    Uses DocumentConverter directly, bypassing content-core's serialization
+    layer that caused E24's row-fragmentation regression.
+    """
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+
+    if pipeline_logger:
+        pipeline_logger.stage_enter(
+            StageId.DOCLING_EXTRACTION, "Starting Docling table extraction"
+        )
+
+    pipeline_options = PdfPipelineOptions(do_table_structure=True)
+    pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
+    pipeline_options.table_structure_options.do_cell_matching = True
+
+    converter = DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+        }
+    )
+
+    result = converter.convert(pdf_path)
+    doc = result.document
+
+    tables: List[Dict[str, Any]] = []
+    for idx, table in enumerate(doc.tables):
+        try:
+            df = table.export_to_dataframe(doc=doc)
+
+            # --- Normalization pipeline (patterns validated in E25-S1) ---
+
+            # 1. Fix split sample numbers: "34511-039- 001" → "34511-039-001"
+            df = df.map(
+                lambda v: re.sub(r"(\d+)-\s+(\d+)", r"\1-\2", str(v))
+                if isinstance(v, str)
+                else v
+            )
+
+            # 2. Strip "Asbestos " prefix from hazard status
+            for col in df.columns:
+                col_str = str(col).lower()
+                if "hazard" in col_str or "status" in col_str:
+                    df[col] = df[col].apply(
+                        lambda v: re.sub(r"^Asbestos\s+", "", str(v))
+                        if isinstance(v, str)
+                        else v
+                    )
+
+            page_no = table.prov[0].page_no if table.prov else -1
+
+            tables.append(
+                {
+                    "table_index": idx,
+                    "page": page_no,
+                    "rows": len(df),
+                    "columns": list(df.columns),
+                    "csv": df.to_csv(index=False),
+                    "markdown": df.to_markdown(index=False),
+                    "html": table.export_to_html(doc=doc),
+                }
+            )
+
+            logger.info(
+                f"Docling table {idx}: page={page_no}, rows={len(df)}, "
+                f"cols={len(df.columns)}"
+            )
+        except Exception as e:
+            logger.warning(f"Docling table {idx} export failed: {e}")
+            continue
+
+    if pipeline_logger:
+        pipeline_logger.stage_complete(
+            StageId.DOCLING_EXTRACTION,
+            summary=f"Extracted {len(tables)} tables from {pdf_path}",
+            tables_found=len(tables),
+            total_rows=sum(t["rows"] for t in tables),
+        )
+
+    logger.info(f"Docling Direct API: {len(tables)} tables extracted from {pdf_path}")
+    return tables
+
+
+async def _store_docling_tables(source_id: str, tables: List[Dict[str, Any]]) -> None:
+    """Store Docling DataFrame tables in acm_table_section."""
+    for table in tables:
+        await repo_create(
+            "acm_table_section",
+            {
+                "source_id": ensure_record_id(source_id),
+                "page_start": table["page"],
+                "page_end": table["page"],
+                "raw_html": table.get("html"),
+                "raw_text": table.get("markdown"),
+                "structured_json": table.get("csv"),
+                "table_type": "docling_direct_api",
+                "building_name": None,
+            },
+        )
+
+
+async def _store_raw_extractions(
+    source_id: str,
+    extraction_result,  # NormalizedExtractionResult
+) -> int:
+    """
+    Persist per-provider raw extraction outputs to the raw_extraction table.
+
+    Called immediately after provider.extract() succeeds, before
+    _store_docling_tables. Returns count of rows stored.
+    """
+    import json
+
+    stored = 0
+    provider_id = extraction_result.provider_id
+    backend_label = f"{provider_id}:2.x"
+
+    for table in extraction_result.tables:
+        bbox_dict = None
+        if table.bbox is not None:
+            bbox_dict = {
+                "x": table.bbox.x,
+                "y": table.bbox.y,
+                "width": table.bbox.width,
+                "height": table.bbox.height,
+                "page": table.bbox.page,
+            }
+
+        # Serialise column + row count into structured_json
+        structured = json.dumps(
+            {
+                "columns": table.columns,
+                "row_count": table.row_count,
+                "col_count": table.col_count,
+                "table_index": table.table_index,
+            }
+        )
+
+        raw = RawExtraction(
+            source_id=source_id,
+            provider_id=provider_id,
+            extraction_backend=backend_label,
+            page_number=table.page,
+            raw_html=table.html,
+            raw_markdown=table.markdown,
+            structured_json=structured,
+            bbox=bbox_dict,
+            confidence=None,  # NormalizedTable has no top-level confidence in E31-S2
+            officer_edits=[],
+        )
+        await raw.save()
+        stored += 1
+
+    logger.info(
+        f"Stored {stored} raw extractions for source {source_id} "
+        f"(provider={provider_id})"
+    )
+    return stored
 
 
 @command(
@@ -98,18 +291,106 @@ async def process_source_command(
         # 3. Process source with all notebooks
         logger.info(f"Processing source with {len(input_data.notebook_ids)} notebooks")
 
-        # Execute source_graph with all notebooks
-        result = await source_graph.ainvoke(
-            {  # type: ignore[arg-type]
-                "content_state": input_data.content_state,
-                "notebook_ids": input_data.notebook_ids,  # Use notebook_ids (plural) as expected by SourceState
-                "apply_transformations": transformations,
-                "embed": input_data.embed,
-                "source_id": input_data.source_id,  # Add the source_id to the state
-            }
+        langfuse_handler = get_langfuse_handler()
+        callbacks = append_langfuse_callback([], langfuse_handler)
+        invoke_metadata = build_langfuse_metadata(
+            source_id=input_data.source_id,
+            extraction_model="source_graph",
+            document_type="source_processing",
+            command_id=str(input_data.execution_context.command_id)
+            if input_data.execution_context
+            else None,
+            extra_metadata={"workflow": "source_graph"},
         )
 
+        # Execute source_graph with all notebooks
+        try:
+            if callbacks:
+                result = await source_graph.ainvoke(
+                    {  # type: ignore[arg-type]
+                        "content_state": input_data.content_state,
+                        "notebook_ids": input_data.notebook_ids,  # Use notebook_ids (plural) as expected by SourceState
+                        "apply_transformations": transformations,
+                        "embed": input_data.embed,
+                        "source_id": input_data.source_id,  # Add the source_id to the state
+                    },
+                    config={
+                        "callbacks": callbacks,
+                        "metadata": invoke_metadata,
+                    },
+                )
+            else:
+                result = await source_graph.ainvoke(
+                    {  # type: ignore[arg-type]
+                        "content_state": input_data.content_state,
+                        "notebook_ids": input_data.notebook_ids,  # Use notebook_ids (plural) as expected by SourceState
+                        "apply_transformations": transformations,
+                        "embed": input_data.embed,
+                        "source_id": input_data.source_id,  # Add the source_id to the state
+                    }
+                )
+        finally:
+            flush_langfuse_handler(langfuse_handler)
+
         processed_source = result["source"]
+
+        # 3b. Docling Direct API parallel extraction (E26, ADR-001 D5)
+        # Runs AFTER PyMuPDF saves full_text — zero regression risk
+        if DOCLING_DIRECT_TABLE_EXTRACTION:
+            pdf_path = _resolve_source_pdf_path(processed_source)
+            if pdf_path and pdf_path.lower().endswith(".pdf"):
+                # Create a PipelineLogger for Docling stage visibility (E27-S2)
+                docling_command_id = (
+                    str(input_data.execution_context.command_id)
+                    if input_data.execution_context
+                    else None
+                )
+                docling_pl = PipelineLogger(
+                    source_id=str(processed_source.id),
+                    command_id=docling_command_id,
+                )
+                try:
+                    # E31-S2: Use provider registry instead of inline Docling call
+                    provider = get_provider_registry().get_default()
+                    extraction_result = provider.extract(
+                        pdf_path, pipeline_logger=docling_pl
+                    )
+                    # E31-S4: Persist raw per-provider outputs before converting to acm_table_section
+                    await _store_raw_extractions(str(processed_source.id), extraction_result)
+                    docling_tables = [
+                        {
+                            "table_index": t.table_index,
+                            "page": t.page,
+                            "rows": t.row_count,
+                            "columns": t.columns,
+                            "csv": t.csv,
+                            "markdown": t.markdown,
+                            "html": t.html,
+                        }
+                        for t in extraction_result.tables
+                    ]
+                    if docling_tables:
+                        await _store_docling_tables(
+                            str(processed_source.id), docling_tables
+                        )
+                        logger.info(
+                            f"Stored {len(docling_tables)} Docling tables "
+                            f"for source {processed_source.id}"
+                        )
+                except ProviderError as e:
+                    docling_pl.stage_fail(
+                        StageId.DOCLING_EXTRACTION,
+                        error=str(e),
+                    )
+                    logger.error(f"Docling table extraction failed: {e}")
+                    # Non-fatal — PyMuPDF text is already saved
+                except Exception as e:
+                    docling_pl.stage_fail(
+                        StageId.DOCLING_EXTRACTION,
+                        error=str(e),
+                    )
+                    logger.error(f"Unexpected error during table extraction: {e}")
+                    # Non-fatal — PyMuPDF text is already saved
 
         # 4. Gather processing results (notebook associations handled by source_graph)
         embedded_chunks = (

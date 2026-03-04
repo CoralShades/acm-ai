@@ -1,0 +1,7 @@
+-- Migration 39: SF Item__c alignment — additive columns (E30-S3)
+-- Adds new fields only. Existing columns are NOT renamed or removed.
+-- SF aliases are handled at the Pydantic layer; DB continues to use BAR column names.
+
+DEFINE FIELD IF NOT EXISTS labelled_sf       ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS assea_risk_level  ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS date_identified   ON TABLE acm_record TYPE option<string>;

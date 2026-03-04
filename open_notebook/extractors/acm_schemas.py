@@ -27,17 +27,17 @@ RESULT_VALUES = {
     "Assumed Positive",
     "Negative",
     "Assumed Negative",
+    "Negative - Treated as Positive",  # NEW (V3 / E30-S3)
     "Not Sampled",
     "No Access",
     "Unknown",
 }
-FRIABLE_VALUES = {"Friable", "Non Friable"}
+FRIABLE_VALUES = {"Friable", "Non-friable"}
 RISK_STATUS_VALUES = {"Low", "Medium", "High"}
 MATERIAL_CONDITION_VALUES = {
-    "Good",
+    "Stable",
     "Fair",
     "Poor",
-    "Damaged",
     "Unknown",
     "N/A (negative)",
     "N/A (assumed negative)",
@@ -180,10 +180,10 @@ class ACMExtractionRecord(BaseModel):
         description="Specific location within room (e.g., 'Ceiling', 'Under stairs')",
     )
     friable: Optional[str] = Field(
-        default=None, description="Friability: 'Friable' or 'Non Friable'"
+        default=None, description="Friability: 'Friable' or 'Non-friable'"
     )
     material_condition: Optional[str] = Field(
-        default=None, description="Condition: 'Good', 'Fair', 'Poor', 'Damaged'"
+        default=None, description="Condition: 'Stable', 'Fair', 'Poor', 'Unknown'"
     )
     risk_status: Optional[str] = Field(
         default=None, description="Risk level: 'Low', 'Medium', 'High'"
@@ -281,7 +281,7 @@ class ACMExtractionRecord(BaseModel):
         if lowered in {"friable", "f"}:
             return "Friable"
         if lowered in {"non friable", "nonfriable", "nf"}:
-            return "Non Friable"
+            return "Non-friable"
 
         for valid in FRIABLE_VALUES:
             if lowered == valid.lower():
@@ -449,6 +449,15 @@ class ChunkExtractionInput(BaseModel):
     )
 
 
+class SyntheticExtractionPlan(BaseModel):
+    """Synthetic extraction plan for documents without building inventory (E29-S3)."""
+
+    building_name: str = "Whole Document"
+    page_start: int = 1
+    page_end: int = 999
+    source: str = "synthetic_no_inventory"
+
+
 class ACMExtractionInput(BaseModel):
     """Input for the ACM extraction command."""
 
@@ -500,4 +509,8 @@ class ACMExtractionOutput(BaseModel):
     chunk_count: int = Field(
         default=1,
         description="Number of chunks used for extraction (1 = no chunking needed) (E1-S23)",
+    )
+    fallback_summary: Optional[List[str]] = Field(
+        default=None,
+        description="Fallback telemetry tags activated during extraction (E29-S4)",
     )

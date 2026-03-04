@@ -345,17 +345,17 @@ class TestACMRecordDomain:
         )
         assert record.source_id == "source:123"
 
-    def test_missing_required_field_school_name(self):
-        """Test that missing school_name raises error."""
-        with pytest.raises((ValidationError, InvalidInputError)):
-            ACMRecord(
-                source_id="source:123",
-                school_name="",  # Empty
-                building_id="B1",
-                product="Tiles",
-                material_description="Vinyl tiles",
-                result="Detected",
-            )
+    def test_empty_school_name_coerced_to_none(self):
+        """Test that empty school_name is coerced to None (school_name is optional per E30-S3/AC4)."""
+        record = ACMRecord(
+            source_id="source:123",
+            school_name="",  # Empty — coerced to None, not an error
+            building_id="B1",
+            product="Tiles",
+            material_description="Vinyl tiles",
+            result="Detected",
+        )
+        assert record.school_name is None
 
     def test_missing_required_field_building_id(self):
         """Test that missing building_id raises error."""

@@ -8,6 +8,7 @@ listing, filtering, extraction, and export.
 import csv
 import io
 import math
+import re
 from datetime import date
 from typing import Optional
 
@@ -35,6 +36,10 @@ from api.models import (
     BackfillParentsResponse,
     BatchClassifyRequest,
     BatchClassifyResponse,
+    BuildingRecordCreateRequest,
+    BuildingRecordListResponse,
+    BuildingRecordResponse,
+    BuildingRecordUpdateRequest,
     BuildingResponse,
     BuildingUpdateRequest,
     BusinessRuleResponse,
@@ -47,17 +52,32 @@ from api.models import (
     NormalizeRequest,
     NormalizeResponse,
     ParentContextResponse,
+    RawExtractionListResponse,
+    RawExtractionResponse,
+    RawTableResponse,
     ReEmbedRequest,
     ReEmbedResponse,
+    SFFieldSchemaConfigResponse,
     SiteConfigRequest,
     SiteConfigResponse,
     SiteConfigTemplateResponse,
+    SourceIntelligenceResponse,
     TaxonomyGroupResponse,
     TaxonomyResponse,
 )
-from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.domain.acm import ACMRecord, ACMTableSection
+from open_notebook.database.repository import (
+    ensure_record_id,
+    get_source_intelligence,
+    repo_query,
+)
+from open_notebook.domain.acm import (
+    ACMRecord,
+    ACMTableSection,
+    BuildingRecord,
+    RawExtraction,
+)
 from open_notebook.domain.site_config import SiteConfig
+from open_notebook.exceptions import NotFoundError
 
 router = APIRouter()
 
@@ -66,6 +86,9 @@ router = APIRouter()
 async def list_acm_records(
     source_id: str = Query(..., description="Source ID to filter by (required)"),
     building_id: Optional[str] = Query(None, description="Filter by building ID"),
+    building_record_id: Optional[str] = Query(
+        None, description="Filter by building_record FK (e.g., building_record:xxx)"
+    ),
     room_id: Optional[str] = Query(None, description="Filter by room ID"),
     risk_status: Optional[str] = Query(
         None, description="Filter by risk status (Low/Medium/High)"
@@ -77,7 +100,7 @@ async def list_acm_records(
     List ACM records with filtering and pagination.
 
     Returns records for the specified source, with optional filtering
-    by building, room, and risk status.
+    by building, room, risk status, and building_record FK.
     """
     try:
         # Build query conditions
@@ -87,6 +110,10 @@ async def list_acm_records(
         if building_id:
             conditions.append("building_id = $building_id")
             params["building_id"] = building_id
+
+        if building_record_id:
+            conditions.append("building_record_id = $building_record_id")
+            params["building_record_id"] = ensure_record_id(building_record_id)
 
         if room_id:
             conditions.append("room_id = $room_id")
@@ -1265,6 +1292,83 @@ _ACM_RECORD_BUILDING_FIELDS = {
     "postcode",
 }
 
+_PAGE_MARKER_PATTERNS = (
+    re.compile(r"<!--\s*Page\s+(\d+)\s*-->", re.IGNORECASE),
+    re.compile(r"[-—]+\s*Page\s+(\d+)\s*[-—]+", re.IGNORECASE),
+    re.compile(r"PAGE\s+(\d+)\s+OF\s+\d+", re.IGNORECASE),
+)
+
+
+def _extract_page_marker(line: str) -> Optional[int]:
+    """Extract page number from a Docling page marker line."""
+    for pattern in _PAGE_MARKER_PATTERNS:
+        match = pattern.search(line)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _is_markdown_table_line(line: str) -> bool:
+    """Return True when a line resembles a markdown table row."""
+    stripped = line.strip()
+    return stripped.count("|") >= 2 and not stripped.startswith("```")
+
+
+def _extract_docling_markdown_tables(
+    full_text: str,
+    source_id: str,
+) -> list[RawTableResponse]:
+    """Extract markdown table blocks from Docling text grouped by page markers."""
+    if not full_text.strip():
+        return []
+
+    tables: list[RawTableResponse] = []
+    current_page = 1
+    table_start_page = 1
+    table_lines: list[str] = []
+
+    def flush_table(page_end: int) -> None:
+        nonlocal table_lines, table_start_page
+        if not table_lines:
+            return
+
+        raw_text = "\n".join(table_lines).strip()
+        table_lines = []
+        if not raw_text:
+            return
+
+        table_index = len(tables) + 1
+        tables.append(
+            RawTableResponse(
+                id=f"docling_table:{source_id}:{table_index}",
+                source_id=source_id,
+                page_start=table_start_page,
+                page_end=page_end,
+                table_type="docling_markdown",
+                raw_text=raw_text,
+            )
+        )
+
+    for line in full_text.splitlines():
+        page_marker = _extract_page_marker(line)
+        if page_marker is not None:
+            flush_table(current_page)
+            current_page = page_marker
+            continue
+
+        if _is_markdown_table_line(line):
+            if not table_lines:
+                table_start_page = current_page
+            table_lines.append(line.rstrip())
+            continue
+
+        if table_lines:
+            flush_table(current_page)
+
+    flush_table(current_page)
+    return tables
+
+
 # site_config fields managed at the source level
 _SITE_CONFIG_BUILDING_FIELDS = {
     "department",
@@ -1317,6 +1421,119 @@ def _build_building_response(
         else None,
         additional_comments=sc.additional_comments if sc else None,
     )
+
+
+@router.get("/jobs/{source_id}/raw-tables", response_model=list[RawTableResponse])
+async def list_raw_tables_for_job(source_id: str):
+    """Return raw table blocks for a job, preferring MinerU HTML when available."""
+    try:
+        normalized_source_id = ensure_record_id(source_id)
+
+        sections = await ACMTableSection.get_by_source(source_id)
+        mineru_sections = [section for section in sections if section.raw_html]
+
+        if mineru_sections:
+            return [
+                RawTableResponse(
+                    id=str(section.id) if section.id else "",
+                    source_id=str(section.source_id),
+                    page_start=section.page_start,
+                    page_end=section.page_end,
+                    table_type=section.table_type or "mineru_html",
+                    raw_html=section.raw_html,
+                    raw_text=section.raw_text,
+                    building_name=section.building_name,
+                )
+                for section in mineru_sections
+            ]
+
+        section_text_rows = [section for section in sections if section.raw_text]
+        if section_text_rows:
+            return [
+                RawTableResponse(
+                    id=str(section.id) if section.id else "",
+                    source_id=str(section.source_id),
+                    page_start=section.page_start,
+                    page_end=section.page_end,
+                    table_type=section.table_type or "register_raw_text",
+                    raw_text=section.raw_text,
+                    building_name=section.building_name,
+                )
+                for section in section_text_rows
+            ]
+
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        if not source:
+            raise HTTPException(status_code=404, detail="Source not found")
+
+        return _extract_docling_markdown_tables(
+            source.full_text or "",
+            str(normalized_source_id),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading raw tables for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/raw-extractions/{source_id}",
+    response_model=RawExtractionListResponse,
+)
+async def list_raw_extractions(
+    source_id: str,
+    provider: Optional[str] = Query(
+        None,
+        description="Filter by provider_id (e.g. 'docling', 'mineru')",
+    ),
+    page_number: Optional[int] = Query(
+        None,
+        description="Filter by page number (1-based)",
+    ),
+):
+    """
+    List per-provider raw extraction outputs for a source document.
+
+    Returns one record per provider per page. Use the provider query param
+    to narrow results to a single provider's output.
+    """
+    try:
+        extractions = await RawExtraction.get_by_source(
+            source_id,
+            provider=provider,
+            page_number=page_number,
+        )
+
+        items = [
+            RawExtractionResponse(
+                id=str(e.id or ""),
+                source_id=str(e.source_id),
+                provider_id=e.provider_id,
+                extraction_backend=e.extraction_backend,
+                page_number=e.page_number,
+                raw_html=e.raw_html,
+                raw_markdown=e.raw_markdown,
+                structured_json=e.structured_json,
+                bbox=e.bbox,
+                confidence=e.confidence,
+                officer_edits=e.officer_edits,
+                created_at=str(e.created_at) if e.created_at else None,
+            )
+            for e in extractions
+        ]
+
+        return RawExtractionListResponse(
+            extractions=items,
+            total=len(items),
+            source_id=source_id,
+        )
+    except Exception as e:
+        logger.error(f"Error listing raw extractions for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/jobs/{source_id}/buildings", response_model=list[BuildingResponse])
@@ -1510,7 +1727,7 @@ async def classify_acm_item(request: ClassifyRequest):
         POST /api/acm/classify
         {"item_description": "Vinyl floor tiles", "friability": "Non-friable"}
 
-    Returns the product group (e.g., "T3 Vinyl products") and product type
+    Returns the product group (e.g., "Vinyl products") and product type
     (e.g., "Vinyl Tiles") with a confidence score.
     """
     try:
@@ -1944,4 +2161,148 @@ async def reset_field_mapping():
         return mapping.model_dump()
     except Exception as e:
         logger.error(f"Error resetting field mapping: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SF Field Schema Endpoint (E30-S1 — V3 Foundation)
+# =============================================================================
+
+
+@router.get("/field-schema", response_model=SFFieldSchemaConfigResponse)
+async def get_sf_field_schema():
+    """Get the current Salesforce field schema configuration.
+
+    Returns the SF schema bundle parsed from V3 markdown files.
+    Falls back to in-memory parse if DB record is not yet populated.
+
+    Returns:
+        SFFieldSchemaConfigResponse with building_fields, item_fields,
+        picklists, and dependency chains.
+    """
+    from open_notebook.extractors.parsers.config_loader import (
+        SFSchemaLoadError,
+        load_sf_field_schema,
+    )
+
+    try:
+        schema = load_sf_field_schema()
+        return SFFieldSchemaConfigResponse(**schema.model_dump())
+    except SFSchemaLoadError as e:
+        logger.error(f"SF schema load error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"SF schema not available: {e}",
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error loading SF schema: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"SF schema not available: {e}",
+        )
+
+
+# --- Building Record CRUD (E30-S2) ---
+
+
+@router.get("/buildings", response_model=BuildingRecordListResponse)
+async def list_building_records(
+    source_id: str = Query(..., description="Source ID to filter by (required)"),
+):
+    """List all building records for a source."""
+    try:
+        buildings = await BuildingRecord.get_by_source(source_id)
+        return BuildingRecordListResponse(
+            buildings=[BuildingRecordResponse(**b.model_dump()) for b in buildings],
+            total=len(buildings),
+        )
+    except Exception as e:
+        logger.error(f"Error listing building records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/buildings/{building_id:path}", response_model=BuildingRecordResponse)
+async def get_building_record(building_id: str):
+    """Get a single building record by ID."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        return BuildingRecordResponse(**building.model_dump())
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Building record not found")
+    except Exception as e:
+        logger.error(f"Error getting building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/buildings", response_model=BuildingRecordResponse, status_code=201)
+async def create_building_record(request: BuildingRecordCreateRequest):
+    """Create a new building record. internal_id is auto-generated."""
+    try:
+        internal_id = await BuildingRecord.generate_internal_id(request.source_id)
+        data = request.model_dump(exclude_none=True)
+        data["internal_id"] = internal_id
+        building = BuildingRecord(**data)
+        await building.save()
+        return BuildingRecordResponse(**building.model_dump())
+    except Exception as e:
+        logger.error(f"Error creating building record: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/buildings/{building_id:path}", response_model=BuildingRecordResponse)
+async def update_building_record(
+    building_id: str, request: BuildingRecordUpdateRequest
+):
+    """Update an existing building record."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        update_data = request.model_dump(exclude_none=True)
+        for key, value in update_data.items():
+            setattr(building, key, value)
+        await building.save()
+        return BuildingRecordResponse(**building.model_dump())
+    except Exception as e:
+        logger.error(f"Error updating building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/buildings/{building_id:path}")
+async def delete_building_record(building_id: str):
+    """Delete a building record."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        await building.delete()
+        return {"deleted": True, "id": building_id}
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Building record not found")
+    except Exception as e:
+        logger.error(f"Error deleting building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Source Intelligence (E30-S9) ---
+
+
+@router.get(
+    "/source-intelligence/{source_id:path}",
+    response_model=SourceIntelligenceResponse,
+)
+async def get_source_intelligence_endpoint(source_id: str):
+    """Return persisted pre-extraction intelligence for a source.
+
+    Returns 404 if no intelligence has been saved yet (extraction not run
+    or the save_intelligence node hasn't executed).
+    """
+    try:
+        data = await get_source_intelligence(source_id)
+        if not data:
+            raise HTTPException(
+                status_code=404,
+                detail="No intelligence data found for this source",
+            )
+        return SourceIntelligenceResponse(**data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching intelligence for {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

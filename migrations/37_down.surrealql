@@ -1,0 +1,1 @@
+REMOVE FIELD structured_json ON TABLE acm_table_section;

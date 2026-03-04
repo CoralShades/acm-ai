@@ -1,0 +1,89 @@
+{
+  "table_index": 6,
+  "page": 12,
+  "rows": 5,
+  "columns": 7,
+  "raw_column_names": [
+    "Sample No",
+    "",
+    "",
+    "",
+    "",
+    "Sample Location / Description / Size",
+    "Result"
+  ],
+  "normalized_column_names": [
+    "Sample No",
+    "",
+    "_1",
+    "_2",
+    "_3",
+    "Sample Location / Description / Size",
+    "Result"
+  ],
+  "sample_rows": [
+    {
+      "Sample No": "34511",
+      "": "-",
+      "_1": "039",
+      "_2": "-",
+      "_3": "013",
+      "Sample Location / Description / Size": "External, boiler room, boiler pipework, orange gasket Orange gasket material 20x10x5mm External, boiler room, brick walls, brown construction joint",
+      "Result": "No asbestos fibres detected Organic fibres detected"
+    },
+    {
+      "Sample No": "34511",
+      "": "-",
+      "_1": "039",
+      "_2": "-",
+      "_3": "014",
+      "Sample Location / Description / Size": "Brown rubbery mastic material 20x10x5mm",
+      "Result": "No asbestos fibres detected"
+    },
+    {
+      "Sample No": "34511",
+      "": "-",
+      "_1": "039",
+      "_2": "-",
+      "_3": "015",
+      "Sample Location / Description / Size": "External, roof, east end, blue ductwork, grey flange mastic Grey rubbery mastic material 15x10x5mm",
+      "Result": "Chrysotile (white asbestos) detected"
+    },
+    {
+      "Sample No": "34511",
+      "": "-",
+      "_1": "039",
+      "_2": "-",
+      "_3": "016",
+      "Sample Location / Description / Size": "sheet Grey fibrous cement material",
+      "Result": "No asbestos fibres detected Organic fibres detected"
+    },
+    {
+      "Sample No": "34511",
+      "": "-",
+      "_1": "039",
+      "_2": "-",
+      "_3": "017",
+      "Sample Location / Description / Size": "sheet vinyl Grey flexible vinyl material 40x20x5mm",
+      "Result": "No asbestos fibres detected Synthetic Mineral Fibres detected"
+    }
+  ],
+  "has_merged_cells": false,
+  "acm_indicators": {
+    "same as": false,
+    "as per": false,
+    "not sampled": false,
+    "assumed positive": false,
+    "assumed": false,
+    "no access": false,
+    "34511": true,
+    "negative": false,
+    "positive": false,
+    "battery charger": false,
+    "fuse cartridge": false,
+    "internal lining": false,
+    "disabled toilet": false,
+    "lift foyer": false,
+    "switch room": false
+  }
+}

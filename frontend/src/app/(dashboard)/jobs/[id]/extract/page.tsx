@@ -16,6 +16,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useExtractionProgress } from '@/lib/hooks/use-extraction-progress'
 import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
+import { useAGUIStream } from '@/lib/hooks/use-agui-stream'
 import { acmApi } from '@/lib/api/acm'
 import { ArrowRight, FileWarning } from 'lucide-react'
 
@@ -39,6 +40,17 @@ function ExtractPageContent() {
   // Wire extraction progress for the ExtractionProgressPanel
   const extractionProgress = useExtractionProgress(sourceId)
   const extractionStatus = useExtractionStatus(sourceId)
+
+  // AG-UI observability stream — uses the same commandId as extraction progress
+  const aguiCommandId =
+    extractionProgress.phase === 'extracting'
+      ? sessionStorage.getItem(`acm-extraction-progress-${sourceId}`)
+        ? JSON.parse(
+            sessionStorage.getItem(`acm-extraction-progress-${sourceId}`) || '{}'
+          ).commandId || null
+        : source?.command_id || null
+      : null
+  const aguiStream = useAGUIStream(aguiCommandId)
 
   // Restore in-progress extraction from sessionStorage on mount
   useEffect(() => {
@@ -212,6 +224,21 @@ function ExtractPageContent() {
             recordsCreated={extractionProgress.recordsCreated}
             errorMessage={extractionProgress.errorMessage}
             onDismiss={extractionProgress.dismiss}
+            reasoningText={aguiStream.reasoningTokens || undefined}
+            toolCalls={
+              aguiStream.activeToolCall
+                ? [
+                    {
+                      id: aguiStream.activeToolCall.id,
+                      name: aguiStream.activeToolCall.name,
+                      status: 'running' as const,
+                      startedAt: Date.now(),
+                    },
+                  ]
+                : undefined
+            }
+            aguiStep={aguiStream.currentStep}
+            aguiConnected={aguiStream.connected}
           />
 
           {isExtractionFailed && (

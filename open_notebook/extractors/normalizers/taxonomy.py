@@ -31,6 +31,17 @@ class ClassificationResult(NamedTuple):
     method: Literal["pattern", "llm", "none"]
 
 
+# Strip T-prefix (e.g., "T3 Vinyl products" → "Vinyl products") for SF alignment
+_T_PREFIX_RE = re.compile(r"^T\d+\s+")
+
+
+def _strip_t_prefix(group: Optional[str]) -> Optional[str]:
+    """Strip BAR T-prefix from product group name for SF picklist alignment."""
+    if group is None:
+        return None
+    return _T_PREFIX_RE.sub("", group)
+
+
 # Taxonomy data loaded from JSON files
 _NONFRIABLE_TAXONOMY: Optional[dict] = None
 _FRIABLE_TAXONOMY: Optional[dict] = None
@@ -615,7 +626,7 @@ def classify_product(
     Example:
         >>> result = classify_product("Vinyl floor tiles", friability="Non-friable")
         >>> result.product_group
-        'T3 Vinyl products'
+        'Vinyl products'
         >>> result.product_type
         'Vinyl Tiles'
         >>> result.method
@@ -651,7 +662,7 @@ def classify_product(
             if is_friable:
                 if f_group:  # Pattern has friable-specific classification
                     return ClassificationResult(
-                        product_group=f_group,
+                        product_group=_strip_t_prefix(f_group),
                         product_type=f_type,
                         confidence=0.9,
                         method="pattern",
@@ -659,7 +670,7 @@ def classify_product(
             else:
                 if nf_group:  # Pattern has non-friable-specific classification
                     return ClassificationResult(
-                        product_group=nf_group,
+                        product_group=_strip_t_prefix(nf_group),
                         product_type=nf_type,
                         confidence=0.9,
                         method="pattern",
@@ -755,7 +766,7 @@ async def classify_with_llm(
 
         result = json.loads(response_text)
 
-        product_group = result.get("product_group")
+        product_group = _strip_t_prefix(result.get("product_group"))
         product_type = result.get("product_type")
         confidence = float(result.get("confidence", 0.5))
 

@@ -28,9 +28,10 @@ SAMPLE_RESULT_SYNONYMS: dict[str, str] = {
     "not sampled": "Assumed Positive",
 }
 
-# Condition synonyms → canonical BAR values
+# Condition synonyms → canonical SF values (E30-S6: "Good" → "Stable")
 CONDITION_SYNONYMS: dict[str, Optional[str]] = {
-    "good": "Good",
+    "good": "Stable",
+    "stable": "Stable",
     "fair": "Fair",
     "poor": "Poor",
     "unknown": "Unknown",

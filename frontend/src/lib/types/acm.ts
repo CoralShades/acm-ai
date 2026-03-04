@@ -232,6 +232,17 @@ export interface CommandJobStatusResponse {
   }
 }
 
+export interface ACMRawTable {
+  id: string
+  source_id: string
+  page_start: number
+  page_end: number
+  table_type?: string | null
+  raw_html?: string | null
+  raw_text?: string | null
+  building_name?: string | null
+}
+
 // Re-export generated types that complement the manual types above.
 // Generated from Pydantic models via 'npm run generate:types'.
 // See frontend/src/lib/types/generated/ for the full generated type set.

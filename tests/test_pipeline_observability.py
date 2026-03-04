@@ -39,15 +39,17 @@ class TestStageIdEnum:
     """Test StageId enum values."""
 
     def test_all_stages_defined(self):
-        assert len(StageId) == 7
+        assert len(StageId) == 9
 
     def test_stage_values(self):
         assert StageId.STRUCTURE == "STRUCTURE"
         assert StageId.PREFLIGHT == "PREFLIGHT"
         assert StageId.ORCHESTRATOR == "ORCHESTRATOR"
+        assert StageId.DOCLING_EXTRACTION == "DOCLING_EXTRACTION"
         assert StageId.EXTRACT == "EXTRACT"
         assert StageId.VALIDATE == "VALIDATE"
         assert StageId.CORRECT == "CORRECT"
+        assert StageId.NO_ACCESS_RECOVERY == "NO_ACCESS_RECOVERY"
         assert StageId.STORE == "STORE"
 
 

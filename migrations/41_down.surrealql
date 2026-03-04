@@ -1,0 +1,4 @@
+-- Rollback migration 41: Remove source_intelligence table (E30-S9)
+
+REMOVE INDEX IF EXISTS idx_source_intelligence_source_id ON TABLE source_intelligence;
+REMOVE TABLE IF EXISTS source_intelligence;

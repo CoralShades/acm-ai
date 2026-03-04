@@ -353,13 +353,31 @@ async def _llm_tag_batch(
         max_tokens=2048,
     )
 
-    chain = model.with_structured_output(PageTagBatch)
+    from open_notebook.graphs.utils import (
+        _verify_provider_routing,
+        parse_json_response,
+    )
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(content="Classify each page into its document section."),
     ]
 
-    result: PageTagBatch = await chain.ainvoke(messages)
+    raw_response = await model.ainvoke(messages)
+
+    # E27-S3: Verify provider routing (non-blocking)
+    try:
+        await _verify_provider_routing(raw_response, "page_tagger")
+    except Exception:
+        pass  # Never block extraction for verification failure
+
+    response_text = (
+        raw_response.content
+        if hasattr(raw_response, "content")
+        else str(raw_response)
+    )
+    parsed = parse_json_response(response_text)
+    result = PageTagBatch.model_validate(parsed)
     return result.pages
 
 

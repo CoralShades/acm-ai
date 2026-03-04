@@ -184,16 +184,22 @@ def _make_extraction_records() -> List[ACMExtractionRecord]:
 
 
 def _make_mock_llm_model(records: List[ACMExtractionRecord]) -> MagicMock:
-    """Create a mock LLM model that returns structured ACMExtractionResult."""
+    """Create a mock LLM model that returns JSON via direct ainvoke().
+
+    E27-S1: All extraction paths now use model.ainvoke() → parse_json_response()
+    instead of model.with_structured_output().ainvoke(). The mock returns a
+    response object whose .content is valid JSON matching ACMExtractionResult.
+    """
     result = ACMExtractionResult(
         records=records,
         status=ExtractionStatus.VALID,
         total_records=len(records),
     )
-    chain = AsyncMock()
-    chain.ainvoke = AsyncMock(return_value=result)
+    json_content = result.model_dump_json()
+    response = MagicMock()
+    response.content = json_content
     model = AsyncMock()
-    model.with_structured_output = MagicMock(return_value=chain)
+    model.ainvoke = AsyncMock(return_value=response)
     return model
 
 
@@ -312,6 +318,12 @@ class TestPipelineLegacyPath:
                 new_callable=AsyncMock,
                 return_value=_make_mock_llm_model(extraction_records),
             ),
+            # Mock LLM at utils level (orchestrator does lazy import from there)
+            patch(
+                "open_notebook.graphs.utils.provision_langchain_model",
+                new_callable=AsyncMock,
+                return_value=_make_mock_llm_model(extraction_records),
+            ),
             # Mock DB operations
             patch(
                 "open_notebook.graphs.acm_extraction.ACMRecord.save",
@@ -382,6 +394,11 @@ class TestPipelineLegacyPath:
                 return_value=_make_mock_llm_model(extraction_records),
             ),
             patch(
+                "open_notebook.graphs.utils.provision_langchain_model",
+                new_callable=AsyncMock,
+                return_value=_make_mock_llm_model(extraction_records),
+            ),
+            patch(
                 "open_notebook.graphs.acm_extraction.ACMRecord.save",
                 new_callable=AsyncMock,
             ),
@@ -445,6 +462,11 @@ class TestPipelineLegacyPath:
             ),
             patch(
                 "open_notebook.graphs.acm_extraction.provision_langchain_model",
+                new_callable=AsyncMock,
+                return_value=_make_mock_llm_model(records),
+            ),
+            patch(
+                "open_notebook.graphs.utils.provision_langchain_model",
                 new_callable=AsyncMock,
                 return_value=_make_mock_llm_model(records),
             ),
@@ -519,6 +541,11 @@ class TestPipelineLegacyPath:
                 return_value=_make_mock_llm_model(dup_records),
             ),
             patch(
+                "open_notebook.graphs.utils.provision_langchain_model",
+                new_callable=AsyncMock,
+                return_value=_make_mock_llm_model(dup_records),
+            ),
+            patch(
                 "open_notebook.graphs.acm_extraction.ACMRecord.save",
                 new_callable=AsyncMock,
             ),
@@ -567,6 +594,11 @@ class TestPipelineLegacyPath:
             ),
             patch(
                 "open_notebook.graphs.acm_extraction.provision_langchain_model",
+                new_callable=AsyncMock,
+                return_value=_make_mock_llm_model(extraction_records),
+            ),
+            patch(
+                "open_notebook.graphs.utils.provision_langchain_model",
                 new_callable=AsyncMock,
                 return_value=_make_mock_llm_model(extraction_records),
             ),
@@ -628,6 +660,10 @@ class TestPipelineLegacyPath:
             ),
             patch(
                 "open_notebook.graphs.acm_extraction.provision_langchain_model",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "open_notebook.graphs.utils.provision_langchain_model",
                 new_callable=AsyncMock,
             ),
             patch(

@@ -1,0 +1,56 @@
+[
+  {
+    "document_name": "Alexander District Hospital",
+    "ground_truth_count": 43,
+    "extracted_count": 70,
+    "matched_count": 42,
+    "recall": 0.9767441860465116,
+    "precision": 0.6,
+    "field_accuracy": 0.6666666666666666,
+    "latency_s": 216.533,
+    "token_usage": 0,
+    "cost_usd": 0.0,
+    "error": null,
+    "unmatched_gt": [
+      {
+        "building_name": "Old Alexandra Hospital",
+        "room_name": "Workshop",
+        "location": "Infill Panels",
+        "product": "Infill panels",
+        "sample_no": "J169642-001-017",
+        "sample_result": "Negative",
+        "friable": "Non-friable"
+      }
+    ],
+    "unmatched_extracted": [
+      "Shower Room/Flat sheeting",
+      "Shower Room/Flat sheeting",
+      "Boiler Room/Fire Door Core",
+      "Mortuary Room/Ceiling",
+      "External/Eaves",
+      "Kitchen/Sink Lining",
+      "External/Ductwork",
+      "External/Ceiling",
+      "External/Eaves",
+      "North Courtyard/Eaves",
+      "South Courtyard/Eaves",
+      "Bathroom Adjacent Labour Ward/Bath Tub Housing",
+      "Compressor Room/Wall",
+      "Former Laundry/Electrical Distribution Board",
+      "Hallway Adjacent Rear Exit/Ceiling",
+      "Medical Records/Floor Covering",
+      "Non Essential Switchboard Room/Door Lining",
+      "Non Essential Switchboard Room/Floor Covering",
+      "Nurses Station/Sink Lining",
+      "Rear Exit Foyer Adjacent Medical Records/Ceiling",
+      "Rear Exit Foyer Adjacent Medical Records/Floor Covering",
+      "Rear Exit Foyer Adjacent Medical Records/Floor Covering Adhesive",
+      "Ward 12/Floor Covering",
+      "External/Eaves",
+      "External/Ceiling lining",
+      "External/Eaves",
+      "Multi Purpose Area - Adjacent CCSD/Fire Door",
+      "West Passage - Adjacent CCSD/Fire Door"
+    ]
+  }
+]

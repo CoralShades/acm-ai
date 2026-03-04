@@ -1,0 +1,82 @@
+{
+  "table_index": 5,
+  "page": 11,
+  "rows": 12,
+  "columns": 6,
+  "raw_column_names": [
+    "",
+    "Sample No",
+    "Sample No",
+    "Sample No",
+    "Sample Location / Description / Size",
+    "Result"
+  ],
+  "normalized_column_names": [
+    "",
+    "Sample No",
+    "Sample No_1",
+    "Sample No_2",
+    "Sample Location / Description / Size",
+    "Result"
+  ],
+  "sample_rows": [
+    {
+      "": "34511",
+      "Sample No": "-",
+      "Sample No_1": "039",
+      "Sample No_2": "001",
+      "Sample Location / Description / Size": "Cream flexible vinyl material with attached yellow adhesive 50x20x5mm",
+      "Result": "Organic fibres detected"
+    },
+    {
+      "": "34511",
+      "Sample No": "-",
+      "Sample No_1": "039",
+      "Sample No_2": "002",
+      "Sample Location / Description / Size": "Internal, ground floor, front desk area, floor, grey sheet vinyl Grey flexible vinyl material 40x20x5mm",
+      "Result": "No asbestos fibres detected Organic fibres detected Synthetic Mineral Fibres detected"
+    },
+    {
+      "": "34511",
+      "Sample No": "-",
+      "Sample No_1": "039",
+      "Sample No_2": "003",
+      "Sample Location / Description / Size": "Internal, ground floor, soft interview room 2, brown skirting vinyl Brown flexible vinyl material 40x20x5mm",
+      "Result": "No asbestos fibres detected"
+    },
+    {
+      "": "34511",
+      "Sample No": "-",
+      "Sample No_1": "039",
+      "Sample No_2": "004",
+      "Sample Location / Description / Size": "Internal, ground floor, watchouts kitchen, floor, dark grey hessian blacked vinyl Grey flexible vinyl material with attached yellow hessian backing material 30x10x5mm",
+      "Result": "No asbestos fibres detected Organic fibres detected"
+    },
+    {
+      "": "34511",
+      "Sample No": "-",
+      "Sample No_1": "039",
+      "Sample No_2": "005",
+      "Sample Location / Description / Size": "Internal, ceiling space, throughout, ductwork, flange, brown mastic Brown rubbery mastic material",
+      "Result": "Chrysotile (white asbestos) detected"
+    }
+  ],
+  "has_merged_cells": true,
+  "acm_indicators": {
+    "same as": false,
+    "as per": false,
+    "not sampled": false,
+    "assumed positive": false,
+    "assumed": false,
+    "no access": false,
+    "34511": true,
+    "negative": false,
+    "positive": false,
+    "battery charger": false,
+    "fuse cartridge": false,
+    "internal lining": false,
+    "disabled toilet": false,
+    "lift foyer": false,
+    "switch room": false
+  }
+}

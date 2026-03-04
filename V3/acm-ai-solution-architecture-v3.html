@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACM-AI Solution Architecture v3.0 — VAEA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #3a8f8a;
+    --teal-light: #4db3ac;
+    --teal-dark: #2d706c;
+    --teal-bg: #f0f9f8;
+    --coral: #d4614a;
+    --coral-light: #e8856f;
+    --coral-bg: #fdf4f2;
+    --navy: #2a2f45;
+    --navy-light: #3d4466;
+    --navy-bg: #f4f4f7;
+    --gold: #c4973b;
+    --gold-bg: #fdf8ef;
+    --white: #ffffff;
+    --gray-50: #f8f9fa;
+    --gray-100: #f1f3f5;
+    --gray-200: #e9ecef;
+    --gray-300: #dee2e6;
+    --gray-400: #ced4da;
+    --gray-500: #adb5bd;
+    --gray-600: #868e96;
+    --gray-700: #495057;
+    --gray-800: #343a40;
+    --gray-900: #212529;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --shadow-sm: 0 1px 2px rgba(42,47,69,0.06);
+    --shadow-md: 0 4px 12px rgba(42,47,69,0.08);
+    --shadow-lg: 0 12px 32px rgba(42,47,69,0.12);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    font-family: var(--font-body);
+    color: var(--navy);
+    background: var(--gray-50);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 270px; background: var(--navy); color: rgba(255,255,255,0.85);
+    padding: 32px 0; overflow-y: auto; z-index: 100;
+  }
+  .sidebar-brand { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 16px; }
+  .sidebar-brand h1 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--teal-light); }
+  .sidebar-brand p { font-size: 0.7rem; color: rgba(255,255,255,0.45); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
+  .sidebar-section { padding: 14px 24px 4px; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.3); font-weight: 600; }
+  .sidebar a { display: block; padding: 7px 24px 7px 28px; color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.82rem; border-left: 3px solid transparent; transition: all 0.2s; }
+  .sidebar a:hover, .sidebar a.active { color: #fff; background: rgba(255,255,255,0.06); border-left-color: var(--teal-light); }
+  .sidebar a.sub { padding-left: 40px; font-size: 0.78rem; }
+
+  /* MAIN */
+  .main { margin-left: 270px; }
+  .hero { background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%); color: white; padding: 64px 56px; }
+  .hero-badge { display: inline-block; background: rgba(58,143,138,0.25); color: var(--teal-light); padding: 6px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; }
+  .hero h1 { font-family: var(--font-display); font-size: 2.6rem; font-weight: 700; line-height: 1.15; margin-bottom: 16px; }
+  .hero h1 span { color: var(--teal-light); }
+  .hero p { font-size: 1.05rem; color: rgba(255,255,255,0.75); max-width: 750px; line-height: 1.7; }
+  .hero-meta { display: flex; gap: 32px; margin-top: 32px; flex-wrap: wrap; }
+  .hero-meta-item { display: flex; flex-direction: column; }
+  .hero-meta-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.4); font-weight: 500; }
+  .hero-meta-value { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; color: var(--teal-light); margin-top: 2px; }
+
+  .content { padding: 0 56px 80px; max-width: 1100px; }
+  section { margin-top: 56px; }
+  h2 { font-family: var(--font-display); font-size: 1.65rem; font-weight: 700; margin-bottom: 8px; color: var(--navy); }
+  h2 .num { color: var(--teal); font-size: 0.85rem; font-weight: 500; margin-right: 4px; }
+  h3 { font-size: 1.1rem; font-weight: 600; margin: 28px 0 12px; color: var(--navy); }
+  .section-subtitle { color: var(--gray-600); font-size: 0.92rem; margin-bottom: 24px; }
+
+  /* CARDS */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 20px 0; }
+  .card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); }
+  .card h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; }
+  .card p { font-size: 0.88rem; color: var(--gray-700); line-height: 1.6; }
+
+  /* CALLOUTS */
+  .callout { background: var(--teal-bg); border-left: 4px solid var(--teal); border-radius: var(--radius); padding: 20px 24px; margin: 20px 0; }
+  .callout.coral { background: var(--coral-bg); border-left-color: var(--coral); }
+  .callout.navy { background: var(--navy-bg); border-left-color: var(--navy); }
+  .callout.gold { background: var(--gold-bg); border-left-color: var(--gold); }
+  .callout-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; }
+  .callout p { font-size: 0.88rem; line-height: 1.6; }
+
+  /* DIAGRAMS */
+  .diagram-container { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 24px; margin: 20px 0; box-shadow: var(--shadow-sm); overflow-x: auto; }
+  .diagram-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+  .diagram-caption { font-size: 0.78rem; color: var(--gray-500); margin-bottom: 16px; }
+
+  /* TABLES */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem; }
+  th { background: var(--navy-bg); text-align: left; padding: 10px 14px; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--navy); border-bottom: 2px solid var(--gray-300); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--gray-200); color: var(--gray-700); vertical-align: top; }
+  tr:hover td { background: var(--gray-50); }
+
+  /* CODE */
+  code { font-family: var(--font-mono); font-size: 0.82rem; background: var(--gray-100); padding: 2px 6px; border-radius: 4px; }
+  pre { background: var(--navy); color: #e0e0e0; padding: 20px; border-radius: var(--radius-lg); overflow-x: auto; font-size: 0.82rem; line-height: 1.6; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+
+  /* PILLS */
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em; }
+  .pill.teal { background: var(--teal-bg); color: var(--teal-dark); }
+  .pill.coral { background: var(--coral-bg); color: var(--coral); }
+  .pill.navy { background: var(--navy-bg); color: var(--navy); }
+  .pill.gold { background: var(--gold-bg); color: var(--gold); }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin: 24px 0; }
+  .stat-block { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 20px; text-align: center; }
+  .stat-number { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--teal); line-height: 1; }
+  .stat-number.coral { color: var(--coral); }
+  .stat-number.navy { color: var(--navy); }
+  .stat-label { font-size: 0.7rem; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-top: 6px; }
+
+  /* FIELD MAPPING TABLE */
+  .field-table { font-size: 0.8rem; }
+  .field-table td:first-child { font-family: var(--font-mono); font-size: 0.78rem; white-space: nowrap; }
+  .field-table .extractable { color: var(--teal-dark); font-weight: 600; }
+  .field-table .manual { color: var(--coral); font-weight: 600; }
+  .field-table .computed { color: var(--navy-light); font-weight: 600; }
+
+  /* PRINT */
+  @media print { .sidebar { display: none; } .main { margin-left: 0; } }
+  @media (max-width: 900px) { .sidebar { transform: translateX(-100%); } .main { margin-left: 0; } .hero { padding: 40px 24px; } .content { padding: 0 24px 60px; } }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h1>ACM-AI</h1>
+    <p>Solution Architecture v3.0</p>
+  </div>
+  <div class="sidebar-section">Overview</div>
+  <a href="#problem">Problem Statement</a>
+  <a href="#solution-overview">Solution Overview</a>
+  <div class="sidebar-section">Architecture</div>
+  <a href="#system-context">System Context</a>
+  <a href="#infrastructure">Infrastructure</a>
+  <a href="#tech-stack">Tech Stack</a>
+  <div class="sidebar-section">Data Model</div>
+  <a href="#salesforce-objects">Salesforce Object Model</a>
+  <a href="#building-fields">Building__c Fields</a>
+  <a href="#item-fields">Item__c (ACM) Fields</a>
+  <a href="#field-dependencies">Dependent Picklists</a>
+  <a href="#internal-schema">Internal Data Schema</a>
+  <div class="sidebar-section">AI Pipeline</div>
+  <a href="#pipeline-overview">Pipeline Overview</a>
+  <a href="#phase-pdf" class="sub">Phase 1: PDF Processing</a>
+  <a href="#phase-structure" class="sub">Phase 2: Structure Analysis</a>
+  <a href="#phase-extraction" class="sub">Phase 3: AI Extraction</a>
+  <a href="#phase-validation" class="sub">Phase 4: Validation</a>
+  <a href="#phase-export" class="sub">Phase 5: Review &amp; Export</a>
+  <div class="sidebar-section">Quality</div>
+  <a href="#design-principles">Design Principles</a>
+</nav>
+
+<div class="main">
+  <header class="hero" id="top">
+    <div class="hero-content">
+      <div class="hero-badge">Victorian Asbestos Eradication Agency</div>
+      <h1>ACM-AI <span>Solution Architecture</span></h1>
+      <p>An AI-powered platform that extracts Buildings and ACM Items from thousands of consultant PDF reports, mapping them precisely to VAEA's Salesforce <code>Building__c</code> and <code>Item__c</code> object model — eliminating manual data entry from PDF tables.</p>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Salesforce Objects</span>
+          <span class="hero-meta-value">Building__c → Item__c</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Building Fields</span>
+          <span class="hero-meta-value">143 (29 extractable)</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Item/ACM Fields</span>
+          <span class="hero-meta-value">154 (35 extractable)</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">AI Provider</span>
+          <span class="hero-meta-value">Anthropic Claude Sonnet</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-label">Version</span>
+          <span class="hero-meta-value">March 2026</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ==================== 01. PROBLEM ==================== -->
+    <section id="problem">
+      <h2><span class="num">01 /</span> Problem Statement</h2>
+      <p class="section-subtitle">The core challenge VAEA faces and why AI-powered extraction is the solution.</p>
+
+      <div class="callout coral">
+        <div class="callout-title">The Problem</div>
+        <p>VAEA manages <strong>thousands of PDF asbestos assessment reports</strong> from multiple consulting firms (Prensa, Greencap, and others). Each PDF contains tables listing Buildings and ACM (Asbestos Containing Material) items found within those buildings. Officers must manually read these tables and enter every Building and every ACM item into Salesforce's <code>Building__c</code> and <code>Item__c</code> objects — field by field, picklist by picklist. A single PDF can contain multiple buildings and dozens of ACM items. At scale, this is unsustainable.</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid var(--coral);">
+          <h4>Manual Data Entry at Scale</h4>
+          <p>Each PDF report requires reading tables, identifying buildings and rooms, then manually populating 29+ building fields and 35+ ACM item fields per record in Salesforce.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>Variable PDF Formats</h4>
+          <p>Reports come from different consulting firms (Prensa, Greencap, generic) with different table layouts, column names, and structures. No single template fits all.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--navy);">
+          <h4>Complex Object Model</h4>
+          <p>Salesforce's <code>Building__c</code> has 143 fields with dependent picklists (e.g., Building Type → Asset Category). <code>Item__c</code> has 154 fields with dependent picklists (e.g., Friability → ACM Product Group). AI must respect these dependencies.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--gold);">
+          <h4>One Building → Many ACMs</h4>
+          <p>A single building can have dozens of ACM items across different rooms and locations. A single PDF can contain multiple buildings, each with their own set of ACMs.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">The Solution</div>
+        <p>ACM-AI uses a multi-stage AI extraction pipeline powered by <strong>Anthropic Claude Sonnet</strong> to read PDF tables, identify buildings and ACM items, extract field values, validate against Salesforce picklist values, and output structured data matching the exact <code>Building__c</code> and <code>Item__c</code> schemas — ready for officer review and export.</p>
+      </div>
+    </section>
+
+    <!-- ==================== 02. SOLUTION OVERVIEW ==================== -->
+    <section id="solution-overview">
+      <h2><span class="num">02 /</span> Solution Overview</h2>
+      <p class="section-subtitle">High-level flow from PDF upload to Salesforce-ready data.</p>
+
+      <div class="stats-row">
+        <div class="stat-block"><div class="stat-number">5</div><div class="stat-label">Pipeline Stages</div></div>
+        <div class="stat-block"><div class="stat-number coral">2</div><div class="stat-label">Salesforce Objects</div></div>
+        <div class="stat-block"><div class="stat-number navy">1</div><div class="stat-label">AI Provider</div></div>
+        <div class="stat-block"><div class="stat-number">2</div><div class="stat-label">PDF Engines</div></div>
+      </div>
+
+      <div class="diagram-container">
+        <div class="diagram-title">End-to-End Flow</div>
+        <div class="diagram-caption">From PDF upload to Salesforce-ready output</div>
+        <div class="mermaid">
+flowchart LR
+    PDF["📄 PDF Upload<br/><i>Consultant Reports</i>"]
+    PARSE["📋 PDF Parsing<br/><i>PyMuPDF + Docling</i>"]
+    STRUCT["🧠 Structure Analysis<br/><i>Claude Sonnet</i>"]
+    EXTRACT["⚙️ AI Extraction<br/><i>Building__c + Item__c</i>"]
+    VALIDATE["✅ Validation<br/><i>Picklist + Schema</i>"]
+    REVIEW["👁️ Officer Review<br/><i>AG Grid Spreadsheet</i>"]
+    EXPORT["📤 Export<br/><i>Salesforce-Ready</i>"]
+
+    PDF --> PARSE --> STRUCT --> EXTRACT --> VALIDATE --> REVIEW --> EXPORT
+
+    style PDF fill:#fdf4f2,stroke:#d4614a
+    style PARSE fill:#f3e8ff,stroke:#7e22ce
+    style STRUCT fill:#e0f2fe,stroke:#0369a1
+    style EXTRACT fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+    style VALIDATE fill:#dcfce7,stroke:#15803d
+    style REVIEW fill:#fef3c7,stroke:#a16207
+    style EXPORT fill:#f4f4f7,stroke:#2a2f45
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 03. SYSTEM CONTEXT ==================== -->
+    <section id="system-context">
+      <h2><span class="num">03 /</span> System Context</h2>
+      <p class="section-subtitle">Where ACM-AI sits and who interacts with it.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">System Context Diagram</div>
+        <div class="diagram-caption">ACM-AI's position in the VAEA ecosystem</div>
+        <div class="mermaid">
+graph TB
+    subgraph Users["👥 Users"]
+        CO["Compliance Officer<br/><i>Uploads PDFs, reviews<br/>extracted data, exports</i>"]
+        ADMIN["System Admin<br/><i>Configures field schema,<br/>manages extraction settings</i>"]
+    end
+
+    subgraph External["🏢 External Inputs"]
+        PDF["Consultant PDFs<br/><i>Prensa, Greencap, Generic<br/>Asbestos Assessment Reports</i>"]
+        SF_SCHEMA["Salesforce Schema<br/><i>Building__c (143 fields)<br/>Item__c (154 fields)</i>"]
+    end
+
+    subgraph ACMAI["🧠 ACM-AI Platform"]
+        direction TB
+        FE["Next.js Frontend<br/><i>AG Grid Spreadsheet<br/>Review &amp; Edit UI</i>"]
+        API["FastAPI Backend<br/><i>REST API + SSE</i>"]
+        PIPE["AI Extraction Pipeline<br/><i>LangGraph Orchestration</i>"]
+        DB["SurrealDB<br/><i>Documents, Records,<br/>Field Schema Config</i>"]
+    end
+
+    subgraph AI["🤖 AI Provider"]
+        CLAUDE["Anthropic Claude Sonnet<br/><i>Direct API</i>"]
+    end
+
+    subgraph Output["📤 Output"]
+        EXCEL["Excel / CSV Export<br/><i>Salesforce-ready format<br/>Building__c + Item__c</i>"]
+    end
+
+    CO --> FE
+    ADMIN --> FE
+    PDF --> ACMAI
+    SF_SCHEMA -.->|"Picklist values<br/>drive validation"| DB
+    FE --> API
+    API --> PIPE
+    PIPE --> CLAUDE
+    API --> DB
+    ACMAI --> EXCEL
+
+    style ACMAI fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+    style Users fill:#f4f4f7,stroke:#2a2f45,stroke-width:1px
+    style External fill:#fdf4f2,stroke:#d4614a,stroke-width:1px
+    style AI fill:#fce7f3,stroke:#be185d,stroke-width:1px
+    style Output fill:#dcfce7,stroke:#15803d,stroke-width:1px
+        </div>
+      </div>
+
+      <div class="callout gold">
+        <div class="callout-title">No Direct Salesforce Integration</div>
+        <p>ACM-AI does <strong>not</strong> push data directly to Salesforce. The output is a Salesforce-ready export (Excel/CSV) matching the exact field names and picklist values of <code>Building__c</code> and <code>Item__c</code>. The Salesforce schema is used to <strong>configure</strong> the extraction pipeline — picklist values, dependent field rules, and field types are loaded into the system to ensure AI outputs conform to Salesforce constraints.</p>
+      </div>
+    </section>
+
+    <!-- ==================== 04. INFRASTRUCTURE ==================== -->
+    <section id="infrastructure">
+      <h2><span class="num">04 /</span> Infrastructure &amp; Deployment</h2>
+      <p class="section-subtitle">Current local deployment topology.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Deployment Topology</div>
+        <div class="diagram-caption">All services running locally on workstation</div>
+        <div class="mermaid">
+graph TB
+    subgraph Local["🖥️ LOCAL WORKSTATION"]
+        subgraph Frontend["Frontend"]
+            FE["Next.js 15<br/>Port 3000<br/><i>AG Grid + React</i>"]
+        end
+        subgraph Python["Python Runtime"]
+            API["FastAPI Backend<br/>Port 5055<br/><i>REST API + SSE</i>"]
+            WORKER["Background Worker<br/><i>Command polling</i>"]
+            PIPE["LangGraph Pipeline<br/><i>Extraction orchestration</i>"]
+        end
+        subgraph GPU["GPU Processing"]
+            DOCLING["Docling + TableFormer<br/><i>CUDA-accelerated<br/>table recognition</i>"]
+        end
+        subgraph Docker["Docker Containers"]
+            SURREAL["SurrealDB v2<br/>Port 8000"]
+        end
+    end
+
+    subgraph Cloud["☁️ EXTERNAL API"]
+        CLAUDE["Anthropic API<br/><i>Claude Sonnet</i>"]
+    end
+
+    FE -->|"HTTP"| API
+    API --> WORKER
+    WORKER --> PIPE
+    PIPE --> DOCLING
+    PIPE -->|"HTTPS"| CLAUDE
+    API --> SURREAL
+    WORKER --> SURREAL
+
+    style Local fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+    style Frontend fill:#e0f2fe,stroke:#0369a1
+    style Python fill:#dcfce7,stroke:#15803d
+    style GPU fill:#fce7f3,stroke:#be185d
+    style Docker fill:#f3e8ff,stroke:#7e22ce
+    style Cloud fill:#fef3c7,stroke:#a16207,stroke-width:1px
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 05. TECH STACK ==================== -->
+    <section id="tech-stack">
+      <h2><span class="num">05 /</span> Tech Stack</h2>
+      <p class="section-subtitle">Technologies used across the platform.</p>
+
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill teal">Frontend</span></td><td>Next.js 15, React, AG Grid Enterprise</td><td>Spreadsheet UI for review and editing of extracted records</td></tr>
+          <tr><td><span class="pill teal">Frontend</span></td><td>CopilotKit + AG-UI Protocol</td><td>AI chat interface with SSE streaming</td></tr>
+          <tr><td><span class="pill coral">Backend</span></td><td>FastAPI (Python)</td><td>REST API, SSE streaming, command queue</td></tr>
+          <tr><td><span class="pill coral">Backend</span></td><td>LangGraph</td><td>Multi-stage extraction pipeline orchestration</td></tr>
+          <tr><td><span class="pill navy">AI</span></td><td>Anthropic Claude Sonnet (Direct API)</td><td>Document structure analysis, field extraction, classification</td></tr>
+          <tr><td><span class="pill gold">PDF</span></td><td>PyMuPDF</td><td>Reading-order text extraction from PDFs</td></tr>
+          <tr><td><span class="pill gold">PDF</span></td><td>Docling + TableFormer (CUDA)</td><td>Structured table recognition and extraction</td></tr>
+          <tr><td><span class="pill navy">Database</span></td><td>SurrealDB v2 (Docker)</td><td>Document storage, record storage, field schema config, vector search</td></tr>
+          <tr><td><span class="pill teal">Validation</span></td><td>Pydantic v2</td><td>Schema validation, picklist enforcement, type coercion</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ==================== 06. SALESFORCE OBJECT MODEL ==================== -->
+    <section id="salesforce-objects">
+      <h2><span class="num">06 /</span> Salesforce Object Model</h2>
+      <p class="section-subtitle">The target data model — Building__c (Asset Class) and Item__c (ACM) from VAEA's Salesforce instance.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Salesforce Object Relationship</div>
+        <div class="diagram-caption">Building__c is the parent, Item__c is the child (Master-Detail via Building_Code__c)</div>
+        <div class="mermaid">
+erDiagram
+    Building__c ||--o{ Item__c : "has many ACMs"
+
+    Building__c {
+        string Name "Asset Code (auto-number)"
+        string Building_Name__c "Asset Name"
+        string Building_Address__c "Street Address"
+        string Suburb__c "Suburb"
+        string Postcode__c "Postcode"
+        string State__c "State"
+        picklist Building_Type__c "Asset Type"
+        picklist Building_Category__c "Asset Category (dep. on Type)"
+        picklist Building_Sub_Category__c "Sub Category (dep. on Cat.)"
+        string Construction_Type__c "Construction Type"
+        picklist Estimated_Year_Build_New__c "Year Built"
+        picklist Number_of_Levels__c "Number of Levels"
+        picklist Owned_or_Leased__c "Owned or Leased"
+        picklist Frequency_of_Use__c "Frequency of Use"
+        picklist Building_Risk_Rating__c "Asset Rating"
+        string RecordType "Building"
+    }
+
+    Item__c {
+        string Name "Item Code (auto-number)"
+        reference Building_Code__c "FK to Building__c"
+        picklist Item_Name__c "Item Name (294 values)"
+        picklist Friability_of_Material__c "Friability"
+        picklist ACM_Classification__c "ACM Product Group (dep.)"
+        picklist ACM_Sub_Classification__c "ACM Product Type (dep.)"
+        picklist Condition__c "Condition (6 values)"
+        picklist Disturbance_Potential__c "Disturbance Potential"
+        string Item_Location__c "Location in Room"
+        string Room_Name__c "Room / Area"
+        string Floor_Level__c "Floor Level"
+        string Quantity__c "Quantity"
+        picklist Sample_Result__c "Sample Result"
+        string Assessor__c "Assessor"
+        string RecordType "ACM"
+    }
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Key Relationship</div>
+        <p><code>Item__c.Building_Code__c</code> is a <strong>Master-Detail</strong> relationship to <code>Building__c</code>. Every ACM item must belong to exactly one Building. When a Building is deleted, all its Items cascade-delete. The AI pipeline must correctly group extracted ACM items to their parent Building.</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Building__c Record Types</h4>
+          <p><strong>Building</strong> (default) — the record type we extract to.<br/>
+          Also available: Structure, Vehicle, Master — not in scope for PDF extraction.</p>
+        </div>
+        <div class="card">
+          <h4>Item__c Record Types</h4>
+          <p><strong>ACM</strong> (default) — the record type we extract to.<br/>
+          Also available: PCB, Lead Containing Paint, Crystalline Silica, Biological Hazards, Ozone Depleting Substances, Space/Area — not in scope.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 07. BUILDING FIELDS ==================== -->
+    <section id="building-fields">
+      <h2><span class="num">07 /</span> Building__c Field Mapping</h2>
+      <p class="section-subtitle">Which of the 143 Building__c fields can be AI-extracted from PDFs, which require manual entry, and which are system-computed.</p>
+
+      <table class="field-table">
+        <thead><tr><th>Salesforce Field</th><th>Label</th><th>Type</th><th>Source</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Building_Name__c</td><td>Asset Name</td><td>string</td><td class="extractable">AI Extract</td><td>Extracted from PDF headings/tables</td></tr>
+          <tr><td>Building_Address__c</td><td>Asset Address</td><td>string</td><td class="extractable">AI Extract</td><td>Street address from cover page or tables</td></tr>
+          <tr><td>Suburb__c</td><td>Suburb</td><td>string</td><td class="extractable">AI Extract</td><td>From address text</td></tr>
+          <tr><td>Postcode__c</td><td>Postcode</td><td>string</td><td class="extractable">AI Extract</td><td>From address text</td></tr>
+          <tr><td>State__c</td><td>State</td><td>picklist</td><td class="extractable">AI Extract</td><td>Defaults to "Victoria"</td></tr>
+          <tr><td>Construction_Type__c</td><td>Construction Type</td><td>string(100)</td><td class="extractable">AI Extract</td><td>Free text, e.g. "Fibre cement and timber"</td></tr>
+          <tr><td>Estimated_Year_Build_New__c</td><td>Estimated Year Built</td><td>picklist (330 values)</td><td class="extractable">AI Extract</td><td>Years 1700–2029</td></tr>
+          <tr><td>Number_of_Levels__c</td><td>Number of Levels</td><td>picklist (1–99)</td><td class="extractable">AI Extract</td><td>From building description</td></tr>
+          <tr><td>Estimated_Size_of_Building__c</td><td>Estimated Size (m²)</td><td>string</td><td class="extractable">AI Extract</td><td>If mentioned in report</td></tr>
+          <tr><td>Date_of_Inspection__c</td><td>Date of Inspection</td><td>date</td><td class="extractable">AI Extract</td><td>From report date/cover page</td></tr>
+          <tr><td>Roof_Type__c</td><td>Roof Type</td><td>picklist</td><td class="extractable">AI Extract</td><td>If mentioned in report</td></tr>
+          <tr><td>Building_Type__c</td><td>Asset Type</td><td>picklist (114 values)</td><td class="manual">Manual / Config</td><td>Controller for Asset Category. Set by officer.</td></tr>
+          <tr><td>Building_Category__c</td><td>Asset Category</td><td>picklist (13 values)</td><td class="manual">Manual / Config</td><td>Dependent on Building_Type__c</td></tr>
+          <tr><td>Building_Sub_Category__c</td><td>Sub Category</td><td>picklist</td><td class="manual">Manual / Config</td><td>Dependent on Building_Category__c</td></tr>
+          <tr><td>Owned_or_Leased__c</td><td>Owned or Leased</td><td>picklist (2)</td><td class="manual">Manual / Config</td><td>Owned | Leased</td></tr>
+          <tr><td>Frequency_of_Use__c</td><td>Frequency of Use</td><td>picklist</td><td class="manual">Manual / Config</td><td>Administrative field</td></tr>
+          <tr><td>Department__c</td><td>Department</td><td>reference</td><td class="manual">Manual / Config</td><td>Lookup to Dept object</td></tr>
+          <tr><td>Organisation__c</td><td>Organisation</td><td>reference</td><td class="manual">Manual / Config</td><td>Lookup to Org object</td></tr>
+          <tr><td>Building_Unique_ID__c</td><td>Asset Unique ID</td><td>string</td><td class="manual">Manual / Config</td><td>Agency's own ID if applicable</td></tr>
+          <tr><td>Building_Risk_Rating__c</td><td>Asset Rating</td><td>picklist (5)</td><td class="computed">Computed</td><td>Very Low → Very High. Derived from child ACMs.</td></tr>
+          <tr><td>Number_of_ACMs__c</td><td>Number of ACMs</td><td>double</td><td class="computed">Computed</td><td>Roll-up count from Item__c</td></tr>
+          <tr><td>No_Identified_ACMs__c</td><td>No Identified ACMs</td><td>boolean</td><td class="computed">Computed</td><td>True if zero positive ACMs</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout navy">
+        <div class="callout-title">Field Source Legend</div>
+        <p><span class="extractable">AI Extract</span> = Can be extracted from PDF by AI.
+        <span class="manual">Manual / Config</span> = Must be set by officer or via site configuration (not in PDF content).
+        <span class="computed">Computed</span> = System-calculated or roll-up field in Salesforce.</p>
+      </div>
+    </section>
+
+    <!-- ==================== 08. ITEM FIELDS ==================== -->
+    <section id="item-fields">
+      <h2><span class="num">08 /</span> Item__c (ACM) Field Mapping</h2>
+      <p class="section-subtitle">Key fields from the 154-field Item__c object. Focus on fields relevant to PDF extraction.</p>
+
+      <table class="field-table">
+        <thead><tr><th>Salesforce Field</th><th>Label</th><th>Type</th><th>Source</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Building_Code__c</td><td>Asset Code</td><td>reference</td><td class="extractable">AI Linked</td><td>Master-Detail to Building__c. Linked by building name match.</td></tr>
+          <tr><td>Item_Name__c</td><td>Item Name</td><td>picklist (294 values)</td><td class="extractable">AI Extract</td><td>e.g. "Ceiling", "Eave lining", "Floor tiles". Dependent on ACM_Classification__c.</td></tr>
+          <tr><td>Friability_of_Material__c</td><td>Friability</td><td>picklist</td><td class="extractable">AI Extract</td><td>"Friable" | "Non Friable". <strong>Controller</strong> for ACM Product Group.</td></tr>
+          <tr><td>ACM_Classification__c</td><td>ACM Product Group</td><td>picklist (18)</td><td class="extractable">AI Extract</td><td>e.g. "Cement products", "Insulation Products". Dependent on Friability.</td></tr>
+          <tr><td>ACM_Sub_Classification__c</td><td>ACM Product Type</td><td>picklist</td><td class="extractable">AI Extract</td><td>Dependent on ACM Product Group.</td></tr>
+          <tr><td>Condition__c</td><td>Condition</td><td>picklist (6)</td><td class="extractable">AI Extract</td><td>Poor | Fair | Stable | Unknown | N/A (negative) | N/A (assumed negative)</td></tr>
+          <tr><td>Disturbance_Potential__c</td><td>Disturbance Potential</td><td>picklist</td><td class="extractable">AI Extract</td><td>Disturbance assessment from report</td></tr>
+          <tr><td>Room_Name__c</td><td>Room / Area</td><td>string</td><td class="extractable">AI Extract</td><td>Room or area where ACM is found</td></tr>
+          <tr><td>Floor_Level__c</td><td>Floor Level</td><td>string</td><td class="extractable">AI Extract</td><td>e.g. "Ground", "Level 1", "Roof"</td></tr>
+          <tr><td>Item_Location__c</td><td>Location in Room</td><td>string</td><td class="extractable">AI Extract</td><td>Specific location within room</td></tr>
+          <tr><td>Internal_External__c</td><td>Internal / External</td><td>picklist</td><td class="extractable">AI Extract</td><td>"Internal" | "External"</td></tr>
+          <tr><td>Sample_Result__c</td><td>Sample Result</td><td>picklist</td><td class="extractable">AI Extract</td><td>Positive | Negative | Assumed Positive | etc.</td></tr>
+          <tr><td>NATA_Sample_Number__c</td><td>Sample Number</td><td>string</td><td class="extractable">AI Extract</td><td>NATA lab sample reference</td></tr>
+          <tr><td>Quantity__c</td><td>Quantity</td><td>string</td><td class="extractable">AI Extract</td><td>e.g. "10 m²", "5 linear meters"</td></tr>
+          <tr><td>Assessor__c</td><td>Assessor</td><td>string</td><td class="extractable">AI Extract</td><td>Person or company that identified the ACM</td></tr>
+          <tr><td>Date_Identified__c</td><td>Date Identified</td><td>date</td><td class="extractable">AI Extract</td><td>Date of assessment</td></tr>
+          <tr><td>ASSEA_Survey_Guide_Risk_Level__c</td><td>ASSEA Risk Level</td><td>picklist (3)</td><td class="extractable">AI Extract</td><td>High | Medium | Low</td></tr>
+          <tr><td>Hygienist_Recommendations__c</td><td>Recommendations</td><td>textarea</td><td class="extractable">AI Extract</td><td>Consultant recommendation text</td></tr>
+          <tr><td>Additional_Comments__c</td><td>Additional Comments</td><td>textarea</td><td class="extractable">AI Extract</td><td>Any extra notes from report</td></tr>
+          <tr><td>Labelled__c</td><td>Labelled</td><td>picklist</td><td class="extractable">AI Extract</td><td>Yes | No — whether ACM is labelled on-site</td></tr>
+          <tr><td>ACM_Risk_Score__c</td><td>ACM Risk Score</td><td>string</td><td class="computed">Computed</td><td>Calculated from condition + disturbance</td></tr>
+          <tr><td>ACM_Sub_Classification_Rating__c</td><td>Friability Scale</td><td>double</td><td class="computed">Computed</td><td>Numeric score from Product Type + Friability</td></tr>
+          <tr><td>VAEA_Friability_Scale__c</td><td>VAEA Friability Scale</td><td>formula</td><td class="computed">Computed</td><td>"VAEA Friable" if scale &gt; 5, else "VAEA Non Friable"</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ==================== 09. DEPENDENT PICKLISTS ==================== -->
+    <section id="field-dependencies">
+      <h2><span class="num">09 /</span> Dependent Picklist Chains</h2>
+      <p class="section-subtitle">Critical field dependencies the AI must respect when extracting values.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Building__c Dependency Chain</div>
+        <div class="mermaid">
+flowchart LR
+    BT["Building_Type__c<br/><i>Controller</i><br/>114 values<br/><span style='font-size:0.7em'>e.g. School, Hospital,<br/>Police station, Office</span>"]
+    BC["Building_Category__c<br/><i>Dependent</i><br/>13 values<br/><span style='font-size:0.7em'>e.g. Educational,<br/>Health services</span>"]
+    BSC["Building_Sub_Category__c<br/><i>Dependent</i><br/><span style='font-size:0.7em'>e.g. Primary school,<br/>Secondary school</span>"]
+
+    BT --> BC --> BSC
+
+    style BT fill:#fdf4f2,stroke:#d4614a,stroke-width:2px
+    style BC fill:#fef3c7,stroke:#a16207
+    style BSC fill:#dcfce7,stroke:#15803d
+        </div>
+      </div>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Item__c (ACM) Dependency Chains</div>
+        <div class="mermaid">
+flowchart LR
+    FR["Friability_of_Material__c<br/><i>Controller</i><br/>Friable | Non Friable"]
+    ACG["ACM_Classification__c<br/><i>ACM Product Group</i><br/>18 values<br/><span style='font-size:0.7em'>e.g. Cement products,<br/>Insulation Products</span>"]
+    ACT["ACM_Sub_Classification__c<br/><i>ACM Product Type</i><br/><span style='font-size:0.7em'>e.g. Flat sheeting,<br/>Moulded products</span>"]
+    IN["Item_Name__c<br/><i>Dependent on Group</i><br/>294 values<br/><span style='font-size:0.7em'>e.g. Ceiling, Eave lining,<br/>Floor tiles, Pipe lagging</span>"]
+
+    FR --> ACG --> ACT
+    ACG --> IN
+
+    style FR fill:#fdf4f2,stroke:#d4614a,stroke-width:2px
+    style ACG fill:#fef3c7,stroke:#a16207
+    style ACT fill:#dcfce7,stroke:#15803d
+    style IN fill:#e0f2fe,stroke:#0369a1
+        </div>
+      </div>
+
+      <div class="callout coral">
+        <div class="callout-title">Why This Matters for AI Extraction</div>
+        <p>The AI cannot simply extract values in isolation. If it extracts <code>Friability = "Non Friable"</code>, then <code>ACM Product Group</code> must be one of the non-friable groups (e.g., "Cement products" not "Cement products (f)"). If it extracts <code>ACM Product Group = "Insulation Products"</code>, then <code>Item Name</code> must be a value valid for insulation (e.g., "Pipe lagging" not "Floor tiles"). The validation layer enforces these chains.</p>
+      </div>
+    </section>
+
+    <!-- ==================== 10. INTERNAL DATA SCHEMA ==================== -->
+    <section id="internal-schema">
+      <h2><span class="num">10 /</span> Internal Data Schema</h2>
+      <p class="section-subtitle">How extracted data is stored in SurrealDB before export.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">SurrealDB Entity Relationship</div>
+        <div class="diagram-caption">Internal storage model mapped to Salesforce objects</div>
+        <div class="mermaid">
+erDiagram
+    source ||--o{ building_record : "extracted_from"
+    source ||--o{ acm_table_section : "has_tables"
+    source ||--o| site_config : "configured_with"
+    building_record ||--o{ acm_record : "has_acms"
+    field_schema ||--o{ building_record : "validates"
+    field_schema ||--o{ acm_record : "validates"
+
+    source {
+        string id PK
+        string title
+        string file_path
+        string full_text
+        datetime created_at
+    }
+
+    building_record {
+        string id PK
+        record source_id FK
+        string building_name
+        string building_address
+        string suburb
+        string postcode
+        string construction_type
+        string estimated_year_built
+        string number_of_levels
+        int page_number
+        float extraction_confidence
+    }
+
+    acm_record {
+        string id PK
+        record source_id FK
+        record building_id FK
+        string item_name
+        string friability
+        string acm_product_group
+        string acm_product_type
+        string condition
+        string disturbance_potential
+        string room_name
+        string floor_level
+        string item_location
+        string sample_result
+        string sample_number
+        string quantity
+        string assessor
+        string recommendations
+        int page_number
+        float extraction_confidence
+    }
+
+    site_config {
+        record source_id FK
+        string department
+        string organisation
+        string building_type
+        string building_category
+        string owned_or_leased
+        string frequency_of_use
+    }
+
+    field_schema {
+        string id PK
+        json field_definitions
+        json picklist_values
+        json dependency_rules
+        string version
+    }
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Schema Configuration</div>
+        <p>The <code>field_schema</code> table stores the Salesforce picklist values and dependency rules extracted from the <code>building_list.txt</code> and <code>item_list.txt</code> schema files. This drives validation, AG Grid column definitions, and export formatting — ensuring all AI outputs conform to Salesforce constraints without a live Salesforce connection.</p>
+      </div>
+    </section>
+
+    <!-- ==================== 11. PIPELINE OVERVIEW ==================== -->
+    <section id="pipeline-overview">
+      <h2><span class="num">11 /</span> AI Extraction Pipeline</h2>
+      <p class="section-subtitle">The 5-phase LangGraph pipeline that transforms PDF content into Salesforce-ready Building and ACM records.</p>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Full Pipeline Flow</div>
+        <div class="diagram-caption">LangGraph orchestrated extraction with Claude Sonnet</div>
+        <div class="mermaid">
+flowchart TB
+    subgraph P1["Phase 1: PDF Processing"]
+        direction LR
+        UPLOAD["PDF Upload"] --> PYMUPDF["PyMuPDF<br/><i>Reading-order text</i>"]
+        UPLOAD --> DOCLING["Docling + TableFormer<br/><i>Structured tables (CUDA)</i>"]
+        PYMUPDF --> MERGE["Merge Results"]
+        DOCLING --> MERGE
+    end
+
+    subgraph P2["Phase 2: Structure Analysis"]
+        direction LR
+        DOC_STRUCT["Document Structure<br/><i>Claude Sonnet</i><br/>TOC, sections, doc type"]
+        BLDG_INV["Building Inventory<br/><i>Claude Sonnet</i><br/>Identify all buildings<br/>and their page ranges"]
+        PAGE_TAG["Page Tagging<br/><i>Claude Sonnet</i><br/>Tag pages by content type"]
+        DOC_STRUCT --> BLDG_INV --> PAGE_TAG
+    end
+
+    subgraph P3["Phase 3: AI Extraction"]
+        direction TB
+        ORCH["Orchestrator<br/><i>Per-building extraction plan</i>"]
+        EXT_B["Extract Building Fields<br/><i>Claude Sonnet</i><br/>→ Building__c fields"]
+        EXT_A["Extract ACM Items<br/><i>Claude Sonnet</i><br/>→ Item__c fields"]
+        ORCH --> EXT_B
+        ORCH --> EXT_A
+    end
+
+    subgraph P4["Phase 4: Validation &amp; Correction"]
+        direction LR
+        PYDANTIC["Pydantic Validation<br/><i>Type + Schema check</i>"]
+        PICKLIST["Picklist Validation<br/><i>Match SF values</i>"]
+        DEP_CHECK["Dependency Check<br/><i>Friability → Group → Type</i>"]
+        CORRECT["AI Correction<br/><i>Claude Sonnet</i><br/>Fix invalid values"]
+        PYDANTIC --> PICKLIST --> DEP_CHECK --> CORRECT
+    end
+
+    subgraph P5["Phase 5: Review &amp; Export"]
+        direction LR
+        STORE["Store in SurrealDB"]
+        GRID["AG Grid Review<br/><i>Officer edits</i>"]
+        EXPORT["Export to Excel/CSV<br/><i>Building__c + Item__c<br/>Salesforce-ready</i>"]
+        STORE --> GRID --> EXPORT
+    end
+
+    MERGE --> DOC_STRUCT
+    PAGE_TAG --> ORCH
+    EXT_A --> PYDANTIC
+    EXT_B --> PYDANTIC
+    CORRECT --> STORE
+
+    style P1 fill:#f3e8ff,stroke:#7e22ce,stroke-width:1px
+    style P2 fill:#e0f2fe,stroke:#0369a1,stroke-width:1px
+    style P3 fill:#f0f9f8,stroke:#3a8f8a,stroke-width:2px
+    style P4 fill:#dcfce7,stroke:#15803d,stroke-width:1px
+    style P5 fill:#fef3c7,stroke:#a16207,stroke-width:1px
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PHASE 1 ==================== -->
+    <section id="phase-pdf">
+      <h3><span class="num">Phase 1 /</span> PDF Processing</h3>
+      <p>Two complementary engines run in parallel on each uploaded PDF.</p>
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid #7e22ce;">
+          <h4>PyMuPDF — Text Extraction</h4>
+          <p>Extracts reading-order text from every page. Provides the raw text context that the AI uses for building identification, metadata extraction, and understanding document structure.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #7e22ce;">
+          <h4>Docling + TableFormer — Table Extraction</h4>
+          <p>GPU-accelerated (CUDA) table detection and recognition. Identifies table boundaries, cell contents, and column headers. This is critical because the ACM data lives in tables — the AI needs structured table data to extract individual ACM records accurately.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PHASE 2 ==================== -->
+    <section id="phase-structure">
+      <h3><span class="num">Phase 2 /</span> Structure Analysis</h3>
+      <p>Three Claude Sonnet calls analyse the document before extraction begins.</p>
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid #0369a1;">
+          <h4>Document Structure</h4>
+          <p>Identifies the document type (Division 5, Risk Assessment, Audit), sections, and table of contents. Determines how many buildings are in the document.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #0369a1;">
+          <h4>Building Inventory</h4>
+          <p>Lists every building found in the document with page ranges. Each building gets a processing plan. This is critical for PDFs with multiple buildings — each building's data must be extracted and grouped separately.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #0369a1;">
+          <h4>Page Tagging</h4>
+          <p>Tags each page by content type (cover, table of contents, building info, ACM table, appendix). This tells the extraction phase which pages to focus on for each building.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PHASE 3 ==================== -->
+    <section id="phase-extraction">
+      <h3><span class="num">Phase 3 /</span> AI Extraction</h3>
+      <p>The core extraction phase — Claude Sonnet extracts Buildings and ACMs from the identified tables.</p>
+
+      <div class="callout">
+        <div class="callout-title">Per-Building Extraction</div>
+        <p>For each building identified in Phase 2, the orchestrator sends the relevant pages and table data to Claude Sonnet with two extraction tasks:</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>Extract Building Fields → Building__c</h4>
+          <p>Extracts: Building Name, Address, Suburb, Postcode, Construction Type, Year Built, Number of Levels, Date of Inspection, Roof Type, Estimated Size. These map directly to <code>Building__c</code> fields.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>Extract ACM Items → Item__c</h4>
+          <p>For every row in the ACM tables, extracts: Item Name, Friability, ACM Product Group, ACM Product Type, Condition, Disturbance Potential, Room/Area, Floor Level, Location, Sample Result, Sample Number, Quantity, Assessor, Recommendations. Each maps to an <code>Item__c</code> field with the correct picklist value.</p>
+        </div>
+      </div>
+
+      <div class="diagram-container">
+        <div class="diagram-title">Extraction Prompt Strategy</div>
+        <div class="diagram-caption">How the AI prompt is constructed for each building</div>
+        <div class="mermaid">
+sequenceDiagram
+    participant ORCH as Orchestrator
+    participant CLAUDE as Claude Sonnet
+    participant VAL as Validator
+
+    ORCH->>ORCH: Select building pages + table data
+    ORCH->>ORCH: Load picklist values from field_schema
+    ORCH->>CLAUDE: System: "Extract Building + ACM data.<br/>Valid Item Names: [294 values]<br/>Valid Friability: Friable | Non Friable<br/>Valid Conditions: Poor|Fair|Stable|Unknown|N/A<br/>..."<br/>User: [table data + context text]
+    CLAUDE-->>ORCH: JSON: {building: {...}, acm_records: [{...}, ...]}
+    ORCH->>VAL: Validate each record
+    VAL-->>ORCH: Validation result
+    alt Validation fails
+        ORCH->>CLAUDE: "Fix these fields: [errors]"
+        CLAUDE-->>ORCH: Corrected JSON
+    end
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PHASE 4 ==================== -->
+    <section id="phase-validation">
+      <h3><span class="num">Phase 4 /</span> Validation &amp; Correction</h3>
+      <p>Every extracted record is validated against the Salesforce schema before storage.</p>
+
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid #15803d;">
+          <h4>Pydantic Schema Validation</h4>
+          <p>Type checking, required field validation, and format coercion (dates, numbers). Uses Pydantic v2 models that mirror the Salesforce field types.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #15803d;">
+          <h4>Picklist Value Validation</h4>
+          <p>Every picklist value is checked against the exact Salesforce picklist values loaded from the schema config. If AI returns "Good" for Condition but Salesforce only accepts "Poor|Fair|Stable|Unknown|N/A", it's flagged.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #15803d;">
+          <h4>Dependency Chain Validation</h4>
+          <p>Verifies that dependent picklist values are valid for their controller. If Friability = "Non Friable", ACM Product Group cannot be "Insulation products (f)" (which is friable-only).</p>
+        </div>
+        <div class="card" style="border-left: 4px solid #15803d;">
+          <h4>AI Correction Loop</h4>
+          <p>Invalid fields are sent back to Claude Sonnet with the specific error and valid options. The AI returns corrected values. Max 3 correction attempts per record before flagging for manual review.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Business Rule: Negative Result Clears Fields</div>
+        <p>When <code>Sample_Result__c</code> = "Negative", the system automatically sets <code>Condition__c</code> = "N/A (negative)" and <code>Disturbance_Potential__c</code> = "N/A". This mirrors the Salesforce business rule where negative results don't require condition or disturbance assessment.</p>
+      </div>
+    </section>
+
+    <!-- ==================== PHASE 5 ==================== -->
+    <section id="phase-export">
+      <h3><span class="num">Phase 5 /</span> Review &amp; Export</h3>
+      <p>Officers review and correct extracted data before export.</p>
+
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid var(--gold);">
+          <h4>AG Grid Spreadsheet Review</h4>
+          <p>All extracted records displayed in an interactive AG Grid spreadsheet. Officers can edit cells, filter by building, sort by condition/risk, and correct any AI errors. Column definitions and picklist dropdowns are driven by the field schema config.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--gold);">
+          <h4>Salesforce-Ready Export</h4>
+          <p>Export to Excel/CSV with exact Salesforce API field names as column headers. Separate sheets for <code>Building__c</code> and <code>Item__c</code> records. Picklist values exactly match Salesforce. Ready for Salesforce Data Loader or Data Import Wizard.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--gold);">
+          <h4>Site Configuration Merge</h4>
+          <p>Officer-configured fields (Department, Organisation, Building Type, Asset Category, Owned/Leased) are merged into the export. These fields cannot be extracted from PDFs — they come from the site config set up before extraction.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== DESIGN PRINCIPLES ==================== -->
+    <section id="design-principles">
+      <h2><span class="num">12 /</span> Design Principles</h2>
+      <p class="section-subtitle">Architectural decisions that guide the system.</p>
+
+      <div class="card-grid">
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>1. Salesforce Schema Drives Everything</h4>
+          <p>The Salesforce <code>Building__c</code> and <code>Item__c</code> schemas are the source of truth. Picklist values, dependent fields, and field types are loaded from schema config and used to drive AI prompts, validation, grid columns, and export formats.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--coral);">
+          <h4>2. Hybrid PDF Extraction</h4>
+          <p>PyMuPDF for text + Docling for tables. Each covers the other's blind spots. Non-blocking design means one engine failing doesn't stop the other.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--navy);">
+          <h4>3. AI Extracts, Rules Validate</h4>
+          <p>Claude Sonnet handles the fuzzy work (interpretation, normalisation). Pydantic and picklist rules handle the precise work (validation, dependency enforcement). Never trust AI output without schema validation.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--teal);">
+          <h4>4. Per-Building Extraction</h4>
+          <p>Every building is extracted independently. This ensures correct Building → ACM Item grouping and handles PDFs with 1 building or 20 buildings identically.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--coral);">
+          <h4>5. Graceful Degradation</h4>
+          <p>Every AI call has a fallback. Structured output fails? JSON parser. LLM misses a record? Regex recovery. Validation fails? AI correction loop. The system always produces output.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--navy);">
+          <h4>6. Design for the Officer</h4>
+          <p>End users are compliance officers, not developers. The workflow is simple: upload PDF → review extracted data in spreadsheet → export. All complexity is hidden behind the pipeline.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <div style="margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--gray-200); text-align: center; color: var(--gray-500); font-size: 0.8rem;">
+      <p>ACM-AI Solution Architecture v3.0 — Victorian Asbestos Eradication Agency</p>
+      <p style="margin-top: 4px;">Generated March 2026 · Salesforce Objects: Building__c (143 fields) + Item__c (154 fields)</p>
+      <p style="margin-top: 2px;">VAEA Branding: <span style="color: var(--teal);">■</span> Teal #3a8f8a · <span style="color: var(--coral);">■</span> Coral #d4614a · <span style="color: var(--navy);">■</span> Navy #2a2f45</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    themeVariables: {
+      primaryColor: '#e0f2fe',
+      primaryTextColor: '#0369a1',
+      primaryBorderColor: '#0369a1',
+      lineColor: '#868e96',
+      secondaryColor: '#fce7f3',
+      tertiaryColor: '#dcfce7',
+      fontFamily: 'DM Sans, system-ui, sans-serif',
+      fontSize: '13px',
+    },
+    flowchart: { htmlLabels: true, curve: 'basis', padding: 12, nodeSpacing: 30, rankSpacing: 40 },
+    sequence: { actorMargin: 30, messageMargin: 20, noteMargin: 8 },
+  });
+
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar a[href^="#"]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => link.classList.remove('active'));
+        const activeLink = document.querySelector(`.sidebar a[href="#${entry.target.id}"]`);
+        if (activeLink) activeLink.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+  sections.forEach(section => observer.observe(section));
+</script>
+
+</body>
+</html>

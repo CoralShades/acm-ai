@@ -4,6 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical** : Always use AskUserQuestion Tool when you want to clarify, interview or ask questions from the user.
 
+## CRITICAL PATH RULE (WSL/Windows)
+
+- Never `cd` to `/d/...` or `D:\...` in Bash commands.
+- Always use the repo root from `$CLAUDE_PROJECT_DIR`.
+- If `$CLAUDE_PROJECT_DIR` is not set, assume WSL mount: `/mnt/d/ailocal/acm-ai`.
+
+Examples:
+- `cd "$CLAUDE_PROJECT_DIR"`
+- `cd "$CLAUDE_PROJECT_DIR" && uv run ...`
+- `ls "$CLAUDE_PROJECT_DIR/docs"`
+- `cd /d/ailocal/acm-ai` — WRONG
+- `cd D:\ailocal\acm-ai` — WRONG
+
 ## Project Overview
 
 ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms SAMP (School Asbestos Management Plan) documents into structured, queryable data. It's a monorepo with two parts:
@@ -146,6 +159,59 @@ extract_acm_records(
 - MinerU dependency (`magic-pdf`) has incomplete dependency declarations - may require manual installation of `opencv-python`, `ultralytics`, `doclayout-yolo` for full functionality
 - Consider Docker containerization for MinerU isolation in production
 - Fallback mechanism ensures data extraction works even if MinerU dependencies are unavailable
+
+## Python Environments: MinerU 2.x (E31-S1 Validated)
+
+MinerU 2.x (`mineru>=2.7.0`) installs directly into the main `.venv/` alongside Docling and PyTorch.
+The `paddlepaddle-gpu` conflict that drove the two-venv pattern was specific to MinerU 1.x (`magic-pdf`).
+
+**IMPORTANT — `[all]` extras conflict:** `mineru[all]` includes `vllm` which pins `torchvision` to versions
+incompatible with `torchvision>=0.25.0` in the project. Use `mineru>=2.7.0` (without `[all]`) instead.
+The `[pipeline]` and `[vlm]` extras can be added individually if specific backends are needed.
+
+### Venv Summary
+
+| Venv | Path | Purpose | Manager |
+|------|------|---------|---------|
+| Main | `.venv/` | All production services — API, worker, Docling/TableFormer, MinerU 2.x | `uv` (pyproject.toml) |
+| MinerU (legacy) | `.venv-mineru/` | MinerU 1.x (`magic-pdf`) — deprecated if MinerU 2.x confirmed in main venv | `pip` (standalone) |
+
+### Interpreter Paths
+
+| Platform | Main venv | MinerU 1.x legacy venv |
+|----------|-----------|-------------------------|
+| Windows | `.venv\Scripts\python.exe` | `.venv-mineru\Scripts\python.exe` (deprecated) |
+| WSL/Linux | `.venv/bin/python` | `.venv-mineru/bin/python` (deprecated) |
+
+### Rules for All AI Coding Tools
+
+- **Always `uv run ...`** for all main project work (API, tests, lint, workers)
+- **`import mineru`** directly in main project code — no subprocess bridge needed for MinerU 2.x
+- **Never** add `mineru[all]` to `pyproject.toml` — use `mineru>=2.7.0` to avoid `vllm`/`torchvision` conflict
+- **Never** `uv pip install magic-pdf` or `paddlepaddle` into the main venv
+- `scripts/mineru_runner.py` — legacy bridge for MinerU 1.x, deprecated
+
+### MinerU 2.x API
+
+```python
+from mineru import MinerUDocumentConverter
+
+converter = MinerUDocumentConverter()
+result = converter.convert("/path/to/file.pdf")
+```
+
+Enable via environment variables: `MINERU_ENABLED=true` (no separate venv path needed)
+
+### Legacy Subprocess Bridge (Deprecated)
+
+`scripts/mineru_runner.py` was the MinerU 1.x subprocess bridge via `.venv-mineru/`.
+It is deprecated now that MinerU 2.x installs in the main venv.
+See E31-S1 validation results at `scripts/research/e31_s1_validation_results.json`.
+
+### One-Time Setup (Windows)
+
+MinerU 2.x installs automatically via `uv sync` — no separate setup step required.
+(Legacy: `/e25-setup-mineru` command set up the old `.venv-mineru/` venv.)
 
 ## Database
 

@@ -1,0 +1,64 @@
+# ralph-config.json Template
+
+Copy this to `ralph-config.json` at your project root. Adjust models, limits, and phases to match your workflow.
+
+```json
+{
+  "version": "1.0",
+  "models": {
+    "sm": "sonnet",
+    "dev": "sonnet",
+    "qa": "sonnet",
+    "reviewer": "sonnet",
+    "architect": "sonnet",
+    "docs": "haiku"
+  },
+  "limits": {
+    "maxIterations": 40,
+    "devRetries": 2,
+    "qaRetries": 1,
+    "reviewRetries": 2,
+    "agentMaxTurns": {
+      "sm": 20,
+      "dev": 50,
+      "qa": 30,
+      "reviewer": 15,
+      "architect": 12,
+      "docs": 10
+    }
+  },
+  "phases": {
+    "architect": true,
+    "sm": true,
+    "dev": true,
+    "qa": true,
+    "review": true,
+    "commit": true,
+    "docUpdate": true
+  },
+  "execution": {
+    "dryRun": false,
+    "autoCommit": true,
+    "branchStrategy": "direct",
+    "verbose": false,
+    "pauseBeforeCommit": false,
+    "pauseBetweenPhases": false
+  },
+  "selection": {
+    "sortBy": "sprint-then-sp",
+    "preferSmallWins": true,
+    "maxStoryPoints": 0
+  }
+}
+```
+
+## Key Settings
+
+| Setting | Values | Effect |
+|---------|--------|--------|
+| `models.*` | `haiku`, `sonnet`, `opus` | AI model per agent phase |
+| `phases.*` | `true`/`false` | Enable/disable phases |
+| `execution.branchStrategy` | `direct`, `feature` | `direct` = commit to current branch |
+| `execution.dryRun` | `true`/`false` | Describe actions without executing |
+| `selection.sortBy` | `sprint-then-sp`, `sp-asc`, `risk-desc` | Story selection priority |
+| `selection.maxStoryPoints` | 0-13 | Filter stories by max SP (0 = no limit) |

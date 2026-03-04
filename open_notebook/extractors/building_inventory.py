@@ -445,6 +445,30 @@ def _heuristic_fallback(
     )
 
 
+def _coerce_rooms_in_inventory(parsed: dict) -> None:
+    """Coerce string rooms to RoomMeta-compatible dicts in-place (R2-AC1).
+
+    LLMs often return rooms as plain strings (e.g. ``["Room A", "Room B"]``)
+    instead of ``[{"room_id": "...", "name": "..."}]``.  This converts them
+    before Pydantic validation so ``BuildingInventory.model_validate`` succeeds.
+    """
+    for building in parsed.get("buildings", []):
+        if not isinstance(building, dict):
+            continue
+        rooms = building.get("rooms")
+        if rooms is None:
+            building["rooms"] = []
+            continue
+        coerced: List[dict] = []
+        for room in rooms:
+            if isinstance(room, str):
+                coerced.append({"room_id": room, "name": room})
+            elif isinstance(room, dict):
+                coerced.append(room)
+            # skip non-str/dict entries silently
+        building["rooms"] = coerced
+
+
 async def _llm_compile_inventory(
     content: str,
     model_id: Optional[str] = None,
@@ -475,14 +499,33 @@ async def _llm_compile_inventory(
         max_tokens=4096,
     )
 
-    chain = model.with_structured_output(BuildingInventory)
+    from open_notebook.graphs.utils import (
+        _verify_provider_routing,
+        parse_json_response,
+    )
+
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
             content="Compile a building inventory with page ranges, room codes, and complexity classifications."
         ),
     ]
-    result: BuildingInventory = await chain.ainvoke(messages)
+    raw_response = await model.ainvoke(messages)
+
+    # E27-S3: Verify provider routing (non-blocking)
+    try:
+        await _verify_provider_routing(raw_response, "building_inventory")
+    except Exception:
+        pass  # Never block extraction for verification failure
+
+    response_text = (
+        raw_response.content
+        if hasattr(raw_response, "content")
+        else str(raw_response)
+    )
+    parsed = parse_json_response(response_text)
+    _coerce_rooms_in_inventory(parsed)
+    result = BuildingInventory.model_validate(parsed)
     return result
 
 

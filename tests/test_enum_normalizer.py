@@ -100,7 +100,7 @@ class TestConditionNormalization:
     def test_good(self):
         from open_notebook.extractors.normalizers.enums import normalize_enum_value
 
-        assert normalize_enum_value("good", "condition") == "Good"
+        assert normalize_enum_value("good", "condition") == "Stable"
 
     def test_fair(self):
         from open_notebook.extractors.normalizers.enums import normalize_enum_value
@@ -135,7 +135,7 @@ class TestConditionNormalization:
     def test_case_insensitive(self):
         from open_notebook.extractors.normalizers.enums import normalize_enum_value
 
-        assert normalize_enum_value("GOOD", "condition") == "Good"
+        assert normalize_enum_value("GOOD", "condition") == "Stable"
         assert normalize_enum_value("Poor", "condition") == "Poor"
 
 
@@ -216,7 +216,7 @@ class TestEdgeCases:
         """Leading/trailing whitespace is stripped."""
         from open_notebook.extractors.normalizers.enums import normalize_enum_value
 
-        assert normalize_enum_value("  good  ", "condition") == "Good"
+        assert normalize_enum_value("  good  ", "condition") == "Stable"
         assert normalize_enum_value("  low  ", "disturbance_potential") == "Low"
 
     def test_friability_reuses_taxonomy(self):

@@ -15,7 +15,9 @@ import type {
   SiteConfigRequest,
   SiteConfigTemplate,
   CommandJobStatusResponse,
+  ACMRawTable,
 } from '@/lib/types/acm'
+import type { SourceIntelligence } from '@/lib/types/intelligence'
 
 export const acmApi = {
   /**
@@ -107,6 +109,16 @@ export const acmApi = {
   },
 
   /**
+   * Fetch raw table sections for a job.
+   */
+  getRawTables: async (sourceId: string): Promise<ACMRawTable[]> => {
+    const response = await apiClient.get<ACMRawTable[]>(
+      `/acm/jobs/${encodeURIComponent(sourceId)}/raw-tables`
+    )
+    return response.data
+  },
+
+  /**
    * Check if a source has ACM records
    */
   hasRecords: async (sourceId: string): Promise<boolean> => {
@@ -163,5 +175,24 @@ export const acmApi = {
     const params = department ? { department } : {}
     const response = await apiClient.get<{ agencies: string[] }>('/acm/config/agencies', { params })
     return response.data.agencies
+  },
+
+  /**
+   * Get pre-extraction intelligence for a source (E30-S9).
+   * Returns null if no intelligence data exists (404).
+   */
+  getIntelligence: async (sourceId: string): Promise<SourceIntelligence | null> => {
+    try {
+      const response = await apiClient.get<SourceIntelligence>(
+        `/acm/source-intelligence/${encodeURIComponent(sourceId)}`
+      )
+      return response.data
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { status?: number } }
+        if (axiosErr.response?.status === 404) return null
+      }
+      throw err
+    }
   },
 }

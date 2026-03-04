@@ -1,0 +1,68 @@
+{
+  "table_index": 7,
+  "page": 13,
+  "rows": 5,
+  "columns": 4,
+  "raw_column_names": [
+    "Table 1: Site Information.Site Address",
+    "Table 1: Site Information.15 Dimboola Road, Broadmeadows, Victoria",
+    "Table 1: Site Information.15 Dimboola Road, Broadmeadows, Victoria",
+    "Table 1: Site Information.15 Dimboola Road, Broadmeadows, Victoria"
+  ],
+  "normalized_column_names": [
+    "Site Address",
+    "15 Dimboola Road, Broadmeadows, Victoria",
+    "15 Dimboola Road, Broadmeadows, Victoria_1",
+    "15 Dimboola Road, Broadmeadows, Victoria_2"
+  ],
+  "sample_rows": [
+    {
+      "Site Address": "Year of Construction Completion:",
+      "15 Dimboola Road, Broadmeadows, Victoria": "1985",
+      "15 Dimboola Road, Broadmeadows, Victoria_1": "External walls:",
+      "15 Dimboola Road, Broadmeadows, Victoria_2": "Brick"
+    },
+    {
+      "Site Address": "Approximate area:",
+      "15 Dimboola Road, Broadmeadows, Victoria": "6,272m 2",
+      "15 Dimboola Road, Broadmeadows, Victoria_1": "Internal walls:",
+      "15 Dimboola Road, Broadmeadows, Victoria_2": "Plaster"
+    },
+    {
+      "Site Address": "Levels:",
+      "15 Dimboola Road, Broadmeadows, Victoria": "2",
+      "15 Dimboola Road, Broadmeadows, Victoria_1": "Ceiling:",
+      "15 Dimboola Road, Broadmeadows, Victoria_2": "Plaster"
+    },
+    {
+      "Site Address": "Roof type:",
+      "15 Dimboola Road, Broadmeadows, Victoria": "Metal",
+      "15 Dimboola Road, Broadmeadows, Victoria_1": "Floor and coverings:",
+      "15 Dimboola Road, Broadmeadows, Victoria_2": "Carpet, vinyl"
+    },
+    {
+      "Site Address": "Assessment Time:",
+      "15 Dimboola Road, Broadmeadows, Victoria": "During normal business hours",
+      "15 Dimboola Road, Broadmeadows, Victoria_1": "Site Occupation:",
+      "15 Dimboola Road, Broadmeadows, Victoria_2": "Occupied"
+    }
+  ],
+  "has_merged_cells": true,
+  "acm_indicators": {
+    "same as": false,
+    "as per": false,
+    "not sampled": false,
+    "assumed positive": false,
+    "assumed": false,
+    "no access": false,
+    "34511": false,
+    "negative": false,
+    "positive": false,
+    "battery charger": false,
+    "fuse cartridge": false,
+    "internal lining": false,
+    "disabled toilet": false,
+    "lift foyer": false,
+    "switch room": false
+  }
+}

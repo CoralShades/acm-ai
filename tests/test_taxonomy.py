@@ -114,33 +114,33 @@ class TestClassifyProductVinyl:
 
     def test_vinyl_floor_tiles(self):
         result = classify_product("Vinyl floor tiles", "Non-friable")
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"
         assert result.product_type == "Vinyl Tiles"
         assert result.method == "pattern"
         assert result.confidence == 0.9
 
     def test_vinyl_sheet(self):
         result = classify_product("Vinyl sheet flooring", "Non-friable")
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"
         assert result.product_type == "Vinyl sheet"
         assert result.method == "pattern"
 
     def test_linoleum(self):
         result = classify_product("Linoleum flooring", "Non-friable")
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"
         assert result.product_type == "Vinyl sheet"
         assert result.method == "pattern"
 
     def test_hessian_backed_vinyl(self):
         result = classify_product("Hessian backed vinyl sheet", "Non-friable")
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"
         # Note: "Vinyl sheet" pattern matches first - pattern ordering could be improved
         assert result.product_type in ["Hessian backed Vinyl sheet", "Vinyl sheet"]
         assert result.method == "pattern"
 
     def test_vinyl_friable(self):
         result = classify_product("Vinyl tiles", "Friable")
-        assert result.product_group == "T2 Vinyl products"
+        assert result.product_group == "Vinyl products"
         assert result.product_type == "Vinyl Tiles"
 
 
@@ -149,13 +149,13 @@ class TestClassifyProductCement:
 
     def test_fibre_cement(self):
         result = classify_product("Fibre cement sheeting", "Non-friable")
-        assert result.product_group == "T1 Cement products"
+        assert result.product_group == "Cement products"
         assert result.product_type == "Flat Sheeting"
         assert result.method == "pattern"
 
     def test_fibro(self):
         result = classify_product("Fibro wall cladding", "Non-friable")
-        assert result.product_group == "T1 Cement products"
+        assert result.product_group == "Cement products"
         assert result.product_type == "Flat Sheeting"
 
     def test_fibro_word_boundary(self):
@@ -171,22 +171,22 @@ class TestClassifyProductCement:
 
     def test_corrugated_roof(self):
         result = classify_product("Corrugated roof sheeting", "Non-friable")
-        assert result.product_group == "T1 Cement products"
+        assert result.product_group == "Cement products"
         assert result.product_type == "Corrugated Roof Sheeting"
 
     def test_weatherboard(self):
         result = classify_product("Weatherboard cladding", "Non-friable")
-        assert result.product_group == "T1 Cement products"
+        assert result.product_group == "Cement products"
         assert result.product_type == "Weatherboards"
 
     def test_flat_sheet(self):
         result = classify_product("Flat sheet to eaves", "Non-friable")
-        assert result.product_group == "T1 Cement products"
+        assert result.product_group == "Cement products"
         assert result.product_type == "Flat Sheeting"
 
     def test_ceiling_tile(self):
         result = classify_product("Ceiling tiles", "Non-friable")
-        assert result.product_group == "T1 Cement products"
+        assert result.product_group == "Cement products"
         assert result.product_type == "Ceiling Tiles"
 
 
@@ -195,28 +195,28 @@ class TestClassifyProductGasket:
 
     def test_mastic(self):
         result = classify_product("Mastic around window", "Non-friable")
-        assert result.product_group == "T4 Gasket, friction products and adhesives"
+        assert result.product_group == "Gasket, friction products and adhesives"
         assert result.product_type == "Mastic"
         assert result.method == "pattern"
 
     def test_gasket(self):
         result = classify_product("Gasket around pipe", "Non-friable")
-        assert result.product_group == "T4 Gasket, friction products and adhesives"
+        assert result.product_group == "Gasket, friction products and adhesives"
         assert result.product_type == "Gasket(s)"
 
     def test_caulking(self):
         result = classify_product("Caulking compound", "Non-friable")
-        assert result.product_group == "T4 Gasket, friction products and adhesives"
+        assert result.product_group == "Gasket, friction products and adhesives"
         assert result.product_type == "Caulking"
 
     def test_putty(self):
         result = classify_product("Window putty", "Non-friable")
-        assert result.product_group == "T4 Gasket, friction products and adhesives"
+        assert result.product_group == "Gasket, friction products and adhesives"
         assert result.product_type == "Putty"
 
     def test_gasket_friable(self):
         result = classify_product("Rope gasket", "Friable")
-        assert result.product_group == "T4 Gasket products"
+        assert result.product_group == "Gasket products"
 
 
 class TestClassifyProductInsulation:
@@ -224,32 +224,32 @@ class TestClassifyProductInsulation:
 
     def test_lagging_nonfriable(self):
         result = classify_product("Pipe lagging", "Non-friable")
-        assert result.product_group == "T8 Insulation"
+        assert result.product_group == "Insulation"
         assert result.product_type == "Lagging"
 
     def test_lagging_friable(self):
         result = classify_product("Pipe lagging", "Friable")
-        assert result.product_group == "T3 Insulation products"
+        assert result.product_group == "Insulation products"
         assert result.product_type == "Lagging"
 
     def test_millboard(self):
         result = classify_product("Millboard behind heater", "Non-friable")
-        assert result.product_group == "T8 Insulation"
+        assert result.product_group == "Insulation"
         assert result.product_type == "Millboard"
 
     def test_vermiculite(self):
         result = classify_product("Vermiculite in ceiling", "Friable")
-        assert result.product_group == "T3 Insulation products"
+        assert result.product_group == "Insulation products"
         assert result.product_type == "Vermiculite"
 
     def test_loose_fill(self):
         result = classify_product("Loose fill ceiling insulation", "Friable")
-        assert result.product_group == "T3 Insulation products"
+        assert result.product_group == "Insulation products"
         assert result.product_type == "Loose Fill Insulation"
 
     def test_fire_door_core(self):
         result = classify_product("Fire door core material", "Non-friable")
-        assert result.product_group == "T8 Insulation"
+        assert result.product_group == "Insulation"
         assert result.product_type == "Fire Door Core"
 
 
@@ -258,18 +258,18 @@ class TestClassifyProductBitumen:
 
     def test_bitumen_membrane(self):
         result = classify_product("Bituminous membrane", "Non-friable")
-        assert result.product_group == "T2 Bitumen products"
+        assert result.product_group == "Bitumen products"
         assert result.product_type == "Bituminous Membrane"
         assert result.method == "pattern"
 
     def test_malthoid(self):
         result = classify_product("Malthoid roofing", "Non-friable")
-        assert result.product_group == "T2 Bitumen products"
+        assert result.product_group == "Bitumen products"
         assert result.product_type == "Malthoid"
 
     def test_asphalt(self):
         result = classify_product("Asphalt flooring", "Non-friable")
-        assert result.product_group == "T2 Bitumen products"
+        assert result.product_group == "Bitumen products"
         assert result.product_type == "Asphalt"
 
     def test_bitumen_not_for_friable(self):
@@ -285,28 +285,28 @@ class TestClassifyProductOther:
 
     def test_debris(self):
         result = classify_product("ACM debris", "Non-friable")
-        assert result.product_group == "T7 Other"
+        assert result.product_group == "Other"
         assert result.product_type == "Debris"
 
     def test_dust(self):
         result = classify_product("Asbestos dust", "Non-friable")
-        assert result.product_group == "T7 Other"
+        assert result.product_group == "Other"
         assert result.product_type == "Dust"
 
     def test_plaster(self):
         # "Plaster wall" without "coating" word
         result = classify_product("Plaster wall finish", "Non-friable")
-        assert result.product_group == "T7 Other"
+        assert result.product_group == "Other"
         assert result.product_type == "Plaster"
 
     def test_render(self):
         result = classify_product("Cement render", "Non-friable")
-        assert result.product_group == "T7 Other"
+        assert result.product_group == "Other"
         assert result.product_type == "Render"
 
     def test_other_friable(self):
         result = classify_product("Debris material", "Friable")
-        assert result.product_group == "T6 Other"
+        assert result.product_group == "Other"
         assert result.product_type == "Debris"
 
 
@@ -315,17 +315,17 @@ class TestClassifyProductTextiles:
 
     def test_fire_blanket(self):
         result = classify_product("Fire blanket", "Friable")
-        assert result.product_group == "T5 Textiles"
+        assert result.product_group == "Textiles"
         assert result.product_type == "Fire blanket"
 
     def test_cloth(self):
         result = classify_product("Asbestos cloth", "Friable")
-        assert result.product_group == "T5 Textiles"
+        assert result.product_group == "Textiles"
         assert result.product_type == "Cloth"
 
     def test_rope(self):
         result = classify_product("Asbestos rope", "Friable")
-        assert result.product_group == "T5 Textiles"
+        assert result.product_group == "Textiles"
         assert result.product_type == "Rope and string"
 
 
@@ -352,13 +352,13 @@ class TestClassifyProductEdgeCases:
 
     def test_case_insensitive(self):
         result = classify_product("VINYL TILES", "Non-friable")
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"
 
     def test_with_product_field(self):
         """Test that product field enhances matching."""
         # Product field "Vinyl" + description "tiles" should match vinyl tiles pattern
         result = classify_product("floor tiles", "Non-friable", product="Vinyl")
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"
 
     def test_result_is_named_tuple(self):
         result = classify_product("Vinyl tiles", "Non-friable")
@@ -391,7 +391,7 @@ class TestClassifyWithLLM:
     async def test_pattern_match_fibro_sheeting(self):
         """Test that pattern matching classifies 'Fibro sheeting' correctly."""
         result = classify_product("Fibro sheeting", "Non-friable")
-        assert result.product_group == "T1 Cement products"
+        assert result.product_group == "Cement products"
         assert result.method == "pattern"
 
 
@@ -404,7 +404,7 @@ class TestClassifyProductAsync:
         result = await classify_product_async(
             "Vinyl tiles", "Non-friable", use_llm_fallback=True
         )
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"
         assert result.method == "pattern"
 
     @pytest.mark.asyncio
@@ -426,4 +426,4 @@ class TestClassifyProductAsync:
             product="Vinyl",
             use_llm_fallback=False,
         )
-        assert result.product_group == "T3 Vinyl products"
+        assert result.product_group == "Vinyl products"

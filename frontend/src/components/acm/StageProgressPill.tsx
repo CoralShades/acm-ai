@@ -12,9 +12,11 @@ const STAGE_LABELS: Record<string, string> = {
   STRUCTURE: 'Structure',
   PREFLIGHT: 'Preflight',
   ORCHESTRATOR: 'Orchestrate',
+  DOCLING_EXTRACTION: 'Docling Tables',
   EXTRACT: 'Extract',
   VALIDATE: 'Validate',
   CORRECT: 'Correct',
+  NO_ACCESS_RECOVERY: 'Recovery',
   STORE: 'Store',
 }
 
