@@ -564,8 +564,8 @@
         "AC8: Extends existing E27 SSE infrastructure",
         "AC9: Unit tests for event bus pub/sub and SSE serialization"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -580,7 +580,7 @@
         "tests/test_pipeline_event_bus.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e31-s7-pipeline-event-bus-sse-infrastructure.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E32-S1",
@@ -615,7 +615,7 @@
         "open_notebook/domain/acm.py",
         "tests/test_building_extraction.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e32-s1-building-extraction-node.md",
       "implementedDate": null
     },
     {
