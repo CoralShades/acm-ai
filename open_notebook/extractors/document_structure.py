@@ -161,9 +161,7 @@ async def _llm_extract_structure(
         pass  # Never block extraction for verification failure
 
     response_text = (
-        raw_response.content
-        if hasattr(raw_response, "content")
-        else str(raw_response)
+        raw_response.content if hasattr(raw_response, "content") else str(raw_response)
     )
     parsed = parse_json_response(response_text)
     llm_result = DocumentStructureLLM.model_validate(parsed)
@@ -219,6 +217,9 @@ def _heuristic_fallback(content: str) -> DocumentStructure:
     )
 
 
+MAX_STRUCTURE_RETRIES = 2
+
+
 async def extract_document_structure(
     content: Optional[str],
     model_id: Optional[str] = None,
@@ -226,7 +227,8 @@ async def extract_document_structure(
     """Extract document structure from markdown content (Task 3).
 
     Single-pass extraction: one LLM call per document.
-    Falls back to heuristic detection if LLM fails.
+    Retries up to MAX_STRUCTURE_RETRIES times before heuristic fallback.
+    Falls back to heuristic detection if LLM fails on all attempts.
 
     Args:
         content: Full document markdown content.
@@ -244,22 +246,33 @@ async def extract_document_structure(
 
     total_pages = _extract_total_pages(content)
 
-    try:
-        structure = await _llm_extract_structure(content, model_id)
-        # Ensure total_pages is set from page markers (more reliable than LLM estimate)
-        if total_pages > 0:
-            structure.total_pages = total_pages
-        logger.info(
-            f"Document structure extracted: type={structure.document_type}, "
-            f"pages={structure.total_pages}, sections={len(structure.sections)}, "
-            f"buildings={len(structure.building_ids)}, "
-            f"register_start={structure.register_start_page}"
-        )
-        return structure
+    for attempt in range(MAX_STRUCTURE_RETRIES):
+        try:
+            structure = await _llm_extract_structure(content, model_id)
+            # Ensure total_pages is set from page markers (more reliable than LLM estimate)
+            if total_pages > 0:
+                structure.total_pages = total_pages
+            logger.info(
+                f"Document structure extracted: type={structure.document_type}, "
+                f"pages={structure.total_pages}, sections={len(structure.sections)}, "
+                f"buildings={len(structure.building_ids)}, "
+                f"register_start={structure.register_start_page}"
+            )
+            return structure
+        except Exception as e:
+            if attempt < MAX_STRUCTURE_RETRIES - 1:
+                logger.warning(
+                    f"LLM structure extraction attempt {attempt + 1} failed: {e}. Retrying..."
+                )
+            else:
+                logger.warning(
+                    f"LLM structure extraction failed after {MAX_STRUCTURE_RETRIES} attempts: {e}. "
+                    "Using heuristic fallback."
+                )
+                fallback = _heuristic_fallback(content)
+                if total_pages > 0:
+                    fallback.total_pages = total_pages
+                return fallback
 
-    except Exception as e:
-        logger.warning(
-            f"LLM structure extraction failed: {e}. Using heuristic fallback."
-        )
-        fallback = _heuristic_fallback(content)
-        return fallback
+    # Should never reach here, but satisfy type checker
+    return _heuristic_fallback(content)

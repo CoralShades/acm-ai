@@ -1,0 +1,2 @@
+-- Migration 43 rollback: Remove field_confidence column from source_intelligence (E31-S8)
+REMOVE FIELD IF EXISTS field_confidence ON TABLE source_intelligence;

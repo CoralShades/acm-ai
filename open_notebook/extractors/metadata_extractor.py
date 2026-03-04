@@ -18,7 +18,10 @@ from open_notebook.extractors.parsers.base import DocumentMeta, DocumentMetaLLM
 from open_notebook.graphs.utils import provision_langchain_model
 
 # Number of pages to extract for cover page analysis
-COVER_PAGE_COUNT = 5
+COVER_PAGE_COUNT = 3
+
+# Fallback character limit when no page markers are present (AC4)
+COVER_PAGE_CHARS = 8000
 
 # ============================================================================
 # Regex patterns for heuristic extraction
@@ -99,7 +102,9 @@ def _extract_cover_pages(content: str, max_pages: int = COVER_PAGE_COUNT) -> str
     page_positions = list(_PAGE_PATTERN.finditer(content))
 
     if not page_positions:
-        return content
+        # No page markers — bound to first COVER_PAGE_CHARS characters to avoid
+        # consultant-name patterns matching on non-cover-page content (AC4)
+        return content[:COVER_PAGE_CHARS]
 
     # Find the position after max_pages page markers
     if len(page_positions) <= max_pages:

@@ -98,7 +98,9 @@ class TestSaveSourceIntelligence:
 
         async def fake_repo_query(query_str, vars=None):
             captured_queries.append((query_str, vars))
-            return [{"id": "source_intelligence:1", "source_id": "source:test_intel_123"}]
+            return [
+                {"id": "source_intelligence:1", "source_id": "source:test_intel_123"}
+            ]
 
         with patch(
             "open_notebook.database.repository.repo_query",
@@ -138,7 +140,9 @@ class TestSaveSourceIntelligence:
         ):
             from open_notebook.database.repository import save_source_intelligence
 
-            await save_source_intelligence("source:test_intel_abc", {"document_meta": None})
+            await save_source_intelligence(
+                "source:test_intel_abc", {"document_meta": None}
+            )
 
         assert len(captured_queries) == 1
         assert "WHERE source_id" in captured_queries[0]
@@ -351,6 +355,78 @@ class TestSaveIntelligenceNode:
         call_args = save_mock.call_args
         assert call_args[0][0] == "source:test_call_123"
 
+    @pytest.mark.asyncio
+    async def test_node_includes_field_confidence_in_data(self):
+        """save_intelligence_node passes field_confidence from doc_meta to save_source_intelligence (AC3 E31-S8)."""
+        from open_notebook.extractors.parsers.base import DocumentMeta
+
+        source = _make_mock_source("source:fc_test")
+        doc_meta = DocumentMeta(
+            consultant_name="Prensa",
+            field_confidence={
+                "consultant_name": "extracted",
+                "site_address": "inferred",
+                "report_date": "missing",
+            },
+        )
+        state = {
+            "source": source,
+            "document_metadata": doc_meta,
+            "document_structure": None,
+            "building_inventory": None,
+            "page_tags": None,
+            "agui_emitter": None,
+            "pipeline_logger": None,
+        }
+        captured_data = {}
+
+        async def capture_save(source_id, data):
+            captured_data.update(data)
+            return []
+
+        with patch(
+            "open_notebook.graphs.acm_extraction.save_source_intelligence",
+            side_effect=capture_save,
+        ):
+            from open_notebook.graphs.acm_extraction import save_intelligence_node
+
+            await save_intelligence_node(state, {})
+
+        assert "field_confidence" in captured_data
+        assert captured_data["field_confidence"]["consultant_name"] == "extracted"
+        assert captured_data["field_confidence"]["site_address"] == "inferred"
+        assert captured_data["field_confidence"]["report_date"] == "missing"
+
+    @pytest.mark.asyncio
+    async def test_node_field_confidence_none_when_no_doc_meta(self):
+        """save_intelligence_node sets field_confidence to None when document_metadata is absent."""
+        source = _make_mock_source("source:no_meta")
+        state = {
+            "source": source,
+            "document_metadata": None,
+            "document_structure": None,
+            "building_inventory": None,
+            "page_tags": None,
+            "agui_emitter": None,
+            "pipeline_logger": None,
+        }
+        captured_data = {}
+
+        async def capture_save(source_id, data):
+            captured_data.update(data)
+            return []
+
+        with patch(
+            "open_notebook.graphs.acm_extraction.save_source_intelligence",
+            side_effect=capture_save,
+        ):
+            from open_notebook.graphs.acm_extraction import save_intelligence_node
+
+            await save_intelligence_node(state, {})
+
+        assert "field_confidence" in captured_data
+        assert captured_data["field_confidence"] is None
+
     def test_node_is_registered_in_graph(self):
         """save_intelligence node must be registered in the compiled LangGraph."""
         from open_notebook.graphs.acm_extraction import agent_state
@@ -358,16 +434,21 @@ class TestSaveIntelligenceNode:
         assert "save_intelligence" in agent_state.nodes
 
     def test_node_positioned_between_tag_pages_and_orchestrate(self):
-        """Graph edges: tag_pages -> save_intelligence -> orchestrate (AC4)."""
+        """Graph edges: tag_pages -> save_intelligence -> extract_building -> extract_items -> [conditional] (AC4, E32-S1/S2)."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
         assert ("tag_pages", "save_intelligence") in edges or any(
             e == ("tag_pages", "save_intelligence") for e in edges
         ), "tag_pages must connect to save_intelligence"
-        assert ("save_intelligence", "orchestrate") in edges or any(
-            e == ("save_intelligence", "orchestrate") for e in edges
-        ), "save_intelligence must connect to orchestrate"
+        # E32-S1: save_intelligence -> extract_building
+        assert ("save_intelligence", "extract_building") in edges or any(
+            e == ("save_intelligence", "extract_building") for e in edges
+        ), "save_intelligence must connect to extract_building (E32-S1)"
+        # E32-S2: extract_building -> extract_items (replaces direct edge to orchestrate)
+        assert ("extract_building", "extract_items") in edges or any(
+            e == ("extract_building", "extract_items") for e in edges
+        ), "extract_building must connect to extract_items (E32-S2)"
 
 
 # ---------------------------------------------------------------------------

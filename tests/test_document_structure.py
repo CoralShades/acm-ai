@@ -262,6 +262,77 @@ B001 - Main Building"""
             assert result.document_type == DocumentType.UNKNOWN
             assert result.total_pages == 13
 
+    @pytest.mark.asyncio
+    async def test_retry_succeeds_on_second_attempt(self):
+        """LLM failure on first attempt should retry; success on second attempt returns result."""
+        content = """--- Page 1 ---
+Some content
+--- Page 5 ---
+Appendix B: Asbestos Register"""
+
+        success_structure = DocumentStructure(
+            document_type=DocumentType.SAMP,
+            total_pages=3,  # overridden by page markers
+            building_ids=["B001"],
+        )
+        call_count = 0
+
+        async def fail_then_succeed(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("Transient LLM error")
+            return success_structure
+
+        with patch(
+            "open_notebook.extractors.document_structure._llm_extract_structure",
+            side_effect=fail_then_succeed,
+        ):
+            result = await extract_document_structure(content)
+
+        assert call_count == 2
+        assert result.document_type == DocumentType.SAMP
+        assert result.total_pages == 5  # overridden by page marker
+        assert "B001" in result.building_ids
+
+    @pytest.mark.asyncio
+    async def test_retry_exhausted_uses_heuristic_fallback(self):
+        """When all retry attempts fail, heuristic fallback is returned with WARNING log."""
+        content = """--- Page 1 ---
+Some intro
+--- Page 7 ---
+Asbestos Register
+B002 - Main Block"""
+
+        call_count = 0
+
+        async def always_fail(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise Exception("Persistent LLM failure")
+
+        with patch(
+            "open_notebook.extractors.document_structure._llm_extract_structure",
+            side_effect=always_fail,
+        ):
+            result = await extract_document_structure(content)
+
+        from open_notebook.extractors.document_structure import MAX_STRUCTURE_RETRIES
+
+        assert call_count == MAX_STRUCTURE_RETRIES
+        assert result is not None
+        # Heuristic fallback returns UNKNOWN type
+        assert result.document_type == DocumentType.UNKNOWN
+        # Page markers still detected
+        assert result.total_pages == 7
+
+    @pytest.mark.asyncio
+    async def test_retry_count_equals_max_structure_retries(self):
+        """MAX_STRUCTURE_RETRIES constant controls the number of LLM attempts."""
+        from open_notebook.extractors.document_structure import MAX_STRUCTURE_RETRIES
+
+        assert MAX_STRUCTURE_RETRIES == 2
+
 
 class TestHeuristicFallback:
     """Test heuristic-based fallback extraction (Task 5.2-5.5)."""
@@ -492,11 +563,12 @@ class TestLangGraphIntegration:
 
         # Verify the edges:
         #   START -> extract_metadata -> structure -> inventory -> tag_pages
-        #         -> save_intelligence -> orchestrate
+        #         -> save_intelligence -> extract_building -> orchestrate
         # E1-S17 added inventory node; E1-S18 added tag_pages node
         # E1-S19 added extract_metadata node before structure
         # E29-S3 made tag_pages -> orchestrate unconditional
         # E30-S9 inserted save_intelligence between tag_pages and orchestrate
+        # E32-S1 inserted extract_building between save_intelligence and orchestrate
         edges = agent_state.edges
         assert ("extract_metadata", "structure") in edges or any(
             e == ("extract_metadata", "structure") for e in edges
@@ -507,13 +579,18 @@ class TestLangGraphIntegration:
         assert ("inventory", "tag_pages") in edges or any(
             e == ("inventory", "tag_pages") for e in edges
         )
-        # E30-S9: tag_pages -> save_intelligence -> orchestrate
+        # E30-S9: tag_pages -> save_intelligence
         assert ("tag_pages", "save_intelligence") in edges or any(
             e == ("tag_pages", "save_intelligence") for e in edges
         ), "tag_pages should connect to save_intelligence (E30-S9)"
-        assert ("save_intelligence", "orchestrate") in edges or any(
-            e == ("save_intelligence", "orchestrate") for e in edges
-        ), "save_intelligence should connect to orchestrate (E30-S9)"
+        # E32-S1: save_intelligence -> extract_building
+        assert ("save_intelligence", "extract_building") in edges or any(
+            e == ("save_intelligence", "extract_building") for e in edges
+        ), "save_intelligence should connect to extract_building (E32-S1)"
+        # E32-S2: extract_building -> extract_items (replaces direct edge to orchestrate)
+        assert ("extract_building", "extract_items") in edges or any(
+            e == ("extract_building", "extract_items") for e in edges
+        ), "extract_building should connect to extract_items (E32-S2)"
 
     @pytest.mark.asyncio
     async def test_extract_structure_node_with_empty_content(self):

@@ -196,6 +196,7 @@ async def save_source_intelligence(
         "total_buildings = $data.total_buildings, "
         "document_type = $data.document_type, "
         "register_page_range = $data.register_page_range, "
+        "field_confidence = $data.field_confidence, "
         "updated_at = $data.updated_at "
         "WHERE source_id = $data.source_id;"
     )

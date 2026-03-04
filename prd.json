@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 36,
-  "totalStoryPoints": 108,
+  "totalStories": 37,
+  "totalStoryPoints": 110,
   "sprints": 7,
   "stories": [
     {
@@ -1274,8 +1274,39 @@
         "open_notebook/graphs/acm_extraction.py",
         "open_notebook/database/repository.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e31-s8-pre-extraction-quality-hardening.md",
       "implementedDate": null
+    },
+    {
+      "id": "E32-S8",
+      "title": "Ollama Token-Budget Content Chunking",
+      "epic": "E32",
+      "sprint": "V3-4",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "backend",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "AC1: _ollama_split_by_budget() in utils.py replaces _truncate_content_for_ollama()",
+        "AC2: Large Ollama content is split at room/item boundaries into budget-sized chunks",
+        "AC3: Each budget chunk is passed through the LLM independently; all_records is extended with each result",
+        "AC4: Non-Ollama models return [content] unchanged (passthrough)",
+        "AC5: Content within budget returns [content] unchanged (no split)",
+        "AC6: Single room exceeding budget is hard-truncated with WARNING (graceful degrade)",
+        "AC7: OLLAMA_MAX_CONTENT_CHARS env override takes priority over num_ctx calculation",
+        "AC8: 6 unit tests covering all scenarios pass"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/utils.py",
+        "open_notebook/extractors/orchestrator.py",
+        "tests/test_ollama_chunking.py"
+      ],
+      "techSpecFile": "docs/sprint-artifacts/e32-s8-ollama-token-budget-chunking.md",
+      "status": "done",
+      "implementedDate": "2026-03-05",
+      "notes": "Replaces hard-truncation (_truncate_content_for_ollama) with multi-pass budget chunking. ACM records in content beyond the token limit are no longer silently dropped."
     }
   ],
   "gates": [

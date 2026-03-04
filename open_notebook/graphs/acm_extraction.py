@@ -822,6 +822,25 @@ async def extract_structure(state: dict, config: RunnableConfig) -> dict:
 
     try:
         structure = await extract_document_structure(content, model_id=model_id)
+
+        # AC1: PyMuPDF page-count fallback when regex finds 0 page markers
+        if structure.total_pages == 0:
+            pdf_path = (
+                getattr(source.asset, "file_path", None) if source.asset else None
+            )
+            if pdf_path:
+                try:
+                    import fitz  # PyMuPDF
+
+                    with fitz.open(pdf_path) as pdf_doc:
+                        structure.total_pages = len(pdf_doc)
+                    logger.info(
+                        f"[AC1] PyMuPDF page-count fallback: {structure.total_pages} pages "
+                        f"for source {source.id}"
+                    )
+                except Exception as fitz_err:
+                    logger.debug(f"PyMuPDF fallback failed: {fitz_err}")
+
         logger.info(
             f"Document structure extracted for source {source.id}: "
             f"type={structure.document_type}, register_start={structure.register_start_page}, "
@@ -1030,6 +1049,7 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
                 if page_tags and page_tags.register_page_range
                 else None
             ),
+            "field_confidence": doc_meta.field_confidence if doc_meta else None,
         }
 
         source_id_str = str(source.id)
