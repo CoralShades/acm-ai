@@ -24,6 +24,7 @@ from open_notebook.extractors.validators.sf_picklist_validator import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def sf_bundle() -> SFSchemaBundle:
     """Load the real SF schema bundle once per test module."""
@@ -39,6 +40,7 @@ def validator(sf_bundle: SFSchemaBundle) -> SalesforcePicklistValidator:
 # ---------------------------------------------------------------------------
 # Helper: extract chain data for parametrized tests
 # ---------------------------------------------------------------------------
+
 
 def _get_friability_classification_combos() -> list[tuple[str, str]]:
     """Return all 36 valid (friability, classification) pairs."""
@@ -74,6 +76,7 @@ def _get_building_type_category_mappings() -> list[tuple[str, str]]:
 # ---------------------------------------------------------------------------
 # AC1: SalesforcePicklistValidator class instantiation
 # ---------------------------------------------------------------------------
+
 
 class TestValidatorInstantiation:
     def test_validator_instantiates(self, validator: SalesforcePicklistValidator):
@@ -117,6 +120,7 @@ class TestACMChainValid:
 # AC2 continued: invalid ACM chain combinations
 # ---------------------------------------------------------------------------
 
+
 class TestACMChainInvalid:
     def test_nonfriable_with_friable_classification(
         self, validator: SalesforcePicklistValidator
@@ -142,9 +146,7 @@ class TestACMChainInvalid:
         assert len(issues) == 1
         assert issues[0].issue_type == "invalid_chain_value"
 
-    def test_invalid_sub_classification(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_invalid_sub_classification(self, validator: SalesforcePicklistValidator):
         """Valid classification with wrong sub-classification should fail."""
         record = {
             "Friability_of_Material__c": "Non-friable",
@@ -158,9 +160,7 @@ class TestACMChainInvalid:
         ]
         assert len(sub_issues) == 1
 
-    def test_unknown_friability_value(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_unknown_friability_value(self, validator: SalesforcePicklistValidator):
         """Unknown friability value should flag as invalid controller."""
         record = {
             "Friability_of_Material__c": "Semi-friable",
@@ -212,9 +212,7 @@ class TestBuildingChainInvalid:
         assert len(issues) == 1
         assert issues[0].valid_values == ["Educational and training facilities"]
 
-    def test_unknown_building_type(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_unknown_building_type(self, validator: SalesforcePicklistValidator):
         record = {
             "Building_Type__c": "Space Station",
             "Building_Category__c": "Transport",
@@ -228,6 +226,7 @@ class TestBuildingChainInvalid:
 # AC4: Case-sensitive matching
 # ---------------------------------------------------------------------------
 
+
 class TestCaseSensitivity:
     def test_lowercase_classification_rejected(
         self, validator: SalesforcePicklistValidator
@@ -240,9 +239,7 @@ class TestCaseSensitivity:
         issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
         assert len(issues) >= 1
 
-    def test_exact_case_accepted(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_exact_case_accepted(self, validator: SalesforcePicklistValidator):
         record = {
             "Friability_of_Material__c": "Non-friable",
             "ACM_Classification__c": "Cement products",
@@ -276,6 +273,7 @@ class TestCaseSensitivity:
 # AC5: WARN policy returns is_valid=True
 # ---------------------------------------------------------------------------
 
+
 class TestWarnPolicy:
     def test_warn_policy_returns_valid_true(
         self, validator: SalesforcePicklistValidator
@@ -294,6 +292,7 @@ class TestWarnPolicy:
 # ---------------------------------------------------------------------------
 # AC6: REJECT policy returns is_valid=False
 # ---------------------------------------------------------------------------
+
 
 class TestRejectPolicy:
     def test_reject_policy_returns_valid_false(
@@ -328,6 +327,7 @@ class TestRejectPolicy:
 # doesn't interfere with BAR-001.
 # ---------------------------------------------------------------------------
 
+
 class TestBAR001NonInterference:
     def test_negative_result_record_no_chain_errors(
         self, validator: SalesforcePicklistValidator
@@ -345,6 +345,7 @@ class TestBAR001NonInterference:
 # ---------------------------------------------------------------------------
 # AC8: Runtime schema loading (mock)
 # ---------------------------------------------------------------------------
+
 
 class TestRuntimeSchemaLoading:
     def test_custom_chain_used(self):
@@ -400,6 +401,7 @@ class TestRuntimeSchemaLoading:
 # AC9: Verify counts for exhaustive tests
 # ---------------------------------------------------------------------------
 
+
 class TestExhaustiveCounts:
     def test_friability_chain_has_18_classification_values(
         self, sf_bundle: SFSchemaBundle
@@ -411,14 +413,11 @@ class TestExhaustiveCounts:
                 and chain.dependent_api_name == "ACM_Classification__c"
             ):
                 total_values = sum(
-                    len(v) if isinstance(v, list) else 1
-                    for v in chain.mapping.values()
+                    len(v) if isinstance(v, list) else 1 for v in chain.mapping.values()
                 )
                 assert total_values == 18
 
-    def test_building_chain_has_at_least_100_types(
-        self, sf_bundle: SFSchemaBundle
-    ):
+    def test_building_chain_has_at_least_100_types(self, sf_bundle: SFSchemaBundle):
         """Verify at least 100 building type mappings."""
         for chain in sf_bundle.dependencies:
             if (
@@ -427,9 +426,7 @@ class TestExhaustiveCounts:
             ):
                 assert len(chain.mapping) >= 100
 
-    def test_building_chain_has_13_categories(
-        self, sf_bundle: SFSchemaBundle
-    ):
+    def test_building_chain_has_13_categories(self, sf_bundle: SFSchemaBundle):
         """Verify exactly 13 unique building categories."""
         for chain in sf_bundle.dependencies:
             if (
@@ -444,9 +441,10 @@ class TestExhaustiveCounts:
 # AC10: Integration with acm_validator.validate_acm_record()
 # ---------------------------------------------------------------------------
 
+
 class TestIntegrationWithACMValidator:
-    def test_validate_acm_record_includes_chain_warnings(self):
-        """validate_acm_record() should include SF chain warnings (non-blocking)."""
+    def test_validate_acm_record_includes_chain_issues(self):
+        """validate_acm_record() should include SF chain issues in blocking issues (REJECT)."""
         from open_notebook.extractors.validators.acm_validator import (
             validate_acm_record,
         )
@@ -460,14 +458,12 @@ class TestIntegrationWithACMValidator:
             "acm_product_group": "Cement products (f)",  # Wrong for Non-friable
         }
         result = validate_acm_record(record)
-        # Chain issues should be in chain_warnings, NOT in issues
-        assert len(result.chain_warnings) >= 1
-        assert result.chain_warnings[0].issue_type == "sf_chain_mismatch"
-        # chain_warnings should NOT affect is_valid (WARN policy)
+        # Chain issues are now blocking (REJECT policy) — in issues, not chain_warnings
         chain_in_issues = [
-            i for i in result.issues if i.issue_type == "sf_chain_mismatch"
+            i for i in result.issues if i.issue_type == "invalid_chain_value"
         ]
-        assert len(chain_in_issues) == 0
+        assert len(chain_in_issues) >= 1
+        assert result.is_valid is False
 
     def test_validate_acm_record_valid_chains_no_warnings(self):
         """Valid chain values should produce no chain_warnings."""
@@ -487,8 +483,8 @@ class TestIntegrationWithACMValidator:
         result = validate_acm_record(record)
         assert len(result.chain_warnings) == 0
 
-    def test_warn_chain_issues_do_not_affect_is_valid(self):
-        """WARN-policy chain issues must not flip is_valid to False (AC5)."""
+    def test_chain_issues_are_blocking(self):
+        """SF chain validation uses REJECT policy — chain issues flip is_valid to False."""
         from open_notebook.extractors.validators.acm_validator import (
             validate_acm_record,
         )
@@ -504,10 +500,13 @@ class TestIntegrationWithACMValidator:
             "acm_product_group": "Cement products (f)",  # Invalid for Non-friable
         }
         result = validate_acm_record(record)
-        # Chain issue exists as warning
-        assert len(result.chain_warnings) >= 1
-        # But is_valid should still be True (no blocking issues)
-        assert result.is_valid is True
+        # Chain issues are now in blocking issues (REJECT policy)
+        chain_in_issues = [
+            i for i in result.issues if i.issue_type == "invalid_chain_value"
+        ]
+        assert len(chain_in_issues) >= 1
+        # is_valid is False because chain issues are blocking
+        assert result.is_valid is False
 
     def test_bar001_coexistence_with_chain_validation(self):
         """BAR-001 business rule and chain validation coexist in validate_acm_record()."""
@@ -526,9 +525,7 @@ class TestIntegrationWithACMValidator:
         }
         result = validate_acm_record(record)
         # BAR-001 should produce a business_rule issue
-        bar_issues = [
-            i for i in result.issues if i.issue_type == "business_rule"
-        ]
+        bar_issues = [i for i in result.issues if i.issue_type == "business_rule"]
         assert len(bar_issues) >= 1
         # No spurious chain warnings for this record
         assert len(result.chain_warnings) == 0
@@ -538,10 +535,9 @@ class TestIntegrationWithACMValidator:
 # Edge cases: missing fields, empty records
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
-    def test_missing_friability_skipped(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_missing_friability_skipped(self, validator: SalesforcePicklistValidator):
         """Record missing friability field should not produce chain errors."""
         record = {"ACM_Classification__c": "Cement products"}
         issues = validator.validate_acm_chain(record, ValidationPolicy.REJECT)
@@ -569,9 +565,7 @@ class TestEdgeCases:
         assert result.is_valid is True
         assert len(result.issues) == 0
 
-    def test_internal_field_names_work(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_internal_field_names_work(self, validator: SalesforcePicklistValidator):
         """Validator should accept BAR internal field names as well as SF API names."""
         record = {
             "friable": "Non-friable",
@@ -655,9 +649,7 @@ class TestSubClassificationNormalization:
             f"'{sub_classification}' under '{classification}' should pass: {sub_issues}"
         )
 
-    def test_already_correct_case_passes(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_already_correct_case_passes(self, validator: SalesforcePicklistValidator):
         """'Brake pads' (already SF-canonical casing) still passes (idempotent)."""
         record = {
             "Friability_of_Material__c": "Non-friable",
@@ -672,9 +664,7 @@ class TestSubClassificationNormalization:
             f"'Brake pads' (exact match) should still pass: {sub_issues}"
         )
 
-    def test_acronym_values_pass(
-        self, validator: SalesforcePicklistValidator
-    ):
+    def test_acronym_values_pass(self, validator: SalesforcePicklistValidator):
         """Acronym-containing values ('CAF gasket(s)', 'SMF insulation') pass without corruption."""
         # CAF gasket(s) — exact match in Gasket classification
         record_caf = {
@@ -765,12 +755,87 @@ class TestSubClassificationNormalization:
         )
 
         # Acronym value: exact match preserved unchanged
-        assert (
-            _normalize_to_sf_value("CAF gasket(s)", valid_values) == "CAF gasket(s)"
-        )
+        assert _normalize_to_sf_value("CAF gasket(s)", valid_values) == "CAF gasket(s)"
 
         # No match: returns the original value (will fail validation)
         assert (
-            _normalize_to_sf_value("TOTALLY MADE UP", valid_values)
-            == "TOTALLY MADE UP"
+            _normalize_to_sf_value("TOTALLY MADE UP", valid_values) == "TOTALLY MADE UP"
         )
+
+
+# ---------------------------------------------------------------------------
+# E32-S7: SF-First Flat Enum Validation
+# ---------------------------------------------------------------------------
+
+
+class TestSFPrimaryFlatEnums:
+    """Tests for validate_flat_enums() — SF as primary enum authority.
+
+    Story: E32-S7 — SF-First Validation Pipeline.
+    """
+
+    def test_valid_sf_enum_passes(self, validator: SalesforcePicklistValidator):
+        """Valid SF picklist values should produce no issues."""
+        record = {
+            "sample_result": "Positive",
+            "material_condition": "Stable",
+            "friable": "Non-friable",
+            "disturbance_potential": "Moderate",
+        }
+        issues = validator.validate_flat_enums(record)
+        assert len(issues) == 0
+
+    def test_negative_treated_as_positive_passes(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """'Negative - Treated as Positive' is a valid SF value and must pass."""
+        record = {"sample_result": "Negative - Treated as Positive"}
+        issues = validator.validate_flat_enums(record)
+        # Should NOT be flagged as invalid
+        invalid_issues = [i for i in issues if i.issue_type == "invalid_sf_enum"]
+        assert len(invalid_issues) == 0
+
+    def test_invalid_sf_enum_rejected(self, validator: SalesforcePicklistValidator):
+        """Invalid SF enum value should produce an invalid_sf_enum issue."""
+        record = {"sample_result": "Bonded"}
+        issues = validator.validate_flat_enums(record)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "invalid_sf_enum"
+        assert issues[0].policy_action == "reject"
+        assert "Positive" in issues[0].valid_values
+
+    def test_not_sampled_flagged_for_review(
+        self, validator: SalesforcePicklistValidator
+    ):
+        """'Not Sampled' (BAR-only) should be flagged as needs_user_review."""
+        record = {"sample_result": "Not Sampled"}
+        issues = validator.validate_flat_enums(record)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "needs_user_review"
+        assert issues[0].policy_action == "warn"
+
+    def test_no_access_flagged_for_review(self, validator: SalesforcePicklistValidator):
+        """'No Access' (BAR-only) should be flagged as needs_user_review."""
+        record = {"sample_result": "No Access"}
+        issues = validator.validate_flat_enums(record)
+        assert len(issues) == 1
+        assert issues[0].issue_type == "needs_user_review"
+        assert issues[0].policy_action == "warn"
+
+    def test_case_insensitive_matching(self, validator: SalesforcePicklistValidator):
+        """SF enum validation should match case-insensitively."""
+        record = {"material_condition": "stable"}  # lowercase
+        issues = validator.validate_flat_enums(record)
+        # Should pass via case-insensitive normalization
+        invalid_issues = [i for i in issues if i.issue_type == "invalid_sf_enum"]
+        assert len(invalid_issues) == 0
+
+    def test_empty_values_skipped(self, validator: SalesforcePicklistValidator):
+        """Empty/None values should not produce issues."""
+        record = {
+            "sample_result": None,
+            "material_condition": "",
+            "friable": None,
+        }
+        issues = validator.validate_flat_enums(record)
+        assert len(issues) == 0

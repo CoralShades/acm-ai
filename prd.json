@@ -792,12 +792,9 @@
     {
       "id": "E32-S7",
       "title": "SF-First Validation Pipeline",
-      "epicId": "E32",
       "storyPoints": 5,
       "priority": "P0",
-      "risk": "HIGH",
       "complexity": "complex",
-      "status": "backlog",
       "dependencies": [
         "E30-S4",
         "E32-S4"
@@ -809,7 +806,15 @@
         "Negative - Treated as Positive passes SF validation without correction",
         "Not Sampled and No Access flagged as needs_user_review (not rejected or auto-corrected)",
         "Graceful degradation: if SF schema unavailable, BAR path used as fallback"
-      ]
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "techSpecFile": "docs/sprint-artifacts/e32-s7-sf-first-validation-pipeline.md",
+      "implementedDate": "2026-03-05",
+      "sprint": "V3-5",
+      "storyType": "backend",
+      "riskLevel": "HIGH",
+      "epic": "E32"
     },
     {
       "id": "E33-S1",

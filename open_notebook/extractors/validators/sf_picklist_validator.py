@@ -72,6 +72,19 @@ _BAR_TO_SF_VALUE: dict[str, dict[str, str]] = {
 }
 
 
+# Internal field name → SF API name for flat (non-chain) enum validation.
+SF_FLAT_ENUM_FIELD_MAP: dict[str, str] = {
+    "sample_result": "Sample_Analysis_Result_Material_Status__c",
+    "material_condition": "Condition__c",
+    "friable": "Friability_of_Material__c",
+    "disturbance_potential": "Disturbance_Potential_of_Material__c",
+}
+
+# BAR-only values absent from SF picklists.
+# These should be flagged for user review, not rejected or auto-corrected.
+_BAR_ONLY_VALUES: set[str] = {"Not Sampled", "No Access"}
+
+
 def _normalize_to_sf_value(value: str, valid_values: list[str]) -> str:
     """Normalize a value to its SF-canonical casing using case-insensitive lookup.
 
@@ -354,3 +367,76 @@ class SalesforcePicklistValidator:
             )
 
         return ChainValidationResult(is_valid=is_valid, issues=issues)
+
+    def validate_flat_enums(self, record: dict) -> list[ChainValidationIssue]:
+        """Validate flat (non-chain) enum fields against SF picklist values.
+
+        Checks sample_result, material_condition, friable, disturbance_potential
+        against SF picklist canonical values (not BAR register_enums.json).
+
+        Special handling:
+        - "Not Sampled" / "No Access": BAR-only values flagged as needs_user_review
+          (not rejected, not auto-corrected).
+
+        Args:
+            record: Dict of ACM record field values.
+
+        Returns:
+            List of ChainValidationIssue for invalid SF enum values.
+        """
+        issues: list[ChainValidationIssue] = []
+
+        for internal_name, sf_api_name in SF_FLAT_ENUM_FIELD_MAP.items():
+            value = _get_field_value(record, sf_api_name)
+            if not value:
+                continue
+
+            # Get SF picklist values for this field
+            # Try item_fields picklists first, then building_fields, then combined
+            sf_values: list[str] = (
+                self._bundle.item_fields.picklists.get(sf_api_name)
+                or self._bundle.building_fields.picklists.get(sf_api_name)
+                or self._bundle.picklists.get(sf_api_name)
+                or []
+            )
+
+            if not sf_values:
+                # No SF picklist data available for this field — skip
+                continue
+
+            # BAR-only values: flag for user review (non-blocking)
+            if value in _BAR_ONLY_VALUES:
+                issues.append(
+                    ChainValidationIssue(
+                        chain_name="flat_enum",
+                        controller_field=sf_api_name,
+                        controller_value=value,
+                        dependent_field=sf_api_name,
+                        dependent_value=value,
+                        valid_values=sf_values,
+                        issue_type="needs_user_review",
+                        policy_action="warn",
+                    )
+                )
+                continue
+
+            # Case-insensitive match against SF picklist values
+            normalized = _normalize_to_sf_value(value, sf_values)
+            if normalized in sf_values:
+                continue
+
+            # No match — invalid SF enum value
+            issues.append(
+                ChainValidationIssue(
+                    chain_name="flat_enum",
+                    controller_field=sf_api_name,
+                    controller_value=value,
+                    dependent_field=sf_api_name,
+                    dependent_value=value,
+                    valid_values=sf_values,
+                    issue_type="invalid_sf_enum",
+                    policy_action="reject",
+                )
+            )
+
+        return issues
