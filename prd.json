@@ -636,8 +636,8 @@
         "AC7: Link each acm_record to raw_extraction_table row via raw_row_id FK",
         "AC8: Unit tests with mock Claude responses"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -650,7 +650,7 @@
         "tests/test_item_extraction.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e32-s2-item-extraction-node.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E32-S3",
