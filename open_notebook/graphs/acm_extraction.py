@@ -77,6 +77,15 @@ from open_notebook.extractors.page_tagger import (
     tag_pages,
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
+from open_notebook.extractors.pipeline_event_bus import (
+    AIBuildingExtractedData,
+    AIBuildingExtractedEvent,
+    AIItemsExtractedData,
+    AIItemsExtractedEvent,
+    AIValidationCompleteData,
+    AIValidationCompleteEvent,
+    get_event_bus,
+)
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
 from open_notebook.extractors.token_limit_validator import TokenLimitValidator
@@ -453,6 +462,8 @@ class ExtractionState(TypedDict):
     pipeline_logger: Optional[PipelineLogger]
     # AG-UI event emitter (E17-S1)
     agui_emitter: Optional[AGUIEventEmitter]
+    # E34-S1: operation_id for PipelineEventBus streaming events
+    operation_id: Optional[str]
     # E32-S1: Building__c extraction results (record IDs of persisted BuildingRecords)
     building_records: List[str]
     # E32-S2: True when extract_items_node produced >= 1 record
@@ -1085,6 +1096,8 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     )  # may be None — _v3_extract_building_meta handles None
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
+    operation_id: Optional[str] = state.get("operation_id")
+    model_id: Optional[str] = state.get("model_id")
 
     if agui:
         await agui.emit_step_started("extract_building")
@@ -1107,6 +1120,7 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     source_id_str = str(source.id)
 
     for building_meta in inventory.buildings:
+        _bldg_start = time.time()
         try:
             # Slice document content to this building's page range
             page_start = building_meta.page_start
@@ -1177,6 +1191,28 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 f"[E32-S1] Saved BuildingRecord {internal_id} for building "
                 f"{building_meta.building_id} (confidence={result.extraction_confidence})"
             )
+
+            # E34-S1: Publish ai.building_extracted event for real-time streaming
+            if operation_id:
+                try:
+                    _bldg_duration_ms = int((time.time() - _bldg_start) * 1000)
+                    await get_event_bus().publish(
+                        AIBuildingExtractedEvent(
+                            operation_id=operation_id,
+                            data=AIBuildingExtractedData(
+                                building_id=internal_id,
+                                building_name=result.building_name or building_meta.building_id,
+                                records_extracted=1,
+                                model_used=model_id or "unknown",
+                                duration_ms=_bldg_duration_ms,
+                            ),
+                        )
+                    )
+                except Exception as _pub_err:
+                    logger.debug(
+                        f"[E34-S1] Failed to publish ai.building_extracted for "
+                        f"{building_meta.building_id}: {_pub_err}"
+                    )
 
         except Exception as e:
             logger.warning(
@@ -1270,6 +1306,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
     source_id_str = str(source.id)
+    operation_id: Optional[str] = state.get("operation_id")
 
     if not inventory or not inventory.buildings:
         logger.info(
@@ -1288,12 +1325,19 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
             for br in (saved_buildings or [])
             if br.building_code
         }
+        # Build building_code -> internal_id lookup for event publishing
+        code_to_internal_id_map: dict = {
+            br.building_code: br.internal_id or br.building_code
+            for br in (saved_buildings or [])
+            if br.building_code
+        }
     except Exception as e:
         logger.warning(
             f"[E32-S2] Could not load BuildingRecords for source {source_id_str}: {e} "
             "(building_record_id will not be populated)"
         )
         code_to_id_map = {}
+        code_to_internal_id_map = {}
 
     all_records: List[ACMExtractionRecord] = []
     n_buildings = len(inventory.buildings)
@@ -1348,6 +1392,33 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
             logger.info(
                 f"[E32-S2] Building {building_meta.building_id}: {len(records)} items"
             )
+
+            # E34-S1: Publish ai.items_extracted event for real-time streaming
+            if operation_id:
+                try:
+                    _internal_id = code_to_internal_id_map.get(
+                        building_meta.building_id, building_meta.building_id
+                    )
+                    items_rejected = (
+                        len(item_result.records) - len(records)
+                        if hasattr(item_result, "records")
+                        else 0
+                    )
+                    await get_event_bus().publish(
+                        AIItemsExtractedEvent(
+                            operation_id=operation_id,
+                            data=AIItemsExtractedData(
+                                building_id=_internal_id,
+                                items_count=len(records),
+                                items_rejected=max(0, items_rejected),
+                            ),
+                        )
+                    )
+                except Exception as _pub_err:
+                    logger.debug(
+                        f"[E34-S1] Failed to publish ai.items_extracted for "
+                        f"{building_meta.building_id}: {_pub_err}"
+                    )
 
         except Exception as e:
             logger.warning(
@@ -2067,6 +2138,8 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
+    operation_id: Optional[str] = state.get("operation_id")
+    _validate_start = time.time()
 
     # Log EXTRACT stage complete on first validation pass (marks end of extraction)
     correction_attempt = state.get("correction_attempt", 0)
@@ -2242,6 +2315,35 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
         await agui.emit_step_finished(
             "validate", accepted=len(validated_records), rejected=rejected_count
         )
+
+    # E34-S1: Publish ai.validation_complete event on the final validation pass only.
+    # validate_records_strict is called once per correction loop iteration; only
+    # publish the terminal event when no more corrections will run.
+    _is_final_validation = rejected_count == 0 or (
+        state.get("correction_attempt", 0) >= state.get("max_correction_attempts", 2)
+    )
+    if operation_id and _is_final_validation:
+        try:
+            _validation_duration_ms = int((time.time() - _validate_start) * 1000)
+            _records_corrected = (
+                correction_stats.get("auto_corrected", 0)
+                + correction_stats.get("llm_corrected", 0)
+            )
+            await get_event_bus().publish(
+                AIValidationCompleteEvent(
+                    operation_id=operation_id,
+                    data=AIValidationCompleteData(
+                        records_valid=len(validated_records),
+                        records_corrected=_records_corrected,
+                        records_rejected=rejected_count,
+                        validation_duration_ms=_validation_duration_ms,
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(
+                f"[E34-S1] Failed to publish ai.validation_complete: {_pub_err}"
+            )
 
     return {
         "records": validated_records,
@@ -3525,6 +3627,8 @@ async def extract_acm_from_source(
         "pipeline_logger": pl,
         # AG-UI event emitter (E17-S1)
         "agui_emitter": agui,
+        # E34-S1: operation_id for PipelineEventBus streaming events
+        "operation_id": command_id,
     }
 
     try:

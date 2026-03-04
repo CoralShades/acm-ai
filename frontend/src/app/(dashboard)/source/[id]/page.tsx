@@ -11,7 +11,9 @@ import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useBuildingStore } from '@/lib/stores/buildingStore'
+import { useBuildings } from '@/lib/hooks/useBuildings'
 import { useValidationSummary, useBulkFix } from '@/lib/hooks/useACMItems'
+import { useV3BuildingStream } from '@/lib/hooks/useV3BuildingStream'
 import { ArrowLeft, Table2, Wrench, Download } from 'lucide-react'
 
 /**
@@ -24,7 +26,26 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   const [quickFilter, setQuickFilter] = useState('')
   const [enableGrouping, setEnableGrouping] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [commandId, setCommandId] = useState<string | null>(null)
   const { selectedBuildingId, setSelectedBuilding } = useBuildingStore()
+
+  // Read commandId from sessionStorage to subscribe to the active extraction SSE stream
+  useEffect(() => {
+    const key = `acm-extraction-progress-${sourceId}`
+    const stored = sessionStorage.getItem(key)
+    setCommandId(stored)
+  }, [sourceId])
+
+  // Load buildings list for progress bar denominator
+  const { data: buildingsData } = useBuildings(sourceId)
+  const buildings = buildingsData?.buildings ?? []
+
+  // Streaming progress
+  const { isStreaming, completedCount, estimatedSecondsRemaining } = useV3BuildingStream({
+    sourceId,
+    operationId: commandId,
+    totalBuildings: buildings.length,
+  })
 
   // Validation summary for Fix All + Export guard
   const { data: validationSummary } = useValidationSummary(sourceId)
@@ -103,6 +124,24 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
             </Button>
           </div>
         </div>
+
+        {/* Streaming progress bar */}
+        {isStreaming && (
+          <div className="w-full px-4 py-1 bg-muted/50 border-b shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-500"
+                  style={{ width: `${Math.round((completedCount / Math.max(1, buildings.length)) * 100)}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {completedCount}/{buildings.length} buildings
+                {estimatedSecondsRemaining !== null && ` · ~${estimatedSecondsRemaining}s remaining`}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Two-panel body */}
         <div className="flex flex-1 overflow-hidden min-h-0">

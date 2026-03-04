@@ -1141,7 +1141,7 @@
         "frontend/src/components/acm/ItemGrid.tsx",
         "frontend/src/hooks/useV3SSE.ts"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e34-s1-record-by-record-streaming.md",
       "implementedDate": null
     },
     {

@@ -7,6 +7,7 @@ import { useBuildings } from '@/lib/hooks/useBuildings'
 import { useBuildingStore } from '@/lib/stores/buildingStore'
 import { useValidationSummary } from '@/lib/hooks/useACMItems'
 import type { BuildingRecord, BuildingValidationStatus } from '@/lib/types/building'
+import type { BuildingStreamStatus } from '@/lib/stores/buildingStore'
 
 interface BuildingSidebarProps {
   sourceId: string
@@ -28,6 +29,20 @@ const validationBadgeLabel: Record<BuildingValidationStatus, string> = {
   complete: 'Complete',
   incomplete: 'Incomplete',
   unknown: 'Unknown',
+}
+
+const streamingBadgeClasses: Record<BuildingStreamStatus, string> = {
+  extracting: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  validating: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  complete: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  error: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+}
+
+const streamingBadgeLabel: Record<BuildingStreamStatus, string> = {
+  extracting: 'Extracting...',
+  validating: 'Validating...',
+  complete: 'Complete',
+  error: 'Error',
 }
 
 function BuildingDetailPanel({ building }: { building: BuildingRecord }) {
@@ -63,7 +78,7 @@ function BuildingDetailPanel({ building }: { building: BuildingRecord }) {
 
 export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
   const { data, isLoading, isError } = useBuildings(sourceId)
-  const { selectedBuildingId, setSelectedBuilding } = useBuildingStore()
+  const { selectedBuildingId, setSelectedBuilding, buildingStatus } = useBuildingStore()
   const { data: validationSummary } = useValidationSummary(sourceId)
 
   // Build a quick lookup map: building_id -> error_count
@@ -130,7 +145,8 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
           <ul className="py-1">
             {buildings.map((building) => {
               const isSelected = building.id === selectedBuildingId
-              const status = deriveValidationStatus(building)
+              const validationStatus = deriveValidationStatus(building)
+              const streamStatus = buildingStatus.get(building.internal_id)
               const errorCount = validationErrorMap.get(building.id) ?? 0
               return (
                 <li key={building.id}>
@@ -165,14 +181,25 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
                             </span>
                           )}
                         </div>
-                        <span
-                          className={[
-                            'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium shrink-0',
-                            validationBadgeClasses[status],
-                          ].join(' ')}
-                        >
-                          {validationBadgeLabel[status]}
-                        </span>
+                        {streamStatus !== undefined ? (
+                          <span
+                            className={[
+                              'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium shrink-0',
+                              streamingBadgeClasses[streamStatus],
+                            ].join(' ')}
+                          >
+                            {streamingBadgeLabel[streamStatus]}
+                          </span>
+                        ) : (
+                          <span
+                            className={[
+                              'inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium shrink-0',
+                              validationBadgeClasses[validationStatus],
+                            ].join(' ')}
+                          >
+                            {validationBadgeLabel[validationStatus]}
+                          </span>
+                        )}
                       </div>
                     </button>
 
