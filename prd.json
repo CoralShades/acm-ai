@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 34,
-  "totalStoryPoints": 100,
+  "totalStories": 35,
+  "totalStoryPoints": 103,
   "sprints": 7,
   "stories": [
     {
@@ -277,7 +277,7 @@
         "AC8: Broadmeadows 31/31 accuracy maintained; Alexander >=40/43 baseline"
       ],
       "passes": false,
-      "notes": "Deferred to V3-4 \u00e2\u20ac\u201d Ollama-first approach per client priority. Not on critical path.",
+      "notes": "BLOCKED: Deferred to last \u2014 Ollama-first sprint priority. No downstream dependents.",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -867,7 +867,7 @@
         "frontend/src/hooks/useBuildings.ts",
         "frontend/src/hooks/useACMItems.ts"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e33-s2-building-grid-item-grid-two-view.md",
       "implementedDate": null
     },
     {
@@ -1217,6 +1217,40 @@
         "docs/sprint-artifacts/sprint-status.yaml",
         "CLAUDE.md",
         "README.md"
+      ],
+      "techSpecFile": null,
+      "implementedDate": null
+    },
+    {
+      "id": "E31-S8",
+      "title": "Pre-Extraction Quality Hardening",
+      "epic": "E31",
+      "sprint": "V3-5",
+      "storyPoints": 3,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "acceptanceCriteria": [
+        "AC1: Page detection uses provider-native page metadata (Docling page boundaries, PyMuPDF page markers) instead of regex-only — total_pages > 0 for Broadmeadows PDF",
+        "AC2: LLM structure extraction has retry logic (max 2 attempts) before heuristic fallback — logged when fallback activates",
+        "AC3: Metadata extraction field_confidence dict persisted to source_intelligence record (extends E30-S9 schema)",
+        "AC4: consultant_name extraction improved: cover page window bounded to first 3 pages (not entire document when page markers missing)",
+        "AC5: Existing extraction tests pass — no regression on Broadmeadows 31/31 record count"
+      ],
+      "passes": false,
+      "notes": "Addresses 3 pre-existing extraction quality gaps found in Broadmeadows demo audit. Improves data quality for source_intelligence (E30-S9). See previous session extraction error audit.",
+      "model": "sonnet",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "E30-S9"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/document_structure.py",
+        "open_notebook/extractors/metadata_extractor.py",
+        "open_notebook/extractors/building_inventory.py",
+        "open_notebook/extractors/page_tagger.py",
+        "open_notebook/graphs/acm_extraction.py",
+        "open_notebook/database/repository.py"
       ],
       "techSpecFile": null,
       "implementedDate": null

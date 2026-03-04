@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState, useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
@@ -27,7 +28,7 @@ import { useACMStats } from '@/lib/hooks/use-acm'
 import { sourcesApi } from '@/lib/api/sources'
 import type { ACMRecord } from '@/lib/types/acm'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MessageSquare, LayoutDashboard } from 'lucide-react'
 
 /**
  * JobDetailPageContent — inner content for the job detail page.
@@ -170,8 +171,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
               onValueChange={setActiveTab}
               className="flex h-full min-h-0 flex-col"
             >
-              <div className="flex-shrink-0 border-b p-2">
-                <TabsList className="w-full justify-start overflow-x-auto">
+              <div className="flex-shrink-0 border-b p-2 flex items-center gap-2">
+                <TabsList className="flex-1 justify-start overflow-x-auto">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="buildings">Buildings</TabsTrigger>
                   <TabsTrigger value="records">ACM Records</TabsTrigger>
@@ -179,6 +180,12 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                   <TabsTrigger value="raw-tables">Raw Tables</TabsTrigger>
                   <TabsTrigger value="log">Extraction Log</TabsTrigger>
                 </TabsList>
+                <Button variant="outline" size="sm" asChild className="shrink-0">
+                  <Link href={`/source/${sourceId}`}>
+                    <LayoutDashboard className="h-4 w-4 mr-1" />
+                    ACM Register
+                  </Link>
+                </Button>
               </div>
 
               <div className="min-h-0 flex-1 overflow-hidden">

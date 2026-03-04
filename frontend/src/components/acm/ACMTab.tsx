@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { FileWarning, AlertCircle } from 'lucide-react'
+import { FileWarning, AlertCircle, ExternalLink } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ACMGrid, type ACMGridRef, type CellSelectionDetails } from './ACMGrid'
 import { ACMRecordDialog } from './ACMRecordDialog'
@@ -326,7 +328,15 @@ export function ACMTab({ sourceId }: ACMTabProps) {
                 Asbestos Containing Material records extracted from this source document
               </CardDescription>
             </div>
-            <SiteConfigPanel sourceId={sourceId} />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/source/${sourceId}`}>
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Full Register View
+                </Link>
+              </Button>
+              <SiteConfigPanel sourceId={sourceId} />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

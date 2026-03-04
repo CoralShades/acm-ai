@@ -18,6 +18,8 @@ import type {
   ACMRawTable,
 } from '@/lib/types/acm'
 import type { SourceIntelligence } from '@/lib/types/intelligence'
+import type { BuildingListResponse } from '@/lib/types/building'
+import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
 
 export const acmApi = {
   /**
@@ -194,5 +196,25 @@ export const acmApi = {
       }
       throw err
     }
+  },
+
+  /**
+   * List buildings for a source (V3 endpoint — E30-S2).
+   * GET /api/acm/buildings?source_id={sourceId}
+   */
+  listBuildings: async (sourceId: string): Promise<BuildingListResponse> => {
+    const response = await apiClient.get<BuildingListResponse>('/acm/buildings', {
+      params: { source_id: sourceId },
+    })
+    return response.data
+  },
+
+  /**
+   * Get SF field schema configuration (E32-S4).
+   * GET /api/acm/field-schema
+   */
+  getFieldSchema: async (): Promise<SFFieldSchemaConfig> => {
+    const response = await apiClient.get<SFFieldSchemaConfig>('/acm/field-schema')
+    return response.data
   },
 }
