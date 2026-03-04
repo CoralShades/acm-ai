@@ -507,7 +507,7 @@ development_status:
   # GitHub Issues: #84, #89, #90, #91, #92, #93, #94
   # ─────────────────────────────────────────────────────
   epic-35: in-progress
-  e35-s1-fix-sync-upload-asyncio: backlog                # 2 SP. GitHub #91. asyncio.run() in event loop → use await
+  e35-s1-fix-sync-upload-asyncio: done                   # 2 SP. GitHub #91. asyncio.run() in event loop → use await
   e35-s2-persist-model-defaults: backlog                 # 2 SP. GitHub #92. PUT /api/models/defaults → SurrealDB settings
   e35-s3-ollama-extraction-hardening: backlog            # 3 SP. GitHub #93. P0. format=json, num_ctx, chunking formalization
   e35-s4-anthropic-direct-provider-priority: backlog     # 3 SP. GitHub #94. P0. Primary path Ollama→Anthropic→OpenRouter. Deps: E35-S3
@@ -553,13 +553,13 @@ development_status:
 # ========
 # Total Epics: 34  (+6 V3 epics: E30-E35)
 # Total Stories: 221  (176 pre-V3 + 37 V3 + 8 V3-hardening)
-# Stories Done: 196 (89%)  -- 160 pre-V3 + 36 V3
+# Stories Done: 197 (89%)  -- 160 pre-V3 + 37 V3
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 8 (E35-S1..S8)
+# Stories Backlog: 7 (E35-S2..S8)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-05
@@ -573,7 +573,7 @@ development_status:
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (0/8).
+# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (1/8).
 # All 5 core V3 epics done. Schema freeze gate unlocked 2026-03-03. Final core story 2026-03-05.
 #
 # EXTRACTION ACCURACY STATUS:

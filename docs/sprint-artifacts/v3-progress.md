@@ -49,6 +49,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-05 | E34-S3 | Performance Optimization | 2 | Performance tuning across extraction pipeline | Broadmeadows <120s, Alexander <300s target benchmarks. Pipeline throughput and latency optimization. |
 | 2026-03-05 | E34-S4 | Canonical Artifact Update | 3 | CLAUDE.md, README.md, PRD, architecture, epics, sprint-status.yaml, prd.json | Documentation audit — all V3 canonical artifacts reconciled with ground truth. V3 Architecture Patterns added to CLAUDE.md. |
 | 2026-03-05 | E30-S8 | Ollama + Anthropic Direct + OpenRouter Provider Priority | 3 | open_notebook/graphs/utils.py, tests/test_openrouter_provider_routing.py | provision_extraction_fallback_model() uses ACM_ANTHROPIC_API_KEY. Priority: Ollama→Anthropic→OpenRouter. No bare env var bleed. |
+| 2026-03-05 | E35-S1 | Fix Sync Upload asyncio.run() Error | 2 | api/routers/sources.py, tests/test_sync_upload.py | Replace execute_command_sync (asyncio.run) with submit_command + await wait_for_command. 10 tests. |
 
 ## Sprint Summary
 
@@ -61,9 +62,9 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-5 | 5/5 | 15/15 | Complete |
 | V3-6 | 5/5 | 14/14 | Complete |
 | V3-7 | 4/4 | 9/9 | Complete |
-| V3-8 | 0/8 | 0/22 | In Progress |
+| V3-8 | 1/8 | 2/22 | In Progress |
 
-**V3 Core: 37/37 stories done (100%). V3-8 Hardening: 0/8 stories (0%).**
+**V3 Core: 37/37 stories done (100%). V3-8 Hardening: 1/8 stories (9%).**
 
 ## Gate Milestones
 
