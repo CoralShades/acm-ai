@@ -58,6 +58,7 @@ from api.models import (
     OfficerEditEntry,  # noqa: F401 — imported for re-export / forward ref
     ParentContextResponse,
     PatchRawExtractionRequest,
+    ProvenanceResponse,
     RawExtractionListResponse,
     RawExtractionResponse,
     RawTableResponse,
@@ -2797,3 +2798,138 @@ async def bulk_fix_records(
     except Exception as e:
         logger.error(f"Error running bulk-fix for {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/provenance/{record_id}", response_model=ProvenanceResponse)
+async def get_provenance(record_id: str):
+    """Get aggregated provenance data for a single ACM record (E33-S6).
+
+    Combines the record itself with its parent ACMTableSection (consensus
+    metadata), all per-provider RawExtractions for the same page, and the
+    source file path so the frontend can render the originating PDF page
+    with a bounding-box overlay.
+    """
+    from open_notebook.domain.notebook import Source
+
+    # 1. Fetch the ACM record
+    try:
+        record = await ACMRecord.get(record_id)
+    except Exception:
+        record = None
+    if not record:
+        raise HTTPException(status_code=404, detail="ACM record not found")
+
+    # 2. Build ACMRecordResponse (reuse the same mapping as get_acm_record)
+    record_response = ACMRecordResponse(
+        id=str(record.id),
+        source_id=str(record.source_id),
+        school_name=record.school_name,
+        school_code=record.school_code,
+        building_id=record.building_id,
+        building_name=record.building_name,
+        building_year=record.building_year,
+        building_construction=record.building_construction,
+        room_id=record.room_id,
+        room_name=record.room_name,
+        room_area=record.room_area,
+        area_type=record.area_type,
+        product=record.product,
+        material_description=record.material_description,
+        extent=record.extent,
+        location=record.location,
+        friable=record.friable,
+        material_condition=record.material_condition,
+        risk_status=record.risk_status,
+        result=record.result,
+        page_number=record.page_number,
+        extraction_confidence=record.extraction_confidence,
+        acm_product_group=record.acm_product_group,
+        acm_product_type=record.acm_product_type,
+        classification_confidence=record.classification_confidence,
+        classification_method=record.classification_method,
+        classification_override=record.classification_override,
+        sample_no=record.sample_no,
+        sample_result=record.sample_result,
+        quantity=record.quantity,
+        acm_labelled=record.acm_labelled,
+        acm_label_details=record.acm_label_details,
+        identifying_company=record.identifying_company,
+        disturbance_potential=record.disturbance_potential,
+        hygienist_recommendations=record.hygienist_recommendations,
+        normalized_action=record.normalized_action,
+        data_issues=record.data_issues,
+        floor_level=record.floor_level,
+        no_access=record.no_access,
+        smf_present=record.smf_present,
+        validation_status=getattr(record, "validation_status", None),
+        validation_errors=getattr(record, "validation_errors", []) or [],
+        created=str(record.created) if record.created else None,
+        updated=str(record.updated) if record.updated else None,
+    )
+
+    # 3. Fetch parent ACMTableSection for consensus metadata
+    table_section = None
+    if record.parent_table_id:
+        try:
+            section = await ACMTableSection.get(record.parent_table_id)
+            if section:
+                table_section = {
+                    "consensus_tier": section.consensus_tier,
+                    "consensus_scores": section.consensus_scores,
+                    "page_start": section.page_start,
+                    "page_end": section.page_end,
+                    "building_name": section.building_name,
+                    "table_type": section.table_type,
+                }
+        except Exception as exc:
+            logger.debug(f"Could not load table section for record {record_id}: {exc}")
+
+    # 4. Fetch per-provider RawExtractions for the same source + page
+    raw_extraction_responses: list[RawExtractionResponse] = []
+    if record.page_number:
+        try:
+            extractions = await RawExtraction.get_by_source(
+                str(record.source_id),
+                page_number=record.page_number,
+            )
+            raw_extraction_responses = [
+                RawExtractionResponse(
+                    id=str(e.id or ""),
+                    source_id=str(e.source_id),
+                    provider_id=e.provider_id,
+                    extraction_backend=e.extraction_backend,
+                    page_number=e.page_number,
+                    raw_html=e.raw_html,
+                    raw_markdown=e.raw_markdown,
+                    structured_json=e.structured_json,
+                    bbox=e.bbox,
+                    confidence=e.confidence,
+                    officer_edits=e.officer_edits,
+                    created_at=str(e.created_at) if e.created_at else None,
+                )
+                for e in extractions
+            ]
+        except Exception as exc:
+            logger.debug(
+                f"Could not load raw extractions for record {record_id}: {exc}"
+            )
+
+    # 5. Fetch source file path and title
+    source_file_path: Optional[str] = None
+    source_title: Optional[str] = None
+    try:
+        source = await Source.get(str(record.source_id))
+        if source:
+            source_title = source.title
+            if source.asset and source.asset.file_path:
+                source_file_path = source.asset.file_path
+    except Exception as exc:
+        logger.debug(f"Could not load source for record {record_id}: {exc}")
+
+    return ProvenanceResponse(
+        record=record_response,
+        table_section=table_section,
+        raw_extractions=raw_extraction_responses,
+        source_file_path=source_file_path,
+        source_title=source_title,
+    )

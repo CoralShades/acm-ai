@@ -1036,7 +1036,7 @@
         "frontend/src/components/acm/LineageTable.tsx",
         "frontend/src/hooks/useProvenance.ts"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e33-s6-provenance-viewer.md",
       "implementedDate": null
     },
     {

@@ -671,6 +671,28 @@ class RawExtractionListResponse(BaseModel):
     source_id: str
 
 
+class ProvenanceResponse(BaseModel):
+    """Aggregated provenance data for a single ACM record (E33-S6).
+
+    Combines the record itself, its parent table section (consensus metadata),
+    all raw per-provider extractions for the same page, and the source file path
+    so the frontend can render the originating PDF page with a bbox overlay.
+    """
+
+    record: "ACMRecordResponse"
+    table_section: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Parent ACMTableSection metadata: consensus_tier, consensus_scores, page_start, page_end, building_name, table_type",
+    )
+    raw_extractions: List[RawExtractionResponse] = Field(default_factory=list)
+    source_file_path: Optional[str] = Field(
+        default=None, description="Absolute path to source PDF for viewer"
+    )
+    source_title: Optional[str] = Field(
+        default=None, description="Human-readable source title"
+    )
+
+
 class OfficerEditEntry(BaseModel):
     """A single officer edit event recorded against a raw extraction row (E33-S5)."""
 

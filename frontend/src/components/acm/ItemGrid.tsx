@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, ModelUpdatedEvent, RowDoubleClickedEvent } from 'ag-grid-community'
+import type { ColDef, ModelUpdatedEvent, RowDoubleClickedEvent, ICellRendererParams } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { useACMItems, useFieldSchema, useUpdateACMRecord } from '@/lib/hooks/useACMItems'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -11,6 +11,8 @@ import { DependentPicklistEditor } from './DependentPicklistEditor'
 import type { DependentPicklistEditorParams } from './DependentPicklistEditor'
 import { ValidationBadge } from './ValidationBadge'
 import { RecordWizard } from './RecordWizard'
+import { ProvenanceViewer } from './ProvenanceViewer'
+import { Eye } from 'lucide-react'
 
 // Register AG Grid modules (idempotent — safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -52,12 +54,44 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
   const [wizardOpen, setWizardOpen] = useState(false)
   const updateRecord = useUpdateACMRecord()
 
+  // Provenance panel state (E33-S6)
+  const [provenanceRecordId, setProvenanceRecordId] = useState<string | null>(null)
+
   const records = acmData?.records ?? []
   const totalCount = acmData?.total ?? 0
 
   // Build column definitions from SF field schema.
   // Falls back to a minimal set of hardcoded columns when schema is unavailable.
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(() => {
+    // Action column — "Source" button to open Provenance Viewer (E33-S6)
+    const sourceActionCol: ColDef<ACMRecord> = {
+      headerName: '',
+      colId: 'provenance_action',
+      width: 72,
+      minWidth: 72,
+      maxWidth: 72,
+      sortable: false,
+      filter: false,
+      resizable: false,
+      suppressMovable: true,
+      pinned: 'right' as const,
+      cellRenderer: (params: ICellRendererParams<ACMRecord>) => {
+        if (!params.data?.id) return null
+        return (
+          <button
+            type="button"
+            title="View source provenance"
+            aria-label="View source provenance"
+            onClick={() => setProvenanceRecordId(params.data!.id)}
+            className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Eye className="h-3.5 w-3.5 mr-0.5" />
+            Source
+          </button>
+        )
+      },
+    }
+
     if (!fieldSchema) {
       // Fallback columns when schema hasn't loaded yet
       return [
@@ -73,6 +107,7 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
         { field: 'risk_status', headerName: 'Risk Status', width: 110, sortable: true, filter: true, resizable: true, cellRenderer: RiskStatusRenderer },
         { field: 'friable', headerName: 'Friability', width: 110, sortable: true, filter: true, resizable: true },
         { field: 'material_condition', headerName: 'Condition', width: 120, sortable: true, filter: true, resizable: true },
+        sourceActionCol,
       ]
     }
 
@@ -81,7 +116,7 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
     const GROUP_FIELD = 'room_id'
     const RISK_FIELD = 'risk_status'
 
-    return fieldSchema.item_fields.fields.map((fieldDef): ColDef<ACMRecord> => {
+    const dataCols = fieldSchema.item_fields.fields.map((fieldDef): ColDef<ACMRecord> => {
       const recordKey = fieldApiToRecordKey(fieldDef.api_name) as keyof ACMRecord
       const isGroupField = String(recordKey) === GROUP_FIELD
       const colDef: ColDef<ACMRecord> = {
@@ -123,7 +158,9 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
 
       return colDef
     })
-  }, [fieldSchema, enableGrouping])
+
+    return [...dataCols, sourceActionCol]
+  }, [fieldSchema, enableGrouping, setProvenanceRecordId])
 
   const defaultColDef = useMemo<ColDef>(
     () => ({
@@ -266,6 +303,16 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
         schema={fieldSchema ?? null}
         isSaving={updateRecord.isPending}
       />
+
+      {/* Provenance viewer panel (E33-S6) */}
+      {provenanceRecordId && (
+        <ProvenanceViewer
+          sourceId={sourceId}
+          recordId={provenanceRecordId}
+          mode="panel"
+          onClose={() => setProvenanceRecordId(null)}
+        />
+      )}
     </div>
   )
 }

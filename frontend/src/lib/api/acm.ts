@@ -19,6 +19,7 @@ import type {
   RawExtractionListResponse,
   RawExtractionRecord,
   PatchRawExtractionRequest,
+  ProvenanceData,
 } from '@/lib/types/acm'
 import type { SourceIntelligence } from '@/lib/types/intelligence'
 import type { BuildingListResponse } from '@/lib/types/building'
@@ -288,6 +289,14 @@ export const acmApi = {
     const response = await apiClient.get<{
       buildings: { building_id: string; error_count: number }[]
     }>('/acm/validation-summary', { params: { source_id: sourceId } })
+    return response.data
+  },
+
+  /** Get provenance data for a single ACM record (E33-S6) */
+  getProvenance: async (recordId: string): Promise<ProvenanceData> => {
+    const response = await apiClient.get<ProvenanceData>(
+      `/acm/provenance/${encodeURIComponent(recordId)}`
+    )
     return response.data
   },
 

@@ -293,6 +293,22 @@ export interface ACMRawTable {
   building_name?: string | null
 }
 
+// Provenance types (E33-S6)
+export interface ProvenanceData {
+  record: ACMRecord
+  table_section: {
+    consensus_tier: string | null
+    consensus_scores: Record<string, number> | null
+    page_start: number
+    page_end: number
+    building_name: string | null
+    table_type: string | null
+  } | null
+  raw_extractions: RawExtractionRecord[]
+  source_file_path: string | null
+  source_title: string | null
+}
+
 // Re-export generated types that complement the manual types above.
 // Generated from Pydantic models via 'npm run generate:types'.
 // See frontend/src/lib/types/generated/ for the full generated type set.
