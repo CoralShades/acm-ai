@@ -491,8 +491,8 @@ development_status:
   # SSE infra moved to E31-S7 (timing fix from Step 08b)
   # FRs: FR-1702, FR-1703
   # ─────────────────────────────────────────────────────
-  epic-34: backlog
-  e34-s1-record-by-record-streaming: backlog           # 2 SP. Blocked by E31-S7, E33-S2. Records appear in grid as validated
+  epic-34: in-progress
+  e34-s1-record-by-record-streaming: done              # 2 SP. Blocked by E31-S7, E33-S2. Records appear in grid as validated. Completed 2026-03-05
   e34-s2-bulk-operations: backlog                      # 2 SP. Blocked by E33-S2, E33-S4, E31-S7. Multi-select, bulk edit/validate/export
   e34-s3-performance-optimization: backlog             # 2 SP. Blocked by E31-S5, E32-S5. Broadmeadows <120s, Alexander <300s
   e34-s4-canonical-artifact-update: backlog            # 3 SP. Last story — or parallel with S1-S3. PRD, arch, epics, sprint-status, CLAUDE.md

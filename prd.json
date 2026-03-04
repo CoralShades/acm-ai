@@ -1127,8 +1127,8 @@
         "AC5: Progress percentage based on buildings-completed / total-buildings ratio",
         "AC6: Estimated time remaining based on avg time per building"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -1142,7 +1142,7 @@
         "frontend/src/hooks/useV3SSE.ts"
       ],
       "techSpecFile": "docs/sprint-artifacts/e34-s1-record-by-record-streaming.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E34-S2",
