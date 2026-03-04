@@ -59,10 +59,15 @@ from api.models import (
     SiteConfigRequest,
     SiteConfigResponse,
     SiteConfigTemplateResponse,
+    SourceIntelligenceResponse,
     TaxonomyGroupResponse,
     TaxonomyResponse,
 )
-from open_notebook.database.repository import ensure_record_id, repo_query
+from open_notebook.database.repository import (
+    ensure_record_id,
+    get_source_intelligence,
+    repo_query,
+)
 from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
 from open_notebook.domain.site_config import SiteConfig
 from open_notebook.exceptions import NotFoundError
@@ -2209,4 +2214,32 @@ async def delete_building_record(building_id: str):
         raise HTTPException(status_code=404, detail="Building record not found")
     except Exception as e:
         logger.error(f"Error deleting building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Source Intelligence (E30-S9) ---
+
+
+@router.get(
+    "/source-intelligence/{source_id:path}",
+    response_model=SourceIntelligenceResponse,
+)
+async def get_source_intelligence_endpoint(source_id: str):
+    """Return persisted pre-extraction intelligence for a source.
+
+    Returns 404 if no intelligence has been saved yet (extraction not run
+    or the save_intelligence node hasn't executed).
+    """
+    try:
+        data = await get_source_intelligence(source_id)
+        if not data:
+            raise HTTPException(
+                status_code=404,
+                detail="No intelligence data found for this source",
+            )
+        return SourceIntelligenceResponse(**data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching intelligence for {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

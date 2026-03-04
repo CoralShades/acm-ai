@@ -21,6 +21,7 @@ from loguru import logger
 from pydantic import ValidationError
 from typing_extensions import TypedDict
 
+from open_notebook.database.repository import save_source_intelligence
 from open_notebook.domain.acm import ACMRecord, ACMTableSection
 from open_notebook.domain.models import Model
 from open_notebook.domain.notebook import Source
@@ -973,6 +974,66 @@ async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
         if agui:
             await agui.emit_step_finished("tag_pages")
         return {"page_tags": None}
+
+
+async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
+    """Persist pre-extraction intelligence to source_intelligence table (E30-S9).
+
+    Runs between tag_pages and orchestrate. Non-blocking: catches all exceptions
+    so the pipeline continues even if persistence fails.
+    """
+    source: Source = state["source"]
+    agui = _get_agui_emitter(state)
+
+    if agui:
+        await agui.emit_step_started("save_intelligence")
+
+    try:
+        doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+        doc_structure: Optional[DocumentStructure] = state.get("document_structure")
+        inventory: Optional[BuildingInventory] = state.get("building_inventory")
+        page_tags: Optional[PageTaggingResult] = state.get("page_tags")
+
+        data: Dict[str, Any] = {
+            "document_meta": doc_meta.model_dump(mode="json") if doc_meta else None,
+            "document_structure": (
+                doc_structure.model_dump(mode="json") if doc_structure else None
+            ),
+            "building_inventory": (
+                inventory.model_dump(mode="json") if inventory else None
+            ),
+            "page_tags": page_tags.model_dump(mode="json") if page_tags else None,
+            "total_pages": (
+                doc_structure.total_pages if doc_structure else None
+            ),
+            "total_buildings": inventory.total_buildings if inventory else None,
+            "document_type": (
+                doc_structure.document_type.value if doc_structure else None
+            ),
+            "register_page_range": (
+                {
+                    "start": page_tags.register_page_range[0],
+                    "end": page_tags.register_page_range[1],
+                }
+                if page_tags and page_tags.register_page_range
+                else None
+            ),
+        }
+
+        source_id_str = str(source.id)
+        await save_source_intelligence(source_id_str, data)
+        logger.info(f"[PIPELINE] Saved pre-extraction intelligence for {source_id_str}")
+
+    except Exception as e:
+        logger.warning(
+            f"[PIPELINE] Failed to save intelligence for {source.id}: {e} "
+            "(non-fatal, continuing pipeline)"
+        )
+
+    if agui:
+        await agui.emit_step_finished("save_intelligence")
+
+    return {}
 
 
 async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
@@ -2923,6 +2984,7 @@ agent_state.add_node("extract_metadata", extract_metadata_node)  # E1-S19: Stage
 agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
 agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
 agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
+agent_state.add_node("save_intelligence", save_intelligence_node)  # E30-S9: Persist pre-extraction intelligence
 agent_state.add_node(
     "orchestrate", orchestrate_with_logging
 )  # E1-S20: Agentic orchestrator (wrapped with E1-S21 logging)
@@ -2939,8 +3001,9 @@ agent_state.add_edge(START, "extract_metadata")
 agent_state.add_edge("extract_metadata", "structure")
 agent_state.add_edge("structure", "inventory")
 agent_state.add_edge("inventory", "tag_pages")
-# E29-S3: Unconditional routing — all documents go through orchestrator
-agent_state.add_edge("tag_pages", "orchestrate")
+# E30-S9: Persist pre-extraction intelligence before orchestrator
+agent_state.add_edge("tag_pages", "save_intelligence")
+agent_state.add_edge("save_intelligence", "orchestrate")
 agent_state.add_edge("orchestrate", "validate")
 # Legacy edges removed — prepare/extract nodes kept but unreachable (AC-5)
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}

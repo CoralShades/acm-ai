@@ -1050,12 +1050,16 @@ class TestGraphWiring:
         assert callable(extract_records)
 
     def test_unconditional_edge_from_tag_pages(self):
-        """E29-S3 AC-1: tag_pages routes unconditionally to orchestrate."""
+        """E29-S3/E30-S9: tag_pages -> save_intelligence -> orchestrate."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        assert ("tag_pages", "orchestrate") in edges or any(
-            e == ("tag_pages", "orchestrate") for e in edges
+        # E30-S9 inserted save_intelligence between tag_pages and orchestrate
+        assert ("tag_pages", "save_intelligence") in edges or any(
+            e == ("tag_pages", "save_intelligence") for e in edges
+        )
+        assert ("save_intelligence", "orchestrate") in edges or any(
+            e == ("save_intelligence", "orchestrate") for e in edges
         )
 
     def test_orchestrate_connects_to_validate(self):

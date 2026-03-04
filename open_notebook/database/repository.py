@@ -174,3 +174,42 @@ async def repo_insert(
             return []
         logger.exception(e)
         raise RuntimeError("Failed to create record")
+
+
+async def save_source_intelligence(
+    source_id: str, data: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Upsert pre-extraction intelligence for a source (E30-S9).
+
+    Keyed on source_id — creates on first call, merges on subsequent calls.
+    """
+    data["source_id"] = ensure_record_id(source_id)
+    data["updated_at"] = datetime.now(timezone.utc)
+    query = (
+        "UPSERT source_intelligence SET "
+        "source_id = $data.source_id, "
+        "document_meta = $data.document_meta, "
+        "document_structure = $data.document_structure, "
+        "building_inventory = $data.building_inventory, "
+        "page_tags = $data.page_tags, "
+        "total_pages = $data.total_pages, "
+        "total_buildings = $data.total_buildings, "
+        "document_type = $data.document_type, "
+        "register_page_range = $data.register_page_range, "
+        "updated_at = $data.updated_at "
+        "WHERE source_id = $data.source_id;"
+    )
+    return await repo_query(query, {"data": data})
+
+
+async def get_source_intelligence(source_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve persisted pre-extraction intelligence for a source (E30-S9)."""
+    sid = ensure_record_id(source_id)
+    result = await repo_query(
+        "SELECT * FROM source_intelligence WHERE source_id = $sid LIMIT 1;",
+        {"sid": sid},
+    )
+    if result and isinstance(result, list) and len(result) > 0:
+        rows = result[0] if isinstance(result[0], list) else result
+        return rows[0] if rows else None
+    return None

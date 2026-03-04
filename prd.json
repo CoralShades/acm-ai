@@ -314,8 +314,8 @@
         "AC9: Page Analysis section shows scrollable table with confidence badges",
         "AC10: Hook polls every 5s during extraction, stops when done; skeleton + empty states"
       ],
-      "passes": false,
-      "notes": "GitHub Issue #85 \u00e2\u20ac\u201d persist transient pre-extraction analysis for frontend display",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P1",
@@ -332,8 +332,8 @@
         "frontend/src/lib/hooks/use-source-intelligence.ts",
         "frontend/src/app/(dashboard)/sources/[id]/page.tsx"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e30-s9-persist-pre-extraction-intelligence.md",
+      "implementedDate": "2026-03-04"
     },
     {
       "id": "E31-S1",

@@ -1386,3 +1386,20 @@ class BuildingRecordListResponse(BaseModel):
 
     buildings: List[BuildingRecordResponse]
     total: int
+
+
+class SourceIntelligenceResponse(BaseModel):
+    """Pre-extraction intelligence persisted from the LangGraph pipeline (E30-S9)."""
+
+    id: Optional[str] = None
+    source_id: str
+    document_meta: Optional[Dict[str, Any]] = None
+    document_structure: Optional[Dict[str, Any]] = None
+    building_inventory: Optional[Dict[str, Any]] = None
+    page_tags: Optional[Dict[str, Any]] = None
+    total_pages: Optional[int] = None
+    total_buildings: Optional[int] = None
+    document_type: Optional[str] = None
+    register_page_range: Optional[Dict[str, Any]] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

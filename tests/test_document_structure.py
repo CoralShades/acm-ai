@@ -487,14 +487,16 @@ class TestLangGraphIntegration:
         assert "structure" in graph.nodes
 
     def test_graph_structure_before_prepare(self):
-        """Structure node should be wired before prepare node (via inventory and tag_pages)."""
+        """Structure node should be wired before orchestrate (via inventory, tag_pages, save_intelligence)."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         # Verify the edges:
-        #   START -> extract_metadata -> structure -> inventory -> tag_pages -> prepare
+        #   START -> extract_metadata -> structure -> inventory -> tag_pages
+        #         -> save_intelligence -> orchestrate
         # E1-S17 added inventory node; E1-S18 added tag_pages node
         # E1-S19 added extract_metadata node before structure
-        # E1-S20 made tag_pages -> prepare a conditional edge (vs orchestrate)
+        # E29-S3 made tag_pages -> orchestrate unconditional
+        # E30-S9 inserted save_intelligence between tag_pages and orchestrate
         edges = agent_state.edges
         assert ("extract_metadata", "structure") in edges or any(
             e == ("extract_metadata", "structure") for e in edges
@@ -505,17 +507,13 @@ class TestLangGraphIntegration:
         assert ("inventory", "tag_pages") in edges or any(
             e == ("inventory", "tag_pages") for e in edges
         )
-        # tag_pages -> prepare is now a conditional edge (E1-S20 orchestrator routing)
-        assert "tag_pages" in agent_state.branches, (
-            "tag_pages should have conditional edges for orchestrator routing"
-        )
-        tag_pages_targets = set()
-        for branch in agent_state.branches["tag_pages"].values():
-            if hasattr(branch, "ends") and branch.ends:
-                tag_pages_targets.update(branch.ends.values())
-        assert "prepare" in tag_pages_targets, (
-            f"tag_pages conditional edges should include 'prepare', got {tag_pages_targets}"
-        )
+        # E30-S9: tag_pages -> save_intelligence -> orchestrate
+        assert ("tag_pages", "save_intelligence") in edges or any(
+            e == ("tag_pages", "save_intelligence") for e in edges
+        ), "tag_pages should connect to save_intelligence (E30-S9)"
+        assert ("save_intelligence", "orchestrate") in edges or any(
+            e == ("save_intelligence", "orchestrate") for e in edges
+        ), "save_intelligence should connect to orchestrate (E30-S9)"
 
     @pytest.mark.asyncio
     async def test_extract_structure_node_with_empty_content(self):
