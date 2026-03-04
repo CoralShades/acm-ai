@@ -29,7 +29,7 @@ export interface ACMRecord {
   risk_status?: string | null // 'Low' | 'Medium' | 'High'
   result: string
   page_number?: number | null
-  extraction_confidence?: number | null
+  extraction_confidence?: string | null // "high" | "medium" | "low"
   // Classification fields
   acm_product_group?: string | null
   acm_product_type?: string | null
@@ -48,6 +48,8 @@ export interface ACMRecord {
   normalized_action?: string | null
   data_issues?: string[] | null
   floor_level?: string | null
+  no_access?: boolean | null
+  smf_present?: string | null
   date_of_inspection?: string | null
   building_address?: string | null
   suburb?: string | null
@@ -277,6 +279,8 @@ export interface CommandJobStatusResponse {
   status: 'new' | 'running' | 'completed' | 'failed' | 'canceled'
   result?: { success?: boolean; records_created?: number; error_message?: string }
   error_message?: string | null
+  created?: string | null
+  updated?: string | null
   progress?: {
     state?: import('./pipeline').PipelineRunState
   }

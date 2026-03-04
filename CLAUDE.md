@@ -235,6 +235,16 @@ SURREAL_PASSWORD=root
 SURREAL_NAMESPACE=open_notebook
 SURREAL_DATABASE=development
 OPENAI_API_KEY=sk-...  # At least one AI provider
+
+# ACM pipeline API keys — separate from Claude Code's keys (never use bare ANTHROPIC_API_KEY here)
+ACM_ANTHROPIC_API_KEY=sk-ant-...    # ACM extraction only — not read by Claude Code tooling
+ACM_OPENROUTER_API_KEY=sk-or-...    # ACM OpenRouter fallback only
+
+# Optional: Ollama-only mode (omit cloud keys above)
+OLLAMA_API_BASE=http://localhost:11434
+# Content truncation guard for Ollama — auto-sized from model's num_ctx (3.5 chars/token).
+# Override only if the auto-size is wrong for your specific model/hardware combo.
+OLLAMA_MAX_CONTENT_CHARS=24000  # explicit override (optional; default: num_ctx * 3.5)
 ```
 
 ## Code Style
@@ -336,6 +346,59 @@ Add to the story's Dev Agent Record:
 - **A 404 error = missing page/route** - create required files
 - **Missing files from tech spec = incomplete** - do not skip any files
 - **Code review cannot catch files that don't exist** - verify BEFORE review
+
+## V3 Architecture Patterns
+
+### Provider Adapter Framework
+- Protocol: `ExtractionProvider` in `open_notebook/extractors/providers/base.py`
+- Adapters: `DoclingAdapter`, `MinerUAdapter` in `open_notebook/extractors/providers/`
+- Registry: `ProviderRegistry` in `open_notebook/extractors/providers/__init__.py`
+- Pattern: adapters normalize provider output to common `RawExtraction` domain objects via `NormalizedExtractionResult`
+
+### Consensus Layer
+- `RecordMatcher` in `open_notebook/extractors/consensus/matcher.py` -- 3-stage record matching (exact, fuzzy, positional)
+- `ConsensusEngine` in `open_notebook/extractors/consensus/engine.py` -- confidence-weighted voting across provider results
+- `ConflictResolver` in `open_notebook/extractors/consensus/resolver.py` -- L1-L4 escalation (identical, majority, confidence, flag)
+
+### Salesforce Schema Alignment
+- Config loader: `open_notebook/extractors/parsers/config_loader.py` (parses SF field summaries into structured config)
+- SF field definitions: `V3/output/building_fields_summary.md`, `V3/output/item_fields_summary.md`
+- Dependent picklist validation: `SalesforcePicklistValidator` in config_loader
+- Normalizer enums: `open_notebook/extractors/normalizers/enums.py`
+- ACM domain model uses SF API names as field aliases: `open_notebook/domain/acm.py`
+
+### Two-View Frontend (Building Grid + Item Grid)
+- Route: `/source/[id]` at `frontend/src/app/(dashboard)/source/[id]/page.tsx`
+- Components: `BuildingSidebar`, `ItemGrid` in `frontend/src/components/acm/`
+- Store: `frontend/src/lib/stores/buildingStore.ts` (Zustand)
+- Hooks: `useBuildings`, `useACMItems` in `frontend/src/lib/hooks/`
+- AG Grid dynamic columns from `GET /api/acm/field-schema`
+
+### SSE Streaming (PipelineEventBus)
+- Backend: `open_notebook/extractors/pipeline_event_bus.py`
+- SSE endpoints: `api/routers/v3_streaming.py`
+- Frontend hook: `frontend/src/lib/hooks/useV3SSE.ts`
+- Zustand store: `frontend/src/lib/stores/streamingStore.ts`
+- Event categories: `extraction`, `ai`, `bulk`
+
+### V3 API Endpoints
+- `GET /api/acm/buildings?source_id=X` -- Building records with record_count
+- `GET /api/acm/field-schema` -- SF field schema config
+- `GET /api/acm/raw-extractions/{source_id}` -- Raw extraction records
+- `GET /api/acm/provenance/{record_id}` -- Record provenance with consensus data
+- `GET /api/acm/intelligence/{source_id}` -- Pre-extraction intelligence
+- `GET /api/v3/stream/{category}/{id}` -- SSE streaming endpoints
+- `POST /api/acm/bulk-edit` -- Bulk field edit
+- `POST /api/acm/bulk-validate` -- Bulk re-validation
+- `GET /api/acm/validation-summary/{source_id}` -- Validation summary
+
+### V3 Frontend Type Files
+- `frontend/src/lib/types/acm.ts` -- ACMRecord, RawExtraction, Provenance types
+- `frontend/src/lib/types/building.ts` -- BuildingRecord, BuildingListResponse
+- `frontend/src/lib/types/pipeline.ts` -- PipelineRunState, StageId, StageStatus
+- `frontend/src/lib/types/sf-schema.ts` -- SFFieldSchemaConfig, SFFieldDef
+- `frontend/src/lib/types/intelligence.ts` -- SourceIntelligence, DocumentMeta, BuildingInventory
+- `frontend/src/lib/types/v3-streaming.ts` -- V3EventEnvelope
 
 ## Documentation
 

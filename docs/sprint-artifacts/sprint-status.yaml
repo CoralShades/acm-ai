@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-04
+updated: 2026-03-05
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -419,7 +419,7 @@ development_status:
   # Dependencies: E29 S1-S4 (completed)
   # FRs: FR-1401..FR-1412
   # ─────────────────────────────────────────────────────
-  epic-30: in-progress  # 8/9 stories done (S9 added); only S8 remaining (deferred V3-4)
+  epic-30: done  # 8/9 stories done (S8 deferred to V4). Completed 2026-03-04.
   e30-s1-sf-schema-config-loader: done                # 5 SP. No deps. FIRST V3 STORY — completed 2026-03-03
   e30-s2-building-record-table-domain-model: done     # 5 SP. Commit 59ac749d. Migration 40 (implemented after S3, so used 40 not 39). 2026-03-03
   e30-s3-acm-record-sf-item-alignment: done            # 3 SP. Blocked by S1. Pydantic SF aliases for Item__c fields — completed 2026-03-03
@@ -438,7 +438,7 @@ development_status:
   # Dependencies: E30 Schema Freeze Gate (S1-S6 done)
   # FRs: FR-1501..FR-1506, FR-1701, FR-1704
   # ─────────────────────────────────────────────────────
-  epic-31: in-progress
+  epic-31: done  # All 8 stories done. Completed 2026-03-05.
   e31-s1-mineru-2x-integration-validation: done        # 2 SP. V3-3. MinerU 2.x installed in main venv, validation results in scripts/research/e31_s1_validation_results.json
   e31-s2-provider-adapter-framework: done             # 3 SP. V3-3. ExtractionProvider Protocol, DoclingAdapter, MinerUAdapter, ProviderRegistry, normalizer. source_commands.py wired. Commit f1152678.
   e31-s3-consensus-layer-core: done                    # 3 SP. V3-3. RecordMatcher (3-stage matching) + ConsensusEngine (confidence-weighted voting) + ConflictResolver (L1-L4 escalation). 78 tests. Completed 2026-03-04.
@@ -455,15 +455,15 @@ development_status:
   # Dependencies: E30 (schema), E31 (providers — consensus tables)
   # FRs: FR-1409..FR-1412, FR-1801..FR-1804
   # ─────────────────────────────────────────────────────
-  epic-32: backlog
+  epic-32: done  # All 8 stories done. Completed 2026-03-05.
   e32-s1-building-ai-extraction-node: done            # 3 SP. V3-5. Building__c extraction via Claude Sonnet. Completed 2026-03-04.
-  e32-s2-item-ai-extraction-node: backlog              # 3 SP. Blocked by S1. Item__c extraction with Item_Name subsetting
+  e32-s2-item-ai-extraction-node: done                # 3 SP. Item__c extraction with Item_Name subsetting. Completed 2026-03-04.
   e32-s3-sf-validation-correction-loop: done           # 3 SP. V3-5. SF Validation + Correction Loop. Completed 2026-03-04.
   e32-s4-classifier-update-sf-taxonomy: done           # 2 SP. Blocked by E30-S6. Tech spec: Option B+ SF-schema normalization. Completed 2026-03-04.
-  e32-s5-extraction-pipeline-e2e-test: done            # 3 SP. Extraction Pipeline E2E Test. tests/test_v3_e2e_pipeline.py (8 test classes, 16 always-run tests). Completed 2026-03-04. GATE:AI_COMPLETE unlocked.
+  e32-s5-extraction-pipeline-e2e-test: done            # 3 SP. Extraction Pipeline E2E Test. tests/test_v3_e2e_pipeline.py (8 test classes, 16 always-run tests). Completed 2026-03-05. GATE:AI_COMPLETE unlocked.
   e32-s6-ollama-model-evaluation-spike: done           # 2 SP. Dep on E30-S8 REMOVED. Ollama-first approach. Completed 2026-03-04.
-  e32-s7-sf-first-validation-pipeline: backlog
-  e32-s8-ollama-token-budget-chunking: done            # 2 SP. V3-4. Replaces hard truncation with multi-pass budget chunking. No more silent record drops for Ollama.
+  e32-s7-sf-first-validation-pipeline: done            # 5 SP. SF-First Validation Pipeline. Completed 2026-03-05.
+  e32-s8-ollama-token-budget-chunking: done            # 2 SP. V3-4. Replaces hard truncation with multi-pass budget chunking. No more silent record drops for Ollama. Completed 2026-03-05.
   epic-32-retrospective: optional
 
   # ─────────────────────────────────────────────────────
@@ -473,15 +473,15 @@ development_status:
   # S1-S2 can start after E30 schema freeze; S3-S8 after E32
   # FRs: FR-1406, FR-1407, FR-1601..FR-1611
   # ─────────────────────────────────────────────────────
-  epic-33: backlog
+  epic-33: done  # All 8 stories done. Completed 2026-03-05.
   e33-s1-upload-wizard-extraction-progress: done       # 3 SP. Post schema freeze + E31-S7 (SSE). Upload wizard + SSE progress. DONE 2026-03-04
-  e33-s2-building-grid-item-grid-two-view: done        # 5 SP. Post schema freeze + E30-S2 (API). Building sidebar + Item AG Grid
+  e33-s2-building-grid-item-grid-two-view: done        # 5 SP. Post schema freeze + E30-S2 (API). Building sidebar + Item AG Grid. DONE 2026-03-04
   e33-s3-dependent-picklist-cell-editors: done         # 3 SP. Blocked by E32, E30-S4. AG Grid cascading picklist editors. DONE 2026-03-05
   e33-s4-sf-validation-badges-record-wizard: done      # 3 SP. Blocked by S2, S3, E30-S4. Inline badges + record wizard modal. DONE 2026-03-05
   e33-s5-raw-table-review: done                        # 3 SP. V3-6. Raw extraction AG Grid (opt-in). Completed 2026-03-05.
   e33-s6-provenance-viewer: done                       # 3 SP. Blocked by E31-S4, S2. PDF.js + bbox overlay + lineage table. DONE 2026-03-05
-  e33-s7-building-detail-page: backlog                 # 3 SP. Blocked by E30-S2, S2. Building__c detail form with picklist editing
-  e33-s8-salesforce-ready-export-ui: backlog           # 2 SP. Blocked by E30-S2, E30-S3, S4. Building__c + Item__c CSV/Excel export
+  e33-s7-building-detail-page: done                    # 3 SP. Building__c detail form with picklist editing. DONE 2026-03-05
+  e33-s8-salesforce-ready-export-ui: done              # 2 SP. Building__c + Item__c CSV/Excel export. DONE 2026-03-05
   epic-33-retrospective: optional
 
   # ─────────────────────────────────────────────────────
@@ -491,11 +491,11 @@ development_status:
   # SSE infra moved to E31-S7 (timing fix from Step 08b)
   # FRs: FR-1702, FR-1703
   # ─────────────────────────────────────────────────────
-  epic-34: in-progress
+  epic-34: done  # All 4 stories done. Completed 2026-03-05.
   e34-s1-record-by-record-streaming: done              # 2 SP. Blocked by E31-S7, E33-S2. Records appear in grid as validated. Completed 2026-03-05
   e34-s2-bulk-operations: done                         # 2 SP. Blocked by E33-S2, E33-S4, E31-S7. Multi-select, bulk edit/validate/export. Completed 2026-03-05
   e34-s3-performance-optimization: done                # 2 SP. Blocked by E31-S5, E32-S5. Broadmeadows <120s, Alexander <300s. Completed 2026-03-05
-  e34-s4-canonical-artifact-update: backlog            # 3 SP. Last story — or parallel with S1-S3. PRD, arch, epics, sprint-status, CLAUDE.md
+  e34-s4-canonical-artifact-update: done               # 3 SP. Documentation audit — PRD, arch, epics, sprint-status, CLAUDE.md, README. Completed 2026-03-05
   epic-34-retrospective: optional
 
   # Bug Fixes & Infrastructure (standalone)
@@ -532,27 +532,31 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 33  (+5 V3 epics: E30–E34)
-# Total Stories: 210  (176 pre-V3 + 34 V3)
-# Stories Done: 160 (76%)  — 152 pre-V3 + 8 V3 (E30: S1,S2,S3,S4,S5,S6,S9; E31: S1)
+# Total Epics: 33  (+5 V3 epics: E30-E34)
+# Total Stories: 213  (176 pre-V3 + 37 V3)
+# Stories Done: 196 (92%)  -- 160 pre-V3 + 36 V3
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 26  (E30: S7,S8; E31: 6; E32: 6; E33: 8; E34: 4)
-# Stories Archived: 12 (E8-S1..S10, E24-S2, E24-S4)
+# Stories Backlog: 1  (E30-S8 deferred to V4)
+# Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-03
+# Last Updated: 2026-03-05
+# Reconciliation note: E34-S4 canonical artifact update reconciled all V3 statuses
+#   against prd.json implementedDate fields. Fixed: E32-S2, E32-S7, E33-S7, E33-S8
+#   were backlog->done; E32, E33, E34 epics were backlog/in-progress->done.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
-#                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28
-# IN-PROGRESS EPICS: E29, E30
-# BACKLOG EPICS: E31, E32, E33, E34
+#                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
+#                  E30, E31, E32, E33, E34
+# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived)
+# BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: GATE:SCHEMA_FREEZE UNLOCKED 2026-03-03 (trigger: E30-S6)
-# V3 Done: 14/34 stories (E30-S1,S2,S3,S4,S5,S6,S7,S9; E31-S1,S2,S4; E32-S6; E33-S1,S2). Next: E31-S3.
+# V3 STATUS: COMPLETE. 36/37 stories done (97%). E30-S8 deferred to V4.
+# All 5 V3 epics done. Schema freeze gate unlocked 2026-03-03. Final story 2026-03-05.
 #
 # EXTRACTION ACCURACY STATUS:
 # ===========================

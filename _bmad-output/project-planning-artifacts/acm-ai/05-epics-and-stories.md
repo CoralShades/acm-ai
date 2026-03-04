@@ -1,9 +1,9 @@
 # Epics and User Stories - ACM-AI
 
-> **Project:** ACM-AI v3.0
-> **Date:** 2025-12-07 (Updated: 2026-03-03)
-> **Status:** Epics 1-28 complete; E29 S1-S4 done (S5-S8 archived); V3 epics 30-34 planned (SF alignment, multi-provider extraction, AI processing, frontend, integration)
-> **Change Log:** 2026-03-03 - V3 Epics 30-34 added (33 stories, 97 SP, SF alignment + multi-provider extraction + two-view UI). Source: Party Mode plan, multi-agent audit, PRD v3.0, Architecture v3.0, UX Design spec; 2026-03-01 - Epic 29 added (Pipeline Unification, 8 stories, measure-first gates, reconciled from audit + SCP + YAML); 2026-02-28 - Epic 28 closed (36/43 partial-success gate); 2026-02-26 - Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 - Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 - Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 - Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 - E15 + E16 added, E9-S3/E10-S1 promoted
+> **Project:** ACM-AI v3.1
+> **Date:** 2025-12-07 (Updated: 2026-03-05)
+> **Status:** Epics 1-28 complete; E29 S1-S4 done (S5-S8 archived); V3 epics 30-34 done (36/37 stories, E30-S8 deferred to V4). Total: 37 V3 stories, 110 SP.
+> **Change Log:** 2026-03-05 - V3 Implementation Audit: E30-E34 statuses updated to Done with actual completion dates from prd.json. E30: 8/9 done (S8 deferred), E31: 8/8, E32: 8/8, E33: 8/8, E34: 4/4; 2026-03-03 - V3 Epics 30-34 added (33 stories, 97 SP, SF alignment + multi-provider extraction + two-view UI). Source: Party Mode plan, multi-agent audit, PRD v3.0, Architecture v3.0, UX Design spec; 2026-03-01 - Epic 29 added (Pipeline Unification, 8 stories, measure-first gates, reconciled from audit + SCP + YAML); 2026-02-28 - Epic 28 closed (36/43 partial-success gate); 2026-02-26 - Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 - Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 - Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 - Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 - E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
 
@@ -38,11 +38,11 @@
 | E27 | Structured Output Resilience | P1 | 4 | Done |
 | E28 | Alexander District Hospital — Not Sampled Record Recovery | P1 | 3 | Done (partial success gate) |
 | E29 | Pipeline Unification — Unified Agent Pipeline | P0 | 8 | S1-S4 Done; S5-S8 Archived |
-| **E30** | **V3 Foundation — Schema + Config** | **P0** | **8** | **Planned** |
-| **E31** | **V3 Multi-Provider Extraction** | **P0** | **7** | **Planned** |
-| **E32** | **V3 AI Processing & Validation** | **P0** | **6** | **Planned** |
-| **E33** | **V3 Frontend & UX** | **P0** | **8** | **Planned** |
-| **E34** | **V3 Integration, Streaming & Polish** | **P0** | **4** | **Planned** |
+| **E30** | **V3 Foundation -- Schema + Config** | **P0** | **9** | **Done** (8/9; S8 deferred to V4) |
+| **E31** | **V3 Multi-Provider Extraction** | **P0** | **8** | **Done** (8/8) |
+| **E32** | **V3 AI Processing & Validation** | **P0** | **8** | **Done** (8/8) |
+| **E33** | **V3 Frontend & UX** | **P0** | **8** | **Done** (8/8) |
+| **E34** | **V3 Integration, Streaming & Polish** | **P0** | **4** | **Done** (4/4) |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -2850,8 +2850,9 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 > **Goal:** Establish the Salesforce schema infrastructure, split flat ACMRecord into Building + Item models, implement dependent picklist validation, and transition vocabulary from BAR to SF.
 > **Dependencies:** E29 S1-S4 (completed)
-> **Gates downstream:** SCHEMA FREEZE after S6 completion
-> **Total:** 8 stories, 29 SP
+> **Gates downstream:** SCHEMA FREEZE after S6 completion -- UNLOCKED 2026-03-03
+> **Total:** 9 stories, 32 SP (S9 added 2026-03-04)
+> **Status:** Done (8/9; S8 deferred to V4). Completed 2026-03-04.
 > **FRs:** FR-1401, FR-1402, FR-1403, FR-1404, FR-1405, FR-1408, FR-1409, FR-1410, FR-1411, FR-1412
 > **Audit findings addressed:** W1-W12, M1-M14, J1-J22
 
@@ -3096,7 +3097,8 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 > **Goal:** Add MinerU 2.x (hybrid backend) as a second extraction provider alongside Docling, build consensus layer for merging results.
 > **Dependencies:** E30 Schema Freeze Gate (S1-S6 must be Done)
-> **Total:** 7 stories, 18 SP
+> **Total:** 8 stories, 21 SP (S8 added: Pre-Extraction Quality Hardening)
+> **Status:** Done (8/8). Completed 2026-03-05.
 > **FRs:** FR-1501, FR-1502, FR-1503, FR-1504, FR-1505, FR-1506, FR-1701, FR-1704
 > **Audit findings addressed:** Tech Research recommendations, Party Mode consensus decisions
 
@@ -3301,8 +3303,9 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 ## Epic 32: V3 AI Processing & Validation
 
 > **Goal:** Implement two-phase Building + Item extraction with Claude Sonnet, SF-aligned validation with correction loop, classifier update, and Ollama model evaluation.
-> **Dependencies:** E30 (schema), E31 (providers — consensus-merged tables feed AI extraction)
-> **Total:** 6 stories, 16 SP
+> **Dependencies:** E30 (schema), E31 (providers -- consensus-merged tables feed AI extraction)
+> **Total:** 8 stories, 22 SP (S7: SF-First Validation Pipeline, S8: Ollama Token-Budget Chunking added)
+> **Status:** Done (8/8). Completed 2026-03-05.
 > **FRs:** FR-1409, FR-1410, FR-1411, FR-1412, FR-1801, FR-1802, FR-1803, FR-1804
 
 ### E32-S1: Building__c AI Extraction Node [3 SP]
@@ -3467,8 +3470,9 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 ## Epic 33: V3 Frontend & UX
 
 > **Goal:** Build the V3 user interface: upload wizard, building/item two-view grid, dependent picklist editors, provenance viewer, raw table review, building detail page, and SF export dialog.
-> **Dependencies:** E30 (schema — API contracts), E32 (AI processing produces data for grids). E33-S1 and S2 can start after E30 Schema Freeze Gate (API contracts defined). E33-S3 through S8 require E32 completion.
+> **Dependencies:** E30 (schema -- API contracts), E32 (AI processing produces data for grids). E33-S1 and S2 can start after E30 Schema Freeze Gate (API contracts defined). E33-S3 through S8 require E32 completion.
 > **Total:** 8 stories, 25 SP
+> **Status:** Done (8/8). Completed 2026-03-05.
 > **FRs:** FR-1406, FR-1407, FR-1601, FR-1602, FR-1603, FR-1604, FR-1605, FR-1606, FR-1607, FR-1608, FR-1609, FR-1610, FR-1611
 > **UX Reference:** `_bmad-output/planning-artifacts/v3-ux-design.md` (Sally's complete UI flow spec)
 
@@ -3708,6 +3712,7 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 > **Goal:** Record-by-record AG Grid streaming, bulk operations, performance optimization, and canonical artifact updates.
 > **Dependencies:** E30-E33 (builds on all prior epics). E34-S4 can start after E30.
 > **Total:** 4 stories, 9 SP
+> **Status:** Done (4/4). Completed 2026-03-05.
 > **FRs:** FR-1702, FR-1703
 > **Note:** SSE infrastructure (FR-1701, FR-1704) moved to E31-S7 to resolve E33-S1 timing dependency.
 

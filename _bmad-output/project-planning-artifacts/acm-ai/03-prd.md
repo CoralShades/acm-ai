@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) - ACM-AI
 
-> **Product:** ACM-AI v3.0
-> **Date:** 2025-12-07 (Updated: 2026-03-02)
-> **Status:** v3.0 - V3 Scope Expansion (Salesforce Alignment, Multi-Provider Extraction, Consensus Layer, Two-View UI)
+> **Product:** ACM-AI v3.1
+> **Date:** 2025-12-07 (Updated: 2026-03-05)
+> **Status:** v3.1 - V3 Implementation Complete (36/37 stories done, 95%; E30-S8 deferred to V4)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
+> **Change Log:** 2026-03-05 - v3.1: V3 Implementation Audit — verified all FR-1400..FR-1800 series against actual implementation, updated status to 36/37 stories complete (E30-S8 deferred), corrected story counts (E30: 9 stories incl. S9, E31: 8 stories incl. S8, E32: 8 stories incl. S8); 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -17,7 +17,7 @@ This PRD defines the requirements for transforming Open Notebook into ACM-AI, a 
 See [Product Brief](./02-product-brief.md) for business context and [System Analysis](./01-system-analysis.md) for technical foundation.
 
 ### 1.3 Scope
-This document covers MVP requirements (Epics 1-20, 29) and V3 scope expansion (Epics 30-34). V3 adds Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, and AI capability routing. See [Section 11: V3 Scope](#11-v3-scope-expansion) for detailed delineation of V3 additions.
+This document covers MVP requirements (Epics 1-20, 29) and V3 scope expansion (Epics 30-34). V3 adds Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, and AI capability routing. **V3 is 95% complete (36/37 stories)** -- only E30-S8 (Ollama provider priority) is deferred to V4. See [Section 11: V3 Scope](#11-v3-scope-expansion) for detailed delineation of V3 additions.
 
 ### 1.4 Document Formats Supported
 | Format | Description | Status |

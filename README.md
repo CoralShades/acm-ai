@@ -154,14 +154,14 @@ uv run python scripts/service_manager.py start --auto-fix  # Auto-resolve port c
 | **SurrealDB** | 8000 | Multi-model database |
 | **FastAPI Backend** | 5055 | REST API server |
 | **Background Worker** | - | Async job processor |
-| **Next.js Frontend** | 8502 | Web UI |
+| **Next.js Frontend** | 8503 | Web UI |
 
 #### Manual Setup (All Platforms)
 ```bash
 docker compose up -d surrealdb        # Database on port 8000
 uv run run_api.py                     # API on port 5055
 uv run surreal-commands-worker --import-modules commands  # Background worker
-cd frontend && npm run dev            # Frontend on port 8502
+cd frontend && npm run dev            # Frontend on port 8503
 ```
 uv run run_api.py --import-modules commands
 
@@ -210,7 +210,7 @@ OLLAMA_API_BASE=http://ollama:11434
 
 > **💡 Tip:** No GPU or office laptop restrictions? Just skip the Ollama profile and use cloud providers (OpenAI, Anthropic, etc.) instead.
 
-**Access at:** http://localhost:8502
+**Access at:** http://localhost:8503
 
 **Requirements:**
 - Docker Desktop (must be running)
@@ -262,6 +262,15 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 - **🤖 Background Processing**: Async extraction with retry logic and error handling
 - **✅ High Accuracy**: 90%+ field accuracy on real-world ACM registers
 
+### V3: Salesforce Integration (NEW)
+- **🔗 Salesforce Schema Alignment**: Building__c + Item__c field mappings with dependent picklist validation
+- **🔄 Multi-Provider Extraction**: Docling + MinerU dual-provider pipeline with consensus layer
+- **📊 Two-View Register UI**: Building Grid + Item Grid with AG Grid dynamic columns
+- **📡 Real-Time Streaming**: SSE-based extraction progress with per-record updates
+- **✅ SF Validation**: Dependent picklist validation against Salesforce vocabulary
+- **📋 Raw Table Review**: Side-by-side raw extraction and provenance viewer
+- **📦 Bulk Operations**: Bulk edit, validate, and Salesforce-ready CSV/Excel export
+
 ### AI-Powered Intelligence
 - **🤖 Multi-Model Support**: 16+ providers including OpenAI, Anthropic, Ollama, Google, LM Studio
 - **💬 Natural Language Queries**: "Show all friable asbestos in buildings before 1980"
@@ -304,7 +313,8 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 
 ## 🗺️ Roadmap
 
-### ACM-AI Current Status ✅
+### Completed Milestones
+
 **Phase 1 - Core Extraction (COMPLETE)**
 - ✅ **ACMRecord Domain Model**: Full Pydantic model with SurrealDB integration
 - ✅ **ACM Extraction Engine**: Regex-based parser for Docling markdown output
@@ -313,15 +323,23 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 - ✅ **Comprehensive Test Suite**: 47 passing tests (unit + integration)
 - ✅ **High Accuracy**: 90%+ field accuracy on real ACM register samples
 
+**Phase 2 - V3 Salesforce Integration (COMPLETE -- 35/37 stories, 110 SP)**
+- ✅ **Salesforce Schema Alignment**: Building__c + Item__c field mappings (143+154 fields, 41 picklists)
+- ✅ **Multi-Provider Extraction**: Docling + MinerU dual-provider pipeline with consensus layer
+- ✅ **Two-View Register UI**: Building Grid + Item Grid with AG Grid dynamic columns
+- ✅ **Real-Time SSE Streaming**: Per-record extraction progress with PipelineEventBus
+- ✅ **Dependent Picklist Validation**: SF vocabulary validation with correction loop
+- ✅ **Raw Table Review**: Side-by-side raw extraction tables and provenance viewer
+- ✅ **Bulk Operations**: Bulk edit, validate, and Salesforce-ready CSV/Excel export
+- ✅ **Performance Optimization**: GPU memory management, pipeline instrumentation
+- ✅ **Pre-Extraction Intelligence**: Document structure analysis, building inventory, page tagging
+
 ### Next for ACM-AI
-- **Real PDF Testing**: Validate against actual 1124, 3980, 4601 SAMP PDFs
-- **Frontend ACM Views**: UI components for browsing extracted ACM data
-- **Export Capabilities**: CSV/Excel export for compliance reporting
-- **Advanced Querying**: Natural language queries over ACM database
-- **Risk Analytics**: Dashboard showing high-risk materials by building/school
-- **Live Front-End Updates**: Real-time UI updates for smoother experience
-- **Cross-Notebook Sources**: Reuse SAMP documents across multiple schools
-- **Compliance Reporting**: Automated report generation for audits
+- **Ollama-First Provider Priority**: Local-first extraction with cloud fallback (E30-S8, deferred)
+- **Salesforce Data Push**: Direct sync of validated records to Salesforce org
+- **Multi-Tenant Deployment**: Support multiple school districts with isolated data
+- **Role-Based Access Control**: User roles and permissions for compliance teams
+- **Risk Analytics Dashboard**: High-risk materials by building/school with trend analysis
 
 See the [open issues](https://github.com/CoralShades/acm-ai/issues) for proposed features and to request new capabilities.
 
