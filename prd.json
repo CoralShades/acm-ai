@@ -1335,10 +1335,10 @@
         "commands/source_commands.py",
         "api/routers/sources.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null,
-      "notes": "",
-      "passes": false
+      "techSpecFile": "docs/sprint-artifacts/e35-s1-fix-sync-upload-asyncio-error.md",
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
     },
     {
       "id": "E35-S2",
