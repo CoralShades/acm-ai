@@ -740,8 +740,8 @@
         "AC7: All exported field names match SF API names",
         "AC8: SF object-level correctness assertions (Building__c + Item__c as separate validated entities)"
       ],
-      "passes": false,
-      "notes": "Full pipeline E2E validation.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -756,7 +756,7 @@
         "tests/conftest.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e32-s5-extraction-pipeline-e2e-test.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E32-S6",
@@ -1304,7 +1304,7 @@
       "id": "GATE:AI_COMPLETE",
       "name": "AI Complete",
       "triggerStory": "E32-S5",
-      "unlocked": false,
+      "unlocked": true,
       "blocksEpics": [],
       "description": "AI validation, correction, and batching pipeline operational."
     },
