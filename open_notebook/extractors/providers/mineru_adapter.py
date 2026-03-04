@@ -77,7 +77,9 @@ class MinerUAdapter:
                 original=e,
             ) from e
 
-    def _run_extraction(self, pdf_path: str, start_ms: int) -> NormalizedExtractionResult:
+    def _run_extraction(
+        self, pdf_path: str, start_ms: int
+    ) -> NormalizedExtractionResult:
         """Internal extraction logic with deferred MinerU imports."""
         try:
             from mineru import MinerUDocumentConverter
@@ -85,8 +87,7 @@ class MinerUAdapter:
             raise ProviderError(
                 provider_id=self.provider_id,
                 message=(
-                    "mineru is not installed. "
-                    "Install it with: uv add 'mineru>=2.7.0'"
+                    "mineru is not installed. Install it with: uv add 'mineru>=2.7.0'"
                 ),
                 original=e,
             ) from e
@@ -254,6 +255,19 @@ class MinerUAdapter:
             csv=None,
             bbox=None,
         )
+
+    def cleanup(self) -> None:
+        """Release resources after extraction. Safe to call multiple times."""
+        import gc
+
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
 
     def supports_table_extraction(self) -> bool:
         """Return True — MinerU specializes in table extraction."""

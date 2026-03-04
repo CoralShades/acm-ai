@@ -91,10 +91,7 @@ class DoclingAdapter:
         except ImportError as e:
             raise ProviderError(
                 provider_id=self.provider_id,
-                message=(
-                    "docling is not installed. "
-                    "Install it with: uv add docling"
-                ),
+                message=("docling is not installed. Install it with: uv add docling"),
                 original=e,
             ) from e
 
@@ -193,6 +190,19 @@ class DoclingAdapter:
             extraction_time_ms=elapsed_ms,
             warnings=warnings,
         )
+
+    def cleanup(self) -> None:
+        """Release resources after extraction. Safe to call multiple times."""
+        import gc
+
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
 
     def supports_table_extraction(self) -> bool:
         """Return True — Docling specializes in table extraction."""

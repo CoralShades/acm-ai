@@ -135,8 +135,7 @@ async def _run_v3_extraction_mocked(
         return [
             t
             for t in docling_tables
-            if t.get("page_start", 0) >= page_start
-            and t.get("page_end", 0) <= page_end
+            if t.get("page_start", 0) >= page_start and t.get("page_end", 0) <= page_end
         ]
 
     async def mock_generate_internal_id(source_id):
@@ -257,8 +256,7 @@ class TestBuildingItemForeignKeys:
         out = await _run_v3_extraction_mocked(source)
         for rec in out["acm_records"]:
             assert (
-                "fk_test_002" in rec.source_id
-                or rec.source_id == "source:fk_test_002"
+                "fk_test_002" in rec.source_id or rec.source_id == "source:fk_test_002"
             ), f"ACMRecord.source_id={rec.source_id!r} does not reference source"
 
     @pytest.mark.asyncio
@@ -339,7 +337,7 @@ class TestRawExtractionStorage:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        await _run_dual_provider_extraction("source:raw_test_001", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction("source:raw_test_001", "/tmp/test.pdf")
 
         # Called once per provider (docling + mineru)
         assert mock_store_raw.call_count == 2
@@ -361,7 +359,7 @@ class TestRawExtractionStorage:
         )
         mock_registry.return_value.get_provider.return_value = mock_docling
 
-        await _run_dual_provider_extraction("source:raw_test_002", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction("source:raw_test_002", "/tmp/test.pdf")
 
         assert mock_store_raw.call_count == 1
 
@@ -417,7 +415,7 @@ class TestConsensusFieldPopulation:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        result = await _run_dual_provider_extraction(
+        result, _ = await _run_dual_provider_extraction(
             "source:consensus_test", "/tmp/test.pdf"
         )
 

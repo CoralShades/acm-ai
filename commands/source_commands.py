@@ -14,7 +14,7 @@ from open_notebook.domain.transformation import Transformation
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
 from open_notebook.extractors.providers import get_provider_registry
-from open_notebook.extractors.providers.base import ProviderError
+from open_notebook.extractors.providers.base import PipelineTimings, ProviderError
 from open_notebook.observability.langfuse_config import (
     append_langfuse_callback,
     build_langfuse_metadata,
@@ -36,6 +36,11 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import source_graph: {e}")
     raise ValueError("source_graph not available")
+
+try:
+    import torch as _torch
+except ImportError:
+    _torch = None  # type: ignore[assignment]
 
 
 def full_model_dump(model):
@@ -415,11 +420,12 @@ async def _run_dual_provider_extraction(
     source_id: str,
     pdf_path: str,
     pipeline_logger: Optional[PipelineLogger] = None,
-) -> List[Dict[str, Any]]:
+) -> tuple[List[Dict[str, Any]], PipelineTimings]:
     """
     Run Docling then (optionally) MinerU sequentially to prevent VRAM contention.
 
-    Returns merged table dicts ready for _store_docling_tables().
+    Returns merged table dicts ready for _store_docling_tables() and a
+    PipelineTimings object with wall-clock measurements for each stage.
     When dual-provider is disabled, returns Docling-only tables with
     consensus_tier='single_provider'.
 
@@ -429,14 +435,18 @@ async def _run_dual_provider_extraction(
         pipeline_logger: Optional PipelineLogger for stage observability.
 
     Returns:
-        List of merged table dicts (see _merge_provider_tables for shape).
+        Tuple of (merged table dicts, PipelineTimings).
     """
     registry = get_provider_registry()
+    timings = PipelineTimings()
 
     # Step 1: Always run Docling first
+    t0 = time.perf_counter()
     docling_provider = registry.get_provider("docling")
     docling_result = docling_provider.extract(pdf_path, pipeline_logger=pipeline_logger)
+    docling_provider.cleanup()
     await _store_raw_extractions(source_id, docling_result)
+    timings.docling_ms = int((time.perf_counter() - t0) * 1000)
     logger.info(
         f"Docling extracted {len(docling_result.tables)} tables from {pdf_path}"
     )
@@ -452,48 +462,97 @@ async def _run_dual_provider_extraction(
             "Dual-provider disabled (V3_DUAL_PROVIDER or MINERU_ENABLED not set); "
             "returning Docling-only results."
         )
-        return [
-            {
-                "table_index": t.table_index,
-                "page": t.page,
-                "rows": t.row_count,
-                "columns": t.columns,
-                "csv": t.csv,
-                "markdown": t.markdown,
-                "html": t.html,
-                "consensus_tier": "single_provider",
-                "consensus_scores": None,
-            }
-            for t in docling_result.tables
-        ]
+        timings.total_provider_ms = timings.docling_ms
+        logger.info(
+            f"Provider timings | "
+            f"docling={timings.docling_ms}ms "
+            f"mineru={timings.mineru_ms}ms "
+            f"merge={timings.merge_ms}ms "
+            f"total={timings.total_provider_ms}ms"
+        )
+        return (
+            [
+                {
+                    "table_index": t.table_index,
+                    "page": t.page,
+                    "rows": t.row_count,
+                    "columns": t.columns,
+                    "csv": t.csv,
+                    "markdown": t.markdown,
+                    "html": t.html,
+                    "consensus_tier": "single_provider",
+                    "consensus_scores": None,
+                }
+                for t in docling_result.tables
+            ],
+            timings,
+        )
+
+    # AC3: flush GPU cache between providers (CUDA-safe guard)
+    t1 = time.perf_counter()
+    if _torch is not None and _torch.cuda.is_available():
+        _torch.cuda.empty_cache()
+        logger.debug("GPU cache flushed between Docling and MinerU")
+    timings.gpu_flush_ms = int((time.perf_counter() - t1) * 1000)
 
     # Step 3: Run MinerU second (GPU released by Docling at this point)
+    t2 = time.perf_counter()
     try:
         mineru_provider = registry.get_provider("mineru")
         mineru_result = mineru_provider.extract(pdf_path)
+        mineru_provider.cleanup()
         await _store_raw_extractions(source_id, mineru_result)
+        timings.mineru_ms = int((time.perf_counter() - t2) * 1000)
         logger.info(
             f"MinerU extracted {len(mineru_result.tables)} tables from {pdf_path}"
         )
     except (ProviderError, KeyError) as e:
+        timings.mineru_ms = int((time.perf_counter() - t2) * 1000)
         logger.warning(f"MinerU extraction failed — falling back to Docling-only: {e}")
-        return [
-            {
-                "table_index": t.table_index,
-                "page": t.page,
-                "rows": t.row_count,
-                "columns": t.columns,
-                "csv": t.csv,
-                "markdown": t.markdown,
-                "html": t.html,
-                "consensus_tier": "single_provider",
-                "consensus_scores": None,
-            }
-            for t in docling_result.tables
-        ]
+        timings.total_provider_ms = (
+            timings.docling_ms + timings.gpu_flush_ms + timings.mineru_ms
+        )
+        logger.info(
+            f"Provider timings | "
+            f"docling={timings.docling_ms}ms "
+            f"mineru={timings.mineru_ms}ms "
+            f"merge={timings.merge_ms}ms "
+            f"total={timings.total_provider_ms}ms"
+        )
+        return (
+            [
+                {
+                    "table_index": t.table_index,
+                    "page": t.page,
+                    "rows": t.row_count,
+                    "columns": t.columns,
+                    "csv": t.csv,
+                    "markdown": t.markdown,
+                    "html": t.html,
+                    "consensus_tier": "single_provider",
+                    "consensus_scores": None,
+                }
+                for t in docling_result.tables
+            ],
+            timings,
+        )
 
     # Step 4: Merge results
-    return _merge_provider_tables(docling_result, mineru_result)
+    t3 = time.perf_counter()
+    merged = _merge_provider_tables(docling_result, mineru_result)
+    timings.merge_ms = int((time.perf_counter() - t3) * 1000)
+
+    timings.total_provider_ms = (
+        timings.docling_ms + timings.gpu_flush_ms + timings.mineru_ms + timings.merge_ms
+    )
+    logger.info(
+        f"Provider timings | "
+        f"docling={timings.docling_ms}ms "
+        f"mineru={timings.mineru_ms}ms "
+        f"merge={timings.merge_ms}ms "
+        f"total={timings.total_provider_ms}ms"
+    )
+    return merged, timings
 
 
 @command(
@@ -610,7 +669,7 @@ async def process_source_command(
                 )
                 try:
                     # E31-S5: Dual-provider sequential extraction with consensus merge
-                    merged_tables = await _run_dual_provider_extraction(
+                    merged_tables, _timings = await _run_dual_provider_extraction(
                         source_id=str(processed_source.id),
                         pdf_path=pdf_path,
                         pipeline_logger=docling_pl,

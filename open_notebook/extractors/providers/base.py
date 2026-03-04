@@ -18,6 +18,18 @@ from typing import Dict, List, Optional, Protocol, runtime_checkable
 
 
 @dataclass
+class PipelineTimings:
+    """Wall-clock timings (milliseconds) for each stage of the extraction pipeline."""
+
+    docling_ms: int = 0
+    gpu_flush_ms: int = 0
+    mineru_ms: int = 0
+    merge_ms: int = 0
+    consensus_ms: int = 0
+    total_provider_ms: int = 0
+
+
+@dataclass
 class TableBBox:
     """Bounding box coordinates for a table within a PDF page."""
 
@@ -122,4 +134,8 @@ class ExtractionProvider(Protocol):
 
     def get_field_confidence(self) -> Dict[str, float]:
         """Return per-field confidence map; empty dict if unsupported."""
+        ...
+
+    def cleanup(self) -> None:
+        """Release resources after extraction. Safe to call multiple times."""
         ...

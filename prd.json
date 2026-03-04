@@ -1209,7 +1209,7 @@
         "open_notebook/extractors/orchestrator.py",
         "docs/benchmarks/v3-performance-report.md"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e34-s3-performance-optimization.md",
       "implementedDate": null
     },
     {

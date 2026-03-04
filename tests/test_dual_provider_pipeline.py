@@ -77,7 +77,7 @@ class TestDualProviderFeatureFlag:
         )
         mock_registry.return_value.get_provider.return_value = mock_docling
 
-        result = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         assert len(result) == 1
         assert result[0]["consensus_tier"] == "single_provider"
@@ -100,7 +100,7 @@ class TestDualProviderFeatureFlag:
         )
         mock_registry.return_value.get_provider.return_value = mock_docling
 
-        result = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         assert len(result) == 1
         assert all(r["consensus_tier"] == "single_provider" for r in result)
@@ -122,7 +122,7 @@ class TestDualProviderFeatureFlag:
         )
         mock_registry.return_value.get_provider.return_value = mock_docling
 
-        result = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         assert all(r["consensus_tier"] == "single_provider" for r in result)
         assert mock_docling.extract.call_count == 1
@@ -156,7 +156,7 @@ class TestDualProviderFeatureFlag:
         mock_registry.return_value.get_provider.side_effect = get_provider
 
         with patch.dict(os.environ, env_without_flag, clear=True):
-            result = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+            result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         # MinerU was attempted (get_provider called with "mineru")
         calls = [
@@ -206,7 +206,7 @@ class TestRunDualProviderExtraction:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         assert call_order == ["docling", "mineru"]
 
@@ -232,7 +232,7 @@ class TestRunDualProviderExtraction:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         assert mock_store.call_count == 2
 
@@ -261,7 +261,7 @@ class TestRunDualProviderExtraction:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        result = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         assert len(result) == 1
         assert result[0]["consensus_tier"] == "single_provider"
@@ -284,7 +284,7 @@ class TestRunDualProviderExtraction:
         )
         mock_registry.return_value.get_provider.return_value = mock_docling
 
-        result = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         assert len(result) == 2
         assert all(r["consensus_tier"] == "single_provider" for r in result)
@@ -329,7 +329,7 @@ class TestRunDualProviderExtraction:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        result = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+        result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
 
         # Three distinct pages in result
         assert len(result) == 3
@@ -337,7 +337,10 @@ class TestRunDualProviderExtraction:
         tiers_by_page = {r["page"]: r["consensus_tier"] for r in result}
 
         # Page 1: both providers -> agreement (divergence=0.0)
-        assert tiers_by_page[1] in ("multi_provider_agreement", "multi_provider_conflict")
+        assert tiers_by_page[1] in (
+            "multi_provider_agreement",
+            "multi_provider_conflict",
+        )
         # Page 2: Docling only -> single_provider
         assert tiers_by_page[2] == "single_provider"
         # Page 3: MinerU only -> single_provider
