@@ -579,7 +579,7 @@
         "frontend/src/hooks/useV3SSE.ts",
         "tests/test_pipeline_event_bus.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e31-s7-pipeline-event-bus-sse-infrastructure.md",
       "implementedDate": null
     },
     {

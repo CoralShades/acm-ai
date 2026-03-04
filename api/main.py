@@ -65,6 +65,7 @@ from api.routers import (
     sources,
     speaker_profiles,
     transformations,
+    v3_streaming,
 )
 from api.routers import commands as commands_router
 from api.sf_schema_provisioning import run_sf_schema_provisioning
@@ -193,6 +194,7 @@ app.include_router(a2a.router, prefix="/api", tags=["a2a"])
 app.include_router(agui_extraction.router, prefix="/api", tags=["agui-extraction"])
 app.include_router(bar_templates.router, tags=["bar-templates"])
 app.include_router(source_bulk.router, prefix="/api", tags=["source-bulk"])
+app.include_router(v3_streaming.router, prefix="/api", tags=["v3-streaming"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 
 # Mount static files for A2A agent card (.well-known)
