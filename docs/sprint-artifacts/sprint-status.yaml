@@ -498,6 +498,25 @@ development_status:
   e34-s4-canonical-artifact-update: done               # 3 SP. Documentation audit — PRD, arch, epics, sprint-status, CLAUDE.md, README. Completed 2026-03-05
   epic-34-retrospective: optional
 
+  # ─────────────────────────────────────────────────────
+  # Epic 35: Post-V3 Hardening & Bug Fixes (P0/P1)
+  # 8 stories, 22 SP
+  # Dependencies: E30-E34 (builds on all V3)
+  # Fixes: Ollama hardening, Anthropic Direct routing, SF validation,
+  #   sync upload, model persistence, building backfill, SSE, frontend polish
+  # GitHub Issues: #84, #89, #90, #91, #92, #93, #94
+  # ─────────────────────────────────────────────────────
+  epic-35: in-progress
+  e35-s1-fix-sync-upload-asyncio: backlog                # 2 SP. GitHub #91. asyncio.run() in event loop → use await
+  e35-s2-persist-model-defaults: backlog                 # 2 SP. GitHub #92. PUT /api/models/defaults → SurrealDB settings
+  e35-s3-ollama-extraction-hardening: backlog            # 3 SP. GitHub #93. P0. format=json, num_ctx, chunking formalization
+  e35-s4-anthropic-direct-provider-priority: backlog     # 3 SP. GitHub #94. P0. Primary path Ollama→Anthropic→OpenRouter. Deps: E35-S3
+  e35-s5-sse-terminal-event: backlog                     # 2 SP. GitHub #90. SSE complete event for finished jobs
+  e35-s6-v3-building-backfill: backlog                   # 3 SP. GitHub #89. Backfill building_record for pre-V3 sources
+  e35-s7-sf-first-validation-pipeline: backlog           # 5 SP. GitHub #84. SF-first enum authority, correction loop fix. Deps: E35-S3
+  e35-s8-frontend-error-handling: backlog                # 2 SP. Empty states, console error cleanup, CopilotKit fix
+  epic-35-retrospective: optional
+
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
   bug-worker-race-condition: done  # 2026-02-25: Atomic claim pattern (_try_claim_command + _generate_worker_id) in acm_commands.py. Migration 34: claimed_by/claimed_at fields. Prevents duplicate command processing.
@@ -532,29 +551,30 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 33  (+5 V3 epics: E30-E34)
-# Total Stories: 213  (176 pre-V3 + 37 V3)
-# Stories Done: 196 (92%)  -- 160 pre-V3 + 36 V3
+# Total Epics: 34  (+6 V3 epics: E30-E35)
+# Total Stories: 221  (176 pre-V3 + 37 V3 + 8 V3-hardening)
+# Stories Done: 196 (89%)  -- 160 pre-V3 + 36 V3
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 0
+# Stories Backlog: 8 (E35-S1..S8)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-05
-# Reconciliation note: E30-S8 implemented 2026-03-05. All 37 V3 stories now complete.
+# Reconciliation note: E35 epic added (8 stories, 22 SP) for post-V3 hardening.
+# V3 core complete (37/37). E35 addresses bugs from E30-S8 verification.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
 #                  E30, E31, E32, E33, E34
-# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived)
+# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived), E35 (8 stories backlog)
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: COMPLETE. 37/37 stories done (100%). All V3 stories implemented.
-# All 5 V3 epics done. Schema freeze gate unlocked 2026-03-03. Final story 2026-03-05.
+# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (0/8).
+# All 5 core V3 epics done. Schema freeze gate unlocked 2026-03-03. Final core story 2026-03-05.
 #
 # EXTRACTION ACCURACY STATUS:
 # ===========================

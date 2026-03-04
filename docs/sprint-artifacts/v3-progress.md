@@ -61,8 +61,9 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-5 | 5/5 | 15/15 | Complete |
 | V3-6 | 5/5 | 14/14 | Complete |
 | V3-7 | 4/4 | 9/9 | Complete |
+| V3-8 | 0/8 | 0/22 | In Progress |
 
-**Total: 37/37 stories done (100%). V3 complete.**
+**V3 Core: 37/37 stories done (100%). V3-8 Hardening: 0/8 stories (0%).**
 
 ## Gate Milestones
 

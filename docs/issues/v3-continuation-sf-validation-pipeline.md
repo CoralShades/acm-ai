@@ -1,9 +1,12 @@
 # V3 Continuation: SF-First Validation Pipeline
 
 > **Created:** 2026-03-04
+> **Updated:** 2026-03-05
 > **Context:** Post-implementation audit of E30-S4 + E30-S6
 > **Purpose:** Resume document for the next session — contains all context needed to implement the SF-First validation fix
 > **Branch:** ACMV3
+> **Story:** E35-S7 (SF-First Validation Pipeline, 5 SP) — Sprint V3-8
+> **GitHub Issue:** #84 (F2-F8 SF picklist mismatches)
 
 ---
 
