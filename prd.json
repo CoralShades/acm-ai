@@ -1092,8 +1092,8 @@
         "AC7: Selected buildings: option to export only selected buildings",
         "AC8: BAR backward compatibility: Export as BAR Excel option retained"
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "simple",
       "priority": "P0",
@@ -1109,7 +1109,7 @@
         "tests/test_sf_export.py"
       ],
       "techSpecFile": "docs/sprint-artifacts/e33-s8-salesforce-ready-export-ui.md",
-      "implementedDate": null
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E34-S1",
@@ -1348,7 +1348,7 @@
       "id": "GATE:UI_COMPLETE",
       "name": "UI Complete",
       "triggerStory": "E33-S8",
-      "unlocked": false,
+      "unlocked": true,
       "blocksEpics": [],
       "description": "All frontend views operational with AG Grid, provenance UI, and dashboards."
     }
