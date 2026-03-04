@@ -87,6 +87,7 @@ export interface ACMRecordCreateRequest {
   building_name?: string
   building_year?: number
   building_construction?: string
+  building_type?: string
   room_id?: string
   room_name?: string
   room_area?: number
@@ -96,6 +97,8 @@ export interface ACMRecordCreateRequest {
   extent?: string
   location?: string
   friable?: string
+  acm_product_group?: string
+  acm_product_type?: string
   material_condition?: string
   risk_status?: string
   result: string
@@ -109,6 +112,7 @@ export interface ACMRecordUpdateRequest {
   building_name?: string
   building_year?: number
   building_construction?: string
+  building_type?: string
   room_id?: string
   room_name?: string
   room_area?: number
@@ -118,6 +122,8 @@ export interface ACMRecordUpdateRequest {
   extent?: string
   location?: string
   friable?: string
+  acm_product_group?: string
+  acm_product_type?: string
   material_condition?: string
   risk_status?: string
   result?: string

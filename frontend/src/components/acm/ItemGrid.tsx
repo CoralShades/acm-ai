@@ -6,6 +6,9 @@ import type { ColDef, ModelUpdatedEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { useACMItems, useFieldSchema } from '@/lib/hooks/useACMItems'
 import type { ACMRecord } from '@/lib/types/acm'
+import { fieldApiToRecordKey } from '@/lib/utils/acm-field-mapping'
+import { DependentPicklistEditor } from './DependentPicklistEditor'
+import type { DependentPicklistEditorParams } from './DependentPicklistEditor'
 
 // Register AG Grid modules (idempotent — safe to call multiple times)
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -35,31 +38,7 @@ function RiskStatusRenderer({ value }: { value: string | null | undefined }) {
   )
 }
 
-/**
- * Maps a SF api_name to the corresponding ACMRecord property key.
- *
- * The SF taxonomy (E32-S4) may use names like "Building_Code__c" or "Risk_Status__c".
- * The ACMRecord interface uses snake_case backend names (building_id, risk_status, etc.).
- * This normalizer converts common SF __c suffixed names to their backend equivalents.
- * Fields that already exist verbatim on ACMRecord pass through unchanged.
- */
-function fieldApiToRecordKey(apiName: string): string {
-  // Strip Salesforce __c suffix and lowercase
-  const stripped = apiName.replace(/__c$/i, '').toLowerCase()
-
-  // Explicit overrides for known mapping differences
-  const overrides: Record<string, string> = {
-    building_code: 'building_id',
-    acm_name: 'product',
-    acm_description: 'material_description',
-    condition: 'material_condition',
-    friability: 'friable',
-    risk: 'risk_status',
-    internal_external: 'area_type',
-  }
-
-  return overrides[stripped] ?? stripped
-}
+// fieldApiToRecordKey is now imported from @/lib/utils/acm-field-mapping (E33-S3)
 
 export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping }: ItemGridProps) {
   const { data: acmData, isLoading: isLoadingItems } = useACMItems(sourceId, buildingId)
@@ -114,6 +93,22 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
       if (String(recordKey) === RISK_FIELD) {
         colDef.cellRenderer = RiskStatusRenderer
         colDef.width = 110
+      }
+
+      // Dependent picklist cell editor (AC1-AC3)
+      if (fieldDef.is_dependent && fieldDef.controller_field && fieldSchema) {
+        colDef.editable = true
+        const capturedApiName = fieldDef.api_name
+        const capturedSchema = fieldSchema
+        colDef.cellEditorSelector = () => ({
+          component: DependentPicklistEditor,
+          // Extra params are merged into the ICellEditorParams supplied by AG Grid
+          params: {
+            mode: 'grid' as const,
+            fieldApiName: capturedApiName,
+            schema: capturedSchema,
+          } as Partial<DependentPicklistEditorParams>,
+        })
       }
 
       return colDef

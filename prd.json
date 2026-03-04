@@ -930,7 +930,7 @@
         "frontend/src/hooks/useFieldSchema.ts",
         "tests/playwright/test_dependent_picklist.spec.ts"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e33-s3-dependent-picklist-cell-editors.md",
       "implementedDate": null
     },
     {

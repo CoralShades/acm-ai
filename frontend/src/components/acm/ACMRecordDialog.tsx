@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -27,6 +27,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { useCreateACMRecord, useUpdateACMRecord } from '@/lib/hooks/use-acm'
 import type { ACMRecord, ACMRecordCreateRequest, ACMRecordUpdateRequest } from '@/lib/types/acm'
+import { useFieldSchema } from '@/lib/hooks/useACMItems'
+import { DependentPicklistEditor } from './DependentPicklistEditor'
 
 // Schema keeps everything as strings - conversion happens in onSubmit
 const acmRecordSchema = z.object({
@@ -45,6 +47,9 @@ const acmRecordSchema = z.object({
   extent: z.string().optional(),
   location: z.string().optional(),
   friable: z.string().optional(),
+  acm_product_group: z.string().optional(),
+  acm_product_type: z.string().optional(),
+  building_type: z.string().optional(),
   material_condition: z.string().optional(),
   risk_status: z.string().optional(),
   result: z.string().min(1, 'Result is required'),
@@ -70,6 +75,7 @@ export function ACMRecordDialog({
 }: ACMRecordDialogProps) {
   const createRecord = useCreateACMRecord()
   const updateRecord = useUpdateACMRecord()
+  const { data: fieldSchema } = useFieldSchema()
 
   const {
     register,
@@ -97,6 +103,9 @@ export function ACMRecordDialog({
       extent: '',
       location: '',
       friable: '',
+      acm_product_group: '',
+      acm_product_type: '',
+      building_type: '',
       material_condition: '',
       risk_status: '',
       result: '',
@@ -123,6 +132,9 @@ export function ACMRecordDialog({
         extent: record.extent || '',
         location: record.location || '',
         friable: record.friable || '',
+        acm_product_group: record.acm_product_group || '',
+        acm_product_type: record.acm_product_type || '',
+        building_type: record.building_type || '',
         material_condition: record.material_condition || '',
         risk_status: record.risk_status || '',
         result: record.result || '',
@@ -132,6 +144,14 @@ export function ACMRecordDialog({
       reset()
     }
   }, [open, mode, record, reset])
+
+  // Build partial ACMRecord from watched form values — used by DependentPicklistEditor (AC6)
+  const watchedForPicker = watch(['friable', 'acm_product_group', 'building_type'])
+  const formRowData = useMemo<Partial<ACMRecord>>(() => ({
+    friable: watchedForPicker[0] || undefined,
+    acm_product_group: watchedForPicker[1] || undefined,
+    building_type: watchedForPicker[2] || undefined,
+  }), [watchedForPicker[0], watchedForPicker[1], watchedForPicker[2]])
 
   const closeDialog = () => {
     onOpenChange(false)
@@ -172,6 +192,9 @@ export function ACMRecordDialog({
         ...(data.extent && { extent: data.extent }),
         ...(data.location && { location: data.location }),
         ...(data.friable && { friable: data.friable }),
+        ...(data.acm_product_group && { acm_product_group: data.acm_product_group }),
+        ...(data.acm_product_type && { acm_product_type: data.acm_product_type }),
+        ...(data.building_type && { building_type: data.building_type }),
         ...(data.material_condition && { material_condition: data.material_condition }),
         ...(data.risk_status && { risk_status: data.risk_status }),
         ...(parseOptionalInt(data.page_number) !== undefined && { page_number: parseOptionalInt(data.page_number) }),
@@ -195,6 +218,9 @@ export function ACMRecordDialog({
         extent: data.extent || undefined,
         location: data.location || undefined,
         friable: data.friable || undefined,
+        acm_product_group: data.acm_product_group || undefined,
+        acm_product_type: data.acm_product_type || undefined,
+        building_type: data.building_type || undefined,
         material_condition: data.material_condition || undefined,
         risk_status: data.risk_status || undefined,
         page_number: parseOptionalInt(data.page_number),
@@ -287,12 +313,48 @@ export function ACMRecordDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="building_construction">Construction Type</Label>
-                  <Input
-                    id="building_construction"
-                    {...register('building_construction')}
-                    placeholder="e.g., Brick"
-                  />
+                  <Label htmlFor="building_type">Building Type</Label>
+                  {fieldSchema ? (
+                    <DependentPicklistEditor
+                      mode="form"
+                      fieldApiName="Building_Type__c"
+                      schema={fieldSchema}
+                      rowData={formRowData}
+                      value={watch('building_type') || ''}
+                      onChange={(val) => setValue('building_type', val)}
+                      placeholder="Select building type"
+                      id="building_type"
+                      className="border border-input rounded-md px-3 py-2"
+                    />
+                  ) : (
+                    <Input
+                      id="building_type"
+                      {...register('building_type')}
+                      placeholder="e.g., School"
+                    />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="building_construction">Construction Category</Label>
+                  {fieldSchema ? (
+                    <DependentPicklistEditor
+                      mode="form"
+                      fieldApiName="Building_Category__c"
+                      schema={fieldSchema}
+                      rowData={formRowData}
+                      value={watch('building_construction') || ''}
+                      onChange={(val) => setValue('building_construction', val)}
+                      placeholder="Select category"
+                      id="building_construction"
+                      className="border border-input rounded-md px-3 py-2"
+                    />
+                  ) : (
+                    <Input
+                      id="building_construction"
+                      {...register('building_construction')}
+                      placeholder="e.g., Brick"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -403,18 +465,84 @@ export function ACMRecordDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="friable">Friable</Label>
-                  <Select
-                    value={watch('friable') || ''}
-                    onValueChange={(value) => setValue('friable', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select friability" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Friable">Friable</SelectItem>
-                      <SelectItem value="Non Friable">Non Friable</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {fieldSchema ? (
+                    <DependentPicklistEditor
+                      mode="form"
+                      fieldApiName="Friability_of_Material__c"
+                      schema={fieldSchema}
+                      rowData={formRowData}
+                      value={watch('friable') || ''}
+                      onChange={(val) => setValue('friable', val)}
+                      placeholder="Select friability"
+                      id="friable"
+                      className="border border-input rounded-md px-3 py-2"
+                    />
+                  ) : (
+                    <Select
+                      value={watch('friable') || ''}
+                      onValueChange={(value) => setValue('friable', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select friability" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Friable">Friable</SelectItem>
+                        <SelectItem value="Non Friable">Non Friable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="acm_product_group">ACM Classification</Label>
+                  {fieldSchema ? (
+                    <DependentPicklistEditor
+                      mode="form"
+                      fieldApiName="ACM_Classification__c"
+                      schema={fieldSchema}
+                      rowData={formRowData}
+                      value={watch('acm_product_group') || ''}
+                      onChange={(val) => setValue('acm_product_group', val)}
+                      placeholder="Select classification"
+                      id="acm_product_group"
+                      className="border border-input rounded-md px-3 py-2"
+                    />
+                  ) : (
+                    <Select
+                      value={watch('acm_product_group') || ''}
+                      onValueChange={(value) => setValue('acm_product_group', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select classification" />
+                      </SelectTrigger>
+                      <SelectContent />
+                    </Select>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="acm_product_type">ACM Sub-Classification</Label>
+                  {fieldSchema ? (
+                    <DependentPicklistEditor
+                      mode="form"
+                      fieldApiName="ACM_Sub_Classification__c"
+                      schema={fieldSchema}
+                      rowData={formRowData}
+                      value={watch('acm_product_type') || ''}
+                      onChange={(val) => setValue('acm_product_type', val)}
+                      placeholder="Select sub-classification"
+                      id="acm_product_type"
+                      className="border border-input rounded-md px-3 py-2"
+                    />
+                  ) : (
+                    <Select
+                      value={watch('acm_product_type') || ''}
+                      onValueChange={(value) => setValue('acm_product_type', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sub-classification" />
+                      </SelectTrigger>
+                      <SelectContent />
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="material_condition">Condition</Label>
