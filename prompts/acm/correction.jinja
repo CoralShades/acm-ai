@@ -27,9 +27,14 @@ The following fields have invalid values:
 
 **Common mappings:**
 - "Bonded" → "Non-friable"
-- "Medium" → "Moderate" (BAR uses "Moderate" not "Medium")
+- "Medium" → "Moderate" (Salesforce uses "Moderate" not "Medium")
 - "Detected" → "Positive"
 - "Not Detected" / "NAD" → "Negative"
+- "Negative - Treated as Positive" is a VALID SF value — do NOT simplify it to "Negative". These records are positive-managed and require Friability to be populated.
+- "Positive - Non-friable" is a VALID SF value — do NOT simplify it to "Positive". It means the result is positive AND the material is non-friable.
+- "Positive - Friable" is a VALID SF value — do NOT simplify it to "Positive". It means the result is positive AND the material is friable.
+- If a record has result "Positive - Non-friable", the friable field must be "Non-friable"
+- If a record has result "Positive - Friable", the friable field must be "Friable"
 - For negative results: Condition and Disturbance Potential should be "N/A (negative)"
 
 ## Output Format

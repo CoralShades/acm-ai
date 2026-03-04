@@ -2154,6 +2154,17 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             correction_stats.get("total_validated", 0) + 1
         )
 
+        # AC6: Write validation fields to record
+        if validation.is_valid:
+            record.validation_status = "valid"
+            record.validation_errors = []
+        else:
+            record.validation_status = "invalid"
+            record.validation_errors = [
+                f"{vi.field_name}: {vi.issue_type} (current={vi.current_value!r})"
+                for vi in validation.issues
+            ]
+
         if not validation.is_valid:
             # Track issues on the record for potential correction
             for vi in validation.issues:
@@ -2480,10 +2491,15 @@ async def _llm_correct_records(
                         correction_stats["llm_corrected"] = (
                             correction_stats.get("llm_corrected", 0) + 1
                         )
+            # AC6: Track correction attempts on record
+            record.correction_attempts = record.correction_attempts + 1
+            record.validation_status = "corrected"
 
         except Exception as e:
             logger.warning(f"LLM correction failed for record {idx}: {e}")
             correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+            record.correction_attempts = record.correction_attempts + 1  # AC6
+            record.validation_status = "failed_correction"
 
 
 def should_correct(state: dict) -> str:

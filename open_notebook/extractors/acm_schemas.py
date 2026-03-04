@@ -387,6 +387,31 @@ class ACMExtractionRecord(BaseModel):
         default_factory=list,
         description="List of data quality issues identified during extraction",
     )
+
+    # Validation tracking (AC6 — E32-S3)
+    validation_status: Optional[str] = Field(
+        default=None,
+        description=(
+            "Validation outcome: 'valid', 'corrected', 'failed_correction', 'invalid'. "
+            "Set by validate_records_strict() and updated after each correction attempt."
+        ),
+    )
+    validation_errors: List[str] = Field(
+        default_factory=list,
+        description=(
+            "List of validation error strings from the last validation run. "
+            "Format: '<field_name>: <issue_type> (current=<value>)'. "
+            "Cleared and rewritten on each validation pass."
+        ),
+    )
+    correction_attempts: int = Field(
+        default=0,
+        description=(
+            "Number of LLM correction attempts made for this record. "
+            "Incremented by _llm_correct_records() on each attempt. Max 3."
+        ),
+    )
+
     page_number: Optional[int] = Field(
         default=None, description="Page number where this record was found"
     )

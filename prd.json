@@ -688,7 +688,7 @@
         "open_notebook/graphs/acm_extraction.py",
         "docs/issues/v3-continuation-sf-validation-pipeline.md"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e32-s3-sf-validation-correction-loop.md",
       "implementedDate": null
     },
     {

@@ -331,6 +331,23 @@ class ACMRecord(ObjectModel):
         description="List of data quality issues identified during extraction",
     )
 
+    # Validation tracking (AC6 — E32-S3)
+    validation_status: Optional[str] = Field(
+        default=None,
+        description=(
+            "Validation outcome: 'valid', 'corrected', 'failed_correction', 'invalid'. "
+            "Populated during extraction pipeline."
+        ),
+    )
+    validation_errors: List[str] = Field(
+        default_factory=list,
+        description="Validation error strings from final validation pass.",
+    )
+    correction_attempts: int = Field(
+        default=0,
+        description="Number of LLM correction attempts made for this record (max 3).",
+    )
+
     # Recommendation normalization (E1-S12: Consultant wording normalization)
     normalized_action: Optional[str] = Field(
         default=None,
@@ -1205,9 +1222,7 @@ class RawExtraction(ObjectModel):
             )
             return [cls(**record) for record in result]
         except Exception as e:
-            logger.error(
-                f"Error fetching raw extractions for source {source_id}: {e}"
-            )
+            logger.error(f"Error fetching raw extractions for source {source_id}: {e}")
             raise DatabaseOperationError(e)
 
     @classmethod
@@ -1222,9 +1237,7 @@ class RawExtraction(ObjectModel):
             )
             return len(result) if result else 0
         except Exception as e:
-            logger.error(
-                f"Error deleting raw extractions for source {source_id}: {e}"
-            )
+            logger.error(f"Error deleting raw extractions for source {source_id}: {e}")
             raise DatabaseOperationError(e)
 
     def _prepare_save_data(self) -> dict:
