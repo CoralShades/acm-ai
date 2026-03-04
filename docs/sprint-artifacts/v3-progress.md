@@ -28,13 +28,13 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 
 | Sprint | Stories Done | SP Done | Status |
 |--------|-------------|---------|--------|
-| V3-1 | 4/6 | 18/22 | In Progress |
-| V3-2 | 1/2 | 2/8 | In Progress |
-| V3-3 | 0/7 | 0/19 | Not Started |
+| V3-1 | 4/4 | 18/18 | Complete |
+| V3-2 | 1/3 | 2/8 | In Progress |
+| V3-3 | 0/7 | 0/17 | Not Started |
 | V3-4 | 0/5 | 0/14 | Not Started |
-| V3-5 | 0/4 | 0/11 | Not Started |
-| V3-6 | 0/5 | 0/12 | Not Started |
-| V3-7 | 0/4 | 0/11 | Not Started |
+| V3-5 | 0/4 | 0/13 | Not Started |
+| V3-6 | 0/6 | 0/17 | Not Started |
+| V3-7 | 0/4 | 0/9 | Not Started |
 
 ## Gate Milestones
 

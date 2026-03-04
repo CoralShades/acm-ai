@@ -656,12 +656,11 @@
       "riskLevel": "LOW",
       "storyType": "backend",
       "acceptanceCriteria": [
-        "AC1: Update 60+ regex patterns from BAR product group/type to SF ACM_Classification/ACM_Sub_Classification",
-        "AC2: 18 classification groups x friability mapping validated",
-        "AC3: Regex-first cascade maintained: regex (80%) -> Ollama fallback -> Claude last resort",
-        "AC4: prompts/acm/classification.jinja updated for SF vocabulary",
-        "AC5: Unit tests for all 18 classification groups",
-        "AC6: Benchmark: classification accuracy maintained or improved vs BAR baseline"
+        "AC1: Product types from classify_product() pass SF chain validation after normalization",
+        "AC2: All 133 ACM_Sub_Classification__c values have correct case in SF chain lookups",
+        "AC3: Case-sensitive matching still enforced for controller values (Friability_of_Material__c, ACM_Classification__c)",
+        "AC4: Existing E30-S4 test suite passes — no regression (187+ tests)",
+        "AC5: F4 finding in V3/output/github-issue-e30s4-audit.md updated to FIXED"
       ],
       "passes": false,
       "notes": "",
@@ -672,11 +671,11 @@
         "E30-S6"
       ],
       "keyFiles": [
-        "open_notebook/extractors/validators/acm_validator.py",
-        "prompts/acm/classification.jinja",
-        "tests/test_classifier.py"
+        "open_notebook/extractors/validators/sf_picklist_validator.py",
+        "tests/test_sf_picklist_validator.py",
+        "V3/output/github-issue-e30s4-audit.md"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e32-s4-classifier-update-sf-taxonomy.md",
       "implementedDate": null
     },
     {
