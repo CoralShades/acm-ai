@@ -510,7 +510,7 @@
         "commands/source_commands.py",
         "tests/test_dual_provider_pipeline.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e31-s5-pipeline-integration.md",
       "implementedDate": null
     },
     {

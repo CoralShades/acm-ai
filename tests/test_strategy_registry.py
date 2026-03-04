@@ -26,9 +26,9 @@ from open_notebook.extractors.strategy_registry import (
 class TestFallbackMatrixCompleteness:
     """AC-1: Strategy selection rules centralized in strategy_registry.py."""
 
-    def test_fallback_matrix_has_all_eight_entries(self):
-        """All 8 fallback scenarios (F1-F8) are present in the matrix."""
-        assert len(FALLBACK_MATRIX) == 8
+    def test_fallback_matrix_has_all_ten_entries(self):
+        """All 10 fallback scenarios (F1-F10) are present in the matrix."""
+        assert len(FALLBACK_MATRIX) == 10
 
     def test_all_fallback_ids_in_matrix(self):
         """Every FallbackId enum member has a corresponding matrix entry."""
@@ -194,7 +194,10 @@ class TestDoclingFailureFallback:
     def test_docling_failure_fallback_exists(self):
         """F8 contract exists — continue with full_text only."""
         contract = FALLBACK_MATRIX[FallbackId.F8_DOCLING_FAILURE]
-        assert "full_text" in contract.behavior.lower() or "text" in contract.behavior.lower()
+        assert (
+            "full_text" in contract.behavior.lower()
+            or "text" in contract.behavior.lower()
+        )
         assert contract.retry_eligible is False
 
     def test_docling_failure_telemetry_tag(self):
@@ -366,3 +369,39 @@ class TestSelectStrategyDelegation:
 
         result = select_strategy(building, page_tags)
         assert result == ExtractionStrategy.REGEX_ONLY
+
+
+# ---------------------------------------------------------------------------
+# F9: Provider conflict fallback
+# ---------------------------------------------------------------------------
+
+
+class TestProviderConflictFallback:
+    def test_provider_conflict_fallback_exists(self):
+        """F9 contract exists — conflict tier, MinerU HTML preferred."""
+        contract = FALLBACK_MATRIX[FallbackId.F9_PROVIDER_CONFLICT]
+        assert "conflict" in contract.behavior.lower()
+        assert contract.severity == "non-fatal (degraded confidence)"
+        assert contract.retry_eligible is False
+
+    def test_provider_conflict_telemetry_tag(self):
+        contract = FALLBACK_MATRIX[FallbackId.F9_PROVIDER_CONFLICT]
+        assert contract.telemetry_tag == "fallback.provider_conflict"
+
+
+# ---------------------------------------------------------------------------
+# F10: Consensus arbitration fallback
+# ---------------------------------------------------------------------------
+
+
+class TestConsensusArbitrationFallback:
+    def test_consensus_arbitration_fallback_exists(self):
+        """F10 contract exists — informational, MinerU HTML chosen."""
+        contract = FALLBACK_MATRIX[FallbackId.F10_CONSENSUS_ARBITRATION]
+        assert "mineru" in contract.behavior.lower()
+        assert contract.severity == "informational"
+        assert contract.retry_eligible is False
+
+    def test_consensus_arbitration_telemetry_tag(self):
+        contract = FALLBACK_MATRIX[FallbackId.F10_CONSENSUS_ARBITRATION]
+        assert contract.telemetry_tag == "fallback.consensus_arbitration"
