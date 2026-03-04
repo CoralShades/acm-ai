@@ -9,6 +9,7 @@ from api.models import (
     DefaultModelsResponse,
     ModelCreate,
     ModelResponse,
+    ModelUpdate,
     ProviderAvailabilityResponse,
 )
 from open_notebook.domain.models import DefaultModels, Model
@@ -329,6 +330,34 @@ async def get_model(model_id: str):
     except Exception as e:
         logger.error(f"Error fetching model {model_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching model: {str(e)}")
+
+
+@router.patch("/models/{model_id}", response_model=ModelResponse)
+async def update_model(model_id: str, update_data: ModelUpdate):
+    """Update a model's mutable fields (e.g., api_key). E30-S8."""
+    try:
+        model = await Model.get(model_id)
+        if not model:
+            raise HTTPException(status_code=404, detail="Model not found")
+
+        if update_data.api_key is not None:
+            model.api_key = update_data.api_key
+
+        await model.save()
+
+        return ModelResponse(
+            id=model.id or "",
+            name=model.name,
+            provider=model.provider,
+            type=model.type,
+            created=str(model.created),
+            updated=str(model.updated),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating model {model_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating model: {str(e)}")
 
 
 @router.delete("/models/{model_id}")

@@ -277,8 +277,8 @@
         "AC7: _provision_fallback_model() in open_notebook/graphs/utils.py updated to use new priority order and ACM-namespaced env vars.",
         "AC8: Broadmeadows 31/31 accuracy maintained; Alexander >=40/43 baseline."
       ],
-      "passes": false,
-      "notes": "BLOCKED: Deferred to V4 - Ollama-first sprint priority. No downstream dependents.",
+      "passes": true,
+      "notes": "Completed",
       "model": "sonnet",
       "complexity": "moderate",
       "priority": "P0",
@@ -292,8 +292,8 @@
         "open_notebook/extractors/orchestrator.py",
         "tests/test_openrouter_provider_routing.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null
+      "techSpecFile": "docs/sprint-artifacts/e30-s8-ollama-anthropic-openrouter-provider-priority.md",
+      "implementedDate": "2026-03-05"
     },
     {
       "id": "E30-S9",

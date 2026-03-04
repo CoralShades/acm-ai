@@ -469,10 +469,12 @@ async def _verify_provider_routing(
         logger.debug(f"[{stage_name}] No generation ID — cannot verify provider")
         return None
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    # E30-S8: prefer ACM-namespaced key, fall back to bare key for
+    # non-extraction callers (e.g. general chat workflows)
+    api_key = os.getenv("ACM_OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         logger.debug(
-            f"[{stage_name}] No OPENROUTER_API_KEY — skipping Generation API lookup"
+            f"[{stage_name}] No ACM_OPENROUTER_API_KEY — skipping Generation API lookup"
         )
         return None
 
@@ -811,57 +813,66 @@ async def provision_extraction_fallback_model(
 ) -> Optional[BaseChatModel]:
     """Provision a fallback extraction model when primary auth fails.
 
-    Priority:
-    1) Anthropic direct (preferred — native structured output support)
-    2) OpenAI direct (fallback — reliable JSON mode)
-    3) Ollama Qwen local fallbacks
+    E30-S8 — ACM extraction uses ONLY ACM-namespaced env vars:
+      ACM_ANTHROPIC_API_KEY (not bare ANTHROPIC_API_KEY)
+      ACM_OPENROUTER_API_KEY (not bare OPENROUTER_API_KEY)
+
+    Priority (first available wins):
+    1) Ollama local (if OLLAMA_API_BASE set) — zero cost, low latency
+    2) Anthropic direct (if ACM_ANTHROPIC_API_KEY set) — best extraction quality
+    3) OpenRouter (if ACM_OPENROUTER_API_KEY set) — cloud fallback
     """
     lower_name = (failed_model_name or "").lower()
-    candidates: list[tuple[str, str]] = []
+    # (provider, model_name, api_key_override)
+    candidates: list[tuple[str, str, Optional[str]]] = []
 
-    # Always try Anthropic direct first — most reliable for extraction
-    if os.getenv("ANTHROPIC_API_KEY"):
-        candidates.append(("anthropic", "claude-sonnet-4-20250514"))
-
-    # OpenAI direct second
-    if os.getenv("OPENAI_API_KEY"):
-        candidates.append(("openai", "gpt-4o"))
-
-    # Ollama local fallbacks — qwen2.5:7b recommended (E32-S6 spike: 98% enrichment, 0.78s/call)
+    # 1) Ollama first — free, local, no API key needed
     if os.getenv("OLLAMA_API_BASE"):
         candidates.extend(
             [
-                (
-                    "ollama",
-                    "qwen2.5:7b",
-                ),  # spike winner: best enrichment speed+accuracy
-                ("ollama", "qwen2.5:32b"),
-                ("ollama", "qwen3:32b"),
+                ("ollama", "qwen2.5:7b", None),  # E32-S6 spike winner
+                ("ollama", "qwen2.5:32b", None),
+                ("ollama", "qwen3:32b", None),
             ]
         )
 
+    # 2) Anthropic direct — ACM-namespaced key ONLY
+    acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")
+    if acm_anthropic_key:
+        candidates.append(("anthropic", "claude-sonnet-4-20250514", acm_anthropic_key))
+
+    # 3) OpenRouter — ACM-namespaced key ONLY
+    acm_openrouter_key = os.getenv("ACM_OPENROUTER_API_KEY")
+    if acm_openrouter_key:
+        candidates.append(
+            ("openrouter", "anthropic/claude-sonnet-4", acm_openrouter_key)
+        )
+
     seen: set[str] = set()
-    unique_candidates: list[tuple[str, str]] = []
-    for provider, model_name in candidates:
+    unique_candidates: list[tuple[str, str, Optional[str]]] = []
+    for provider, model_name, api_key in candidates:
         key = f"{provider}/{model_name}".lower()
         if key in seen or model_name.lower() == lower_name:
             continue
         seen.add(key)
-        unique_candidates.append((provider, model_name))
+        unique_candidates.append((provider, model_name, api_key))
 
-    for provider, model_name in unique_candidates:
+    for provider, model_name, api_key in unique_candidates:
         try:
             logger.warning(
                 "Attempting extraction fallback model after auth failure: "
                 f"{provider}/{model_name}"
             )
+            config: dict = {
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            if api_key:
+                config["api_key"] = api_key
             model = AIFactory.create_language(
                 model_name=model_name,
                 provider=provider,
-                config={
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                },
+                config=config,
             )
             assert isinstance(model, LanguageModel), (
                 f"Fallback model is not a LanguageModel: {model}"

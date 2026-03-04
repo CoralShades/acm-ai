@@ -90,6 +90,12 @@ class DefaultModelsResponse(BaseModel):
     default_extraction_model: Optional[str] = None  # ACM extraction model
 
 
+class ModelUpdate(BaseModel):
+    """Update a model's mutable fields (E30-S8)."""
+
+    api_key: Optional[str] = Field(None, description="Provider API key for this model")
+
+
 class ProviderAvailabilityResponse(BaseModel):
     available: List[str] = Field(..., description="List of available providers")
     unavailable: List[str] = Field(..., description="List of unavailable providers")
@@ -1447,6 +1453,7 @@ class BuildingRecordResponse(BaseModel):
     gps_coordinates: Optional[str] = None
     capital_works_project_details: Optional[str] = None
     possible_capital_works_project: Optional[str] = None
+    record_count: int = 0  # ACM item count for this building (computed at query time)
     embedding: Optional[list] = None
     embedding_text: Optional[str] = None
     embedding_model: Optional[str] = None

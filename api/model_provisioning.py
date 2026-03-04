@@ -56,12 +56,21 @@ def get_fallback_providers() -> list[str]:
 
 
 def is_provider_available(provider: str) -> bool:
-    """Check if a provider is available based on environment configuration."""
+    """Check if a provider is available based on environment configuration.
+
+    Checks both standard and ACM-namespaced env vars (E30-S8).
+    """
     provider_checks = {
         "ollama": lambda: os.getenv("OLLAMA_API_BASE") is not None,
         "openai": lambda: os.getenv("OPENAI_API_KEY") is not None,
-        "anthropic": lambda: os.getenv("ANTHROPIC_API_KEY") is not None,
-        "openrouter": lambda: os.getenv("OPENROUTER_API_KEY") is not None,
+        "anthropic": lambda: (
+            os.getenv("ANTHROPIC_API_KEY") is not None
+            or os.getenv("ACM_ANTHROPIC_API_KEY") is not None
+        ),
+        "openrouter": lambda: (
+            os.getenv("OPENROUTER_API_KEY") is not None
+            or os.getenv("ACM_OPENROUTER_API_KEY") is not None
+        ),
         "google": lambda: os.getenv("GOOGLE_API_KEY") is not None
         or os.getenv("GEMINI_API_KEY") is not None,
         "groq": lambda: os.getenv("GROQ_API_KEY") is not None,

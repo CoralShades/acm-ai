@@ -64,7 +64,9 @@ class TestProviderHardLock:
 
         assert "only" in provider, "Must use provider.only for hard lock"
         assert "order" not in provider, "Must NOT use provider.order (soft preference)"
-        assert "ignore" not in provider, "Must NOT use provider.ignore (partial blocklist)"
+        assert "ignore" not in provider, (
+            "Must NOT use provider.ignore (partial blocklist)"
+        )
 
     def test_allow_fallbacks_disabled(self):
         """allow_fallbacks must be False."""
@@ -147,9 +149,7 @@ class TestResponseHealing:
     def test_plugins_not_duplicated_on_merge(self):
         """If response-healing already exists, don't add it again."""
         extra_body = _apply_and_get_extra_body(
-            model_kwargs={
-                "extra_body": {"plugins": [{"id": "response-healing"}]}
-            }
+            model_kwargs={"extra_body": {"plugins": [{"id": "response-healing"}]}}
         )
         plugins = extra_body.get("plugins", [])
         healing_count = sum(1 for p in plugins if p.get("id") == "response-healing")
@@ -158,9 +158,7 @@ class TestResponseHealing:
     def test_preserves_existing_plugins(self):
         """Existing plugins must be preserved when adding response-healing."""
         extra_body = _apply_and_get_extra_body(
-            model_kwargs={
-                "extra_body": {"plugins": [{"id": "custom-plugin"}]}
-            }
+            model_kwargs={"extra_body": {"plugins": [{"id": "custom-plugin"}]}}
         )
         plugins = extra_body.get("plugins", [])
         plugin_ids = [p.get("id") for p in plugins]
@@ -225,9 +223,7 @@ class TestDeepMerge:
     def test_preserves_existing_provider_fields(self):
         """Must deep-merge provider dict, not overwrite it."""
         extra_body = _apply_and_get_extra_body(
-            model_kwargs={
-                "extra_body": {"provider": {"custom_provider_field": True}}
-            }
+            model_kwargs={"extra_body": {"provider": {"custom_provider_field": True}}}
         )
         provider = extra_body.get("provider", {})
         assert provider.get("custom_provider_field") is True
@@ -254,23 +250,23 @@ class TestOldConstantsRemoved:
     def test_no_ignored_providers(self):
         import open_notebook.graphs.utils as utils
 
-        assert not hasattr(
-            utils, "OPENROUTER_IGNORED_PROVIDERS"
-        ), "OPENROUTER_IGNORED_PROVIDERS should be removed"
+        assert not hasattr(utils, "OPENROUTER_IGNORED_PROVIDERS"), (
+            "OPENROUTER_IGNORED_PROVIDERS should be removed"
+        )
 
     def test_no_provider_order(self):
         import open_notebook.graphs.utils as utils
 
-        assert not hasattr(
-            utils, "OPENROUTER_PROVIDER_ORDER"
-        ), "OPENROUTER_PROVIDER_ORDER should be removed"
+        assert not hasattr(utils, "OPENROUTER_PROVIDER_ORDER"), (
+            "OPENROUTER_PROVIDER_ORDER should be removed"
+        )
 
     def test_allowed_providers_exists(self):
         import open_notebook.graphs.utils as utils
 
-        assert hasattr(
-            utils, "OPENROUTER_ALLOWED_PROVIDERS"
-        ), "OPENROUTER_ALLOWED_PROVIDERS must exist"
+        assert hasattr(utils, "OPENROUTER_ALLOWED_PROVIDERS"), (
+            "OPENROUTER_ALLOWED_PROVIDERS must exist"
+        )
 
 
 class TestProviderVerification:
@@ -498,9 +494,7 @@ class TestInjectResponseFormat:
 
         mock = MagicMock()
         mock.openai_api_base = "https://openrouter.ai/api/v1"
-        mock.model_kwargs = {
-            "extra_body": {"provider": {"only": ["Anthropic"]}}
-        }
+        mock.model_kwargs = {"extra_body": {"provider": {"only": ["Anthropic"]}}}
 
         schema = {"type": "object"}
         _inject_response_format(mock, schema, "TestSchema")
@@ -532,3 +526,144 @@ class TestUnwrapCompletionStateRemoved:
         import open_notebook.graphs.utils as utils
 
         assert not hasattr(utils, "_unwrap_completion_state")
+
+
+class TestACMNamespacedEnvVars:
+    """E30-S8: Verify extraction fallback uses ACM-namespaced env vars only."""
+
+    @pytest.mark.asyncio
+    async def test_fallback_uses_acm_anthropic_key_not_bare(self):
+        """provision_extraction_fallback_model must use ACM_ANTHROPIC_API_KEY, not bare."""
+        from unittest.mock import patch
+
+        from open_notebook.graphs.utils import provision_extraction_fallback_model
+
+        # Only bare ANTHROPIC_API_KEY set → should NOT be picked up
+        with patch.dict(
+            "os.environ",
+            {"ANTHROPIC_API_KEY": "sk-bare-key"},
+            clear=True,
+        ):
+            result = await provision_extraction_fallback_model(
+                "some-failed-model", temperature=0.0, max_tokens=4096
+            )
+            # No ACM key and no Ollama → should return None
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_fallback_picks_up_acm_anthropic_key(self):
+        """provision_extraction_fallback_model uses ACM_ANTHROPIC_API_KEY when set."""
+        from unittest.mock import AsyncMock, patch
+
+        from esperanto import LanguageModel
+
+        from open_notebook.graphs.utils import provision_extraction_fallback_model
+
+        with patch.dict(
+            "os.environ",
+            {"ACM_ANTHROPIC_API_KEY": "sk-acm-test-key"},
+            clear=True,
+        ):
+            with patch(
+                "open_notebook.graphs.utils.AIFactory"
+            ) as mock_factory:
+                mock_model = MagicMock(spec=LanguageModel)
+                mock_model.to_langchain.return_value = MagicMock(
+                    openai_api_base="https://api.anthropic.com/v1",
+                    base_url="https://api.anthropic.com/v1",
+                    model_kwargs={},
+                )
+                mock_factory.create_language.return_value = mock_model
+
+                result = await provision_extraction_fallback_model(
+                    "some-failed-model", temperature=0.0, max_tokens=4096
+                )
+                assert result is not None
+                # Verify api_key was passed in config
+                call_kwargs = mock_factory.create_language.call_args
+                assert call_kwargs[1]["config"]["api_key"] == "sk-acm-test-key"
+
+    @pytest.mark.asyncio
+    async def test_fallback_priority_ollama_first(self):
+        """Ollama candidates appear before Anthropic and OpenRouter."""
+        from unittest.mock import patch
+
+        from esperanto import LanguageModel
+
+        from open_notebook.graphs.utils import provision_extraction_fallback_model
+
+        with patch.dict(
+            "os.environ",
+            {
+                "OLLAMA_API_BASE": "http://localhost:11434",
+                "ACM_ANTHROPIC_API_KEY": "sk-acm-key",
+                "ACM_OPENROUTER_API_KEY": "sk-acm-or-key",
+            },
+            clear=True,
+        ):
+            with patch(
+                "open_notebook.graphs.utils.AIFactory"
+            ) as mock_factory:
+                mock_model = MagicMock(spec=LanguageModel)
+                mock_model.to_langchain.return_value = MagicMock(
+                    openai_api_base="http://localhost:11434",
+                    base_url="http://localhost:11434",
+                    model_kwargs={},
+                )
+                mock_factory.create_language.return_value = mock_model
+
+                result = await provision_extraction_fallback_model(
+                    "some-failed-model", temperature=0.0, max_tokens=4096
+                )
+                assert result is not None
+                # First call should be Ollama qwen2.5:7b
+                first_call = mock_factory.create_language.call_args_list[0]
+                assert first_call[1]["provider"] == "ollama"
+                assert first_call[1]["model_name"] == "qwen2.5:7b"
+
+    @pytest.mark.asyncio
+    async def test_fallback_no_bare_openai_key(self):
+        """Bare OPENAI_API_KEY must not be used by extraction fallback."""
+        from unittest.mock import patch
+
+        from open_notebook.graphs.utils import provision_extraction_fallback_model
+
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "sk-openai-bare"},
+            clear=True,
+        ):
+            result = await provision_extraction_fallback_model(
+                "some-failed-model", temperature=0.0, max_tokens=4096
+            )
+            # No ACM keys and no Ollama → None
+            assert result is None
+
+    def test_no_bare_anthropic_key_in_extraction_fallback_source(self):
+        """Static check: provision_extraction_fallback_model source has no bare ANTHROPIC_API_KEY read."""
+        import inspect
+
+        from open_notebook.graphs.utils import provision_extraction_fallback_model
+
+        source = inspect.getsource(provision_extraction_fallback_model)
+        # Should NOT contain os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")
+        assert 'getenv("ANTHROPIC_API_KEY")' not in source
+        assert 'getenv("OPENAI_API_KEY")' not in source
+
+    def test_no_bare_openai_key_in_extraction_fallback_source(self):
+        """Static check: no bare OPENAI_API_KEY in extraction fallback."""
+        import inspect
+
+        from open_notebook.graphs.utils import provision_extraction_fallback_model
+
+        source = inspect.getsource(provision_extraction_fallback_model)
+        assert 'getenv("OPENAI_API_KEY")' not in source
+
+    def test_verify_provider_routing_uses_acm_key(self):
+        """_verify_provider_routing should prefer ACM_OPENROUTER_API_KEY."""
+        import inspect
+
+        from open_notebook.graphs.utils import _verify_provider_routing
+
+        source = inspect.getsource(_verify_provider_routing)
+        assert "ACM_OPENROUTER_API_KEY" in source

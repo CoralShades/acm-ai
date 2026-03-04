@@ -1,0 +1,2 @@
+-- E30-S8: Add optional api_key field to model table for ACM-namespaced key storage
+DEFINE FIELD api_key ON TABLE model TYPE option<string>;
