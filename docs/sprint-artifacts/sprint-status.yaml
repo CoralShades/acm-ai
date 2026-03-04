@@ -446,7 +446,7 @@ development_status:
   e31-s5-pipeline-integration: done                    # 3 SP. V3-4. Wire dual-provider into orchestrator + consensus. Completed 2026-03-04.
   e31-s6-dual-provider-benchmark: done                # 2 SP. Blocked by S5. Broadmeadows 31/31, Alexander ≥40/43 consensus validation. Completed 2026-03-04.
   e31-s7-pipeline-event-bus-sse-infrastructure: done     # 3 SP. V3-4. PipelineEventBus + SSE endpoints + Zustand streaming. Completed 2026-03-04.
-  e31-s8-pre-extraction-quality-hardening: backlog    # 3 SP. V3-5. Fix page markers, LLM structure retry, metadata quality. Deps: E30-S9
+  e31-s8-pre-extraction-quality-hardening: done       # 3 SP. V3-5. PyMuPDF page-count fallback (AC1), LLM retry logic (AC2), field_confidence top-level column (AC3), cover page window bounded to 3 pages (AC4). Completed 2026-03-05.
   epic-31-retrospective: optional
 
   # ─────────────────────────────────────────────────────
@@ -463,6 +463,7 @@ development_status:
   e32-s5-extraction-pipeline-e2e-test: done            # 3 SP. Extraction Pipeline E2E Test. tests/test_v3_e2e_pipeline.py (8 test classes, 16 always-run tests). Completed 2026-03-04. GATE:AI_COMPLETE unlocked.
   e32-s6-ollama-model-evaluation-spike: done           # 2 SP. Dep on E30-S8 REMOVED. Ollama-first approach. Completed 2026-03-04.
   e32-s7-sf-first-validation-pipeline: backlog
+  e32-s8-ollama-token-budget-chunking: done            # 2 SP. V3-4. Replaces hard truncation with multi-pass budget chunking. No more silent record drops for Ollama.
   epic-32-retrospective: optional
 
   # ─────────────────────────────────────────────────────
