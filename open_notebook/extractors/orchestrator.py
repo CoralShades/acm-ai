@@ -10,6 +10,7 @@ Story: E1-S20 Agentic Extraction Orchestrator
 """
 
 import asyncio
+import os
 import re
 import time
 from enum import Enum
@@ -48,6 +49,8 @@ from open_notebook.extractors.strategy_registry import (
 )
 from open_notebook.graphs.utils import (
     _get_acm_extraction_schema,
+    _get_v3_building_schema,
+    _get_v3_item_schema,
     _inject_response_format,
     _is_qwen_model,
     _verify_provider_routing,
@@ -496,6 +499,27 @@ async def _llm_extract_building(
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
     runnable_config: Optional[RunnableConfig] = state.get("_langchain_config")
 
+    # E30-S7: V3 Two-Phase extraction (feature-flagged)
+    ACM_V3_PROMPTS = os.getenv("ACM_V3_PROMPTS", "false").lower() == "true"
+    if ACM_V3_PROMPTS:
+        schema_bundle = None
+        try:
+            from open_notebook.extractors.parsers.config_loader import (
+                load_sf_field_schema,
+            )
+
+            schema_bundle = load_sf_field_schema()
+        except Exception as e:
+            logger.warning(f"Could not load SF schema bundle for V3 prompts: {e}")
+
+        building_meta = await _v3_extract_building_meta(
+            building_content, plan, state, schema_bundle
+        )
+        item_result = await _v3_extract_items(
+            building_content, plan, building_meta, state, schema_bundle
+        )
+        return _normalize_v3_records(building_meta, item_result, plan)
+
     # Check room count and sub-chunk if needed
     sub_chunks = (
         [building_content]
@@ -683,6 +707,257 @@ async def _llm_extract_building(
         all_records.extend(result.records)
 
     return all_records
+
+
+# ---------------------------------------------------------------------------
+# E30-S7: V3 Two-Phase Extraction Helpers
+# ---------------------------------------------------------------------------
+
+
+async def _v3_extract_building_meta(
+    building_content: str,
+    plan: BuildingExtractionPlan,
+    state: dict,
+    schema_bundle: Optional[Any],
+) -> Optional[Any]:
+    """Phase 1: Extract Building__c metadata using v3_building_extraction.jinja.
+
+    Returns None on failure (falls back to continuing without building meta).
+    """
+    from ai_prompter import Prompter
+
+    from open_notebook.extractors.acm_schemas_v3 import BuildingExtractionResult
+    from open_notebook.extractors.prompt_context_builder import build_picklist_context
+    from open_notebook.graphs.utils import provision_langchain_model
+
+    model_id = state.get("model_id")
+    doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+    runnable_config: Optional[Any] = state.get("_langchain_config")
+
+    try:
+        prompt_ctx = _create_building_prompt_context(plan, doc_meta)
+        picklists = build_picklist_context(schema_bundle, acm_classification=None)
+
+        model = await provision_langchain_model(
+            building_content,
+            model_id,
+            "extraction",
+            temperature=0.1,
+            max_tokens=32768,
+        )
+        model = _inject_response_format(
+            model, _get_v3_building_schema(), "BuildingExtractionResult"
+        )
+
+        prompter = Prompter(prompt_template="acm/v3_building_extraction")
+        system_prompt = prompter.render(
+            data={
+                "building_context": prompt_ctx,
+                "content": building_content,
+                "picklists": picklists,
+            }
+        )
+
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(
+                content="Extract the building metadata from the document header."
+            ),
+        ]
+
+        raw_response = await model.ainvoke(messages, config=runnable_config)
+        response_text = (
+            raw_response.content
+            if hasattr(raw_response, "content")
+            else str(raw_response)
+        )
+        parsed = parse_json_response(response_text)
+        result: BuildingExtractionResult = BuildingExtractionResult.model_validate(parsed)
+        logger.info(
+            f"V3 Phase 1 [{plan.building_id}]: building_name={result.building_name!r}, "
+            f"confidence={result.extraction_confidence}"
+        )
+        return result
+    except Exception as e:
+        logger.warning(
+            f"V3 Phase 1 [{plan.building_id}] failed — continuing without building meta: {e}"
+        )
+        return None
+
+
+async def _v3_extract_items(
+    building_content: str,
+    plan: BuildingExtractionPlan,
+    building_meta: Optional[Any],
+    state: dict,
+    schema_bundle: Optional[Any],
+) -> Any:
+    """Phase 2: Extract Item__c records using v3_item_extraction.jinja.
+
+    building_meta is passed from Phase 1 to subset Item_Name__c picklist.
+    Returns ACMItemExtractionResult (records may be empty if no ACM data).
+    """
+    from ai_prompter import Prompter
+
+    from open_notebook.extractors.acm_schemas_v3 import ACMItemExtractionResult
+    from open_notebook.extractors.prompt_context_builder import build_picklist_context
+    from open_notebook.graphs.utils import provision_langchain_model
+
+    model_id = state.get("model_id")
+    doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+    runnable_config: Optional[Any] = state.get("_langchain_config")
+
+    # Determine acm_classification from Phase 1 for item name subsetting
+    # (Phase 1 result does not carry acm_classification directly; use None to get default groups)
+    acm_classification: Optional[str] = None
+
+    try:
+        prompt_ctx = _create_building_prompt_context(plan, doc_meta)
+        picklists = build_picklist_context(
+            schema_bundle, acm_classification=acm_classification
+        )
+        building_meta_dict = building_meta.model_dump() if building_meta is not None else {}
+
+        model = await provision_langchain_model(
+            building_content,
+            model_id,
+            "extraction",
+            temperature=0.1,
+            max_tokens=32768,
+        )
+        model = _inject_response_format(
+            model, _get_v3_item_schema(), "ACMItemExtractionResult"
+        )
+
+        prompter = Prompter(prompt_template="acm/v3_item_extraction")
+        system_prompt = prompter.render(
+            data={
+                "building_context": prompt_ctx,
+                "content": building_content,
+                "building_meta": building_meta_dict,
+                "picklists": picklists,
+            }
+        )
+
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content="Extract all ACM item records from the building content."),
+        ]
+
+        raw_response = await model.ainvoke(messages, config=runnable_config)
+        response_text = (
+            raw_response.content
+            if hasattr(raw_response, "content")
+            else str(raw_response)
+        )
+        parsed = parse_json_response(response_text)
+        result: ACMItemExtractionResult = ACMItemExtractionResult.model_validate(parsed)
+        logger.info(
+            f"V3 Phase 2 [{plan.building_id}]: {len(result.records)} records, "
+            f"status={result.status}"
+        )
+        return result
+    except Exception as e:
+        logger.warning(
+            f"V3 Phase 2 [{plan.building_id}] failed — returning empty result: {e}"
+        )
+        from open_notebook.extractors.acm_schemas_v3 import ACMItemExtractionResult
+
+        return ACMItemExtractionResult(records=[], status="invalid")
+
+
+def _normalize_v3_records(
+    building_meta: Optional[Any],
+    item_result: Any,
+    plan: BuildingExtractionPlan,
+) -> List[ACMExtractionRecord]:
+    """Map V3 SF field names -> ACMExtractionRecord for pipeline compatibility.
+
+    Bridges V3 two-phase output to the existing V2 ACMExtractionRecord format
+    so that validate -> correct -> deduplicate -> save stages are unchanged.
+
+    Args:
+        building_meta: BuildingExtractionResult from Phase 1 (may be None).
+        item_result: ACMItemExtractionResult from Phase 2.
+        plan: BuildingExtractionPlan — plan.building_id is authoritative.
+
+    Returns:
+        List of ACMExtractionRecord instances.
+    """
+    records: List[ACMExtractionRecord] = []
+
+    # Extract building-level fields from Phase 1 (if available)
+    bldg_name: Optional[str] = None
+    bldg_identifying_company: Optional[str] = None
+    if building_meta is not None:
+        bldg_name = building_meta.building_name
+        bldg_identifying_company = building_meta.identifying_company
+
+    for item in item_result.records:
+        # Map Internal_External__c -> area_type
+        area_type: Optional[str] = None
+        ie = item.internal_external
+        if ie == "Internal":
+            area_type = "Interior"
+        elif ie in ("External", "External & Internal"):
+            area_type = "Exterior"
+
+        # Map labelled -> acm_labelled bool
+        acm_labelled: Optional[bool] = None
+        if item.labelled == "Yes":
+            acm_labelled = True
+        elif item.labelled == "No":
+            acm_labelled = False
+
+        # Build data_issues list
+        data_issues = list(item.data_issues) if item.data_issues else []
+        if item.if_other_item_name:
+            data_issues.append(f"Item name: {item.if_other_item_name}")
+
+        # quantity: float -> str
+        quantity_str: Optional[str] = None
+        if item.quantity is not None:
+            quantity_str = str(item.quantity)
+
+        record = ACMExtractionRecord(
+            # Building identity — plan.building_id is authoritative
+            building_id=plan.building_id,
+            building_name=bldg_name or plan.building_name,
+            # Location
+            room_name=item.room_or_area,
+            floor_level=item.level,
+            location=item.location_in_room,
+            area_type=area_type,
+            # ACM classification
+            product=item.item_name or "",
+            material_description=item.acm_sub_classification,
+            friable=item.friability_of_material,
+            # Sample and assessment
+            result=item.sample_result or ("Assumed Positive" if item.no_access else "Unknown"),
+            sample_result=item.sample_result,
+            sample_no=item.nata_sample_no,
+            material_condition=item.condition,
+            disturbance_potential=item.disturbance_potential,
+            quantity=quantity_str,
+            acm_labelled=acm_labelled,
+            acm_label_details=item.labelled_details,
+            # Notes
+            hygienist_recommendations=item.hygienist_recommendations,
+            additional_comments=item.additional_comments,
+            identifying_company=bldg_identifying_company,
+            # Pipeline flags
+            no_access=item.no_access,
+            extraction_confidence=item.extraction_confidence,
+            data_issues=data_issues,
+            page_number=item.page_number,
+        )
+        records.append(record)
+
+    return records
 
 
 async def extract_building(

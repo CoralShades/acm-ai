@@ -1,0 +1,272 @@
+# Phase 2: Item__c ACM Record Extraction
+
+You are extracting individual Asbestos Containing Material (ACM) items as Salesforce **Item__c** records from a building inspection document. Each row in the ACM register table MUST become one JSON record in your output.
+
+## Building Identity (from Phase 1)
+
+{% if building_meta %}
+- Building Name: {{ building_meta.building_name or building_context.building_name or "Unknown" }}
+- Building Type: {{ building_meta.building_type or "Unknown" }}
+- Address: {{ building_meta.building_address or "" }}{% if building_meta.suburb %}, {{ building_meta.suburb }}{% endif %}
+- Audit Date: {{ building_meta.date_of_audit or "Unknown" }}
+- Identifying Company: {{ building_meta.identifying_company or "Unknown" }}
+{% else %}
+- Building ID: {{ building_context.building_id }}
+- Building Name: {{ building_context.building_name or "Unknown" }}
+{% endif %}
+- Page range: {{ building_context.page_start }}–{{ building_context.page_end }}
+
+## CRITICAL EXTRACTION RULES — READ BEFORE ANYTHING ELSE
+
+**Every single row in the register table MUST become one JSON record. No exceptions.**
+
+This includes rows that many extractors incorrectly skip:
+
+1. **"Same as" / "As Per" / "Similar To" reference rows** — These are SEPARATE, DISTINCT records. Extract each as its own record with `nata_sample_no` set to the literal reference string (e.g., "Same as 34511-039001").
+
+2. **"Not Sampled" / "Assumed Positive" rows** — Items observed but not lab-tested are VALID entries. Extract them with `sample_result: "Assumed Positive"` or `sample_result: "Not Sampled"`.
+
+3. **"No Access" rows** — Areas the assessor could not enter. Extract with `no_access: true`, `sample_result: null`.
+
+**DO NOT skip, merge, or omit ANY table row.**
+
+### PDF Text Formatting
+
+Multi-word values are often split across multiple lines in PDF-extracted text:
+- `Same as\n34511-039001` = one value: "Same as 34511-039001"
+- `Assumed\npositive` = "Assumed Positive"
+- `Non-friable` may appear as `Non friable`
+
+## SF Vocabulary Mapping
+
+Use these exact SF picklist values when mapping document text:
+
+| Document Text | SF API Field | SF Picklist Value |
+|---------------|-------------|-------------------|
+| "Non Friable" / "Non-Friable" / "NF" | Friability_of_Material__c | Non-friable |
+| "Friable" / "F" | Friability_of_Material__c | Friable |
+| "Good Condition" / "Good" / "G" | Condition__c | Stable |
+| "Fair" / "Fair Condition" | Condition__c | Fair |
+| "Poor" / "Poor Condition" | Condition__c | Poor |
+| "Low" (disturbance) | Disturbance_Potential_of_Material__c | Low |
+| "Medium" / "Moderate" (disturbance) | Disturbance_Potential_of_Material__c | Moderate |
+| "High" (disturbance) | Disturbance_Potential_of_Material__c | High |
+| "Interior" / "Internal" / "Int" | Internal_External__c | Internal |
+| "Exterior" / "External" / "Ext" | Internal_External__c | External |
+| "Both" / "Internal & External" | Internal_External__c | External & Internal |
+| "Positive" / "Pos" | Sample_Analysis_Result_Material_Status__c | Positive |
+| "Assumed Positive" / "AP" / "Presumed Positive" | Sample_Analysis_Result_Material_Status__c | Assumed Positive |
+| "Negative" / "Neg" | Sample_Analysis_Result_Material_Status__c | Negative |
+| "Assumed Negative" / "AN" / "Presumed Negative" | Sample_Analysis_Result_Material_Status__c | Assumed Negative |
+| "Neg - TAP" / "Treated as Positive" | Sample_Analysis_Result_Material_Status__c | Negative - Treated as Positive |
+
+## SF Field Reference
+
+Extract the following Salesforce Item__c fields per ACM register row:
+
+| SF API Name | Label | Notes |
+|-------------|-------|-------|
+| `room_or_area` | Room or Area | Room name, area, or location identifier |
+| `internal_external` | Internal/External | See picklist below |
+| `level` | Level | Floor level (e.g., "Ground", "Level 1", "Roof") |
+| `location_in_room` | Location in Room | Specific location (e.g., "Ceiling", "Wall", "Floor") |
+| `friability_of_material` | Friability | See Friability_of_Material__c picklist |
+| `acm_classification` | ACM Classification | See ACM_Classification__c picklist (product group) |
+| `acm_sub_classification` | ACM Sub-Classification | Product type description |
+| `item_name` | Item Name | See subsetted Item_Name__c list below |
+| `if_other_item_name` | If Other Item Name | Free text — only when item_name = "Other" |
+| `sample_result` | Sample Result | See Sample_Analysis_Result_Material_Status__c picklist |
+| `nata_sample_no` | NATA Sample No | Sample number or reference string (e.g., "Same as 34511-039001") |
+| `condition` | Condition | See Condition__c picklist |
+| `disturbance_potential` | Disturbance Potential | See Disturbance_Potential_of_Material__c picklist |
+| `quantity` | Quantity | Numeric value (float) — strip units |
+| `labelled` | Labelled | "Yes" or "No" |
+| `labelled_details` | Label Details | Free text label description if labelled |
+| `hygienist_recommendations` | Hygienist Recommendations | Free text |
+| `additional_comments` | Additional Comments | Free text |
+| `no_access` | No Access | true if area was inaccessible |
+| `data_issues` | Data Issues | List of data quality issues |
+| `page_number` | Page Number | Page where this record appears |
+| `extraction_confidence` | Confidence | "high" / "medium" / "low" |
+
+## Picklist Values
+
+### Friability_of_Material__c:
+{{ picklists.friability_options }}
+
+### ACM_Classification__c (product group):
+{{ picklists.acm_classification_options }}
+
+### Sample_Analysis_Result_Material_Status__c:
+{{ picklists.sample_result_options }}
+
+### Condition__c:
+{{ picklists.condition_options }}
+
+### Disturbance_Potential_of_Material__c:
+{{ picklists.disturbance_potential_options }}
+
+### Internal_External__c:
+{{ picklists.internal_external_options }}
+
+### Labelled__c:
+{{ picklists.labelled_options }}
+
+### Item_Name__c (use one of these exact values; use "Other" + fill if_other_item_name if none match):
+{{ picklists.item_name_options }}
+
+## Worked Example 1 — "Same as" Reference Row
+
+**INPUT row** (from register table):
+```
+Ground floor | Corridor adjacent cells | Floor | Vinyl sheet (cream) | Assumed Positive | Same as 34511-039001 | Non-friable | Stable | Low
+```
+
+**OUTPUT record:**
+```json
+{
+  "room_or_area": "Corridor adjacent cells",
+  "internal_external": "Internal",
+  "level": "Ground floor",
+  "location_in_room": "Floor",
+  "friability_of_material": "Non-friable",
+  "acm_classification": "Vinyl products",
+  "acm_sub_classification": "Vinyl sheet",
+  "item_name": "Floor covering",
+  "if_other_item_name": null,
+  "sample_result": "Assumed Positive",
+  "nata_sample_no": "Same as 34511-039001",
+  "condition": "Stable",
+  "disturbance_potential": "Low",
+  "quantity": null,
+  "labelled": null,
+  "labelled_details": null,
+  "hygienist_recommendations": null,
+  "additional_comments": "Vinyl sheet (cream)",
+  "no_access": false,
+  "extraction_confidence": "high",
+  "data_issues": [],
+  "page_number": null
+}
+```
+
+## Worked Example 2 — "No Access" Entry
+
+**INPUT row:**
+```
+Roof void | No Access | Height restriction | - | - | - | - | - | -
+```
+
+**OUTPUT record:**
+```json
+{
+  "room_or_area": "Roof void",
+  "internal_external": null,
+  "level": null,
+  "location_in_room": null,
+  "friability_of_material": null,
+  "acm_classification": null,
+  "acm_sub_classification": null,
+  "item_name": null,
+  "if_other_item_name": null,
+  "sample_result": null,
+  "nata_sample_no": null,
+  "condition": null,
+  "disturbance_potential": null,
+  "quantity": null,
+  "labelled": null,
+  "labelled_details": null,
+  "hygienist_recommendations": null,
+  "additional_comments": "Height restriction",
+  "no_access": true,
+  "extraction_confidence": "high",
+  "data_issues": [],
+  "page_number": null
+}
+```
+
+## Worked Example 3 — "Assumed Positive" Item (Fuse Cartridge)
+
+**INPUT row:**
+```
+Switchboard | Electrical room | Fuse cartridge | Assumed Positive | Not sampled | Non-friable | Stable | Low
+```
+
+**OUTPUT record:**
+```json
+{
+  "room_or_area": "Electrical room",
+  "internal_external": "Internal",
+  "level": null,
+  "location_in_room": "Switchboard",
+  "friability_of_material": "Non-friable",
+  "acm_classification": "Gasket, friction products and adhesives",
+  "acm_sub_classification": "Fuse cartridge",
+  "item_name": "Other",
+  "if_other_item_name": "Fuse cartridge",
+  "sample_result": "Assumed Positive",
+  "nata_sample_no": null,
+  "condition": "Stable",
+  "disturbance_potential": "Low",
+  "quantity": null,
+  "labelled": "No",
+  "labelled_details": null,
+  "hygienist_recommendations": null,
+  "additional_comments": null,
+  "no_access": false,
+  "extraction_confidence": "high",
+  "data_issues": [],
+  "page_number": null
+}
+```
+
+## Item_Name Usage Note
+
+- Use one of the provided Item_Name options above — write the exact value including punctuation and capitalisation.
+- Use `"Other"` if none of the provided options match, and fill `if_other_item_name` with the literal text from the document.
+- Do NOT invent new Item_Name values outside the provided list.
+
+## Document Content
+
+```
+{{ content }}
+```
+
+## Output Format
+
+Respond with a single JSON object matching the `ACMItemExtractionResult` schema:
+
+```json
+{
+  "records": [
+    {
+      "room_or_area": ...,
+      "internal_external": ...,
+      "level": ...,
+      "location_in_room": ...,
+      "friability_of_material": ...,
+      "acm_classification": ...,
+      "acm_sub_classification": ...,
+      "item_name": ...,
+      "if_other_item_name": ...,
+      "sample_result": ...,
+      "nata_sample_no": ...,
+      "condition": ...,
+      "disturbance_potential": ...,
+      "quantity": ...,
+      "labelled": ...,
+      "labelled_details": ...,
+      "hygienist_recommendations": ...,
+      "additional_comments": ...,
+      "no_access": false,
+      "extraction_confidence": "high" | "medium" | "low",
+      "data_issues": [],
+      "page_number": null
+    }
+  ],
+  "status": "valid" | "no_acm_data" | "invalid",
+  "extraction_notes": null
+}
+```
+
+If there are no ACM items in this building section, return `{"records": [], "status": "no_acm_data", "extraction_notes": "..."}`.

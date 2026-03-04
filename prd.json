@@ -255,7 +255,7 @@
         "open_notebook/extractors/orchestrator.py",
         "tests/test_extraction_prompts.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e30-s7-two-phase-extraction-prompts.md",
       "implementedDate": null
     },
     {
