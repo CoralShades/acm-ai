@@ -40,7 +40,10 @@ from open_notebook.extractors.acm_schemas import (
     BuildingRoomContext,
     ExtractionStatus,
 )
-from open_notebook.extractors.acm_schemas_v3 import BuildingExtractionResult
+from open_notebook.extractors.acm_schemas_v3 import (
+    ACMItemExtractionResult,
+    BuildingExtractionResult,
+)
 from open_notebook.extractors.agui_event_emitter import AGUIEventEmitter
 from open_notebook.extractors.building_inventory import (
     BuildingInventory,
@@ -64,7 +67,9 @@ from open_notebook.extractors.orchestrator import (
     _extract_building_content,
     _get_docling_tables,
     _inject_docling_tables,
+    _normalize_v3_records,
     _v3_extract_building_meta,
+    _v3_extract_items,
     orchestrate_extraction,
 )
 from open_notebook.extractors.page_tagger import (
@@ -450,6 +455,8 @@ class ExtractionState(TypedDict):
     agui_emitter: Optional[AGUIEventEmitter]
     # E32-S1: Building__c extraction results (record IDs of persisted BuildingRecords)
     building_records: List[str]
+    # E32-S2: True when extract_items_node produced >= 1 record
+    items_extracted: bool
 
 
 def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
@@ -1178,6 +1185,198 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
         )
 
     return {"building_records": saved_ids}
+
+
+# ---------------------------------------------------------------------------
+# E32-S2: Item__c AI Extraction Node
+# ---------------------------------------------------------------------------
+
+_ITEM_EXTRACTION_CHUNK_CHARS = 48_000
+
+
+async def _chunk_and_extract_items(
+    building_content: str,
+    plan: BuildingExtractionPlan,
+    building_meta: Optional[BuildingExtractionResult],
+    state: dict,
+    schema_bundle: Optional[Any],
+) -> ACMItemExtractionResult:
+    """Split oversized building content and merge item results.
+
+    If building_content exceeds _ITEM_EXTRACTION_CHUNK_CHARS, splits into
+    equal-sized char chunks, calls _v3_extract_items() for each, and merges
+    records into a single ACMItemExtractionResult.
+
+    Story: E32-S2 Item__c AI Extraction Node
+    """
+    if len(building_content) <= _ITEM_EXTRACTION_CHUNK_CHARS:
+        return await _v3_extract_items(
+            building_content, plan, building_meta, state, schema_bundle
+        )
+
+    # Split into N equal-sized char chunks
+    chunks = [
+        building_content[i : i + _ITEM_EXTRACTION_CHUNK_CHARS]
+        for i in range(0, len(building_content), _ITEM_EXTRACTION_CHUNK_CHARS)
+    ]
+    merged_records = []
+    final_status = "valid"
+    for chunk in chunks:
+        result = await _v3_extract_items(
+            chunk, plan, building_meta, state, schema_bundle
+        )
+        merged_records.extend(result.records)
+        if result.status == "invalid":
+            final_status = "invalid"
+
+    return ACMItemExtractionResult(records=merged_records, status=final_status)
+
+
+async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
+    """Phase 2 Item__c extraction: one AI call per building section.
+
+    For each building in building_inventory, calls _v3_extract_items()
+    and normalises results to ACMExtractionRecord via _normalize_v3_records().
+    Appends all records to state["records"] for consumption by validate/save nodes.
+
+    Returns items_extracted=True when at least one record was produced.
+
+    Story: E32-S2 Item__c AI Extraction Node
+    """
+    source: Source = state["source"]
+    content: str = source.full_text or ""
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
+    schema_bundle = state.get("schema_bundle")
+    pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
+    source_id_str = str(source.id)
+
+    if not inventory or not inventory.buildings:
+        logger.info(
+            f"[E32-S2] No building inventory for source {source_id_str} — skipping item extraction"
+        )
+        return {"records": [], "items_extracted": False}
+
+    if agui:
+        await agui.emit_step_started("extract_items")
+
+    # Build building_code -> record_id lookup from persisted BuildingRecords
+    try:
+        saved_buildings = await BuildingRecord.get_by_source(source_id_str)
+        code_to_id_map: dict = {
+            br.building_code: str(br.id)
+            for br in (saved_buildings or [])
+            if br.building_code
+        }
+    except Exception as e:
+        logger.warning(
+            f"[E32-S2] Could not load BuildingRecords for source {source_id_str}: {e} "
+            "(building_record_id will not be populated)"
+        )
+        code_to_id_map = {}
+
+    all_records: List[ACMExtractionRecord] = []
+    n_buildings = len(inventory.buildings)
+
+    for building_meta in inventory.buildings:
+        try:
+            page_start = building_meta.page_start
+            page_end = building_meta.page_end or page_start
+
+            building_content = _extract_building_content(content, page_start, page_end)
+
+            if not building_content.strip():
+                logger.warning(
+                    f"[E32-S2] Empty content for building {building_meta.building_id} "
+                    f"(pages {page_start}-{page_end}) — skipping"
+                )
+                continue
+
+            plan = BuildingExtractionPlan(
+                building_id=building_meta.building_id,
+                building_name=building_meta.name,
+                page_range=(page_start, page_end),
+                strategy=ExtractionStrategy.FULL_LLM,
+            )
+
+            # Re-run Phase 1 to get building_meta_result for picklist subsetting.
+            # Phase 1 is cheap (small prompt). This avoids state complexity of
+            # caching Phase 1 results across nodes.
+            # If None, _normalize_v3_records falls back to plan.building_name.
+            building_meta_result = await _v3_extract_building_meta(
+                building_content=building_content,
+                plan=plan,
+                state=state,
+                schema_bundle=schema_bundle,
+            )
+
+            # Phase 2: extract items (with chunking if content is large)
+            item_result = await _chunk_and_extract_items(
+                building_content, plan, building_meta_result, state, schema_bundle
+            )
+
+            # Normalise V3 SF fields -> ACMExtractionRecord
+            records = _normalize_v3_records(building_meta_result, item_result, plan)
+
+            # Populate building_record_id FK from lookup map
+            building_record_id = code_to_id_map.get(building_meta.building_id)
+            if building_record_id:
+                for rec in records:
+                    rec.building_record_id = building_record_id
+
+            all_records.extend(records)
+            logger.info(
+                f"[E32-S2] Building {building_meta.building_id}: {len(records)} items"
+            )
+
+        except Exception as e:
+            logger.warning(
+                f"[E32-S2] Failed to extract items for building "
+                f"{building_meta.building_id}: {e} "
+                "(skipping — partial results preserved)"
+            )
+            continue
+
+    logger.info(
+        f"[E32-S2] Item extraction complete: {len(all_records)} records from "
+        f"{n_buildings} buildings"
+    )
+
+    if pl:
+        pl.stage_progress(
+            StageId.ORCHESTRATOR,
+            f"Item extraction: {len(all_records)} records from {n_buildings} buildings",
+        )
+
+    if agui:
+        await agui.emit_step_finished(
+            "extract_items",
+            records=len(all_records),
+            buildings=n_buildings,
+        )
+
+    return {"records": all_records, "items_extracted": len(all_records) > 0}
+
+
+def should_run_orchestrate(state: dict) -> str:
+    """Route to orchestrate (fallback) or validate directly.
+
+    Orchestrate runs when:
+    - building_inventory is None/empty (legacy document, no structure detection)
+    - items_extracted is False (E32-S2 produced zero records — possible extraction failure)
+
+    Otherwise skip directly to validate.
+
+    Story: E32-S2 Item__c AI Extraction Node
+    """
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
+    items_extracted: bool = state.get("items_extracted", False)
+
+    if not inventory or not inventory.buildings:
+        return "orchestrate"
+    if not items_extracted:
+        return "orchestrate"
+    return "validate"
 
 
 async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
@@ -2985,6 +3184,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 building_name=record.building_name,
                 building_year=record.building_year,
                 building_construction=record.building_construction,
+                building_record_id=record.building_record_id,  # E32-S2
                 room_id=record.room_id,
                 room_name=record.room_name,
                 room_area=record.room_area,
@@ -3135,6 +3335,9 @@ agent_state.add_node(
     "extract_building", extract_building_node
 )  # E32-S1: Building__c Phase 1 extraction
 agent_state.add_node(
+    "extract_items", extract_items_node
+)  # E32-S2: Item__c Phase 2 extraction
+agent_state.add_node(
     "orchestrate", orchestrate_with_logging
 )  # E1-S20: Agentic orchestrator (wrapped with E1-S21 logging)
 agent_state.add_node("prepare", prepare_context)
@@ -3152,9 +3355,15 @@ agent_state.add_edge("structure", "inventory")
 agent_state.add_edge("inventory", "tag_pages")
 # E30-S9: Persist pre-extraction intelligence before orchestrator
 agent_state.add_edge("tag_pages", "save_intelligence")
-# E32-S1: Building__c extraction runs between save_intelligence and orchestrate
+# E32-S1: Building__c extraction runs between save_intelligence and extract_items
 agent_state.add_edge("save_intelligence", "extract_building")
-agent_state.add_edge("extract_building", "orchestrate")
+# E32-S2: Item__c extraction runs after building extraction, with conditional fallback
+agent_state.add_edge("extract_building", "extract_items")
+agent_state.add_conditional_edges(
+    "extract_items",
+    should_run_orchestrate,
+    {"orchestrate": "orchestrate", "validate": "validate"},
+)
 agent_state.add_edge("orchestrate", "validate")
 # Legacy edges removed — prepare/extract nodes kept but unreachable (AC-5)
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}

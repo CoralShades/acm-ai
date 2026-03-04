@@ -253,6 +253,13 @@ class ACMExtractionRecord(BaseModel):
         description="Additional comments or notes about the ACM item from the register",
     )
 
+    # FK to building_record table — populated by E32-S2 extract_items_node
+    building_record_id: Optional[str] = Field(
+        default=None,
+        description="FK to building_record table (record<building_record> in DB). "
+        "Populated during E32-S2 item extraction.",
+    )
+
     @field_validator("result", mode="before")
     @classmethod
     def validate_result(cls, v: Optional[str]) -> Optional[str]:

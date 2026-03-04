@@ -649,7 +649,7 @@
         "open_notebook/extractors/orchestrator.py",
         "tests/test_item_extraction.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e32-s2-item-extraction-node.md",
       "implementedDate": null
     },
     {
