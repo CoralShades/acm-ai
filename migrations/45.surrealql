@@ -1,0 +1,10 @@
+-- E35-S2: Define fields on open_notebook table for model defaults
+-- Table already exists (seeded in migration 1), adding explicit field defs
+DEFINE FIELD IF NOT EXISTS default_chat_model ON TABLE open_notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS default_transformation_model ON TABLE open_notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS large_context_model ON TABLE open_notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS default_text_to_speech_model ON TABLE open_notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS default_speech_to_text_model ON TABLE open_notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS default_embedding_model ON TABLE open_notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS default_tools_model ON TABLE open_notebook TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS default_extraction_model ON TABLE open_notebook TYPE option<string>;

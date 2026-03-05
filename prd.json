@@ -1363,10 +1363,10 @@
         "open_notebook/database/repository.py",
         "migrations/"
       ],
-      "techSpecFile": null,
-      "implementedDate": null,
-      "notes": "",
-      "passes": false
+      "techSpecFile": "docs/sprint-artifacts/e35-s2-persist-model-defaults-to-surrealdb.md",
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
     },
     {
       "id": "E35-S3",

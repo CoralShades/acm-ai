@@ -393,18 +393,12 @@ async def update_defaults_if_needed(provisioned: dict[str, Optional[str]]) -> No
 
         current_value = getattr(defaults, field, None)
 
-        # Skip only if current value already matches the provisioned model
-        if current_value == model_id:
+        # Only set defaults for empty fields — never overwrite user customizations
+        if current_value:
+            logger.debug(f"Preserving existing {field} = {current_value}")
             continue
 
-        # Log why we're updating
-        if current_value:
-            logger.info(
-                f"Updating {field}: {current_value} -> {model_id} (env var changed)"
-            )
-        else:
-            logger.info(f"Setting {field} = {model_id}")
-
+        logger.info(f"Setting {field} = {model_id}")
         setattr(defaults, field, model_id)
         updated = True
 
