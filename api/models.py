@@ -1534,3 +1534,29 @@ class SourceIntelligenceResponse(BaseModel):
     register_page_range: Optional[Dict[str, Any]] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+# =============================================================================
+# Building Backfill Models (E35-S6)
+# =============================================================================
+
+
+class BackfillBuildingsRequest(BaseModel):
+    """Request to backfill building_record entries from acm_record data."""
+
+    source_id: Optional[str] = Field(None, description="Optional source ID filter")
+
+
+class BackfillBuildingsResponse(BaseModel):
+    """Response from building backfill operation."""
+
+    buildings_created: int = Field(
+        ..., description="Number of building records created"
+    )
+    buildings_skipped: int = Field(
+        ..., description="Number of building records skipped (already existed)"
+    )
+    records_linked: int = Field(
+        ..., description="Number of acm_records linked to building records"
+    )
+    message: str = Field(..., description="Status message")

@@ -34,6 +34,8 @@ from api.models import (
     ACMStatsResponse,
     AgencyListResponse,
     ApplyTemplateRequest,
+    BackfillBuildingsRequest,
+    BackfillBuildingsResponse,
     BackfillParentsRequest,
     BackfillParentsResponse,
     BatchClassifyRequest,
@@ -1226,6 +1228,44 @@ async def backfill_parent_references(
 
     except Exception as e:
         logger.error(f"Error backfilling parent references: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backfill-buildings", response_model=BackfillBuildingsResponse)
+async def backfill_building_records(
+    request: BackfillBuildingsRequest = BackfillBuildingsRequest(),
+):
+    """
+    Backfill building_record entries from existing ACM records (E35-S6).
+
+    Groups acm_records by (source_id, building_id), creates a BuildingRecord
+    for each unique building, and sets building_record_id FK on the acm_records.
+    Idempotent: skips buildings that already exist and never overwrites
+    non-NULL FK values.
+    """
+    try:
+        from scripts.v3_building_backfill import backfill_all, backfill_source
+
+        if request.source_id:
+            result = await backfill_source(request.source_id)
+        else:
+            result = await backfill_all()
+
+        total = result.buildings_created + result.buildings_skipped
+        return BackfillBuildingsResponse(
+            buildings_created=result.buildings_created,
+            buildings_skipped=result.buildings_skipped,
+            records_linked=result.records_linked,
+            message=(
+                f"Backfill complete: {result.buildings_created} buildings created, "
+                f"{result.buildings_skipped} skipped, "
+                f"{result.records_linked} records linked "
+                f"({total} total buildings)"
+            ),
+        )
+
+    except Exception as e:
+        logger.error(f"Error backfilling building records: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
