@@ -1450,10 +1450,10 @@
         "frontend/src/hooks/useExtractionSSE.ts",
         "api/routers/acm.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null,
-      "notes": "",
-      "passes": false
+      "techSpecFile": "docs/sprint-artifacts/e35-s5-sse-terminal-event-completed-jobs.md",
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
     },
     {
       "id": "E35-S6",
