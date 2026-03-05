@@ -511,10 +511,10 @@ development_status:
   e35-s2-persist-model-defaults: done                    # 2 SP. GitHub #92. PUT /api/models/defaults → SurrealDB settings. Completed 2026-03-05.
   e35-s3-ollama-extraction-hardening: done               # 3 SP. GitHub #93. P0. format=json, num_ctx, chunking formalization. Completed 2026-03-05.
   e35-s4-anthropic-direct-provider-priority: done        # 3 SP. GitHub #94. P0. Primary path Ollama→Anthropic→OpenRouter. Completed 2026-03-05.
-  e35-s5-sse-terminal-event: backlog                     # 2 SP. GitHub #90. SSE complete event for finished jobs
+  e35-s5-sse-terminal-event: done                        # 2 SP. GitHub #90. SSE complete event for finished jobs. Completed 2026-03-05.
   e35-s6-v3-building-backfill: backlog                   # 3 SP. GitHub #89. Backfill building_record for pre-V3 sources
   e35-s7-sf-first-validation-pipeline: backlog           # 5 SP. GitHub #84. SF-first enum authority, correction loop fix. Deps: E35-S3
-  e35-s8-frontend-error-handling: backlog                # 2 SP. Empty states, console error cleanup, CopilotKit fix
+  e35-s8-frontend-error-handling: done                   # 2 SP. Empty states, console error cleanup, CopilotKit fix. Completed 2026-03-05.
   epic-35-retrospective: optional
 
   # Bug Fixes & Infrastructure (standalone)
@@ -559,12 +559,12 @@ development_status:
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 3 (E35-S6..S8)
+# Stories Backlog: 2 (E35-S6, E35-S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-05
 # Reconciliation note: E35 epic added (8 stories, 22 SP) for post-V3 hardening.
-# V3 core complete (37/37). E35 hardening: 5/8 stories done (E35-S1, E35-S2, E35-S3, E35-S4, E35-S5). E35 addresses bugs from E30-S8 verification.
+# V3 core complete (37/37). E35 hardening: 7/8 stories done (E35-S1..S5, E35-S8). E35 addresses bugs from E30-S8 verification.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
