@@ -1537,10 +1537,10 @@
         "frontend/src/components/acm/ItemGrid.tsx",
         "frontend/src/app/(dashboard)/source/[id]/page.tsx"
       ],
-      "techSpecFile": null,
-      "implementedDate": null,
-      "notes": "",
-      "passes": false
+      "techSpecFile": "docs/sprint-artifacts/e35-s8-frontend-error-handling-polish.md",
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
     }
   ],
   "gates": [
