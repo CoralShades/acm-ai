@@ -508,7 +508,7 @@ development_status:
   # ─────────────────────────────────────────────────────
   epic-35: in-progress
   e35-s1-fix-sync-upload-asyncio: done                   # 2 SP. GitHub #91. asyncio.run() in event loop → use await
-  e35-s2-persist-model-defaults: backlog                 # 2 SP. GitHub #92. PUT /api/models/defaults → SurrealDB settings
+  e35-s2-persist-model-defaults: done                    # 2 SP. GitHub #92. PUT /api/models/defaults → SurrealDB settings. Completed 2026-03-05.
   e35-s3-ollama-extraction-hardening: backlog            # 3 SP. GitHub #93. P0. format=json, num_ctx, chunking formalization
   e35-s4-anthropic-direct-provider-priority: backlog     # 3 SP. GitHub #94. P0. Primary path Ollama→Anthropic→OpenRouter. Deps: E35-S3
   e35-s5-sse-terminal-event: backlog                     # 2 SP. GitHub #90. SSE complete event for finished jobs
@@ -553,18 +553,18 @@ development_status:
 # ========
 # Total Epics: 34  (+6 V3 epics: E30-E35)
 # Total Stories: 221  (176 pre-V3 + 37 V3 + 8 V3-hardening)
-# Stories Done: 197 (89%)  -- 160 pre-V3 + 37 V3
+# Stories Done: 198 (90%)  -- 160 pre-V3 + 37 V3 + 1 V3-hardening
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 7 (E35-S2..S8)
+# Stories Backlog: 6 (E35-S3..S8)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-05
 # Reconciliation note: E35 epic added (8 stories, 22 SP) for post-V3 hardening.
-# V3 core complete (37/37). E35 addresses bugs from E30-S8 verification.
+# V3 core complete (37/37). E35 hardening: 2/8 stories done (E35-S1, E35-S2). E35 addresses bugs from E30-S8 verification.
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
@@ -573,7 +573,7 @@ development_status:
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (1/8).
+# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (2/8).
 # All 5 core V3 epics done. Schema freeze gate unlocked 2026-03-03. Final core story 2026-03-05.
 #
 # EXTRACTION ACCURACY STATUS:
