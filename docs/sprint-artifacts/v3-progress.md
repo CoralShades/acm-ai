@@ -51,6 +51,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-05 | E30-S8 | Ollama + Anthropic Direct + OpenRouter Provider Priority | 3 | open_notebook/graphs/utils.py, tests/test_openrouter_provider_routing.py | provision_extraction_fallback_model() uses ACM_ANTHROPIC_API_KEY. Priority: Ollama→Anthropic→OpenRouter. No bare env var bleed. |
 | 2026-03-05 | E35-S1 | Fix Sync Upload asyncio.run() Error | 2 | api/routers/sources.py, tests/test_sync_upload.py | Replace execute_command_sync (asyncio.run) with submit_command + await wait_for_command. 10 tests. |
 | 2026-03-05 | E35-S2 | Persist Model Defaults to SurrealDB | 2 | model_settings_service.py, model_settings_router.py, 45.surrealql, test_model_settings.py | SurrealDB model_settings table, PUT /api/models/defaults endpoint, PATCH /api/models/{id} updates persisted. Fixes Ollama model resets on API restart. |
+| 2026-03-05 | E35-S3 | Ollama Extraction Hardening | 3 | open_notebook/graphs/utils.py, open_notebook/extractors/orchestrator.py, tests/test_ollama_extraction_settings.py | Fixed stale chunking test, added 5 new tests for _apply_ollama_extraction_settings (format=json, num_ctx tuning, content truncation). Validated end-to-end. |
 
 ## Sprint Summary
 
@@ -63,9 +64,9 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | V3-5 | 5/5 | 15/15 | Complete |
 | V3-6 | 5/5 | 14/14 | Complete |
 | V3-7 | 4/4 | 9/9 | Complete |
-| V3-8 | 2/8 | 4/22 | In Progress |
+| V3-8 | 3/8 | 7/22 | In Progress |
 
-**V3 Core: 37/37 stories done (100%). V3-8 Hardening: 2/8 stories (25%), 4/22 SP (18%).**
+**V3 Core: 37/37 stories done (100%). V3-8 Hardening: 3/8 stories (38%), 7/22 SP (32%).**
 
 ## Gate Milestones
 
