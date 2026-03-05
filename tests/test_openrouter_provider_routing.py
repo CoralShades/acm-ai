@@ -564,9 +564,7 @@ class TestACMNamespacedEnvVars:
             {"ACM_ANTHROPIC_API_KEY": "sk-acm-test-key"},
             clear=True,
         ):
-            with patch(
-                "open_notebook.graphs.utils.AIFactory"
-            ) as mock_factory:
+            with patch("open_notebook.graphs.utils.AIFactory") as mock_factory:
                 mock_model = MagicMock(spec=LanguageModel)
                 mock_model.to_langchain.return_value = MagicMock(
                     openai_api_base="https://api.anthropic.com/v1",
@@ -601,9 +599,7 @@ class TestACMNamespacedEnvVars:
             },
             clear=True,
         ):
-            with patch(
-                "open_notebook.graphs.utils.AIFactory"
-            ) as mock_factory:
+            with patch("open_notebook.graphs.utils.AIFactory") as mock_factory:
                 mock_model = MagicMock(spec=LanguageModel)
                 mock_model.to_langchain.return_value = MagicMock(
                     openai_api_base="http://localhost:11434",
@@ -667,3 +663,246 @@ class TestACMNamespacedEnvVars:
 
         source = inspect.getsource(_verify_provider_routing)
         assert "ACM_OPENROUTER_API_KEY" in source
+
+
+class TestExtractionPrimaryProviderPriority:
+    """E35-S4: Primary extraction path follows Ollama->Anthropic->OpenRouter."""
+
+    @pytest.mark.asyncio
+    async def test_ollama_first_when_available(self, monkeypatch):
+        """When OLLAMA_API_BASE is set, Ollama model is used first."""
+        from unittest.mock import patch
+
+        from esperanto import LanguageModel
+
+        from open_notebook.graphs.utils import _provision_extraction_primary_model
+
+        monkeypatch.setenv("OLLAMA_API_BASE", "http://localhost:11434")
+        monkeypatch.delenv("ACM_ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("ACM_OPENROUTER_API_KEY", raising=False)
+
+        mock_lm = MagicMock(spec=LanguageModel)
+        mock_lc = MagicMock(
+            openai_api_base="http://localhost:11434",
+            base_url="http://localhost:11434",
+            model_kwargs={},
+        )
+        mock_lm.to_langchain.return_value = mock_lc
+
+        with patch("open_notebook.graphs.utils.AIFactory") as mock_factory:
+            mock_factory.create_language.return_value = mock_lm
+            result = await _provision_extraction_primary_model()
+
+        assert result is not None
+        mock_factory.create_language.assert_called_once()
+        call_kwargs = mock_factory.create_language.call_args
+        assert call_kwargs.kwargs["provider"] == "ollama"
+        assert "api_key" not in call_kwargs.kwargs.get("config", {})
+
+    @pytest.mark.asyncio
+    async def test_anthropic_when_ollama_unavailable(self, monkeypatch):
+        """AC4: OLLAMA_API_BASE unset + ACM_ANTHROPIC_API_KEY set = Anthropic used."""
+        from unittest.mock import patch
+
+        from esperanto import LanguageModel
+
+        from open_notebook.graphs.utils import _provision_extraction_primary_model
+
+        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
+        monkeypatch.setenv("ACM_ANTHROPIC_API_KEY", "sk-ant-test-key")
+        monkeypatch.delenv("ACM_OPENROUTER_API_KEY", raising=False)
+
+        mock_lm = MagicMock(spec=LanguageModel)
+        mock_lc = MagicMock(
+            openai_api_base="https://api.anthropic.com/v1",
+            base_url="https://api.anthropic.com/v1",
+            model_kwargs={},
+        )
+        mock_lm.to_langchain.return_value = mock_lc
+
+        with patch("open_notebook.graphs.utils.AIFactory") as mock_factory:
+            mock_factory.create_language.return_value = mock_lm
+            result = await _provision_extraction_primary_model()
+
+        assert result is not None
+        call_kwargs = mock_factory.create_language.call_args
+        assert call_kwargs.kwargs["provider"] == "anthropic"
+        assert call_kwargs.kwargs["config"]["api_key"] == "sk-ant-test-key"
+
+    @pytest.mark.asyncio
+    async def test_openrouter_when_others_unavailable(self, monkeypatch):
+        """Only ACM_OPENROUTER_API_KEY set -> OpenRouter used."""
+        from unittest.mock import patch
+
+        from esperanto import LanguageModel
+
+        from open_notebook.graphs.utils import _provision_extraction_primary_model
+
+        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
+        monkeypatch.delenv("ACM_ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setenv("ACM_OPENROUTER_API_KEY", "sk-or-test-key")
+
+        mock_lm = MagicMock(spec=LanguageModel)
+        mock_lc = MagicMock(
+            openai_api_base="https://openrouter.ai/api/v1",
+            base_url="https://openrouter.ai/api/v1",
+            model_kwargs={},
+        )
+        mock_lm.to_langchain.return_value = mock_lc
+
+        with patch("open_notebook.graphs.utils.AIFactory") as mock_factory:
+            mock_factory.create_language.return_value = mock_lm
+            result = await _provision_extraction_primary_model()
+
+        assert result is not None
+        call_kwargs = mock_factory.create_language.call_args
+        assert call_kwargs.kwargs["provider"] == "openrouter"
+        assert call_kwargs.kwargs["config"]["api_key"] == "sk-or-test-key"
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_no_provider(self, monkeypatch):
+        """No env vars set -> returns None (caller falls to DB default)."""
+        from open_notebook.graphs.utils import _provision_extraction_primary_model
+
+        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
+        monkeypatch.delenv("ACM_ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("ACM_OPENROUTER_API_KEY", raising=False)
+
+        result = await _provision_extraction_primary_model()
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_uses_acm_key_not_bare_anthropic(self, monkeypatch):
+        """AC2: bare ANTHROPIC_API_KEY is NOT used -- only ACM_ANTHROPIC_API_KEY."""
+        from open_notebook.graphs.utils import _provision_extraction_primary_model
+
+        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
+        monkeypatch.delenv("ACM_ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("ACM_OPENROUTER_API_KEY", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-bare-key")  # bare key
+
+        result = await _provision_extraction_primary_model()
+        # Should return None — bare ANTHROPIC_API_KEY is not checked
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_skips_failed_provider_tries_next(self, monkeypatch):
+        """If Ollama fails, tries Anthropic next."""
+        from unittest.mock import patch
+
+        from esperanto import LanguageModel
+
+        from open_notebook.graphs.utils import _provision_extraction_primary_model
+
+        monkeypatch.setenv("OLLAMA_API_BASE", "http://localhost:11434")
+        monkeypatch.setenv("ACM_ANTHROPIC_API_KEY", "sk-ant-test-key")
+
+        mock_lm = MagicMock(spec=LanguageModel)
+        mock_lc = MagicMock(
+            openai_api_base="https://api.anthropic.com/v1",
+            base_url="https://api.anthropic.com/v1",
+            model_kwargs={},
+        )
+        mock_lm.to_langchain.return_value = mock_lc
+
+        call_count = 0
+
+        def side_effect(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ConnectionError("Ollama offline")
+            return mock_lm
+
+        with patch("open_notebook.graphs.utils.AIFactory") as mock_factory:
+            mock_factory.create_language.side_effect = side_effect
+            result = await _provision_extraction_primary_model()
+
+        assert result is not None
+        assert call_count == 2
+        # Second call should be anthropic
+        second_call = mock_factory.create_language.call_args_list[1]
+        assert second_call.kwargs["provider"] == "anthropic"
+
+    def test_no_bare_keys_in_primary_source(self):
+        """Static check: _provision_extraction_primary_model has no bare key reads."""
+        import inspect
+
+        from open_notebook.graphs.utils import _provision_extraction_primary_model
+
+        source = inspect.getsource(_provision_extraction_primary_model)
+        assert 'getenv("ANTHROPIC_API_KEY")' not in source
+        assert 'getenv("OPENAI_API_KEY")' not in source
+        assert 'getenv("OPENROUTER_API_KEY")' not in source
+
+    @pytest.mark.asyncio
+    async def test_provision_langchain_model_calls_primary_for_extraction(
+        self, monkeypatch
+    ):
+        """AC1 integration: provision_langchain_model invokes primary path for extraction."""
+        from unittest.mock import AsyncMock, patch
+
+        from open_notebook.graphs.utils import provision_langchain_model
+
+        monkeypatch.setenv("ACM_ANTHROPIC_API_KEY", "sk-ant-test")
+        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
+        monkeypatch.delenv("ACM_OPENROUTER_API_KEY", raising=False)
+
+        mock_lc = MagicMock(
+            openai_api_base="https://api.anthropic.com/v1",
+            base_url="https://api.anthropic.com/v1",
+            model_kwargs={},
+        )
+
+        with patch(
+            "open_notebook.graphs.utils._provision_extraction_primary_model",
+            new_callable=AsyncMock,
+            return_value=mock_lc,
+        ) as mock_primary:
+            result = await provision_langchain_model(
+                "short content", None, "extraction"
+            )
+
+        mock_primary.assert_called_once()
+        assert result is mock_lc
+
+    @pytest.mark.asyncio
+    async def test_provision_langchain_model_skips_primary_when_model_id_set(
+        self, monkeypatch
+    ):
+        """AC6: DB-stored model_id overrides primary extraction path."""
+        from unittest.mock import AsyncMock, patch
+
+        from esperanto import LanguageModel
+
+        from open_notebook.graphs.utils import provision_langchain_model
+
+        monkeypatch.setenv("ACM_ANTHROPIC_API_KEY", "sk-ant-test")
+        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
+
+        mock_lm = MagicMock(spec=LanguageModel)
+        mock_lc = MagicMock(
+            openai_api_base="https://api.anthropic.com/v1",
+            base_url="https://api.anthropic.com/v1",
+            model_kwargs={},
+        )
+        mock_lm.to_langchain.return_value = mock_lc
+
+        with (
+            patch(
+                "open_notebook.graphs.utils._provision_extraction_primary_model",
+                new_callable=AsyncMock,
+            ) as mock_primary,
+            patch(
+                "open_notebook.graphs.utils.model_manager",
+            ) as mock_mm,
+        ):
+            mock_mm.get_model = AsyncMock(return_value=mock_lm)
+            result = await provision_langchain_model(
+                "short content", "model:explicit-id", "extraction"
+            )
+
+        # Primary path must NOT be called when model_id is explicit
+        mock_primary.assert_not_called()
+        # DB model_manager.get_model must be called with the explicit model_id
+        mock_mm.get_model.assert_called_once_with("model:explicit-id")

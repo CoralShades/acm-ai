@@ -384,8 +384,7 @@ def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
                 f"Splitting into character-based chunks."
             )
             return [
-                content[i : i + max_chars]
-                for i in range(0, len(content), max_chars)
+                content[i : i + max_chars] for i in range(0, len(content), max_chars)
             ]
         return [content]
 
@@ -593,6 +592,13 @@ async def provision_langchain_model(
             model = await model_manager.get_default_model(default_type, **kwargs)
     elif model_id:
         model = await model_manager.get_model(model_id, **kwargs)
+    elif default_type == "extraction":
+        # E35-S4: Primary extraction priority chain (Ollama -> Anthropic -> OpenRouter)
+        lc_model = await _provision_extraction_primary_model(**kwargs)
+        if lc_model is not None:
+            return lc_model
+        # Fall through to DB default if no provider available
+        model = await model_manager.get_default_model(default_type, **kwargs)
     else:
         model = await model_manager.get_default_model(default_type, **kwargs)
 
@@ -846,6 +852,59 @@ def is_provider_schema_error(error: Exception) -> bool:
             return True
 
     return False
+
+
+async def _provision_extraction_primary_model(
+    **kwargs,
+) -> Optional[BaseChatModel]:
+    """Primary extraction model provisioning with Ollama->Anthropic->OpenRouter priority.
+
+    E35-S4: When default_type='extraction' and no explicit model_id, use this
+    priority chain instead of only reading the DB-stored default.
+    Uses ACM-namespaced API keys only (never bare ANTHROPIC_API_KEY).
+
+    Returns None if no provider is available (caller falls through to DB default).
+    """
+    candidates: list[tuple[str, str, Optional[str]]] = []
+
+    # 1) Ollama first — free, local
+    if os.getenv("OLLAMA_API_BASE"):
+        candidates.append(("ollama", "qwen2.5:7b", None))
+
+    # 2) Anthropic Direct — ACM-namespaced key ONLY
+    acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")
+    if acm_anthropic_key:
+        candidates.append(("anthropic", "claude-sonnet-4-20250514", acm_anthropic_key))
+
+    # 3) OpenRouter — ACM-namespaced key ONLY
+    acm_openrouter_key = os.getenv("ACM_OPENROUTER_API_KEY")
+    if acm_openrouter_key:
+        candidates.append(
+            ("openrouter", "anthropic/claude-sonnet-4", acm_openrouter_key)
+        )
+
+    for provider, model_name, api_key in candidates:
+        try:
+            config: dict = {**kwargs}
+            if api_key:
+                config["api_key"] = api_key
+            model = AIFactory.create_language(
+                model_name=model_name,
+                provider=provider,
+                config=config,
+            )
+            assert isinstance(model, LanguageModel)
+            lc_model = model.to_langchain()
+            lc_model = _apply_openrouter_preferences(lc_model)
+            lc_model = _apply_ollama_extraction_settings(lc_model)
+            logger.info(f"Primary extraction model: {provider}/{model_name}")
+            return lc_model
+        except Exception as e:
+            logger.warning(
+                f"Primary extraction candidate {provider}/{model_name} failed: {e}"
+            )
+
+    return None
 
 
 async def provision_extraction_fallback_model(
