@@ -1478,10 +1478,10 @@
         "scripts/v3_building_backfill.py",
         "open_notebook/database/repository.py"
       ],
-      "techSpecFile": null,
-      "implementedDate": null,
-      "notes": "",
-      "passes": false
+      "techSpecFile": "docs/sprint-artifacts/e35-s6-v3-building-record-backfill.md",
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
     },
     {
       "id": "E35-S7",
