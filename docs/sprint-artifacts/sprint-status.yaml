@@ -506,14 +506,14 @@ development_status:
   #   sync upload, model persistence, building backfill, SSE, frontend polish
   # GitHub Issues: #84, #89, #90, #91, #92, #93, #94
   # ─────────────────────────────────────────────────────
-  epic-35: in-progress
+  epic-35: done
   e35-s1-fix-sync-upload-asyncio: done                   # 2 SP. GitHub #91. asyncio.run() in event loop → use await
   e35-s2-persist-model-defaults: done                    # 2 SP. GitHub #92. PUT /api/models/defaults → SurrealDB settings. Completed 2026-03-05.
   e35-s3-ollama-extraction-hardening: done               # 3 SP. GitHub #93. P0. format=json, num_ctx, chunking formalization. Completed 2026-03-05.
   e35-s4-anthropic-direct-provider-priority: done        # 3 SP. GitHub #94. P0. Primary path Ollama→Anthropic→OpenRouter. Completed 2026-03-05.
   e35-s5-sse-terminal-event: done                        # 2 SP. GitHub #90. SSE complete event for finished jobs. Completed 2026-03-05.
-  e35-s6-v3-building-backfill: backlog                   # 3 SP. GitHub #89. Backfill building_record for pre-V3 sources
-  e35-s7-sf-first-validation-pipeline: backlog           # 5 SP. GitHub #84. SF-first enum authority, correction loop fix. Deps: E35-S3
+  e35-s6-v3-building-backfill: done                      # 3 SP. GitHub #89. Backfill building_record for pre-V3 sources. Completed 2026-03-05.
+  e35-s7-sf-first-validation-pipeline: done               # 5 SP. GitHub #84. SF-first enum authority, correction loop fix. Completed 2026-03-05.
   e35-s8-frontend-error-handling: done                   # 2 SP. Empty states, console error cleanup, CopilotKit fix. Completed 2026-03-05.
   epic-35-retrospective: optional
 
@@ -553,18 +553,18 @@ development_status:
 # ========
 # Total Epics: 34  (+6 V3 epics: E30-E35)
 # Total Stories: 221  (176 pre-V3 + 37 V3 + 8 V3-hardening)
-# Stories Done: 201 (91%)  -- 160 pre-V3 + 37 V3 + 5 V3-hardening
+# Stories Done: 203 (92%)  -- 160 pre-V3 + 37 V3 + 8 V3-hardening (E35-S1..S8 all done)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 2 (E35-S6, E35-S7)
+# Stories Backlog: 0
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-05
 # Reconciliation note: E35 epic added (8 stories, 22 SP) for post-V3 hardening.
-# V3 core complete (37/37). E35 hardening: 7/8 stories done (E35-S1..S5, E35-S8). E35 addresses bugs from E30-S8 verification.
+# V3 core complete (37/37). E35 hardening: 8/8 stories done (E35-S1..S8 all complete). ALL V3 stories delivered (45/45, 132 SP).
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
@@ -573,8 +573,26 @@ development_status:
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (4/8).
+# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (7/8).
 # All 5 core V3 epics done. Schema freeze gate unlocked 2026-03-03. Final core story 2026-03-05.
+#
+# INFRASTRUCTURE: Self-Healing E2E Testing Workflow (2026-03-05):
+# ===============================================================
+# Implemented comprehensive E2E testing infrastructure:
+#   - Self-healing framework: tests/e2e/framework/self-healing/ (6 modules)
+#     config.ts, selector-engine.ts, state-recovery.ts, api-contract-validator.ts,
+#     evidence-collector.ts, healing-reporter.ts
+#   - Route walker: tests/e2e/framework/route-walker.ts (24 static + 4 dynamic routes)
+#   - Accessibility: tests/e2e/framework/accessibility.ts (axe-core WCAG 2.1 AA)
+#   - Fixtures: tests/support/fixtures/self-healing.ts (HealingPage, EvidenceCollector, APIContractValidator)
+#   - 7 new spec files: smoke-walker, api-contracts, settings-pages, upload-wizard,
+#     jobs-pipeline, building-detail, accessibility (56 new tests)
+#   - Tiered projects in playwright.config.ts: smoke→critical→feature→accessibility
+#   - CI workflow: tiered execution (smoke every PR, critical on merge, full nightly)
+#   - data-testid retrofit: 6 components (ItemGrid, BuildingSidebar, UploadWizard,
+#     ExtractionProgress, CommandPalette, AppSidebar)
+#   - Agent skill: .claude/skills/e2e-test/SKILL.md with agent-browser integration
+#   - Port fix: 8502→8503 across all configs
 #
 # EXTRACTION ACCURACY STATUS:
 # ===========================
