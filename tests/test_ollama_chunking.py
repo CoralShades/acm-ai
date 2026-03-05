@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from open_notebook.graphs.utils import (
+    _apply_ollama_extraction_settings,
     _ollama_split_by_budget,
     _split_content_by_char_budget,
 )
@@ -17,6 +18,7 @@ from open_notebook.graphs.utils import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_openai_model(num_ctx: int = 8192):
     """Create a real ChatOpenAI-like instance — no 'ollama' in MRO."""
@@ -54,12 +56,14 @@ def test_split_no_boundaries_within_budget():
 
 
 def test_split_no_boundaries_over_budget():
+    """Content > budget with no room boundaries -> character-based multi-chunking."""
     content = "A" * 200
     with patch("open_notebook.graphs.utils.logger") as mock_log:
         chunks = _split_content_by_char_budget(content, max_chars=100)
-    assert len(chunks) == 1
+    assert len(chunks) == 2
     assert len(chunks[0]) == 100
-    mock_log.warning.assert_called_once()
+    assert len(chunks[1]) == 100
+    mock_log.info.assert_called()
 
 
 def test_split_two_rooms_each_fits_separately():
@@ -176,3 +180,48 @@ def test_env_override_small_fits_all(monkeypatch):
     result = _ollama_split_by_budget(content, model)
     assert len(result) == 1
     assert result[0] == content
+
+
+# ---------------------------------------------------------------------------
+# _apply_ollama_extraction_settings
+# ---------------------------------------------------------------------------
+
+
+class TestApplyOllamaExtractionSettings:
+    """Tests for _apply_ollama_extraction_settings() -- AC1, AC2, AC5."""
+
+    def test_sets_format_json_on_ollama(self):
+        """AC1: format=json set on Ollama models."""
+        model = _make_ollama_model(num_ctx=8192)
+        result = _apply_ollama_extraction_settings(model)
+        assert getattr(result, "format", None) == "json"
+
+    def test_sets_num_ctx_default(self):
+        """AC2: num_ctx raised to 32768 when lower."""
+        model = _make_ollama_model(num_ctx=8192)
+        result = _apply_ollama_extraction_settings(model)
+        assert getattr(result, "num_ctx", None) == 32768
+
+    def test_num_ctx_env_override(self, monkeypatch):
+        """AC2: OLLAMA_NUM_CTX env var overrides default 32768."""
+        monkeypatch.setenv("OLLAMA_NUM_CTX", "16384")
+        model = _make_ollama_model(num_ctx=8192)
+        result = _apply_ollama_extraction_settings(model)
+        assert getattr(result, "num_ctx", None) == 16384
+
+    def test_num_ctx_not_lowered(self):
+        """AC2: num_ctx is NOT lowered if already higher than target."""
+        model = _make_ollama_model(num_ctx=65536)
+        result = _apply_ollama_extraction_settings(model)
+        assert getattr(result, "num_ctx", None) == 65536
+
+    def test_non_ollama_model_unchanged(self):
+        """AC5: Non-Ollama models bypass all Ollama settings."""
+        model = _make_openai_model(num_ctx=8192)
+        original_num_ctx = model.num_ctx
+        result = _apply_ollama_extraction_settings(model)
+        assert result is model  # same object returned
+        assert (
+            not hasattr(result, "format") or getattr(result, "format", None) != "json"
+        )
+        assert getattr(result, "num_ctx", None) == original_num_ctx
