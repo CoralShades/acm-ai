@@ -182,6 +182,61 @@ export function useExtractionProgress(sourceId: string): ExtractionProgress {
       }
     }
 
+    // E35-S5: Handle the named 'done' event emitted by the backend on terminal status.
+    // Without this, a completed job's terminal event is silently ignored because
+    // eventSource.onmessage only fires for unnamed (no "event:" prefix) SSE messages.
+    eventSource.addEventListener('done', (e: MessageEvent) => {
+      if (sseTimeoutRef.current) {
+        clearTimeout(sseTimeoutRef.current)
+        sseTimeoutRef.current = null
+      }
+
+      try {
+        const payload: { status: string } = JSON.parse(e.data)
+
+        if (payload.status === 'completed' || payload.status === 'partial') {
+          setPhase('completed')
+          sessionStorage.removeItem(sessionKey)
+          eventSource.close()
+
+          queryClient.invalidateQueries({ queryKey: ['acm', 'records', sourceId] })
+          queryClient.invalidateQueries({ queryKey: ACM_QUERY_KEYS.stats(sourceId) })
+
+          if (toastControllerRef.current) {
+            toastControllerRef.current.complete('Extraction complete', 'Done')
+            toastControllerRef.current = null
+          }
+        } else if (payload.status === 'failed') {
+          setPhase('failed')
+          setErrorMessage('Extraction failed')
+          sessionStorage.removeItem(sessionKey)
+          eventSource.close()
+
+          if (toastControllerRef.current) {
+            toastControllerRef.current.fail('Extraction failed', 'Extraction failed')
+            toastControllerRef.current = null
+          }
+        }
+      } catch {
+        eventSource.close()
+      }
+    })
+
+    // E35-S5: Handle named 'error' event from backend (e.g. not_found after max polls).
+    // Distinct from the native onerror which fires on network-level errors.
+    eventSource.addEventListener('error', (e: Event) => {
+      const msgEvent = e as MessageEvent
+      if (eventSource.readyState === EventSource.OPEN && msgEvent.data) {
+        try {
+          const payload: { status: string } = JSON.parse(msgEvent.data)
+          if (payload.status === 'not_found') {
+            fallbackToPollingRef.current = true
+          }
+        } catch { /* ignore malformed payload */ }
+        eventSource.close()
+      }
+    })
+
     eventSource.onerror = () => {
       console.error('[ExtractionProgress] SSE connection error, falling back to polling')
       fallbackToPollingRef.current = true
