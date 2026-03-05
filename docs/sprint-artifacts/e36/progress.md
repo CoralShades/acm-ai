@@ -41,3 +41,23 @@
   - 10 screenshots captured as evidence in docs/sprint-artifacts/e36/evidence/e36-s3/
   - npm run build passes
 - **Next**: E36-S4 (Ollama Multi-Model Benchmark)
+
+## 2026-03-05 — E36-S4: Ollama Multi-Model Benchmark
+
+- **Status**: DONE
+- **What completed**:
+  - Created benchmark script `scripts/benchmark_ollama.py` with dual completion detection
+  - Registered mistral:7b model in the system (was missing)
+  - Executed 12 benchmark runs (6 models x 2 PDFs): 5 completed, 7 timed out
+  - Discovered extraction_progress status bug (Finding 012) — pipeline logger doesn't write terminal status
+  - Discovered Alexander field misalignment (Finding 013) — room_name contains material descriptions
+  - Reconfirmed correction stage JSON failure (Finding 014) — format="json" not applied to correction LLM
+  - Identified qwen2.5:7b as best Ollama model (Finding 015): fastest, highest extraction rate
+  - Created 12 per-run detail files + summary.md + raw_results.json in benchmark-results/
+  - Log sentinel report at evidence/log-sentinel-e36s4.md
+  - Updated findings.md with 4 new findings (012-015)
+- **Key metrics**:
+  - Best model: qwen2.5:7b (64.5% Broadmeadows, 86.0% Alexander extraction rate)
+  - Worst: llama3.1:8b (9.7% Broadmeadows, timeout Alexander)
+  - Average extraction time (completed): 167s (qwen2.5:7b) to 403s (llama3.1:8b)
+- **Next**: E36-S5 (Functional Verification)

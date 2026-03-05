@@ -1587,7 +1587,9 @@
       "storyType": "verification",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["E36-S1"],
+      "dependencies": [
+        "E36-S1"
+      ],
       "acceptanceCriteria": [
         "AC1: Each E35 fix (S1-S8) browser-tested with screenshot evidence",
         "AC2: Sync upload completes without asyncio error",
@@ -1618,7 +1620,9 @@
       "storyType": "testing",
       "complexity": "simple",
       "priority": "P1",
-      "dependencies": ["E36-S1"],
+      "dependencies": [
+        "E36-S1"
+      ],
       "acceptanceCriteria": [
         "AC1: DYNAMIC_ROUTES has 12 entries (was 4)",
         "AC2: smoke-walker spec runs successfully",
@@ -1644,7 +1648,9 @@
       "storyType": "verification",
       "complexity": "complex",
       "priority": "P1",
-      "dependencies": ["E36-S2"],
+      "dependencies": [
+        "E36-S2"
+      ],
       "acceptanceCriteria": [
         "AC1: 12 extraction runs completed (6 models x 2 PDFs)",
         "AC2: Each run compared against ground truth",
@@ -1658,7 +1664,10 @@
         "tests/e2e/fixtures/samps/broadmeadows-expected-results.json",
         "docs/samplePDF/Alexander_GroundTruth.csv"
       ],
-      "notes": "Backlog"
+      "notes": "Completed",
+      "passes": true,
+      "implementedDate": "2026-03-05",
+      "techSpecFile": "docs/sprint-artifacts/e36-s4-ollama-multi-model-benchmark.md"
     },
     {
       "id": "E36-S5",
@@ -1670,7 +1679,9 @@
       "storyType": "verification",
       "complexity": "complex",
       "priority": "P1",
-      "dependencies": ["E36-S2"],
+      "dependencies": [
+        "E36-S2"
+      ],
       "acceptanceCriteria": [
         "AC1: Dashboard stats cards show real counts",
         "AC2: Upload wizard completes full workflow",
@@ -1696,7 +1707,9 @@
       "storyType": "verification",
       "complexity": "moderate",
       "priority": "P2",
-      "dependencies": ["E36-S2"],
+      "dependencies": [
+        "E36-S2"
+      ],
       "acceptanceCriteria": [
         "AC1: All 36 routes audited at 3 viewports",
         "AC2: Loading/empty/error states verified",
@@ -1720,7 +1733,10 @@
       "storyType": "review",
       "complexity": "moderate",
       "priority": "P2",
-      "dependencies": ["E36-S2", "E36-S4"],
+      "dependencies": [
+        "E36-S2",
+        "E36-S4"
+      ],
       "acceptanceCriteria": [
         "AC1: Adversarial review of all 8 E35 fixes",
         "AC2: Benchmark results reviewed for data quality",
@@ -1743,7 +1759,14 @@
       "storyType": "documentation",
       "complexity": "simple",
       "priority": "P2",
-      "dependencies": ["E36-S2", "E36-S3", "E36-S4", "E36-S5", "E36-S6", "E36-S7"],
+      "dependencies": [
+        "E36-S2",
+        "E36-S3",
+        "E36-S4",
+        "E36-S5",
+        "E36-S6",
+        "E36-S7"
+      ],
       "acceptanceCriteria": [
         "AC1: prd.json updated with final E36 story statuses",
         "AC2: sprint-status.yaml updated",

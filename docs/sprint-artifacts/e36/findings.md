@@ -131,3 +131,47 @@ Each finding follows:
 - **Description**: E35-S1 asyncio.run() fix remains confirmed holding. No asyncio.run() errors observed in the E36-S3 window (14:00–16:00) or in any of today's production log entries. No Python tracebacks, no unhandled exceptions, no 500 HTTP responses from the API layer. The API initialized cleanly at the 06:56 restart and remained stable throughout the session.
 - **Evidence**: `D:/ailocal/acm-ai/docs/sprint-artifacts/e36/evidence/log-sentinel-e36s3.md` section 4 and 7
 - **Recommendation**: No action needed. Continue monitoring across E36-S4 benchmark runs.
+
+---
+
+## Finding 012 — 2026-03-05
+
+- **Date**: 2026-03-05 (E36-S4 benchmark run)
+- **Category**: benchmark
+- **Severity**: BLOCKER
+- **Description**: The `extraction_progress` SurrealDB table does NOT reliably update to "completed" status after the worker finishes extraction. 7 of 12 benchmark runs "timed out" at 600s despite the worker completing the extraction and saving records. The pipeline logger writes initial "running" status but fails to write the terminal "completed" status for most runs. This makes the polling-based completion detection unreliable.
+- **Evidence**: `docs/sprint-artifacts/e36/benchmark-results/summary.md`, benchmark script output
+- **Recommendation**: Debug pipeline logger terminal status write in `open_notebook/extractors/pipeline_logger.py`. Check if the graph's final node correctly invokes `stage_exit` with terminal status. Consider adding a worker-side status update as fallback.
+
+---
+
+## Finding 013 — 2026-03-05
+
+- **Date**: 2026-03-05 (E36-S4 benchmark run)
+- **Category**: benchmark
+- **Severity**: CONCERN
+- **Description**: All Alexander PDF extraction runs show 0% record recall despite models extracting 33-42 records (vs 43 ground truth). Root cause: the extraction places material/product descriptions in the `room_name` field instead of actual room names. Example: extracted `room_name="Infill Panels - Flat Cement Sheeting"` vs ground truth `room_name="Shower Room"`. The fuzzy matching cannot pair records when the primary matching field is fundamentally wrong.
+- **Evidence**: `docs/sprint-artifacts/e36/benchmark-results/summary.md`, Alexander ground truth CSV vs API `GET /api/acm/records?source_id=source:ubbsh2i0b6ypy64vs1hh`
+- **Recommendation**: Fix room_name extraction in the ACM extraction prompt to distinguish room/location names from material descriptions. Consider adding a separate `location_detail` field for material-specific location info.
+
+---
+
+## Finding 014 — 2026-03-05
+
+- **Date**: 2026-03-05 (E36-S4 benchmark run)
+- **Category**: benchmark
+- **Severity**: CONCERN
+- **Description**: Correction stage fails 100% for all Ollama models tested. The `format="json"` setting (E35-S3 fix) is applied to the extraction LLM call but NOT to the correction LLM call. All correction attempts return empty JSON bodies (`Expecting value: line 1 column 1 (char 0)`). This means validated field corrections never succeed with Ollama.
+- **Evidence**: `docs/sprint-artifacts/e36/evidence/log-sentinel-e36s4.md`, worker.log correction failure entries
+- **Recommendation**: Apply `_apply_ollama_extraction_settings()` to the correction LLM call in `acm_extraction.py:_llm_correct_records`. Reconfirms Finding 003/008.
+
+---
+
+## Finding 015 — 2026-03-05
+
+- **Date**: 2026-03-05 (E36-S4 benchmark run)
+- **Category**: benchmark
+- **Severity**: INFO
+- **Description**: qwen2.5:7b is the best-performing Ollama model for ACM extraction. It was the only model to complete both PDFs within 600s timeout. Broadmeadows: 20/31 records (64.5%) in 252s. Alexander: 37/43 records (86.0%) in 82s. Fastest average time across all models (167s). llama3.1:8b extracted fewer records (3 for Broadmeadows) and was slower (403s). mistral:7b showed promise for Alexander (~42 detected) but timed out for Broadmeadows.
+- **Evidence**: `docs/sprint-artifacts/e36/benchmark-results/summary.md`
+- **Recommendation**: Set qwen2.5:7b as the default Ollama extraction model. Consider increasing timeout to 900s for production to accommodate larger PDFs.

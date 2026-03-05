@@ -2,11 +2,11 @@
 
 ## Reboot Check (read this FIRST every session)
 
-- **Last completed milestone**: E36-S3 (Route/Coverage Gap Fixes)
-- **Current active task**: None — ready for E36-S4
+- **Last completed milestone**: E36-S4 (Ollama Multi-Model Benchmark)
+- **Current active task**: None — ready for E36-S5
 - **Blockers**: None known
-- **Last modified files**: `docs/sprint-artifacts/e36/evidence/e36-s3/`, `task_plan.md`, `progress.md`
-- **Next planned action**: E36-S4 (Ollama Multi-Model Benchmark)
+- **Last modified files**: `docs/sprint-artifacts/e36/benchmark-results/`, `task_plan.md`, `progress.md`, `findings.md`
+- **Next planned action**: E36-S5 (Functional Verification)
 
 ---
 
@@ -38,21 +38,21 @@
 - [x] Update cheat-sheet.md routes section
 - [x] Confirm 36/36 routes covered
 
-## Phase 3: Ollama Benchmark (E36-S4) — 5 SP
+## Phase 3: Ollama Benchmark (E36-S4) — 5 SP — DONE
 
-- [ ] qwen2.5:7b x Broadmeadows
-- [ ] qwen2.5:7b x Alexander
-- [ ] llama3.1:8b x Broadmeadows
-- [ ] llama3.1:8b x Alexander
-- [ ] mistral:7b x Broadmeadows
-- [ ] mistral:7b x Alexander
-- [ ] qwen3:32b x Broadmeadows
-- [ ] qwen3:32b x Alexander
-- [ ] qwen2.5:32b x Broadmeadows
-- [ ] qwen2.5:32b x Alexander
-- [ ] phi4:latest x Broadmeadows
-- [ ] phi4:latest x Alexander
-- [ ] Write summary.md with comparison table
+- [x] qwen2.5:7b x Broadmeadows (20 records, 252s)
+- [x] qwen2.5:7b x Alexander (37 records, 82s)
+- [x] llama3.1:8b x Broadmeadows (3 records, 403s)
+- [x] llama3.1:8b x Alexander (timeout, 613s)
+- [x] mistral:7b x Broadmeadows (timeout, 613s)
+- [x] mistral:7b x Alexander (~42 records, timeout 616s)
+- [x] qwen3:32b x Broadmeadows (~7 records, timeout 616s)
+- [x] qwen3:32b x Alexander (~33 records, timeout 616s)
+- [x] qwen2.5:32b x Broadmeadows (timeout, 613s)
+- [x] qwen2.5:32b x Alexander (35 records, 238s)
+- [x] phi4:14b x Broadmeadows (timeout, 613s)
+- [x] phi4:14b x Alexander (35 records, 82s)
+- [x] Write summary.md with comparison table
 
 ## Phase 4: Functional + UX (E36-S5 + E36-S6) — 7 SP
 
