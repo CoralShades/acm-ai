@@ -731,6 +731,18 @@ input[type="radio"]:focus-visible {
 }
 
 /* ========================================
+   COPILOTKIT DEV INSPECTOR OVERRIDE (E35-S8)
+   Prevent floating dev tools from blocking user interactions.
+   ======================================== */
+[data-copilotkit-dev-console],
+.copilotkit-dev-console,
+[class*="CopilotDevConsole"] {
+  pointer-events: none !important;
+  opacity: 0 !important;
+  z-index: -1 !important;
+}
+
+/* ========================================
    ACCESSIBILITY: SKIP TO CONTENT LINK
    ======================================== */
 

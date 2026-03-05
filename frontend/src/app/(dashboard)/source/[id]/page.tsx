@@ -51,7 +51,7 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
     totalBuildings: buildings.length,
   })
 
-  // Validation summary for Fix All + Export guard
+  // Validation summary for Fix All + Export guard (skip when no buildings)
   const { data: validationSummary } = useValidationSummary(sourceId)
   const bulkFix = useBulkFix()
 

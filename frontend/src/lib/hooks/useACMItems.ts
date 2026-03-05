@@ -36,6 +36,8 @@ export function useValidationSummary(sourceId: string) {
     queryFn: () => acmApi.getValidationSummary(sourceId),
     enabled: !!sourceId,
     staleTime: 30 * 1000,
+    // Limit retries to avoid console error noise for sources with no buildings (E35-S8)
+    retry: 1,
   })
 }
 

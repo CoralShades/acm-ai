@@ -11,5 +11,7 @@ export function useBuildings(sourceId: string) {
     queryFn: () => acmApi.listBuildings(sourceId),
     enabled: !!sourceId,
     staleTime: 30 * 1000,
+    // Limit retries to avoid console error noise for sources with no building data (E35-S8)
+    retry: 1,
   })
 }
