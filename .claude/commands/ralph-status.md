@@ -7,6 +7,12 @@ This is a read-only command that parses `prd.json` and displays progress.
 ### 1. Read prd.json
 Read `prd.json` from the project root. If it doesn't exist, report: "No prd.json found. Run `/ralph-bridge` first to generate it."
 
+**IMPORTANT — Python encoding on Windows**: Always open prd.json with `encoding='utf-8'` to avoid cp1252 UnicodeDecodeError. Likewise when writing output, use `errors='replace'` or ensure UTF-8 stdout.
+
+**Data types in prd.json**:
+- `sprints` is an **integer** (sprint count), not a dict
+- `gates` is a **list** of gate objects (each with `id`, `unlocked`, `triggerStory`, `blocksEpics`), not a dict — iterate with `for gate in gates`, not `gates.items()`
+
 ### 2. Calculate Progress
 
 Count:
@@ -24,7 +30,7 @@ For each gate:
 
 ### 4. Sprint Progress
 
-Group stories by sprint (V3-1 through V3-7):
+Group stories by their `sprint` field (V3-1 through V3-N, where N = `sprints` integer from prd.json):
 - Show done/total per sprint
 - Show SP completed/total per sprint
 
@@ -32,33 +38,31 @@ Group stories by sprint (V3-1 through V3-7):
 
 Find the next story to work on using priority rules:
 1. Sprint order (V3-1 first, then V3-2, etc.)
-2. Within a sprint: story points ascending (small wins first)
+2. Within a sprint: P0 first, then P1, then P2; within same priority: story points ascending
 3. All dependencies satisfied (story deps + gate deps)
+4. Stories with unsatisfied `dependencies` (where dep story `passes=false`) are blocked
 
 ### 6. Display Report
 
 ```
-╔══════════════════════════════════════════╗
-║         Ralph V3 Progress Report         ║
-╠══════════════════════════════════════════╣
-║ Stories: {done}/33 done ({pct}%)         ║
-║ Story Points: {sp_done}/97 completed     ║
-║ Current Sprint: V3-{N}                   ║
-╠══════════════════════════════════════════╣
-║ GATES                                    ║
-║ ○ SCHEMA_FREEZE    — {status} (E30-S6)   ║
-║ ○ EXTRACTION_COMPLETE — {status} (E31-S6)║
-║ ○ AI_COMPLETE      — {status} (E32-S5)   ║
-║ ○ UI_COMPLETE      — {status} (E33-S8)   ║
-╠══════════════════════════════════════════╣
-║ SPRINTS                                  ║
-║ V3-1: {done}/{total} ({sp} SP)           ║
-║ V3-2: {done}/{total} ({sp} SP)           ║
-║ ...                                      ║
-╠══════════════════════════════════════════╣
-║ NEXT: {story_id} — {title} ({sp} SP)     ║
-║ Blocked: {N} stories waiting on deps     ║
-╚══════════════════════════════════════════╝
+╔══════════════════════════════════════════════╗
+║         Ralph V3 Progress Report             ║
+╠══════════════════════════════════════════════╣
+║ Stories: {done}/{total} done ({pct}%)        ║
+║ Story Points: {sp_done}/{sp_total} completed ║
+║ Current Sprint: V3-{N}                       ║
+╠══════════════════════════════════════════════╣
+║ GATES                                        ║
+║  (iterate gates list — show each gate's      ║
+║   id, unlocked status, and triggerStory)     ║
+╠══════════════════════════════════════════════╣
+║ SPRINTS                                      ║
+║  (iterate all sprints found in stories)      ║
+║  V3-N: {done}/{total} ({sp} SP)              ║
+╠══════════════════════════════════════════════╣
+║ NEXT: {story_id} — {title} ({sp} SP)         ║
+║ Blocked: {N} stories waiting on deps         ║
+╚══════════════════════════════════════════════╝
 ```
 
 ### 7. Blocked Stories (if any)

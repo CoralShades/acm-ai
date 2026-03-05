@@ -245,7 +245,7 @@ export function ItemGrid({ sourceId, buildingId, quickFilterText, enableGrouping
   const isLoading = isLoadingItems || isLoadingSchema
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-testid="item-grid">
       {/* Record count bar */}
       <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground shrink-0">
         {visibleCount !== null && visibleCount !== totalCount ? (

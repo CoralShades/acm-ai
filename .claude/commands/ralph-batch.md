@@ -20,7 +20,7 @@ Options:
 **Behavior**: Runs `/ralph-run` for each eligible story in sequence. After each story completes, checks if the next story is still eligible (deps may have changed). Stops after N stories or when no eligible stories remain.
 
 ### Steps
-1. Read `prd.json`
+1. Read `prd.json` (always use `encoding='utf-8'`)
 2. Find all eligible stories (same logic as `/ralph-run` auto-select)
 3. Apply filters (--max-sp, --sprint)
 4. Take first N stories

@@ -90,7 +90,7 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
 
   if (isLoading) {
     return (
-      <div className="w-72 border-r flex flex-col overflow-hidden shrink-0 bg-background">
+      <div className="w-72 border-r flex flex-col overflow-hidden shrink-0 bg-background" data-testid="building-sidebar">
         <div className="p-4 border-b">
           <div className="h-5 w-32 rounded bg-muted animate-pulse" />
         </div>
@@ -105,7 +105,7 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
 
   if (isError) {
     return (
-      <div className="w-72 border-r flex flex-col overflow-hidden shrink-0 bg-background">
+      <div className="w-72 border-r flex flex-col overflow-hidden shrink-0 bg-background" data-testid="building-sidebar">
         <div className="p-4 border-b">
           <h2 className="text-sm font-semibold">Buildings</h2>
         </div>
@@ -119,7 +119,7 @@ export function BuildingSidebar({ sourceId }: BuildingSidebarProps) {
   const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId) ?? null
 
   return (
-    <div className="w-72 border-r flex flex-col overflow-hidden shrink-0 bg-background">
+    <div className="w-72 border-r flex flex-col overflow-hidden shrink-0 bg-background" data-testid="building-sidebar">
       {/* Sidebar header */}
       <div className="p-4 border-b shrink-0">
         <h2 className="text-sm font-semibold">Buildings</h2>

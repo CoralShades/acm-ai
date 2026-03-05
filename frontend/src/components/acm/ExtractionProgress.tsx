@@ -208,7 +208,7 @@ export function ExtractionProgress({ sourceId, buildings }: ExtractionProgressPr
   const progressPercent = Math.round((completedStages / PIPELINE_STAGE_ORDER.length) * 100)
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full overflow-y-auto" data-testid="extraction-progress">
       <div className="max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
 
         {/* Page header with overall progress percentage */}

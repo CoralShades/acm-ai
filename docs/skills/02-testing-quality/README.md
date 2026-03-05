@@ -37,3 +37,17 @@ Use this doc in prompts:
 - OpenCode: `@docs/skills/02-testing-quality/README.md Use verification-before-completion to run final checks before closing this task.`
 - Claude: `@docs/skills/02-testing-quality/README.md Use verification-before-completion to run final checks before closing this task.`
 - Codex: `@docs/skills/02-testing-quality/README.md Use verification-before-completion to run final checks before closing this task.`
+
+### `e2e-test`
+- Use for: self-healing E2E test execution with autonomous failure recovery, selector healing, API contract validation, and evidence collection.
+- Docs: [E2E Testing Guide](../../e2e-testing/README.md)
+- OpenCode: `@docs/skills/02-testing-quality/README.md Use the e2e-test skill to run self-healing E2E tests for the ACM pipeline.`
+- Claude: `@docs/skills/02-testing-quality/README.md Use the e2e-test skill to run self-healing E2E tests for the ACM pipeline.`
+- Codex: `@docs/skills/02-testing-quality/README.md Use the e2e-test skill to run self-healing E2E tests for the ACM pipeline.`
+
+### `agent-browser`
+- Use for: browser automation CLI for AI agents — navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps.
+- Docs: [Agent-Browser Patterns](../../e2e-testing/agent-browser.md)
+- OpenCode: `@docs/skills/02-testing-quality/README.md Use the agent-browser skill to debug the upload wizard flow interactively.`
+- Claude: `@docs/skills/02-testing-quality/README.md Use the agent-browser skill to debug the upload wizard flow interactively.`
+- Codex: `@docs/skills/02-testing-quality/README.md Use the agent-browser skill to debug the upload wizard flow interactively.`

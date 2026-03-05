@@ -8,7 +8,7 @@ Reset a completed story to re-run it through the Ralph loop.
 ## Steps
 
 ### 1. Read State
-Read `prd.json`. Find the story by ID.
+Read `prd.json` (always use `encoding='utf-8'`). Find the story by ID.
 
 If `passes` is not `true`, abort: "Story {ID} is not complete. Nothing to reset."
 

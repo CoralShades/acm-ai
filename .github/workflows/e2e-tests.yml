@@ -3,7 +3,11 @@ name: E2E Tests
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'  # Nightly at 6am UTC
 
 jobs:
   e2e:
@@ -25,11 +29,7 @@ jobs:
             -e SURREAL_EXPERIMENTAL_GRAPHQL=true \
             surrealdb/surrealdb:v2 \
             start --log info --user root --pass root memory
-
-          # Wait for SurrealDB to be ready
-          echo "Waiting for SurrealDB to start..."
           timeout 30 bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 1; done'
-          echo "SurrealDB is ready!"
 
       # ============================================
       # Python Backend Setup
@@ -77,18 +77,13 @@ jobs:
       # ============================================
       - name: Create .env file
         run: |
-          cat > .env << EOF
-          # API Configuration
+          cat > .env << 'EOF'
           API_URL=http://localhost:5055
-
-          # SurrealDB Connection
           SURREAL_URL=ws://localhost:8000/rpc
           SURREAL_USER=root
           SURREAL_PASSWORD=root
           SURREAL_NAMESPACE=open_notebook
           SURREAL_DATABASE=development
-
-          # Required for E2E tests
           SURREAL_COMMANDS_RETRY_ENABLED=true
           SURREAL_COMMANDS_RETRY_MAX_ATTEMPTS=3
           SURREAL_COMMANDS_MAX_TASKS=5
@@ -99,75 +94,84 @@ jobs:
           uv run run_api.py &
           API_PID=$!
           echo "API_PID=$API_PID" >> $GITHUB_ENV
-
-          # Wait for API to be ready
-          echo "Waiting for API to start on port 5055..."
           timeout 60 bash -c 'until curl -f http://localhost:5055/health 2>/dev/null; do sleep 2; done'
-          echo "Backend API is ready!"
 
       - name: Start Frontend
         run: |
           cd frontend && npm run dev &
           FRONTEND_PID=$!
           echo "FRONTEND_PID=$FRONTEND_PID" >> $GITHUB_ENV
-
-          # Wait for frontend to be ready
-          echo "Waiting for frontend to start on port 8502..."
-          timeout 120 bash -c 'until curl -f http://localhost:8502 2>/dev/null; do sleep 2; done'
-          echo "Frontend is ready!"
+          timeout 120 bash -c 'until curl -f http://localhost:8503 2>/dev/null; do sleep 2; done'
 
       # ============================================
-      # Run E2E Tests
+      # Tier 1: Smoke Tests (every PR)
       # ============================================
-      - name: Run Playwright E2E tests
-        run: npx playwright test
+      - name: 'Tier 1: Smoke Tests'
+        run: npx playwright test --project=smoke
         env:
           CI: true
-          BASE_URL: http://localhost:8502
+          BASE_URL: http://localhost:8503
 
-      # ============================================
-      # Upload Artifacts (Always run, even on failure)
-      # ============================================
-      - name: Upload Playwright test results
+      - name: Upload smoke results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results
+          name: smoke-results
           path: test-results/
           retention-days: 7
 
-      - name: Upload Playwright HTML report
-        if: always()
+      # ============================================
+      # Tier 2: Critical Tests (merges to main)
+      # ============================================
+      - name: 'Tier 2: Critical Tests'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        run: npx playwright test --project=critical
+        env:
+          CI: true
+          BASE_URL: http://localhost:8503
+
+      - name: Upload critical results
+        if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: critical-results
+          path: test-results/
           retention-days: 7
 
-      - name: Upload screenshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-screenshots
-          path: test-results/**/*.png
-          retention-days: 7
-          if-no-files-found: ignore
+      # ============================================
+      # Tier 3: Full Suite (nightly + manual)
+      # ============================================
+      - name: 'Tier 3: Feature & Accessibility Tests'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: npx playwright test --project=feature --project=accessibility
+        env:
+          CI: true
+          BASE_URL: http://localhost:8503
 
-      - name: Upload videos
-        if: failure()
+      - name: Upload full results
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-videos
-          path: test-results/**/*.webm
-          retention-days: 7
+          name: full-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+      - name: Upload healing report
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: healing-report
+          path: test-results/healing-report.json
+          retention-days: 14
           if-no-files-found: ignore
 
       # ============================================
-      # Cleanup (Optional - GitHub Actions cleans up automatically)
+      # Cleanup
       # ============================================
       - name: Stop services
         if: always()
         run: |
-          # Kill frontend and API processes if they're still running
           [ -n "$FRONTEND_PID" ] && kill $FRONTEND_PID || true
           [ -n "$API_PID" ] && kill $API_PID || true

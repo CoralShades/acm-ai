@@ -21,6 +21,7 @@ dotenvConfig({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: ['**/framework/**', '**/helpers/**'],
   outputDir: './test-results',
 
   // Parallel execution
@@ -37,7 +38,7 @@ export default defineConfig({
 
   use: {
     // Base URL - matches Open Notebook frontend
-    baseURL: process.env.BASE_URL || 'http://localhost:8502',
+    baseURL: process.env.BASE_URL || 'http://localhost:8503',
 
     // Action/Navigation timeouts
     actionTimeout: 15 * 1000,
@@ -63,24 +64,42 @@ export default defineConfig({
   // Browser projects
   projects: [
     {
+      name: 'smoke',
+      testMatch: /smoke|route-walker/,
+      grep: /@smoke/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'critical',
+      testMatch: /upload-wizard|jobs-pipeline/,
+      grep: /@critical/,
+      dependencies: ['smoke'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'feature',
+      testMatch: /settings|building|provenance/,
+      grep: /@feature/,
+      dependencies: ['smoke'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'accessibility',
+      testMatch: /accessibility/,
+      grep: /@a11y/,
+      dependencies: ['smoke'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    // Uncomment for cross-browser testing:
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
   ],
 
   // Web server configuration (starts frontend automatically)
   webServer: {
     command: 'cd frontend && npm run dev',
-    url: 'http://localhost:8502',
+    url: 'http://localhost:8503',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

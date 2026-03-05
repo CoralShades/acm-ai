@@ -11,7 +11,7 @@ If no arguments, defaults to `show` (all gates).
 
 ## `show` — Display Gate Status
 
-Read `prd.json` and display all gates:
+Read `prd.json` (always use `encoding='utf-8'`; `gates` is a **list** of objects, not a dict). Display all gates:
 
 ```
 Ralph V3 Gates

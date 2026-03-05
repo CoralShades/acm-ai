@@ -1,6 +1,8 @@
 Generate `prd.json` from BMAD V3 planning artifacts.
 
-This command reads the V3 epic/story definitions and sprint plan, then outputs a machine-readable `prd.json` at the project root containing all 33 stories with dependency graph and 4 gate nodes.
+This command reads the V3 epic/story definitions and sprint plan, then outputs a machine-readable `prd.json` at the project root containing all stories with dependency graph and gate nodes.
+
+**IMPORTANT — Windows encoding**: Always read/write prd.json with `encoding='utf-8'`. The `gates` field is a **list** of gate objects, `sprints` is an **integer** (sprint count). Derive `totalStories` and `totalStoryPoints` dynamically from the stories array — never hardcode.
 
 ## Steps
 
@@ -140,16 +142,16 @@ HIGH risk stories (need architect guidance):
 
 ### 7. Write prd.json
 
-Write the complete JSON to `prd.json` at the project root with this top-level structure:
+Write the complete JSON to `prd.json` (with `encoding='utf-8'`) at the project root with this top-level structure:
 
 ```json
 {
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "<ISO timestamp>",
-  "totalStories": 33,
-  "totalStoryPoints": 97,
-  "sprints": 7,
+  "totalStories": "<len(stories)>",
+  "totalStoryPoints": "<sum of all storyPoints>",
+  "sprints": "<number of distinct sprints>",
   "stories": [ ... ],
   "gates": [ ... ],
   "metadata": {
@@ -163,13 +165,14 @@ Write the complete JSON to `prd.json` at the project root with this top-level st
 }
 ```
 
+Note: `totalStories`, `totalStoryPoints`, and `sprints` must be computed dynamically from the stories array — never hardcode. `sprints` is an integer (count of distinct sprint values). `gates` is a list.
+
 ### 8. Validate
 
 After writing, verify:
-- Exactly 33 stories in the `stories` array
-- Exactly 4 gates in the `gates` array
+- Story count matches `totalStories`
+- All gates referenced in story dependencies exist in `gates` list
 - E30-S1 has `dependencies: []`
-- All gate IDs referenced in story dependencies exist in `gates` array
 - No circular dependencies
 - All story IDs are unique
 - Sprint assignments cover all stories

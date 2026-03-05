@@ -8,7 +8,7 @@ Retry a blocked or failed story in the Ralph loop.
 ## Steps
 
 ### 1. Read State
-Read `prd.json`. Find the story by ID.
+Read `prd.json` (always use `encoding='utf-8'`). Find the story by ID.
 
 If the story doesn't exist, abort: "Story {ID} not found in prd.json."
 If the story already has `passes: true`, abort: "Story {ID} is already complete. Use `/ralph-reset` to re-run it."

@@ -168,7 +168,7 @@ export function UploadWizard() {
   // ─── Render helpers ───────────────────────────────────────────────────────
 
   const renderStep1 = () => (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="upload-step-1">
       <div>
         <h2 className="text-xl font-semibold mb-1">Upload SAMP Document</h2>
         <p className="text-sm text-muted-foreground">
@@ -232,7 +232,7 @@ export function UploadWizard() {
   )
 
   const renderStep2 = () => (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="upload-step-2">
       <div>
         <h2 className="text-xl font-semibold mb-1">Select Extraction Mode</h2>
         <p className="text-sm text-muted-foreground">
@@ -313,7 +313,7 @@ export function UploadWizard() {
   )
 
   const renderStep3 = () => (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="upload-step-3">
       <div>
         <h2 className="text-xl font-semibold mb-1">Confirm &amp; Start Extraction</h2>
         <p className="text-sm text-muted-foreground">
@@ -369,7 +369,7 @@ export function UploadWizard() {
   )
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-testid="upload-wizard">
       {/* Wizard step header */}
       <WizardStepHeader
         currentStep={step}

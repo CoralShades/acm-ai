@@ -7,10 +7,10 @@ Run ONE V3 story through the full BMAD cycle (SM -> Dev -> QA -> Review -> Commi
 
 ## Step 1: Read State
 
-Read `prd.json` from the project root. If missing, abort: "Run `/ralph-bridge` first."
+Read `prd.json` from the project root (**always use `encoding='utf-8'`** to avoid Windows cp1252 errors). If missing, abort: "Run `/ralph-bridge` first."
 Read `ralph-config.json` from the project root. If missing, use defaults (see `/ralph-config`).
 
-Parse the stories and gates arrays. Apply config overrides:
+Parse the stories and gates arrays. Note: `sprints` is an **integer** (count), `gates` is a **list** of objects (not a dict). Apply config overrides:
 - **Models**: Use `config.models.<phase>` for each agent spawn (default: sonnet)
 - **Phase skipping**: If `config.phases.<phase>` is false, skip that phase entirely
 - **Retry limits**: Use `config.limits.devRetries`, `qaRetries`, `reviewRetries`
@@ -172,26 +172,30 @@ Spawn the `docs-specialist` agent with:
 
 ## Step 10: Completion Check
 
-Read updated prd.json. Count stories:
-- Done (`passes === true`)
-- Remaining (`passes === false`)
-- Blocked (deps not satisfied)
-- Eligible (deps satisfied, not blocked)
+Read updated prd.json. Count stories dynamically from the `stories` array:
+- Total: `len(stories)`
+- Done: stories where `passes === true`
+- Remaining: stories where `passes === false`
+- Blocked: deps not satisfied
+- Eligible: deps satisfied, not blocked
+- Total SP: `sum(s.storyPoints for all stories)`
+- Done SP: `sum(s.storyPoints for done stories)`
 
 Report:
 ```
-╔══════════════════════════════════════════╗
-║ Story Complete: {STORY_ID} — {TITLE}     ║
-║ Progress: {done}/33 ({pct}%)             ║
-║ Next eligible: {next_id} — {next_title}  ║
-║ Blocked: {N} stories                     ║
-╚══════════════════════════════════════════╝
+╔══════════════════════════════════════════════╗
+║ Story Complete: {STORY_ID} — {TITLE}         ║
+║ Progress: {done}/{total} ({pct}%)            ║
+║ Story Points: {sp_done}/{sp_total}           ║
+║ Next eligible: {next_id} — {next_title}      ║
+║ Blocked: {N} stories                         ║
+╚══════════════════════════════════════════════╝
 ```
 
-If all 33 stories done:
+If ALL stories done (every story has `passes === true`):
 ```
 <promise>COMPLETE</promise>
-All 33 V3 stories implemented. 97 SP delivered across 7 sprints.
+All {total} stories implemented. {sp_total} SP delivered across {sprints} sprints.
 ```
 
 If all remaining stories are blocked and none are eligible:
