@@ -527,7 +527,7 @@ development_status:
   epic-36: in-progress
   e36-s1-agent-team-creation: done                        # 3 SP. Agent files, state files, prd.json, sprint-status.
   e36-s2-e35-fix-reverification: done                     # 5 SP. All 8 E35 fixes verified with code analysis + API tests + 315 unit tests.
-  e36-s3-route-coverage-gaps: backlog                     # 3 SP. Add 8 missing DYNAMIC_ROUTES, verify 36/36.
+  e36-s3-route-coverage-gaps: done                        # 3 SP. Verified 12 DYNAMIC_ROUTES, 36/36 route coverage confirmed with smoke-walker spec + screenshots.
   e36-s4-ollama-multi-model-benchmark: backlog            # 5 SP. 12 runs: 6 models x 2 PDFs vs ground truth.
   e36-s5-functional-verification: backlog                 # 5 SP. Verify all major features E2E with real data.
   e36-s6-ux-audit: backlog                                # 2 SP. 3 viewports, loading/empty/error states, data-testid.
@@ -571,7 +571,7 @@ development_status:
 # ========
 # Total Epics: 35  (+6 V3 epics: E30-E35, +1 E36 verification)
 # Total Stories: 229  (176 pre-V3 + 37 V3 + 8 V3-hardening + 8 E36-verification)
-# Stories Done: 205 (89%)  -- 160 pre-V3 + 37 V3 + 8 V3-hardening + 2 E36 (E36-S1, S2)
+# Stories Done: 206 (89%)  -- 160 pre-V3 + 37 V3 + 8 V3-hardening + 3 E36 (E36-S1, S2, S3)
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
@@ -588,11 +588,11 @@ development_status:
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
 #                  E30, E31, E32, E33, E34
-# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived), E36 (2/8 done, 6 backlog)
+# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived), E36 (3/8 done, 5 backlog)
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: COMPLETE. 37/37 core + 8/8 hardening done (100%). E36 verification in progress (2/8).
+# V3 STATUS: COMPLETE. 37/37 core + 8/8 hardening done (100%). E36 verification in progress (3/8).
 # All 5 core V3 epics done. Schema freeze gate unlocked 2026-03-03. Final core story 2026-03-05.
 #
 # INFRASTRUCTURE: Self-Healing E2E Testing Workflow (2026-03-05):

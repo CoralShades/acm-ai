@@ -109,3 +109,25 @@ Each finding follows:
 - **Description**: OpenRouter account has insufficient credits (HTTP 402 errors). Four extraction attempts failed between 00:03 and 07:18 when the fallback chain reached openrouter/anthropic/claude-sonnet-4. This blocks full benchmark runs that depend on OpenRouter as a fallback provider.
 - **Evidence**: `D:/ailocal/acm-ai/logs/api-error.log` lines 9-17 (HTTP 402 payment required)
 - **Recommendation**: Top up OpenRouter credits before E36-S4 benchmarking, or configure benchmark runs to use Ollama+Anthropic-direct only (skip OpenRouter).
+
+---
+
+## Finding 010 — 2026-03-05
+
+- **Date**: 2026-03-05 (E36-S3 log sentinel session)
+- **Category**: functional
+- **Severity**: CONCERN
+- **Description**: Test pipeline runs (pytest and manual test invocations) write their logs — including `AsyncMock` errors and `PROVIDER MISMATCH` warnings — to the shared production log files `logs/api-error.log` and `logs/api.log`. Today's scan found 24 `AsyncMock` occurrences and 203 `PROVIDER MISMATCH` entries, the vast majority originating from test runs (source IDs like `source:test_e2e_123`). This contaminates production logs and makes automated error pattern detection unreliable.
+- **Evidence**: `D:/ailocal/acm-ai/docs/sprint-artifacts/e36/evidence/log-sentinel-e36s3.md` section 3.1 and 3.5
+- **Recommendation**: Configure pytest log handlers (or a `conftest.py` fixture) to redirect log output to a separate `logs/api-test.log` file, or suppress file handler output during test runs. No functional impact on extraction correctness.
+
+---
+
+## Finding 011 — 2026-03-05
+
+- **Date**: 2026-03-05 (E36-S3 log sentinel session)
+- **Category**: E35-verify
+- **Severity**: INFO
+- **Description**: E35-S1 asyncio.run() fix remains confirmed holding. No asyncio.run() errors observed in the E36-S3 window (14:00–16:00) or in any of today's production log entries. No Python tracebacks, no unhandled exceptions, no 500 HTTP responses from the API layer. The API initialized cleanly at the 06:56 restart and remained stable throughout the session.
+- **Evidence**: `D:/ailocal/acm-ai/docs/sprint-artifacts/e36/evidence/log-sentinel-e36s3.md` section 4 and 7
+- **Recommendation**: No action needed. Continue monitoring across E36-S4 benchmark runs.

@@ -28,3 +28,16 @@
   - Unit tests: 315 passed, 1 skipped across all E35-related test files
   - All 8 evidence files created in docs/sprint-artifacts/e36/evidence/
 - **Next**: E36-S3 (route coverage gaps)
+
+## 2026-03-05 — E36-S3: Route/Coverage Gap Fixes
+
+- **Status**: DONE
+- **What completed**:
+  - Verified 12 DYNAMIC_ROUTES entries in route-walker.ts (AC1)
+  - Updated smoke-walker.spec.ts with static + dynamic route tests and 36/36 coverage assertion (AC2)
+  - Confirmed 36/36 route coverage: 24 static + 12 dynamic (AC3)
+  - Updated cheat-sheet.md Dynamic Routes section from 4 to 12 entries (AC4)
+  - All static routes return 200/307, dynamic routes work in browser with real entity IDs
+  - 10 screenshots captured as evidence in docs/sprint-artifacts/e36/evidence/e36-s3/
+  - npm run build passes
+- **Next**: E36-S4 (Ollama Multi-Model Benchmark)

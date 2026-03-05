@@ -527,3 +527,18 @@ CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 ```
 
 Agent definitions in `.claude/agents/`. The `orchestrator` reads stories from `docs/sprint-artifacts/` and delegates to specialists based on the routing table above.
+
+#### E36 Verification Team
+
+The `e36-lead` agent orchestrates E2E verification, benchmarking, and auditing:
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `e36-lead` | sonnet | Pure orchestrator — delegates all work, manages state files |
+| `e36-browser-tester` | sonnet | UI testing via agent-browser CLI |
+| `e36-log-sentinel` | sonnet | Log monitoring during extraction runs |
+| `e36-devils-advocate` | sonnet | Adversarial code/test review |
+| `e36-bmad-scribe` | haiku | BMAD documentation updates |
+| `e36-ux-auditor` | sonnet | Visual/responsive/a11y audit |
+
+State files: `docs/sprint-artifacts/e36/` (task_plan.md, progress.md, findings.md)

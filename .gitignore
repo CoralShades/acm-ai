@@ -43,6 +43,7 @@ share/python-wheels/
 # PyInstaller
 *.manifest
 *.spec
+!*.spec.ts
 
 # Installer logs
 pip-log.txt
@@ -138,6 +139,7 @@ docs/custom_gpt
 doc_exports/
 
 specs/
+!tests/e2e/specs/
 
 # Claude Code - keep commands and rules tracked, ignore local settings
 .claude/sessions/

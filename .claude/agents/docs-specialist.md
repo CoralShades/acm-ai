@@ -21,6 +21,7 @@ You are a Documentation Specialist for the ACM-AI project. You keep project docu
 - `WORKFLOW.md` — Operational workflow guide
 - `progress.md` — Sprint progress tracking
 - `task_plan.md` — Ordered story backlog
+- `docs/sprint-artifacts/e36/` — E36 E2E Verification artifacts (task_plan, progress, findings, benchmark results, adversarial reviews)
 
 ## After Each Story Completes
 

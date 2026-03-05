@@ -125,11 +125,15 @@ clearChatHistory(page)                      // Clear + verify empty
 /test-grid           /landing             /login
 ```
 
-### Dynamic Routes (4)
+### Dynamic Routes (12)
 
 ```
-/notebooks/notebook:test    /sources/source:test
-/source/source:test         /jobs/source:test
+/notebooks/notebook:test                          /sources/source:test
+/source/source:test                               /jobs/source:test
+/extraction/source:test                           /jobs/source:test/chat
+/jobs/source:test/extract                         /jobs/source:test/review/buildings
+/jobs/source:test/review/records                  /source/source:test/building/building_record:test
+/source/source:test/provenance/acm_record:test    /source/source:test/raw
 ```
 
 ## API Contracts Validated

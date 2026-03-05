@@ -2,11 +2,11 @@
 
 ## Reboot Check (read this FIRST every session)
 
-- **Last completed milestone**: E36-S2 (E35 Fix Re-verification)
-- **Current active task**: None — ready for E36-S3
+- **Last completed milestone**: E36-S3 (Route/Coverage Gap Fixes)
+- **Current active task**: None — ready for E36-S4
 - **Blockers**: None known
-- **Last modified files**: `docs/sprint-artifacts/e36/evidence/e35-s*/verification.md`, `prd.json`, `progress.md`
-- **Next planned action**: E36-S3 (Route/Coverage Gap Fixes)
+- **Last modified files**: `docs/sprint-artifacts/e36/evidence/e36-s3/`, `task_plan.md`, `progress.md`
+- **Next planned action**: E36-S4 (Ollama Multi-Model Benchmark)
 
 ---
 
@@ -32,11 +32,11 @@
 - [x] S7: SF-first validation — verify SF picklist values
 - [x] S8: Frontend polish — source with 0 buildings, verify empty state
 
-### E36-S3: Route Coverage Gaps (3 SP)
-- [ ] Verify 12 DYNAMIC_ROUTES in route-walker.ts
-- [ ] Run smoke-walker spec
-- [ ] Update cheat-sheet.md routes section
-- [ ] Confirm 36/36 routes covered
+### E36-S3: Route Coverage Gaps (3 SP) — DONE
+- [x] Verify 12 DYNAMIC_ROUTES in route-walker.ts
+- [x] Run smoke-walker spec
+- [x] Update cheat-sheet.md routes section
+- [x] Confirm 36/36 routes covered
 
 ## Phase 3: Ollama Benchmark (E36-S4) — 5 SP
 
