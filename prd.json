@@ -2,9 +2,9 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 45,
-  "totalStoryPoints": 132,
-  "sprints": 8,
+  "totalStories": 53,
+  "totalStoryPoints": 158,
+  "sprints": 9,
   "stories": [
     {
       "id": "E30-S1",
@@ -1541,6 +1541,221 @@
       "implementedDate": "2026-03-05",
       "notes": "Completed",
       "passes": true
+    },
+    {
+      "id": "E36-S1",
+      "title": "Agent Team Creation & Orchestration Setup",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 3,
+      "riskLevel": "LOW",
+      "storyType": "infrastructure",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "AC1: 6 new agent files created in .claude/agents/ with valid YAML frontmatter",
+        "AC2: 3 existing agents updated (acm-e2e-tester, qa-specialist, docs-specialist)",
+        "AC3: docs/sprint-artifacts/e36/ directory with task_plan.md, progress.md, findings.md",
+        "AC4: prd.json contains E36 epic with 8 stories",
+        "AC5: sprint-status.yaml has E36 entries",
+        "AC6: DYNAMIC_ROUTES in route-walker.ts has 12 entries",
+        "AC7: npm run build still passes",
+        "AC8: uv run ruff check . still passes"
+      ],
+      "keyFiles": [
+        ".claude/agents/e36-lead.md",
+        ".claude/agents/e36-browser-tester.md",
+        ".claude/agents/e36-log-sentinel.md",
+        ".claude/agents/e36-devils-advocate.md",
+        ".claude/agents/e36-bmad-scribe.md",
+        ".claude/agents/e36-ux-auditor.md",
+        "docs/sprint-artifacts/e36/task_plan.md",
+        "tests/e2e/framework/route-walker.ts"
+      ],
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
+    },
+    {
+      "id": "E36-S2",
+      "title": "E35 Fix Re-verification",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 5,
+      "riskLevel": "MEDIUM",
+      "storyType": "verification",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": ["E36-S1"],
+      "acceptanceCriteria": [
+        "AC1: Each E35 fix (S1-S8) browser-tested with screenshot evidence",
+        "AC2: Sync upload completes without asyncio error",
+        "AC3: Model defaults persist across API restart",
+        "AC4: Ollama extraction completes with format=json",
+        "AC5: Provider priority order verified in logs",
+        "AC6: SSE shows Complete for finished jobs",
+        "AC7: Building backfill returns data for pre-V3 sources",
+        "AC8: SF picklist values used in extracted records",
+        "AC9: Empty state shown for source with 0 buildings"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/evidence/e35-s1/",
+        "docs/sprint-artifacts/e36/progress.md"
+      ],
+      "techSpecFile": "docs/sprint-artifacts/e36-s2-e35-fix-re-verification.md",
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
+    },
+    {
+      "id": "E36-S3",
+      "title": "Route/Coverage Gap Fixes",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 3,
+      "riskLevel": "LOW",
+      "storyType": "testing",
+      "complexity": "simple",
+      "priority": "P1",
+      "dependencies": ["E36-S1"],
+      "acceptanceCriteria": [
+        "AC1: DYNAMIC_ROUTES has 12 entries (was 4)",
+        "AC2: smoke-walker spec runs successfully",
+        "AC3: 36/36 routes covered (100%)",
+        "AC4: cheat-sheet.md routes section updated"
+      ],
+      "keyFiles": [
+        "tests/e2e/framework/route-walker.ts",
+        "tests/e2e/specs/smoke-walker.spec.ts",
+        "docs/e2e-testing/cheat-sheet.md"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S4",
+      "title": "Ollama Multi-Model Benchmark",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 5,
+      "riskLevel": "HIGH",
+      "storyType": "verification",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": ["E36-S2"],
+      "acceptanceCriteria": [
+        "AC1: 12 extraction runs completed (6 models x 2 PDFs)",
+        "AC2: Each run compared against ground truth",
+        "AC3: Per-run detail files in benchmark-results/",
+        "AC4: Summary table with accuracy % per model per PDF",
+        "AC5: Log analysis per run in logs/",
+        "AC6: Best-performing model identified"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/benchmark-results/summary.md",
+        "tests/e2e/fixtures/samps/broadmeadows-expected-results.json",
+        "docs/samplePDF/Alexander_GroundTruth.csv"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S5",
+      "title": "Functional Verification of Completed Epics",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 5,
+      "riskLevel": "MEDIUM",
+      "storyType": "verification",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": ["E36-S2"],
+      "acceptanceCriteria": [
+        "AC1: Dashboard stats cards show real counts",
+        "AC2: Upload wizard completes full workflow",
+        "AC3: Extraction visible on frontend",
+        "AC4: Raw table tab shows extracted tables",
+        "AC5: PDF provenance viewer shows bbox overlays",
+        "AC6: Building sidebar + item grid show records",
+        "AC7: ACM register shows global grid",
+        "AC8: No dropped pages or missing records vs ground truth"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/evidence/functional/"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S6",
+      "title": "UI/UX Audit & Evidence Collection",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "verification",
+      "complexity": "moderate",
+      "priority": "P2",
+      "dependencies": ["E36-S2"],
+      "acceptanceCriteria": [
+        "AC1: All 36 routes audited at 3 viewports",
+        "AC2: Loading/empty/error states verified",
+        "AC3: data-testid coverage report generated",
+        "AC4: Responsive layout issues documented",
+        "AC5: UX audit report written"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/ux-audit-report.md",
+        "docs/sprint-artifacts/e36/evidence/ux-audit/"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S7",
+      "title": "Devil's Advocate Review & Hardening",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "review",
+      "complexity": "moderate",
+      "priority": "P2",
+      "dependencies": ["E36-S2", "E36-S4"],
+      "acceptanceCriteria": [
+        "AC1: Adversarial review of all 8 E35 fixes",
+        "AC2: Benchmark results reviewed for data quality",
+        "AC3: Test assertions challenged for completeness",
+        "AC4: Synthesis document with BLOCKER/CONCERN/NITPICK counts",
+        "AC5: Prioritized action items"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/adversarial-reviews/synthesis.md"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S8",
+      "title": "BMAD Documentation Closeout",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 1,
+      "riskLevel": "LOW",
+      "storyType": "documentation",
+      "complexity": "simple",
+      "priority": "P2",
+      "dependencies": ["E36-S2", "E36-S3", "E36-S4", "E36-S5", "E36-S6", "E36-S7"],
+      "acceptanceCriteria": [
+        "AC1: prd.json updated with final E36 story statuses",
+        "AC2: sprint-status.yaml updated",
+        "AC3: CLAUDE.md updated if needed",
+        "AC4: MEMORY.md updated with E36 findings",
+        "AC5: task_plan.md and progress.md finalized"
+      ],
+      "keyFiles": [
+        "prd.json",
+        "docs/sprint-artifacts/sprint-status.yaml",
+        "docs/sprint-artifacts/e36/task_plan.md",
+        "docs/sprint-artifacts/e36/progress.md"
+      ],
+      "notes": "Backlog"
     }
   ],
   "gates": [
