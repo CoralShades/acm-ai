@@ -1050,12 +1050,21 @@ class TestGraphWiring:
         assert callable(extract_records)
 
     def test_unconditional_edge_from_tag_pages(self):
-        """E29-S3 AC-1: tag_pages routes unconditionally to orchestrate."""
+        """E29-S3/E30-S9/E32-S1/S2: tag_pages -> save_intelligence -> extract_building -> extract_items -> [conditional]."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        assert ("tag_pages", "orchestrate") in edges or any(
-            e == ("tag_pages", "orchestrate") for e in edges
+        # E30-S9 inserted save_intelligence between tag_pages and orchestrate
+        assert ("tag_pages", "save_intelligence") in edges or any(
+            e == ("tag_pages", "save_intelligence") for e in edges
+        )
+        # E32-S1 inserted extract_building after save_intelligence
+        assert ("save_intelligence", "extract_building") in edges or any(
+            e == ("save_intelligence", "extract_building") for e in edges
+        )
+        # E32-S2: extract_building -> extract_items (replaces direct edge to orchestrate)
+        assert ("extract_building", "extract_items") in edges or any(
+            e == ("extract_building", "extract_items") for e in edges
         )
 
     def test_orchestrate_connects_to_validate(self):
@@ -1473,7 +1482,10 @@ class TestStrategyRegistryIntegration:
                     pages_processed=3,
                     strategy_used="full_llm",
                     time_ms=50,
-                    fallback_tags=["fallback.no_docling_tables", "fallback.empty_extraction"],
+                    fallback_tags=[
+                        "fallback.no_docling_tables",
+                        "fallback.empty_extraction",
+                    ],
                 ),
             ),
         ]
@@ -1535,9 +1547,7 @@ class TestRoomMetaCoercion:
                     "building_id": "B00A",
                     "name": "Admin",
                     "page_start": 1,
-                    "rooms": [
-                        {"room_id": "R001", "name": "Office", "area_m2": 20.0}
-                    ],
+                    "rooms": [{"room_id": "R001", "name": "Office", "area_m2": 20.0}],
                 }
             ],
             "processing_groups": [],

@@ -1,0 +1,77 @@
+Ollama is available.
+Test sample built: 50 records
+ANTHROPIC_API_KEY found — Claude Sonnet baseline included.
+
+============================================================
+Evaluating: llama3.1:8b (ollama)
+============================================================
+  Running warm-up inference...
+  VRAM: 6.10 GB
+  Running classification task (50 records)...
+  Classification: accuracy=28.0%, mean=1.77s, p95=4.33s, errors=0
+  Running enrichment task (50 records)...
+  Enrichment:     accuracy=91.0%, mean=0.80s, p95=0.90s, errors=0
+
+============================================================
+Evaluating: qwen2.5:7b (ollama)
+============================================================
+  Running warm-up inference...
+  VRAM: 5.56 GB
+  Running classification task (50 records)...
+  Classification: accuracy=24.0%, mean=0.94s, p95=1.05s, errors=0
+  Running enrichment task (50 records)...
+  Enrichment:     accuracy=98.0%, mean=0.78s, p95=0.86s, errors=0
+
+============================================================
+Evaluating: mistral:7b (ollama)
+============================================================
+  Running warm-up inference...
+  VRAM: 5.78 GB
+  Running classification task (50 records)...
+  Classification: accuracy=26.0%, mean=1.61s, p95=1.33s, errors=0
+  Running enrichment task (50 records)...
+  Enrichment:     accuracy=100.0%, mean=0.96s, p95=1.12s, errors=0
+
+============================================================
+Evaluating: qwen3:latest (ollama)
+============================================================
+  Running warm-up inference...
+  VRAM: 6.50 GB
+  Running classification task (50 records)...
+  Classification: accuracy=28.0%, mean=73.18s, p95=87.05s, errors=1
+  Running enrichment task (50 records)...
+  Enrichment:     accuracy=88.0%, mean=20.88s, p95=109.11s, errors=0
+
+============================================================
+Evaluating: phi4:latest (ollama)
+============================================================
+  Running warm-up inference...
+  VRAM: 10.88 GB
+  Running classification task (50 records)...
+  Classification: accuracy=28.0%, mean=1.65s, p95=1.38s, errors=0
+  Running enrichment task (50 records)...
+  Enrichment:     accuracy=94.0%, mean=0.97s, p95=1.07s, errors=0
+
+============================================================
+Evaluating: claude-sonnet-4-20250514 (anthropic)
+============================================================
+  Running classification task (50 records)...
+  Classification: accuracy=0.0%, mean=0.00s, p95=0.00s, errors=50
+  Running enrichment task (50 records)...
+  Enrichment:     accuracy=0.0%, mean=0.00s, p95=0.00s, errors=50
+
+--- BENCHMARK RESULTS ---
+
+| Model                    | Provider  | VRAM   | Class. Acc | Enrich. Acc | Class. p95 | Enrich. p95 |
+|--------------------------|-----------|--------|------------|-------------|------------|-------------|
+| llama3.1:8b              | ollama    | 6.1GB  |     28.0%  |      91.0%  |     4.33s  |      0.90s  |
+| qwen2.5:7b               | ollama    | 5.6GB  |     24.0%  |      98.0%  |     1.05s  |      0.86s  |
+| mistral:7b               | ollama    | 5.8GB  |     26.0%  |     100.0%  |     1.33s  |      1.12s  |
+| qwen3:latest             | ollama    | 6.5GB  |     28.0%  |      88.0%  |    87.05s  |    109.11s  |
+| phi4:latest              | ollama    | 10.9GB |     28.0%  |      94.0%  |     1.38s  |      1.07s  |
+| claude-sonnet-4-20250514 | anthropic | n/a    |      0.0%  |       0.0%  |     0.00s  |      0.00s  |
+
+Results written to: D:\ailocal\acm-ai\scripts\research\results\ollama_eval_results.json
+--- RECOMMENDATION SUMMARY ---
+No model met the 75% threshold. Best performer: mistral:7b (classification: 26.0%, enrichment: 100.0%)
+Recommendation: escalate to E32-S7 investigation.

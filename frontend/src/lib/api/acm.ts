@@ -16,7 +16,14 @@ import type {
   SiteConfigTemplate,
   CommandJobStatusResponse,
   ACMRawTable,
+  RawExtractionListResponse,
+  RawExtractionRecord,
+  PatchRawExtractionRequest,
+  ProvenanceData,
 } from '@/lib/types/acm'
+import type { SourceIntelligence } from '@/lib/types/intelligence'
+import type { BuildingListResponse, BuildingRecord, BuildingRecordUpdateRequest } from '@/lib/types/building'
+import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
 
 export const acmApi = {
   /**
@@ -68,11 +75,13 @@ export const acmApi = {
   },
 
   /**
-   * Trigger ACM extraction for a source
+   * Trigger ACM extraction for a source.
+   * Pass { force: true } to clear existing records and re-run extraction.
    */
-  extract: async (sourceId: string): Promise<ACMExtractResponse> => {
+  extract: async (sourceId: string, opts?: { force?: boolean }): Promise<ACMExtractResponse> => {
     const response = await apiClient.post<ACMExtractResponse>('/acm/extract', {
       source_id: sourceId,
+      force: opts?.force ?? false,
     })
     return response.data
   },
@@ -94,6 +103,32 @@ export const acmApi = {
   exportExcel: async (sourceId: string): Promise<Blob> => {
     const response = await apiClient.get('/acm/export/excel', {
       params: { source_id: sourceId },
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  /**
+   * Export as SF-ready CSV (ZIP with Building__c.csv + Item__c.csv)
+   */
+  exportSfCsv: async (sourceId: string, buildingIds?: string[]): Promise<Blob> => {
+    const params: Record<string, string> = { source_id: sourceId }
+    if (buildingIds?.length) params.building_ids = buildingIds.join(',')
+    const response = await apiClient.get('/acm/export/sf-csv', {
+      params,
+      responseType: 'blob',
+    })
+    return response.data
+  },
+
+  /**
+   * Export as SF-ready Excel (2-sheet XLSX)
+   */
+  exportSfExcel: async (sourceId: string, buildingIds?: string[]): Promise<Blob> => {
+    const params: Record<string, string> = { source_id: sourceId }
+    if (buildingIds?.length) params.building_ids = buildingIds.join(',')
+    const response = await apiClient.get('/acm/export/sf-excel', {
+      params,
       responseType: 'blob',
     })
     return response.data
@@ -174,5 +209,135 @@ export const acmApi = {
     const params = department ? { department } : {}
     const response = await apiClient.get<{ agencies: string[] }>('/acm/config/agencies', { params })
     return response.data.agencies
+  },
+
+  /**
+   * Get pre-extraction intelligence for a source (E30-S9).
+   * Returns null if no intelligence data exists (404).
+   */
+  getIntelligence: async (sourceId: string): Promise<SourceIntelligence | null> => {
+    try {
+      const response = await apiClient.get<SourceIntelligence>(
+        `/acm/source-intelligence/${encodeURIComponent(sourceId)}`
+      )
+      return response.data
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { status?: number } }
+        if (axiosErr.response?.status === 404) return null
+      }
+      throw err
+    }
+  },
+
+  /**
+   * List buildings for a source (V3 endpoint — E30-S2).
+   * GET /api/acm/buildings?source_id={sourceId}
+   */
+  listBuildings: async (sourceId: string): Promise<BuildingListResponse> => {
+    const response = await apiClient.get<BuildingListResponse>('/acm/buildings', {
+      params: { source_id: sourceId },
+    })
+    return response.data
+  },
+
+  /**
+   * Get a single building record by ID (E33-S7).
+   * GET /api/acm/buildings/{building_id}
+   */
+  getBuilding: async (buildingId: string): Promise<BuildingRecord> => {
+    const response = await apiClient.get<BuildingRecord>(
+      `/acm/buildings/${encodeURIComponent(buildingId)}`
+    )
+    return response.data
+  },
+
+  /**
+   * Update a building record (E33-S7).
+   * PUT /api/acm/buildings/{building_id}
+   */
+  updateBuilding: async (buildingId: string, data: BuildingRecordUpdateRequest): Promise<BuildingRecord> => {
+    const response = await apiClient.put<BuildingRecord>(
+      `/acm/buildings/${encodeURIComponent(buildingId)}`,
+      data
+    )
+    return response.data
+  },
+
+  /**
+   * Get SF field schema configuration (E32-S4).
+   * GET /api/acm/field-schema
+   */
+  getFieldSchema: async (): Promise<SFFieldSchemaConfig> => {
+    const response = await apiClient.get<SFFieldSchemaConfig>('/acm/field-schema')
+    return response.data
+  },
+
+  /**
+   * List raw extractions for a source (E31-S4 raw_extraction table).
+   * Optionally filter by provider: "docling" | "mineru"
+   */
+  rawExtractions: async (sourceId: string, provider?: string): Promise<RawExtractionListResponse> => {
+    const params: Record<string, string> = {}
+    if (provider) params.provider = provider
+    const response = await apiClient.get<RawExtractionListResponse>(
+      `/acm/raw-extractions/${encodeURIComponent(sourceId)}`,
+      { params }
+    )
+    return response.data
+  },
+
+  /**
+   * Patch officer edits onto a raw extraction row.
+   */
+  patchRawExtraction: async (
+    sourceId: string,
+    extractionId: string,
+    body: PatchRawExtractionRequest
+  ): Promise<RawExtractionRecord> => {
+    const response = await apiClient.patch<RawExtractionRecord>(
+      `/acm/raw-extractions/${encodeURIComponent(sourceId)}/${encodeURIComponent(extractionId)}`,
+      body
+    )
+    return response.data
+  },
+
+  /**
+   * Get per-building validation error counts (E33-S4).
+   * GET /api/acm/validation-summary?source_id=X
+   */
+  getValidationSummary: async (
+    sourceId: string
+  ): Promise<{ buildings: { building_id: string; error_count: number }[] }> => {
+    const response = await apiClient.get<{
+      buildings: { building_id: string; error_count: number }[]
+    }>('/acm/validation-summary', { params: { source_id: sourceId } })
+    return response.data
+  },
+
+  /** Get provenance data for a single ACM record (E33-S6) */
+  getProvenance: async (recordId: string): Promise<ProvenanceData> => {
+    const response = await apiClient.get<ProvenanceData>(
+      `/acm/provenance/${encodeURIComponent(recordId)}`
+    )
+    return response.data
+  },
+
+  /**
+   * Bulk fix auto-correctable validation issues (E33-S4).
+   * POST /api/acm/bulk-fix?source_id=X&building_id=Y
+   */
+  bulkFix: async (
+    sourceId: string,
+    buildingId?: string
+  ): Promise<{ fixed_count: number; remaining_errors: number }> => {
+    const params: Record<string, string> = { source_id: sourceId }
+    if (buildingId) params.building_id = buildingId
+    const response = await apiClient.post<{ fixed_count: number; remaining_errors: number }>(
+      '/acm/bulk-fix',
+      null,
+      { params }
+    )
+    return response.data
   },
 }

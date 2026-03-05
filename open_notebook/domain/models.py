@@ -27,6 +27,8 @@ class Model(ObjectModel):
     supports_structured_output: Optional[bool] = None
     supports_tool_calling: Optional[bool] = None
     embedding_dimensions: Optional[int] = None
+    # Optional per-model API key (E30-S8: ACM-namespaced key isolation)
+    api_key: Optional[str] = None
 
     # Known provider defaults for output tokens and context windows
     # Keys are matched via `if key in name_lower` — order most-specific first within each family
@@ -282,30 +284,35 @@ class ModelManager:
             model.provider, model.name
         )
 
+        # Merge per-model api_key into config if present (E30-S8)
+        config = dict(kwargs)
+        if model.api_key:
+            config["api_key"] = model.api_key
+
         # Create model based on type (Esperanto will cache the instance)
         if model.type == "language":
             return AIFactory.create_language(
                 model_name=routed_name,
                 provider=routed_provider,
-                config=kwargs,
+                config=config,
             )
         elif model.type == "embedding":
             return AIFactory.create_embedding(
                 model_name=routed_name,
                 provider=routed_provider,
-                config=kwargs,
+                config=config,
             )
         elif model.type == "speech_to_text":
             return AIFactory.create_speech_to_text(
                 model_name=routed_name,
                 provider=routed_provider,
-                config=kwargs,
+                config=config,
             )
         elif model.type == "text_to_speech":
             return AIFactory.create_text_to_speech(
                 model_name=routed_name,
                 provider=routed_provider,
-                config=kwargs,
+                config=config,
             )
         else:
             raise ValueError(f"Invalid model type: {model.type}")

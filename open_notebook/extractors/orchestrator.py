@@ -10,6 +10,7 @@ Story: E1-S20 Agentic Extraction Orchestrator
 """
 
 import asyncio
+import os
 import re
 import time
 from enum import Enum
@@ -48,8 +49,11 @@ from open_notebook.extractors.strategy_registry import (
 )
 from open_notebook.graphs.utils import (
     _get_acm_extraction_schema,
+    _get_v3_building_schema,
+    _get_v3_item_schema,
     _inject_response_format,
     _is_qwen_model,
+    _ollama_split_by_budget,
     _verify_provider_routing,
     is_auth_error,
     is_provider_schema_error,
@@ -496,6 +500,27 @@ async def _llm_extract_building(
     doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
     runnable_config: Optional[RunnableConfig] = state.get("_langchain_config")
 
+    # E30-S7: V3 Two-Phase extraction (feature-flagged)
+    ACM_V3_PROMPTS = os.getenv("ACM_V3_PROMPTS", "false").lower() == "true"
+    if ACM_V3_PROMPTS:
+        schema_bundle = None
+        try:
+            from open_notebook.extractors.parsers.config_loader import (
+                load_sf_field_schema,
+            )
+
+            schema_bundle = load_sf_field_schema()
+        except Exception as e:
+            logger.warning(f"Could not load SF schema bundle for V3 prompts: {e}")
+
+        building_meta = await _v3_extract_building_meta(
+            building_content, plan, state, schema_bundle
+        )
+        item_result = await _v3_extract_items(
+            building_content, plan, building_meta, state, schema_bundle
+        )
+        return _normalize_v3_records(building_meta, item_result, plan)
+
     # Check room count and sub-chunk if needed
     sub_chunks = (
         [building_content]
@@ -522,120 +547,51 @@ async def _llm_extract_building(
             model, _get_acm_extraction_schema(), "ACMExtractionResult"
         )
 
-        is_qwen = _is_qwen_model(model)
-        model_family = "qwen" if is_qwen else "default"
+        # E32-S8: Split into Ollama token-budget chunks (multi-pass extraction)
+        budget_chunks = _ollama_split_by_budget(chunk_content, model)
 
-        prompter = Prompter(prompt_template="acm/building_extraction")
-        system_prompt = prompter.render(
-            data={
-                "building_context": prompt_ctx,
-                "content": chunk_content,
-                "input_format": input_format,
-                "model_family": model_family,
-            }
-        )
+        for budget_chunk_idx, budget_chunk in enumerate(budget_chunks):
+            is_qwen = _is_qwen_model(model)
+            model_family = "qwen" if is_qwen else "default"
 
-        from langchain_core.messages import HumanMessage, SystemMessage
+            prompter = Prompter(prompt_template="acm/building_extraction")
+            system_prompt = prompter.render(
+                data={
+                    "building_context": prompt_ctx,
+                    "content": budget_chunk,
+                    "input_format": input_format,
+                    "model_family": model_family,
+                }
+            )
 
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(
-                content="Extract ACM records from the building content provided."
-            ),
-        ]
+            from langchain_core.messages import HumanMessage, SystemMessage
 
-        async def _invoke(active_model, active_is_qwen: bool) -> ACMExtractionResult:
-            response_text = ""
-            try:
-                raw_response = await active_model.ainvoke(
-                    messages,
-                    config=runnable_config,
-                )
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(
+                    content="Extract ACM records from the building content provided."
+                ),
+            ]
 
-                # E27-S3: Verify provider routing (non-blocking)
+            async def _invoke(
+                active_model, active_is_qwen: bool
+            ) -> ACMExtractionResult:
+                response_text = ""
                 try:
-                    await _verify_provider_routing(
-                        raw_response,
-                        f"orchestrator/{plan.building_id}",
-                    )
-                except Exception:
-                    pass
-
-                response_text = (
-                    raw_response.content
-                    if hasattr(raw_response, "content")
-                    else str(raw_response)
-                )
-                parsed = parse_json_response(response_text)
-                # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
-                _normalize_extraction_json(parsed)
-                result_local: ACMExtractionResult = ACMExtractionResult.model_validate(
-                    parsed
-                )
-                logger.info(
-                    f"Building {plan.building_id} direct JSON: "
-                    f"{len(result_local.records)} records"
-                )
-                return result_local
-            except (ValueError, ValidationError) as parse_err:
-                # E29-S4: F3 — JSON parse failure telemetry
-                emit_fallback_telemetry(
-                    FallbackId.F3_JSON_PARSE,
-                    plan.building_name or plan.building_id,
-                    str(parse_err),
-                )
-                logger.error(
-                    f"Building {plan.building_id} JSON parsing failed: {parse_err}. "
-                    f"Response preview: {response_text[:200] if response_text else 'N/A'}"
-                )
-                raise
-
-        try:
-            result = await _invoke(model, is_qwen)
-        except Exception as invoke_err:
-            if is_auth_error(invoke_err):
-                failed_model_name = (
-                    getattr(model, "model_name", None)
-                    or getattr(model, "model", None)
-                    or str(model_id or "unknown")
-                )
-                fallback_model = await provision_extraction_fallback_model(
-                    str(failed_model_name),
-                    temperature=0.1,
-                    max_tokens=32768,
-                )
-                if fallback_model is None:
-                    raise
-
-                model = fallback_model
-                is_qwen = _is_qwen_model(model)
-                logger.warning(
-                    "Building extraction auth failure for model "
-                    f"'{failed_model_name}', switched to fallback model "
-                    f"'{getattr(model, 'model_name', getattr(model, 'model', 'unknown'))}'"
-                )
-                result = await _invoke(model, is_qwen)
-            elif is_provider_schema_error(invoke_err):
-                # Provider (e.g. Amazon Bedrock, Google Vertex AI) rejected
-                # the structured output request. Fall back to direct invocation
-                # with manual JSON parsing, mirroring the Qwen pattern.
-                logger.warning(
-                    f"Building {plan.building_id}: Provider schema/compat error "
-                    f"detected ({invoke_err}). Falling back to direct "
-                    "invocation with manual JSON parsing."
-                )
-                pl = state.get("pipeline_logger")
-                if pl:
-                    pl._log(
-                        f"  Provider error detected — falling back to direct "
-                        f"JSON parsing for {plan.building_id}",
-                        level="warning",
-                    )
-                try:
-                    raw_response = await model.ainvoke(
+                    raw_response = await active_model.ainvoke(
                         messages,
                         config=runnable_config,
                     )
+
+                    # E27-S3: Verify provider routing (non-blocking)
+                    try:
+                        await _verify_provider_routing(
+                            raw_response,
+                            f"orchestrator/{plan.building_id}",
+                        )
+                    except Exception:
+                        pass
+
                     response_text = (
                         raw_response.content
                         if hasattr(raw_response, "content")
@@ -644,45 +600,380 @@ async def _llm_extract_building(
                     parsed = parse_json_response(response_text)
                     # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
                     _normalize_extraction_json(parsed)
-                    result = ACMExtractionResult.model_validate(parsed)
+                    result_local: ACMExtractionResult = (
+                        ACMExtractionResult.model_validate(parsed)
+                    )
                     logger.info(
-                        f"Building {plan.building_id} schema-error fallback "
-                        f"succeeded: {len(result.records)} records"
+                        f"Building {plan.building_id} direct JSON: "
+                        f"{len(result_local.records)} records"
                     )
-                    if pl:
-                        pl._log(
-                            f"  Fallback succeeded: {len(result.records)} records "
-                            f"from {plan.building_id}"
-                        )
-                except (ValueError, ValidationError) as fallback_err:
+                    return result_local
+                except (ValueError, ValidationError) as parse_err:
+                    # E29-S4: F3 — JSON parse failure telemetry
+                    emit_fallback_telemetry(
+                        FallbackId.F3_JSON_PARSE,
+                        plan.building_name or plan.building_id,
+                        str(parse_err),
+                    )
                     logger.error(
-                        f"Building {plan.building_id} schema-error fallback "
-                        f"JSON parsing failed: {fallback_err}"
+                        f"Building {plan.building_id} JSON parsing failed: {parse_err}. "
+                        f"Response preview: {response_text[:200] if response_text else 'N/A'}"
                     )
+                    raise
+
+            try:
+                result = await _invoke(model, is_qwen)
+            except Exception as invoke_err:
+                if is_auth_error(invoke_err):
+                    failed_model_name = (
+                        getattr(model, "model_name", None)
+                        or getattr(model, "model", None)
+                        or str(model_id or "unknown")
+                    )
+                    fallback_model = await provision_extraction_fallback_model(
+                        str(failed_model_name),
+                        temperature=0.1,
+                        max_tokens=32768,
+                    )
+                    if fallback_model is None:
+                        raise
+
+                    model = fallback_model
+                    is_qwen = _is_qwen_model(model)
+                    logger.warning(
+                        "Building extraction auth failure for model "
+                        f"'{failed_model_name}', switched to fallback model "
+                        f"'{getattr(model, 'model_name', getattr(model, 'model', 'unknown'))}'"
+                    )
+                    result = await _invoke(model, is_qwen)
+                elif is_provider_schema_error(invoke_err):
+                    # Provider (e.g. Amazon Bedrock, Google Vertex AI) rejected
+                    # the structured output request. Fall back to direct invocation
+                    # with manual JSON parsing, mirroring the Qwen pattern.
+                    logger.warning(
+                        f"Building {plan.building_id}: Provider schema/compat error "
+                        f"detected ({invoke_err}). Falling back to direct "
+                        "invocation with manual JSON parsing."
+                    )
+                    pl = state.get("pipeline_logger")
                     if pl:
                         pl._log(
-                            f"  Fallback JSON parsing FAILED: {fallback_err}",
-                            level="error",
+                            f"  Provider error detected — falling back to direct "
+                            f"JSON parsing for {plan.building_id}",
+                            level="warning",
                         )
+                    try:
+                        raw_response = await model.ainvoke(
+                            messages,
+                            config=runnable_config,
+                        )
+                        response_text = (
+                            raw_response.content
+                            if hasattr(raw_response, "content")
+                            else str(raw_response)
+                        )
+                        parsed = parse_json_response(response_text)
+                        # E27-S4: completionState wrapper eliminated by Anthropic-direct routing
+                        _normalize_extraction_json(parsed)
+                        result = ACMExtractionResult.model_validate(parsed)
+                        logger.info(
+                            f"Building {plan.building_id} schema-error fallback "
+                            f"succeeded: {len(result.records)} records"
+                        )
+                        if pl:
+                            pl._log(
+                                f"  Fallback succeeded: {len(result.records)} records "
+                                f"from {plan.building_id}"
+                            )
+                    except (ValueError, ValidationError) as fallback_err:
+                        logger.error(
+                            f"Building {plan.building_id} schema-error fallback "
+                            f"JSON parsing failed: {fallback_err}"
+                        )
+                        if pl:
+                            pl._log(
+                                f"  Fallback JSON parsing FAILED: {fallback_err}",
+                                level="error",
+                            )
+                        raise
+                else:
+                    # E29-S4: F7 — LLM provider error telemetry
+                    emit_fallback_telemetry(
+                        FallbackId.F7_LLM_ERROR,
+                        plan.building_name or plan.building_id,
+                        str(invoke_err),
+                    )
                     raise
-            else:
-                # E29-S4: F7 — LLM provider error telemetry
-                emit_fallback_telemetry(
-                    FallbackId.F7_LLM_ERROR,
-                    plan.building_name or plan.building_id,
-                    str(invoke_err),
+
+            if len(sub_chunks) > 1 or len(budget_chunks) > 1:
+                logger.info(
+                    f"Building {plan.building_id} chunk "
+                    f"{chunk_idx + 1}/{len(sub_chunks)} "
+                    f"budget {budget_chunk_idx + 1}/{len(budget_chunks)}: "
+                    f"{len(result.records)} records"
                 )
-                raise
 
-        if len(sub_chunks) > 1:
-            logger.info(
-                f"Building {plan.building_id} sub-chunk {chunk_idx + 1}/{len(sub_chunks)}: "
-                f"{len(result.records)} records"
-            )
-
-        all_records.extend(result.records)
+            all_records.extend(result.records)
 
     return all_records
+
+
+# ---------------------------------------------------------------------------
+# E30-S7: V3 Two-Phase Extraction Helpers
+# ---------------------------------------------------------------------------
+
+
+async def _v3_extract_building_meta(
+    building_content: str,
+    plan: BuildingExtractionPlan,
+    state: dict,
+    schema_bundle: Optional[Any],
+) -> Optional[Any]:
+    """Phase 1: Extract Building__c metadata using v3_building_extraction.jinja.
+
+    Returns None on failure (falls back to continuing without building meta).
+    """
+    from ai_prompter import Prompter
+
+    from open_notebook.extractors.acm_schemas_v3 import BuildingExtractionResult
+    from open_notebook.extractors.prompt_context_builder import build_picklist_context
+    from open_notebook.graphs.utils import provision_langchain_model
+
+    model_id = state.get("model_id")
+    doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+    runnable_config: Optional[Any] = state.get("_langchain_config")
+
+    try:
+        prompt_ctx = _create_building_prompt_context(plan, doc_meta)
+        picklists = build_picklist_context(schema_bundle, acm_classification=None)
+
+        model = await provision_langchain_model(
+            building_content,
+            model_id,
+            "extraction",
+            temperature=0.1,
+            max_tokens=32768,
+        )
+        model = _inject_response_format(
+            model, _get_v3_building_schema(), "BuildingExtractionResult"
+        )
+
+        prompter = Prompter(prompt_template="acm/v3_building_extraction")
+        system_prompt = prompter.render(
+            data={
+                "building_context": prompt_ctx,
+                "content": building_content,
+                "picklists": picklists,
+            }
+        )
+
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(
+                content="Extract the building metadata from the document header."
+            ),
+        ]
+
+        raw_response = await model.ainvoke(messages, config=runnable_config)
+        response_text = (
+            raw_response.content
+            if hasattr(raw_response, "content")
+            else str(raw_response)
+        )
+        parsed = parse_json_response(response_text)
+        result: BuildingExtractionResult = BuildingExtractionResult.model_validate(
+            parsed
+        )
+        logger.info(
+            f"V3 Phase 1 [{plan.building_id}]: building_name={result.building_name!r}, "
+            f"confidence={result.extraction_confidence}"
+        )
+        return result
+    except Exception as e:
+        logger.warning(
+            f"V3 Phase 1 [{plan.building_id}] failed — continuing without building meta: {e}"
+        )
+        return None
+
+
+async def _v3_extract_items(
+    building_content: str,
+    plan: BuildingExtractionPlan,
+    building_meta: Optional[Any],
+    state: dict,
+    schema_bundle: Optional[Any],
+) -> Any:
+    """Phase 2: Extract Item__c records using v3_item_extraction.jinja.
+
+    building_meta is passed from Phase 1 to subset Item_Name__c picklist.
+    Returns ACMItemExtractionResult (records may be empty if no ACM data).
+    """
+    from ai_prompter import Prompter
+
+    from open_notebook.extractors.acm_schemas_v3 import ACMItemExtractionResult
+    from open_notebook.extractors.prompt_context_builder import build_picklist_context
+    from open_notebook.graphs.utils import provision_langchain_model
+
+    model_id = state.get("model_id")
+    doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+    runnable_config: Optional[Any] = state.get("_langchain_config")
+
+    # Determine acm_classification from Phase 1 for item name subsetting
+    # (Phase 1 result does not carry acm_classification directly; use None to get default groups)
+    acm_classification: Optional[str] = None
+
+    try:
+        prompt_ctx = _create_building_prompt_context(plan, doc_meta)
+        picklists = build_picklist_context(
+            schema_bundle, acm_classification=acm_classification
+        )
+        building_meta_dict = (
+            building_meta.model_dump() if building_meta is not None else {}
+        )
+
+        model = await provision_langchain_model(
+            building_content,
+            model_id,
+            "extraction",
+            temperature=0.1,
+            max_tokens=32768,
+        )
+        model = _inject_response_format(
+            model, _get_v3_item_schema(), "ACMItemExtractionResult"
+        )
+
+        prompter = Prompter(prompt_template="acm/v3_item_extraction")
+        system_prompt = prompter.render(
+            data={
+                "building_context": prompt_ctx,
+                "content": building_content,
+                "building_meta": building_meta_dict,
+                "picklists": picklists,
+            }
+        )
+
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(
+                content="Extract all ACM item records from the building content."
+            ),
+        ]
+
+        raw_response = await model.ainvoke(messages, config=runnable_config)
+        response_text = (
+            raw_response.content
+            if hasattr(raw_response, "content")
+            else str(raw_response)
+        )
+        parsed = parse_json_response(response_text)
+        result: ACMItemExtractionResult = ACMItemExtractionResult.model_validate(parsed)
+        logger.info(
+            f"V3 Phase 2 [{plan.building_id}]: {len(result.records)} records, "
+            f"status={result.status}"
+        )
+        return result
+    except Exception as e:
+        logger.warning(
+            f"V3 Phase 2 [{plan.building_id}] failed — returning empty result: {e}"
+        )
+        from open_notebook.extractors.acm_schemas_v3 import ACMItemExtractionResult
+
+        return ACMItemExtractionResult(records=[], status="invalid")
+
+
+def _normalize_v3_records(
+    building_meta: Optional[Any],
+    item_result: Any,
+    plan: BuildingExtractionPlan,
+) -> List[ACMExtractionRecord]:
+    """Map V3 SF field names -> ACMExtractionRecord for pipeline compatibility.
+
+    Bridges V3 two-phase output to the existing V2 ACMExtractionRecord format
+    so that validate -> correct -> deduplicate -> save stages are unchanged.
+
+    Args:
+        building_meta: BuildingExtractionResult from Phase 1 (may be None).
+        item_result: ACMItemExtractionResult from Phase 2.
+        plan: BuildingExtractionPlan — plan.building_id is authoritative.
+
+    Returns:
+        List of ACMExtractionRecord instances.
+    """
+    records: List[ACMExtractionRecord] = []
+
+    # Extract building-level fields from Phase 1 (if available)
+    bldg_name: Optional[str] = None
+    bldg_identifying_company: Optional[str] = None
+    if building_meta is not None:
+        bldg_name = building_meta.building_name
+        bldg_identifying_company = building_meta.identifying_company
+
+    for item in item_result.records:
+        # Map Internal_External__c -> area_type
+        area_type: Optional[str] = None
+        ie = item.internal_external
+        if ie == "Internal":
+            area_type = "Interior"
+        elif ie in ("External", "External & Internal"):
+            area_type = "Exterior"
+
+        # Map labelled -> acm_labelled bool
+        acm_labelled: Optional[bool] = None
+        if item.labelled == "Yes":
+            acm_labelled = True
+        elif item.labelled == "No":
+            acm_labelled = False
+
+        # Build data_issues list
+        data_issues = list(item.data_issues) if item.data_issues else []
+        if item.if_other_item_name:
+            data_issues.append(f"Item name: {item.if_other_item_name}")
+
+        # quantity: float -> str
+        quantity_str: Optional[str] = None
+        if item.quantity is not None:
+            quantity_str = str(item.quantity)
+
+        record = ACMExtractionRecord(
+            # Building identity — plan.building_id is authoritative
+            building_id=plan.building_id,
+            building_name=bldg_name or plan.building_name,
+            # Location
+            room_name=item.room_or_area,
+            floor_level=item.level,
+            location=item.location_in_room,
+            area_type=area_type,
+            # ACM classification
+            product=item.item_name or "",
+            material_description=item.acm_sub_classification,
+            friable=item.friability_of_material,
+            # Sample and assessment
+            result=item.sample_result
+            or ("Assumed Positive" if item.no_access else "Unknown"),
+            sample_result=item.sample_result,
+            sample_no=item.nata_sample_no,
+            material_condition=item.condition,
+            disturbance_potential=item.disturbance_potential,
+            quantity=quantity_str,
+            acm_labelled=acm_labelled,
+            acm_label_details=item.labelled_details,
+            # Notes
+            hygienist_recommendations=item.hygienist_recommendations,
+            additional_comments=item.additional_comments,
+            identifying_company=bldg_identifying_company,
+            # Pipeline flags
+            no_access=item.no_access,
+            extraction_confidence=item.extraction_confidence,
+            data_issues=data_issues,
+            page_number=item.page_number,
+        )
+        records.append(record)
+
+    return records
 
 
 async def extract_building(

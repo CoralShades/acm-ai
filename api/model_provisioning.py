@@ -56,12 +56,21 @@ def get_fallback_providers() -> list[str]:
 
 
 def is_provider_available(provider: str) -> bool:
-    """Check if a provider is available based on environment configuration."""
+    """Check if a provider is available based on environment configuration.
+
+    Checks both standard and ACM-namespaced env vars (E30-S8).
+    """
     provider_checks = {
         "ollama": lambda: os.getenv("OLLAMA_API_BASE") is not None,
         "openai": lambda: os.getenv("OPENAI_API_KEY") is not None,
-        "anthropic": lambda: os.getenv("ANTHROPIC_API_KEY") is not None,
-        "openrouter": lambda: os.getenv("OPENROUTER_API_KEY") is not None,
+        "anthropic": lambda: (
+            os.getenv("ANTHROPIC_API_KEY") is not None
+            or os.getenv("ACM_ANTHROPIC_API_KEY") is not None
+        ),
+        "openrouter": lambda: (
+            os.getenv("OPENROUTER_API_KEY") is not None
+            or os.getenv("ACM_OPENROUTER_API_KEY") is not None
+        ),
         "google": lambda: os.getenv("GOOGLE_API_KEY") is not None
         or os.getenv("GEMINI_API_KEY") is not None,
         "groq": lambda: os.getenv("GROQ_API_KEY") is not None,
@@ -384,18 +393,12 @@ async def update_defaults_if_needed(provisioned: dict[str, Optional[str]]) -> No
 
         current_value = getattr(defaults, field, None)
 
-        # Skip only if current value already matches the provisioned model
-        if current_value == model_id:
+        # Only set defaults for empty fields — never overwrite user customizations
+        if current_value:
+            logger.debug(f"Preserving existing {field} = {current_value}")
             continue
 
-        # Log why we're updating
-        if current_value:
-            logger.info(
-                f"Updating {field}: {current_value} -> {model_id} (env var changed)"
-            )
-        else:
-            logger.info(f"Setting {field} = {model_id}")
-
+        logger.info(f"Setting {field} = {model_id}")
         setattr(defaults, field, model_id)
         updated = True
 

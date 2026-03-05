@@ -139,7 +139,12 @@ def _make_extracted_record(**kwargs):
 class TestGroundTruthLoading:
     def test_load_broadmeadows(self):
         """AC-2: Broadmeadows ground truth exists with 31 records."""
-        path = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "ground_truth" / "broadmeadows.json"
+        path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "benchmarks"
+            / "ground_truth"
+            / "broadmeadows.json"
+        )
         if not path.exists():
             pytest.skip("broadmeadows.json not created yet")
         data = load_ground_truth(path)
@@ -148,7 +153,12 @@ class TestGroundTruthLoading:
 
     def test_load_alexander(self):
         """AC-3: Alexander ground truth exists with 43 records."""
-        path = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "ground_truth" / "alexander.json"
+        path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "benchmarks"
+            / "ground_truth"
+            / "alexander.json"
+        )
         if not path.exists():
             pytest.skip("alexander.json not created yet")
         data = load_ground_truth(path)
@@ -157,7 +167,12 @@ class TestGroundTruthLoading:
 
     def test_load_third_document(self):
         """AC-4: Third document ground truth exists."""
-        path = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "ground_truth" / "aldavilla_4601.json"
+        path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "benchmarks"
+            / "ground_truth"
+            / "aldavilla_4601.json"
+        )
         if not path.exists():
             pytest.skip("aldavilla_4601.json not created yet")
         data = load_ground_truth(path)
@@ -193,8 +208,15 @@ class TestRecordMatching:
     def test_tier1_sample_number_match(self):
         """Records match by sample_no (primary tier)."""
         gt = [
-            {"building_name": "A", "room_name": "Room 1", "location": "Floor",
-             "product": "Tiles", "sample_no": "S-001", "sample_result": "Pos", "friable": "NF"},
+            {
+                "building_name": "A",
+                "room_name": "Room 1",
+                "location": "Floor",
+                "product": "Tiles",
+                "sample_no": "S-001",
+                "sample_result": "Pos",
+                "friable": "NF",
+            },
         ]
         extracted = [
             _make_extracted_record(
@@ -212,8 +234,15 @@ class TestRecordMatching:
     def test_tier1_as_per_reference(self):
         """'As Per' sample references are resolved correctly."""
         gt = [
-            {"building_name": "A", "room_name": "R1", "location": "Floor",
-             "product": "T", "sample_no": "As Per S-001", "sample_result": "", "friable": ""},
+            {
+                "building_name": "A",
+                "room_name": "R1",
+                "location": "Floor",
+                "product": "T",
+                "sample_no": "As Per S-001",
+                "sample_result": "",
+                "friable": "",
+            },
         ]
         extracted = [
             _make_extracted_record(sample_no="S-001"),
@@ -224,8 +253,15 @@ class TestRecordMatching:
     def test_tier2_composite_key_match(self):
         """Records match by building_name|room_name|location|product."""
         gt = [
-            {"building_name": "Main", "room_name": "Office", "location": "Ceiling",
-             "product": "Ceiling Tiles", "sample_no": "", "sample_result": "", "friable": ""},
+            {
+                "building_name": "Main",
+                "room_name": "Office",
+                "location": "Ceiling",
+                "product": "Ceiling Tiles",
+                "sample_no": "",
+                "sample_result": "",
+                "friable": "",
+            },
         ]
         extracted = [
             _make_extracted_record(
@@ -241,8 +277,15 @@ class TestRecordMatching:
     def test_tier2_synonym_match(self):
         """Product synonyms are resolved during matching."""
         gt = [
-            {"building_name": "A", "room_name": "R1", "location": "AHU",
-             "product": "Flange joints", "sample_no": "", "sample_result": "", "friable": ""},
+            {
+                "building_name": "A",
+                "room_name": "R1",
+                "location": "AHU",
+                "product": "Flange joints",
+                "sample_no": "",
+                "sample_result": "",
+                "friable": "",
+            },
         ]
         extracted = [
             _make_extracted_record(
@@ -258,8 +301,15 @@ class TestRecordMatching:
     def test_tier3_room_location_fuzzy(self):
         """Fuzzy matching by room+location when product differs."""
         gt = [
-            {"building_name": "A", "room_name": "Switch Room", "location": "Switchboard",
-             "product": "Fuse cartridge", "sample_no": "Not Sampled", "sample_result": "", "friable": ""},
+            {
+                "building_name": "A",
+                "room_name": "Switch Room",
+                "location": "Switchboard",
+                "product": "Fuse cartridge",
+                "sample_no": "Not Sampled",
+                "sample_result": "",
+                "friable": "",
+            },
         ]
         extracted = [
             _make_extracted_record(
@@ -275,12 +325,33 @@ class TestRecordMatching:
     def test_partial_match_with_extras(self):
         """Some records match, some don't — both sides have unmatched."""
         gt = [
-            {"building_name": "A", "room_name": "R1", "location": "F",
-             "product": "P1", "sample_no": "S-001", "sample_result": "", "friable": ""},
-            {"building_name": "A", "room_name": "R2", "location": "C",
-             "product": "P2", "sample_no": "S-002", "sample_result": "", "friable": ""},
-            {"building_name": "A", "room_name": "R3", "location": "W",
-             "product": "P3", "sample_no": "S-003", "sample_result": "", "friable": ""},
+            {
+                "building_name": "A",
+                "room_name": "R1",
+                "location": "F",
+                "product": "P1",
+                "sample_no": "S-001",
+                "sample_result": "",
+                "friable": "",
+            },
+            {
+                "building_name": "A",
+                "room_name": "R2",
+                "location": "C",
+                "product": "P2",
+                "sample_no": "S-002",
+                "sample_result": "",
+                "friable": "",
+            },
+            {
+                "building_name": "A",
+                "room_name": "R3",
+                "location": "W",
+                "product": "P3",
+                "sample_no": "S-003",
+                "sample_result": "",
+                "friable": "",
+            },
         ]
         extracted = [
             _make_extracted_record(sample_no="S-001", room_name="R1", product="P1"),
@@ -294,13 +365,23 @@ class TestRecordMatching:
     def test_no_matches(self):
         """No records match at all."""
         gt = [
-            {"building_name": "A", "room_name": "R1", "location": "F",
-             "product": "P1", "sample_no": "S-999", "sample_result": "", "friable": ""},
+            {
+                "building_name": "A",
+                "room_name": "R1",
+                "location": "F",
+                "product": "P1",
+                "sample_no": "S-999",
+                "sample_result": "",
+                "friable": "",
+            },
         ]
         extracted = [
             _make_extracted_record(
-                building_name="Z", room_name="RZ", location="X",
-                product="PZ", sample_no="S-000",
+                building_name="Z",
+                room_name="RZ",
+                location="X",
+                product="PZ",
+                sample_no="S-000",
             ),
         ]
         result = match_records(gt, extracted)
@@ -313,22 +394,50 @@ class TestRecordMatching:
         result = match_records([], [])
         assert len(result.matched_pairs) == 0
 
-        result = match_records([{"sample_no": "S-1", "room_name": "R", "location": "L",
-                                  "product": "P", "building_name": "B",
-                                  "sample_result": "", "friable": ""}], [])
+        result = match_records(
+            [
+                {
+                    "sample_no": "S-1",
+                    "room_name": "R",
+                    "location": "L",
+                    "product": "P",
+                    "building_name": "B",
+                    "sample_result": "",
+                    "friable": "",
+                }
+            ],
+            [],
+        )
         assert len(result.unmatched_gt) == 1
 
     def test_consumed_records_not_double_matched(self):
         """Each extracted record can only match one GT record."""
         gt = [
-            {"building_name": "A", "room_name": "R1", "location": "Floor",
-             "product": "Tiles", "sample_no": "", "sample_result": "", "friable": ""},
-            {"building_name": "A", "room_name": "R1", "location": "Floor",
-             "product": "Tiles", "sample_no": "", "sample_result": "", "friable": ""},
+            {
+                "building_name": "A",
+                "room_name": "R1",
+                "location": "Floor",
+                "product": "Tiles",
+                "sample_no": "",
+                "sample_result": "",
+                "friable": "",
+            },
+            {
+                "building_name": "A",
+                "room_name": "R1",
+                "location": "Floor",
+                "product": "Tiles",
+                "sample_no": "",
+                "sample_result": "",
+                "friable": "",
+            },
         ]
         extracted = [
             _make_extracted_record(
-                building_name="A", room_name="R1", location="Floor", product="Tiles",
+                building_name="A",
+                room_name="R1",
+                location="Floor",
+                product="Tiles",
             ),
         ]
         result = match_records(gt, extracted)
@@ -345,12 +454,28 @@ class TestRecordMatching:
 class TestMetricCalculations:
     def test_perfect_recall_precision(self):
         """All records matched: recall=1.0, precision=1.0."""
-        gt = [{"room_name": "R1", "location": "L1", "product": "P1",
-               "sample_no": "S1", "building_name": "B", "sample_result": "Pos", "friable": "NF"}]
-        ext = [_make_extracted_record(
-            room_name="R1", location="L1", product="P1",
-            sample_no="S1", building_name="B", sample_result="Pos", friable="NF",
-        )]
+        gt = [
+            {
+                "room_name": "R1",
+                "location": "L1",
+                "product": "P1",
+                "sample_no": "S1",
+                "building_name": "B",
+                "sample_result": "Pos",
+                "friable": "NF",
+            }
+        ]
+        ext = [
+            _make_extracted_record(
+                room_name="R1",
+                location="L1",
+                product="P1",
+                sample_no="S1",
+                building_name="B",
+                sample_result="Pos",
+                friable="NF",
+            )
+        ]
         match_result = MatchResult(
             matched_pairs=[(gt[0], ext[0])],
             unmatched_gt=[],
@@ -362,9 +487,18 @@ class TestMetricCalculations:
 
     def test_partial_recall(self):
         """8 matched out of 10 GT: recall=0.8."""
-        gt_recs = [{"room_name": f"R{i}", "location": "L", "product": "P",
-                     "sample_no": f"S{i}", "building_name": "B",
-                     "sample_result": "", "friable": ""} for i in range(10)]
+        gt_recs = [
+            {
+                "room_name": f"R{i}",
+                "location": "L",
+                "product": "P",
+                "sample_no": f"S{i}",
+                "building_name": "B",
+                "sample_result": "",
+                "friable": "",
+            }
+            for i in range(10)
+        ]
         ext_recs = [_make_extracted_record(sample_no=f"S{i}") for i in range(9)]
         matched = [(gt_recs[i], ext_recs[i]) for i in range(8)]
         match_result = MatchResult(
@@ -372,56 +506,111 @@ class TestMetricCalculations:
             unmatched_gt=gt_recs[8:],
             unmatched_extracted=[ext_recs[8]],
         )
-        result = calculate_metrics(gt_recs, ext_recs, match_result, 5.0, 500, 0.005, "Test")
+        result = calculate_metrics(
+            gt_recs, ext_recs, match_result, 5.0, 500, 0.005, "Test"
+        )
         assert result.recall == pytest.approx(0.8)
         assert result.precision == pytest.approx(8.0 / 9.0, abs=0.01)
 
     def test_zero_extracted(self):
         """No records extracted: recall=0, precision=0."""
-        gt = [{"room_name": "R1", "sample_no": "S1", "building_name": "B",
-               "location": "L", "product": "P", "sample_result": "", "friable": ""}]
-        match_result = MatchResult(matched_pairs=[], unmatched_gt=gt, unmatched_extracted=[])
+        gt = [
+            {
+                "room_name": "R1",
+                "sample_no": "S1",
+                "building_name": "B",
+                "location": "L",
+                "product": "P",
+                "sample_result": "",
+                "friable": "",
+            }
+        ]
+        match_result = MatchResult(
+            matched_pairs=[], unmatched_gt=gt, unmatched_extracted=[]
+        )
         result = calculate_metrics(gt, [], match_result, 1.0, 0, 0.0, "Test")
         assert result.recall == 0.0
         assert result.precision == 0.0
 
     def test_field_accuracy_perfect(self):
         """All fields match: field_accuracy=1.0."""
-        pairs = [(
-            {"building_name": "B", "room_name": "R", "location": "L",
-             "product": "P", "sample_no": "S", "sample_result": "Pos", "friable": "NF"},
-            _make_extracted_record(
-                building_name="B", room_name="R", location="L",
-                product="P", sample_no="S", sample_result="Pos", friable="NF",
-            ),
-        )]
+        pairs = [
+            (
+                {
+                    "building_name": "B",
+                    "room_name": "R",
+                    "location": "L",
+                    "product": "P",
+                    "sample_no": "S",
+                    "sample_result": "Pos",
+                    "friable": "NF",
+                },
+                _make_extracted_record(
+                    building_name="B",
+                    room_name="R",
+                    location="L",
+                    product="P",
+                    sample_no="S",
+                    sample_result="Pos",
+                    friable="NF",
+                ),
+            )
+        ]
         acc = calculate_field_accuracy(pairs)
         assert acc == 1.0
 
     def test_field_accuracy_partial(self):
         """Some fields match, some don't."""
-        pairs = [(
-            {"building_name": "B", "room_name": "R", "location": "L",
-             "product": "P", "sample_no": "S-001", "sample_result": "Positive", "friable": "NF"},
-            _make_extracted_record(
-                building_name="B", room_name="R", location="L",
-                product="P", sample_no="S-001", sample_result="Negative", friable="Friable",
-            ),
-        )]
+        pairs = [
+            (
+                {
+                    "building_name": "B",
+                    "room_name": "R",
+                    "location": "L",
+                    "product": "P",
+                    "sample_no": "S-001",
+                    "sample_result": "Positive",
+                    "friable": "NF",
+                },
+                _make_extracted_record(
+                    building_name="B",
+                    room_name="R",
+                    location="L",
+                    product="P",
+                    sample_no="S-001",
+                    sample_result="Negative",
+                    friable="Friable",
+                ),
+            )
+        ]
         acc = calculate_field_accuracy(pairs)
         # 5 out of 7 fields match (building_name, room_name, location, product, sample_no)
         assert acc == pytest.approx(5.0 / 7.0, abs=0.01)
 
     def test_field_accuracy_synonym_product(self):
         """Product synonyms count as matches in field accuracy."""
-        pairs = [(
-            {"building_name": "B", "room_name": "R", "location": "L",
-             "product": "Flange joints", "sample_no": "", "sample_result": "", "friable": ""},
-            _make_extracted_record(
-                building_name="B", room_name="R", location="L",
-                product="Mastic", sample_no="", sample_result="", friable="",
-            ),
-        )]
+        pairs = [
+            (
+                {
+                    "building_name": "B",
+                    "room_name": "R",
+                    "location": "L",
+                    "product": "Flange joints",
+                    "sample_no": "",
+                    "sample_result": "",
+                    "friable": "",
+                },
+                _make_extracted_record(
+                    building_name="B",
+                    room_name="R",
+                    location="L",
+                    product="Mastic",
+                    sample_no="",
+                    sample_result="",
+                    friable="",
+                ),
+            )
+        ]
         acc = calculate_field_accuracy(pairs)
         # building_name, room_name, location all match; product matches via synonym
         # sample_no, sample_result, friable are all empty-empty → skipped
@@ -522,10 +711,20 @@ class TestReportGeneration:
                 token_usage=3000,
                 cost_usd=0.015,
                 unmatched_gt=[
-                    {"building_name": "B", "room_name": "R1", "location": "L1",
-                     "product": "P1", "sample_no": "S-99"},
-                    {"building_name": "B", "room_name": "R2", "location": "L2",
-                     "product": "P2", "sample_no": "S-98"},
+                    {
+                        "building_name": "B",
+                        "room_name": "R1",
+                        "location": "L1",
+                        "product": "P1",
+                        "sample_no": "S-99",
+                    },
+                    {
+                        "building_name": "B",
+                        "room_name": "R2",
+                        "location": "L2",
+                        "product": "P2",
+                        "sample_no": "S-98",
+                    },
                 ],
                 unmatched_extracted=["R3/P3"],
             ),
@@ -602,7 +801,9 @@ class TestNormalization:
     def test_product_synonym_unknown_preserved(self):
         """Unknown products are returned as-is (normalized case)."""
         assert _normalize_product("Pipe Insulation") == "pipe insulation"
-        assert _normalize_product("Unknown Special Material") == "unknown special material"
+        assert (
+            _normalize_product("Unknown Special Material") == "unknown special material"
+        )
 
     def test_normalize_empty_string(self):
         """Empty strings normalize cleanly."""

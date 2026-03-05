@@ -18,6 +18,22 @@ The following fields have invalid values:
   - Issue: {{ issue.issue_type }}
 {% endfor %}
 
+{% if frozen_fields %}
+## DO NOT MODIFY -- SF-Valid Fields
+
+The following fields have already been validated against Salesforce picklist values and are CORRECT. Do NOT change them, even if they look different from BAR terminology:
+
+{% for field_name, field_value in frozen_fields.items() %}
+- **{{ field_name }}**: `{{ field_value }}` (SF-valid -- do not change)
+{% endfor %}
+
+**Important SF-BAR differences:**
+- "Stable" is the correct SF value for BAR "Good" condition -- do NOT change it to "Good"
+- "Moderate" is the correct SF value for BAR "Medium" disturbance -- do NOT change it to "Medium"
+- "Non-friable" (with hyphen) is the correct SF value -- do NOT change it to "Non Friable"
+- Compound results like "Negative - Treated as Positive" are valid SF values -- do NOT simplify
+{% endif %}
+
 ## Correction Instructions
 
 1. For each field listed above, determine the correct value from the valid values list
@@ -27,9 +43,14 @@ The following fields have invalid values:
 
 **Common mappings:**
 - "Bonded" → "Non-friable"
-- "Medium" → "Moderate" (BAR uses "Moderate" not "Medium")
+- "Medium" → "Moderate" (Salesforce uses "Moderate" not "Medium")
 - "Detected" → "Positive"
 - "Not Detected" / "NAD" → "Negative"
+- "Negative - Treated as Positive" is a VALID SF value — do NOT simplify it to "Negative". These records are positive-managed and require Friability to be populated.
+- "Positive - Non-friable" is a VALID SF value — do NOT simplify it to "Positive". It means the result is positive AND the material is non-friable.
+- "Positive - Friable" is a VALID SF value — do NOT simplify it to "Positive". It means the result is positive AND the material is friable.
+- If a record has result "Positive - Non-friable", the friable field must be "Non-friable"
+- If a record has result "Positive - Friable", the friable field must be "Friable"
 - For negative results: Condition and Disturbance Potential should be "N/A (negative)"
 
 ## Output Format

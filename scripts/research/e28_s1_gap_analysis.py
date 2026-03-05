@@ -4,6 +4,7 @@ Usage:
     cd $CLAUDE_PROJECT_DIR
     uv run python scripts/research/e28_s1_gap_analysis.py
 """
+
 import csv
 import re
 from pathlib import Path
@@ -100,7 +101,9 @@ def scan_pdf_not_sampled():
                 start = max(0, j - 5)
                 end = min(len(lines), j + 5)
                 context = lines[start:end]
-                print(f"  Page {i+1}, line {j}: {' | '.join(ln.strip() for ln in context if ln.strip())}")
+                print(
+                    f"  Page {i + 1}, line {j}: {' | '.join(ln.strip() for ln in context if ln.strip())}"
+                )
                 print()
 
 

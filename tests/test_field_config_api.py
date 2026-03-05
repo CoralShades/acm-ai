@@ -70,6 +70,15 @@ class TestGetFieldConfig:
 class TestUpdateFieldConfig:
     """Test PUT /api/acm/field-config endpoint."""
 
+    @pytest.fixture(autouse=True)
+    def mock_db(self):
+        from unittest.mock import AsyncMock, patch
+
+        with patch(
+            "api.routers.acm.repo_query", new_callable=AsyncMock, return_value=[]
+        ):
+            yield
+
     def test_update_field_config_toggle_active(self, client):
         """PUT can toggle a field's active status."""
         # First get current config
@@ -105,6 +114,15 @@ class TestUpdateFieldConfig:
 
 class TestResetFieldConfig:
     """Test POST /api/acm/field-config/reset endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def mock_db(self):
+        from unittest.mock import AsyncMock, patch
+
+        with patch(
+            "api.routers.acm.repo_query", new_callable=AsyncMock, return_value=[]
+        ):
+            yield
 
     def test_reset_returns_default_config(self, client):
         """POST reset restores default config from JSON files."""

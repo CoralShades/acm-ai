@@ -1,0 +1,146 @@
+# Phase 1: Building__c Metadata Extraction
+
+You are extracting building-level metadata for a Salesforce **Building__c** record from an Asbestos Containing Material (ACM) inspection document. Your task is to extract only building-level information — do NOT extract individual ACM items in this phase.
+
+## Building Context
+
+- Building ID: {{ building_context.building_id }}
+- Building Name (from document structure): {{ building_context.building_name or "Unknown" }}
+- Page range: {{ building_context.page_start }}–{{ building_context.page_end }}
+{% if building_context.consultant_name %}
+- Consultant: {{ building_context.consultant_name }}
+{% endif %}
+{% if building_context.site_name %}
+- Site: {{ building_context.site_name }}
+{% endif %}
+
+## SF Field Reference
+
+Extract ONLY the following Salesforce Building__c fields. Leave fields `null` if not present in the document.
+
+| SF API Name | Label | Format / Picklist |
+|-------------|-------|-------------------|
+| `building_name` | Building Name | Free text |
+| `building_type` | Asset Type | See Building_Type__c picklist below |
+| `building_category` | Asset Category | See Building_Category__c picklist below |
+| `building_address` | Building Address | Street address only (no suburb/postcode) |
+| `suburb` | Suburb | Suburb name |
+| `postcode` | Postcode | 4-digit string |
+| `estimated_year_built` | Estimated Year Built | 4-digit year string ({{ picklists.estimated_year_built_note }}) |
+| `construction_type` | Construction Type | Free text (e.g., "Brick/Concrete", "Timber Frame") |
+| `date_of_audit` | Date of Audit/Report | Free text date string as it appears |
+| `frequency_of_use` | Frequency of Use | See Frequency_of_Use__c picklist below |
+| `identifying_company` | Identifying Hygiene/Consulting Company | Free text company name |
+| `extraction_confidence` | Extraction Confidence | "high" / "medium" / "low" |
+| `extraction_notes` | Extraction Notes | Free text — note any ambiguity |
+
+## Picklist Values
+
+### Building_Type__c (choose the closest match):
+{{ picklists.building_type_options }}
+
+### Building_Category__c:
+{{ picklists.building_category_options }}
+
+### Frequency_of_Use__c:
+{{ picklists.frequency_of_use_options }}
+
+## Extraction Rules
+
+1. **Leave fields null** if the information is not present in the document — do not invent or guess values.
+2. **building_address** should contain ONLY the street portion (not suburb or postcode).
+3. **building_type** MUST exactly match one value from the Building_Type__c picklist above. Use the closest match based on document context (e.g., "Police Complex" → "Police Station"). If no match, leave null.
+4. **extraction_confidence**: Use "high" when most fields are populated from explicit document text; "medium" when some inference was required; "low" when document header is sparse.
+5. **identifying_company**: Extract the hygiene or consulting company name from headers like "Identifying Company:", "Prepared by:", or "Hygiene Company:".
+
+## Worked Example 1 — Prensa ARA Format
+
+**INPUT (document header):**
+```
+Asbestos Risk Assessment
+Building Name: Broadmeadows Police Complex
+Full Address: 21–25 Pearcedale Parade, Broadmeadows VIC 3047
+Construction Type: Brick/Concrete
+Number of Levels: 1
+Date of Report: March 2024
+Identifying Company: Prensa Pty Ltd
+```
+
+**OUTPUT:**
+```json
+{
+  "building_name": "Broadmeadows Police Complex",
+  "building_type": "Police Station",
+  "building_category": null,
+  "building_address": "21-25 Pearcedale Parade",
+  "suburb": "Broadmeadows",
+  "postcode": "3047",
+  "estimated_year_built": null,
+  "construction_type": "Brick/Concrete",
+  "date_of_audit": "March 2024",
+  "frequency_of_use": null,
+  "identifying_company": "Prensa Pty Ltd",
+  "extraction_confidence": "high",
+  "extraction_notes": null
+}
+```
+
+## Worked Example 2 — SAMP Format
+
+**INPUT (document header):**
+```
+School Asbestos Management Plan
+Site: Reservoir Primary School
+Building: B01 — Main Classroom Block
+Construction: Brick veneer, 1965
+Date of Inspection: 14 February 2023
+Hygienist: Safety Environmental Consulting Pty Ltd
+Frequency of Use: Daily
+```
+
+**OUTPUT:**
+```json
+{
+  "building_name": "Main Classroom Block",
+  "building_type": "Classroom",
+  "building_category": "Educational and training facilities",
+  "building_address": null,
+  "suburb": null,
+  "postcode": null,
+  "estimated_year_built": "1965",
+  "construction_type": "Brick veneer",
+  "date_of_audit": "14 February 2023",
+  "frequency_of_use": "Daily",
+  "identifying_company": "Safety Environmental Consulting Pty Ltd",
+  "extraction_confidence": "high",
+  "extraction_notes": null
+}
+```
+
+## Document Content
+
+```
+{{ content }}
+```
+
+## Output Format
+
+Respond with a single JSON object matching the `BuildingExtractionResult` schema. All fields are optional (null if not found). Do NOT include any ACM item data — that is Phase 2.
+
+```json
+{
+  "building_name": ...,
+  "building_type": ...,
+  "building_category": ...,
+  "building_address": ...,
+  "suburb": ...,
+  "postcode": ...,
+  "estimated_year_built": ...,
+  "construction_type": ...,
+  "date_of_audit": ...,
+  "frequency_of_use": ...,
+  "identifying_company": ...,
+  "extraction_confidence": "high" | "medium" | "low",
+  "extraction_notes": ...
+}
+```

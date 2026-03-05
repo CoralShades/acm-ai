@@ -84,6 +84,16 @@ npm run build                        # Production build
 npm run lint                         # Lint
 ```
 
+## Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes
+
 ## Architecture
 
 ### Service Communication
@@ -160,40 +170,58 @@ extract_acm_records(
 - Consider Docker containerization for MinerU isolation in production
 - Fallback mechanism ensures data extraction works even if MinerU dependencies are unavailable
 
-## Secondary Python Environment: MinerU
+## Python Environments: MinerU 2.x (E31-S1 Validated)
 
-MinerU requires `paddlepaddle-gpu` which conflicts with `torch 2.10.0+cu126` in the main venv.
-It runs in an isolated venv at `.venv-mineru/` — managed by pip directly (not uv/pyproject.toml).
+MinerU 2.x (`mineru>=2.7.0`) installs directly into the main `.venv/` alongside Docling and PyTorch.
+The `paddlepaddle-gpu` conflict that drove the two-venv pattern was specific to MinerU 1.x (`magic-pdf`).
+
+**IMPORTANT — `[all]` extras conflict:** `mineru[all]` includes `vllm` which pins `torchvision` to versions
+incompatible with `torchvision>=0.25.0` in the project. Use `mineru>=2.7.0` (without `[all]`) instead.
+The `[pipeline]` and `[vlm]` extras can be added individually if specific backends are needed.
 
 ### Venv Summary
 
 | Venv | Path | Purpose | Manager |
 |------|------|---------|---------|
-| Main | `.venv/` | All production services — API, worker, Docling/TableFormer | `uv` (pyproject.toml) |
-| MinerU | `.venv-mineru/` | MinerU table extraction — spike research + optional backend | `pip` (standalone) |
+| Main | `.venv/` | All production services — API, worker, Docling/TableFormer, MinerU 2.x | `uv` (pyproject.toml) |
+| MinerU (legacy) | `.venv-mineru/` | MinerU 1.x (`magic-pdf`) — deprecated if MinerU 2.x confirmed in main venv | `pip` (standalone) |
 
 ### Interpreter Paths
 
-| Platform | Main venv | MinerU venv |
-|----------|-----------|-------------|
-| Windows | `.venv\Scripts\python.exe` | `.venv-mineru\Scripts\python.exe` |
-| WSL/Linux | `.venv/bin/python` | `.venv-mineru/bin/python` |
+| Platform | Main venv | MinerU 1.x legacy venv |
+|----------|-----------|-------------------------|
+| Windows | `.venv\Scripts\python.exe` | `.venv-mineru\Scripts\python.exe` (deprecated) |
+| WSL/Linux | `.venv/bin/python` | `.venv-mineru/bin/python` (deprecated) |
 
 ### Rules for All AI Coding Tools
 
 - **Always `uv run ...`** for all main project work (API, tests, lint, workers)
-- **`.venv-mineru` only** for: `scripts/mineru_runner.py`, `scripts/research/` spike scripts
+- **`import mineru`** directly in main project code — no subprocess bridge needed for MinerU 2.x
+- **Never** add `mineru[all]` to `pyproject.toml` — use `mineru>=2.7.0` to avoid `vllm`/`torchvision` conflict
 - **Never** `uv pip install magic-pdf` or `paddlepaddle` into the main venv
-- **Never** import `magic_pdf` or `paddle` directly in main project code — use `scripts/mineru_runner.py` via subprocess
+- `scripts/mineru_runner.py` — legacy bridge for MinerU 1.x, deprecated
 
-### Backend Integration Pattern
+### MinerU 2.x API
 
-See `scripts/mineru_runner.py` for the subprocess bridge interface.
-Enable via environment variables: `MINERU_ENABLED=true` + `MINERU_VENV_PATH=.venv-mineru`
+```python
+from mineru import MinerUDocumentConverter
+
+converter = MinerUDocumentConverter()
+result = converter.convert("/path/to/file.pdf")
+```
+
+Enable via environment variables: `MINERU_ENABLED=true` (no separate venv path needed)
+
+### Legacy Subprocess Bridge (Deprecated)
+
+`scripts/mineru_runner.py` was the MinerU 1.x subprocess bridge via `.venv-mineru/`.
+It is deprecated now that MinerU 2.x installs in the main venv.
+See E31-S1 validation results at `scripts/research/e31_s1_validation_results.json`.
 
 ### One-Time Setup (Windows)
 
-See `/e25-setup-mineru` command or Phase 1 of the MinerU venv plan.
+MinerU 2.x installs automatically via `uv sync` — no separate setup step required.
+(Legacy: `/e25-setup-mineru` command set up the old `.venv-mineru/` venv.)
 
 ## Database
 
@@ -217,6 +245,16 @@ SURREAL_PASSWORD=root
 SURREAL_NAMESPACE=open_notebook
 SURREAL_DATABASE=development
 OPENAI_API_KEY=sk-...  # At least one AI provider
+
+# ACM pipeline API keys — separate from Claude Code's keys (never use bare ANTHROPIC_API_KEY here)
+ACM_ANTHROPIC_API_KEY=sk-ant-...    # ACM extraction only — not read by Claude Code tooling
+ACM_OPENROUTER_API_KEY=sk-or-...    # ACM OpenRouter fallback only
+
+# Optional: Ollama-only mode (omit cloud keys above)
+OLLAMA_API_BASE=http://localhost:11434
+# Content truncation guard for Ollama — auto-sized from model's num_ctx (3.5 chars/token).
+# Override only if the auto-size is wrong for your specific model/hardware combo.
+OLLAMA_MAX_CONTENT_CHARS=24000  # explicit override (optional; default: num_ctx * 3.5)
 ```
 
 ## Code Style
@@ -318,6 +356,59 @@ Add to the story's Dev Agent Record:
 - **A 404 error = missing page/route** - create required files
 - **Missing files from tech spec = incomplete** - do not skip any files
 - **Code review cannot catch files that don't exist** - verify BEFORE review
+
+## V3 Architecture Patterns
+
+### Provider Adapter Framework
+- Protocol: `ExtractionProvider` in `open_notebook/extractors/providers/base.py`
+- Adapters: `DoclingAdapter`, `MinerUAdapter` in `open_notebook/extractors/providers/`
+- Registry: `ProviderRegistry` in `open_notebook/extractors/providers/__init__.py`
+- Pattern: adapters normalize provider output to common `RawExtraction` domain objects via `NormalizedExtractionResult`
+
+### Consensus Layer
+- `RecordMatcher` in `open_notebook/extractors/consensus/matcher.py` -- 3-stage record matching (exact, fuzzy, positional)
+- `ConsensusEngine` in `open_notebook/extractors/consensus/engine.py` -- confidence-weighted voting across provider results
+- `ConflictResolver` in `open_notebook/extractors/consensus/resolver.py` -- L1-L4 escalation (identical, majority, confidence, flag)
+
+### Salesforce Schema Alignment
+- Config loader: `open_notebook/extractors/parsers/config_loader.py` (parses SF field summaries into structured config)
+- SF field definitions: `V3/output/building_fields_summary.md`, `V3/output/item_fields_summary.md`
+- Dependent picklist validation: `SalesforcePicklistValidator` in config_loader
+- Normalizer enums: `open_notebook/extractors/normalizers/enums.py`
+- ACM domain model uses SF API names as field aliases: `open_notebook/domain/acm.py`
+
+### Two-View Frontend (Building Grid + Item Grid)
+- Route: `/source/[id]` at `frontend/src/app/(dashboard)/source/[id]/page.tsx`
+- Components: `BuildingSidebar`, `ItemGrid` in `frontend/src/components/acm/`
+- Store: `frontend/src/lib/stores/buildingStore.ts` (Zustand)
+- Hooks: `useBuildings`, `useACMItems` in `frontend/src/lib/hooks/`
+- AG Grid dynamic columns from `GET /api/acm/field-schema`
+
+### SSE Streaming (PipelineEventBus)
+- Backend: `open_notebook/extractors/pipeline_event_bus.py`
+- SSE endpoints: `api/routers/v3_streaming.py`
+- Frontend hook: `frontend/src/lib/hooks/useV3SSE.ts`
+- Zustand store: `frontend/src/lib/stores/streamingStore.ts`
+- Event categories: `extraction`, `ai`, `bulk`
+
+### V3 API Endpoints
+- `GET /api/acm/buildings?source_id=X` -- Building records with record_count
+- `GET /api/acm/field-schema` -- SF field schema config
+- `GET /api/acm/raw-extractions/{source_id}` -- Raw extraction records
+- `GET /api/acm/provenance/{record_id}` -- Record provenance with consensus data
+- `GET /api/acm/intelligence/{source_id}` -- Pre-extraction intelligence
+- `GET /api/v3/stream/{category}/{id}` -- SSE streaming endpoints
+- `POST /api/acm/bulk-edit` -- Bulk field edit
+- `POST /api/acm/bulk-validate` -- Bulk re-validation
+- `GET /api/acm/validation-summary/{source_id}` -- Validation summary
+
+### V3 Frontend Type Files
+- `frontend/src/lib/types/acm.ts` -- ACMRecord, RawExtraction, Provenance types
+- `frontend/src/lib/types/building.ts` -- BuildingRecord, BuildingListResponse
+- `frontend/src/lib/types/pipeline.ts` -- PipelineRunState, StageId, StageStatus
+- `frontend/src/lib/types/sf-schema.ts` -- SFFieldSchemaConfig, SFFieldDef
+- `frontend/src/lib/types/intelligence.ts` -- SourceIntelligence, DocumentMeta, BuildingInventory
+- `frontend/src/lib/types/v3-streaming.ts` -- V3EventEnvelope
 
 ## Documentation
 

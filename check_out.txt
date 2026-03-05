@@ -1,0 +1,7 @@
+Python: 3.12.9 (main, Feb 12 2025, 14:52:31) [MSC v.1942 64 bit (AMD64)]
+Path: ['', 'C:\\Users\\User\\AppData\\Roaming\\uv\\python\\cpython-3.12.9-windows-x86_64-none\\python312.zip']
+Migration imports OK
+Groups: 2 (expected 2)
+Group test PASSED
+Field extraction test PASSED
+All checks PASSED

@@ -92,13 +92,16 @@ class TestGetDoclingTables:
     @pytest.mark.asyncio
     async def test_returns_tables_for_valid_page_range(self):
         """_get_docling_tables returns tables when query finds matches."""
-        with patch(
-            "open_notebook.database.repository.repo_query",
-            new_callable=AsyncMock,
-            return_value=SAMPLE_TABLES,
-        ) as mock_query, patch(
-            "open_notebook.database.repository.ensure_record_id",
-            side_effect=lambda x: x,
+        with (
+            patch(
+                "open_notebook.database.repository.repo_query",
+                new_callable=AsyncMock,
+                return_value=SAMPLE_TABLES,
+            ) as mock_query,
+            patch(
+                "open_notebook.database.repository.ensure_record_id",
+                side_effect=lambda x: x,
+            ),
         ):
             result = await _get_docling_tables("source:abc123", 5, 7)
 
@@ -110,13 +113,16 @@ class TestGetDoclingTables:
     @pytest.mark.asyncio
     async def test_returns_empty_for_no_tables(self):
         """_get_docling_tables returns [] when no tables match the page range."""
-        with patch(
-            "open_notebook.database.repository.repo_query",
-            new_callable=AsyncMock,
-            return_value=[],
-        ), patch(
-            "open_notebook.database.repository.ensure_record_id",
-            side_effect=lambda x: x,
+        with (
+            patch(
+                "open_notebook.database.repository.repo_query",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "open_notebook.database.repository.ensure_record_id",
+                side_effect=lambda x: x,
+            ),
         ):
             result = await _get_docling_tables("source:abc123", 20, 25)
 
@@ -125,13 +131,16 @@ class TestGetDoclingTables:
     @pytest.mark.asyncio
     async def test_returns_empty_on_query_error(self):
         """_get_docling_tables returns [] on any error (non-fatal)."""
-        with patch(
-            "open_notebook.database.repository.repo_query",
-            new_callable=AsyncMock,
-            side_effect=RuntimeError("DB connection failed"),
-        ), patch(
-            "open_notebook.database.repository.ensure_record_id",
-            side_effect=lambda x: x,
+        with (
+            patch(
+                "open_notebook.database.repository.repo_query",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("DB connection failed"),
+            ),
+            patch(
+                "open_notebook.database.repository.ensure_record_id",
+                side_effect=lambda x: x,
+            ),
         ):
             result = await _get_docling_tables("source:abc123", 5, 7)
 
@@ -218,15 +227,18 @@ class TestExtractBuildingDoclingIntegration:
         mock_result = MagicMock()
         mock_result.records = []
 
-        with patch(
-            "open_notebook.extractors.orchestrator._get_docling_tables",
-            new_callable=AsyncMock,
-            return_value=SAMPLE_TABLES,
-        ) as mock_get, patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-            return_value=[],
-        ) as mock_llm:
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._get_docling_tables",
+                new_callable=AsyncMock,
+                return_value=SAMPLE_TABLES,
+            ) as mock_get,
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+                return_value=[],
+            ) as mock_llm,
+        ):
             records, stats = await extract_building(plan, BUILDING_CONTENT, state)
 
         # Verify _get_docling_tables was called with correct args
@@ -244,15 +256,18 @@ class TestExtractBuildingDoclingIntegration:
         source = _make_source()
         state = {"source": source, "model_id": "test-model"}
 
-        with patch(
-            "open_notebook.extractors.orchestrator._get_docling_tables",
-            new_callable=AsyncMock,
-            return_value=[],
-        ), patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-            return_value=[],
-        ) as mock_llm:
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._get_docling_tables",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+                return_value=[],
+            ) as mock_llm,
+        ):
             records, stats = await extract_building(plan, BUILDING_CONTENT, state)
 
         # Verify the LLM received original content (no structured header)
@@ -266,15 +281,18 @@ class TestExtractBuildingDoclingIntegration:
         source = _make_source()
         state = {"source": source, "model_id": "test-model"}
 
-        with patch(
-            "open_notebook.extractors.orchestrator._get_docling_tables",
-            new_callable=AsyncMock,
-            side_effect=RuntimeError("Unexpected error"),
-        ), patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-            return_value=[],
-        ) as mock_llm:
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._get_docling_tables",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("Unexpected error"),
+            ),
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+                return_value=[],
+            ) as mock_llm,
+        ):
             records, stats = await extract_building(plan, BUILDING_CONTENT, state)
 
         # Should still proceed — non-fatal
@@ -287,13 +305,16 @@ class TestExtractBuildingDoclingIntegration:
         plan = _make_plan()
         state = {"model_id": "test-model"}
 
-        with patch(
-            "open_notebook.extractors.orchestrator._get_docling_tables",
-            new_callable=AsyncMock,
-        ) as mock_get, patch(
-            "open_notebook.extractors.orchestrator._llm_extract_building",
-            new_callable=AsyncMock,
-            return_value=[],
+        with (
+            patch(
+                "open_notebook.extractors.orchestrator._get_docling_tables",
+                new_callable=AsyncMock,
+            ) as mock_get,
+            patch(
+                "open_notebook.extractors.orchestrator._llm_extract_building",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
         ):
             records, stats = await extract_building(plan, BUILDING_CONTENT, state)
 

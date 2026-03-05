@@ -393,11 +393,7 @@ def cross_reference_ground_truth(docling_result: dict, gt_csv_path: str) -> dict
                 if term in row_str:
                     rec["found"] = True
                     # Serialize row without internal keys
-                    clean_row = {
-                        k: v
-                        for k, v in row.items()
-                        if not k.startswith("_")
-                    }
+                    clean_row = {k: v for k, v in row.items() if not k.startswith("_")}
                     if clean_row not in rec["matching_rows"]:
                         rec["matching_rows"].append(clean_row)
 
@@ -438,7 +434,9 @@ def analyze_markdown_export(docling_result: dict) -> dict:
     lines = md.split("\n")
     table_lines = [line for line in lines if "|" in line]
     page_markers = [
-        line for line in lines if "page" in line.lower() and ("---" in line or "##" in line.lower())
+        line
+        for line in lines
+        if "page" in line.lower() and ("---" in line or "##" in line.lower())
     ]
 
     # Search for ACM indicators in markdown
@@ -510,9 +508,7 @@ def save_outputs(
             continue
 
         # CSV
-        (docling_dir / f"table_{idx}.csv").write_text(
-            table["csv"], encoding="utf-8"
-        )
+        (docling_dir / f"table_{idx}.csv").write_text(table["csv"], encoding="utf-8")
 
         # Markdown
         (docling_dir / f"table_{idx}.md").write_text(
@@ -520,9 +516,7 @@ def save_outputs(
         )
 
         # HTML
-        (docling_dir / f"table_{idx}.html").write_text(
-            table["html"], encoding="utf-8"
-        )
+        (docling_dir / f"table_{idx}.html").write_text(table["html"], encoding="utf-8")
 
         # Analysis JSON (without large fields)
         analysis = {
@@ -541,9 +535,7 @@ def save_outputs(
 
     # Docling summary (without large fields)
     docling_summary = {
-        k: v
-        for k, v in docling_result.items()
-        if k not in ("tables", "markdown_full")
+        k: v for k, v in docling_result.items() if k not in ("tables", "markdown_full")
     }
     docling_summary["tables_overview"] = [
         {
@@ -596,14 +588,10 @@ def save_outputs(
             "unique_sample_numbers_found": len(
                 cross_ref.get("sample_numbers_found", [])
             ),
-            "unique_as_per_found": len(
-                cross_ref.get("as_per_references_found", [])
-            ),
+            "unique_as_per_found": len(cross_ref.get("as_per_references_found", [])),
             "indicators": cross_ref["indicators"],
             "missing_records_found": sum(
-                1
-                for r in cross_ref.get("missing_record_hunt", [])
-                if r["found"]
+                1 for r in cross_ref.get("missing_record_hunt", []) if r["found"]
             ),
         },
         "markdown_analysis": markdown_analysis,
@@ -649,9 +637,7 @@ def print_report(
 
     for table in docling_result["tables"]:
         if "error" in table:
-            print(
-                f"    Table {table['table_index']}: ERROR — {table['error'][:60]}"
-            )
+            print(f"    Table {table['table_index']}: ERROR — {table['error'][:60]}")
         else:
             print(
                 f"    Table {table['table_index']}: page={table['page']}, "
@@ -677,12 +663,8 @@ def print_report(
     print(f"    Not Sampled: {cr['ground_truth_not_sampled']}")
     print(f"  Docling register rows: {cr['docling_register_rows']}")
     print(f"  Sample numbers matched: {cr['matches']['by_sample_number']}")
-    print(
-        f"  Unique sample numbers: {len(cr.get('sample_numbers_found', []))}"
-    )
-    print(
-        f"  As Per references matched: {cr['matches']['by_as_per_reference']}"
-    )
+    print(f"  Unique sample numbers: {len(cr.get('sample_numbers_found', []))}")
+    print(f"  As Per references matched: {cr['matches']['by_as_per_reference']}")
     print(f"  Unique As Per refs: {len(cr.get('as_per_references_found', []))}")
 
     print("\n  Indicators in register tables:")
@@ -702,9 +684,7 @@ def print_report(
 
     print("\n  All-table search hits:")
     for hit in cr.get("all_table_search_hits", []):
-        print(
-            f"    '{hit['term']}' in table {hit['table_index']} (page {hit['page']})"
-        )
+        print(f"    '{hit['term']}' in table {hit['table_index']} (page {hit['page']})")
 
     print("\n--- Approach C: Markdown Export ---")
     ma = markdown_analysis
@@ -722,9 +702,7 @@ def print_report(
     print("\n" + "=" * 70)
 
     # Final verdict
-    missing_found = sum(
-        1 for r in cr.get("missing_record_hunt", []) if r["found"]
-    )
+    missing_found = sum(1 for r in cr.get("missing_record_hunt", []) if r["found"])
     print(f"\n  VERDICT: {missing_found}/3 missing E23 records found in DataFrames")
 
     if missing_found == 3:

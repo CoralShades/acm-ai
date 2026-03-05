@@ -71,6 +71,7 @@ Resources for extending and contributing to Open Notebook.
 - **[Architecture](development/architecture.md)** - System design overview
 - **[API Reference](development/api-reference.md)** - REST API documentation
 - **[TUI Monitor](development/tui-monitor.md)** - Terminal dashboard for service control and monitoring
+- **[E2E Testing](e2e-testing/README.md)** - Self-healing E2E testing framework (guide, cheat sheet, agents, framework deep dive)
 - **[Contributing](development/contributing.md)** - How to contribute
 
 ---

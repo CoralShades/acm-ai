@@ -8,10 +8,13 @@ from pydantic import BaseModel
 from surreal_commands import CommandInput, CommandOutput, command
 
 from open_notebook.database.repository import ensure_record_id, repo_create
+from open_notebook.domain.acm import RawExtraction
 from open_notebook.domain.notebook import Source
 from open_notebook.domain.transformation import Transformation
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.extractors.providers import get_provider_registry
+from open_notebook.extractors.providers.base import PipelineTimings, ProviderError
 from open_notebook.observability.langfuse_config import (
     append_langfuse_callback,
     build_langfuse_metadata,
@@ -23,11 +26,21 @@ DOCLING_DIRECT_TABLE_EXTRACTION = (
     os.environ.get("DOCLING_DIRECT_TABLE_EXTRACTION", "true").lower() == "true"
 )
 
+# Documents the env var name for the dual-provider feature flag.
+# The effective value is computed dynamically inside _run_dual_provider_extraction()
+# so that tests can monkeypatch os.environ without reloading this module.
+V3_DUAL_PROVIDER_ENV_VAR = "V3_DUAL_PROVIDER"
+
 try:
     from open_notebook.graphs.source import source_graph
 except ImportError as e:
     logger.error(f"Failed to import source_graph: {e}")
     raise ValueError("source_graph not available")
+
+try:
+    import torch as _torch
+except ImportError:
+    _torch = None  # type: ignore[assignment]
 
 
 def full_model_dump(model):
@@ -158,7 +171,7 @@ async def _extract_tables_with_docling(
 
 
 async def _store_docling_tables(source_id: str, tables: List[Dict[str, Any]]) -> None:
-    """Store Docling DataFrame tables in acm_table_section."""
+    """Store merged provider tables in acm_table_section with consensus metadata."""
     for table in tables:
         await repo_create(
             "acm_table_section",
@@ -171,8 +184,375 @@ async def _store_docling_tables(source_id: str, tables: List[Dict[str, Any]]) ->
                 "structured_json": table.get("csv"),
                 "table_type": "docling_direct_api",
                 "building_name": None,
+                "consensus_tier": table.get("consensus_tier"),
+                "consensus_scores": table.get("consensus_scores"),
             },
         )
+
+
+async def _store_raw_extractions(
+    source_id: str,
+    extraction_result,  # NormalizedExtractionResult
+) -> int:
+    """
+    Persist per-provider raw extraction outputs to the raw_extraction table.
+
+    Called immediately after provider.extract() succeeds, before
+    _store_docling_tables. Returns count of rows stored.
+    """
+    import json
+
+    stored = 0
+    provider_id = extraction_result.provider_id
+    backend_label = f"{provider_id}:2.x"
+
+    for table in extraction_result.tables:
+        bbox_dict = None
+        if table.bbox is not None:
+            bbox_dict = {
+                "x": table.bbox.x,
+                "y": table.bbox.y,
+                "width": table.bbox.width,
+                "height": table.bbox.height,
+                "page": table.bbox.page,
+            }
+
+        # Serialise column + row count into structured_json
+        structured = json.dumps(
+            {
+                "columns": table.columns,
+                "row_count": table.row_count,
+                "col_count": table.col_count,
+                "table_index": table.table_index,
+            }
+        )
+
+        raw = RawExtraction(
+            source_id=source_id,
+            provider_id=provider_id,
+            extraction_backend=backend_label,
+            page_number=table.page,
+            raw_html=table.html,
+            raw_markdown=table.markdown,
+            structured_json=structured,
+            bbox=bbox_dict,
+            confidence=None,  # NormalizedTable has no top-level confidence in E31-S2
+            officer_edits=[],
+        )
+        await raw.save()
+        stored += 1
+
+    logger.info(
+        f"Stored {stored} raw extractions for source {source_id} "
+        f"(provider={provider_id})"
+    )
+    return stored
+
+
+def _merge_provider_tables(
+    docling_result: "Any",
+    mineru_result: "Any",
+) -> List[Dict[str, Any]]:
+    """
+    Merge per-provider table outputs into a unified list for acm_table_section storage.
+
+    Pure function — no I/O, no async. Groups tables by page number and computes
+    row_divergence to assign a consensus_tier to each merged table.
+
+    Args:
+        docling_result: NormalizedExtractionResult from DoclingAdapter.extract().
+        mineru_result: NormalizedExtractionResult from MinerUAdapter.extract().
+
+    Returns:
+        List of table dicts with keys: table_index, page, rows, columns, csv,
+        markdown, html, consensus_tier, consensus_scores.
+    """
+    from open_notebook.extractors.strategy_registry import (
+        FallbackId,
+        emit_fallback_telemetry,
+    )
+
+    # Index by page number; page <= 0 means unknown — handle separately
+    docling_by_page: Dict[int, Any] = {}
+    mineru_by_page: Dict[int, Any] = {}
+
+    unknown_docling = []
+    unknown_mineru = []
+
+    for t in docling_result.tables:
+        if t.page > 0:
+            docling_by_page[t.page] = t
+        else:
+            unknown_docling.append(t)
+
+    for t in mineru_result.tables:
+        if t.page > 0:
+            mineru_by_page[t.page] = t
+        else:
+            unknown_mineru.append(t)
+
+    merged: List[Dict[str, Any]] = []
+    all_pages = sorted(set(docling_by_page.keys()) | set(mineru_by_page.keys()))
+
+    for page in all_pages:
+        d_table = docling_by_page.get(page)
+        m_table = mineru_by_page.get(page)
+
+        if d_table and not m_table:
+            # Only Docling has this page
+            merged.append(
+                {
+                    "table_index": d_table.table_index,
+                    "page": page,
+                    "rows": d_table.row_count,
+                    "columns": d_table.columns,
+                    "csv": d_table.csv,
+                    "markdown": d_table.markdown,
+                    "html": d_table.html,
+                    "consensus_tier": "single_provider",
+                    "consensus_scores": None,
+                }
+            )
+
+        elif m_table and not d_table:
+            # Only MinerU has this page
+            merged.append(
+                {
+                    "table_index": m_table.table_index,
+                    "page": page,
+                    "rows": m_table.row_count,
+                    "columns": m_table.columns,
+                    "csv": m_table.csv,
+                    "markdown": m_table.markdown,
+                    "html": m_table.html,
+                    "consensus_tier": "single_provider",
+                    "consensus_scores": None,
+                }
+            )
+
+        else:
+            # Both providers have this page — compute consensus
+            d_rows = d_table.row_count  # type: ignore[union-attr]
+            m_rows = m_table.row_count  # type: ignore[union-attr]
+
+            denom = max(d_rows, m_rows)
+            row_divergence = abs(d_rows - m_rows) / denom if denom > 0 else 0.0
+            total_rows = d_rows + m_rows
+            scores = {
+                "docling": d_rows / total_rows if total_rows > 0 else 0.0,
+                "mineru": m_rows / total_rows if total_rows > 0 else 0.0,
+                "row_divergence": row_divergence,
+                "agreement": 1.0 - row_divergence,
+            }
+
+            if row_divergence > 0.40:
+                consensus_tier = "multi_provider_conflict"
+                emit_fallback_telemetry(
+                    FallbackId.F9_PROVIDER_CONFLICT,
+                    building_name=f"page={page}",
+                    reason=f"row_divergence={row_divergence:.3f} (docling={d_rows}, mineru={m_rows})",
+                )
+            else:
+                consensus_tier = "multi_provider_agreement"
+                emit_fallback_telemetry(
+                    FallbackId.F10_CONSENSUS_ARBITRATION,
+                    building_name=f"page={page}",
+                    reason=f"row_divergence={row_divergence:.3f} — MinerU HTML preferred",
+                )
+
+            merged.append(
+                {
+                    "table_index": d_table.table_index,  # type: ignore[union-attr]
+                    "page": page,
+                    "rows": d_rows,
+                    "columns": d_table.columns,  # type: ignore[union-attr]
+                    "csv": d_table.csv,  # type: ignore[union-attr]
+                    "markdown": d_table.markdown,  # type: ignore[union-attr]
+                    "html": m_table.html
+                    or d_table.html,  # Prefer MinerU HTML  # type: ignore[union-attr]
+                    "consensus_tier": consensus_tier,
+                    "consensus_scores": scores,
+                }
+            )
+
+    # Append unknown-page tables (page <= 0), Docling first, then MinerU
+    _table_counter = len(merged)
+    for t in unknown_docling:
+        merged.append(
+            {
+                "table_index": _table_counter,
+                "page": t.page,
+                "rows": t.row_count,
+                "columns": t.columns,
+                "csv": t.csv,
+                "markdown": t.markdown,
+                "html": t.html,
+                "consensus_tier": "single_provider",
+                "consensus_scores": None,
+            }
+        )
+        _table_counter += 1
+
+    for t in unknown_mineru:
+        merged.append(
+            {
+                "table_index": _table_counter,
+                "page": t.page,
+                "rows": t.row_count,
+                "columns": t.columns,
+                "csv": t.csv,
+                "markdown": t.markdown,
+                "html": t.html,
+                "consensus_tier": "single_provider",
+                "consensus_scores": None,
+            }
+        )
+        _table_counter += 1
+
+    logger.info(
+        f"_merge_provider_tables: {len(merged)} merged tables "
+        f"(docling={len(docling_result.tables)}, mineru={len(mineru_result.tables)})"
+    )
+    return merged
+
+
+async def _run_dual_provider_extraction(
+    source_id: str,
+    pdf_path: str,
+    pipeline_logger: Optional[PipelineLogger] = None,
+) -> tuple[List[Dict[str, Any]], PipelineTimings]:
+    """
+    Run Docling then (optionally) MinerU sequentially to prevent VRAM contention.
+
+    Returns merged table dicts ready for _store_docling_tables() and a
+    PipelineTimings object with wall-clock measurements for each stage.
+    When dual-provider is disabled, returns Docling-only tables with
+    consensus_tier='single_provider'.
+
+    Args:
+        source_id: Fully qualified source record ID (e.g. 'source:abc123').
+        pdf_path: Absolute path to the PDF file on disk.
+        pipeline_logger: Optional PipelineLogger for stage observability.
+
+    Returns:
+        Tuple of (merged table dicts, PipelineTimings).
+    """
+    registry = get_provider_registry()
+    timings = PipelineTimings()
+
+    # Step 1: Always run Docling first
+    t0 = time.perf_counter()
+    docling_provider = registry.get_provider("docling")
+    docling_result = docling_provider.extract(pdf_path, pipeline_logger=pipeline_logger)
+    docling_provider.cleanup()
+    await _store_raw_extractions(source_id, docling_result)
+    timings.docling_ms = int((time.perf_counter() - t0) * 1000)
+    logger.info(
+        f"Docling extracted {len(docling_result.tables)} tables from {pdf_path}"
+    )
+
+    # Step 2: Check dual-provider gate (read dynamically for testability)
+    dual_enabled = (
+        os.environ.get("V3_DUAL_PROVIDER", "true").lower() == "true"
+        and os.environ.get("MINERU_ENABLED", "false").lower() == "true"
+    )
+
+    if not dual_enabled:
+        logger.info(
+            "Dual-provider disabled (V3_DUAL_PROVIDER or MINERU_ENABLED not set); "
+            "returning Docling-only results."
+        )
+        timings.total_provider_ms = timings.docling_ms
+        logger.info(
+            f"Provider timings | "
+            f"docling={timings.docling_ms}ms "
+            f"mineru={timings.mineru_ms}ms "
+            f"merge={timings.merge_ms}ms "
+            f"total={timings.total_provider_ms}ms"
+        )
+        return (
+            [
+                {
+                    "table_index": t.table_index,
+                    "page": t.page,
+                    "rows": t.row_count,
+                    "columns": t.columns,
+                    "csv": t.csv,
+                    "markdown": t.markdown,
+                    "html": t.html,
+                    "consensus_tier": "single_provider",
+                    "consensus_scores": None,
+                }
+                for t in docling_result.tables
+            ],
+            timings,
+        )
+
+    # AC3: flush GPU cache between providers (CUDA-safe guard)
+    t1 = time.perf_counter()
+    if _torch is not None and _torch.cuda.is_available():
+        _torch.cuda.empty_cache()
+        logger.debug("GPU cache flushed between Docling and MinerU")
+    timings.gpu_flush_ms = int((time.perf_counter() - t1) * 1000)
+
+    # Step 3: Run MinerU second (GPU released by Docling at this point)
+    t2 = time.perf_counter()
+    try:
+        mineru_provider = registry.get_provider("mineru")
+        mineru_result = mineru_provider.extract(pdf_path)
+        mineru_provider.cleanup()
+        await _store_raw_extractions(source_id, mineru_result)
+        timings.mineru_ms = int((time.perf_counter() - t2) * 1000)
+        logger.info(
+            f"MinerU extracted {len(mineru_result.tables)} tables from {pdf_path}"
+        )
+    except (ProviderError, KeyError) as e:
+        timings.mineru_ms = int((time.perf_counter() - t2) * 1000)
+        logger.warning(f"MinerU extraction failed — falling back to Docling-only: {e}")
+        timings.total_provider_ms = (
+            timings.docling_ms + timings.gpu_flush_ms + timings.mineru_ms
+        )
+        logger.info(
+            f"Provider timings | "
+            f"docling={timings.docling_ms}ms "
+            f"mineru={timings.mineru_ms}ms "
+            f"merge={timings.merge_ms}ms "
+            f"total={timings.total_provider_ms}ms"
+        )
+        return (
+            [
+                {
+                    "table_index": t.table_index,
+                    "page": t.page,
+                    "rows": t.row_count,
+                    "columns": t.columns,
+                    "csv": t.csv,
+                    "markdown": t.markdown,
+                    "html": t.html,
+                    "consensus_tier": "single_provider",
+                    "consensus_scores": None,
+                }
+                for t in docling_result.tables
+            ],
+            timings,
+        )
+
+    # Step 4: Merge results
+    t3 = time.perf_counter()
+    merged = _merge_provider_tables(docling_result, mineru_result)
+    timings.merge_ms = int((time.perf_counter() - t3) * 1000)
+
+    timings.total_provider_ms = (
+        timings.docling_ms + timings.gpu_flush_ms + timings.mineru_ms + timings.merge_ms
+    )
+    logger.info(
+        f"Provider timings | "
+        f"docling={timings.docling_ms}ms "
+        f"mineru={timings.mineru_ms}ms "
+        f"merge={timings.merge_ms}ms "
+        f"total={timings.total_provider_ms}ms"
+    )
+    return merged, timings
 
 
 @command(
@@ -288,25 +668,33 @@ async def process_source_command(
                     command_id=docling_command_id,
                 )
                 try:
-                    docling_tables = await _extract_tables_with_docling(
-                        str(processed_source.id),
-                        pdf_path,
+                    # E31-S5: Dual-provider sequential extraction with consensus merge
+                    merged_tables, _timings = await _run_dual_provider_extraction(
+                        source_id=str(processed_source.id),
+                        pdf_path=pdf_path,
                         pipeline_logger=docling_pl,
                     )
-                    if docling_tables:
+                    if merged_tables:
                         await _store_docling_tables(
-                            str(processed_source.id), docling_tables
+                            str(processed_source.id), merged_tables
                         )
                         logger.info(
-                            f"Stored {len(docling_tables)} Docling tables "
+                            f"Stored {len(merged_tables)} consensus tables "
                             f"for source {processed_source.id}"
                         )
-                except Exception as e:
+                except ProviderError as e:
                     docling_pl.stage_fail(
                         StageId.DOCLING_EXTRACTION,
                         error=str(e),
                     )
                     logger.error(f"Docling table extraction failed: {e}")
+                    # Non-fatal — PyMuPDF text is already saved
+                except Exception as e:
+                    docling_pl.stage_fail(
+                        StageId.DOCLING_EXTRACTION,
+                        error=str(e),
+                    )
+                    logger.error(f"Unexpected error during table extraction: {e}")
                     # Non-fatal — PyMuPDF text is already saved
 
         # 4. Gather processing results (notebook associations handled by source_graph)

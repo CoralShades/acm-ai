@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) - ACM-AI
 
-> **Product:** ACM-AI v1.0
-> **Date:** 2025-12-07 (Updated: 2026-02-23)
-> **Status:** v1.6 - Updated for E20 (Marketing-App Cross-Site Navigation & Domain Cutover)
+> **Product:** ACM-AI v3.1
+> **Date:** 2025-12-07 (Updated: 2026-03-05)
+> **Status:** v3.1 - V3 Implementation Complete (36/37 stories done, 95%; E30-S8 deferred to V4)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
+> **Change Log:** 2026-03-05 - v3.1: V3 Implementation Audit — verified all FR-1400..FR-1800 series against actual implementation, updated status to 36/37 stories complete (E30-S8 deferred), corrected story counts (E30: 9 stories incl. S9, E31: 8 stories incl. S8, E32: 8 stories incl. S8); 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -17,7 +17,7 @@ This PRD defines the requirements for transforming Open Notebook into ACM-AI, a 
 See [Product Brief](./02-product-brief.md) for business context and [System Analysis](./01-system-analysis.md) for technical foundation.
 
 ### 1.3 Scope
-This document covers MVP requirements. Future enhancements are noted but not detailed.
+This document covers MVP requirements (Epics 1-20, 29) and V3 scope expansion (Epics 30-34). V3 adds Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, and AI capability routing. **V3 is 95% complete (36/37 stories)** -- only E30-S8 (Ollama provider priority) is deferred to V4. See [Section 11: V3 Scope](#11-v3-scope-expansion) for detailed delineation of V3 additions.
 
 ### 1.4 Document Formats Supported
 | Format | Description | Status |
@@ -192,6 +192,91 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | FR-1003 | Extraction progress shall be visible in real-time on job pages | P1 | SSE progress wired to jobs flow |
 | FR-1004 | Jobs pages shall use consistent layout matching ACM Register design | P1 | Same card/grid/toolbar patterns |
 
+### 2.12 Salesforce Schema Alignment (FR-1400 Series)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — SCP-20260301-SF, APPROVED)
+> **Source:** [SCP-20260301-SF-salesforce-alignment.md](../../../V3/SCP-20260301-SF-salesforce-alignment.md)
+> **Epic:** E30 — Foundation & SF Schema
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1401 | Store Building data in `building_record` table mapped to SF Building__c fields | P0 | `building_record` table exists with 29+ extractable SF Building__c fields; BuildingRecord Pydantic model validates; CRUD API endpoints return Building data |
+| FR-1402 | Store ACM data in `acm_record` table mapped to SF Item__c fields | P0 | `acm_record` contains SF Item__c field aliases for 35+ fields; Pydantic aliases resolve SF API names; existing BAR fields preserved during transition |
+| FR-1403 | Enforce Friability → ACM_Classification → ACM_Sub_Classification dependency chain | P0 | 18 ACM_Classification values × 2 Friability values = 36 valid combinations enforced; invalid combinations flagged with inline badge; export blocked for unresolved violations |
+| FR-1404 | Enforce Building_Type → Building_Category dependency chain | P0 | 114 Building_Type values map to 13 Building_Category values; cascading dropdown filters valid categories based on selected type; invalid combinations flagged |
+| FR-1405 | Validate picklist values against exact SF values (case-sensitive) | P0 | All picklist fields validated against SF-defined values; case-sensitive matching (e.g., "Stable" not "stable"); BAR "Good" mapped to SF "Stable" |
+| FR-1406 | Export Building__c Data Loader CSV | P0 | CSV file generated with exact SF Building__c API field names as headers; all picklist values are valid SF values; External_ID__c field populated |
+| FR-1407 | Export Item__c Data Loader CSV | P0 | CSV file generated with exact SF Item__c API field names as headers; Building external ID present for parent-child Data Loader matching; referential integrity verified |
+| FR-1408 | Load SF schema from JSON config (describe metadata) | P0 | SF schema parsed from building_list.txt and item_list.txt into SalesforceSchemaConfig; loaded into field_schema table (version = salesforce-v1); picklist values and dependency chains available at runtime |
+| FR-1409 | Use Anthropic Claude Sonnet as default AI interpretation provider for Building__c and Item__c extraction | P0 | Direct ChatAnthropic API used for extraction by default; OpenRouter MUST remain fully supported as fallback (admin-configurable toggle); Ollama local permitted for embeddings, classification fallback, and enrichment; all non-extraction AI tasks (chat, search) continue via Esperanto/OpenRouter |
+| FR-1410 | Extract Building and ACM fields in separate AI calls | P0 | Two-phase extraction per building: Building__c fields extracted first, then Item__c fields; each phase uses dedicated prompt with SF field names and constrained picklist values |
+| FR-1411 | Provide context-relevant Item_Name subsets by Product Group | P1 | Item_Name__c choices (294 values) constrained by selected ACM_Classification/Product Group context; prompt receives subset of ≤50 relevant values per classification |
+| FR-1412 | Business rule: Negative result → Condition = N/A (negative) | P0 | When Sample_Analysis_Result_Material_Status__c is "Negative" or "Assumed Negative", Condition__c auto-set to "N/A (negative)" or "N/A (assumed negative)"; Disturbance_Potential__c likewise set to N/A variant; enforced in validator AND extraction prompt |
+
+### 2.13 Multi-Provider Extraction (FR-1500 Series)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — Party Mode Synthesis)
+> **Source:** [v3-party-mode-plan.md](../../../V3/output/v3-party-mode-plan.md) § PRD Delta
+> **Epic:** E31 — Multi-Provider Extraction
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1501 | Support 2+ table extraction providers (Docling + MinerU) with consensus merging | P0 | Both Docling (structure-based) and MinerU (hybrid: VLM + pipeline) execute per document; raw results stored per-provider; consensus merge produces unified table sections; Broadmeadows accuracy ≥31/31 with consensus |
+| FR-1502 | Per-field confidence scoring with consensus tier (HIGH/MEDIUM/LOW/CONTESTED) | P0 | Each merged record has consensus_tier assignment; HIGH = all providers agree; MEDIUM = 2/3 agree or >0.8 confidence; LOW = single provider; CONTESTED = disagreement on high-stakes field (result, friable, condition) |
+| FR-1503 | Store raw per-provider extraction results for provenance | P0 | `raw_extraction_table` stores per-provider output with provider_id, page_number, raw_html, raw_markdown, structured_json, bbox, and confidence; officer_edits array tracks manual corrections |
+| FR-1504 | Sequential GPU execution to prevent VRAM contention | P1 | Docling runs first (~4 GB, ~22s), MinerU hybrid runs second (~10 GB, ~15-20s); no concurrent GPU allocation; total dual-provider time ≤42s for 20-page document |
+| FR-1505 | Provider adapter interface for adding future extraction providers | P1 | ExtractionProvider protocol defined with async extract method; DoclingAdapter and MinerUAdapter implement protocol; NormalizedExtractionResult schema normalizes both HTML tables and VLM image-based markdown; new provider requires only adapter implementation |
+| FR-1506 | Cross-page table stitching (via MinerU) | P0 | Tables spanning multiple PDF pages merged into single logical table; MinerU hybrid backend handles multi-page stitching; stitched table coordinates tracked in bbox metadata |
+
+### 2.14 UI / UX Flows (FR-1600 Series)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — Party Mode Synthesis)
+> **Source:** [v3-party-mode-plan.md](../../../V3/output/v3-party-mode-plan.md) § PRD Delta
+> **Epic:** E33 — Frontend & UX
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1601 | Upload wizard with provider selection (Quick/Thorough) | P0 | 3-step wizard: (1) drop PDF, (2) select provider mode (Quick = Docling only, Thorough = Docling + MinerU with consensus), (3) confirm and extract; wizard validates file type and size before submission |
+| FR-1602 | SSE-powered extraction progress with building-by-building completion | P0 | Progress page shows stage labels, building cards with status; buildings appear as extraction completes; officers can navigate to completed buildings while extraction continues |
+| FR-1603 | Two-view layout: building list + item grid per building | P0 | Building list sidebar shows all buildings for a source; clicking a building shows its Item__c records in AG Grid; building-by-building workflow matches SF officer workflow |
+| FR-1604 | AG Grid dependent picklist cascading (SF dependency chains) | P0 | Custom cell editors for Friability→ACM_Classification→ACM_Sub_Classification; BuildingType→BuildingCategory; `getValues()` callback filters valid values based on controller field selection |
+| FR-1605 | Inline SF validation badges (red/orange/yellow) | P0 | Invalid picklist values show red badge; dependency chain violations show orange badge; low-confidence consensus fields show yellow badge; export button grayed out with "X validation errors" until all resolved |
+| FR-1606 | Raw table review (opt-in, editable) | P1 | Editable AG Grid showing raw extraction output at `/source/:id/raw`; officer corrections saved to `raw_extraction_table.officer_edits[]`; link to re-run AI processing on corrected raw data |
+| FR-1607 | Provenance viewer (PDF.js + bbox overlay + lineage table) | P1 | Slide-over panel: top = PDF page rendered with highlighted bounding box; bottom = extraction lineage (provider, model, confidence, edit history); accessible via "Source" button on each record row |
+| FR-1608 | Record wizard with SF picklist guidance | P1 | Modal dialog for editing individual records; dependent picklist dropdowns cascade correctly; SF field names shown alongside human-readable labels; save validates against SF schema |
+| FR-1609 | Bulk operations (multi-select, bulk edit, bulk validate) | P1 | Multi-select checkboxes in AG Grid; bulk edit changes field for all selected records; bulk validate re-runs SF validation; bulk export generates CSV for selected buildings; SSE progress for bulk operations |
+| FR-1610 | Building ID auto-assignment (BLD#NNN) during extraction | P0 | Server-side building ID generated during extraction: `BLD#{source_short}_{seq:03d}`; deterministic, generated in orchestrator; NOT the SF `Building_Name__c` field |
+| FR-1611 | Building detail page with editable Building__c fields and child ACM item grid | P1 | Dedicated building detail view displaying all 29+ Building__c fields in grouped form layout; editable fields with SF picklist dropdowns; BuildingType → Category dependent picklist cascading; save persists via PUT /api/acm/buildings/{id}; validation badges on invalid fields |
+
+### 2.15 Streaming & Observability (FR-1700 Series)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — Party Mode Synthesis)
+> **Source:** [v3-party-mode-plan.md](../../../V3/output/v3-party-mode-plan.md) § PRD Delta
+> **Epic:** E31 (SSE infrastructure: FR-1701, FR-1704) + E34 (streaming, lineage: FR-1702, FR-1703)
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1701 | SSE endpoints for extraction, AI processing, and bulk operations | P0 | Three SSE endpoint categories filtered by operation ID; Zustand streaming store for frontend state; SSE triggers React Query refetch on data changes |
+| FR-1702 | Record-by-record streaming to AG Grid during extraction | P1 | Records appear in AG Grid as they pass validation; officers can work on completed buildings while extraction continues; building completion events trigger grid update |
+| FR-1703 | Full extraction lineage: table → record → field with provider, model, confidence, edit history | P0 | Each ACM record stores extraction_provider, extraction_model, consensus_metadata (tier, scores, votes), and edit_history (user, field, old, new, timestamp); lineage queryable via API |
+| FR-1704 | PipelineEventBus for worker→SSE event relay | P1 | In-memory `asyncio.Queue`-based event bus; no external message broker required; SSE endpoints subscribe to bus; events include stage transitions, record completions, errors |
+
+### 2.16 AI Strategy (FR-1800 Series)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — Party Mode Synthesis)
+> **Source:** [v3-party-mode-plan.md](../../../V3/output/v3-party-mode-plan.md) § PRD Delta
+> **Epic:** E32 — AI Processing & Validation
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1801 | Capability registry with ModelCapability enum (EXTRACTION, CLASSIFICATION, ENRICHMENT, EMBEDDING, CHAT, SEARCH) | P0 | ModelCapability enum defines 6 task types; ModelPolicy maps each task type to default provider + fallback; admin settings page allows per-task provider routing |
+| FR-1802 | Ollama local for embeddings (zero cloud dependency) | P1 | Embedding generation uses Ollama local exclusively (nomic-embed-text or similar); no cloud API calls for embeddings; $0 embedding cost; data never leaves machine |
+| FR-1803 | AI model selection invisible to end users (admin settings only) | P0 | Upload wizard shows no model selection; officers interact with accuracy results not model choices; admin settings page provides provider routing configuration |
+| FR-1804 | Structured output via Pydantic models + Claude tool_use | P0 | BuildingExtractionResult and ACMItemExtractionResult Pydantic schemas used for Claude structured output via tool_use; schemas compatible with both Anthropic direct API and OpenRouter request/response formats |
+
+---
+
+## 3. Non-Functional Requirements
 
 ### 3.1 Performance (NFR-100 Series)
 
@@ -227,6 +312,29 @@ This document covers MVP requirements. Future enhancements are noted but not det
 | NFR-401 | System shall work on Chrome, Firefox, Edge (latest 2 versions) | P0 | Cross-browser testing passes |
 | NFR-402 | System shall work on desktop (1024px+ width) | P0 | Responsive layout works |
 | NFR-403 | Mobile support is out of scope for MVP | P0 | Documented limitation |
+
+### 3.5 V3 Performance Targets (NFR-500 Series)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion)
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| NFR-501 | Dual-provider extraction (Docling + MinerU) shall complete within 120 seconds for Broadmeadows (19 pages) | P0 | End-to-end pipeline time measured from upload to records-in-DB; sequential GPU execution: Docling (~22s) + MinerU hybrid (~20s) + consensus (~1s) + AI extraction |
+| NFR-502 | Dual-provider extraction shall complete within 300 seconds for Alexander (34 pages) | P0 | End-to-end pipeline time including multi-building extraction, validation, and correction loops |
+| NFR-503 | Consensus layer record matching shall complete in under 1 second per table section | P1 | Measured from provider results ready to consensus merge complete; per-field voting and conflict resolution included |
+| NFR-504 | GPU memory shall not exceed 10 GB peak during any single extraction phase | P1 | Sequential execution prevents VRAM contention; Docling (~4 GB) and MinerU hybrid (~10 GB) never run concurrently; monitored via nvidia-smi |
+| NFR-505 | V3 extraction accuracy shall equal or exceed V1 benchmarks | P0 | Broadmeadows ≥31/31 records; Alexander ≥40/43 records (after completionState fix baseline); all picklist values valid SF values |
+
+### 3.6 Data Sovereignty & Compliance (NFR-600 Series)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion)
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| NFR-601 | Anthropic API data shall not be used for model training | P0 | Anthropic API terms confirm; documented in deployment guide |
+| NFR-602 | Ollama embedding and classification operations shall be fully local | P0 | No network calls during embedding/classification; verified via network traffic audit |
+| NFR-603 | Exported CSV/Excel files shall contain only SF-validated field values | P0 | Export blocked if any record has unresolved validation errors; all picklist values match exact SF values |
+| NFR-604 | Edit history shall be immutable and auditable | P1 | All record modifications tracked in edit_history array; entries include user, field, old value, new value, timestamp; no deletion of history entries |
 
 ---
 
@@ -352,6 +460,36 @@ const defaultVisibleColumns = [
   'material_condition', 'risk_status', 'sample_result'
 ];
 ```
+
+### 4.4 V3 UI Structure (NEW - 2026-03-02)
+
+> **Added:** V3 Scope Expansion — Two-view layout, upload wizard, provenance viewer
+
+**V3 Page Flow:**
+```
+/upload           → Upload Wizard (3 steps: drop PDF, select provider mode, extract)
+/extraction/:id   → Extraction Progress (SSE-powered, stage labels, building cards)
+/source/:id/raw   → Raw Table Review (opt-in, editable AG Grid)
+/source/:id       → Building Grid (sidebar list) + Item Grid (per-building)
+/source/:id/provenance/:recordId → Provenance Viewer (PDF.js + lineage)
+/source/:id/export → Export Dialog (Building__c + Item__c, CSV/Excel)
+/admin/settings   → AI Provider Config, Field Schema, Site Config
+```
+
+**V3 New Components:**
+
+| Component | Description | Location |
+|-----------|-------------|----------|
+| `UploadWizard` | 3-step wizard: drop PDF, select provider mode, extract | /upload page |
+| `ExtractionProgress` | SSE-powered progress with building cards and stage labels | /extraction/:id page |
+| `BuildingListSidebar` | Building list with drill-down selection | Source detail sidebar |
+| `ItemGrid` | AG Grid for Item__c records filtered by selected building | Source detail main panel |
+| `DependentPicklistEditor` | AG Grid custom cell editor with cascading SF picklist values | Grid cell editors |
+| `ValidationBadge` | Inline red/orange/yellow badge for SF validation status | Grid cell renderer |
+| `RecordWizardModal` | Modal for editing individual records with SF picklist guidance | Overlay |
+| `ProvenanceViewer` | PDF.js + bbox overlay + extraction lineage table | Slide-over panel |
+| `RawTableReview` | Editable AG Grid for raw extraction output | /source/:id/raw page |
+| `SFExportDialog` | Export dialog for Building__c + Item__c CSV/Excel | /source/:id/export |
 
 ---
 
@@ -535,6 +673,112 @@ DEFINE FIELD created_at ON extraction_progress TYPE datetime DEFAULT time::now()
 DEFINE INDEX idx_extraction_progress_command ON extraction_progress FIELDS command_id UNIQUE;
 ```
 
+### 5.1.5 Building Record Table (V3 — E30-S2)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — SF Building__c alignment)
+
+Stores building-level data as a first-class entity, mapped to SF Building__c extractable fields. Master-detail relationship: `acm_record.building_id → building_record.id`.
+
+```sql
+DEFINE TABLE building_record SCHEMAFULL;
+DEFINE FIELD source_id ON building_record TYPE record<source>;
+DEFINE FIELD internal_id ON building_record TYPE string;            -- BLD#001, BLD#002 (auto-assigned)
+DEFINE FIELD building_name ON building_record TYPE option<string>;  -- SF: Building_Name__c
+DEFINE FIELD building_address ON building_record TYPE option<string>; -- SF: Building_Address__c
+DEFINE FIELD suburb ON building_record TYPE option<string>;         -- SF: Suburb__c (custom derived)
+DEFINE FIELD postcode ON building_record TYPE option<string>;       -- SF: Postcode__c (custom derived)
+DEFINE FIELD state ON building_record TYPE option<string>;          -- SF: State__c (custom derived)
+DEFINE FIELD construction_type ON building_record TYPE option<string>; -- SF: Construction_Type__c
+DEFINE FIELD building_type ON building_record TYPE option<string>;  -- SF: Building_Type__c (picklist, 114 values)
+DEFINE FIELD building_category ON building_record TYPE option<string>; -- SF: Building_Category__c (dependent on Building_Type__c)
+DEFINE FIELD estimated_year_built ON building_record TYPE option<string>; -- SF: Estimated_Year_Build_New__c
+DEFINE FIELD number_of_levels ON building_record TYPE option<string>; -- SF: Number_of_Levels__c (custom derived)
+DEFINE FIELD est_building_size ON building_record TYPE option<string>; -- SF: Est_Building_Size_m2__c
+DEFINE FIELD date_of_inspection ON building_record TYPE option<string>; -- SF: Date_of_Inspection__c (formula)
+DEFINE FIELD roof_type ON building_record TYPE option<string>;      -- SF: Roof_Type__c (custom derived)
+DEFINE FIELD frequency_of_use ON building_record TYPE option<string>; -- SF: Frequency_of_Use__c (picklist)
+DEFINE FIELD owned_or_leased ON building_record TYPE option<string>; -- SF: Owned_or_Leased__c (custom derived)
+DEFINE FIELD department ON building_record TYPE option<string>;     -- From site_config
+DEFINE FIELD organisation ON building_record TYPE option<string>;   -- From site_config
+DEFINE FIELD page_number ON building_record TYPE option<int>;
+DEFINE FIELD extraction_confidence ON building_record TYPE option<float>;
+DEFINE FIELD extraction_provider ON building_record TYPE option<string>;
+DEFINE FIELD extraction_model ON building_record TYPE option<string>;
+DEFINE FIELD created_at ON building_record TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON building_record TYPE datetime DEFAULT time::now();
+
+DEFINE INDEX bldg_source ON building_record FIELDS source_id;
+DEFINE INDEX bldg_internal_id ON building_record FIELDS internal_id;
+```
+
+### 5.1.6 Raw Extraction Table (V3 — E31-S4)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — Per-provider provenance storage)
+
+Stores raw extraction output per provider BEFORE consensus merging and AI interpretation. Full provenance chain.
+
+```sql
+DEFINE TABLE raw_extraction_table SCHEMAFULL;
+DEFINE FIELD source_id ON raw_extraction_table TYPE record<source>;
+DEFINE FIELD provider_id ON raw_extraction_table TYPE string;      -- "docling", "mineru", "google_docai"
+DEFINE FIELD extraction_backend ON raw_extraction_table TYPE option<string>; -- "pipeline", "vlm", "hybrid", null
+DEFINE FIELD page_number ON raw_extraction_table TYPE int;
+DEFINE FIELD raw_html ON raw_extraction_table TYPE option<string>;
+DEFINE FIELD raw_markdown ON raw_extraction_table TYPE option<string>;
+DEFINE FIELD structured_json ON raw_extraction_table TYPE option<object>;
+DEFINE FIELD bbox ON raw_extraction_table TYPE option<object>;     -- {x, y, width, height}
+DEFINE FIELD confidence ON raw_extraction_table TYPE option<float>;
+DEFINE FIELD officer_edits ON raw_extraction_table TYPE option<array<object>>; -- [{field, old, new, user, timestamp}]
+DEFINE FIELD created_at ON raw_extraction_table TYPE datetime DEFAULT time::now();
+
+DEFINE INDEX raw_source ON raw_extraction_table FIELDS source_id;
+DEFINE INDEX raw_provider ON raw_extraction_table FIELDS provider_id;
+```
+
+### 5.1.7 V3 Schema Additions to Existing Tables
+
+> **Added:** 2026-03-02 (V3 Scope Expansion)
+
+**acm_record — V3 field additions:**
+```sql
+-- Building FK (replaces freeform building_id string)
+DEFINE FIELD building_id ON acm_record TYPE option<record<building_record>>;
+-- Raw provenance link
+DEFINE FIELD raw_row_id ON acm_record TYPE option<record<raw_extraction_table>>;
+-- Extraction metadata
+DEFINE FIELD extraction_provider ON acm_record TYPE option<string>;
+DEFINE FIELD extraction_model ON acm_record TYPE option<string>;
+-- Consensus metadata
+DEFINE FIELD consensus_metadata ON acm_record TYPE option<object>; -- {tier, scores, votes}
+-- Edit history (immutable audit trail)
+DEFINE FIELD edit_history ON acm_record TYPE option<array<object>>; -- [{user, field, old, new, timestamp}]
+-- Note: SF field names are exposed via Pydantic aliases, not separate DB columns
+```
+
+**acm_table_section — V3 field additions:**
+```sql
+-- Multi-provider consensus data
+DEFINE FIELD provider_results ON acm_table_section TYPE option<object>;   -- {docling: {...}, mineru: {...}}
+DEFINE FIELD consensus_tier ON acm_table_section TYPE option<string>;     -- HIGH, MEDIUM, LOW, CONTESTED
+DEFINE FIELD consensus_scores ON acm_table_section TYPE option<object>;   -- Per-field agreement data
+```
+
+**site_config — V3 field additions:**
+```sql
+-- SF-specific officer-configured fields
+DEFINE FIELD department_sf ON site_config TYPE option<string>;     -- SF: Department__c context
+DEFINE FIELD organisation_sf ON site_config TYPE option<string>;   -- SF: Organisation__c
+DEFINE FIELD building_type_default ON site_config TYPE option<string>; -- Default Building_Type__c
+DEFINE FIELD building_category_default ON site_config TYPE option<string>; -- Default Building_Category__c
+```
+
+**field_schema — V3 evolution:**
+```sql
+-- Evolve to support SF picklist values and dependency chains
+-- version = "salesforce-v1" for SF-aligned config
+-- config_json contains: {building_fields, item_fields, picklists, dependencies}
+```
+
 ### 5.2 API Endpoints (Expanded)
 
 | Endpoint | Method | Description |
@@ -556,6 +800,26 @@ DEFINE INDEX idx_extraction_progress_command ON extraction_progress FIELDS comma
 | `/api/acm/extraction-progress/{command_id}/stream` | GET | SSE stream â€” real-time pipeline events (text/event-stream) |
 | `/api/acm/extraction-progress/{command_id}` | GET | REST polling fallback â€” current extraction state and log entries |
 | `/api/acm/field-schema` | GET | Active field schema config for AG Grid dynamic column definitions |
+
+**V3 API Endpoints (NEW — 2026-03-02):**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/acm/buildings` | GET | List building records for a source (filterable) |
+| `/api/acm/buildings/{id}` | GET | Get single building record |
+| `/api/acm/buildings/{id}` | PUT | Update building record |
+| `/api/acm/buildings/{id}` | DELETE | Delete building and cascade to child ACM records |
+| `/api/acm/buildings/{id}/items` | GET | List ACM items for a specific building |
+| `/api/acm/export/sf/building` | GET | Export Building__c Data Loader CSV |
+| `/api/acm/export/sf/item` | GET | Export Item__c Data Loader CSV |
+| `/api/acm/export/sf/excel` | GET | Export Excel with Building__c + Item__c sheets |
+| `/api/acm/raw-tables/{source_id}` | GET | List raw extraction tables for a source |
+| `/api/acm/raw-tables/{id}` | PUT | Update raw extraction table (officer edits) |
+| `/api/acm/sf-schema` | GET | Get active Salesforce schema config (picklists, dependencies) |
+| `/api/acm/sf-schema/validate` | POST | Validate records against SF schema |
+| `/api/acm/provenance/{record_id}` | GET | Get extraction lineage for a record |
+| `/api/admin/ai-config` | GET | Get AI provider routing configuration |
+| `/api/admin/ai-config` | PUT | Update AI provider routing (admin only) |
 
 ### 5.3 BAR Export Format Specification (NEW)
 
@@ -579,6 +843,26 @@ The system shall export Excel files compliant with Victorian Government BAR form
 38. PSB Supplied ACM ID â†’ 39. Assumed Removed? â†’ 40. Date of Removal
 41. Quantity Removed â†’ 42. Asbestos Removal Notification No
 43. EPA Waste Transport Certificate No â†’ 44. Removal Comments â†’ 45. Photo Reference Number
+
+### 5.3.1 Salesforce Export Format Specification (V3 — NEW)
+
+> **Added:** 2026-03-02 (V3 Scope Expansion — FR-1406, FR-1407)
+
+The system shall export CSV/Excel files compatible with Salesforce Data Loader:
+
+**File Structure:**
+- `Building__c.csv` — One row per building, exact SF Building__c API field names as headers
+- `Item__c.csv` — One row per ACM item, exact SF Item__c API field names as headers, Building External_ID__c for parent linkage
+- Excel: Two sheets (Building__c, Item__c) in a single .xlsx file
+
+**Data Loader Requirements:**
+- All picklist values must be exact SF values (case-sensitive)
+- External_ID__c populated for upsert matching
+- Building parent-child linking via Building External ID in Item__c sheet
+- All validation errors must be resolved before export is permitted
+
+**Export Validation Gate:**
+Export is blocked if any record has unresolved SF validation errors. Export button shows "X validation errors — resolve before export" until clean.
 
 ### 5.4 Extraction Pipeline Architecture
 
@@ -616,6 +900,50 @@ tag_pages -> orchestrate_extraction (always)
 **Observability:** SSE + structured logs for stage transitions, benchmark telemetry, retries,
 and correction outcomes.
 
+### 5.4.1 V3 Target Pipeline (NEW - 2026-03-02)
+
+> **Added:** V3 Scope Expansion — 5-phase pipeline with multi-provider extraction and SF-aligned validation
+
+```
+Phase 1: PDF Processing (E31)
+  PDF → PyMuPDF (text)
+      + Docling (structure-based HTML tables)
+      + MinerU hybrid (VLM image-based + pipeline, auto-routes)
+  → raw_extraction_table (per-provider, includes VLM output)
+  → Consensus Layer (per-field weighted voting, 3-stage matching)
+  → acm_table_section (consensus-merged, provider_results JSONB)
+
+Phase 2: Structure Analysis (existing + enhanced)
+  Table-derived structure (page ranges, building groups)
+  + Heuristic enrichment (TOC, building names, metadata)
+  → Building Inventory + Page Tags
+
+Phase 3: AI Extraction — per building (E32)
+  Orchestrator → Building__c extraction (Claude Sonnet, SF field names)
+               → Item__c extraction (Claude Sonnet, SF picklist values)
+  → Raw BuildingRecord + ACMRecord candidates
+
+Phase 4: Validation & Correction (E32)
+  Pydantic schema validation (SF field types)
+  → SF picklist validation (exact case-sensitive values)
+  → Dependency chain validation (Friability→Classification, BuildingType→Category)
+  → AI correction loop (Claude Sonnet, max 3 retries, single-record context)
+  → Dedup + No-Access recovery
+  → Negative→N/A business rule enforcement
+
+Phase 5: Review & Export (E33, E34)
+  → building_record + acm_record in SurrealDB
+  → AG Grid (building list sidebar + item grid, dependent picklists)
+  → Provenance viewer (PDF.js + bbox overlay)
+  → Export: Building__c.csv + Item__c.csv (SF Data Loader ready)
+```
+
+**V3 Fallback additions:**
+- Provider failure: skip failed provider, continue with remaining providers; non-fatal
+- Consensus conflict: L1 weighted vote → L2 provider priority → L3 LLM arbitration → L4 human escalation (CONTESTED badge)
+- AI extraction failure: Anthropic direct → OpenRouter fallback → skip building + preserve partial
+- SF validation failure: WARN during editing (inline badges), REJECT on export
+
 ### 5.5 Enum Definitions (NEW - 2026-02-05)
 
 > Source: `docs/samplePDF/instructions-sample/register_enums.json`
@@ -636,6 +964,21 @@ and correction outcomes.
   - Set Condition to `N/A (negative)` or `N/A (assumed negative)`
   - Set Disturbance Potential to `N/A (negative)` or `N/A (assumed negative)`
 - Note: BAR uses `Moderate` not `Medium` for Disturbance Potential
+
+**V3 Salesforce Vocabulary Alignment (2026-03-02):**
+
+| BAR Value | SF Value | Affected Field | Migration |
+|-----------|----------|---------------|-----------|
+| `Good` | `Stable` | Condition (Condition__c) | BAR "Good" has NO SF equivalent — map to "Stable" |
+| `T3 Vinyl products` | `Vinyl products` | ACM_Classification__c | Remove "T3" prefix for SF picklist match |
+| `product` | `Item_Name__c` | Item name field | Pydantic alias; 294 valid values from SF picklist |
+| `friable` | `Friability_of_Material__c` | Friability field | Pydantic alias |
+| `material_condition` | `Condition__c` | Condition field | Pydantic alias + value mapping |
+| `acm_product_group` | `ACM_Classification__c` | Product group | Pydantic alias + value mapping |
+| `acm_product_type` | `ACM_Sub_Classification__c` | Product type | Pydantic alias |
+| `labelled` (bool) | `Labelled__c` (picklist "Yes"/"No") | Labelled field | Type change: boolean → picklist |
+
+> **Note:** SF adds `Negative - Treated as Positive` to Sample_Analysis_Result_Material_Status__c (not in current BAR enum). SF Condition values: `Poor`, `Fair`, `Stable`, `Unknown`, `N/A (negative)`, `N/A (assumed negative)`.
 
 ### 5.6 ACM Product Taxonomy (NEW - 2026-02-05)
 
@@ -756,6 +1099,31 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 | T-011 | PDF citation navigation from spreadsheet | Correct page open and cell context |
 | T-012 | Upload non-ACM PDF | Graceful error path or empty ACM view |
 
+**V3 Test Scenarios (NEW — 2026-03-02):**
+
+| ID | Scenario | Expected Result |
+|----|----------|-----------------|
+| T-V3-001 | Dual-provider extraction on Broadmeadows | Docling + MinerU both execute; consensus merge produces ≥31/31 records |
+| T-V3-002 | Dual-provider extraction on Alexander | Consensus ≥40/43 after completionState fix baseline |
+| T-V3-003 | SF picklist validation — valid values | All extracted picklist values match exact SF values (case-sensitive) |
+| T-V3-004 | SF picklist validation — invalid values | Invalid values flagged with inline red badge; export blocked |
+| T-V3-005 | Dependent picklist chain — Friability→Classification | Selecting "Non-friable" filters to 8 valid ACM_Classification values; "Friable" filters to 6 |
+| T-V3-006 | Dependent picklist chain — BuildingType→Category | Selecting Building_Type filters to valid Building_Category values (114→13 mapping) |
+| T-V3-007 | Two-phase AI extraction | Building__c fields extracted in first call; Item__c fields in second; both stored correctly |
+| T-V3-008 | Building__c.csv export | CSV headers match SF API names; all values valid SF picklist values; External_ID__c populated |
+| T-V3-009 | Item__c.csv export | CSV headers match SF API names; Building external ID present for parent-child linkage |
+| T-V3-010 | Export validation gate | Export button disabled when validation errors exist; enabled when all clean |
+| T-V3-011 | Consensus tier assignment | HIGH when all providers agree; MEDIUM for 2/3; LOW for single provider; CONTESTED for disagreement |
+| T-V3-012 | Provider failure fallback | When MinerU fails, extraction continues with Docling only; non-fatal toast notification |
+| T-V3-013 | Anthropic→OpenRouter fallback | When Anthropic direct fails, extraction falls back to OpenRouter; admin toggle works |
+| T-V3-014 | Two-view building/item layout | Building list sidebar; click building shows filtered items; building-by-building navigation |
+| T-V3-015 | Provenance viewer | Click "Source" on record; PDF renders with bbox highlight; lineage table shows provider, model, confidence |
+| T-V3-016 | Building ID auto-assignment | Buildings assigned BLD#NNN IDs during extraction; deterministic, sequential |
+| T-V3-017 | "Good"→"Stable" migration | All BAR "Good" values correctly mapped to SF "Stable" in extraction, validation, and export |
+| T-V3-018 | Negative→N/A business rule (SF) | Negative result auto-sets Condition__c and Disturbance_Potential__c to N/A variants |
+| T-V3-019 | Cascading delete | Deleting a building_record cascades to child acm_records |
+| T-V3-020 | Edit history audit trail | All record modifications tracked in edit_history with user, field, old, new, timestamp |
+
 ---
 
 ## 8. Rollout Plan
@@ -779,6 +1147,43 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 - User testing with real SAMPs
 - Performance optimization
 - Documentation
+
+### V3 Phase 5: Foundation & SF Schema (E30)
+- Salesforce schema config loader and dependency chain mappings
+- Building Record table + domain model (SF Building__c)
+- ACM Record SF Item__c field alignment
+- Dependent picklist validator
+- Data migration (BAR→SF vocabulary)
+- Two-phase extraction prompts (Building__c + Item__c)
+- Anthropic Claude direct API + OpenRouter fallback
+
+### V3 Phase 6: Multi-Provider Extraction (E31)
+- MinerU 2.x integration (hybrid backend)
+- Provider adapter framework
+- Consensus layer (record matching + per-field voting)
+- Raw extraction table storage
+- Pipeline integration + benchmark validation
+
+### V3 Phase 7: AI Processing & Validation (E32)
+- Two-phase Building__c + Item__c AI extraction
+- SF-aligned validation + correction loop
+- Classifier update (SF taxonomy)
+- Ollama model evaluation spike
+
+### V3 Phase 8: Frontend & UX (E33)
+- Upload wizard with provider selection
+- Two-view building/item grid layout
+- Dependent picklist cell editors
+- Validation badges + record wizard
+- Raw table review + provenance viewer
+- Salesforce-ready export
+
+### V3 Phase 9: Integration & Polish (E34)
+- PipelineEventBus + SSE endpoints
+- Record-by-record streaming
+- Bulk operations
+- Performance optimization
+- Canonical artifact update
 
 ---
 
@@ -808,6 +1213,13 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 | NATA | National Association of Testing Authorities |
 | PSB | Property Services Branch |
 | EPA | Environment Protection Authority |
+| Building__c | Salesforce custom object representing a physical building/asset |
+| Item__c | Salesforce custom object representing an ACM item within a building |
+| Data Loader | Salesforce bulk data import tool using CSV files |
+| Dependent Picklist | SF picklist where valid values depend on another field's selection |
+| Consensus Layer | V3 component that merges extraction results from multiple providers |
+| VLM | Vision Language Model — MinerU backend that processes page images |
+| Hybrid Backend | MinerU mode that auto-routes pages to pipeline or VLM based on complexity |
 
 ### B. References
 
@@ -816,6 +1228,9 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 - [Open Notebook Documentation](../index.md)
 - [AG Grid Documentation](https://www.ag-grid.com/react-data-grid/)
 - [Docling GitHub](https://github.com/docling-project/docling)
+- [MinerU GitHub](https://github.com/opendatalab/MinerU)
+- [Anthropic API Documentation](https://docs.anthropic.com/)
+- [Salesforce Data Loader Guide](https://developer.salesforce.com/docs/atlas.en-us.dataLoader.meta/dataLoader/)
 
 ### C. Change Log
 
@@ -828,3 +1243,90 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 | 2026-02-20 | 1.4 | SCP-20260220: FR-102 updated (MinerU primary); 7 new `acm_record` fields (quantity, acm_labelled, identifying_company, floor_level, normalized_action, enriched_text, parent_table_id); 3 new tables (field_schema Â§5.1.2, acm_table_section Â§5.1.3, extraction_progress Â§5.1.4); 3 new API endpoints (extraction-progress SSE/REST, field-schema); FR-800 series (Extraction Monitor, E15); FR-900 series (UX Enhancement, E16); Section 1.4 note on generic parser; Section 9 resolved AG Grid license item |
 | 2026-02-23 | 1.6 | Added FR-1100 series for cross-site marketing-app navigation, canonical root-domain behavior, and env-configurable URL contract for Vercel multi-project deployment |
 | 2026-03-01 | 1.7 | Epic 29 reconciliation: unified orchestrator path contract, parser resilience requirement, benchmark-gated NFRs, and decision-gate release controls added. |
+| 2026-03-02 | 3.0 | **V3 Scope Expansion:** FR-1400 series (SF alignment, 12 FRs); FR-1500 series (multi-provider extraction, 6 FRs); FR-1600 series (UI/UX flows, 10 FRs); FR-1700 series (streaming, 4 FRs); FR-1800 series (AI strategy, 4 FRs); FR-1409 amended (Anthropic default + OpenRouter fallback); NFR-500 (V3 performance), NFR-600 (data sovereignty); Building Record schema (§5.1.5), Raw Extraction Table (§5.1.6), V3 schema additions (§5.1.7); V3 pipeline architecture (§5.4.1); SF vocabulary mapping (§5.5); SF export format (§5.3.1); V3 UI structure (§4.4); 20 V3 test scenarios; V3 rollout phases 5-9; Section 11 V3 Scope |
+
+---
+
+## 11. V3 Scope Expansion
+
+> **Added:** 2026-03-02
+> **Source Documents:** [Party Mode Synthesis](../../../V3/output/v3-party-mode-plan.md), [SF Alignment SCP](../../../V3/SCP-20260301-SF-salesforce-alignment.md), [Multi-Agent Audit](../../../V3/output/e30-multi-agent-audit-unified.md)
+
+### 11.1 V3 Overview
+
+V3 transforms ACM-AI from a BAR-centric extraction tool into a Salesforce-aligned compliance platform with multi-provider extraction, consensus-based accuracy, and two-phase building/item data model. All original PRD content (Epics 1-20, 29) is preserved; V3 adds Epics 30-34.
+
+**Key V3 Capabilities:**
+1. **Salesforce Schema Alignment** — Data model split into Building__c + Item__c with dependent picklist validation and SF Data Loader export
+2. **Multi-Provider Extraction** — Docling (structure-based) + MinerU (vision-based hybrid) with per-field consensus merging
+3. **Two-Phase AI Extraction** — Separate Building__c and Item__c extraction calls per building using Claude Sonnet
+4. **Two-View UI** — Building list sidebar + item grid, dependent picklist cascading, SF validation badges
+5. **Full Provenance** — Raw per-provider data, consensus metadata, extraction lineage, edit history audit trail
+6. **AI Capability Routing** — 6-task-type capability registry with per-task provider routing (Anthropic, OpenRouter, Ollama)
+
+### 11.2 V3 Epic Boundary Summary
+
+| Epic | Scope | Stories | SP | Dependencies |
+|------|-------|--------:|---:|-------------|
+| E30: Foundation & SF Schema | SF schema config, building record model, dependent picklist validation, data migration, extraction prompts, Anthropic direct API | 8 | 29 | E29 complete |
+| E31: Multi-Provider Extraction | MinerU 2.x integration, provider adapters, consensus layer, raw storage, pipeline integration, SSE infrastructure | 7 | 18 | E30 (schema freeze) |
+| E32: AI Processing & Validation | Two-phase extraction, SF validation + correction, classifier update, Ollama evaluation | 6 | 16 | E30, E31 |
+| E33: Frontend & UX | Upload wizard, building/item grid, picklist editors, validation badges, provenance viewer, building detail, export | 8 | 25 | E30, E32 |
+| E34: Integration & Polish | Record streaming, bulk operations, performance, artifact update | 4 | 9 | E30-E33 |
+| **TOTAL** | | **33** | **97** | |
+
+### 11.3 V3 Dependency Graph
+
+```
+E30 (Foundation & SF Schema) ─── SCHEMA FREEZE GATE ──┐
+                                                       │
+E31 (Multi-Provider) ─────────────────────────────────┤
+                                                       │
+                      E32 (AI Processing) ─────────────┤
+                                                       │
+                      E33-S1,S2 (Core UI) ─────────────┤  ← can start after E30
+                                                       │
+                      E33-S3-S8 (Advanced UI) ─────────┤  ← after E32
+                                                       │
+                      E34 (Integration) ───────────────┘  ← after E32+E33-S2
+
+Critical path: E30 → E31 → E32 → E33-S3 → E34
+Parallel lane: E33-S1,S2 can start after E30 (API contracts defined)
+```
+
+### 11.4 V3 Data Model Overview
+
+```
+source
+  ├── raw_extraction_table (per-provider: Docling, MinerU)
+  │     └── bbox, raw HTML/markdown, officer_edits[]
+  ├── acm_table_section (consensus-merged, provider_results JSONB)
+  │     └── consensus_tier (HIGH/MEDIUM/LOW/CONTESTED)
+  ├── building_record (SF Building__c mapped, 29+ fields)
+  │     └── acm_record (SF Item__c mapped, 35+ fields)
+  │           └── edit_history[], consensus_metadata
+  ├── site_config (officer-configured SF fields)
+  └── field_schema (SF picklists, dependency chains, version=salesforce-v1)
+```
+
+### 11.5 V3 AI Capability Routing
+
+| Task Type | Default Provider | Fallback | Admin Override? |
+|-----------|-----------------|----------|:--------------:|
+| EXTRACTION | Anthropic Claude Sonnet (direct API) | OpenRouter (same or alt model) | YES |
+| CLASSIFICATION | Regex patterns (80% hit rate) | Ollama local → Claude Sonnet | YES |
+| ENRICHMENT | Ollama local (llama3.1:8b) | Claude Haiku via OpenRouter | YES |
+| EMBEDDING | Ollama local (nomic-embed-text) | None (local only) | NO |
+| CHAT | Esperanto/OpenRouter (user-selected) | N/A | YES |
+| SEARCH | Esperanto/OpenRouter | N/A | YES |
+
+### 11.6 V3 FR Traceability
+
+| FR Series | Epic | Source Document | Status |
+|-----------|------|-----------------|--------|
+| FR-1401–FR-1412 | E30 | SCP-20260301-SF-salesforce-alignment.md | APPROVED |
+| FR-1501–FR-1506 | E31 | v3-party-mode-plan.md § PRD Delta | NEW |
+| FR-1601–FR-1611 | E33 | v3-party-mode-plan.md § PRD Delta + readiness fix | NEW |
+| FR-1701, FR-1704 | E31 | Moved from E34 to E31-S7 (SSE timing fix) | NEW |
+| FR-1702, FR-1703 | E34 | v3-party-mode-plan.md § PRD Delta | NEW |
+| FR-1801–FR-1804 | E32 | v3-party-mode-plan.md § PRD Delta | NEW |

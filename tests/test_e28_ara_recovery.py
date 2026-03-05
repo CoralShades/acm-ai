@@ -174,7 +174,9 @@ class TestARANotSampledRecovery:
         )
         assert len(records) >= 1
         rec = records[0]
-        assert "fire door" in rec.product.lower() or "fire door" in rec.room_name.lower()
+        assert (
+            "fire door" in rec.product.lower() or "fire door" in rec.room_name.lower()
+        )
         assert rec.result == "Assumed Positive"
         assert rec.sample_result == "Assumed Positive"
         assert rec.sample_no == "Not Sampled"
@@ -194,12 +196,13 @@ class TestARANotSampledRecovery:
 
     def test_eaves_recovered(self):
         """Eaves (height restricted) recovered."""
-        records = _recover_not_sampled_records_ara(
-            ARA_EAVES_TEXT, [], "unknown", ""
-        )
+        records = _recover_not_sampled_records_ara(ARA_EAVES_TEXT, [], "unknown", "")
         assert len(records) >= 1
         rec = records[0]
-        assert "eaves" in rec.product.lower() or "eaves" in rec.material_description.lower()
+        assert (
+            "eaves" in rec.product.lower()
+            or "eaves" in rec.material_description.lower()
+        )
         assert rec.building_name == "VMO Accommodations"
         assert rec.area_type == "Exterior"
 
@@ -210,23 +213,22 @@ class TestARANotSampledRecovery:
         )
         assert len(records) >= 1
         rec = records[0]
-        assert "electrical" in rec.product.lower() or "electrical" in rec.material_description.lower()
+        assert (
+            "electrical" in rec.product.lower()
+            or "electrical" in rec.material_description.lower()
+        )
         assert "Live Electrical" in rec.data_issues[0]
 
     def test_ceiling_recovered(self):
         """Ceiling 'Not Sampled' (height restricted) recovered."""
-        records = _recover_not_sampled_records_ara(
-            ARA_CEILING_TEXT, [], "unknown", ""
-        )
+        records = _recover_not_sampled_records_ara(ARA_CEILING_TEXT, [], "unknown", "")
         assert len(records) >= 1
         rec = records[0]
         assert "ceiling" in rec.product.lower()
 
     def test_safe_recovered(self):
         """Safe insulation (restricted access) recovered."""
-        records = _recover_not_sampled_records_ara(
-            ARA_SAFE_TEXT, [], "unknown", ""
-        )
+        records = _recover_not_sampled_records_ara(ARA_SAFE_TEXT, [], "unknown", "")
         assert len(records) >= 1
         rec = records[0]
         assert "safe" in rec.product.lower() or "insulation" in rec.product.lower()
@@ -236,7 +238,9 @@ class TestARANotSampledRecovery:
         records = _recover_not_sampled_records_ara(
             ARA_MULTI_ITEM_TEXT, [], "unknown", ""
         )
-        assert len(records) >= 2, f"Expected >=2, got {len(records)}: {[r.product for r in records]}"
+        assert len(records) >= 2, (
+            f"Expected >=2, got {len(records)}: {[r.product for r in records]}"
+        )
 
     def test_no_duplicate_recovery(self):
         """Recovery does not duplicate records already extracted by LLM."""
@@ -257,18 +261,20 @@ class TestARANotSampledRecovery:
         )
         # Should not duplicate the fire door
         fire_door_count = sum(
-            1
-            for r in records
-            if "fire door" in (r.product or "").lower()
+            1 for r in records if "fire door" in (r.product or "").lower()
         )
-        assert fire_door_count == 0, f"Fire door should not be duplicated, got {fire_door_count}"
+        assert fire_door_count == 0, (
+            f"Fire door should not be duplicated, got {fire_door_count}"
+        )
 
     def test_sampled_positive_not_recovered(self):
         """Sampled positive items (with NATA sample number) should NOT be recovered."""
         records = _recover_not_sampled_records_ara(
             ARA_SAMPLED_POSITIVE_TEXT, [], "unknown", ""
         )
-        assert len(records) == 0, f"Should not recover sampled items, got {len(records)}"
+        assert len(records) == 0, (
+            f"Should not recover sampled items, got {len(records)}"
+        )
 
     def test_samp_path_unaffected(self):
         """Legacy SAMP path recovery unaffected by ARA changes."""
@@ -277,7 +283,9 @@ class TestARANotSampledRecovery:
         records = _recover_not_sampled_records_ara(
             SAMP_NO_ACCESS_TEXT, [], "B009", "Main Building"
         )
-        assert len(records) == 0, f"ARA scan should not match SAMP text, got {len(records)}"
+        assert len(records) == 0, (
+            f"ARA scan should not match SAMP text, got {len(records)}"
+        )
 
     def test_samp_recovery_still_works(self):
         """The parent _recover_no_access_records still finds SAMP-format entries."""
@@ -290,16 +298,12 @@ class TestARANotSampledRecovery:
 
     def test_building_context_from_section_header(self):
         """Building name extracted from ARA section header."""
-        records = _recover_not_sampled_records_ara(
-            ARA_EAVES_TEXT, [], "unknown", ""
-        )
+        records = _recover_not_sampled_records_ara(ARA_EAVES_TEXT, [], "unknown", "")
         assert len(records) >= 1
         assert records[0].building_name == "VMO Accommodations"
 
     def test_area_type_from_section_header(self):
         """Area type (Interior/Exterior) extracted from ARA section header."""
-        records = _recover_not_sampled_records_ara(
-            ARA_EAVES_TEXT, [], "unknown", ""
-        )
+        records = _recover_not_sampled_records_ara(ARA_EAVES_TEXT, [], "unknown", "")
         assert len(records) >= 1
         assert records[0].area_type == "Exterior"

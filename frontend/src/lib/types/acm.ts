@@ -29,7 +29,7 @@ export interface ACMRecord {
   risk_status?: string | null // 'Low' | 'Medium' | 'High'
   result: string
   page_number?: number | null
-  extraction_confidence?: number | null
+  extraction_confidence?: string | null // "high" | "medium" | "low"
   // Classification fields
   acm_product_group?: string | null
   acm_product_type?: string | null
@@ -48,6 +48,8 @@ export interface ACMRecord {
   normalized_action?: string | null
   data_issues?: string[] | null
   floor_level?: string | null
+  no_access?: boolean | null
+  smf_present?: string | null
   date_of_inspection?: string | null
   building_address?: string | null
   suburb?: string | null
@@ -59,6 +61,9 @@ export interface ACMRecord {
   additional_comments?: string | null
   created?: string | null
   updated?: string | null
+  // Validation fields (E33-S4) — populated by SF validation pipeline (E32-S7)
+  validation_status?: string | null  // "valid" | "corrected" | "failed_correction" | "invalid"
+  validation_errors?: string[] | null // Validation error strings
 }
 
 export interface ACMRecordListResponse {
@@ -87,6 +92,7 @@ export interface ACMRecordCreateRequest {
   building_name?: string
   building_year?: number
   building_construction?: string
+  building_type?: string
   room_id?: string
   room_name?: string
   room_area?: number
@@ -96,6 +102,8 @@ export interface ACMRecordCreateRequest {
   extent?: string
   location?: string
   friable?: string
+  acm_product_group?: string
+  acm_product_type?: string
   material_condition?: string
   risk_status?: string
   result: string
@@ -109,6 +117,7 @@ export interface ACMRecordUpdateRequest {
   building_name?: string
   building_year?: number
   building_construction?: string
+  building_type?: string
   room_id?: string
   room_name?: string
   room_area?: number
@@ -118,6 +127,8 @@ export interface ACMRecordUpdateRequest {
   extent?: string
   location?: string
   friable?: string
+  acm_product_group?: string
+  acm_product_type?: string
   material_condition?: string
   risk_status?: string
   result?: string
@@ -222,11 +233,54 @@ export const FREQUENCY_OPTIONS = [
 
 export const PUBLIC_ACCESS_OPTIONS = ['YES', 'NO'] as const
 
+// Raw Extraction types (E31-S4 raw_extraction table)
+export interface OfficerEdit {
+  field: string
+  old_value: string
+  new_value: string
+  user: string
+  timestamp: string // ISO 8601
+}
+
+export interface RawExtractionRecord {
+  id: string
+  source_id: string
+  provider_id: string // "docling" | "mineru"
+  extraction_backend: string
+  page_number: number
+  raw_html: string | null
+  raw_markdown: string | null
+  structured_json: string | null // JSON string: { headers: string[], rows: string[][] }
+  bbox: Record<string, number> | null
+  confidence: number | null
+  officer_edits: OfficerEdit[]
+  created_at: string | null
+}
+
+export interface RawExtractionListResponse {
+  source_id: string
+  total: number
+  extractions: RawExtractionRecord[]
+}
+
+export interface PatchRawExtractionRequest {
+  structured_json?: string
+  edits: OfficerEdit[]
+}
+
+// Shape of parsed structured_json content
+export interface StructuredJsonContent {
+  headers: string[]
+  rows: string[][]
+}
+
 export interface CommandJobStatusResponse {
   job_id: string
   status: 'new' | 'running' | 'completed' | 'failed' | 'canceled'
   result?: { success?: boolean; records_created?: number; error_message?: string }
   error_message?: string | null
+  created?: string | null
+  updated?: string | null
   progress?: {
     state?: import('./pipeline').PipelineRunState
   }
@@ -241,6 +295,22 @@ export interface ACMRawTable {
   raw_html?: string | null
   raw_text?: string | null
   building_name?: string | null
+}
+
+// Provenance types (E33-S6)
+export interface ProvenanceData {
+  record: ACMRecord
+  table_section: {
+    consensus_tier: string | null
+    consensus_scores: Record<string, number> | null
+    page_start: number
+    page_end: number
+    building_name: string | null
+    table_type: string | null
+  } | null
+  raw_extractions: RawExtractionRecord[]
+  source_file_path: string | null
+  source_title: string | null
 }
 
 // Re-export generated types that complement the manual types above.

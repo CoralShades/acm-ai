@@ -1,0 +1,4 @@
+-- Migration 38 down: No-op — removing optional fields would delete data from any
+-- field_schema:sf_v1 records. Fields are additive and safe to leave.
+-- To fully revert, manually run: DELETE field_schema:sf_v1;
+RETURN "38_down: no-op";

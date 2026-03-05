@@ -1,0 +1,5 @@
+-- Migration 40 down: Remove building_record table and FK field
+-- WARNING: This will delete all building_record data.
+REMOVE INDEX IF EXISTS idx_acm_building_record ON TABLE acm_record;
+REMOVE FIELD IF EXISTS building_record_id ON TABLE acm_record;
+REMOVE TABLE IF EXISTS building_record;

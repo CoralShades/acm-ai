@@ -7,10 +7,12 @@ listing, filtering, extraction, and export.
 
 import csv
 import io
+import json as _json
 import math
 import re
+import zipfile
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -32,12 +34,24 @@ from api.models import (
     ACMStatsResponse,
     AgencyListResponse,
     ApplyTemplateRequest,
+    BackfillBuildingsRequest,
+    BackfillBuildingsResponse,
     BackfillParentsRequest,
     BackfillParentsResponse,
     BatchClassifyRequest,
     BatchClassifyResponse,
+    BuildingRecordCreateRequest,
+    BuildingRecordListResponse,
+    BuildingRecordResponse,
+    BuildingRecordUpdateRequest,
     BuildingResponse,
     BuildingUpdateRequest,
+    BuildingValidationSummary,
+    BulkEditRequest,
+    BulkEditResponse,
+    BulkFixResponse,
+    BulkValidateRequest,
+    BulkValidateResponse,
     BusinessRuleResponse,
     ClassifyRequest,
     ClassifyResponse,
@@ -47,19 +61,37 @@ from api.models import (
     FieldSchemaConfigUpdateRequest,
     NormalizeRequest,
     NormalizeResponse,
+    OfficerEditEntry,  # noqa: F401 — imported for re-export / forward ref
     ParentContextResponse,
+    PatchRawExtractionRequest,
+    ProvenanceResponse,
+    RawExtractionListResponse,
+    RawExtractionResponse,
     RawTableResponse,
     ReEmbedRequest,
     ReEmbedResponse,
+    SFFieldSchemaConfigResponse,
     SiteConfigRequest,
     SiteConfigResponse,
     SiteConfigTemplateResponse,
+    SourceIntelligenceResponse,
     TaxonomyGroupResponse,
     TaxonomyResponse,
+    ValidationSummaryResponse,
 )
-from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.domain.acm import ACMRecord, ACMTableSection
+from open_notebook.database.repository import (
+    ensure_record_id,
+    get_source_intelligence,
+    repo_query,
+)
+from open_notebook.domain.acm import (
+    ACMRecord,
+    ACMTableSection,
+    BuildingRecord,
+    RawExtraction,
+)
 from open_notebook.domain.site_config import SiteConfig
+from open_notebook.exceptions import NotFoundError
 
 router = APIRouter()
 
@@ -68,6 +100,9 @@ router = APIRouter()
 async def list_acm_records(
     source_id: str = Query(..., description="Source ID to filter by (required)"),
     building_id: Optional[str] = Query(None, description="Filter by building ID"),
+    building_record_id: Optional[str] = Query(
+        None, description="Filter by building_record FK (e.g., building_record:xxx)"
+    ),
     room_id: Optional[str] = Query(None, description="Filter by room ID"),
     risk_status: Optional[str] = Query(
         None, description="Filter by risk status (Low/Medium/High)"
@@ -79,7 +114,7 @@ async def list_acm_records(
     List ACM records with filtering and pagination.
 
     Returns records for the specified source, with optional filtering
-    by building, room, and risk status.
+    by building, room, risk status, and building_record FK.
     """
     try:
         # Build query conditions
@@ -89,6 +124,10 @@ async def list_acm_records(
         if building_id:
             conditions.append("building_id = $building_id")
             params["building_id"] = building_id
+
+        if building_record_id:
+            conditions.append("building_record_id = $building_record_id")
+            params["building_record_id"] = ensure_record_id(building_record_id)
 
         if room_id:
             conditions.append("room_id = $room_id")
@@ -368,6 +407,9 @@ def _get_record_value(record: ACMRecord, field: str | None) -> str:
 @router.get("/export/csv")
 async def export_acm_records(
     source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[List[str]] = Query(
+        None, description="Filter to specific building IDs"
+    ),
 ):
     """
     Export ACM records as CSV file.
@@ -378,6 +420,10 @@ async def export_acm_records(
     try:
         # Get all records for source
         records = await ACMRecord.get_by_source(source_id)
+
+        # Filter to requested buildings if specified
+        if building_ids:
+            records = [r for r in records if r.get("building_id") in building_ids]
 
         if not records:
             raise HTTPException(
@@ -432,6 +478,9 @@ RISK_COLORS = {
 @router.get("/export/excel")
 async def export_acm_excel(
     source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[List[str]] = Query(
+        None, description="Filter to specific building IDs"
+    ),
 ):
     """
     Export ACM records as formatted Excel file.
@@ -442,6 +491,10 @@ async def export_acm_excel(
     try:
         # Get all records for source
         records = await ACMRecord.get_by_source(source_id)
+
+        # Filter to requested buildings if specified
+        if building_ids:
+            records = [r for r in records if r.get("building_id") in building_ids]
 
         if not records:
             raise HTTPException(
@@ -526,6 +579,306 @@ async def export_acm_excel(
         raise
     except Exception as e:
         logger.error(f"Error exporting ACM records to Excel: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/export/sf-csv")
+async def export_sf_csv(
+    source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[str] = Query(
+        None,
+        description="Comma-separated building internal_ids to restrict export (AC7)",
+    ),
+):
+    """Export as ZIP containing Building__c.csv + Item__c.csv with SF API field names.
+
+    Returns a ZIP archive with two CSV files:
+    - Building__c.csv — one row per building, SF API names as headers
+    - Item__c.csv     — one row per ACM item, linked via Building__r.External_ID__c
+
+    Building ID filtering (AC7): pass building_ids as comma-separated internal_ids
+    to restrict the export to only those buildings and their items.
+    """
+    from open_notebook.extractors.exporters.sf_export import (
+        BUILDING_SF_MAPPING,
+        ITEM_SF_MAPPING,
+        building_to_sf_row,
+        generate_external_id,
+        get_building_sf_headers,
+        get_item_sf_headers,
+        item_to_sf_row,
+    )
+
+    try:
+        # Resolve optional building filter
+        building_id_filter: set[str] | None = None
+        if building_ids:
+            building_id_filter = {
+                bid.strip() for bid in building_ids.split(",") if bid.strip()
+            }
+
+        # Fetch building records
+        buildings = await BuildingRecord.get_by_source(source_id)
+        if not buildings:
+            raise HTTPException(
+                status_code=404, detail="No building records found for source"
+            )
+
+        if building_id_filter:
+            buildings = [b for b in buildings if b.internal_id in building_id_filter]
+
+        # Fetch site config (AC5)
+        site_config = None
+        try:
+            site_config = await SiteConfig.get_by_source(source_id)
+        except Exception as sc_err:
+            logger.warning(f"Could not load site config for {source_id}: {sc_err}")
+
+        # Pre-compute External_ID__c for each building (keyed by building DB id string)
+        building_ext_id: dict[str, str] = {}
+        for b in buildings:
+            eid = generate_external_id(b, source_id)
+            building_ext_id[str(b.id) if b.id else b.internal_id] = eid
+
+        # Also index by building_code so ACMRecord.building_id can resolve the parent
+        building_code_to_ext_id: dict[str, str] = {}
+        for b in buildings:
+            if b.building_code:
+                building_code_to_ext_id[b.building_code] = generate_external_id(
+                    b, source_id
+                )
+            building_code_to_ext_id[b.internal_id] = generate_external_id(b, source_id)
+
+        # Fetch ACM records
+        all_records = await ACMRecord.get_by_source(source_id)
+        # Filter by building_record_id or building_id if a building filter was requested
+        if building_id_filter:
+            allowed_building_codes = {
+                b.building_code for b in buildings if b.building_code
+            } | {b.internal_id for b in buildings}
+            all_records = [
+                r for r in all_records if r.building_id in allowed_building_codes
+            ]
+
+        # Build Building CSV bytes
+        building_buf = io.StringIO()
+        b_writer = csv.DictWriter(
+            building_buf, fieldnames=get_building_sf_headers(), extrasaction="ignore"
+        )
+        b_writer.writeheader()
+        for b in buildings:
+            row = building_to_sf_row(b, source_id, site_config)
+            b_writer.writerow(row)
+        building_csv_bytes = building_buf.getvalue().encode("utf-8-sig")
+
+        # Build Item CSV bytes
+        item_buf = io.StringIO()
+        i_writer = csv.DictWriter(
+            item_buf, fieldnames=get_item_sf_headers(), extrasaction="ignore"
+        )
+        i_writer.writeheader()
+        for record in all_records:
+            parent_ext_id = building_code_to_ext_id.get(record.building_id, "")
+            row = item_to_sf_row(record, parent_ext_id)
+            i_writer.writerow(row)
+        item_csv_bytes = item_buf.getvalue().encode("utf-8-sig")
+
+        # Package both CSVs into a ZIP
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("Building__c.csv", building_csv_bytes)
+            zf.writestr("Item__c.csv", item_csv_bytes)
+        zip_buf.seek(0)
+
+        # Get source title for filename
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        source_title = source.title if source else source_id
+        filename = f"sf_export_{source_title}_{date.today()}.zip".replace(" ", "_")
+
+        return StreamingResponse(
+            zip_buf,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting SF CSV for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/export/sf-excel")
+async def export_sf_excel(
+    source_id: str = Query(..., description="Source ID to export"),
+    building_ids: Optional[str] = Query(
+        None,
+        description="Comma-separated building internal_ids to restrict export (AC7)",
+    ),
+):
+    """Export as XLSX workbook with Building__c and Item__c sheets.
+
+    Returns a single Excel file with two sheets:
+    - Sheet 1 "Building__c" — one row per building, SF API names as headers
+    - Sheet 2 "Item__c"     — one row per ACM item, linked via Building__r.External_ID__c
+
+    Building ID filtering (AC7): pass building_ids as comma-separated internal_ids
+    to restrict the export to only those buildings and their items.
+    """
+    from open_notebook.extractors.exporters.sf_export import (
+        building_to_sf_row,
+        generate_external_id,
+        get_building_sf_headers,
+        get_item_sf_headers,
+        item_to_sf_row,
+    )
+
+    try:
+        # Resolve optional building filter
+        building_id_filter: set[str] | None = None
+        if building_ids:
+            building_id_filter = {
+                bid.strip() for bid in building_ids.split(",") if bid.strip()
+            }
+
+        # Fetch building records
+        buildings = await BuildingRecord.get_by_source(source_id)
+        if not buildings:
+            raise HTTPException(
+                status_code=404, detail="No building records found for source"
+            )
+
+        if building_id_filter:
+            buildings = [b for b in buildings if b.internal_id in building_id_filter]
+
+        # Fetch site config (AC5)
+        site_config = None
+        try:
+            site_config = await SiteConfig.get_by_source(source_id)
+        except Exception as sc_err:
+            logger.warning(f"Could not load site config for {source_id}: {sc_err}")
+
+        # Pre-compute External_ID__c per building_code / internal_id
+        building_code_to_ext_id: dict[str, str] = {}
+        for b in buildings:
+            ext_id = generate_external_id(b, source_id)
+            if b.building_code:
+                building_code_to_ext_id[b.building_code] = ext_id
+            building_code_to_ext_id[b.internal_id] = ext_id
+
+        # Fetch ACM records
+        all_records = await ACMRecord.get_by_source(source_id)
+        if building_id_filter:
+            allowed_building_codes = {
+                b.building_code for b in buildings if b.building_code
+            } | {b.internal_id for b in buildings}
+            all_records = [
+                r for r in all_records if r.building_id in allowed_building_codes
+            ]
+
+        # --- Excel workbook ---
+        wb = Workbook()
+
+        # Shared cell styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill_blue = PatternFill(
+            start_color="4472C4", end_color="4472C4", fill_type="solid"
+        )
+        header_fill_green = PatternFill(
+            start_color="375623", end_color="375623", fill_type="solid"
+        )
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        # --- Sheet 1: Building__c ---
+        ws_bld = wb.active
+        ws_bld.title = "Building__c"
+        b_headers = get_building_sf_headers()
+        for col_idx, header in enumerate(b_headers, 1):
+            cell = ws_bld.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill_blue
+            cell.alignment = header_alignment
+            cell.border = thin_border
+            ws_bld.column_dimensions[get_column_letter(col_idx)].width = max(
+                12, len(header) + 2
+            )
+
+        for row_idx, b in enumerate(buildings, 2):
+            b_row = building_to_sf_row(b, source_id, site_config)
+            for col_idx, header in enumerate(b_headers, 1):
+                cell = ws_bld.cell(
+                    row=row_idx, column=col_idx, value=b_row.get(header, "")
+                )
+                cell.border = thin_border
+
+        ws_bld.freeze_panes = "A2"
+        if buildings:
+            ws_bld.auto_filter.ref = ws_bld.dimensions
+
+        # --- Sheet 2: Item__c ---
+        ws_itm = wb.create_sheet(title="Item__c")
+        i_headers = get_item_sf_headers()
+        for col_idx, header in enumerate(i_headers, 1):
+            cell = ws_itm.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill_green
+            cell.alignment = header_alignment
+            cell.border = thin_border
+            ws_itm.column_dimensions[get_column_letter(col_idx)].width = max(
+                12, len(header) + 2
+            )
+
+        for row_idx, record in enumerate(all_records, 2):
+            parent_ext_id = building_code_to_ext_id.get(record.building_id, "")
+            i_row = item_to_sf_row(record, parent_ext_id)
+            for col_idx, header in enumerate(i_headers, 1):
+                cell = ws_itm.cell(
+                    row=row_idx, column=col_idx, value=i_row.get(header, "")
+                )
+                cell.border = thin_border
+
+                # Color code Risk_Status__c column
+                if header == "Risk_Status__c" and i_row.get(header) in RISK_COLORS:
+                    cell.fill = PatternFill(
+                        start_color=RISK_COLORS[i_row[header]],
+                        end_color=RISK_COLORS[i_row[header]],
+                        fill_type="solid",
+                    )
+
+        ws_itm.freeze_panes = "A2"
+        if all_records:
+            ws_itm.auto_filter.ref = ws_itm.dimensions
+
+        # Save workbook to bytes buffer
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        # Get source title for filename
+        from open_notebook.domain.notebook import Source
+
+        source = await Source.get(source_id)
+        source_title = source.title if source else source_id
+        filename = f"sf_export_{source_title}_{date.today()}.xlsx".replace(" ", "_")
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting SF Excel for source {source_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -875,6 +1228,44 @@ async def backfill_parent_references(
 
     except Exception as e:
         logger.error(f"Error backfilling parent references: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backfill-buildings", response_model=BackfillBuildingsResponse)
+async def backfill_building_records(
+    request: BackfillBuildingsRequest = BackfillBuildingsRequest(),
+):
+    """
+    Backfill building_record entries from existing ACM records (E35-S6).
+
+    Groups acm_records by (source_id, building_id), creates a BuildingRecord
+    for each unique building, and sets building_record_id FK on the acm_records.
+    Idempotent: skips buildings that already exist and never overwrites
+    non-NULL FK values.
+    """
+    try:
+        from scripts.v3_building_backfill import backfill_all, backfill_source
+
+        if request.source_id:
+            result = await backfill_source(request.source_id)
+        else:
+            result = await backfill_all()
+
+        total = result.buildings_created + result.buildings_skipped
+        return BackfillBuildingsResponse(
+            buildings_created=result.buildings_created,
+            buildings_skipped=result.buildings_skipped,
+            records_linked=result.records_linked,
+            message=(
+                f"Backfill complete: {result.buildings_created} buildings created, "
+                f"{result.buildings_skipped} skipped, "
+                f"{result.records_linked} records linked "
+                f"({total} total buildings)"
+            ),
+        )
+
+    except Exception as e:
+        logger.error(f"Error backfilling building records: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1455,6 +1846,126 @@ async def list_raw_tables_for_job(source_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get(
+    "/raw-extractions/{source_id}",
+    response_model=RawExtractionListResponse,
+)
+async def list_raw_extractions(
+    source_id: str,
+    provider: Optional[str] = Query(
+        None,
+        description="Filter by provider_id (e.g. 'docling', 'mineru')",
+    ),
+    page_number: Optional[int] = Query(
+        None,
+        description="Filter by page number (1-based)",
+    ),
+):
+    """
+    List per-provider raw extraction outputs for a source document.
+
+    Returns one record per provider per page. Use the provider query param
+    to narrow results to a single provider's output.
+    """
+    try:
+        extractions = await RawExtraction.get_by_source(
+            source_id,
+            provider=provider,
+            page_number=page_number,
+        )
+
+        items = [
+            RawExtractionResponse(
+                id=str(e.id or ""),
+                source_id=str(e.source_id),
+                provider_id=e.provider_id,
+                extraction_backend=e.extraction_backend,
+                page_number=e.page_number,
+                raw_html=e.raw_html,
+                raw_markdown=e.raw_markdown,
+                structured_json=e.structured_json,
+                bbox=e.bbox,
+                confidence=e.confidence,
+                officer_edits=e.officer_edits,
+                created_at=str(e.created_at) if e.created_at else None,
+            )
+            for e in extractions
+        ]
+
+        return RawExtractionListResponse(
+            extractions=items,
+            total=len(items),
+            source_id=source_id,
+        )
+    except Exception as e:
+        logger.error(f"Error listing raw extractions for source {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch(
+    "/raw-extractions/{source_id}/{extraction_id}",
+    response_model=RawExtractionResponse,
+)
+async def patch_raw_extraction(
+    source_id: str,
+    extraction_id: str,
+    body: PatchRawExtractionRequest,
+):
+    """Append officer edits and optionally update structured_json for a raw extraction row.
+
+    Verifies that the extraction record belongs to the given source_id before
+    applying changes. Returns the updated RawExtractionResponse on success.
+    """
+    try:
+        try:
+            extraction = await RawExtraction.get(extraction_id)
+        except NotFoundError:
+            raise HTTPException(status_code=404, detail="Raw extraction not found")
+
+        # Normalize source_id: add 'source:' prefix if not present so the
+        # comparison works whether the caller passes "s1" or "source:s1".
+        normalized_source_id = (
+            source_id if source_id.startswith("source:") else f"source:{source_id}"
+        )
+        if str(extraction.source_id) != normalized_source_id:
+            raise HTTPException(status_code=403, detail="source_id mismatch")
+
+        if body.structured_json is not None:
+            try:
+                _json.loads(body.structured_json)
+            except ValueError:
+                raise HTTPException(
+                    status_code=422, detail="structured_json is not valid JSON"
+                )
+            extraction.structured_json = body.structured_json
+
+        extraction.officer_edits = extraction.officer_edits + [
+            e.model_dump() for e in body.edits
+        ]
+
+        await extraction.save()
+
+        return RawExtractionResponse(
+            id=str(extraction.id or ""),
+            source_id=str(extraction.source_id),
+            provider_id=extraction.provider_id,
+            extraction_backend=extraction.extraction_backend,
+            page_number=extraction.page_number,
+            raw_html=extraction.raw_html,
+            raw_markdown=extraction.raw_markdown,
+            structured_json=extraction.structured_json,
+            bbox=extraction.bbox,
+            confidence=extraction.confidence,
+            officer_edits=extraction.officer_edits,
+            created_at=str(extraction.created_at) if extraction.created_at else None,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error patching raw extraction {extraction_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/jobs/{source_id}/buildings", response_model=list[BuildingResponse])
 async def list_buildings_for_job(source_id: str):
     """
@@ -1646,7 +2157,7 @@ async def classify_acm_item(request: ClassifyRequest):
         POST /api/acm/classify
         {"item_description": "Vinyl floor tiles", "friability": "Non-friable"}
 
-    Returns the product group (e.g., "T3 Vinyl products") and product type
+    Returns the product group (e.g., "Vinyl products") and product type
     (e.g., "Vinyl Tiles") with a confidence score.
     """
     try:
@@ -2081,3 +2592,538 @@ async def reset_field_mapping():
     except Exception as e:
         logger.error(f"Error resetting field mapping: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SF Field Schema Endpoint (E30-S1 — V3 Foundation)
+# =============================================================================
+
+
+@router.get("/field-schema", response_model=SFFieldSchemaConfigResponse)
+async def get_sf_field_schema():
+    """Get the current Salesforce field schema configuration.
+
+    Returns the SF schema bundle parsed from V3 markdown files.
+    Falls back to in-memory parse if DB record is not yet populated.
+
+    Returns:
+        SFFieldSchemaConfigResponse with building_fields, item_fields,
+        picklists, and dependency chains.
+    """
+    from open_notebook.extractors.parsers.config_loader import (
+        SFSchemaLoadError,
+        load_sf_field_schema,
+    )
+
+    try:
+        schema = load_sf_field_schema()
+        return SFFieldSchemaConfigResponse(**schema.model_dump())
+    except SFSchemaLoadError as e:
+        logger.error(f"SF schema load error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"SF schema not available: {e}",
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error loading SF schema: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"SF schema not available: {e}",
+        )
+
+
+# --- Building Record CRUD (E30-S2) ---
+
+
+@router.get("/buildings", response_model=BuildingRecordListResponse)
+async def list_building_records(
+    source_id: str = Query(..., description="Source ID to filter by (required)"),
+):
+    """List all building records for a source, with ACM item counts."""
+    try:
+        buildings = await BuildingRecord.get_by_source(source_id)
+
+        # Compute record_count per building via a single query
+        record_counts: dict[str, int] = {}
+        if buildings:
+            from open_notebook.database.repository import repo_query
+
+            rows = await repo_query(
+                "SELECT building_record_id, count() AS cnt "
+                "FROM acm_record WHERE source_id = $source_id "
+                "AND building_record_id != NONE "
+                "GROUP BY building_record_id",
+                {"source_id": source_id},
+            )
+            for row in rows:
+                bid = str(row.get("building_record_id", ""))
+                record_counts[bid] = row.get("cnt", 0)
+
+        responses = []
+        for b in buildings:
+            data = b.model_dump()
+            data["record_count"] = record_counts.get(str(b.id), 0)
+            responses.append(BuildingRecordResponse(**data))
+
+        return BuildingRecordListResponse(
+            buildings=responses,
+            total=len(responses),
+        )
+    except Exception as e:
+        logger.error(f"Error listing building records: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/buildings/{building_id:path}", response_model=BuildingRecordResponse)
+async def get_building_record(building_id: str):
+    """Get a single building record by ID."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        return BuildingRecordResponse(**building.model_dump())
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Building record not found")
+    except Exception as e:
+        logger.error(f"Error getting building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/buildings", response_model=BuildingRecordResponse, status_code=201)
+async def create_building_record(request: BuildingRecordCreateRequest):
+    """Create a new building record. internal_id is auto-generated."""
+    try:
+        internal_id = await BuildingRecord.generate_internal_id(request.source_id)
+        data = request.model_dump(exclude_none=True)
+        data["internal_id"] = internal_id
+        building = BuildingRecord(**data)
+        await building.save()
+        return BuildingRecordResponse(**building.model_dump())
+    except Exception as e:
+        logger.error(f"Error creating building record: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/buildings/{building_id:path}", response_model=BuildingRecordResponse)
+async def update_building_record(
+    building_id: str, request: BuildingRecordUpdateRequest
+):
+    """Update an existing building record."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        update_data = request.model_dump(exclude_none=True)
+        for key, value in update_data.items():
+            setattr(building, key, value)
+        await building.save()
+        return BuildingRecordResponse(**building.model_dump())
+    except Exception as e:
+        logger.error(f"Error updating building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/buildings/{building_id:path}")
+async def delete_building_record(building_id: str):
+    """Delete a building record."""
+    try:
+        building = await BuildingRecord.get(building_id)
+        await building.delete()
+        return {"deleted": True, "id": building_id}
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Building record not found")
+    except Exception as e:
+        logger.error(f"Error deleting building record {building_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Source Intelligence (E30-S9) ---
+
+
+@router.get(
+    "/source-intelligence/{source_id:path}",
+    response_model=SourceIntelligenceResponse,
+)
+async def get_source_intelligence_endpoint(source_id: str):
+    """Return persisted pre-extraction intelligence for a source.
+
+    Returns 404 if no intelligence has been saved yet (extraction not run
+    or the save_intelligence node hasn't executed).
+    """
+    try:
+        data = await get_source_intelligence(source_id)
+        if not data:
+            raise HTTPException(
+                status_code=404,
+                detail="No intelligence data found for this source",
+            )
+        return SourceIntelligenceResponse(**data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching intelligence for {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Validation Summary + Bulk Fix (E33-S4) ---
+
+
+@router.get("/validation-summary", response_model=ValidationSummaryResponse)
+async def get_validation_summary(
+    source_id: str = Query(..., description="Source ID"),
+):
+    """Return per-building validation error counts for the sidebar badges.
+
+    Queries all acm_record rows for this source that have one or more
+    validation_errors and groups results by building_id.
+    """
+    try:
+        sid = ensure_record_id(source_id)
+        query = """
+            SELECT building_id,
+                   count() as error_count
+            FROM acm_record
+            WHERE source_id = $source_id
+              AND array::len(validation_errors) > 0
+            GROUP BY building_id;
+        """
+        rows = await repo_query(query, {"source_id": sid})
+        buildings = [
+            BuildingValidationSummary(
+                building_id=r.get("building_id", ""),
+                error_count=r.get("error_count", 0),
+            )
+            for r in rows
+        ]
+        return ValidationSummaryResponse(buildings=buildings)
+    except Exception as e:
+        logger.error(f"Error fetching validation summary for {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-fix", response_model=BulkFixResponse)
+async def bulk_fix_records(
+    source_id: str = Query(..., description="Source ID"),
+    building_id: Optional[str] = Query(None, description="Optional building filter"),
+):
+    """Re-validate and auto-correct fixable records.
+
+    Loads all records for the source (optionally filtered to a building)
+    that currently have validation_errors, runs validate_acm_record() on
+    each one (which applies normalizations as side-effects to the dict),
+    and persists any records that now pass validation back to SurrealDB.
+    """
+    from open_notebook.extractors.validators.acm_validator import validate_acm_record
+
+    try:
+        sid = ensure_record_id(source_id)
+
+        conditions = [
+            "source_id = $source_id",
+            "array::len(validation_errors) > 0",
+        ]
+        params: dict = {"source_id": sid}
+
+        if building_id:
+            conditions.append("building_id = $building_id")
+            params["building_id"] = building_id
+
+        where_clause = " AND ".join(conditions)
+        fetch_query = f"SELECT * FROM acm_record WHERE {where_clause};"
+        records = await repo_query(fetch_query, params)
+
+        fixed_count = 0
+        for rec in records:
+            record_dict = dict(rec)
+            result = validate_acm_record(record_dict)
+
+            if result.is_valid:
+                record_id = rec.get("id", "")
+                if not record_id:
+                    continue
+
+                # Build SET clause for normalised enum fields that may have changed
+                set_parts = [
+                    "validation_status = 'valid'",
+                    "validation_errors = []",
+                    "updated = time::now()",
+                ]
+                update_params: dict = {"record_id": ensure_record_id(str(record_id))}
+
+                for field_name in [
+                    "sample_result",
+                    "material_condition",
+                    "friable",
+                    "disturbance_potential",
+                ]:
+                    if field_name in record_dict:
+                        set_parts.append(f"{field_name} = ${field_name}")
+                        update_params[field_name] = record_dict[field_name]
+
+                set_clause = ", ".join(set_parts)
+                update_query = f"UPDATE $record_id SET {set_clause};"
+                await repo_query(update_query, update_params)
+                fixed_count += 1
+
+        # Count records still failing validation
+        remaining_query = (
+            "SELECT count() as cnt FROM acm_record "
+            "WHERE source_id = $source_id "
+            "AND array::len(validation_errors) > 0 "
+            "GROUP ALL;"
+        )
+        remaining_rows = await repo_query(remaining_query, {"source_id": sid})
+        remaining_count = remaining_rows[0].get("cnt", 0) if remaining_rows else 0
+
+        return BulkFixResponse(
+            fixed_count=fixed_count,
+            remaining_errors=remaining_count,
+        )
+
+    except Exception as e:
+        logger.error(f"Error running bulk-fix for {source_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-edit", response_model=BulkEditResponse)
+async def bulk_edit_records(
+    request: BulkEditRequest,
+    source_id: str = Query(..., description="Source ID for authorization"),
+):
+    """Set a single field to the same value on all specified records.
+
+    Publishes bulk.progress events (one per record) and bulk.complete at end.
+    Source_id is required for authorization but only records matching record_ids
+    are updated.
+    """
+    # Whitelist check: only allow editable ACMRecord fields, not system/immutable ones.
+    _immutable_fields = {"id", "source_id", "created", "updated", "table_bbox"}
+    allowed_fields = frozenset(
+        f for f in ACMRecord.model_fields if f not in _immutable_fields
+    )
+    if request.field not in allowed_fields:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Field '{request.field}' is not a valid editable ACMRecord field.",
+        )
+
+    from open_notebook.extractors.pipeline_event_bus import (
+        V3PipelineEvent,
+        get_event_bus,
+    )
+
+    bus = get_event_bus()
+    total = len(request.record_ids)
+    updated = 0
+
+    for record_id in request.record_ids:
+        try:
+            rid = ensure_record_id(record_id)
+            await repo_query(
+                f"UPDATE $rid SET `{request.field}` = $val, updated = time::now();",
+                {"rid": rid, "val": request.value},
+            )
+            updated += 1
+        except Exception as e:
+            logger.warning(f"Failed to update record {record_id}: {e}")
+
+        await bus.publish(
+            V3PipelineEvent(
+                type="bulk.progress",
+                operation_id=request.operation_id,
+                data={
+                    "processed": updated,
+                    "total": total,
+                    "percent": round((updated / max(total, 1)) * 100),
+                },
+            )
+        )
+
+    await bus.publish(
+        V3PipelineEvent(
+            type="bulk.complete",
+            operation_id=request.operation_id,
+            data={"updated_count": updated, "field": request.field},
+        )
+    )
+
+    return BulkEditResponse(updated_count=updated, operation_id=request.operation_id)
+
+
+@router.post("/bulk-validate", response_model=BulkValidateResponse)
+async def bulk_validate_records(request: BulkValidateRequest):
+    """Re-run SF validation on the specified records only.
+
+    Equivalent to the existing /bulk-fix but scoped to explicit record_ids.
+    """
+    from open_notebook.extractors.validators.acm_validator import validate_acm_record
+
+    fixed_count = 0
+    for record_id in request.record_ids:
+        try:
+            rid = ensure_record_id(record_id)
+            rows = await repo_query("SELECT * FROM $rid;", {"rid": rid})
+            if not rows:
+                continue
+            record_dict = dict(rows[0])
+            result = validate_acm_record(record_dict)
+
+            if result.is_valid:
+                await repo_query(
+                    "UPDATE $rid SET validation_status = 'valid', "
+                    "validation_errors = [], updated = time::now();",
+                    {"rid": rid},
+                )
+                fixed_count += 1
+            else:
+                error_msgs = [
+                    e.message if hasattr(e, "message") else str(e)
+                    for e in result.errors
+                ]
+                await repo_query(
+                    "UPDATE $rid SET validation_status = 'invalid', "
+                    "validation_errors = $errors, updated = time::now();",
+                    {"rid": rid, "errors": error_msgs},
+                )
+        except Exception as e:
+            logger.warning(f"Failed to validate record {record_id}: {e}")
+
+    remaining_rows = await repo_query(
+        "SELECT count() as cnt FROM acm_record "
+        "WHERE id IN $ids AND array::len(validation_errors) > 0 GROUP ALL;",
+        {"ids": [ensure_record_id(r) for r in request.record_ids]},
+    )
+    remaining = remaining_rows[0].get("cnt", 0) if remaining_rows else 0
+
+    return BulkValidateResponse(fixed_count=fixed_count, remaining_errors=remaining)
+
+
+@router.get("/provenance/{record_id}", response_model=ProvenanceResponse)
+async def get_provenance(record_id: str):
+    """Get aggregated provenance data for a single ACM record (E33-S6).
+
+    Combines the record itself with its parent ACMTableSection (consensus
+    metadata), all per-provider RawExtractions for the same page, and the
+    source file path so the frontend can render the originating PDF page
+    with a bounding-box overlay.
+    """
+    from open_notebook.domain.notebook import Source
+
+    # 1. Fetch the ACM record
+    try:
+        record = await ACMRecord.get(record_id)
+    except Exception:
+        record = None
+    if not record:
+        raise HTTPException(status_code=404, detail="ACM record not found")
+
+    # 2. Build ACMRecordResponse (reuse the same mapping as get_acm_record)
+    record_response = ACMRecordResponse(
+        id=str(record.id),
+        source_id=str(record.source_id),
+        school_name=record.school_name,
+        school_code=record.school_code,
+        building_id=record.building_id,
+        building_name=record.building_name,
+        building_year=record.building_year,
+        building_construction=record.building_construction,
+        room_id=record.room_id,
+        room_name=record.room_name,
+        room_area=record.room_area,
+        area_type=record.area_type,
+        product=record.product,
+        material_description=record.material_description,
+        extent=record.extent,
+        location=record.location,
+        friable=record.friable,
+        material_condition=record.material_condition,
+        risk_status=record.risk_status,
+        result=record.result,
+        page_number=record.page_number,
+        extraction_confidence=record.extraction_confidence,
+        acm_product_group=record.acm_product_group,
+        acm_product_type=record.acm_product_type,
+        classification_confidence=record.classification_confidence,
+        classification_method=record.classification_method,
+        classification_override=record.classification_override,
+        sample_no=record.sample_no,
+        sample_result=record.sample_result,
+        quantity=record.quantity,
+        acm_labelled=record.acm_labelled,
+        acm_label_details=record.acm_label_details,
+        identifying_company=record.identifying_company,
+        disturbance_potential=record.disturbance_potential,
+        hygienist_recommendations=record.hygienist_recommendations,
+        normalized_action=record.normalized_action,
+        data_issues=record.data_issues,
+        floor_level=record.floor_level,
+        no_access=record.no_access,
+        smf_present=record.smf_present,
+        validation_status=getattr(record, "validation_status", None),
+        validation_errors=getattr(record, "validation_errors", []) or [],
+        created=str(record.created) if record.created else None,
+        updated=str(record.updated) if record.updated else None,
+    )
+
+    # 3. Fetch parent ACMTableSection for consensus metadata
+    table_section = None
+    if record.parent_table_id:
+        try:
+            section = await ACMTableSection.get(record.parent_table_id)
+            if section:
+                table_section = {
+                    "consensus_tier": section.consensus_tier,
+                    "consensus_scores": section.consensus_scores,
+                    "page_start": section.page_start,
+                    "page_end": section.page_end,
+                    "building_name": section.building_name,
+                    "table_type": section.table_type,
+                }
+        except Exception as exc:
+            logger.debug(f"Could not load table section for record {record_id}: {exc}")
+
+    # 4. Fetch per-provider RawExtractions for the same source + page
+    raw_extraction_responses: list[RawExtractionResponse] = []
+    if record.page_number:
+        try:
+            extractions = await RawExtraction.get_by_source(
+                str(record.source_id),
+                page_number=record.page_number,
+            )
+            raw_extraction_responses = [
+                RawExtractionResponse(
+                    id=str(e.id or ""),
+                    source_id=str(e.source_id),
+                    provider_id=e.provider_id,
+                    extraction_backend=e.extraction_backend,
+                    page_number=e.page_number,
+                    raw_html=e.raw_html,
+                    raw_markdown=e.raw_markdown,
+                    structured_json=e.structured_json,
+                    bbox=e.bbox,
+                    confidence=e.confidence,
+                    officer_edits=e.officer_edits,
+                    created_at=str(e.created_at) if e.created_at else None,
+                )
+                for e in extractions
+            ]
+        except Exception as exc:
+            logger.debug(
+                f"Could not load raw extractions for record {record_id}: {exc}"
+            )
+
+    # 5. Fetch source file path and title
+    source_file_path: Optional[str] = None
+    source_title: Optional[str] = None
+    try:
+        source = await Source.get(str(record.source_id))
+        if source:
+            source_title = source.title
+            if source.asset and source.asset.file_path:
+                source_file_path = source.asset.file_path
+    except Exception as exc:
+        logger.debug(f"Could not load source for record {record_id}: {exc}")
+
+    return ProvenanceResponse(
+        record=record_response,
+        table_section=table_section,
+        raw_extractions=raw_extraction_responses,
+        source_file_path=source_file_path,
+        source_title=source_title,
+    )

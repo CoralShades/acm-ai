@@ -49,11 +49,7 @@ def is_field_name_line(line: str, next_nonempty: str) -> bool:
     A field name line has no colon in it and is followed by 'aggregatable:' on
     the next non-empty line.
     """
-    return (
-        bool(line)
-        and ":" not in line
-        and next_nonempty.startswith("aggregatable:")
-    )
+    return bool(line) and ":" not in line and next_nonempty.startswith("aggregatable:")
 
 
 def get_next_nonempty(lines: list[str], start: int) -> str:
@@ -282,9 +278,7 @@ def sf_type_to_json(sf_type: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_schema(
-    building_fields: list[dict], item_fields: list[dict]
-) -> dict:
+def build_schema(building_fields: list[dict], item_fields: list[dict]) -> dict:
     """Combine both field lists into a single JSON Schema document.
 
     When the same API name appears in both objects, the property key is
@@ -439,13 +433,11 @@ if __name__ == "__main__":
     # Quick validation: counts should match descriptor headers
     print("\nField count validation:", file=sys.stderr)
     print(
-        f"  Building__c: {len(building_fields)} "
-        f"(expected 143 per descriptor header)",
+        f"  Building__c: {len(building_fields)} (expected 143 per descriptor header)",
         file=sys.stderr,
     )
     print(
-        f"  Item__c    : {len(item_fields)} "
-        f"(expected 154 per descriptor header)",
+        f"  Item__c    : {len(item_fields)} (expected 154 per descriptor header)",
         file=sys.stderr,
     )
 

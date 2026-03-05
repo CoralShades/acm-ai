@@ -1,0 +1,74 @@
+-- Migration 40: Create building_record table + FK field on acm_record (E30-S2)
+-- Additive only. Does NOT alter existing acm_record.building_id field.
+
+DEFINE TABLE IF NOT EXISTS building_record SCHEMAFULL;
+
+-- Core identification
+DEFINE FIELD IF NOT EXISTS internal_id               ON TABLE building_record TYPE string;
+DEFINE FIELD IF NOT EXISTS source_id                 ON TABLE building_record TYPE record<source>;
+DEFINE FIELD IF NOT EXISTS building_code             ON TABLE building_record TYPE option<string>;
+
+-- Fields from ACMRecord (building-level)
+DEFINE FIELD IF NOT EXISTS building_name             ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_year             ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_construction     ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_address          ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS suburb                    ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS postcode                  ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_type             ON TABLE building_record TYPE option<string>;
+
+-- Additional SF Building__c fields
+DEFINE FIELD IF NOT EXISTS building_category         ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_address_lga      ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_address_region   ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS roof_type                 ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS number_of_levels          ON TABLE building_record TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS est_building_size_m2      ON TABLE building_record TYPE option<float>;
+DEFINE FIELD IF NOT EXISTS frequency_of_use          ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS daily_duration            ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS level_of_activity         ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS public_access             ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS mobile_plant              ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS owned_or_leased           ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS asbestos_register_available ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS audit_report_available    ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS date_of_audit_report      ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS no_identified_acms        ON TABLE building_record TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS no_identified_acms_note   ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS site_name                 ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS school_uid                ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_unique_id        ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS external_id               ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_out_of_scope     ON TABLE building_record TYPE option<bool>;
+DEFINE FIELD IF NOT EXISTS building_out_of_scope_comments ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS demolished_status         ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS demolition_date           ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS demolition_type           ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS demolition_comments       ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS additional_comments       ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS within_your_portfolio     ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS psb_district_region       ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS state                     ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS country                   ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS gps_coordinates           ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS capital_works_project_details ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS possible_capital_works_project ON TABLE building_record TYPE option<string>;
+
+-- Embedding fields
+DEFINE FIELD IF NOT EXISTS embedding                 ON TABLE building_record TYPE option<array<float>>;
+DEFINE FIELD IF NOT EXISTS embedding_text            ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS embedding_model           ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS embedded_at               ON TABLE building_record TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS enriched_text             ON TABLE building_record TYPE option<string>;
+
+-- Timestamps (standard ObjectModel fields)
+DEFINE FIELD IF NOT EXISTS created                   ON TABLE building_record TYPE option<datetime>;
+DEFINE FIELD IF NOT EXISTS updated                   ON TABLE building_record TYPE option<datetime>;
+
+-- Indexes (AC10)
+DEFINE INDEX IF NOT EXISTS idx_building_source_id    ON TABLE building_record COLUMNS source_id;
+DEFINE INDEX IF NOT EXISTS idx_building_internal_id  ON TABLE building_record COLUMNS internal_id UNIQUE;
+
+-- Add FK field to acm_record (additive, does NOT change existing building_id)
+DEFINE FIELD IF NOT EXISTS building_record_id        ON TABLE acm_record TYPE option<record<building_record>>;
+DEFINE INDEX IF NOT EXISTS idx_acm_building_record   ON TABLE acm_record COLUMNS building_record_id;

@@ -18,6 +18,10 @@ from open_notebook.extractors.parsers.field_config import (
     BusinessRule,
     FieldDef,
     FieldSchemaConfig,
+    SFDependencyChain,
+    SFFieldDef,
+    SFFieldSchemaConfig,
+    SFSchemaBundle,
 )
 
 CONFIG_DIR = os.path.join(
@@ -364,7 +368,7 @@ def _build_default_config() -> FieldSchemaConfig:
             "Condition": [
                 "Poor",
                 "Fair",
-                "Good",
+                "Stable",
                 "Unknown",
                 "N/A (negative)",
                 "N/A (assumed negative)",
@@ -381,4 +385,1285 @@ def _build_default_config() -> FieldSchemaConfig:
         },
         business_rules=list(DEFAULT_BUSINESS_RULES),
         version="1.0.0-fallback",
+    )
+
+
+# =============================================================================
+# SF Schema Config (V3) — E30-S1
+# =============================================================================
+
+
+class SFSchemaLoadError(Exception):
+    """Raised when SF schema source files cannot be parsed."""
+
+    pass
+
+
+SF_SCHEMA_DIR = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "V3", "output"
+)
+
+_SF_SCHEMA: Optional[SFSchemaBundle] = None
+
+
+def load_sf_field_schema() -> SFSchemaBundle:
+    """Load Salesforce field schema from V3 markdown files.
+
+    Returns cached bundle on subsequent calls.
+    Raises SFSchemaLoadError on malformed source files.
+    """
+    global _SF_SCHEMA
+    if _SF_SCHEMA is not None:
+        return _SF_SCHEMA
+
+    building_path = os.path.join(SF_SCHEMA_DIR, "building_fields_summary.md")
+    item_path = os.path.join(SF_SCHEMA_DIR, "item_fields_summary.md")
+
+    building_config = _parse_sf_field_table_from_path(building_path, "Building__c")
+    item_config = _parse_sf_field_table_from_path(item_path, "Item__c")
+
+    # Build combined picklists across both objects
+    combined_picklists: dict[str, list[str]] = {}
+    combined_picklists.update(building_config.picklists)
+    combined_picklists.update(item_config.picklists)
+    # Add Item_Name__c values from the item config
+    if "Item_Name__c" not in combined_picklists:
+        combined_picklists["Item_Name__c"] = list(ITEM_NAME_TO_PRODUCT_GROUP.keys())
+
+    # Build dependency chains
+    dependencies = [
+        _build_friability_chain(),
+        _build_acm_classification_chain(),
+        _build_building_type_chain(),
+    ]
+
+    _SF_SCHEMA = SFSchemaBundle(
+        version="salesforce-v1",
+        building_fields=building_config,
+        item_fields=item_config,
+        picklists=combined_picklists,
+        dependencies=dependencies,
+    )
+    logger.info(
+        f"Loaded SF schema: building={len(building_config.fields)} fields, "
+        f"item={len(item_config.fields)} fields, "
+        f"{len(combined_picklists)} picklists"
+    )
+    return _SF_SCHEMA
+
+
+def _parse_sf_field_table_from_path(
+    file_path: str, object_name: str
+) -> SFFieldSchemaConfig:
+    """Load a *_fields_summary.md file and parse into SFFieldSchemaConfig.
+
+    Raises SFSchemaLoadError if the file cannot be read.
+    """
+    try:
+        with open(file_path, encoding="utf-8") as f:
+            content = f.read()
+    except FileNotFoundError as e:
+        raise SFSchemaLoadError(f"SF schema file not found: {file_path}") from e
+    except OSError as e:
+        raise SFSchemaLoadError(f"Cannot read SF schema file {file_path}: {e}") from e
+
+    return _parse_sf_field_table(content, object_name)
+
+
+def _parse_sf_field_table(
+    markdown_content: str, object_name: str
+) -> SFFieldSchemaConfig:
+    """Parse a *_fields_summary.md markdown table into SFFieldSchemaConfig.
+
+    Keyed on 'API Name' column (not Label).
+    Handles:
+    - Optional spaces around | delimiters
+    - Empty cells (treats as None/default)
+    - Boolean columns Y/blank -> True/False
+    - 'Restricted picklist' detection from Notes column
+    - 'Dependent on <api_name>' detection from Notes column
+    """
+    lines = markdown_content.splitlines()
+
+    # Parse header metadata
+    object_label = object_name
+    total_fields = 0
+    custom_fields = 0
+    picklist_count = 0
+
+    for line in lines:
+        # e.g. "**Object:** Building__c (label: Asset Class)"
+        if line.startswith("**Object:**"):
+            m = re.search(r"\(label:\s*([^)]+)\)", line)
+            if m:
+                object_label = m.group(1).strip()
+        # e.g. "**Total fields:** 143  **Custom fields:** 130  **Picklist fields:** 18"
+        m_total = re.search(r"\*\*Total fields:\*\*\s*(\d+)", line)
+        if m_total:
+            total_fields = int(m_total.group(1))
+        m_custom = re.search(r"\*\*Custom fields:\*\*\s*(\d+)", line)
+        if m_custom:
+            custom_fields = int(m_custom.group(1))
+        m_picklist = re.search(r"\*\*Picklist fields:\*\*\s*(\d+)", line)
+        if m_picklist:
+            picklist_count = int(m_picklist.group(1))
+
+    # Locate table header
+    header_start = -1
+    for i, line in enumerate(lines):
+        if "| # | API Name |" in line or "| # |API Name|" in line:
+            header_start = i
+            break
+
+    if header_start == -1:
+        raise SFSchemaLoadError(
+            f"Cannot find field table header in {object_name} markdown"
+        )
+
+    # Skip header row and separator row
+    data_start = header_start + 2
+
+    fields: list[SFFieldDef] = []
+    for line in lines[data_start:]:
+        stripped = line.strip()
+        # Stop at blank line or next heading
+        if not stripped or stripped.startswith("#"):
+            # Only stop at the "## Picklist Fields" section heading
+            if stripped.startswith("## Picklist"):
+                break
+            if not stripped:
+                continue
+
+        if not stripped.startswith("|"):
+            continue
+
+        # Split on | — the format is "| # | API Name | ..."
+        parts = [p.strip() for p in stripped.split("|")]
+        # Remove leading and trailing empty strings from split
+        if parts and parts[0] == "":
+            parts = parts[1:]
+        if parts and parts[-1] == "":
+            parts = parts[:-1]
+
+        # Expect exactly 10 columns:
+        # # | API Name | Label | Type | Length | Nillable | Custom | Calc | Updateable | Notes
+        if len(parts) < 10:
+            if len(parts) >= 2 and parts[1]:  # Has at least an API name
+                logger.warning(
+                    f"Skipping malformed row in {object_name} "
+                    f"(expected 10 cols, got {len(parts)}): {stripped[:80]}"
+                )
+            continue
+
+        # Skip separator row (contains "---")
+        if parts[0].startswith("---") or parts[1].startswith("---"):
+            continue
+
+        col_num = parts[0]
+        api_name = parts[1]
+        label = parts[2]
+        field_type = parts[3].lower() if parts[3] else "string"
+        length_str = parts[4]
+        nillable_str = parts[5]
+        custom_str = parts[6]
+        calc_str = parts[7]
+        updateable_str = parts[8]
+        notes = parts[9] if len(parts) > 9 else ""
+
+        # Validate row number (skip header-like rows)
+        if not col_num or col_num == "#" or col_num.startswith("---"):
+            continue
+
+        # Parse length
+        length: Optional[int] = None
+        if length_str:
+            try:
+                length = int(length_str)
+            except ValueError:
+                length = None
+
+        # Parse boolean columns: Y = True, empty = False
+        nillable = nillable_str.upper() == "Y"
+        custom = custom_str.upper() == "Y"
+        calc = calc_str.upper() == "Y"
+        updateable = updateable_str.upper() == "Y"
+
+        # Detect restricted picklist
+        is_restricted = "Restricted picklist" in notes
+
+        # Detect dependent picklist and controller field
+        is_dependent = False
+        controller_field: Optional[str] = None
+        dep_match = re.search(r"Dependent on\s+(\w+__c)", notes)
+        if dep_match:
+            is_dependent = True
+            controller_field = dep_match.group(1)
+
+        fields.append(
+            SFFieldDef(
+                api_name=api_name,
+                label=label,
+                field_type=field_type,
+                length=length,
+                nillable=nillable,
+                custom=custom,
+                calc=calc,
+                updateable=updateable,
+                notes=notes if notes else None,
+                is_restricted_picklist=is_restricted,
+                is_dependent=is_dependent,
+                controller_field=controller_field,
+            )
+        )
+
+    # Extract picklists from the "## Picklist Fields" section
+    picklists = _extract_picklist_values(markdown_content)
+
+    return SFFieldSchemaConfig(
+        object_name=object_name,
+        object_label=object_label,
+        total_fields=total_fields or len(fields),
+        custom_fields=custom_fields,
+        picklist_fields=picklist_count,
+        fields=fields,
+        picklists=picklists,
+        version="salesforce-v1",
+    )
+
+
+def _extract_picklist_values(markdown_content: str) -> dict[str, list[str]]:
+    """Extract picklist value lists from the Picklist Fields section of a
+    *_fields_summary.md file.
+
+    Sections follow the pattern:
+        ### API_Name__c — Label (restricted) (dependent on ...)
+        *Description*
+
+        - Value 1
+        - Value 2
+    """
+    picklists: dict[str, list[str]] = {}
+
+    # Find the Picklist section
+    picklist_section_match = re.search(
+        r"^## Picklist Fields", markdown_content, re.MULTILINE
+    )
+    if not picklist_section_match:
+        return picklists
+
+    section_text = markdown_content[picklist_section_match.start() :]
+    lines = section_text.splitlines()
+
+    current_api_name: Optional[str] = None
+    current_values: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Detect a new picklist section heading: ### API_Name__c — ...
+        if stripped.startswith("###"):
+            # Save previous
+            if current_api_name and current_values:
+                picklists[current_api_name] = current_values
+
+            # Extract API name from heading
+            # Format: "### API_Name__c — Label (restricted) (dependent on ...)"
+            heading_match = re.match(r"###\s+(\w+__c|\w+)\s*[—-]", stripped)
+            if heading_match:
+                current_api_name = heading_match.group(1)
+                current_values = []
+            else:
+                current_api_name = None
+                current_values = []
+            continue
+
+        # Collect values: "- Value"
+        if stripped.startswith("- ") and current_api_name:
+            value = stripped[2:].strip()
+            if value and not value.startswith("[Years:"):
+                current_values.append(value)
+
+    # Save the last section
+    if current_api_name and current_values:
+        picklists[current_api_name] = current_values
+
+    return picklists
+
+
+def _build_friability_chain() -> SFDependencyChain:
+    """Build Friability_of_Material__c -> ACM_Classification__c dependency.
+
+    Returns all 18 valid classification values grouped by the 2 friability values.
+    Data hardcoded from picklist-dependency-mappings.md.
+    """
+    return SFDependencyChain(
+        controller_api_name="Friability_of_Material__c",
+        dependent_api_name="ACM_Classification__c",
+        mapping={
+            "Non-friable": [
+                "Bitumen products",
+                "Cement products",
+                "Coatings",
+                "Gasket, friction products and adhesives",
+                "Insulation Products",
+                "Other",
+                "Reinforced plastics/resins (excluding bitumen products)",
+                "Textiles",
+                "Vinyl products",
+            ],
+            "Friable": [
+                "Bitumen products (f)",
+                "Cement products (f)",
+                "Coatings (f)",
+                "Gasket, friction products and adhesives (f)",
+                "Insulation products (f)",
+                "Other (f)",
+                "Reinforced plastics/resins (excluding bitumen products) (f)",
+                "Textiles (f)",
+                "Vinyl products (f)",
+            ],
+        },
+    )
+
+
+def _build_acm_classification_chain() -> SFDependencyChain:
+    """Build ACM_Classification__c -> ACM_Sub_Classification__c dependency.
+
+    36 valid (friability, classification) combinations with product type lists.
+    Data hardcoded from picklist-dependency-mappings.md.
+    """
+    return SFDependencyChain(
+        controller_api_name="ACM_Classification__c",
+        dependent_api_name="ACM_Sub_Classification__c",
+        mapping={
+            # NON-FRIABLE product groups
+            "Cement products": [
+                "Ceiling Tiles",
+                "Cement Flue",
+                "Cement Pipe",
+                "Cement Strapping",
+                "Communications Pit",
+                "Compressed Flat Sheeting",
+                "Contaminated Soil (Non-friable Debris)",
+                "Corrugated Roof Sheeting",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Electrical Arc Shields",
+                "Faux Brick Cladding",
+                "Faux Timber Sheeting",
+                "Flat Sheeting",
+                "Flue Cap",
+                "Internal Lining",
+                "Laminated Cement Sheeting (Tilux)",
+                "Moulded Sheet",
+                "Pebble Rendered Cement Sheeting",
+                "Profiled Roof Sheeting",
+                "Rainwater Guttering",
+                "Ridge Capping",
+                "Roof Tiles",
+                "Toilet Cisterns",
+                "Unknown",
+                "Valley Gutters",
+                "Vents",
+                "Water Tanks",
+                "Weatherboards",
+            ],
+            "Bitumen products": [
+                "Acoustic Pad",
+                "Adhesive or Glue",
+                "Asphalt",
+                "Bitumen Coated Paper",
+                "Bitumen Coated Polystyrene",
+                "Bitumen Coating",
+                "Bitumen Washer",
+                "Bituminous Membrane",
+                "Bituminous adhesive (BlackJack)",
+                "Brake Pads",
+                "Caulking",
+                "Compressed Electrical Panels",
+                "Contaminated Soil (Non-friable Debris)",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Electrical Cable Shrouding",
+                "Electrical Components",
+                "Galbestos (Asbestos coated metal sheet)",
+                "Internal Lining",
+                "Malthoid",
+                "Mastic",
+                "Pipe Lagging Residues",
+                "Toilet Cisterns",
+                "Toilet Seats",
+                "Unknown",
+                "Washers/Bitumen Washers",
+            ],
+            "Vinyl products": [
+                "Contaminated Soil (Non-friable Debris)",
+                "Dust",
+                "Dust and Debris",
+                "Hessian backed vinyl sheet",
+                "Millboard or paper-backed vinyl sheet",
+                "Unknown",
+                "Vinyl sheet",
+                "Vinyl sheet and adhesive",
+                "Vinyl tiles",
+                "Vinyl tiles and adhesive",
+            ],
+            "Gasket, friction products and adhesives": [
+                "Brake pads",
+                "CAF gasket(s)",
+                "CAF gasket debris",
+                "Caulking",
+                "Clutch Plates",
+                "Contaminated Soil (Non-friable Debris)",
+                "Debris",
+                "Dust and Debris",
+                "Gland Packing",
+                "Gasket(s)",
+                "Gasket debris",
+                "Mastic",
+                "Putty",
+                "Rope or Braided Gasket",
+                "Rubber Gasket",
+                "Rubber Products",
+                "Silicone",
+                "Unknown",
+                "Washers",
+            ],
+            "Coatings": [
+                "Contaminated Soil (Non-friable Debris)",
+                "Debris",
+                "Dust and Debris",
+                "Paint",
+                "Textured Coating",
+                "Unknown",
+            ],
+            "Reinforced plastics/resins (excluding bitumen products)": [
+                "Compressed Electrical Panels",
+                "Contaminated Soil (Non-friable Debris)",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Electrical Components",
+                "Plastic",
+                "Resinous Block",
+                "Rubber Products",
+                "Toilet Cisterns",
+                "Toilet Seats",
+                "Unknown",
+                "Water Tanks",
+            ],
+            "Other": [
+                "Cardboard",
+                "Concrete levelling compound",
+                "Contaminated Carpet Underlay",
+                "Contaminated Materials",
+                "Contaminated Soil (Non-friable Debris)",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Fibrous Material",
+                "Fire brick",
+                "Fire curtains",
+                "Gauze mats",
+                "Granular Material",
+                "Grout",
+                "Masonry",
+                "Mattresses",
+                "Mineral Fibre Tiles",
+                "Mortar",
+                "Naturally Occurring",
+                "Paper",
+                "Plaster",
+                "Putty",
+                "Render",
+                "Resinous Block",
+                "Terrazzo",
+                "Unknown",
+            ],
+            "Insulation Products": [
+                "Acoustic pad",
+                "Calico Wrap",
+                "Ceiling Tiles",
+                "Ceramic Fibre",
+                "Contaminated Soil (Non-friable Debris)",
+                "Debris",
+                "Doonas",
+                "Dust",
+                "Dust and Debris",
+                "Electrical Arc Shields",
+                "Electrical Cable Shrouding",
+                "Electrical Components",
+                "Fire Door Core",
+                "Fire Rating Material",
+                "Fireproof Pillows",
+                "Foam Insulation",
+                "Gauze Mats",
+                "Gland Packing",
+                "Hessian",
+                "Horsehair",
+                "Insulation",
+                "Insulation Product Dust and Debris",
+                "Internal Insulation (Suspected)",
+                "Internal Lining",
+                "Lagging",
+                "Limpet (Sprayed Insulation)",
+                "Loose Fill Insulation",
+                "Low Density Asbestos Fibre Board (AIB)",
+                "Millboard",
+                "Millboard or paper-backed vinyl sheet",
+                "Pipe Lagging Residues",
+                "SMF",
+                "SMF Insulation",
+                "Sprayed Insulation",
+                "Sprayed insulation (Limpet)",
+                "Strawboard",
+                "Strawboard lined with millboard",
+                "Strawboard with cement sheet lining",
+                "Tape",
+                "Unknown",
+                "Vermiculite",
+            ],
+            "Textiles": [
+                "Calico Wrap",
+                "Carpet",
+                "Cloth",
+                "Contaminated Carpet Underlay",
+                "Contaminated Materials",
+                "Doonas",
+                "Fire blanket",
+                "Fire curtains",
+                "Fire-fighting clothing",
+                "Gauze mats",
+                "Gloves",
+                "Hessian",
+                "Horsehair",
+                "Mattresses",
+                "Paper",
+                "Polyester",
+                "Rope and String",
+                "Woven product",
+            ],
+            # FRIABLE product groups
+            "Cement products (f)": [
+                "Ceiling Tiles",
+                "Cement Flue",
+                "Cement Pipe",
+                "Cement Strapping",
+                "Communications Pit",
+                "Compressed Flat Sheeting",
+                "Contaminated Soil (Friable Debris)",
+                "Corrugated Roof Sheeting",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Electrical Arc Shields",
+                "Faux Brick Cladding",
+                "Faux Timber Sheeting",
+                "Flat Sheeting",
+                "Flue Cap",
+                "Internal Lining",
+                "Laminated Cement Sheeting (Tilux)",
+                "Moulded Sheet",
+                "Pebble Rendered Cement Sheeting",
+                "Profiled Roof Sheeting",
+                "Rainwater Guttering",
+                "Ridge Capping",
+                "Roof Tiles",
+                "Toilet Cisterns",
+                "Unknown",
+                "Valley Gutters",
+                "Vents",
+                "Water Tanks",
+                "Weatherboards",
+            ],
+            "Vinyl products (f)": [
+                "Contaminated Soil (Friable Debris)",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Hessian backed Vinyl sheet",
+                "Millboard or paper-backed vinyl sheet",
+                "Unknown",
+                "Vinyl sheet",
+                "Vinyl sheet and adhesive",
+                "Vinyl Tiles",
+                "Vinyl tiles and adhesive",
+            ],
+            "Insulation products (f)": [
+                "AIB (Asbestos Insulated Board)",
+                "Calico Wrap",
+                "Ceiling Tiles",
+                "Ceramic Fibre",
+                "Contaminated Soil (Friable Debris)",
+                "Debris",
+                "Doonas",
+                "Dust",
+                "Dust and Debris",
+                "Electrical Arc Shields",
+                "Electrical Cable Shrouding",
+                "Electrical Components",
+                "Fibrous Material",
+                "Fire Brick",
+                "Fire Door Core",
+                "Fire Rating Material",
+                "Fireproof Pillows",
+                "Foam Insulation",
+                "Gauze Mats",
+                "Gland Packing",
+                "Hessian",
+                "Horsehair",
+                "Insulation",
+                "Insulation Product Dust and Debris",
+                "Internal Insulation (Suspected)",
+                "Internal Lining",
+                "Lagging",
+                "Limpet",
+                "Loose Fill Insulation",
+                "Low Density Asbestos Fibre Board (AIB)",
+                "Mattresses",
+                "Millboard",
+                "Pipe Lagging Residues",
+                "SMF Insulation",
+                "Sprayed Insulation",
+                "Strawboard",
+                "Tape",
+                "Unknown",
+                "Vermiculite",
+            ],
+            "Gasket, friction products and adhesives (f)": [
+                "Adhesive or Glue",
+                "Brake Pads",
+                "CAF gasket(s)",
+                "CAF gasket debris",
+                "Caulking",
+                "Clutch Plates",
+                "Contaminated Soil (Friable Debris)",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Flange Gaskets",
+                "Gasket Debris",
+                "Gasket(s)",
+                "Gland Packing",
+                "Mastic",
+                "Putty",
+                "Rope and String",
+                "Rope or Braided Gasket",
+                "Rubber Gasket",
+                "Unknown",
+            ],
+            "Textiles (f)": [
+                "Cloth",
+                "Fire blanket",
+                "Fire-fighting clothing",
+                "Gloves",
+                "Paper",
+                "Rope and String",
+            ],
+            "Other (f)": [
+                "Cardboard",
+                "Ceiling Tiles",
+                "Concrete Levelling Compound",
+                "Contaminated Carpet Underlay",
+                "Contaminated Materials",
+                "Contaminated Soil (Friable Debris)",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Fibrous Material",
+                "Granular Material",
+                "Grout",
+                "Masonry",
+                "Mattresses",
+                "Mineral Fibre Tiles",
+                "Mortar",
+                "Naturally Occurring",
+                "Plaster",
+                "Render",
+                "Resinous Block",
+                "Terrazzo",
+                "Unknown",
+            ],
+            "Bitumen products (f)": [
+                "Acoustic Pad",
+                "Asphalt",
+                "Bitumen Coated Paper",
+                "Bitumen Coating",
+                "Bitumen Washer",
+                "Bituminous adhesive (BlackJack)",
+                "Bituminous Membrane",
+                "Malthoid",
+            ],
+            "Coatings (f)": [
+                "Paint",
+                "Textured Coating",
+                "Debris",
+                "Dust",
+                "Dust and Debris",
+                "Unknown",
+            ],
+            "Reinforced plastics/resins (excluding bitumen products) (f)": [
+                "Compressed Electrical Panels",
+                "Electrical Components",
+                "Plastic",
+                "Resinous Block",
+                "Rubber Products",
+                "Unknown",
+            ],
+        },
+    )
+
+
+def _build_building_type_chain() -> SFDependencyChain:
+    """Build Building_Type__c -> Building_Category__c dependency.
+
+    114 building types -> 13 categories.
+    The mapping is 1:1 (each building type has exactly one category),
+    so values are str (not list[str]) for direct string comparison.
+    Data hardcoded from picklist-dependency-mappings.md.
+    """
+    # Mapping: building_type -> category (str, not list)
+    mapping: dict[str, str] = {}
+
+    # Agriculture
+    for btype in [
+        "Farm annexe",
+        "Farm depot house",
+        "Fruit shed",
+        "Grain storage shed",
+        "Hay shed",
+        "Hothouse",
+        "Polyhouse",
+        "Poultry pen",
+        "Stables",
+        "Stockyard",
+    ]:
+        mapping[btype] = "Agriculture"
+
+    # Commercial and retail
+    for btype in [
+        "Commercial",
+        "Docklands studios",
+        "Film vault",
+        "Retail",
+        "Shop / Kiosk",
+    ]:
+        mapping[btype] = "Commercial and retail"
+
+    # Correctional and justice facilities
+    for btype in ["Court", "Juvenile", "Prison"]:
+        mapping[btype] = "Correctional and justice facilities"
+
+    # Defence and emergency services
+    for btype in [
+        "Airbase",
+        "Ambulance garage",
+        "Ambulance station",
+        "CFA/FRV",
+        "Fire pump shed",
+        "Police Station",
+    ]:
+        mapping[btype] = "Defence and emergency services"
+
+    # Educational and training facilities
+    for btype in [
+        "Building nursery",
+        "Child care",
+        "Children's centre",
+        "Classroom",
+        "Education centre",
+        "School",
+        "TAFE",
+        "Teacher house",
+        "Training centre",
+        "Youth camp",
+    ]:
+        mapping[btype] = "Educational and training facilities"
+
+    # Factories, warehouses and shops
+    for btype in [
+        "Canteen",
+        "Factory",
+        "Storage Shed",
+        "Storeroom",
+        "Warehouse",
+        "Workshop",
+    ]:
+        mapping[btype] = "Factories, warehouses and shops"
+
+    # Health services
+    for btype in [
+        "Aged Care",
+        "Bush nursing",
+        "Community Health Centre",
+        "Consulting rooms",
+        "Day centre",
+        "Dental clinic",
+        "Health centre",
+        "Hospital",
+        "Nursing home",
+        "Rehab",
+        "Specialist clinic",
+    ]:
+        mapping[btype] = "Health services"
+
+    # Housing and accommodation
+    for btype in [
+        "Accommodation unit",
+        "Apartment",
+        "Curator house",
+        "Flat",
+        "Hostel",
+        "House",
+        "Housing - disability",
+        "Housing - Other",
+        "Lodge",
+        "Residence",
+    ]:
+        mapping[btype] = "Housing and accommodation"
+
+    # IT and communications
+    for btype in ["Communication tower", "Computer centre", "Radio tower"]:
+        mapping[btype] = "IT and communications"
+
+    # Offices and professional services
+    for btype in [
+        "Administration",
+        "Conference centre",
+        "Head office",
+        "HQ",
+        "Office",
+        "Ranger's office",
+        "Reception",
+        "Research facility",
+    ]:
+        mapping[btype] = "Offices and professional services"
+
+    # Public and family services
+    for btype in [
+        "Activities shelter",
+        "Amenities",
+        "Art centre",
+        "Assembly hall",
+        "Band room",
+        "Basketball court",
+        "Community centre",
+        "Community hall",
+        "Concert hall",
+        "Gallery",
+        "Gymnasium",
+        "Hall",
+        "Information centre",
+        "Leisure centre",
+        "Library",
+        "Multipurpose hall",
+        "Museum",
+        "Pavilion",
+        "Recreation and sport",
+        "Recreation centre",
+        "Rotunda",
+        "Tennis pavilion",
+        "Theatre",
+        "Visitor centre",
+    ]:
+        mapping[btype] = "Public and family services"
+
+    # Transport
+    for btype in [
+        "Bridge",
+        "Car",
+        "Control building",
+        "Control centre (train network)",
+        "Control centre (tram network)",
+        "Control room",
+        "Crew room",
+        "Depot",
+        "Forklift",
+        "Level crossing",
+        "Roadway",
+        "Train maintenance facility",
+        "Train station",
+        "Train station precinct",
+        "Train substation",
+        "Train yard",
+        "Tram depot",
+        "Tram substation",
+        "Transport depot",
+        "Truck",
+        "Tunnel",
+        "Van",
+    ]:
+        mapping[btype] = "Transport"
+
+    # Unknown/other
+    for btype in [
+        "Barrier or Fencing",
+        "Bicycle enclosure",
+        "Building",
+        "Building room",
+        "Business interruption",
+        "Facility",
+        "Garage",
+        "Main building",
+        "Other",
+        "Pipe",
+        "Plant and equipment",
+        "Plant room",
+        "Pump house",
+        "Shed",
+        "Shelter",
+        "Shelter shed",
+        "Shipping Container",
+        "Toilet",
+        "Tower",
+    ]:
+        mapping[btype] = "Unknown/other"
+
+    # Note: Teacher house appears in both Educational and Housing per the source doc.
+    # The picklist-dependency-mappings.md lists it under Educational first.
+    # Teacher house is already set to "Educational and training facilities" above.
+
+    return SFDependencyChain(
+        controller_api_name="Building_Type__c",
+        dependent_api_name="Building_Category__c",
+        mapping=mapping,
+    )
+
+
+# Item_Name__c product group mapping (not a dependent picklist).
+# Maps each of the 294 Item_Name__c picklist values to their primary
+# ACM_Classification__c (product group). Used by get_item_names_by_product_group().
+# Source: docs/reference/product-taxonomy.md + picklist-dependency-mappings.md
+ITEM_NAME_TO_PRODUCT_GROUP: dict[str, str] = {
+    # Cement products items (structural/sheeting/piping)
+    "Access hatch": "Cement products",
+    "Architrave": "Cement products",
+    "Awning lining": "Cement products",
+    "Backing panel": "Cement products",
+    "Batten(s)": "Cement products",
+    "Behind heater": "Cement products",
+    "Board": "Cement products",
+    "Boxing": "Cement products",
+    "Bulkhead": "Cement products",
+    "Cabinet lining": "Cement products",
+    "Capping": "Cement products",
+    "Ceiling": "Cement products",
+    "Ceiling and awning": "Cement products",
+    "Ceiling and vertical infill panel": "Cement products",
+    "Ceiling and walls": "Cement products",
+    "Ceiling cavity": "Cement products",
+    "Ceiling Lining": "Cement products",
+    "Ceiling Strapping": "Cement products",
+    "Ceiling tiles": "Cement products",
+    "Chimney": "Cement products",
+    "Cladding": "Cement products",
+    "Cladding brackets": "Cement products",
+    "Clerestorey eaves": "Cement products",
+    "Columns": "Cement products",
+    "Communications pit": "Cement products",
+    "Conduit": "Cement products",
+    "Cornices": "Cement products",
+    "Cover": "Cement products",
+    "Cover battens": "Cement products",
+    "Cubicle partition(s)": "Cement products",
+    "Culvert cover": "Cement products",
+    "Dado wall": "Cement products",
+    "Decking": "Cement products",
+    "Door frame": "Cement products",
+    "Down pipe": "Cement products",
+    "Drain cover": "Cement products",
+    "Eave and awning": "Cement products",
+    "Eave and porch ceiling": "Cement products",
+    "Eave lining": "Cement products",
+    "End caps": "Cement products",
+    "Expansion joint": "Cement products",
+    "Extraction cover": "Cement products",
+    "Fascia": "Cement products",
+    "Fencing": "Cement products",
+    "Flashing": "Cement products",
+    "Floor": "Cement products",
+    "Floor (below screed)": "Cement products",
+    "Floor and walls": "Cement products",
+    "Floor Cavity/void": "Cement products",
+    "Formwork": "Cement products",
+    "Framework (timber/metal)": "Cement products",
+    "Gable lining": "Cement products",
+    "Gutter": "Cement products",
+    "Infill panels": "Cement products",
+    "Infill panels below windows": "Cement products",
+    "Internal components": "Cement products",
+    "Internal lining": "Cement products",
+    "Kickboards": "Cement products",
+    "Lid": "Cement products",
+    "Lining": "Cement products",
+    "Lining to ceramic tiles": "Cement products",
+    "Lining to tiles": "Cement products",
+    "Louvres": "Cement products",
+    "Lower walls": "Cement products",
+    "Other": "Other",
+    "Panel(s)": "Cement products",
+    "Parapet wall": "Cement products",
+    "Partitions": "Cement products",
+    "Partition Wall(s)": "Cement products",
+    "Pebblecrete joint": "Cement products",
+    "Plinth": "Cement products",
+    "Porch": "Cement products",
+    "Porch ceiling": "Cement products",
+    "Porch floor": "Cement products",
+    "Porch stoop": "Cement products",
+    "Retaining wall": "Cement products",
+    "Ridge capping": "Cement products",
+    "Riser": "Cement products",
+    "Roof": "Cement products",
+    "Roof cavity": "Cement products",
+    "Roof covering": "Cement products",
+    "Roofing": "Cement products",
+    "Sign": "Cement products",
+    "Skirting": "Cement products",
+    "Soffit": "Cement products",
+    "Soffit penetration": "Cement products",
+    "Stairwell": "Cement products",
+    "Strapping/beading": "Cement products",
+    "Subfloor": "Cement products",
+    "Suspended ceiling": "Cement products",
+    "Tile backing": "Cement products",
+    "Throughout": "Cement products",
+    "Upper wall(s)": "Cement products",
+    "Vent": "Cement products",
+    "Vent cover": "Cement products",
+    "Verandah": "Cement products",
+    "Void": "Cement products",
+    "Wall(s)": "Cement products",
+    "Wall and gable lining": "Cement products",
+    "Wall beading": "Cement products",
+    "Wall cavity/void": "Cement products",
+    "Wall cladding": "Cement products",
+    "Wall covering": "Cement products",
+    "Wall lining": "Cement products",
+    "Wall panelling": "Cement products",
+    "Walls and ceiling": "Cement products",
+    "Water tank": "Cement products",
+    "Window frame": "Cement products",
+    "Window infill panels": "Cement products",
+    "Window sill": "Cement products",
+    # Bitumen products items (waterproofing/coatings/electrical)
+    "Air conditioning re-heat unit": "Bitumen products",
+    "Air conditioning trunking": "Bitumen products",
+    "Air handling unit": "Bitumen products",
+    "Baffle": "Bitumen products",
+    "Bench top": "Cement products",
+    "Benchtop lining": "Cement products",
+    "Boiler": "Insulation Products",
+    "Boiler gasket": "Gasket, friction products and adhesives",
+    "Brake lining": "Gasket, friction products and adhesives",
+    "Cable tray": "Bitumen products",
+    "Calorifier": "Insulation Products",
+    "Cistern": "Bitumen products",
+    "Cistern boxing": "Bitumen products",
+    "Clutch pad": "Gasket, friction products and adhesives",
+    "Coils (electrical)": "Bitumen products",
+    "Cold water service": "Insulation Products",
+    "Compressor(s)": "Insulation Products",
+    "Contact panel": "Bitumen products",
+    "Counter top": "Cement products",
+    "Door": "Cement products",
+    "Door seal": "Gasket, friction products and adhesives",
+    "Draining board": "Cement products",
+    "Drip Guard": "Bitumen products",
+    "Duct cover": "Insulation Products",
+    "Ductwork": "Insulation Products",
+    "Ductwork flange joint": "Gasket, friction products and adhesives",
+    "Ductwork insulation": "Insulation Products",
+    "Dumb waiter": "Bitumen products",
+    "Electrical board": "Bitumen products",
+    "Electrical cupboard": "Bitumen products",
+    "Electrical cupboard door": "Bitumen products",
+    "Electrical cupboard lining": "Bitumen products",
+    "Electrical cables": "Bitumen products",
+    "Electrical components": "Bitumen products",
+    "Electrical meter": "Bitumen products",
+    "Electrical terminal block": "Bitumen products",
+    "Engine/motor": "Gasket, friction products and adhesives",
+    "Exhaust": "Bitumen products",
+    "Filing cabinet": "Bitumen products",
+    "Flange joints": "Gasket, friction products and adhesives",
+    "Flash guards": "Bitumen products",
+    "Fume cupboard": "Cement products",
+    "Furnace": "Insulation Products",
+    "Fuse box": "Bitumen products",
+    "Fuse cartridge": "Bitumen products",
+    "Gas meter": "Bitumen products",
+    "Gatic": "Cement products",
+    "Gatic cover": "Cement products",
+    "Header tank": "Insulation Products",
+    "Heater": "Insulation Products",
+    "Heater flue": "Insulation Products",
+    "Heating coils": "Insulation Products",
+    "Heat mats": "Insulation Products",
+    "Hot plate": "Bitumen products",
+    "Hot water system": "Insulation Products",
+    "HRC Fuse": "Bitumen products",
+    "Illegal dump": "Other",
+    "Incinerator": "Insulation Products",
+    "Incinerator flue": "Insulation Products",
+    "Incubator lining": "Insulation Products",
+    "In cupboard": "Cement products",
+    "Inspection hatch": "Cement products",
+    "Insulation": "Insulation Products",
+    "Ironing board": "Textiles",
+    "Joint": "Gasket, friction products and adhesives",
+    "Kiln lining": "Insulation Products",
+    "Lift car": "Insulation Products",
+    "Lift landing doors": "Insulation Products",
+    "Lift motor": "Insulation Products",
+    "Light fitting": "Bitumen products",
+    "Lightswitch": "Bitumen products",
+    "Membrane": "Bitumen products",
+    "Meter box": "Bitumen products",
+    "Naturally occuring": "Other",
+    "Oven": "Insulation Products",
+    "Oven door seal": "Gasket, friction products and adhesives",
+    "Overspray": "Coatings",
+    "Packing material": "Gasket, friction products and adhesives",
+    "Penetration packing": "Insulation Products",
+    "Penetration sealant": "Gasket, friction products and adhesives",
+    "Pie warmer": "Insulation Products",
+    "Pipework": "Insulation Products",
+    "Pipework brackets": "Insulation Products",
+    "Pipework flange joints": "Gasket, friction products and adhesives",
+    "Pipework insulation": "Insulation Products",
+    "Pipework joint": "Gasket, friction products and adhesives",
+    "Pit": "Cement products",
+    "Plant and equipment": "Other",
+    "Pothead pitch": "Bitumen products",
+    "Pump flange joints": "Gasket, friction products and adhesives",
+    "Rainwater goods": "Cement products",
+    "Reheat unit (to ductwork)": "Insulation Products",
+    "Residual debris": "Other",
+    "Return air plenum": "Insulation Products",
+    "Rock sample": "Other",
+    "Safe": "Insulation Products",
+    "Sanitary incinerator": "Insulation Products",
+    "Seal": "Gasket, friction products and adhesives",
+    "Seat": "Bitumen products",
+    "Sewer Pit": "Cement products",
+    "Shelving": "Cement products",
+    "Sink unit": "Cement products",
+    "Soil debris": "Other",
+    "Speaker": "Bitumen products",
+    "Splashback": "Cement products",
+    "Splashback lining": "Cement products",
+    "Stored item(s)": "Other",
+    "Stump packing": "Other",
+    "Switch (Pitch)": "Bitumen products",
+    "Switchboard": "Bitumen products",
+    "Switchboard cupboard lining": "Bitumen products",
+    "Switchboard insulation": "Insulation Products",
+    "Switchboard internal wall linings": "Bitumen products",
+    "Switchboard lining": "Bitumen products",
+    "Table top": "Cement products",
+    "Textured coating": "Coatings",
+    "Toilet cistern": "Bitumen products",
+    "Toilet seat": "Bitumen products",
+    "Trolley": "Other",
+    "Underside of bath": "Bitumen products",
+    "Underside of floor": "Cement products",
+    "Underside of roof": "Cement products",
+    "Unknown": "Other",
+    "Urinal": "Cement products",
+    "Urinal backing": "Cement products",
+    "Valve": "Gasket, friction products and adhesives",
+    "Waste pipe": "Cement products",
+    "Water pipe": "Insulation Products",
+    "Waterproofing": "Bitumen products",
+    "Washer": "Gasket, friction products and adhesives",
+    # Floor coverings (vinyl)
+    "Beneath carpet": "Vinyl products",
+    "Beneath floor covering": "Vinyl products",
+    "Beneath sink": "Vinyl products",
+    "Floor covering": "Vinyl products",
+    "Floor covering (beneath carpet)": "Vinyl products",
+    "Floor covering (lower layer)": "Vinyl products",
+    "Floor covering (upper layer)": "Vinyl products",
+    "Floor covering adhesive": "Vinyl products",
+    "Floor covering lining": "Vinyl products",
+    "Floor underlay": "Vinyl products",
+    "Flooring": "Vinyl products",
+    # Fire-related / Insulation
+    "Arc Shield": "Insulation Products",
+    "BBQ Top": "Other",
+    "Bain marie": "Insulation Products",
+    "Bagged waste": "Other",
+    "Basin": "Cement products",
+    "Bath surround panels": "Cement products",
+    "Ballustrade": "Cement products",
+    "Beneath render": "Coatings",
+    "Beneath roof": "Cement products",
+    "Beneath slab(s)": "Cement products",
+    "Beams": "Cement products",
+    "Chalk board": "Cement products",
+    "Chiller unit": "Insulation Products",
+    "Core sample": "Other",
+    "Contaminated soil": "Other",
+    "Cupboard": "Cement products",
+    "Debris": "Other",
+    "Desk": "Cement products",
+    "Dust": "Other",
+    "Dust and debris": "Other",
+    "Fire blanket": "Textiles",
+    "Fire curtain": "Textiles",
+    "Fire door(s)": "Insulation Products",
+    "Fire door frame": "Insulation Products",
+    "Fire fighting equipment": "Textiles",
+    "Fire hose cupboard lining": "Insulation Products",
+    "Fireplace": "Insulation Products",
+    "Fireproof cupboard": "Insulation Products",
+    "Fire proofing": "Insulation Products",
+    "Flammable good cabinet": "Insulation Products",
+    "Gasket(s)": "Gasket, friction products and adhesives",
+    "Gas mask": "Textiles",
+    "Gauze mats": "Insulation Products",
+    "Gland Packing": "Gasket, friction products and adhesives",
+    "Glove": "Textiles",
+    "Gutter debris": "Cement products",
+    "Hessian": "Insulation Products",
+    # Shower/bath
+    "Shower and bath surrounds": "Cement products",
+    "Shower Cubicle": "Cement products",
+    "Shower screen": "Cement products",
+}
+
+
+def get_item_names_by_product_group(acm_classification: str) -> list[str]:
+    """Return all Item_Name__c values for a given ACM_Classification value.
+
+    Args:
+        acm_classification: e.g. "Cement products", "Insulation Products",
+                            "Cement products (f)", "Insulation products (f)"
+
+    Returns:
+        Sorted list of item names belonging to that product group.
+    """
+    # For friable groups (those ending in (f)), use the same mapping as non-friable
+    # since ITEM_NAME_TO_PRODUCT_GROUP maps to the non-friable group name
+    lookup_group = acm_classification
+    # Strip friable suffix for lookup purposes — item names don't differ by friability
+    if lookup_group.endswith(" (f)"):
+        lookup_group = lookup_group[:-4]
+        # Normalize case for matching (e.g. "Insulation products (f)" -> "Insulation Products")
+        # Find best match in existing keys
+        non_friable_groups = {g for g in set(ITEM_NAME_TO_PRODUCT_GROUP.values())}
+        matched = next(
+            (g for g in non_friable_groups if g.lower() == lookup_group.lower()),
+            None,
+        )
+        if matched:
+            lookup_group = matched
+
+    return sorted(
+        name
+        for name, group in ITEM_NAME_TO_PRODUCT_GROUP.items()
+        if group == lookup_group
     )

@@ -160,10 +160,7 @@ def pydantic_to_openrouter_schema(model_class: type) -> dict:
         result = {}
         for k, v in node.items():
             if k == "properties" and isinstance(v, dict):
-                result[k] = {
-                    pk: _resolve_refs(pv, defs)
-                    for pk, pv in v.items()
-                }
+                result[k] = {pk: _resolve_refs(pv, defs) for pk, pv in v.items()}
             elif k == "items":
                 result[k] = _resolve_refs(v, defs)
             elif k in ("anyOf", "oneOf", "allOf") and isinstance(v, list):
@@ -210,6 +207,10 @@ def pydantic_to_openrouter_schema(model_class: type) -> dict:
 # Module-level cache for ACM extraction schema (E27-S4)
 _ACM_EXTRACTION_JSON_SCHEMA: dict | None = None
 
+# Module-level caches for V3 schemas (E30-S7)
+_V3_BUILDING_JSON_SCHEMA: dict | None = None
+_V3_ITEM_JSON_SCHEMA: dict | None = None
+
 
 def _get_acm_extraction_schema() -> dict:
     """Lazily generate and cache the JSON Schema for ACMExtractionResult."""
@@ -217,10 +218,77 @@ def _get_acm_extraction_schema() -> dict:
     if _ACM_EXTRACTION_JSON_SCHEMA is None:
         from open_notebook.extractors.acm_schemas import ACMExtractionResult
 
-        _ACM_EXTRACTION_JSON_SCHEMA = pydantic_to_openrouter_schema(
-            ACMExtractionResult
-        )
+        _ACM_EXTRACTION_JSON_SCHEMA = pydantic_to_openrouter_schema(ACMExtractionResult)
     return _ACM_EXTRACTION_JSON_SCHEMA
+
+
+def _get_v3_building_schema() -> dict:
+    """Lazily generate and cache JSON Schema for BuildingExtractionResult (E30-S7)."""
+    global _V3_BUILDING_JSON_SCHEMA
+    if _V3_BUILDING_JSON_SCHEMA is None:
+        from open_notebook.extractors.acm_schemas_v3 import BuildingExtractionResult
+
+        _V3_BUILDING_JSON_SCHEMA = pydantic_to_openrouter_schema(
+            BuildingExtractionResult
+        )
+    return _V3_BUILDING_JSON_SCHEMA
+
+
+def _get_v3_item_schema() -> dict:
+    """Lazily generate and cache JSON Schema for ACMItemExtractionResult (E30-S7)."""
+    global _V3_ITEM_JSON_SCHEMA
+    if _V3_ITEM_JSON_SCHEMA is None:
+        from open_notebook.extractors.acm_schemas_v3 import ACMItemExtractionResult
+
+        _V3_ITEM_JSON_SCHEMA = pydantic_to_openrouter_schema(ACMItemExtractionResult)
+    return _V3_ITEM_JSON_SCHEMA
+
+
+def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
+    """Apply Ollama-specific extraction settings: format=json and num_ctx.
+
+    Separated from _inject_response_format so it can be called without a
+    JSON schema (e.g. in provision_extraction_fallback_model where the schema
+    is applied later by the calling extraction function).
+
+    - format="json": forces Ollama to emit pure JSON, preventing qwen2.5/phi4
+      from returning conversational tutorial text instead of extraction data.
+    - num_ctx: sets the context window to 32768 (or OLLAMA_NUM_CTX env var),
+      replacing the Ollama default of 8192 which truncates large SAMP docs.
+
+    No-op for non-Ollama models.
+    """
+    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
+    if not is_ollama:
+        return lc_model
+
+    model_name = (
+        getattr(lc_model, "model_name", "") or getattr(lc_model, "model", "") or ""
+    )
+
+    # ChatOllama.format is a first-class Pydantic field — NOT part of
+    # model_kwargs. Setting model_kwargs["format"] is silently ignored because
+    # ChatOllama builds its request payload from self.format directly
+    # (see langchain_ollama/chat_models.py: params["format"] = self.format).
+    object.__setattr__(lc_model, "format", "json")
+
+    # Set num_ctx for extraction models. Ollama defaults to 8192 tokens which
+    # is far too small for 50k+ char SAMP documents. Use env var OLLAMA_NUM_CTX
+    # if set, otherwise default to 32768 (adequate for qwen2.5:7b/32b and
+    # phi4:14b without OOM risk on 16GB VRAM).
+    num_ctx_env = os.getenv("OLLAMA_NUM_CTX")
+    num_ctx_target = int(num_ctx_env) if num_ctx_env else 32768
+    # Only raise num_ctx — never lower it if already configured larger.
+    current_num_ctx = getattr(lc_model, "num_ctx", None) or 0
+    if num_ctx_target > current_num_ctx:
+        object.__setattr__(lc_model, "num_ctx", num_ctx_target)
+
+    logger.debug(
+        f"Applied Ollama extraction settings: "
+        f"format=json, num_ctx={getattr(lc_model, 'num_ctx', None)} "
+        f"for model {model_name}"
+    )
+    return lc_model
 
 
 def _inject_response_format(
@@ -231,12 +299,17 @@ def _inject_response_format(
     """Inject response_format: json_schema into model's extra_body.
 
     Stage-specific — called AFTER provision_langchain_model() and BEFORE
-    model.ainvoke(). Only applies to OpenRouter models.
+    model.ainvoke(). Applies to OpenRouter models (json_schema) and Ollama
+    models (format=json + num_ctx).
 
     This enforces schema validation at the OpenRouter layer, so the LLM
     returns JSON that conforms to the given schema. Combined with
     Response Healing plugin (E27-S3), this provides production-grade
     structured output without with_structured_output().
+
+    For Ollama, delegates to _apply_ollama_extraction_settings() which sets
+    format="json" (first-class ChatOllama field, not model_kwargs) and
+    num_ctx=32768 to handle large SAMP documents.
 
     Args:
         lc_model: LangChain model (already provisioned with OpenRouter prefs)
@@ -246,11 +319,17 @@ def _inject_response_format(
     Returns:
         The same model with response_format injected into extra_body.
     """
+    # Ollama: delegate to shared helper (also used by fallback model path)
+    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
+    if is_ollama:
+        return _apply_ollama_extraction_settings(lc_model)
+
     base_url = (
         getattr(lc_model, "openai_api_base", None)
         or getattr(lc_model, "base_url", None)
         or ""
     )
+
     if "openrouter.ai" not in str(base_url).lower():
         return lc_model
 
@@ -273,10 +352,117 @@ def _inject_response_format(
     object.__setattr__(lc_model, "model_kwargs", new_kwargs)
 
     logger.debug(
-        f"Injected response_format: json_schema ({schema_name}) "
-        f"into model extra_body"
+        f"Injected response_format: json_schema ({schema_name}) into model extra_body"
     )
     return lc_model
+
+
+# Boundary patterns for Ollama token-budget content splitting (E32-S8)
+_BUDGET_ROOM_RE = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
+_BUDGET_ARA_RE = re.compile(r"(?:^|\n)(\d+)\.\s", re.MULTILINE)
+
+
+def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
+    """Split content at room/item boundaries to fit within max_chars per chunk.
+
+    Boundary detection:
+    - SAMP format: B###-R#### room headers
+    - ARA format: numbered items like "1. " at start of line
+
+    If a single boundary segment exceeds max_chars, that segment is
+    hard-truncated with a WARNING (graceful degrade — never silently drops).
+    """
+    boundaries = list(_BUDGET_ROOM_RE.finditer(content))
+    if not boundaries:
+        boundaries = list(_BUDGET_ARA_RE.finditer(content))
+
+    if not boundaries:
+        if len(content) > max_chars:
+            logger.info(
+                f"Content ({len(content)} chars) exceeds budget "
+                f"({max_chars} chars) and no room boundaries found. "
+                f"Splitting into character-based chunks."
+            )
+            return [
+                content[i : i + max_chars] for i in range(0, len(content), max_chars)
+            ]
+        return [content]
+
+    # Build (start, end) segments: preamble + each room
+    segments: list[tuple[int, int]] = []
+    if boundaries[0].start() > 0:
+        segments.append((0, boundaries[0].start()))
+    for i, match in enumerate(boundaries):
+        end = boundaries[i + 1].start() if i + 1 < len(boundaries) else len(content)
+        segments.append((match.start(), end))
+
+    # Greedily accumulate into budget-sized chunks
+    chunks: list[str] = []
+    chunk_start = segments[0][0]
+    chunk_end = segments[0][0]
+
+    for seg_start, seg_end in segments:
+        seg_len = seg_end - seg_start
+        current_chunk_len = chunk_end - chunk_start
+
+        if seg_len > max_chars:
+            # Single oversized segment — flush current chunk, then truncate
+            if chunk_end > chunk_start:
+                chunks.append(content[chunk_start:chunk_end])
+            logger.warning(
+                f"Single room/item content ({seg_len} chars) exceeds budget "
+                f"({max_chars} chars). Hard-truncating this segment."
+            )
+            chunks.append(content[seg_start : seg_start + max_chars])
+            chunk_start = seg_end
+            chunk_end = seg_end
+        elif current_chunk_len > 0 and current_chunk_len + seg_len > max_chars:
+            # Adding this segment would overflow — flush and start fresh
+            chunks.append(content[chunk_start:chunk_end])
+            chunk_start = seg_start
+            chunk_end = seg_end
+        else:
+            chunk_end = seg_end
+
+    # Flush final chunk
+    if chunk_end > chunk_start:
+        chunks.append(content[chunk_start:chunk_end])
+
+    return chunks if chunks else [content]
+
+
+def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
+    """Split content into Ollama token-budget chunks (E32-S8).
+
+    Returns [content] unchanged for non-Ollama models or content within budget.
+    For Ollama, splits at room/item boundaries to stay within the effective
+    context window. If a single room still exceeds the budget, hard-truncates
+    that room with a WARNING (graceful degrade — never silently drops records).
+
+    Limit priority:
+      1. OLLAMA_MAX_CONTENT_CHARS env var (explicit override)
+      2. model.num_ctx * 3.5 chars/token (model-size aware)
+      3. 8192 * 3.5 = 28672 chars (default fallback)
+    """
+    is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
+    if not is_ollama:
+        return [content]
+
+    env_override = os.getenv("OLLAMA_MAX_CONTENT_CHARS")
+    if env_override:
+        max_chars = int(env_override)
+    else:
+        num_ctx = getattr(lc_model, "num_ctx", None) or 8192
+        max_chars = int(num_ctx * 3.5)
+
+    if len(content) <= max_chars:
+        return [content]
+
+    logger.info(
+        f"Ollama content ({len(content)} chars) exceeds budget ({max_chars} chars). "
+        f"Splitting into budget chunks."
+    )
+    return _split_content_by_char_budget(content, max_chars)
 
 
 async def _verify_provider_routing(
@@ -311,28 +497,26 @@ async def _verify_provider_routing(
             )
         else:
             logger.info(
-                f"[{stage_name}] Provider: {actual_provider} | "
-                f"Model: {actual_model}"
+                f"[{stage_name}] Provider: {actual_provider} | Model: {actual_model}"
             )
         return {"provider_name": actual_provider, "model": actual_model}
 
     # Method 2: Query Generation API (definitive, async)
     if not gen_id:
-        gen_id = (
-            metadata.get("id")
-            or (getattr(response, "additional_kwargs", {}) or {}).get("id")
-        )
+        gen_id = metadata.get("id") or (
+            getattr(response, "additional_kwargs", {}) or {}
+        ).get("id")
 
     if not gen_id:
-        logger.debug(
-            f"[{stage_name}] No generation ID — cannot verify provider"
-        )
+        logger.debug(f"[{stage_name}] No generation ID — cannot verify provider")
         return None
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    # E30-S8: prefer ACM-namespaced key, fall back to bare key for
+    # non-extraction callers (e.g. general chat workflows)
+    api_key = os.getenv("ACM_OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         logger.debug(
-            f"[{stage_name}] No OPENROUTER_API_KEY — skipping Generation API lookup"
+            f"[{stage_name}] No ACM_OPENROUTER_API_KEY — skipping Generation API lookup"
         )
         return None
 
@@ -408,6 +592,13 @@ async def provision_langchain_model(
             model = await model_manager.get_default_model(default_type, **kwargs)
     elif model_id:
         model = await model_manager.get_model(model_id, **kwargs)
+    elif default_type == "extraction":
+        # E35-S4: Primary extraction priority chain (Ollama -> Anthropic -> OpenRouter)
+        lc_model = await _provision_extraction_primary_model(**kwargs)
+        if lc_model is not None:
+            return lc_model
+        # Fall through to DB default if no provider available
+        model = await model_manager.get_default_model(default_type, **kwargs)
     else:
         model = await model_manager.get_default_model(default_type, **kwargs)
 
@@ -491,7 +682,6 @@ def _is_qwen_model(model: "BaseChatModel") -> bool:
     if not isinstance(model_name, str):
         return False
     return "qwen2.5" in model_name.lower()
-
 
 
 class TruncationError(ValueError):
@@ -664,6 +854,59 @@ def is_provider_schema_error(error: Exception) -> bool:
     return False
 
 
+async def _provision_extraction_primary_model(
+    **kwargs,
+) -> Optional[BaseChatModel]:
+    """Primary extraction model provisioning with Ollama->Anthropic->OpenRouter priority.
+
+    E35-S4: When default_type='extraction' and no explicit model_id, use this
+    priority chain instead of only reading the DB-stored default.
+    Uses ACM-namespaced API keys only (never bare ANTHROPIC_API_KEY).
+
+    Returns None if no provider is available (caller falls through to DB default).
+    """
+    candidates: list[tuple[str, str, Optional[str]]] = []
+
+    # 1) Ollama first — free, local
+    if os.getenv("OLLAMA_API_BASE"):
+        candidates.append(("ollama", "qwen2.5:7b", None))
+
+    # 2) Anthropic Direct — ACM-namespaced key ONLY
+    acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")
+    if acm_anthropic_key:
+        candidates.append(("anthropic", "claude-sonnet-4-20250514", acm_anthropic_key))
+
+    # 3) OpenRouter — ACM-namespaced key ONLY
+    acm_openrouter_key = os.getenv("ACM_OPENROUTER_API_KEY")
+    if acm_openrouter_key:
+        candidates.append(
+            ("openrouter", "anthropic/claude-sonnet-4", acm_openrouter_key)
+        )
+
+    for provider, model_name, api_key in candidates:
+        try:
+            config: dict = {**kwargs}
+            if api_key:
+                config["api_key"] = api_key
+            model = AIFactory.create_language(
+                model_name=model_name,
+                provider=provider,
+                config=config,
+            )
+            assert isinstance(model, LanguageModel)
+            lc_model = model.to_langchain()
+            lc_model = _apply_openrouter_preferences(lc_model)
+            lc_model = _apply_ollama_extraction_settings(lc_model)
+            logger.info(f"Primary extraction model: {provider}/{model_name}")
+            return lc_model
+        except Exception as e:
+            logger.warning(
+                f"Primary extraction candidate {provider}/{model_name} failed: {e}"
+            )
+
+    return None
+
+
 async def provision_extraction_fallback_model(
     failed_model_name: str,
     *,
@@ -672,59 +915,80 @@ async def provision_extraction_fallback_model(
 ) -> Optional[BaseChatModel]:
     """Provision a fallback extraction model when primary auth fails.
 
-    Priority:
-    1) Anthropic direct (preferred — native structured output support)
-    2) OpenAI direct (fallback — reliable JSON mode)
-    3) Ollama Qwen local fallbacks
+    E30-S8 — ACM extraction uses ONLY ACM-namespaced env vars:
+      ACM_ANTHROPIC_API_KEY (not bare ANTHROPIC_API_KEY)
+      ACM_OPENROUTER_API_KEY (not bare OPENROUTER_API_KEY)
+
+    Priority (first available wins):
+    1) Ollama local (if OLLAMA_API_BASE set) — zero cost, low latency
+    2) Anthropic direct (if ACM_ANTHROPIC_API_KEY set) — best extraction quality
+    3) OpenRouter (if ACM_OPENROUTER_API_KEY set) — cloud fallback
     """
     lower_name = (failed_model_name or "").lower()
-    candidates: list[tuple[str, str]] = []
+    # (provider, model_name, api_key_override)
+    candidates: list[tuple[str, str, Optional[str]]] = []
 
-    # Always try Anthropic direct first — most reliable for extraction
-    if os.getenv("ANTHROPIC_API_KEY"):
-        candidates.append(("anthropic", "claude-sonnet-4-20250514"))
-
-    # OpenAI direct second
-    if os.getenv("OPENAI_API_KEY"):
-        candidates.append(("openai", "gpt-4o"))
-
-    # Ollama local fallbacks
+    # 1) Ollama first — free, local, no API key needed
     if os.getenv("OLLAMA_API_BASE"):
         candidates.extend(
             [
-                ("ollama", "qwen2.5:32b"),
-                ("ollama", "qwen3:32b"),
+                ("ollama", "qwen2.5:7b", None),  # E32-S6 spike winner
+                ("ollama", "qwen2.5:32b", None),
+                ("ollama", "qwen3:32b", None),
             ]
         )
 
+    # 2) Anthropic direct — ACM-namespaced key ONLY
+    acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")
+    if acm_anthropic_key:
+        candidates.append(("anthropic", "claude-sonnet-4-20250514", acm_anthropic_key))
+
+    # 3) OpenRouter — ACM-namespaced key ONLY
+    acm_openrouter_key = os.getenv("ACM_OPENROUTER_API_KEY")
+    if acm_openrouter_key:
+        candidates.append(
+            ("openrouter", "anthropic/claude-sonnet-4", acm_openrouter_key)
+        )
+
     seen: set[str] = set()
-    unique_candidates: list[tuple[str, str]] = []
-    for provider, model_name in candidates:
+    unique_candidates: list[tuple[str, str, Optional[str]]] = []
+    for provider, model_name, api_key in candidates:
         key = f"{provider}/{model_name}".lower()
         if key in seen or model_name.lower() == lower_name:
             continue
         seen.add(key)
-        unique_candidates.append((provider, model_name))
+        unique_candidates.append((provider, model_name, api_key))
 
-    for provider, model_name in unique_candidates:
+    for provider, model_name, api_key in unique_candidates:
         try:
             logger.warning(
                 "Attempting extraction fallback model after auth failure: "
                 f"{provider}/{model_name}"
             )
+            config: dict = {
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+            if api_key:
+                config["api_key"] = api_key
             model = AIFactory.create_language(
                 model_name=model_name,
                 provider=provider,
-                config={
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                },
+                config=config,
             )
             assert isinstance(model, LanguageModel), (
                 f"Fallback model is not a LanguageModel: {model}"
             )
             lc_model = model.to_langchain()
-            return _apply_openrouter_preferences(lc_model)
+            lc_model = _apply_openrouter_preferences(lc_model)
+            # Apply format=json and num_ctx for Ollama fallback models.
+            # _inject_response_format returns early after applying Ollama
+            # settings so the empty schema args are never used.  For non-Ollama
+            # fallbacks (Anthropic, OpenRouter) the caller is responsible for
+            # injecting the schema via _inject_response_format after selecting
+            # the schema appropriate to the extraction stage.
+            lc_model = _apply_ollama_extraction_settings(lc_model)
+            return lc_model
         except Exception as fallback_error:
             logger.warning(
                 f"Fallback candidate {provider}/{model_name} failed: {fallback_error}"

@@ -49,6 +49,7 @@ dependencies = [
     "textual>=1.0.0",
     "typer>=0.20.0",
     "langfuse>=3.14.5",
+    "mineru>=2.7.0",
 ]
 
 [tool.setuptools]
@@ -118,6 +119,8 @@ ignore = [
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests requiring external services (ANTHROPIC_API_KEY, DB, etc.)",
+    "v3_benchmark: marks tests as V3 dual-provider benchmark quality gates (require benchmark fixtures)",
+    "v3_e2e: V3 end-to-end accuracy tests (require RUN_E2E_LLM=true)",
 ]
 
 [tool.mypy]

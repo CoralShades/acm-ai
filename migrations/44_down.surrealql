@@ -1,0 +1,2 @@
+-- E30-S8 rollback: Remove api_key field from model table
+REMOVE FIELD api_key ON TABLE model;

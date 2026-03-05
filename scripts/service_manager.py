@@ -188,7 +188,7 @@ def cmd_start(args: argparse.Namespace) -> int:
             _print("[yellow]Auto-fixing port conflicts...[/yellow]")
             for name, conflict in conflicts.items():
                 svc = services[name]
-                if kill_port_owner(svc.port, force=False):
+                if kill_port_owner(svc.port):
                     _print(f"  [green]Freed[/green] port {svc.port}")
                 else:
                     _print(f"  [red]Failed[/red] to free port {svc.port}")
@@ -375,7 +375,7 @@ def cmd_fix(args: argparse.Namespace) -> int:
         _print("Resolving conflicts...")
         for name, conflict in conflicts.items():
             svc = services[name]
-            if kill_port_owner(svc.port, force=False):
+            if kill_port_owner(svc.port):
                 _print(f"  [green]Freed[/green] port {svc.port}")
             else:
                 _print(f"  [red]Failed[/red] to free port {svc.port}")

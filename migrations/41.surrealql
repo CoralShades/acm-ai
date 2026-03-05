@@ -1,0 +1,27 @@
+-- Migration 41: Persist pre-extraction intelligence (E30-S9)
+-- Stores DocumentMeta, DocumentStructure, BuildingInventory, PageTaggingResult
+-- so they survive beyond the transient LangGraph pipeline state.
+
+DEFINE TABLE IF NOT EXISTS source_intelligence SCHEMAFULL;
+
+-- Core fields
+DEFINE FIELD IF NOT EXISTS source_id      ON TABLE source_intelligence TYPE record<source>;
+DEFINE FIELD IF NOT EXISTS document_meta  ON TABLE source_intelligence TYPE option<object>;
+DEFINE FIELD IF NOT EXISTS document_structure ON TABLE source_intelligence TYPE option<object>;
+DEFINE FIELD IF NOT EXISTS building_inventory ON TABLE source_intelligence TYPE option<object>;
+DEFINE FIELD IF NOT EXISTS page_tags      ON TABLE source_intelligence TYPE option<object>;
+
+-- Denormalized summary fields for quick queries
+DEFINE FIELD IF NOT EXISTS total_pages       ON TABLE source_intelligence TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS total_buildings   ON TABLE source_intelligence TYPE option<int>;
+DEFINE FIELD IF NOT EXISTS document_type     ON TABLE source_intelligence TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS register_page_range ON TABLE source_intelligence TYPE option<object>;
+
+-- Timestamps
+DEFINE FIELD IF NOT EXISTS created_at ON TABLE source_intelligence TYPE option<datetime> DEFAULT time::now();
+DEFINE FIELD IF NOT EXISTS updated_at ON TABLE source_intelligence TYPE option<datetime> DEFAULT time::now();
+
+-- Unique constraint: one intelligence record per source
+DEFINE INDEX IF NOT EXISTS idx_source_intelligence_source_id
+    ON TABLE source_intelligence
+    FIELDS source_id UNIQUE;

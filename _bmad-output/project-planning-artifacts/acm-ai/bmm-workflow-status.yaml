@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-03-01"
+updated: "2026-03-02"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -53,9 +53,17 @@ workflow_status:
   correct-course-docint: "_bmad-output/sprint-change-proposal-20260207-workflow-extraction.md"
   correct-course-generic-parser: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md"
   correct-course-extraction-monitor-ux: "_bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md"
+  correct-course-v3-scope-expansion: "V3/output/SCP-V3-scope-expansion.md"
 
 # CHANGE LOG:
 # ===========
+# 2026-03-02: V3 Scope Expansion — Course Correction
+#   - E29 S5-S8 archived: Superseded by V3 multi-provider extraction + SF alignment design
+#   - E29 R1/R2 archived: Fixes incorporated into V3 extraction requirements
+#   - E30 SCP preserved as V3 input (not added to sprint-status)
+#   - V3 SCP: V3/output/SCP-V3-scope-expansion.md
+#   - Next steps: Party Mode → PRD → Architecture → Epics (full BMAD cycle)
+#   - E29 S1-S4 retained as V3 foundation (JSON parser, benchmark, orchestrator, registry)
 # 2026-03-01: E29 Gate 2 recovery loop initiated
 #   - Gate 2 FAIL: G2.1 28/31, G2.2 31/43, G2.3 not testable. No regression from baseline.
 #   - PM decision: NO ROLLBACK. Recovery stories R1 (benchmark fidelity, 2 SP) + R2 (match-gap, 2 SP) authorized.

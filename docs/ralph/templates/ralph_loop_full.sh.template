@@ -1,0 +1,263 @@
+#!/bin/bash
+# Ralph Loop — Full-Featured Pattern
+# Spawns fresh Claude Code instances with checkpointing, metrics, fatal error
+# detection, no-progress circuit breaker, and a real-time dashboard.
+# Adapted from snarktank/ralph.
+#
+# Exit codes:
+#   0 = complete (all stories pass)
+#   1 = blocked (needs human intervention)
+#   2 = max iterations reached
+#   3 = setup error (preflight failed)
+#   4 = infrastructure failure (fatal error detected)
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Defaults (override via args or env)
+# ---------------------------------------------------------------------------
+MAX_ITERATIONS="${MAX_ITERATIONS:-{{MAX_ITERATIONS:-40}}}"
+CHECKPOINT_INTERVAL="${CHECKPOINT_INTERVAL:-{{CHECKPOINT_INTERVAL:-10}}}"
+NO_PROGRESS_THRESHOLD="${NO_PROGRESS_THRESHOLD:-{{NO_PROGRESS_THRESHOLD:-3}}}"
+FIX_PLAN="${FIX_PLAN:-{{FIX_PLAN:-.ralph/@fix_plan.md}}}"
+PROMPT_FILE="${PROMPT_FILE:-{{PROMPT_FILE:-.ralph/PROMPT.md}}}"
+LOG_DIR="${LOG_DIR:-{{LOG_DIR:-.ralph/logs}}}"
+MODEL="sonnet"
+FALLBACK_MODEL="haiku"
+COMPLETION_PROMISE="<promise>COMPLETE</promise>"
+BLOCKED_SIGNAL="<promise>BLOCKED</promise>"
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --max)          MAX_ITERATIONS="$2";    shift 2 ;;
+    --model)        MODEL="$2";             shift 2 ;;
+    --fallback-model) FALLBACK_MODEL="$2"; shift 2 ;;
+    --log-dir)      LOG_DIR="$2";           shift 2 ;;
+    --prompt)       PROMPT_FILE="$2";       shift 2 ;;
+    *) echo "Unknown arg: $1"; exit 3 ;;
+  esac
+done
+
+# ---------------------------------------------------------------------------
+# Setup
+# ---------------------------------------------------------------------------
+unset ANTHROPIC_API_KEY
+unset CLAUDECODE
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/ralph-$(date +%Y%m%d-%H%M%S).log"
+METRICS_FILE="$LOG_DIR/metrics.tsv"
+
+START_TIME=$(date +%s)
+CURRENT_MODEL="$MODEL"
+
+# ---------------------------------------------------------------------------
+# Preflight checks
+# ---------------------------------------------------------------------------
+preflight_check() {
+  local errors=0
+
+  if ! command -v claude &>/dev/null; then
+    echo "ERROR: 'claude' CLI not found in PATH." >&2
+    errors=$((errors + 1))
+  fi
+
+  if [ ! -f "$PROMPT_FILE" ]; then
+    echo "ERROR: Prompt file not found: $PROMPT_FILE" >&2
+    errors=$((errors + 1))
+  fi
+
+  if [ ! -f "$FIX_PLAN" ]; then
+    echo "ERROR: Fix plan not found: $FIX_PLAN" >&2
+    errors=$((errors + 1))
+  fi
+
+  if [ "$errors" -gt 0 ]; then
+    exit 3
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+log_metric() {
+  local event="$1"
+  local detail="${2:-}"
+  local iteration="${ITERATION:-0}"
+  echo -e "$(date -u +%Y-%m-%dT%H:%M:%SZ)\t${iteration}\t${event}\t${detail}" >> "$METRICS_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# Task counting from fix plan
+# ---------------------------------------------------------------------------
+count_tasks() {
+  local checked unchecked
+  checked=$(grep -c '^\- \[x\]' "$FIX_PLAN" 2>/dev/null || echo "0")
+  unchecked=$(grep -c '^\- \[ \]' "$FIX_PLAN" 2>/dev/null || echo "0")
+  echo "$checked $unchecked"
+}
+
+# ---------------------------------------------------------------------------
+# Fatal error detection
+# ---------------------------------------------------------------------------
+is_fatal_error() {
+  local output="$1"
+  local fatal_patterns=(
+    "credit balance"
+    "rate limit"
+    "authentication failed"
+    "invalid api key"
+    "connection refused"
+    "no such host"
+    "SSL_ERROR"
+    "ECONNREFUSED"
+  )
+  for pattern in "${fatal_patterns[@]}"; do
+    if echo "$output" | grep -qi "$pattern"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------------
+print_dashboard() {
+  local iteration="$1"
+  local tasks_done="$2"
+  local tasks_total="$3"
+  local elapsed=$(( $(date +%s) - START_TIME ))
+  local elapsed_fmt
+  elapsed_fmt=$(printf '%02d:%02d:%02d' $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60)))
+
+  echo ""
+  echo "┌─────────────────────────────────────────┐"
+  printf "│  Iteration : %-3d / %-3d                   │\n" "$iteration" "$MAX_ITERATIONS"
+  printf "│  Tasks     : %-3d / %-3d done               │\n" "$tasks_done" "$tasks_total"
+  printf "│  Elapsed   : %-10s                   │\n" "$elapsed_fmt"
+  printf "│  Model     : %-10s                   │\n" "$CURRENT_MODEL"
+  echo "└─────────────────────────────────────────┘"
+}
+
+# ---------------------------------------------------------------------------
+# Safety checkpoint (git commit)
+# ---------------------------------------------------------------------------
+safety_checkpoint() {
+  local iteration="$1"
+  echo "=== Safety checkpoint at iteration $iteration ==="
+  git add -u 2>/dev/null || true
+  git commit -m "chore(ralph): safety checkpoint — iteration $iteration" \
+    --no-verify 2>/dev/null || echo "(nothing to commit at checkpoint)"
+  log_metric "CHECKPOINT" "iteration=$iteration"
+}
+
+# ---------------------------------------------------------------------------
+# Main loop
+# ---------------------------------------------------------------------------
+preflight_check
+log_metric "START" "model=$MODEL max=$MAX_ITERATIONS"
+
+echo "=== Ralph Loop (Full) ==="
+echo "    Max iterations : $MAX_ITERATIONS"
+echo "    Checkpoint every: $CHECKPOINT_INTERVAL iterations"
+echo "    No-progress limit: $NO_PROGRESS_THRESHOLD consecutive"
+echo "    Fix plan : $FIX_PLAN"
+echo "    Prompt   : $PROMPT_FILE"
+echo "    Log      : $LOG_FILE"
+echo ""
+
+LAST_TASKS_DONE=-1
+NO_PROGRESS_COUNT=0
+
+for ITERATION in $(seq 1 "$MAX_ITERATIONS"); do
+  # --- Task count snapshot ---
+  read -r TASKS_DONE TASKS_UNCHECKED <<< "$(count_tasks)"
+  TASKS_TOTAL=$(( TASKS_DONE + TASKS_UNCHECKED ))
+
+  print_dashboard "$ITERATION" "$TASKS_DONE" "$TASKS_TOTAL"
+
+  # --- All tasks done? ---
+  if [ "$TASKS_UNCHECKED" -eq 0 ] && [ "$TASKS_TOTAL" -gt 0 ]; then
+    echo "All tasks checked off in fix plan."
+    log_metric "COMPLETE" "tasks_done=$TASKS_DONE"
+    exit 0
+  fi
+
+  # --- No-progress circuit breaker ---
+  if [ "$TASKS_DONE" -eq "$LAST_TASKS_DONE" ]; then
+    NO_PROGRESS_COUNT=$(( NO_PROGRESS_COUNT + 1 ))
+    echo "No progress: $NO_PROGRESS_COUNT/$NO_PROGRESS_THRESHOLD consecutive iterations."
+    if [ "$NO_PROGRESS_COUNT" -ge "$NO_PROGRESS_THRESHOLD" ]; then
+      echo "=== No-progress limit reached. Switching to fallback model or aborting. ==="
+      if [ "$CURRENT_MODEL" != "$FALLBACK_MODEL" ]; then
+        echo "Switching model: $CURRENT_MODEL -> $FALLBACK_MODEL"
+        CURRENT_MODEL="$FALLBACK_MODEL"
+        NO_PROGRESS_COUNT=0
+      else
+        log_metric "BLOCKED" "no_progress threshold=$NO_PROGRESS_THRESHOLD"
+        exit 1
+      fi
+    fi
+  else
+    NO_PROGRESS_COUNT=0
+  fi
+  LAST_TASKS_DONE="$TASKS_DONE"
+
+  # --- Safety checkpoint ---
+  if (( ITERATION % CHECKPOINT_INTERVAL == 0 )); then
+    safety_checkpoint "$ITERATION"
+  fi
+
+  # --- Spawn Claude Code ---
+  echo "=== Iteration $ITERATION — spawning Claude ($CURRENT_MODEL) ==="
+  log_metric "SPAWN" "model=$CURRENT_MODEL tasks_done=$TASKS_DONE unchecked=$TASKS_UNCHECKED"
+
+  set +e
+  OUTPUT=$(claude \
+    -p "$(cat "$PROMPT_FILE")" \
+    --dangerously-skip-permissions \
+    --model "$CURRENT_MODEL" \
+    2>&1 | tee -a "$LOG_FILE")
+  EXIT_CODE=$?
+  set -e
+
+  # --- Fatal error check ---
+  if is_fatal_error "$OUTPUT"; then
+    echo "=== Fatal infrastructure error detected. ==="
+    log_metric "FATAL" "exit_code=$EXIT_CODE"
+    exit 4
+  fi
+
+  # --- Completion signals ---
+  if echo "$OUTPUT" | grep -qF "$COMPLETION_PROMISE"; then
+    echo "=== Ralph completed all stories! ==="
+    log_metric "COMPLETE" "signal=COMPLETE"
+    exit 0
+  fi
+
+  if echo "$OUTPUT" | grep -qF "$BLOCKED_SIGNAL"; then
+    REASON=$(echo "$OUTPUT" | grep -oP '(?<=BLOCKED\]: ).*' | head -1 || echo "unspecified")
+    echo "=== Ralph blocked: $REASON ==="
+    log_metric "BLOCKED" "reason=$REASON"
+    exit 1
+  fi
+
+  # --- Inter-iteration delay ---
+  if [ "$EXIT_CODE" -ne 0 ]; then
+    echo "Claude exited with code $EXIT_CODE. Waiting 30s before retry."
+    sleep 30
+  else
+    sleep 2
+  fi
+done
+
+echo "=== Max iterations ($MAX_ITERATIONS) reached ==="
+log_metric "MAX_REACHED" "iterations=$MAX_ITERATIONS"
+exit 2

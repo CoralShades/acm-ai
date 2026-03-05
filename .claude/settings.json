@@ -22,8 +22,8 @@
       "Bash(test -f *)",
       "Bash(rm .claude/ralph-loop.local.md)",
       "Bash(chmod +x *)",
-      "Bash(.ralph/ralph_loop.sh *)",
-      "Bash(.ralph/ralph_sprint.sh *)",
+      "Bash(cd frontend *)",
+      "Bash(python3 *)",
       "Bash(ruff check *)",
       "Bash(ruff format *)",
       "Bash(pytest *)",
@@ -69,8 +69,8 @@
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-commit.sh\"",
-            "timeout": 30
+            "command": "echo '[auto-commit] DISABLED — use /commit or git commit manually'",
+            "timeout": 5
           }
         ]
       }
@@ -95,6 +95,12 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-gate.sh\"",
             "timeout": 120,
             "statusMessage": "Pre-commit verification..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/ralph-gate-guard.sh\"",
+            "timeout": 10,
+            "statusMessage": "Ralph gate check..."
           }
         ]
       }
@@ -107,6 +113,12 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/story-done-check.sh\"",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/ralph-progress.sh\"",
+            "timeout": 10,
+            "statusMessage": "Ralph progress..."
           }
         ]
       }

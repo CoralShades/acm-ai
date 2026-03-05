@@ -355,7 +355,7 @@ class TestClassifyACMItem:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["product_group"] == "T3 Vinyl products"
+        assert data["product_group"] == "Vinyl products"
         assert data["product_type"] == "Vinyl Tiles"
         assert data["confidence"] == 0.9
         assert data["method"] == "pattern"
@@ -375,7 +375,7 @@ class TestClassifyACMItem:
         data = response.json()
         # Pattern should match, no need for LLM
         assert data["method"] == "pattern"
-        assert data["product_group"] == "T1 Cement products"
+        assert data["product_group"] == "Cement products"
 
     def test_classify_no_match(self, client):
         """Test classification when no pattern matches and LLM disabled."""
@@ -413,7 +413,7 @@ class TestClassifyACMItem:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["product_group"] == "T1 Cement products"
+        assert data["product_group"] == "Cement products"
 
 
 class TestNormalizeRecommendation:

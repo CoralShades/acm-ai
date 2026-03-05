@@ -44,7 +44,7 @@ class CopilotErrorBoundary extends React.Component<
       return this.props.children;
     }
     return (
-      <CopilotKit runtimeUrl={this.props.runtimeUrl}>
+      <CopilotKit runtimeUrl={this.props.runtimeUrl} showDevConsole={false}>
         {this.props.children}
       </CopilotKit>
     );

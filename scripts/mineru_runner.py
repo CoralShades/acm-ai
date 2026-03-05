@@ -59,7 +59,11 @@ def main() -> int:
 
     try:
         if not pdf_path.exists():
-            result = {"status": "error", "error": f"PDF not found: {pdf_path}", "tables": []}
+            result = {
+                "status": "error",
+                "error": f"PDF not found: {pdf_path}",
+                "tables": [],
+            }
         else:
             tables = extract_tables(pdf_path)
             result = {"status": "ok", "tables": tables}

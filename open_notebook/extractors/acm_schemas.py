@@ -27,17 +27,17 @@ RESULT_VALUES = {
     "Assumed Positive",
     "Negative",
     "Assumed Negative",
+    "Negative - Treated as Positive",  # NEW (V3 / E30-S3)
     "Not Sampled",
     "No Access",
     "Unknown",
 }
-FRIABLE_VALUES = {"Friable", "Non Friable"}
+FRIABLE_VALUES = {"Friable", "Non-friable"}
 RISK_STATUS_VALUES = {"Low", "Medium", "High"}
 MATERIAL_CONDITION_VALUES = {
-    "Good",
+    "Stable",
     "Fair",
     "Poor",
-    "Damaged",
     "Unknown",
     "N/A (negative)",
     "N/A (assumed negative)",
@@ -180,10 +180,10 @@ class ACMExtractionRecord(BaseModel):
         description="Specific location within room (e.g., 'Ceiling', 'Under stairs')",
     )
     friable: Optional[str] = Field(
-        default=None, description="Friability: 'Friable' or 'Non Friable'"
+        default=None, description="Friability: 'Friable' or 'Non-friable'"
     )
     material_condition: Optional[str] = Field(
-        default=None, description="Condition: 'Good', 'Fair', 'Poor', 'Damaged'"
+        default=None, description="Condition: 'Stable', 'Fair', 'Poor', 'Unknown'"
     )
     risk_status: Optional[str] = Field(
         default=None, description="Risk level: 'Low', 'Medium', 'High'"
@@ -253,6 +253,13 @@ class ACMExtractionRecord(BaseModel):
         description="Additional comments or notes about the ACM item from the register",
     )
 
+    # FK to building_record table — populated by E32-S2 extract_items_node
+    building_record_id: Optional[str] = Field(
+        default=None,
+        description="FK to building_record table (record<building_record> in DB). "
+        "Populated during E32-S2 item extraction.",
+    )
+
     @field_validator("result", mode="before")
     @classmethod
     def validate_result(cls, v: Optional[str]) -> Optional[str]:
@@ -281,7 +288,7 @@ class ACMExtractionRecord(BaseModel):
         if lowered in {"friable", "f"}:
             return "Friable"
         if lowered in {"non friable", "nonfriable", "nf"}:
-            return "Non Friable"
+            return "Non-friable"
 
         for valid in FRIABLE_VALUES:
             if lowered == valid.lower():
@@ -362,6 +369,16 @@ class ACMExtractionRecord(BaseModel):
                 raise ValueError(f"quantity cannot be negative, got '{v}'")
         return v
 
+    # Consensus layer metadata (populated by ConsensusEngine — E31-S3)
+    consensus_metadata: Optional[dict] = Field(
+        default=None,
+        description=(
+            "Populated by the ConsensusEngine when multiple providers are used. "
+            "Contains tier, providers, match_method, field_votes, conflict_level, "
+            "and resolver_used. None for single-provider extractions."
+        ),
+    )
+
     # Extraction metadata
     extraction_confidence: str = Field(
         default="medium", description="Confidence level: 'high', 'medium', 'low'"
@@ -370,6 +387,31 @@ class ACMExtractionRecord(BaseModel):
         default_factory=list,
         description="List of data quality issues identified during extraction",
     )
+
+    # Validation tracking (AC6 — E32-S3)
+    validation_status: Optional[str] = Field(
+        default=None,
+        description=(
+            "Validation outcome: 'valid', 'corrected', 'failed_correction', 'invalid'. "
+            "Set by validate_records_strict() and updated after each correction attempt."
+        ),
+    )
+    validation_errors: List[str] = Field(
+        default_factory=list,
+        description=(
+            "List of validation error strings from the last validation run. "
+            "Format: '<field_name>: <issue_type> (current=<value>)'. "
+            "Cleared and rewritten on each validation pass."
+        ),
+    )
+    correction_attempts: int = Field(
+        default=0,
+        description=(
+            "Number of LLM correction attempts made for this record. "
+            "Incremented by _llm_correct_records() on each attempt. Max 3."
+        ),
+    )
+
     page_number: Optional[int] = Field(
         default=None, description="Page number where this record was found"
     )

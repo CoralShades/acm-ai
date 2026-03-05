@@ -1,0 +1,3 @@
+-- Migration 43: Add field_confidence top-level column to source_intelligence (E31-S8)
+-- Exposes per-field extraction confidence scores as a dedicated column for quick queries.
+DEFINE FIELD IF NOT EXISTS field_confidence ON TABLE source_intelligence TYPE option<object>;

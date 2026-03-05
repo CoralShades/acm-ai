@@ -1,0 +1,3253 @@
+{
+  "meta": {
+    "script": "scripts/research/ollama_model_eval.py",
+    "story": "E32-S6",
+    "timestamp": "2026-03-04T06:03:32Z",
+    "models_tested": [
+      "qwen3:latest",
+      "deepseek-r1:8b",
+      "phi4:latest",
+      "claude-sonnet-4-20250514"
+    ]
+  },
+  "results": [
+    {
+      "model_name": "qwen3:latest",
+      "provider": "ollama",
+      "vram_bytes": 6499533824,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.14666666666666667,
+        "mean_latency_s": 11.218,
+        "p95_latency_s": 32.435,
+        "error_count": 27
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 0.55,
+        "mean_latency_s": 17.067,
+        "p95_latency_s": 72.257,
+        "error_count": 18
+      },
+      "debug": {
+        "classification": [
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 32.435,
+            "predicted": {
+              "acm_classification": "Non Friable",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is Ceiling Tiles with a material description of \"Asbestos-containing suspended ceiling panels"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Ceiling Tiles with a material description of Textured plaster ceiling with ACM fibres.\\n\\nF"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is Ceiling Tiles with a material description of \"Sprayed asbestos texture coating on ceiling "
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Ceiling Tiles, and the material description says mineral fibre ceiling tiles with low ACM c"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Pipe Lagging, and the material description mentions Amosite pipe lagging wrapped in hessian"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Pipe Lagging with a material description of lagged hot water pipes using corrugated paper w"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Pipe Lagging with a material description of insulated steam pipes having ACM wrap and parti"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '{\\n  \"acm_classification\":'"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Pipe Lagging, and the material description mentions loose ACM lagging on heating pipes with"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 26.462,
+            "predicted": {
+              "acm_classification": "Asbestos Containing Material",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 35.758,
+            "predicted": {
+              "acm_classification": "Non Friable",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Floor Tiles, and the material description mentions Thermoplastic floor tiles laid over ACM "
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 10.819,
+            "predicted": {
+              "acm_classification": "Non Friable",
+              "acm_sub_classification": "Bitumen-backed",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Floor Tiles, and the material description says they're in good condition under carpet. Firs"
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.6666666666666666,
+            "latency_s": 8.973,
+            "predicted": {
+              "acm_classification": "Friable",
+              "acm_sub_classification": "Amosite",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.0,
+            "latency_s": 8.269,
+            "predicted": {
+              "acm_classification": "Asbestos Containing Material",
+              "acm_sub_classification": "Sprayed Coating",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.6666666666666666,
+            "latency_s": 12.082,
+            "predicted": {
+              "acm_classification": "Asbestos Containing Material",
+              "acm_sub_classification": "Chrysotile",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is a Sprayed Coating with a material description of \"Mixed fibre sprayed coating on underside"
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.3333333333333333,
+            "latency_s": 11.344,
+            "predicted": {
+              "acm_classification": "Friable",
+              "acm_sub_classification": null,
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Asbestos Insulation Board (AIB)",
+            "score": 0.3333333333333333,
+            "latency_s": 11.558,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation Board",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Asbestos Insulation Board",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is \"Asbestos Insulation Board\" and the material description mentions AIB partition walls in g"
+          },
+          {
+            "product": "AIB Ceiling",
+            "score": 0.0,
+            "latency_s": 228.561,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation Board",
+              "acm_sub_classification": "Ceiling Tiles",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "AIB Panel",
+            "score": 0.3333333333333333,
+            "latency_s": 18.693,
+            "predicted": {
+              "acm_classification": "Friable",
+              "acm_sub_classification": "Amosite",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "AIB Soffit",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is AIB Soffit, and the material description mentions panels below a staircase with minor delam"
+          },
+          {
+            "product": "Corrugated Asbestos Cement Roof Sheeting",
+            "score": 0.3333333333333333,
+            "latency_s": 16.888,
+            "predicted": {
+              "acm_classification": "Non Friable",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Asbestos Cement Cladding",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '{\\n  \"acm_classification\": \"Cement Asbestos\",\\n  \"acm_sub_classification\": null,\\n  \"friability\": \"Non Fri'"
+          },
+          {
+            "product": "AC Roof Sheet",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is \"AC Roof Sheet\" and the material description mentions asbestos cement roof sheets over a w"
+          },
+          {
+            "product": "Asbestos Cement Downpipe",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is \"Asbestos Cement Downpipe\" and the material description mentions AC downpipes and gutterin"
+          },
+          {
+            "product": "Asbestos Cement Fascia",
+            "score": 0.3333333333333333,
+            "latency_s": 15.582,
+            "predicted": {
+              "acm_classification": "Asbestos Cement Products",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Boiler Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Boiler Insulation with a material description of Amosite sectional boiler lagging in poor c"
+          },
+          {
+            "product": "Duct Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Duct Insulation, and the material description mentions ACM duct insulation wrap in ceiling,"
+          },
+          {
+            "product": "Calorifier Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '{\\n  \"acm_classification'"
+          },
+          {
+            "product": "Tank Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is \"Tank Insulation\" with a material description of \"ACM insulation blanket on cold water sto"
+          },
+          {
+            "product": "Flue Insulation",
+            "score": 0.0,
+            "latency_s": 16.867,
+            "predicted": {
+              "acm_classification": "ACM",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Artex / Textured Coating",
+            "score": 0.6666666666666666,
+            "latency_s": 17.386,
+            "predicted": {
+              "acm_classification": "Asbestos Containing Material",
+              "acm_sub_classification": "Chrysotile",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Textured Paint",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Textured Paint, and the material description mentions a swirl pattern textured paint on wal"
+          },
+          {
+            "product": "Artex Ceiling Finish",
+            "score": 0.3333333333333333,
+            "latency_s": 17.758,
+            "predicted": {
+              "acm_classification": "Artex",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Pebble Dash",
+            "score": 0.3333333333333333,
+            "latency_s": 9.369,
+            "predicted": {
+              "acm_classification": "ACM",
+              "acm_sub_classification": "Pebble Dash",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Spray Plaster Finish",
+            "score": 0.3333333333333333,
+            "latency_s": 11.637,
+            "predicted": {
+              "acm_classification": "Spray Plaster",
+              "acm_sub_classification": "Ceiling",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Gasket / Rope Seal",
+            "score": 0.3333333333333333,
+            "latency_s": 11.608,
+            "predicted": {
+              "acm_classification": "Asbestos Containing Material",
+              "acm_sub_classification": "Flexible Gasket",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Pipe Gasket",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is a Pipe Gasket with the material description as asbestos compressed sheet gaskets on flanged"
+          },
+          {
+            "product": "Loose Insulation Fill",
+            "score": 0.0,
+            "latency_s": 11.894,
+            "predicted": {
+              "acm_classification": "Non Friable",
+              "acm_sub_classification": "Blown Insulation",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Cavity Insulation",
+            "score": 0.6666666666666666,
+            "latency_s": 7.651,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Vermiculite Insulation",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Bitumen Felt Roofing",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Bitumen Felt Roofing with a material description mentioning bituminous roof felt and ACM re"
+          },
+          {
+            "product": "Rope Packing",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this ACM classification. The product is \"Rope Packing\" with a material description of \"Chrysotile rope packing around window frame"
+          },
+          {
+            "product": "Fire Door Infill Panel",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is a Fire Door Infill Panel with the material description mentioning AIB infill panels in stee"
+          },
+          {
+            "product": "Ceiling Plaster",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: \"<think>\\nOkay, let's tackle this ACM classification. The product is Ceiling Plaster with a material description mentioning ACM plaster skim coat on lath and th"
+          },
+          {
+            "product": "Sprayed Steel Beams",
+            "score": 0.0,
+            "latency_s": 9.834,
+            "predicted": {
+              "acm_classification": "Crocidolite",
+              "acm_sub_classification": "Sprayed-on",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Bitumen DPC",
+            "score": 0.3333333333333333,
+            "latency_s": 9.496,
+            "predicted": {
+              "acm_classification": "Asbestos Containing Material",
+              "acm_sub_classification": "Non Friable",
+              "friability": "Non Friable"
+            }
+          }
+        ],
+        "enrichment": [
+          {
+            "location_raw": "ground floor corridor",
+            "room_ref_raw": "  GF-CORR-01 ",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. First, the user provided a location raw value of \"ground floor corridor\" and a room reference of \"GF-CORR"
+          },
+          {
+            "location_raw": "FIRST FLOOR OFFICE",
+            "room_ref_raw": "1F-OFF-02",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference that need to be standardized. \\n\\nFirst, the location i"
+          },
+          {
+            "location_raw": "basement car park",
+            "room_ref_raw": "B1-PARK",
+            "score": 1.0,
+            "latency_s": 14.011,
+            "predicted": {
+              "location_normalized": "Basement Car Park",
+              "room_ref_standardized": "B1-Park"
+            }
+          },
+          {
+            "location_raw": "science block level 2",
+            "room_ref_raw": "SCI-L2-001",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and room reference that need to be standardized.\\n\\nFirst, the location is \""
+          },
+          {
+            "location_raw": "admin wing, room 4",
+            "room_ref_raw": "ADM-004",
+            "score": 1.0,
+            "latency_s": 15.445,
+            "predicted": {
+              "location_normalized": "Admin Wing, Room 4",
+              "room_ref_standardized": "Adm-004"
+            }
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": " BOILER-01",
+            "score": 1.0,
+            "latency_s": 13.662,
+            "predicted": {
+              "location_normalized": "Boiler Room",
+              "room_ref_standardized": "Boiler-01"
+            }
+          },
+          {
+            "location_raw": "roof void",
+            "room_ref_raw": "RV-PIPE-03",
+            "score": 1.0,
+            "latency_s": 9.193,
+            "predicted": {
+              "location_normalized": "Roof Void",
+              "room_ref_standardized": "RV-PIPE-03"
+            }
+          },
+          {
+            "location_raw": "plant room level 1",
+            "room_ref_raw": "PL-L1-SteamPipes",
+            "score": 0.5,
+            "latency_s": 11.613,
+            "predicted": {
+              "location_normalized": "Plant Room Level 1",
+              "room_ref_standardized": "PL-L1-Steam Pipes"
+            }
+          },
+          {
+            "location_raw": "CEILING VOID ABOVE LIBRARY",
+            "room_ref_raw": "LIB-VOID",
+            "score": 1.0,
+            "latency_s": 12.268,
+            "predicted": {
+              "location_normalized": "CEILING VOID ABOVE LIBRARY",
+              "room_ref_standardized": "Lib-void"
+            }
+          },
+          {
+            "location_raw": "subfloor service duct",
+            "room_ref_raw": "SF-DUCT-A",
+            "score": 1.0,
+            "latency_s": 19.886,
+            "predicted": {
+              "location_normalized": "Subfloor Service Duct",
+              "room_ref_standardized": "Sf-Duct-A"
+            }
+          },
+          {
+            "location_raw": "main entrance lobby",
+            "room_ref_raw": "ENT-LOBBY",
+            "score": 0.5,
+            "latency_s": 27.985,
+            "predicted": {
+              "location_normalized": "Main Entrance Lobby",
+              "room_ref_standardized": "Entrance-Lobby"
+            }
+          },
+          {
+            "location_raw": "Staff Room",
+            "room_ref_raw": " SR-001 ",
+            "score": 1.0,
+            "latency_s": 20.479,
+            "predicted": {
+              "location_normalized": "Staff Room",
+              "room_ref_standardized": "SR-001"
+            }
+          },
+          {
+            "location_raw": "gymnasium",
+            "room_ref_raw": "GYM-FL",
+            "score": 1.0,
+            "latency_s": 8.873,
+            "predicted": {
+              "location_normalized": "Gymnasium",
+              "room_ref_standardized": "Gym-Fl"
+            }
+          },
+          {
+            "location_raw": "craft room & store",
+            "room_ref_raw": "CRAFT-STR",
+            "score": 0.5,
+            "latency_s": 11.229,
+            "predicted": {
+              "location_normalized": "Craft Room And Store",
+              "room_ref_standardized": "Craft-Str"
+            }
+          },
+          {
+            "location_raw": "headmaster's office",
+            "room_ref_raw": "HM-OFF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a raw location \"headmaster\\'s office\" and a room reference \"HM-OFF\". \\n\\nFirst, for the"
+          },
+          {
+            "location_raw": "sports hall roof steelwork",
+            "room_ref_raw": "SPALL-ROOF",
+            "score": 0.5,
+            "latency_s": 8.658,
+            "predicted": {
+              "location_normalized": "Sports Hall Roof Steelwork",
+              "room_ref_standardized": "Spall Roof"
+            }
+          },
+          {
+            "location_raw": "car park upper deck",
+            "room_ref_raw": "CP-UPPER",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. First, the location is \"car park upper deck\". I need to convert this to title case and remove any special"
+          },
+          {
+            "location_raw": "changing rooms male",
+            "room_ref_raw": "CHG-M",
+            "score": 1.0,
+            "latency_s": 11.106,
+            "predicted": {
+              "location_normalized": "Changing Rooms Male",
+              "room_ref_standardized": "Chg-M"
+            }
+          },
+          {
+            "location_raw": "under floor 2",
+            "room_ref_raw": "UF-L2",
+            "score": 1.0,
+            "latency_s": 9.842,
+            "predicted": {
+              "location_normalized": "Under Floor 2",
+              "room_ref_standardized": "UF-L2"
+            }
+          },
+          {
+            "location_raw": "plant room roof",
+            "room_ref_raw": "PLT-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location raw value of \"plant room roof\" and a room reference of \"PLT-ROOF\". \\n\\nFirst"
+          },
+          {
+            "location_raw": "fire door fire escape route",
+            "room_ref_raw": "FD-ESC-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '{\\n  \"location_normalized\": \"Fire Door Fire Escape Route\",\\n  \"room_ref_standardized\": \"'"
+          },
+          {
+            "location_raw": "STORAGE CUPBOARD UNDER STAIRS",
+            "room_ref_raw": "STAIR-STORE",
+            "score": 1.0,
+            "latency_s": 9.794,
+            "predicted": {
+              "location_normalized": "Storage Cupboard Under Stairs",
+              "room_ref_standardized": "Stair-Store"
+            }
+          },
+          {
+            "location_raw": "caretaker room",
+            "room_ref_raw": "CARE-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference. First, the location is \"caretaker room\". The instructi"
+          },
+          {
+            "location_raw": "electrical switchroom",
+            "room_ref_raw": "ELEC-SW",
+            "score": 1.0,
+            "latency_s": 11.703,
+            "predicted": {
+              "location_normalized": "Electrical Switchroom",
+              "room_ref_standardized": "Elec-Sw"
+            }
+          },
+          {
+            "location_raw": "stairwell level 1-2",
+            "room_ref_raw": "STAIR-L1L2",
+            "score": 1.0,
+            "latency_s": 6.364,
+            "predicted": {
+              "location_normalized": "Stairwell Level 1-2",
+              "room_ref_standardized": "Stair-L1L2"
+            }
+          },
+          {
+            "location_raw": "main building rooftop",
+            "room_ref_raw": "ROOF-MAIN",
+            "score": 0.5,
+            "latency_s": 17.11,
+            "predicted": {
+              "location_normalized": "Main Building Rooftop",
+              "room_ref_standardized": "Roof Main"
+            }
+          },
+          {
+            "location_raw": "north elevation external",
+            "room_ref_raw": "EXT-NORTH",
+            "score": 1.0,
+            "latency_s": 26.465,
+            "predicted": {
+              "location_normalized": "North Elevation External",
+              "room_ref_standardized": "Ext-North"
+            }
+          },
+          {
+            "location_raw": "WORKSHOP ROOF",
+            "room_ref_raw": "WKSHP-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference. First, I need to process the location: \"WORKSHOP ROOF\""
+          },
+          {
+            "location_raw": "east facade external",
+            "room_ref_raw": "EXT-EAST-DP",
+            "score": 1.0,
+            "latency_s": 18.857,
+            "predicted": {
+              "location_normalized": "East Facade External",
+              "room_ref_standardized": "Ext-East-Dp"
+            }
+          },
+          {
+            "location_raw": "south eaves",
+            "room_ref_raw": "EAVES-S",
+            "score": 1.0,
+            "latency_s": 23.06,
+            "predicted": {
+              "location_normalized": "South Eaves",
+              "room_ref_standardized": "Eaves-S"
+            }
+          },
+          {
+            "location_raw": "boiler house",
+            "room_ref_raw": "BH-BOILER",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '{\\n  \"location_normalized\": \"Boiler House\",\\n  \"room_ref_standardized\": \"Bh-'"
+          },
+          {
+            "location_raw": "ceiling void block A",
+            "room_ref_raw": "CV-BLK-A",
+            "score": 0.5,
+            "latency_s": 18.992,
+            "predicted": {
+              "location_normalized": "Ceiling Void Block A",
+              "room_ref_standardized": "CV Blk A"
+            }
+          },
+          {
+            "location_raw": "plant room ground floor",
+            "room_ref_raw": "PLT-GF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference. First, I need to process the location: \"plant room gro"
+          },
+          {
+            "location_raw": "roof tank room",
+            "room_ref_raw": "TANK-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference. First, I need to process the location: \"roof tank room"
+          },
+          {
+            "location_raw": "BOILER FLUE DUCT",
+            "room_ref_raw": "BH-FLUE",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference. First, I need to process the location: \"BOILER FLUE DU"
+          },
+          {
+            "location_raw": "classroom block 2",
+            "room_ref_raw": "CL-BLK-2-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '{\\n  \"location_normalized\": \"Classroom Block 2\",\\n  \"room_ref_standardized\": \"CL-BLK-2-0'"
+          },
+          {
+            "location_raw": "corridor main block",
+            "room_ref_raw": "MB-CORR",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference that need to be standardized.\\n\\nFirst, the location is"
+          },
+          {
+            "location_raw": "hall and assembly area",
+            "room_ref_raw": "HALL-ASSY",
+            "score": 1.0,
+            "latency_s": 50.611,
+            "predicted": {
+              "location_normalized": "Hall And Assembly Area",
+              "room_ref_standardized": "Hall-Assy"
+            }
+          },
+          {
+            "location_raw": "external south wall",
+            "room_ref_raw": "EXT-SW",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference. First, the location is \"external south wall\". I need t"
+          },
+          {
+            "location_raw": "dining room",
+            "room_ref_raw": "DINING-01",
+            "score": 1.0,
+            "latency_s": 60.91,
+            "predicted": {
+              "location_normalized": "Dining Room",
+              "room_ref_standardized": "Dining-01"
+            }
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": "BOILER-GSK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. The user provided a location and a room reference. First, I need to standardize the location string. The "
+          },
+          {
+            "location_raw": "plant room level 2",
+            "room_ref_raw": "PLT-L2-GSK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nOkay, let\\'s tackle this normalization task. First, the location raw is \"plant room level 2\". I need to convert this to title case and remove any spec"
+          },
+          {
+            "location_raw": "wall cavity block C",
+            "room_ref_raw": "WALL-CAV-C",
+            "score": 0.5,
+            "latency_s": 92.305,
+            "predicted": {
+              "location_normalized": "Wall Cavity Block C",
+              "room_ref_standardized": "Wall Cav C"
+            }
+          },
+          {
+            "location_raw": "external wall cavity",
+            "room_ref_raw": "EXT-CAV",
+            "score": 1.0,
+            "latency_s": 55.544,
+            "predicted": {
+              "location_normalized": "External Wall Cavity",
+              "room_ref_standardized": "Ext-Cav"
+            }
+          },
+          {
+            "location_raw": "west wing flat roof",
+            "room_ref_raw": "ROOF-WEST",
+            "score": 0.5,
+            "latency_s": 74.279,
+            "predicted": {
+              "location_normalized": "West Wing Flat Roof",
+              "room_ref_standardized": "Roof West"
+            }
+          },
+          {
+            "location_raw": "window frames ground floor external",
+            "room_ref_raw": "WIN-GF-EXT",
+            "score": 0.5,
+            "latency_s": 72.257,
+            "predicted": {
+              "location_normalized": "Window Frame Ground Floor External",
+              "room_ref_standardized": "Win-Gf-Ext"
+            }
+          },
+          {
+            "location_raw": "fire escape stairwell",
+            "room_ref_raw": "ESC-STAIR",
+            "score": 1.0,
+            "latency_s": 29.942,
+            "predicted": {
+              "location_normalized": "Fire Escape Stairwell",
+              "room_ref_standardized": "Esc-Stair"
+            }
+          },
+          {
+            "location_raw": "old building first floor",
+            "room_ref_raw": "OLD-1F-PL",
+            "score": 1.0,
+            "latency_s": 42.176,
+            "predicted": {
+              "location_normalized": "Old Building First Floor",
+              "room_ref_standardized": "Old-1F-Pl"
+            }
+          },
+          {
+            "location_raw": "sports hall main frame",
+            "room_ref_raw": "SH-STEEL",
+            "score": 1.0,
+            "latency_s": 31.749,
+            "predicted": {
+              "location_normalized": "Sports Hall Main Frame",
+              "room_ref_standardized": "Sh-Steel"
+            }
+          },
+          {
+            "location_raw": "foundation wall damp course",
+            "room_ref_raw": "FOUND-DPC",
+            "score": 1.0,
+            "latency_s": 16.994,
+            "predicted": {
+              "location_normalized": "Foundation Wall Damp Course",
+              "room_ref_standardized": "Found-Dpc"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "model_name": "deepseek-r1:8b",
+      "provider": "ollama",
+      "vram_bytes": 6499533824,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.0,
+        "mean_latency_s": 0.0,
+        "p95_latency_s": 0.0,
+        "error_count": 50
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 0.0,
+        "mean_latency_s": 0.0,
+        "p95_latency_s": 0.0,
+        "error_count": 50
+      },
+      "debug": {
+        "classification": [
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Ceiling Tiles\" with \"Vinyl asbestos ceiling tiles, 300x300mm grid pattern\". I n"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Ceiling Tiles\" with a description of \"Asbestos-containing suspended ceiling pan"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Ceiling Tiles\" and \"Textured plaster ceiling with ACM fibres\". I need to classi"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Ceiling Tiles\" with a description of \"Sprayed asbestos texture coating on ceili"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Ceiling Tiles\" and \"Mineral fibre ceiling tiles with low ACM content\". I need t"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Pipe Lagging\" with \"Amosite pipe lagging wrapped in hessian cloth, boiler room\""
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Pipe Lagging\" with a description of \"Lagged hot water pipes, corrugated paper w"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Pipe Lagging\" with a description of \"Insulated steam pipes with ACM wrap, parti"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Pipe Lagging\" with a description of \"Chrysotile lagged pipework in ceiling void"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Pipe Lagging\" with description \"Loose ACM lagging on heating pipes, multiple se"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Floor Tiles\" with a description of \"9-inch vinyl asbestos floor tiles, black/wh"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Floor Tiles\" and \"Asbestos vinyl composite tiles with mastic adhesive\". I need "
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Floor Tiles\" with a description of \"Thermoplastic floor tiles laid over ACM adh"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Floor Tiles\" with a description of \"Bitumen-backed asbestos tiles, partially li"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Floor Tiles\" with a description of \"ACM floor tiles in good condition under car"
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Sprayed Limpet Coating\" with a description of \"Blue Limpet amosite sprayed coat"
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Sprayed Limpet Coating\" with a description of \"ACM sprayed fire protection on c"
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Sprayed Coating\" with a description of \"Chrysotile-containing sprayed plaster, "
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Sprayed Coating\" with a description of \"Mixed fibre sprayed coating on undersid"
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Sprayed Coating\" with a description of \"Partially removed sprayed ACM, high fib"
+          },
+          {
+            "product": "Asbestos Insulation Board (AIB)",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Asbestos Insulation Board (AIB)\" and \"asbestos insulation board panels on fire "
+          },
+          {
+            "product": "Asbestos Insulation Board",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Asbestos Insulation Board\" with a description of \"AIB partition walls in good c"
+          },
+          {
+            "product": "AIB Ceiling",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"AIB Ceiling\" with description \"Asbestos insulation board ceiling tiles, crumbli"
+          },
+          {
+            "product": "AIB Panel",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"AIB Panel\" with \"Amosite AIB used as electrical panel backing board\". I need to"
+          },
+          {
+            "product": "AIB Soffit",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"AIB Soffit\" with description \"AIB soffit panels below staircase, minor delamina"
+          },
+          {
+            "product": "Corrugated Asbestos Cement Roof Sheeting",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Corrugated Asbestos Cement Roof Sheeting\" with a description of \"External corru"
+          },
+          {
+            "product": "Asbestos Cement Cladding",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Asbestos Cement Cladding\" with a description of \"Flat asbestos cement clinding "
+          },
+          {
+            "product": "AC Roof Sheet",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"AC Roof Sheet\" with description \"Asbestos cement roof sheets over workshop, goo"
+          },
+          {
+            "product": "Asbestos Cement Downpipe",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name: \"Asbestos Cement Downpipe\" and a material description: \"AC downpipes and guttering along east facade\". I "
+          },
+          {
+            "product": "Asbestos Cement Fascia",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Asbestos Cement Fascia\" with a description of \"AC fascia boards under eaves, we"
+          },
+          {
+            "product": "Boiler Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Boiler Insulation\" with \"Amosite sectional boiler lagging, poor condition\". I n"
+          },
+          {
+            "product": "Duct Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Duct Insulation\" with a description of \"ACM duct insulation wrap in ceiling, de"
+          },
+          {
+            "product": "Calorifier Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Calorifier Insulation\" and \"Hot water calorifier with ACM sectional insulation\""
+          },
+          {
+            "product": "Tank Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Tank Insulation\" with a description of \"ACM insulation blanket on cold water st"
+          },
+          {
+            "product": "Flue Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name: \"Flue Insulation\" and a material description: \"ACM rope seal and insulation around boiler fluse\". I need "
+          },
+          {
+            "product": "Artex / Textured Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Artex / Textured Coating\" with a description of \"Artex stipple finish on classr"
+          },
+          {
+            "product": "Textured Paint",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Textured Paint\" with a description of \"Swirl pattern textured paint on walls co"
+          },
+          {
+            "product": "Artex Ceiling Finish",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Artex Ceiling Finish\" with a description of \"Blown Artex coating in good condit"
+          },
+          {
+            "product": "Pebble Dash",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Pebble Dash\" and \"External pebble dash render with ACM binder\". I need to class"
+          },
+          {
+            "product": "Spray Plaster Finish",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Spray Plaster Finish\" with a description of \"Machine-applied spray plaster with"
+          },
+          {
+            "product": "Gasket / Rope Seal",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name: \"Gasket / Rope Seal\" and a material description: \"ACM rope seals and gaskets on boiler access doors\". I n"
+          },
+          {
+            "product": "Pipe Gasket",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Pipe Gasket\" with \"Asbestos compressed sheet gaskets on flanged joints\". I need"
+          },
+          {
+            "product": "Loose Insulation Fill",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Loose Insulation Fill\" with a description of \"Loose ACM fill in wall cavity, li"
+          },
+          {
+            "product": "Cavity Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Cavity Insulation\" with a description of \"Vermiculite ACM cavity insulation, hi"
+          },
+          {
+            "product": "Bitumen Felt Roofing",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Bitumen Felt Roofing\" and \"Bituminous roof felt with ACM reinforcement, west wi"
+          },
+          {
+            "product": "Rope Packing",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Rope Packing\" with a description of \"Chrysotile rope packing around window fram"
+          },
+          {
+            "product": "Fire Door Infill Panel",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Fire Door Infill Panel\" with \"AIB infill panels in steel fire door frames\". I n"
+          },
+          {
+            "product": "Ceiling Plaster",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Ceiling Plaster\" with a description of \"ACM plaster skim coat on lath, highly f"
+          },
+          {
+            "product": "Sprayed Steel Beams",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Sprayed Steel Beams\" with a description of \"Crocidolite sprayed fire protection"
+          },
+          {
+            "product": "Bitumen DPC",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me a product name and material description: \"Bitumen DPC\" with description \"Bitumen damp proof course containing ACM fibres\""
+          }
+        ],
+        "enrichment": [
+          {
+            "location_raw": "ground floor corridor",
+            "room_ref_raw": "  GF-CORR-01 ",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): ground floor corridor\" and \"Room Reference (raw):   GF-CORR-01\". I need to output only a JS"
+          },
+          {
+            "location_raw": "FIRST FLOOR OFFICE",
+            "room_ref_raw": "1F-OFF-02",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): FIRST FLOOR OFFICE\" and \"Room Reference (raw): 1F-OFF-02\". I need to output only a JSON obj"
+          },
+          {
+            "location_raw": "basement car park",
+            "room_ref_raw": "B1-PARK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"basement car park\" for location and \"B1-PARK\" for room reference. I need to output a JSON object with two k"
+          },
+          {
+            "location_raw": "science block level 2",
+            "room_ref_raw": "SCI-L2-001",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"science block level 2\" for location and \"SCI-L2-001\" for room reference.\\n\\nI need to output only a JSON ob"
+          },
+          {
+            "location_raw": "admin wing, room 4",
+            "room_ref_raw": "ADM-004",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"admin wing, room 4\" for location and \"ADM-004\" for room reference.\\n\\nI need to output only a JSON object w"
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": " BOILER-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): boiler room\" and \"Room Reference (raw):  BOILER-01\". I need to output only a JSON object wi"
+          },
+          {
+            "location_raw": "roof void",
+            "room_ref_raw": "RV-PIPE-03",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): roof void\" and \"Room Reference (raw): RV-PIPE-03\". I need to output only a JSON object with"
+          },
+          {
+            "location_raw": "plant room level 1",
+            "room_ref_raw": "PL-L1-SteamPipes",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): plant room level 1\" and \"Room Reference (raw): PL-L1-SteamPipes\". I need to output only a J"
+          },
+          {
+            "location_raw": "CEILING VOID ABOVE LIBRARY",
+            "room_ref_raw": "LIB-VOID",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"CEILING VOID ABOVE LIBRARY\" for location and \"LIB-VOID\" for room reference.\\n\\nI need to output only a JSON"
+          },
+          {
+            "location_raw": "subfloor service duct",
+            "room_ref_raw": "SF-DUCT-A",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"subfloor service duct\" for location and \"SF-DUCT-A\" for room reference.\\n\\nI need to output ONLY a JSON obj"
+          },
+          {
+            "location_raw": "main entrance lobby",
+            "room_ref_raw": "ENT-LOBBY",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: Location is \"main entrance lobby\" and Room Reference is \"ENT-LOBBY\". I need to output a JSON object with two"
+          },
+          {
+            "location_raw": "Staff Room",
+            "room_ref_raw": " SR-001 ",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): Staff Room\" and \"Room Reference (raw):  SR-001\". I need to output only a JSON object with t"
+          },
+          {
+            "location_raw": "gymnasium",
+            "room_ref_raw": "GYM-FL",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: Location is \"gymnasium\" and Room Reference is \"GYM-FL\". I need to output a JSON object with two keys: \"locat"
+          },
+          {
+            "location_raw": "craft room & store",
+            "room_ref_raw": "CRAFT-STR",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): craft room & store\" and \"Room Reference (raw): CRAFT-STR\". I need to output only a JSON obj"
+          },
+          {
+            "location_raw": "headmaster's office",
+            "room_ref_raw": "HM-OFF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"headmaster\\'s office\" for location and \"HM-OFF\" for room reference.\\n\\nI need to output ONLY a JSON object "
+          },
+          {
+            "location_raw": "sports hall roof steelwork",
+            "room_ref_raw": "SPALL-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"sports hall roof steelwork\" for location and \"SPALL-ROOF\" for room reference.\\n\\nI need to output only a JS"
+          },
+          {
+            "location_raw": "car park upper deck",
+            "room_ref_raw": "CP-UPPER",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: Location is \"car park upper deck\" and Room Reference is \"CP-UPPER\". I need to output a JSON object with two "
+          },
+          {
+            "location_raw": "changing rooms male",
+            "room_ref_raw": "CHG-M",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"changing rooms male\" for location and \"CHG-M\" for room reference.\\n\\nI need to output ONLY a JSON object wi"
+          },
+          {
+            "location_raw": "under floor 2",
+            "room_ref_raw": "UF-L2",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"under floor 2\" for location and \"UF-L2\" for room reference.\\n\\nI need to output ONLY a JSON object with two"
+          },
+          {
+            "location_raw": "plant room roof",
+            "room_ref_raw": "PLT-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): plant room roof\" and \"Room Reference (raw): PLT-ROOF\". I need to output only a JSON object "
+          },
+          {
+            "location_raw": "fire door fire escape route",
+            "room_ref_raw": "FD-ESC-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"fire door fire escape route\" for location and \"FD-ESC-01\" for room reference.\\n\\nI need to output only a JS"
+          },
+          {
+            "location_raw": "STORAGE CUPBOARD UNDER STAIRS",
+            "room_ref_raw": "STAIR-STORE",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"STORAGE CUPBOARD UNDER STAIRS\" for location and \"STAIR-STORE\" for room reference.\\n\\nI need to output only "
+          },
+          {
+            "location_raw": "caretaker room",
+            "room_ref_raw": "CARE-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): caretaker room\" and \"Room Reference (raw): CARE-01\". I need to output only a JSON object wi"
+          },
+          {
+            "location_raw": "electrical switchroom",
+            "room_ref_raw": "ELEC-SW",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"electrical switchroom\" for location and \"ELEC-SW\" for room reference.\\n\\nI need to output ONLY a JSON objec"
+          },
+          {
+            "location_raw": "stairwell level 1-2",
+            "room_ref_raw": "STAIR-L1L2",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"stairwell level 1-2\" for location and \"STAIR-L1L2\" for room reference.\\n\\nI need to output only a JSON obje"
+          },
+          {
+            "location_raw": "main building rooftop",
+            "room_ref_raw": "ROOF-MAIN",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"main building rooftop\" for location and \"ROOF-MAIN\" for room reference.\\n\\nI need to output ONLY a JSON obj"
+          },
+          {
+            "location_raw": "north elevation external",
+            "room_ref_raw": "EXT-NORTH",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"north elevation external\" for location and \"EXT-NORTH\" for room reference.\\n\\nI need to output ONLY a JSON "
+          },
+          {
+            "location_raw": "WORKSHOP ROOF",
+            "room_ref_raw": "WKSHP-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"WORKSHOP ROOF\" for location and \"WKSHP-ROOF\" for room reference.\\n\\nI need to output only a JSON object wit"
+          },
+          {
+            "location_raw": "east facade external",
+            "room_ref_raw": "EXT-EAST-DP",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"east facade external\" for location and \"EXT-EAST-DP\" for room reference.\\n\\nI need to output ONLY a JSON ob"
+          },
+          {
+            "location_raw": "south eaves",
+            "room_ref_raw": "EAVES-S",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"south eaves\" for location and \"EAVES-S\" for room reference. I need to output a JSON object with two keys: \""
+          },
+          {
+            "location_raw": "boiler house",
+            "room_ref_raw": "BH-BOILER",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"boiler house\" for location and \"BH-BOILER\" for room reference.\\n\\nI need to output ONLY a JSON object with "
+          },
+          {
+            "location_raw": "ceiling void block A",
+            "room_ref_raw": "CV-BLK-A",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: Location is \"ceiling void block A\" and Room Reference is \"CV-BLK-A\". I need to output a JSON object with two"
+          },
+          {
+            "location_raw": "plant room ground floor",
+            "room_ref_raw": "PLT-GF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): plant room ground floor\" and \"Room Reference (raw): PLT-GF\". I need to output only a JSON o"
+          },
+          {
+            "location_raw": "roof tank room",
+            "room_ref_raw": "TANK-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): roof tank room\" and \"Room Reference (raw): TANK-ROOF\". I need to output only a JSON object "
+          },
+          {
+            "location_raw": "BOILER FLUE DUCT",
+            "room_ref_raw": "BH-FLUE",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): BOILER FLUE DUCT\" and \"Room Reference (raw): BH-FLUE\". I need to output only a JSON object "
+          },
+          {
+            "location_raw": "classroom block 2",
+            "room_ref_raw": "CL-BLK-2-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): classroom block 2\" and \"Room Reference (raw): CL-BLK-2-01\". I need to output only a JSON ob"
+          },
+          {
+            "location_raw": "corridor main block",
+            "room_ref_raw": "MB-CORR",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"corridor main block\" for location and \"MB-CORR\" for room reference.\\n\\nI need to output ONLY a JSON object "
+          },
+          {
+            "location_raw": "hall and assembly area",
+            "room_ref_raw": "HALL-ASSY",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"hall and assembly area\" for location and \"HALL-ASSY\" for room reference.\\n\\nI need to output only a JSON ob"
+          },
+          {
+            "location_raw": "external south wall",
+            "room_ref_raw": "EXT-SW",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"external south wall\" for location and \"EXT-SW\" for room reference. I need to output a JSON object with two "
+          },
+          {
+            "location_raw": "dining room",
+            "room_ref_raw": "DINING-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): dining room\" and \"Room Reference (raw): DINING-01\". I need to output only a JSON object wit"
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": "BOILER-GSK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): boiler room\" and \"Room Reference (raw): BOILER-GSK\". I need to output a JSON object with tw"
+          },
+          {
+            "location_raw": "plant room level 2",
+            "room_ref_raw": "PLT-L2-GSK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"Location (raw): plant room level 2\" and \"Room Reference (raw): PLT-L2-GSK\". I need to output only a JSON ob"
+          },
+          {
+            "location_raw": "wall cavity block C",
+            "room_ref_raw": "WALL-CAV-C",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"wall cavity block C\" for location and \"WALL-CAV-C\" for room reference.\\n\\nI need to output only a JSON obje"
+          },
+          {
+            "location_raw": "external wall cavity",
+            "room_ref_raw": "EXT-CAV",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"external wall cavity\" for location and \"EXT-CAV\" for room reference.\\n\\nI need to output ONLY a JSON object"
+          },
+          {
+            "location_raw": "west wing flat roof",
+            "room_ref_raw": "ROOF-WEST",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: Location is \"west wing flat roof\" and Room Reference is \"ROOF-WEST\". I need to output a JSON object with two"
+          },
+          {
+            "location_raw": "window frames ground floor external",
+            "room_ref_raw": "WIN-GF-EXT",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"window frames ground floor external\" for location and \"WIN-GF-EXT\" for room reference.\\n\\nI need to output "
+          },
+          {
+            "location_raw": "fire escape stairwell",
+            "room_ref_raw": "ESC-STAIR",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: Location is \"fire escape stairwell\" and Room Reference is \"ESC-STAIR\". I need to output a JSON object with t"
+          },
+          {
+            "location_raw": "old building first floor",
+            "room_ref_raw": "OLD-1F-PL",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"old building first floor\" for location and \"OLD-1F-PL\" for room reference.\\n\\nI need to output only a JSON "
+          },
+          {
+            "location_raw": "sports hall main frame",
+            "room_ref_raw": "SH-STEEL",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: \"sports hall main frame\" for location and \"SH-STEEL\" for room reference. I need to output a JSON object with"
+          },
+          {
+            "location_raw": "foundation wall damp course",
+            "room_ref_raw": "FOUND-DPC",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "No valid JSON object found in response: '<think>\\nFirst, the user has given me raw strings: one for location and one for room reference. I need to output a JSON object with two keys: \"location_normali"
+          }
+        ]
+      }
+    },
+    {
+      "model_name": "phi4:latest",
+      "provider": "ollama",
+      "vram_bytes": 10879120725,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.28,
+        "mean_latency_s": 0.944,
+        "p95_latency_s": 0.58,
+        "error_count": 0
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 0.94,
+        "mean_latency_s": 0.412,
+        "p95_latency_s": 0.445,
+        "error_count": 0
+      },
+      "debug": {
+        "classification": [
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 21.911,
+            "predicted": {
+              "acm_classification": "Asbestos Cement",
+              "acm_sub_classification": "Vinyl Asbestos Floor and Roofing Products",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.542,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation",
+              "acm_sub_classification": "Suspended Ceiling Panels",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 0.48,
+            "predicted": {
+              "acm_classification": "Plaster",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 0.533,
+            "predicted": {
+              "acm_classification": "Sprayed Asbestos-Containing Material",
+              "acm_sub_classification": null,
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 0.495,
+            "predicted": {
+              "acm_classification": "Mineral Wool",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.485,
+            "predicted": {
+              "acm_classification": "Amosite",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.3333333333333333,
+            "latency_s": 0.535,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation",
+              "acm_sub_classification": "Pipe Covering",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.497,
+            "predicted": {
+              "acm_classification": "Pipe Insulation",
+              "acm_sub_classification": "Steam Pipe Wrap",
+              "friability": null
+            }
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.554,
+            "predicted": {
+              "acm_classification": "Chrysotile",
+              "acm_sub_classification": "Pipe Lagging",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.3333333333333333,
+            "latency_s": 0.526,
+            "predicted": {
+              "acm_classification": "Pipe Insulation",
+              "acm_sub_classification": "Lagging",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 0.49,
+            "predicted": {
+              "acm_classification": "Floor Tile",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 0.519,
+            "predicted": {
+              "acm_classification": "Vinyl Composite Tile",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 0.448,
+            "predicted": {
+              "acm_classification": "Adhesive",
+              "acm_sub_classification": null,
+              "friability": null
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.535,
+            "predicted": {
+              "acm_classification": "Asbestos-Containing Material",
+              "acm_sub_classification": "Floor Tile",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.3333333333333333,
+            "latency_s": 0.487,
+            "predicted": {
+              "acm_classification": "Floor Tile",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.3333333333333333,
+            "latency_s": 0.472,
+            "predicted": {
+              "acm_classification": "Amosite",
+              "acm_sub_classification": null,
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.3333333333333333,
+            "latency_s": 0.512,
+            "predicted": {
+              "acm_classification": "Sprayed Fireproofing",
+              "acm_sub_classification": null,
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.3333333333333333,
+            "latency_s": 0.51,
+            "predicted": {
+              "acm_classification": "Sprayed Material",
+              "acm_sub_classification": "Plaster",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.3333333333333333,
+            "latency_s": 0.547,
+            "predicted": {
+              "acm_classification": "Sprayed Asbestos Material",
+              "acm_sub_classification": "Mixed Fibre",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.3333333333333333,
+            "latency_s": 0.47,
+            "predicted": {
+              "acm_classification": "Sprayed",
+              "acm_sub_classification": null,
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Asbestos Insulation Board (AIB)",
+            "score": 0.3333333333333333,
+            "latency_s": 0.547,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Asbestos Insulation Board",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Asbestos Insulation Board",
+            "score": 0.3333333333333333,
+            "latency_s": 0.518,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation Board",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "AIB Ceiling",
+            "score": 0.0,
+            "latency_s": 0.532,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Asbestos Insulation Board",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "AIB Panel",
+            "score": 0.3333333333333333,
+            "latency_s": 0.482,
+            "predicted": {
+              "acm_classification": "Amosite",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "AIB Soffit",
+            "score": 0.3333333333333333,
+            "latency_s": 0.522,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation Board",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Corrugated Asbestos Cement Roof Sheeting",
+            "score": 0.3333333333333333,
+            "latency_s": 0.498,
+            "predicted": {
+              "acm_classification": "Asbestos Cement",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Asbestos Cement Cladding",
+            "score": 0.3333333333333333,
+            "latency_s": 0.498,
+            "predicted": {
+              "acm_classification": "Asbestos Cement",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "AC Roof Sheet",
+            "score": 0.3333333333333333,
+            "latency_s": 0.495,
+            "predicted": {
+              "acm_classification": "Asbestos Cement",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Asbestos Cement Downpipe",
+            "score": 0.3333333333333333,
+            "latency_s": 0.498,
+            "predicted": {
+              "acm_classification": "Asbestos Cement",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Asbestos Cement Fascia",
+            "score": 0.3333333333333333,
+            "latency_s": 0.497,
+            "predicted": {
+              "acm_classification": "Asbestos Cement",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Boiler Insulation",
+            "score": 0.3333333333333333,
+            "latency_s": 0.524,
+            "predicted": {
+              "acm_classification": "Amosite",
+              "acm_sub_classification": "Boiler Lagging",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Duct Insulation",
+            "score": 0.3333333333333333,
+            "latency_s": 0.511,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Duct Wrap",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Calorifier Insulation",
+            "score": 0.0,
+            "latency_s": 0.476,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Sectional",
+              "friability": null
+            }
+          },
+          {
+            "product": "Tank Insulation",
+            "score": 0.0,
+            "latency_s": 0.511,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Blanket",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Flue Insulation",
+            "score": 0.0,
+            "latency_s": 0.538,
+            "predicted": {
+              "acm_classification": "Pipe/Boiler Insulation",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Artex / Textured Coating",
+            "score": 0.3333333333333333,
+            "latency_s": 0.587,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation",
+              "acm_sub_classification": "Spray-Applied Material",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Textured Paint",
+            "score": 0.3333333333333333,
+            "latency_s": 0.474,
+            "predicted": {
+              "acm_classification": "Paint",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Artex Ceiling Finish",
+            "score": 0.3333333333333333,
+            "latency_s": 0.559,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation",
+              "acm_sub_classification": "Spray Coating",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Pebble Dash",
+            "score": 0.3333333333333333,
+            "latency_s": 0.496,
+            "predicted": {
+              "acm_classification": "Asbestos Cement",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Spray Plaster Finish",
+            "score": 0.3333333333333333,
+            "latency_s": 0.57,
+            "predicted": {
+              "acm_classification": "Sprayed Material",
+              "acm_sub_classification": "Plaster or Stucco",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Gasket / Rope Seal",
+            "score": 0.3333333333333333,
+            "latency_s": 0.563,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation",
+              "acm_sub_classification": "Boiler Insulation",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Pipe Gasket",
+            "score": 0.3333333333333333,
+            "latency_s": 0.56,
+            "predicted": {
+              "acm_classification": "Asbestos-Containing Material",
+              "acm_sub_classification": "Pipe Gasket",
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Loose Insulation Fill",
+            "score": 0.6666666666666666,
+            "latency_s": 0.509,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Loose-fill",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Cavity Insulation",
+            "score": 0.6666666666666666,
+            "latency_s": 0.536,
+            "predicted": {
+              "acm_classification": "Insulation",
+              "acm_sub_classification": "Vermiculite",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Bitumen Felt Roofing",
+            "score": 0.3333333333333333,
+            "latency_s": 0.507,
+            "predicted": {
+              "acm_classification": "Roofing",
+              "acm_sub_classification": "Bitumen Felt",
+              "friability": null
+            }
+          },
+          {
+            "product": "Rope Packing",
+            "score": 0.0,
+            "latency_s": 0.542,
+            "predicted": {
+              "acm_classification": "Chrysotile Asbestos",
+              "acm_sub_classification": "Rope",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Fire Door Infill Panel",
+            "score": 0.3333333333333333,
+            "latency_s": 0.519,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation Board",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          },
+          {
+            "product": "Ceiling Plaster",
+            "score": 0.3333333333333333,
+            "latency_s": 0.512,
+            "predicted": {
+              "acm_classification": "Plaster",
+              "acm_sub_classification": "Skim Coat",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Sprayed Steel Beams",
+            "score": 0.3333333333333333,
+            "latency_s": 0.58,
+            "predicted": {
+              "acm_classification": "Asbestos Insulation",
+              "acm_sub_classification": "Spray-on Asbestos Insulation",
+              "friability": "Friable"
+            }
+          },
+          {
+            "product": "Bitumen DPC",
+            "score": 0.3333333333333333,
+            "latency_s": 0.508,
+            "predicted": {
+              "acm_classification": "Asphaltic Products",
+              "acm_sub_classification": null,
+              "friability": "Non Friable"
+            }
+          }
+        ],
+        "enrichment": [
+          {
+            "location_raw": "ground floor corridor",
+            "room_ref_raw": "  GF-CORR-01 ",
+            "score": 1.0,
+            "latency_s": 0.441,
+            "predicted": {
+              "location_normalized": "Ground Floor Corridor",
+              "room_ref_standardized": "Gf-Corr-01"
+            }
+          },
+          {
+            "location_raw": "FIRST FLOOR OFFICE",
+            "room_ref_raw": "1F-OFF-02",
+            "score": 1.0,
+            "latency_s": 0.41,
+            "predicted": {
+              "location_normalized": "First Floor Office",
+              "room_ref_standardized": "1f-off-02"
+            }
+          },
+          {
+            "location_raw": "basement car park",
+            "room_ref_raw": "B1-PARK",
+            "score": 1.0,
+            "latency_s": 0.408,
+            "predicted": {
+              "location_normalized": "Basement Car Park",
+              "room_ref_standardized": "B1-park"
+            }
+          },
+          {
+            "location_raw": "science block level 2",
+            "room_ref_raw": "SCI-L2-001",
+            "score": 1.0,
+            "latency_s": 0.434,
+            "predicted": {
+              "location_normalized": "Science Block Level 2",
+              "room_ref_standardized": "Sci-l2-001"
+            }
+          },
+          {
+            "location_raw": "admin wing, room 4",
+            "room_ref_raw": "ADM-004",
+            "score": 0.5,
+            "latency_s": 0.422,
+            "predicted": {
+              "location_normalized": "Admin Wing Room 4",
+              "room_ref_standardized": "Adm-004"
+            }
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": " BOILER-01",
+            "score": 1.0,
+            "latency_s": 0.394,
+            "predicted": {
+              "location_normalized": "Boiler Room",
+              "room_ref_standardized": "Boiler-01"
+            }
+          },
+          {
+            "location_raw": "roof void",
+            "room_ref_raw": "RV-PIPE-03",
+            "score": 1.0,
+            "latency_s": 0.42,
+            "predicted": {
+              "location_normalized": "Roof Void",
+              "room_ref_standardized": "Rv-Pipe-03"
+            }
+          },
+          {
+            "location_raw": "plant room level 1",
+            "room_ref_raw": "PL-L1-SteamPipes",
+            "score": 0.5,
+            "latency_s": 0.43,
+            "predicted": {
+              "location_normalized": "Plant Room Level 1",
+              "room_ref_standardized": "Pl L1 Steampipes"
+            }
+          },
+          {
+            "location_raw": "CEILING VOID ABOVE LIBRARY",
+            "room_ref_raw": "LIB-VOID",
+            "score": 1.0,
+            "latency_s": 0.408,
+            "predicted": {
+              "location_normalized": "Ceiling Void Above Library",
+              "room_ref_standardized": "Lib-Void"
+            }
+          },
+          {
+            "location_raw": "subfloor service duct",
+            "room_ref_raw": "SF-DUCT-A",
+            "score": 1.0,
+            "latency_s": 0.43,
+            "predicted": {
+              "location_normalized": "Subfloor Service Duct",
+              "room_ref_standardized": "Sf-Duct-A"
+            }
+          },
+          {
+            "location_raw": "main entrance lobby",
+            "room_ref_raw": "ENT-LOBBY",
+            "score": 1.0,
+            "latency_s": 0.383,
+            "predicted": {
+              "location_normalized": "Main Entrance Lobby",
+              "room_ref_standardized": "Ent-Lobby"
+            }
+          },
+          {
+            "location_raw": "Staff Room",
+            "room_ref_raw": " SR-001 ",
+            "score": 1.0,
+            "latency_s": 0.373,
+            "predicted": {
+              "location_normalized": "Staff Room",
+              "room_ref_standardized": "Sr-001"
+            }
+          },
+          {
+            "location_raw": "gymnasium",
+            "room_ref_raw": "GYM-FL",
+            "score": 1.0,
+            "latency_s": 0.408,
+            "predicted": {
+              "location_normalized": "Gymnasium",
+              "room_ref_standardized": "Gym-Fl"
+            }
+          },
+          {
+            "location_raw": "craft room & store",
+            "room_ref_raw": "CRAFT-STR",
+            "score": 0.5,
+            "latency_s": 0.396,
+            "predicted": {
+              "location_normalized": "Craft Room And Store",
+              "room_ref_standardized": "Craft-Str"
+            }
+          },
+          {
+            "location_raw": "headmaster's office",
+            "room_ref_raw": "HM-OFF",
+            "score": 0.5,
+            "latency_s": 0.382,
+            "predicted": {
+              "location_normalized": "Headmasters Office",
+              "room_ref_standardized": "HM-Off"
+            }
+          },
+          {
+            "location_raw": "sports hall roof steelwork",
+            "room_ref_raw": "SPALL-ROOF",
+            "score": 1.0,
+            "latency_s": 0.432,
+            "predicted": {
+              "location_normalized": "Sports Hall Roof Steelwork",
+              "room_ref_standardized": "Spall-Roof"
+            }
+          },
+          {
+            "location_raw": "car park upper deck",
+            "room_ref_raw": "CP-UPPER",
+            "score": 1.0,
+            "latency_s": 0.409,
+            "predicted": {
+              "location_normalized": "Car Park Upper Deck",
+              "room_ref_standardized": "CP-UppEr"
+            }
+          },
+          {
+            "location_raw": "changing rooms male",
+            "room_ref_raw": "CHG-M",
+            "score": 1.0,
+            "latency_s": 0.38,
+            "predicted": {
+              "location_normalized": "Changing Rooms Male",
+              "room_ref_standardized": "Chg-m"
+            }
+          },
+          {
+            "location_raw": "under floor 2",
+            "room_ref_raw": "UF-L2",
+            "score": 1.0,
+            "latency_s": 0.406,
+            "predicted": {
+              "location_normalized": "Under Floor 2",
+              "room_ref_standardized": "Uf-l2"
+            }
+          },
+          {
+            "location_raw": "plant room roof",
+            "room_ref_raw": "PLT-ROOF",
+            "score": 1.0,
+            "latency_s": 0.408,
+            "predicted": {
+              "location_normalized": "Plant Room Roof",
+              "room_ref_standardized": "Plt-Roof"
+            }
+          },
+          {
+            "location_raw": "fire door fire escape route",
+            "room_ref_raw": "FD-ESC-01",
+            "score": 1.0,
+            "latency_s": 0.431,
+            "predicted": {
+              "location_normalized": "Fire Door Fire Escape Route",
+              "room_ref_standardized": "Fd-Esc-01"
+            }
+          },
+          {
+            "location_raw": "STORAGE CUPBOARD UNDER STAIRS",
+            "room_ref_raw": "STAIR-STORE",
+            "score": 0.5,
+            "latency_s": 0.421,
+            "predicted": {
+              "location_normalized": "Storage Cupboard Under Stairs",
+              "room_ref_standardized": "Stair Store"
+            }
+          },
+          {
+            "location_raw": "caretaker room",
+            "room_ref_raw": "CARE-01",
+            "score": 1.0,
+            "latency_s": 0.393,
+            "predicted": {
+              "location_normalized": "Caretaker Room",
+              "room_ref_standardized": "Care-01"
+            }
+          },
+          {
+            "location_raw": "electrical switchroom",
+            "room_ref_raw": "ELEC-SW",
+            "score": 1.0,
+            "latency_s": 0.395,
+            "predicted": {
+              "location_normalized": "Electrical Switchroom",
+              "room_ref_standardized": "Elec-sw"
+            }
+          },
+          {
+            "location_raw": "stairwell level 1-2",
+            "room_ref_raw": "STAIR-L1L2",
+            "score": 0.5,
+            "latency_s": 0.479,
+            "predicted": {
+              "location_normalized": "Stairwell Level 1-2",
+              "room_ref_standardized": "Stair L1l2"
+            }
+          },
+          {
+            "location_raw": "main building rooftop",
+            "room_ref_raw": "ROOF-MAIN",
+            "score": 1.0,
+            "latency_s": 0.422,
+            "predicted": {
+              "location_normalized": "Main Building Rooftop",
+              "room_ref_standardized": "Roof-Main"
+            }
+          },
+          {
+            "location_raw": "north elevation external",
+            "room_ref_raw": "EXT-NORTH",
+            "score": 1.0,
+            "latency_s": 0.397,
+            "predicted": {
+              "location_normalized": "North Elevation External",
+              "room_ref_standardized": "Ext-North"
+            }
+          },
+          {
+            "location_raw": "WORKSHOP ROOF",
+            "room_ref_raw": "WKSHP-ROOF",
+            "score": 1.0,
+            "latency_s": 0.42,
+            "predicted": {
+              "location_normalized": "Workshop Roof",
+              "room_ref_standardized": "WksHp-Roof"
+            }
+          },
+          {
+            "location_raw": "east facade external",
+            "room_ref_raw": "EXT-EAST-DP",
+            "score": 1.0,
+            "latency_s": 0.408,
+            "predicted": {
+              "location_normalized": "East Facade External",
+              "room_ref_standardized": "Ext-East-Dp"
+            }
+          },
+          {
+            "location_raw": "south eaves",
+            "room_ref_raw": "EAVES-S",
+            "score": 1.0,
+            "latency_s": 0.383,
+            "predicted": {
+              "location_normalized": "South Eaves",
+              "room_ref_standardized": "Eaves-S"
+            }
+          },
+          {
+            "location_raw": "boiler house",
+            "room_ref_raw": "BH-BOILER",
+            "score": 1.0,
+            "latency_s": 0.398,
+            "predicted": {
+              "location_normalized": "Boiler House",
+              "room_ref_standardized": "Bh-boiler"
+            }
+          },
+          {
+            "location_raw": "ceiling void block A",
+            "room_ref_raw": "CV-BLK-A",
+            "score": 1.0,
+            "latency_s": 0.435,
+            "predicted": {
+              "location_normalized": "Ceiling Void Block A",
+              "room_ref_standardized": "CV-Blk-A"
+            }
+          },
+          {
+            "location_raw": "plant room ground floor",
+            "room_ref_raw": "PLT-GF",
+            "score": 1.0,
+            "latency_s": 0.408,
+            "predicted": {
+              "location_normalized": "Plant Room Ground Floor",
+              "room_ref_standardized": "Plt-Gf"
+            }
+          },
+          {
+            "location_raw": "roof tank room",
+            "room_ref_raw": "TANK-ROOF",
+            "score": 1.0,
+            "latency_s": 0.408,
+            "predicted": {
+              "location_normalized": "Roof Tank Room",
+              "room_ref_standardized": "Tank-Roof"
+            }
+          },
+          {
+            "location_raw": "BOILER FLUE DUCT",
+            "room_ref_raw": "BH-FLUE",
+            "score": 1.0,
+            "latency_s": 0.443,
+            "predicted": {
+              "location_normalized": "Boiler Flue Duct",
+              "room_ref_standardized": "Bh-Flue"
+            }
+          },
+          {
+            "location_raw": "classroom block 2",
+            "room_ref_raw": "CL-BLK-2-01",
+            "score": 1.0,
+            "latency_s": 0.459,
+            "predicted": {
+              "location_normalized": "Classroom Block 2",
+              "room_ref_standardized": "Cl-blk-2-01"
+            }
+          },
+          {
+            "location_raw": "corridor main block",
+            "room_ref_raw": "MB-CORR",
+            "score": 1.0,
+            "latency_s": 0.399,
+            "predicted": {
+              "location_normalized": "Corridor Main Block",
+              "room_ref_standardized": "Mb-Corr"
+            }
+          },
+          {
+            "location_raw": "hall and assembly area",
+            "room_ref_raw": "HALL-ASSY",
+            "score": 1.0,
+            "latency_s": 0.394,
+            "predicted": {
+              "location_normalized": "Hall And Assembly Area",
+              "room_ref_standardized": "Hall-Assy"
+            }
+          },
+          {
+            "location_raw": "external south wall",
+            "room_ref_raw": "EXT-SW",
+            "score": 1.0,
+            "latency_s": 0.371,
+            "predicted": {
+              "location_normalized": "External South Wall",
+              "room_ref_standardized": "Ext-sw"
+            }
+          },
+          {
+            "location_raw": "dining room",
+            "room_ref_raw": "DINING-01",
+            "score": 1.0,
+            "latency_s": 0.397,
+            "predicted": {
+              "location_normalized": "Dining Room",
+              "room_ref_standardized": "Dining-01"
+            }
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": "BOILER-GSK",
+            "score": 1.0,
+            "latency_s": 0.397,
+            "predicted": {
+              "location_normalized": "Boiler Room",
+              "room_ref_standardized": "Boiler-Gsk"
+            }
+          },
+          {
+            "location_raw": "plant room level 2",
+            "room_ref_raw": "PLT-L2-GSK",
+            "score": 1.0,
+            "latency_s": 0.444,
+            "predicted": {
+              "location_normalized": "Plant Room Level 2",
+              "room_ref_standardized": "Plt-l2-gsk"
+            }
+          },
+          {
+            "location_raw": "wall cavity block C",
+            "room_ref_raw": "WALL-CAV-C",
+            "score": 1.0,
+            "latency_s": 0.445,
+            "predicted": {
+              "location_normalized": "Wall Cavity Block C",
+              "room_ref_standardized": "WALL-CAV-C"
+            }
+          },
+          {
+            "location_raw": "external wall cavity",
+            "room_ref_raw": "EXT-CAV",
+            "score": 1.0,
+            "latency_s": 0.395,
+            "predicted": {
+              "location_normalized": "External Wall Cavity",
+              "room_ref_standardized": "Ext-Cav"
+            }
+          },
+          {
+            "location_raw": "west wing flat roof",
+            "room_ref_raw": "ROOF-WEST",
+            "score": 1.0,
+            "latency_s": 0.392,
+            "predicted": {
+              "location_normalized": "West Wing Flat Roof",
+              "room_ref_standardized": "Roof-West"
+            }
+          },
+          {
+            "location_raw": "window frames ground floor external",
+            "room_ref_raw": "WIN-GF-EXT",
+            "score": 1.0,
+            "latency_s": 0.433,
+            "predicted": {
+              "location_normalized": "Window Frames Ground Floor External",
+              "room_ref_standardized": "Win-Gf-Ext"
+            }
+          },
+          {
+            "location_raw": "fire escape stairwell",
+            "room_ref_raw": "ESC-STAIR",
+            "score": 1.0,
+            "latency_s": 0.409,
+            "predicted": {
+              "location_normalized": "Fire Escape Stairwell",
+              "room_ref_standardized": "Esc-Stair"
+            }
+          },
+          {
+            "location_raw": "old building first floor",
+            "room_ref_raw": "OLD-1F-PL",
+            "score": 1.0,
+            "latency_s": 0.435,
+            "predicted": {
+              "location_normalized": "Old Building First Floor",
+              "room_ref_standardized": "Old-1f-Pl"
+            }
+          },
+          {
+            "location_raw": "sports hall main frame",
+            "room_ref_raw": "SH-STEEL",
+            "score": 1.0,
+            "latency_s": 0.397,
+            "predicted": {
+              "location_normalized": "Sports Hall Main Frame",
+              "room_ref_standardized": "Sh-Steel"
+            }
+          },
+          {
+            "location_raw": "foundation wall damp course",
+            "room_ref_raw": "FOUND-DPC",
+            "score": 1.0,
+            "latency_s": 0.405,
+            "predicted": {
+              "location_normalized": "Foundation Wall Damp Course",
+              "room_ref_standardized": "Found-Dpc"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "model_name": "claude-sonnet-4-20250514",
+      "provider": "anthropic",
+      "vram_bytes": null,
+      "classification": {
+        "task_name": "classification",
+        "accuracy": 0.0,
+        "mean_latency_s": 0.0,
+        "p95_latency_s": 0.0,
+        "error_count": 50
+      },
+      "enrichment": {
+        "task_name": "enrichment",
+        "accuracy": 0.0,
+        "mean_latency_s": 0.0,
+        "p95_latency_s": 0.0,
+        "error_count": 50
+      },
+      "debug": {
+        "classification": [
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Ceiling Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Pipe Lagging",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Floor Tiles",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Sprayed Limpet Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Sprayed Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Asbestos Insulation Board (AIB)",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Asbestos Insulation Board",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "AIB Ceiling",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "AIB Panel",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "AIB Soffit",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Corrugated Asbestos Cement Roof Sheeting",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Asbestos Cement Cladding",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "AC Roof Sheet",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Asbestos Cement Downpipe",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Asbestos Cement Fascia",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Boiler Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Duct Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Calorifier Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Tank Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Flue Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Artex / Textured Coating",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Textured Paint",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Artex Ceiling Finish",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Pebble Dash",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Spray Plaster Finish",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Gasket / Rope Seal",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Pipe Gasket",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Loose Insulation Fill",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Cavity Insulation",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Bitumen Felt Roofing",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Rope Packing",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Fire Door Infill Panel",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Ceiling Plaster",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Sprayed Steel Beams",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "product": "Bitumen DPC",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          }
+        ],
+        "enrichment": [
+          {
+            "location_raw": "ground floor corridor",
+            "room_ref_raw": "  GF-CORR-01 ",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "FIRST FLOOR OFFICE",
+            "room_ref_raw": "1F-OFF-02",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "basement car park",
+            "room_ref_raw": "B1-PARK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "science block level 2",
+            "room_ref_raw": "SCI-L2-001",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "admin wing, room 4",
+            "room_ref_raw": "ADM-004",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": " BOILER-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "roof void",
+            "room_ref_raw": "RV-PIPE-03",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "plant room level 1",
+            "room_ref_raw": "PL-L1-SteamPipes",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "CEILING VOID ABOVE LIBRARY",
+            "room_ref_raw": "LIB-VOID",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "subfloor service duct",
+            "room_ref_raw": "SF-DUCT-A",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "main entrance lobby",
+            "room_ref_raw": "ENT-LOBBY",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "Staff Room",
+            "room_ref_raw": " SR-001 ",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "gymnasium",
+            "room_ref_raw": "GYM-FL",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "craft room & store",
+            "room_ref_raw": "CRAFT-STR",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "headmaster's office",
+            "room_ref_raw": "HM-OFF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "sports hall roof steelwork",
+            "room_ref_raw": "SPALL-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "car park upper deck",
+            "room_ref_raw": "CP-UPPER",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "changing rooms male",
+            "room_ref_raw": "CHG-M",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "under floor 2",
+            "room_ref_raw": "UF-L2",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "plant room roof",
+            "room_ref_raw": "PLT-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "fire door fire escape route",
+            "room_ref_raw": "FD-ESC-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "STORAGE CUPBOARD UNDER STAIRS",
+            "room_ref_raw": "STAIR-STORE",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "caretaker room",
+            "room_ref_raw": "CARE-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "electrical switchroom",
+            "room_ref_raw": "ELEC-SW",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "stairwell level 1-2",
+            "room_ref_raw": "STAIR-L1L2",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "main building rooftop",
+            "room_ref_raw": "ROOF-MAIN",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "north elevation external",
+            "room_ref_raw": "EXT-NORTH",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "WORKSHOP ROOF",
+            "room_ref_raw": "WKSHP-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "east facade external",
+            "room_ref_raw": "EXT-EAST-DP",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "south eaves",
+            "room_ref_raw": "EAVES-S",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "boiler house",
+            "room_ref_raw": "BH-BOILER",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "ceiling void block A",
+            "room_ref_raw": "CV-BLK-A",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "plant room ground floor",
+            "room_ref_raw": "PLT-GF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "roof tank room",
+            "room_ref_raw": "TANK-ROOF",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "BOILER FLUE DUCT",
+            "room_ref_raw": "BH-FLUE",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "classroom block 2",
+            "room_ref_raw": "CL-BLK-2-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "corridor main block",
+            "room_ref_raw": "MB-CORR",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "hall and assembly area",
+            "room_ref_raw": "HALL-ASSY",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "external south wall",
+            "room_ref_raw": "EXT-SW",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "dining room",
+            "room_ref_raw": "DINING-01",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "boiler room",
+            "room_ref_raw": "BOILER-GSK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "plant room level 2",
+            "room_ref_raw": "PLT-L2-GSK",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "wall cavity block C",
+            "room_ref_raw": "WALL-CAV-C",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "external wall cavity",
+            "room_ref_raw": "EXT-CAV",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "west wing flat roof",
+            "room_ref_raw": "ROOF-WEST",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "window frames ground floor external",
+            "room_ref_raw": "WIN-GF-EXT",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "fire escape stairwell",
+            "room_ref_raw": "ESC-STAIR",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "old building first floor",
+            "room_ref_raw": "OLD-1F-PL",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "sports hall main frame",
+            "room_ref_raw": "SH-STEEL",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          },
+          {
+            "location_raw": "foundation wall damp course",
+            "room_ref_raw": "FOUND-DPC",
+            "score": 0.0,
+            "latency_s": 0.0,
+            "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purcha"
+          }
+        ]
+      }
+    }
+  ]
+}

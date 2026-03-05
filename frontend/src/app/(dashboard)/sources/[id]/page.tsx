@@ -35,6 +35,7 @@ import {
   ExternalLink,
   Youtube,
   Info,
+  Brain,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -57,6 +58,9 @@ import { KnowledgeGraph } from '@/components/acm/KnowledgeGraph';
 import { SourceContentPanel } from '@/components/source/SourceContentPanel';
 import { SourceInsightsPanel } from '@/components/source/SourceInsightsPanel';
 import { SourceDetailsPanel } from '@/components/source/SourceDetailsPanel';
+import { SourceIntelligencePanel } from '@/components/acm/SourceIntelligencePanel';
+import { useSourceIntelligence } from '@/lib/hooks/use-source-intelligence';
+import { useExtractionProgress } from '@/lib/hooks/use-extraction-progress';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { sourcesApi } from '@/lib/api/sources';
@@ -108,6 +112,18 @@ export default function SourceDetailPage() {
     staleTime: 30 * 1000,
   });
   const insightsCount = insightsData?.length || 0;
+
+  // Extraction progress (for intelligence polling)
+  const extractionProgress = useExtractionProgress(sourceId);
+
+  // Pre-extraction intelligence (E30-S9)
+  const {
+    data: intelligenceData,
+    isLoading: isLoadingIntelligence,
+  } = useSourceIntelligence(sourceId, extractionProgress.phase);
+
+  // Show Intelligence tab when data exists or extraction is running
+  const showIntelligenceTab = !!intelligenceData || extractionProgress.phase === 'extracting';
 
   // If ACM check failed, show toggle anyway (fail-open for better UX)
   const showAcmToggle = acmCheckError ? true : hasAcmData;
@@ -372,6 +388,12 @@ export default function SourceDetailPage() {
                       </Badge>
                     )}
                   </TabsTrigger>
+                  {showIntelligenceTab && (
+                    <TabsTrigger value="intelligence" className="gap-1.5">
+                      <Brain className="w-4 h-4" />
+                      Intelligence
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="details" className="gap-1.5">
                     <Info className="w-4 h-4" />
                     Details
@@ -399,6 +421,15 @@ export default function SourceDetailPage() {
                   className="h-full m-0 p-4 overflow-auto"
                 >
                   <SourceInsightsPanel sourceId={sourceId} />
+                </TabsContent>
+                <TabsContent
+                  value="intelligence"
+                  className="h-full m-0 p-4 overflow-auto"
+                >
+                  <SourceIntelligencePanel
+                    data={intelligenceData}
+                    isLoading={isLoadingIntelligence}
+                  />
                 </TabsContent>
                 <TabsContent
                   value="details"

@@ -80,9 +80,7 @@ class TestUpsertSyntax:
 
         # db_connection is imported lazily inside _persist_state,
         # so patch it where it's imported from (the repository module).
-        with patch(
-            "open_notebook.database.repository.db_connection"
-        ) as mock_conn:
+        with patch("open_notebook.database.repository.db_connection") as mock_conn:
             mock_cm = AsyncMock()
             mock_cm.__aenter__ = AsyncMock(return_value=mock_db)
             mock_cm.__aexit__ = AsyncMock(return_value=False)

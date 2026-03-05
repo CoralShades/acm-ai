@@ -869,17 +869,18 @@ class TestLangGraphIntegration:
         assert ("inventory", "tag_pages") in edges or any(
             e == ("inventory", "tag_pages") for e in edges
         )
-        # tag_pages -> prepare is now a conditional edge (E1-S20 orchestrator routing)
-        assert "tag_pages" in agent_state.branches, (
-            "tag_pages should have conditional edges for orchestrator routing"
-        )
-        tag_pages_targets = set()
-        for branch in agent_state.branches["tag_pages"].values():
-            if hasattr(branch, "ends") and branch.ends:
-                tag_pages_targets.update(branch.ends.values())
-        assert "prepare" in tag_pages_targets, (
-            f"tag_pages conditional edges should include 'prepare', got {tag_pages_targets}"
-        )
+        # E30-S9: tag_pages -> save_intelligence
+        assert ("tag_pages", "save_intelligence") in edges or any(
+            e == ("tag_pages", "save_intelligence") for e in edges
+        ), "tag_pages should connect to save_intelligence (E30-S9)"
+        # E32-S1: save_intelligence -> extract_building
+        assert ("save_intelligence", "extract_building") in edges or any(
+            e == ("save_intelligence", "extract_building") for e in edges
+        ), "save_intelligence should connect to extract_building (E32-S1)"
+        # E32-S2: extract_building -> extract_items (replaces direct edge to orchestrate)
+        assert ("extract_building", "extract_items") in edges or any(
+            e == ("extract_building", "extract_items") for e in edges
+        ), "extract_building should connect to extract_items (E32-S2)"
 
     def test_extraction_state_has_page_tags(self):
         import typing

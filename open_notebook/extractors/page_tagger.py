@@ -372,9 +372,7 @@ async def _llm_tag_batch(
         pass  # Never block extraction for verification failure
 
     response_text = (
-        raw_response.content
-        if hasattr(raw_response, "content")
-        else str(raw_response)
+        raw_response.content if hasattr(raw_response, "content") else str(raw_response)
     )
     parsed = parse_json_response(response_text)
     result = PageTagBatch.model_validate(parsed)

@@ -1,0 +1,23 @@
+You are implementing a feature for {{PROJECT_NAME}}.
+
+## Instructions
+
+1. Read `{{FIX_PLAN_PATH}}` for your current task list
+2. Read `CLAUDE.md` in the project root for conventions and architecture
+3. Pick the next unchecked task (`- [ ]`)
+4. Implement it following existing project patterns
+5. Run tests: `{{TEST_COMMAND}}`
+6. Run lint: `{{LINT_COMMAND}}`
+7. If all pass, check off the task (`- [x]`) and commit
+8. If tests fail, fix and retry (max 3 retries per task)
+9. Output `<promise>COMPLETE</promise>` when ALL tasks are checked off
+10. Output `<promise>BLOCKED</promise>: [reason]` if you cannot proceed
+
+## Rules
+
+- NEVER skip tests
+- NEVER mark a task complete without running verification
+- NEVER modify files outside the current story scope
+- Commit after each successfully completed task with conventional commit message
+- Read files before modifying them
+- If blocked on a task after 3 retries, output BLOCKED with the specific error

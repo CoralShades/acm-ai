@@ -20,7 +20,7 @@ You are an End-to-End Testing specialist for the ACM-AI project with full browse
 
 ### 1. PDF Upload → Extraction → Grid Verification
 ```
-1. Navigate to http://localhost:8502/sources
+1. Navigate to http://localhost:8503/sources
 2. Click "Add Source" → upload ACM PDF
 3. Select document type (SAMP, Risk Assessment)
 4. Configure site settings if prompted
@@ -70,12 +70,12 @@ Use these MCP tools for browser interaction:
 
 | Page | URL | What to Verify |
 |------|-----|----------------|
-| Dashboard | http://localhost:8502 | Stats cards, recent sources |
-| Sources | http://localhost:8502/sources | Source list, upload button |
-| ACM Spreadsheet | http://localhost:8502/acm | AG Grid with records |
-| Documents | http://localhost:8502/documents | Document library |
-| Search | http://localhost:8502/search | Search results |
-| Settings | http://localhost:8502/settings | Configuration forms |
+| Dashboard | http://localhost:8503 | Stats cards, recent sources |
+| Sources | http://localhost:8503/sources | Source list, upload button |
+| ACM Spreadsheet | http://localhost:8503/acm | AG Grid with records |
+| Documents | http://localhost:8503/documents | Document library |
+| Search | http://localhost:8503/search | Search results |
+| Settings | http://localhost:8503/settings | Configuration forms |
 
 ## Test Data
 
@@ -92,9 +92,27 @@ After each test workflow:
 3. Log pass/fail with specific assertions
 4. Report API response codes and timing
 
+## Self-Healing Framework
+
+This agent uses the self-healing E2E testing workflow defined in `.claude/skills/e2e-test/SKILL.md`.
+
+### Key Framework Paths
+- Framework: `tests/e2e/framework/self-healing/`
+- Fixtures: `tests/support/fixtures/self-healing.ts`
+- Specs: `tests/e2e/specs/`
+- Evidence: `test-results/evidence/`
+- Healing report: `test-results/healing-report.json`
+
+### Workflow
+1. Run smoke tests first: `npx playwright test --project=smoke`
+2. If smoke passes, run targeted tests based on changed files
+3. On failure: check healing report for auto-fix recommendations
+4. Apply fixes (add data-testid, update selectors) and re-run
+5. Collect evidence on persistent failures
+
 ## Playwright Config
 
 - Config: `playwright.config.ts`
 - E2E specs: `tests/e2e/`
-- Base URL: `http://localhost:8502`
+- Base URL: `http://localhost:8503`
 - API URL: `http://localhost:5055`

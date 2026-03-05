@@ -1,10 +1,13 @@
 """
 ACM Record Validator.
 
-Validates ACM extraction records against BAR enum values and business rules.
-Used by the corrective RAG loop to identify fields needing correction.
+Validates ACM extraction records against SF picklist values (primary) and
+BAR enum values (audit-only). Used by the corrective RAG loop to identify
+fields needing correction.
 
 Story: E1-S15 Corrective RAG Validation Loop
+Story: E30-S4 Dependent Picklist Validator (SF chain integration)
+Story: E32-S7 SF-First Validation Pipeline
 """
 
 from typing import Optional
@@ -31,6 +34,12 @@ class ValidationResult(BaseModel):
 
     is_valid: bool
     issues: list[ValidationIssue] = []
+    chain_warnings: list[
+        ValidationIssue
+    ] = []  # WARN-policy SF chain issues (non-blocking)
+    bar_warnings: list[
+        ValidationIssue
+    ] = []  # BAR enum audit issues (non-blocking, never triggers correction)
 
 
 class CorrectionStats(BaseModel):
@@ -96,6 +105,63 @@ def _append_data_issue(record: dict, message: str) -> None:
         issues.append(message)
 
 
+def normalize_to_sf_canonical(record: dict) -> set[str]:
+    """Normalize record values to SF-canonical forms.
+
+    Applies BAR-to-SF value mapping and case-insensitive normalization.
+    Graceful degradation: returns empty set if SF schema is unavailable.
+
+    Args:
+        record: Dict of ACM record field values (mutated in-place).
+
+    Returns:
+        Set of internal field names that were modified.
+    """
+    try:
+        from open_notebook.extractors.validators.sf_picklist_validator import (
+            normalize_record_to_sf,
+        )
+
+        return normalize_record_to_sf(record)
+    except (ImportError, OSError) as e:
+        logger.debug(f"SF normalization skipped: {e}")
+        return set()
+
+
+def sf_valid_fields(record: dict) -> set[str]:
+    """Return set of internal field names that pass SF flat enum validation.
+
+    Used by the correction loop to freeze SF-valid fields from LLM overwrites.
+    Graceful degradation: returns empty set if SF schema is unavailable.
+
+    Args:
+        record: Dict of ACM record field values.
+
+    Returns:
+        Set of internal field names that pass SF flat enum validation.
+    """
+    try:
+        from open_notebook.extractors.validators.sf_picklist_validator import (
+            SF_FLAT_ENUM_FIELD_MAP,
+            SalesforcePicklistValidator,
+        )
+
+        sf_validator = SalesforcePicklistValidator()
+        sf_issues = sf_validator.validate_flat_enums(record)
+        # Fields with issues are NOT sf-valid
+        invalid_sf_api_names = {i.dependent_field for i in sf_issues}
+        # Return internal field names that have values and no SF issues
+        valid: set[str] = set()
+        for internal_name, sf_api_name in SF_FLAT_ENUM_FIELD_MAP.items():
+            value = record.get(internal_name)
+            if value and sf_api_name not in invalid_sf_api_names:
+                valid.add(internal_name)
+        return valid
+    except (ImportError, OSError) as e:
+        logger.debug(f"SF valid field check skipped: {e}")
+        return set()
+
+
 def _normalize_enum_for_validation(field_name: str, raw_value: str) -> Optional[str]:
     """Normalize enum values while preserving passthrough for unknowns."""
     if field_name == "friable":
@@ -103,7 +169,7 @@ def _normalize_enum_for_validation(field_name: str, raw_value: str) -> Optional[
         if lowered in {"friable", "f"}:
             return "Friable"
         if lowered in {"non friable", "nonfriable", "nf"}:
-            return "Non Friable"
+            return "Non-friable"
         if lowered in {"none", "n/a", "na", "unknown", "-"}:
             return None
         return raw_value.strip()
@@ -254,8 +320,18 @@ def validate_business_rules(record: dict) -> list[ValidationIssue]:
                 )
             )
 
-    # BAR-004: Positive results require friability
-    positive_values = {"Positive", "Assumed Positive"}
+    # BAR-004: Positive results require friability populated.
+    # Includes SF compound values that are positive-managed.
+    # NOTE: "Negative - Treated as Positive" is intentionally excluded from
+    # negative_values above — it is positive-managed and friability IS required
+    # for these records (same as "Positive"/"Assumed Positive").
+    positive_values = {
+        "Positive",
+        "Assumed Positive",
+        "Positive - Non-friable",  # SF compound value (AC5)
+        "Positive - Friable",  # SF compound value (AC5)
+        "Negative - Treated as Positive",  # Positive-managed despite negative analytical result
+    }
     if sample_result in positive_values:
         friable = record.get("friable")
         if not friable:
@@ -302,10 +378,73 @@ def validate_required_fields(record: dict) -> list[ValidationIssue]:
     return issues
 
 
-def validate_acm_record(record: dict) -> ValidationResult:
-    """Validate a full ACM record against enums, business rules, and required fields.
+def _convert_chain_issues(chain_issues: list) -> list[ValidationIssue]:
+    """Convert ChainValidationIssue objects to ValidationIssue for pipeline compat."""
+    issues: list[ValidationIssue] = []
+    for ci in chain_issues:
+        issues.append(
+            ValidationIssue(
+                field_name=ci.dependent_field,
+                current_value=ci.dependent_value,
+                expected_format="sf_chain"
+                if ci.chain_name != "flat_enum"
+                else "sf_enum",
+                valid_values=ci.valid_values,
+                issue_type=ci.issue_type,
+            )
+        )
+    return issues
 
-    Orchestrates all validators and returns a combined result.
+
+def validate_sf_chains(record: dict) -> list[ValidationIssue]:
+    """Validate SF dependent picklist chains if SF schema is available.
+
+    Runs the SalesforcePicklistValidator with WARN policy (non-blocking)
+    and converts ChainValidationIssues to ValidationIssues for compatibility
+    with the existing validation pipeline.
+
+    .. deprecated:: E32-S7
+        Kept for backward compatibility. Use validate_acm_record() which now
+        calls SF validation directly with REJECT policy.
+
+    Args:
+        record: Dict of ACM record field values.
+
+    Returns:
+        List of ValidationIssue for chain validation failures (WARN-policy,
+        non-blocking — should not flip is_valid to False).
+    """
+    try:
+        from open_notebook.extractors.validators.sf_picklist_validator import (
+            SalesforcePicklistValidator,
+            ValidationPolicy,
+        )
+
+        validator = SalesforcePicklistValidator()
+        result = validator.validate_all_chains(record, ValidationPolicy.WARN)
+        return _convert_chain_issues(result.issues)
+    except (ImportError, OSError) as e:
+        logger.debug(f"SF chain validation skipped: {e}")
+        return []
+
+
+def validate_acm_record(record: dict) -> ValidationResult:
+    """Validate a full ACM record with SF-first validation pipeline.
+
+    Orchestrates all validators. SF picklist validation is the primary
+    blocking authority. BAR enum validation is demoted to audit-only
+    (bar_warnings, never triggers correction).
+
+    Validation order:
+    0. Normalize to SF-canonical values (BAR→SF mapping, casing)
+    1. Required fields — blocking
+    2. SF flat enum validation — blocking (primary authority)
+    3. SF chain validation (REJECT policy) — blocking
+    4. Business rules — blocking (BAR & SF share N/A values)
+    5. BAR enum validation — audit-only (bar_warnings, non-blocking)
+
+    Graceful degradation: if SF schema files are unavailable, falls back to
+    BAR enum path as blocking (existing behavior preserved).
 
     Args:
         record: Dict of ACM record field values.
@@ -313,10 +452,46 @@ def validate_acm_record(record: dict) -> ValidationResult:
     Returns:
         ValidationResult with is_valid flag and aggregated issues.
     """
-    all_issues: list[ValidationIssue] = []
+    # Step 0: Normalize to SF-canonical values before validation
+    normalize_to_sf_canonical(record)
 
+    all_issues: list[ValidationIssue] = []
+    bar_warnings: list[ValidationIssue] = []
+    chain_warnings: list[ValidationIssue] = []
+
+    # 1. Required fields — always blocking
     all_issues.extend(validate_required_fields(record))
-    all_issues.extend(validate_enum_fields(record))
+
+    # 2-3. SF validation (primary authority)
+    try:
+        from open_notebook.extractors.parsers.config_loader import SFSchemaLoadError
+        from open_notebook.extractors.validators.sf_picklist_validator import (
+            SalesforcePicklistValidator,
+            ValidationPolicy,
+        )
+
+        sf_validator = SalesforcePicklistValidator()
+
+        # 2. SF flat enum validation — blocking
+        sf_flat_issues = sf_validator.validate_flat_enums(record)
+        all_issues.extend(_convert_chain_issues(sf_flat_issues))
+
+        # 3. SF chain validation — REJECT policy (blocking)
+        sf_chain_result = sf_validator.validate_all_chains(
+            record, ValidationPolicy.REJECT
+        )
+        all_issues.extend(_convert_chain_issues(sf_chain_result.issues))
+
+        # 5. BAR enum validation — demoted to audit-only (non-blocking)
+        bar_warnings.extend(validate_enum_fields(record))
+
+    except (ImportError, OSError, SFSchemaLoadError) as e:
+        # Graceful degradation: SF unavailable, fall back to BAR as blocking
+        logger.debug(f"SF validation unavailable, falling back to BAR path: {e}")
+        all_issues.extend(validate_enum_fields(record))
+        chain_warnings = validate_sf_chains(record)
+
+    # 4. Business rules — always blocking (BAR & SF share N/A values)
     all_issues.extend(validate_business_rules(record))
 
     is_valid = len(all_issues) == 0
@@ -326,5 +501,15 @@ def validate_acm_record(record: dict) -> ValidationResult:
             f"Record validation failed with {len(all_issues)} issues: "
             f"{[i.field_name for i in all_issues]}"
         )
+    if bar_warnings:
+        logger.debug(
+            f"Record has {len(bar_warnings)} BAR audit warnings (non-blocking): "
+            f"{[i.field_name for i in bar_warnings]}"
+        )
 
-    return ValidationResult(is_valid=is_valid, issues=all_issues)
+    return ValidationResult(
+        is_valid=is_valid,
+        issues=all_issues,
+        chain_warnings=chain_warnings,
+        bar_warnings=bar_warnings,
+    )

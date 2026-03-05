@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul
 echo ========================================
 echo   ACM-AI - Starting All Services
@@ -33,9 +34,25 @@ REM Kill any leftover ACM-AI service windows from previous runs
 taskkill /FI "WINDOWTITLE eq ACM-AI - Frontend*" /F >nul 2>&1
 taskkill /FI "WINDOWTITLE eq ACM-AI - Worker*" /F >nul 2>&1
 taskkill /FI "WINDOWTITLE eq ACM-AI - API*" /F >nul 2>&1
-REM Force-kill anything still holding our ports (5055, 8502)
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5055.*LISTENING"') do taskkill /F /PID %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8502.*LISTENING"') do taskkill /F /PID %%a >nul 2>&1
+REM Kill orphaned Windows processes by command line pattern
+for /f "tokens=2 delims=," %%a in ('wmic process where "CommandLine like '%%run_api.py%%'" get ProcessId /format:csv 2^>nul ^| findstr /r "[0-9]"') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=2 delims=," %%a in ('wmic process where "CommandLine like '%%run_worker.py%%'" get ProcessId /format:csv 2^>nul ^| findstr /r "[0-9]"') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=2 delims=," %%a in ('wmic process where "CommandLine like '%%next dev%%'" get ProcessId /format:csv 2^>nul ^| findstr /r "[0-9]"') do taskkill /F /PID %%a >nul 2>&1
+REM Kill orphaned uvicorn multiprocessing workers via Python utility
+REM (only kills children of dead parent PIDs — safe for other multiprocessing uses)
+uv run python -c "from scripts._port_utils import _kill_orphaned_children; _kill_orphaned_children(5055)" >nul 2>&1
+REM Kill any Windows process LISTENING on our ports (local address only)
+for /f "tokens=2,5" %%a in ('netstat -ano 2^>nul ^| findstr "LISTENING"') do (
+    echo %%a | findstr /E ":5055" >nul 2>&1 && taskkill /F /PID %%b >nul 2>&1
+    echo %%a | findstr /E ":8502" >nul 2>&1 && taskkill /F /PID %%b >nul 2>&1
+)
+REM Kill WSL2-hosted processes (invisible to Windows taskkill)
+wsl -- pkill -9 -f "run_api" >nul 2>&1
+wsl -- pkill -9 -f "uvicorn.*5055" >nul 2>&1
+wsl -- pkill -9 -f "run_worker" >nul 2>&1
+wsl -- pkill -9 -f "next.*dev" >nul 2>&1
+wsl -- fuser -k 5055/tcp >nul 2>&1
+wsl -- fuser -k 8502/tcp >nul 2>&1
 uv run python scripts/service_manager.py fix --auto-fix 2>nul
 echo.
 
@@ -50,6 +67,26 @@ if %errorlevel% neq 0 (
 )
 REM Save SurrealDB startup logs
 docker compose logs --no-color --tail 200 surrealdb > "%ACM_DIR%logs\surrealdb.log" 2>&1
+echo.
+
+REM Verify port 5055 is free before starting API (connect test)
+echo Verifying port 5055 is free before starting API...
+set "PORT_RETRIES=0"
+:check_port_5055
+curl -sf http://localhost:5055/health >nul 2>&1
+if errorlevel 1 goto port_5055_free
+set /a PORT_RETRIES+=1
+if !PORT_RETRIES! GEQ 15 (
+    echo ERROR: Port 5055 still responding after 15s. Cannot start API.
+    echo Try running: wsl --shutdown
+    echo Then re-run this script.
+    pause
+    exit /b 1
+)
+timeout /t 1 /nobreak >nul
+goto check_port_5055
+:port_5055_free
+echo Port 5055 is free.
 echo.
 
 echo [4/7] Starting API Server (port 5055)...
@@ -93,3 +130,4 @@ echo.
 echo [7/7] Verifying service health...
 timeout /t 5 /nobreak >nul
 uv run python scripts/service_manager.py status 2>nul
+endlocal

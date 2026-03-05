@@ -67,6 +67,7 @@ export function AppSidebar() {
   return (
     <TooltipProvider delayDuration={0}>
       <div
+        data-testid="app-sidebar"
         className={cn(
           'app-sidebar flex h-full flex-col bg-sidebar border-sidebar-border border-r transition-all duration-300',
           isCollapsed ? 'w-16' : 'w-64'

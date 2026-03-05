@@ -10,6 +10,11 @@
  */
 
 import { test as base, mergeTests, expect } from '@playwright/test';
+import {
+  HealingPage,
+  EvidenceCollector,
+  APIContractValidator,
+} from './self-healing';
 
 // Types for custom fixtures
 type TestFixtures = {
@@ -26,6 +31,15 @@ type TestFixtures = {
     waitForApi: (urlPattern: string | RegExp, timeout?: number) => Promise<void>;
     waitForNetworkIdle: (timeout?: number) => Promise<void>;
   };
+
+  /** Self-healing page wrapper with selector fallback chain */
+  healingPage: HealingPage;
+
+  /** Evidence collector for screenshots, console logs, network requests */
+  evidence: EvidenceCollector;
+
+  /** API contract validator for response shape checks */
+  apiValidator: APIContractValidator;
 };
 
 // Base test with custom fixtures
@@ -69,6 +83,26 @@ const customTest = base.extend<TestFixtures>({
     };
 
     await use(client);
+  },
+
+  // Self-healing page fixture
+  healingPage: async ({ page }, use) => {
+    const healingPage = new HealingPage(page);
+    await use(healingPage);
+    healingPage.reportHealings();
+  },
+
+  // Evidence collector fixture
+  evidence: async ({ page }, use) => {
+    const collector = new EvidenceCollector();
+    collector.attach(page);
+    await use(collector);
+    collector.detach();
+  },
+
+  // API contract validator fixture
+  apiValidator: async ({}, use) => {
+    await use(new APIContractValidator());
   },
 
   // Wait helpers fixture - for async operations

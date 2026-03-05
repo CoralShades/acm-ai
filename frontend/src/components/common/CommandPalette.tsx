@@ -186,6 +186,7 @@ export function CommandPalette() {
       title="Command Palette"
       description="Navigate, search, or ask your knowledge base"
       className="sm:max-w-lg"
+      data-testid="command-palette"
     >
       <CommandInput
         placeholder="Type a command or search..."

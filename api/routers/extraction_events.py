@@ -19,7 +19,7 @@ router = APIRouter()
 # SSE config
 _POLL_INTERVAL_S = 1.0
 _HEARTBEAT_INTERVAL_S = 15.0
-_TERMINAL_STATUSES = {"completed", "failed"}
+_TERMINAL_STATUSES = {"completed", "failed", "partial"}
 
 
 async def _get_progress(command_id: str) -> Optional[dict]:
@@ -46,16 +46,26 @@ async def _get_progress(command_id: str) -> Optional[dict]:
         return None
 
 
+_MAX_EMPTY_POLLS = 10  # Fail fast after 10s if no DB row found (E35-S5)
+
+
 async def _sse_generator(command_id: str):
-    """Generate SSE events by polling extraction_progress table."""
+    """Generate SSE events by polling extraction_progress table.
+
+    E35-S5: Pre-flight check — if the job is already in a terminal state on
+    first connection, emit the terminal event immediately and close the stream.
+    Also fail fast if no DB row is found after _MAX_EMPTY_POLLS ticks.
+    """
     last_updated = None
     heartbeat_counter = 0
     polls_per_heartbeat = int(_HEARTBEAT_INTERVAL_S / _POLL_INTERVAL_S)
+    empty_poll_count = 0
 
     while True:
         progress = await _get_progress(command_id)
 
         if progress:
+            empty_poll_count = 0
             current_updated = str(progress.get("updated_at", ""))
             if current_updated != last_updated:
                 last_updated = current_updated
@@ -73,6 +83,15 @@ async def _sse_generator(command_id: str):
                 if progress.get("status") in _TERMINAL_STATUSES:
                     yield f"event: done\ndata: {json.dumps({'status': progress['status']})}\n\n"
                     return
+        else:
+            empty_poll_count += 1
+            if empty_poll_count >= _MAX_EMPTY_POLLS:
+                yield (
+                    f"event: error\n"
+                    f"data: {json.dumps({'status': 'not_found', 'command_id': command_id})}\n\n"
+                )
+                return
+
         # Heartbeat to keep connection alive
         if heartbeat_counter >= polls_per_heartbeat:
             yield ": heartbeat\n\n"
