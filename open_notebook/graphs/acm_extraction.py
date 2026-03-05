@@ -2412,10 +2412,23 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
         if validation.is_valid:
             continue
 
+        # Compute SF-valid fields to freeze (AC2 — E35-S7)
+        from open_notebook.extractors.validators.acm_validator import sf_valid_fields
+
+        frozen_fields = sf_valid_fields(record_dict)
+
         # Layer 1: Try deterministic normalization first
         still_invalid = []
         for issue in validation.issues:
-            if issue.issue_type != "enum_mismatch":
+            # Skip frozen fields — SF-valid values must not be overwritten
+            if issue.field_name in frozen_fields:
+                logger.info(
+                    f"Skipping correction of {issue.field_name}="
+                    f"'{issue.current_value}' — field is SF-valid (frozen)"
+                )
+                continue
+
+            if issue.issue_type not in ("enum_mismatch", "invalid_sf_enum"):
                 still_invalid.append(issue)
                 continue
 
@@ -2505,10 +2518,19 @@ async def _llm_correct_records(
     correction_attempt: int,
     pl: Optional[PipelineLogger] = None,
 ) -> None:
-    """Use LLM to correct records that failed Layer 1 normalization."""
+    """Use LLM to correct records that failed Layer 1 normalization.
+
+    SF-valid fields are frozen and excluded from the correction prompt.
+    Any LLM response that attempts to modify a frozen field is rejected.
+
+    Story: E35-S7 — SF-First Validation Pipeline (field freezing).
+    """
     import json
 
-    from open_notebook.extractors.validators.acm_validator import validate_acm_record
+    from open_notebook.extractors.validators.acm_validator import (
+        sf_valid_fields,
+        validate_acm_record,
+    )
 
     enum_fields = {
         "sample_result": "sample_result",
@@ -2533,12 +2555,30 @@ async def _llm_correct_records(
         if validation.is_valid:
             continue
 
+        # Compute SF-valid fields to freeze (AC2 — E35-S7)
+        frozen_fields = sf_valid_fields(record_dict)
+
+        # Filter issues to exclude frozen fields from the correction prompt
+        unfrozen_issues = [
+            i for i in validation.issues if i.field_name not in frozen_fields
+        ]
+
+        if not unfrozen_issues:
+            # All issues are on frozen fields — skip LLM correction
+            continue
+
+        # Build frozen_fields display dict for the template
+        frozen_fields_display = {
+            f: record_dict.get(f, "") for f in frozen_fields if record_dict.get(f)
+        }
+
         # Render correction prompt
         prompter = Prompter(prompt_template="acm/correction")
         correction_prompt = prompter.render(
             data={
                 "record_json": json.dumps(record_dict, indent=2, default=str),
-                "validation_issues": [i.model_dump() for i in validation.issues],
+                "validation_issues": [i.model_dump() for i in unfrozen_issues],
+                "frozen_fields": frozen_fields_display,
             }
         )
 
@@ -2603,6 +2643,13 @@ async def _llm_correct_records(
             corrected = json.loads(text)
             if isinstance(corrected, dict):
                 for field, value in corrected.items():
+                    # Reject corrections to frozen fields (AC2 — E35-S7)
+                    if field in frozen_fields:
+                        logger.warning(
+                            f"LLM attempted to modify frozen field {field} "
+                            f"(SF-valid), ignoring correction"
+                        )
+                        continue
                     if field in enum_fields and value:
                         old_val = getattr(record, field, None) or record_dict.get(field)
                         _apply_field_correction(record, field, value)
@@ -2658,11 +2705,19 @@ def should_correct(state: dict) -> str:
         }
         validation = validate_acm_record(record_dict)
         if not validation.is_valid:
-            # Filter to only correctable issues (enum + business rule + SF enum)
+            # Filter to only correctable issues
+            # (enum + business rule + SF enum + SF chain)
             correctable = [
                 i
                 for i in validation.issues
-                if i.issue_type in ("enum_mismatch", "business_rule", "invalid_sf_enum")
+                if i.issue_type
+                in (
+                    "enum_mismatch",
+                    "business_rule",
+                    "invalid_sf_enum",
+                    "sf_chain",
+                    "invalid_chain_value",
+                )
             ]
             if correctable:
                 return "correct"

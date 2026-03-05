@@ -11,6 +11,8 @@ from open_notebook.extractors.validators.acm_validator import (
     CorrectionStats,
     ValidationIssue,
     ValidationResult,
+    normalize_to_sf_canonical,
+    sf_valid_fields,
     validate_acm_record,
     validate_business_rules,
     validate_enum_fields,
@@ -21,6 +23,7 @@ from open_notebook.extractors.validators.sf_picklist_validator import (
     ChainValidationResult,
     SalesforcePicklistValidator,
     ValidationPolicy,
+    normalize_record_to_sf,
 )
 
 __all__ = [
@@ -31,6 +34,9 @@ __all__ = [
     "ValidationIssue",
     "ValidationPolicy",
     "ValidationResult",
+    "normalize_record_to_sf",
+    "normalize_to_sf_canonical",
+    "sf_valid_fields",
     "validate_acm_record",
     "validate_business_rules",
     "validate_enum_fields",

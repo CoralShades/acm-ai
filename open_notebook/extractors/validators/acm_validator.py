@@ -105,6 +105,63 @@ def _append_data_issue(record: dict, message: str) -> None:
         issues.append(message)
 
 
+def normalize_to_sf_canonical(record: dict) -> set[str]:
+    """Normalize record values to SF-canonical forms.
+
+    Applies BAR-to-SF value mapping and case-insensitive normalization.
+    Graceful degradation: returns empty set if SF schema is unavailable.
+
+    Args:
+        record: Dict of ACM record field values (mutated in-place).
+
+    Returns:
+        Set of internal field names that were modified.
+    """
+    try:
+        from open_notebook.extractors.validators.sf_picklist_validator import (
+            normalize_record_to_sf,
+        )
+
+        return normalize_record_to_sf(record)
+    except (ImportError, OSError) as e:
+        logger.debug(f"SF normalization skipped: {e}")
+        return set()
+
+
+def sf_valid_fields(record: dict) -> set[str]:
+    """Return set of internal field names that pass SF flat enum validation.
+
+    Used by the correction loop to freeze SF-valid fields from LLM overwrites.
+    Graceful degradation: returns empty set if SF schema is unavailable.
+
+    Args:
+        record: Dict of ACM record field values.
+
+    Returns:
+        Set of internal field names that pass SF flat enum validation.
+    """
+    try:
+        from open_notebook.extractors.validators.sf_picklist_validator import (
+            SF_FLAT_ENUM_FIELD_MAP,
+            SalesforcePicklistValidator,
+        )
+
+        sf_validator = SalesforcePicklistValidator()
+        sf_issues = sf_validator.validate_flat_enums(record)
+        # Fields with issues are NOT sf-valid
+        invalid_sf_api_names = {i.dependent_field for i in sf_issues}
+        # Return internal field names that have values and no SF issues
+        valid: set[str] = set()
+        for internal_name, sf_api_name in SF_FLAT_ENUM_FIELD_MAP.items():
+            value = record.get(internal_name)
+            if value and sf_api_name not in invalid_sf_api_names:
+                valid.add(internal_name)
+        return valid
+    except (ImportError, OSError) as e:
+        logger.debug(f"SF valid field check skipped: {e}")
+        return set()
+
+
 def _normalize_enum_for_validation(field_name: str, raw_value: str) -> Optional[str]:
     """Normalize enum values while preserving passthrough for unknowns."""
     if field_name == "friable":
@@ -379,6 +436,7 @@ def validate_acm_record(record: dict) -> ValidationResult:
     (bar_warnings, never triggers correction).
 
     Validation order:
+    0. Normalize to SF-canonical values (BAR→SF mapping, casing)
     1. Required fields — blocking
     2. SF flat enum validation — blocking (primary authority)
     3. SF chain validation (REJECT policy) — blocking
@@ -394,6 +452,9 @@ def validate_acm_record(record: dict) -> ValidationResult:
     Returns:
         ValidationResult with is_valid flag and aggregated issues.
     """
+    # Step 0: Normalize to SF-canonical values before validation
+    normalize_to_sf_canonical(record)
+
     all_issues: list[ValidationIssue] = []
     bar_warnings: list[ValidationIssue] = []
     chain_warnings: list[ValidationIssue] = []

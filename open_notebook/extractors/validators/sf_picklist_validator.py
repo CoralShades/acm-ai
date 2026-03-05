@@ -69,6 +69,16 @@ _BAR_TO_SF_VALUE: dict[str, dict[str, str]] = {
         "Non Friable": "Non-friable",  # BAR normalizer uses "Non Friable"
         "Friable": "Friable",  # Same in both
     },
+    "Condition__c": {
+        "Good": "Stable",  # BAR "Good" -> SF "Stable"
+    },
+    "Disturbance_Potential_of_Material__c": {
+        "Medium": "Moderate",  # BAR "Medium" -> SF "Moderate"
+    },
+    "Sample_Analysis_Result_Material_Status__c": {
+        # No known BAR-to-SF mismatches for sample_result currently,
+        # but placeholder for future additions.
+    },
 }
 
 
@@ -109,6 +119,101 @@ def _normalize_to_sf_value(value: str, valid_values: list[str]) -> str:
         if sf_value.lower() == value_lower:
             return sf_value
     return value
+
+
+def normalize_record_to_sf(
+    record: dict, schema_bundle: Optional[SFSchemaBundle] = None
+) -> set[str]:
+    """Normalize all SF-mappable fields to SF-canonical values in-place.
+
+    Applies:
+    1. BAR-to-SF value mapping (_BAR_TO_SF_VALUE)
+    2. Case-insensitive normalization to SF picklist canonical casing
+
+    Handles both flat enum fields (via SF_FLAT_ENUM_FIELD_MAP) and the
+    acm_product_type field (via chain validation lookups).
+
+    Records use internal field names (friable, material_condition, etc.),
+    NOT SF API names. This function reads from internal names and writes
+    back to internal names.
+
+    Args:
+        record: Dict of ACM record field values (mutated in-place).
+        schema_bundle: Optional pre-loaded SF schema. If None, loads from
+            config_loader.
+
+    Returns:
+        Set of internal field names that were modified.
+    """
+    try:
+        bundle = schema_bundle or load_sf_field_schema()
+    except (ImportError, OSError) as e:
+        logger.debug(f"SF normalization skipped (schema unavailable): {e}")
+        return set()
+
+    modified: set[str] = set()
+
+    # 1. Normalize flat enum fields (sample_result, material_condition,
+    #    friable, disturbance_potential)
+    for internal_name, sf_api_name in SF_FLAT_ENUM_FIELD_MAP.items():
+        value = record.get(internal_name)
+        if not value:
+            continue
+
+        original = str(value).strip()
+        if not original:
+            continue
+
+        normalized = original
+
+        # Step 1a: Apply BAR-to-SF value mapping
+        bar_sf_map = _BAR_TO_SF_VALUE.get(sf_api_name)
+        if bar_sf_map and normalized in bar_sf_map:
+            normalized = bar_sf_map[normalized]
+
+        # Step 1b: Case-insensitive normalization against SF picklist
+        sf_values: list[str] = (
+            bundle.item_fields.picklists.get(sf_api_name)
+            or bundle.building_fields.picklists.get(sf_api_name)
+            or bundle.picklists.get(sf_api_name)
+            or []
+        )
+        if sf_values:
+            normalized = _normalize_to_sf_value(normalized, sf_values)
+
+        if normalized != original:
+            record[internal_name] = normalized
+            modified.add(internal_name)
+            logger.debug(
+                f"SF normalization: {internal_name} '{original}' -> '{normalized}'"
+            )
+
+    # 2. Normalize acm_product_type (ACM_Sub_Classification__c).
+    #    taxonomy.py outputs Title Case (e.g., "Flat Sheeting"), but SF uses
+    #    sentence case ("Flat sheeting"). Use the SF picklist values as the
+    #    canonical source (not chain mapping, which may also be Title Case).
+    product_type = record.get("acm_product_type")
+    if product_type:
+        original_pt = str(product_type).strip()
+        if original_pt:
+            sf_sub_class_api = "ACM_Sub_Classification__c"
+            # Get canonical SF picklist values for SubClassification
+            sf_sub_values: list[str] = (
+                bundle.item_fields.picklists.get(sf_sub_class_api)
+                or bundle.picklists.get(sf_sub_class_api)
+                or []
+            )
+            if sf_sub_values:
+                normalized_pt = _normalize_to_sf_value(original_pt, sf_sub_values)
+                if normalized_pt != original_pt:
+                    record["acm_product_type"] = normalized_pt
+                    modified.add("acm_product_type")
+                    logger.debug(
+                        f"SF normalization: acm_product_type "
+                        f"'{original_pt}' -> '{normalized_pt}'"
+                    )
+
+    return modified
 
 
 def _get_field_value(record: dict, sf_api_name: str) -> Optional[str]:

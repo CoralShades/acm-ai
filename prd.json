@@ -1510,7 +1510,7 @@
         "prompts/acm/correction.jinja",
         "open_notebook/extractors/parsers/config_loader.py"
       ],
-      "techSpecFile": null,
+      "techSpecFile": "docs/sprint-artifacts/e35-s7-sf-first-validation-pipeline.md",
       "implementedDate": null,
       "notes": "",
       "passes": false
