@@ -75,6 +75,7 @@ build-backend = "setuptools.build_meta"
 [dependency-groups]
 dev = [
     "langgraph-cli[inmem]>=0.1.0",
+    "langgraph-api>=0.7.0",
     "logfire>=3.0.0",
     "pre-commit>=4.1.0",
     "pytest-asyncio>=1.2.0",
