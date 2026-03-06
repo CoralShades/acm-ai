@@ -10,7 +10,13 @@ Usage:
   uv run python scripts/generate_model_diagrams.py
 """
 
+import sys
 from pathlib import Path
+
+# Ensure project root is on sys.path so `api` package is importable
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 OUTPUT_DIR = Path("docs/diagrams")
 
@@ -19,7 +25,7 @@ def generate_all():
     try:
         import erdantic as erd
     except ImportError:
-        print("erdantic not installed. Run: uv sync --group dev")
+        print("erdantic not installed. Run: uv pip install erdantic (requires pygraphviz + Graphviz)")
         return
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

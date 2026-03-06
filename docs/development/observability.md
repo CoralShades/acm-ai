@@ -933,9 +933,19 @@ File: `langgraph.json`
 ### erdantic fails to install
 
 1. Install Graphviz system library first: `winget install graphviz` (Windows)
-2. Then: `pip install erdantic`
-3. If pygraphviz still fails: ensure Graphviz `bin/` is in PATH and `include/` has `cgraph.h`
-4. On Windows, you may need to set `GRAPHVIZ_DIR` environment variable
+2. Install pygraphviz with explicit include/lib paths (Windows):
+   ```powershell
+   uv pip install pygraphviz --config-settings="--global-option=build_ext" --config-settings="--global-option=-IC:\Program Files\Graphviz\include" --config-settings="--global-option=-LC:\Program Files\Graphviz\lib"
+   ```
+3. Then: `uv pip install erdantic`
+4. **DLL load failure at runtime:** Add Graphviz `bin/` to PATH before running:
+   ```bash
+   # Bash / Git Bash
+   PATH="$PATH:/c/Program Files/Graphviz/bin" uv run python scripts/generate_model_diagrams.py
+   # PowerShell
+   $env:PATH += ";C:\Program Files\Graphviz\bin"; uv run python scripts/generate_model_diagrams.py
+   ```
+5. To make permanent, add `C:\Program Files\Graphviz\bin` to your system PATH via Windows Environment Variables
 
 ### Both Langfuse and LangSmith enabled — conflicts?
 
