@@ -1,7 +1,8 @@
 """Langfuse observability integration for ACM-AI extraction pipeline."""
 
 import os
-from typing import Any, Dict, List, Optional
+from contextlib import contextmanager
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler
@@ -118,3 +119,57 @@ def flush_langfuse_handler(handler: Optional[CallbackHandler]) -> None:
             client.flush()
     except Exception as exc:
         logger.debug("Langfuse flush skipped due to error: {error}", error=str(exc))
+
+
+@contextmanager
+def langfuse_tracing(
+    graph_name: str,
+    source_id: str = "N/A",
+    notebook_id: Optional[str] = None,
+    operation_type: Optional[str] = None,
+    extra_tags: Optional[List[str]] = None,
+    extra_metadata: Optional[Dict[str, Any]] = None,
+) -> Generator[Tuple[List[Any], Dict[str, Any]], None, None]:
+    """Context manager that yields (callbacks, metadata) and auto-flushes.
+
+    Usage::
+
+        with langfuse_tracing("chat", source_id="chat", operation_type="chat") as (cb, meta):
+            config = merge_langfuse_into_config(base_config, cb, meta)
+            graph.invoke(input, config=config)
+    """
+    handler = get_langfuse_handler()
+    callbacks = append_langfuse_callback([], handler)
+
+    tags = [operation_type or graph_name]
+    if extra_tags:
+        tags.extend(extra_tags)
+
+    metadata = build_langfuse_metadata(
+        source_id=source_id,
+        extraction_model=graph_name,
+        document_type=operation_type or graph_name,
+        extra_metadata={
+            **({"notebook_id": notebook_id} if notebook_id else {}),
+            "langfuse_tags": tags,
+            **(extra_metadata or {}),
+        },
+    )
+    try:
+        yield callbacks, metadata
+    finally:
+        flush_langfuse_handler(handler)
+
+
+def merge_langfuse_into_config(
+    config: Dict[str, Any],
+    callbacks: List[Any],
+    metadata: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Merge Langfuse callbacks/metadata into an existing RunnableConfig dict."""
+    if not callbacks:
+        return config
+    merged = dict(config)
+    merged["callbacks"] = callbacks
+    merged["metadata"] = metadata
+    return merged

@@ -1062,12 +1062,23 @@ async def create_source_insight(source_id: str, request: CreateSourceInsightRequ
         if not transformation:
             raise HTTPException(status_code=404, detail="Transformation not found")
 
-        # Run transformation graph
+        # Run transformation graph with optional Langfuse tracing
         from open_notebook.graphs.transformation import graph as transform_graph
-
-        await transform_graph.ainvoke(
-            input=dict(source=source, transformation=transformation)  # type: ignore[arg-type]
+        from open_notebook.observability.langfuse_config import (
+            langfuse_tracing,
+            merge_langfuse_into_config,
         )
+
+        with langfuse_tracing(
+            "transformation",
+            source_id=source_id,
+            operation_type="insight",
+        ) as (callbacks, metadata):
+            config = merge_langfuse_into_config({}, callbacks, metadata)
+            await transform_graph.ainvoke(
+                input=dict(source=source, transformation=transformation),  # type: ignore[arg-type]
+                config=config,
+            )
 
         # Get the newly created insight (last one)
         insights = await source.get_insights()

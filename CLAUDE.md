@@ -58,6 +58,15 @@ cd frontend && npm run dev            # Frontend on port 8502
 
 **Note:** Use `run_worker.py` instead of `surreal-commands-worker` directly on Windows to avoid Unicode encoding errors (see Issue #1).
 
+### LangGraph Dev Server (Local Graph Debugging)
+```bash
+uv run langgraph dev --no-browser     # Both graphs: acm_extraction, supervisor
+# API: http://127.0.0.1:2024          # Invoke graphs, inspect thread state
+# Docs: http://127.0.0.1:2024/docs    # Swagger UI — fully local, no cloud
+```
+**Important:** Always use `uv run langgraph dev`, not bare `langgraph dev` — the latter uses global Python which lacks project deps.
+**Note:** LangGraph Studio UI now requires LangSmith cloud. Use the local API + Swagger UI at `:2024/docs` for fully-local debugging, combined with Langfuse traces for visualization.
+
 ### Docker-Only Development
 ```bash
 # Full containerized development with hot-reload:
@@ -383,6 +392,29 @@ Add to the story's Dev Agent Record:
 - Store: `frontend/src/lib/stores/buildingStore.ts` (Zustand)
 - Hooks: `useBuildings`, `useACMItems` in `frontend/src/lib/hooks/`
 - AG Grid dynamic columns from `GET /api/acm/field-schema`
+
+### Observability Stack
+Three tools, each with a distinct role:
+
+| Tool | When to Use | Key Feature | Data Location |
+|------|------------|-------------|---------------|
+| **Langfuse** (self-hosted) | Production monitoring, cost tracking, trace archive | Per-provider cost breakdown, unlimited retention | Local Docker (`localhost:3000`) |
+| **LangSmith** (cloud) | Dev prompt iteration, auto-tracing all graphs | Prompt playground (edit + re-run), side-by-side comparison | Cloud (smith.langchain.com) |
+| **LangGraph API** (local) | Debug graph state, invoke/inspect threads | Swagger UI at `:2024/docs`, state inspection via REST | Local (`127.0.0.1:2024`) |
+
+**When to use which:**
+- **"Why did this extraction produce wrong data?"** → LangSmith (trace the LLM call, edit prompt in playground)
+- **"How much is this costing across all runs?"** → Langfuse (self-hosted, cost/token dashboards)
+- **"What's the graph state right now for thread X?"** → LangGraph API (`GET /threads/{id}/state`)
+- **"Is the pipeline healthy across many documents?"** → Langfuse (historical traces, score trends)
+- **Production** → Langfuse only (self-hosted, data stays local — required for government data)
+
+**Code patterns:**
+- Config: `open_notebook/observability/langfuse_config.py`
+- Use `langfuse_tracing()` context manager + `merge_langfuse_into_config()` for all new graph invocations in routers
+- Do NOT modify `acm_extraction.py` or `source_commands.py` Langfuse wiring (pre-existing, working)
+- All tracing is non-fatal — app works with Langfuse disabled
+- LangSmith auto-traces via `LANGCHAIN_TRACING_V2=true` env var (zero code changes)
 
 ### SSE Streaming (PipelineEventBus)
 - Backend: `open_notebook/extractors/pipeline_event_bus.py`

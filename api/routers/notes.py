@@ -6,6 +6,10 @@ from loguru import logger
 from api.models import NoteCreate, NoteResponse, NoteUpdate
 from open_notebook.domain.notebook import Note
 from open_notebook.exceptions import InvalidInputError
+from open_notebook.observability.langfuse_config import (
+    langfuse_tracing,
+    merge_langfuse_into_config,
+)
 
 router = APIRouter()
 
@@ -56,12 +60,18 @@ async def create_note(note_data: NoteCreate):
             from open_notebook.graphs.prompt import graph as prompt_graph
 
             prompt = "Based on the Note below, please provide a Title for this content, with max 15 words"
-            result = await prompt_graph.ainvoke(
-                {  # type: ignore[arg-type]
-                    "input_text": note_data.content,
-                    "prompt": prompt,
-                }
-            )
+            with langfuse_tracing(
+                "prompt",
+                operation_type="note_title",
+            ) as (callbacks, metadata):
+                config = merge_langfuse_into_config({}, callbacks, metadata)
+                result = await prompt_graph.ainvoke(
+                    {  # type: ignore[arg-type]
+                        "input_text": note_data.content,
+                        "prompt": prompt,
+                    },
+                    config=config,
+                )
             title = result.get("output", "Untitled Note")
 
         # Validate note_type

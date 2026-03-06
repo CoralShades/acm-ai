@@ -1,7 +1,8 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "acm_extraction": "./open_notebook/graphs/studio_entry.py:graph"
+    "acm_extraction": "./open_notebook/graphs/studio_entry.py:graph",
+    "supervisor": "./open_notebook/graphs/studio_entry_supervisor.py:graph"
   },
   "env": ".env"
 }
