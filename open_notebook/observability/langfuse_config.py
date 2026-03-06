@@ -1,6 +1,7 @@
 """Langfuse observability integration for ACM-AI extraction pipeline."""
 
 import os
+import uuid
 from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
@@ -18,8 +19,53 @@ def is_langfuse_enabled() -> bool:
     return os.getenv("LANGFUSE_ENABLED", "false").strip().lower() in _TRUE_VALUES
 
 
-def get_langfuse_handler() -> Optional[CallbackHandler]:
+def _try_inject_otel_trace_context(trace_id: str) -> Any:
+    """Inject a Langfuse trace_id into the OTel context so Logfire spans nest under it.
+
+    When LOGFIRE_ENABLED=true and logfire.instrument_pydantic(include={...}) is active,
+    Pydantic validation spans created inside the current asyncio task will carry this
+    trace_id as their traceparent. Langfuse routes them under the matching trace.
+
+    Returns an OTel context token to pass to _try_detach_otel_context(), or None if
+    opentelemetry is unavailable or OTel context injection fails (non-fatal).
+    """
+    try:
+        from opentelemetry import context as otel_ctx
+        from opentelemetry import trace as otel_trace
+        from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
+
+        trace_id_int = int(trace_id.replace("-", ""), 16)
+        span_ctx = SpanContext(
+            trace_id=trace_id_int,
+            span_id=0x1A2B3C4D5E6F7A8B,  # fixed dummy parent span_id
+            is_remote=True,
+            trace_flags=TraceFlags(TraceFlags.SAMPLED),
+        )
+        ctx = otel_trace.set_span_in_context(NonRecordingSpan(span_ctx))
+        return otel_ctx.attach(ctx)
+    except Exception:
+        return None
+
+
+def _try_detach_otel_context(token: Any) -> None:
+    """Detach OTel context token set by _try_inject_otel_trace_context()."""
+    if token is None:
+        return
+    try:
+        from opentelemetry import context as otel_ctx
+
+        otel_ctx.detach(token)
+    except Exception:
+        pass
+
+
+def get_langfuse_handler(trace_id: Optional[str] = None) -> Optional[CallbackHandler]:
     """Create a Langfuse LangChain callback handler when configured.
+
+    Args:
+        trace_id: Optional pre-generated UUID string to use as the Langfuse trace_id.
+            Pass this when you also inject the same ID into the OTel context via
+            _try_inject_otel_trace_context() so that Logfire spans nest under this trace.
 
     Returns:
         CallbackHandler when Langfuse is enabled and credentials are present,
@@ -43,7 +89,12 @@ def get_langfuse_handler() -> Optional[CallbackHandler]:
     try:
         # Initialize client first so CallbackHandler(public_key=...) can bind to it.
         Langfuse(public_key=public_key, secret_key=secret_key, host=host)
-        return CallbackHandler(public_key=public_key, update_trace=True)
+        trace_context = {"trace_id": trace_id} if trace_id else None
+        return CallbackHandler(
+            public_key=public_key,
+            update_trace=True,
+            **({"trace_context": trace_context} if trace_context else {}),
+        )
     except Exception as exc:
         logger.warning(
             "Failed to initialize Langfuse callback handler: {error}. "
@@ -138,8 +189,16 @@ def langfuse_tracing(
             config = merge_langfuse_into_config(base_config, cb, meta)
             graph.invoke(input, config=config)
     """
-    handler = get_langfuse_handler()
+    # Pre-generate trace_id so we can pass it to both the CallbackHandler and
+    # the OTel context. This makes Logfire Pydantic validation spans nest under
+    # this Langfuse trace when LOGFIRE_ENABLED=true and instrument_pydantic() is active.
+    trace_id = str(uuid.uuid4())
+    handler = get_langfuse_handler(trace_id=trace_id)
     callbacks = append_langfuse_callback([], handler)
+
+    # Inject trace_id into OTel context so Logfire spans inherit it as traceparent.
+    # Non-fatal: returns None if opentelemetry not available or Logfire disabled.
+    otel_token = _try_inject_otel_trace_context(trace_id) if handler else None
 
     tags = [operation_type or graph_name]
     if extra_tags:
@@ -158,6 +217,7 @@ def langfuse_tracing(
     try:
         yield callbacks, metadata
     finally:
+        _try_detach_otel_context(otel_token)
         flush_langfuse_handler(handler)
 
 
