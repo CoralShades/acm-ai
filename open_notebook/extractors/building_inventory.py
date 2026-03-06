@@ -488,7 +488,7 @@ async def _llm_compile_inventory(
     from open_notebook.graphs.utils import provision_langchain_model
 
     prompter = Prompter(prompt_template="acm/building_inventory")
-    system_prompt = prompter.render(data={"content": content})
+    system_prompt = prompter.render(data={})
 
     # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
@@ -507,7 +507,7 @@ async def _llm_compile_inventory(
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
-            content="Compile a building inventory with page ranges, room codes, and complexity classifications."
+            content=f"## Document Content\n\n{content}\n\nCompile a building inventory with page ranges, room codes, and complexity classifications."
         ),
     ]
     raw_response = await model.ainvoke(messages)

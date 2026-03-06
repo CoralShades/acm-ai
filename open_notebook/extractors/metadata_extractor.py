@@ -221,7 +221,7 @@ async def _llm_extract_metadata(
     from langchain_core.messages import HumanMessage, SystemMessage
 
     prompter = Prompter(prompt_template="acm/metadata_extraction")
-    system_prompt = prompter.render(data={"cover_pages": content})
+    system_prompt = prompter.render(data={})
 
     # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     # 2048 is appropriate for metadata extraction (small structured output)
@@ -237,7 +237,7 @@ async def _llm_extract_metadata(
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
-            content="Extract the document metadata from the cover pages provided."
+            content=f"## Cover Page Content\n\n{content}\n\nExtract the document metadata from the cover pages above."
         ),
     ]
     llm_result: DocumentMetaLLM = await chain.ainvoke(messages)

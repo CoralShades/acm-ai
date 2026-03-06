@@ -130,7 +130,7 @@ async def _llm_extract_structure(
     from open_notebook.graphs.utils import provision_langchain_model
 
     prompter = Prompter(prompt_template="acm/structure_extraction")
-    system_prompt = prompter.render(data={"content": content})
+    system_prompt = prompter.render(data={})
 
     # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
@@ -149,7 +149,7 @@ async def _llm_extract_structure(
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
-            content="Extract the document structure, table of contents, and section hierarchy."
+            content=f"## Document Content\n\n{content}\n\nExtract the document structure, table of contents, and section hierarchy."
         ),
     ]
     raw_response = await model.ainvoke(messages)

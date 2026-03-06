@@ -68,10 +68,6 @@ Classify each page below. For EACH page, provide:
 - **0.5-0.7**: Moderate indicators, content could belong to adjacent sections
 - **0.3-0.5**: Weak indicators, mostly inferred from context/position
 
-## Pages to Classify
+## Instructions
 
-{% for page in batch_pages %}
---- Page {{ page.page_number }} ---
-{{ page.text }}
-
-{% endfor %}
+Classify each page provided in the user message into its document section. Respond with a JSON object matching the PageTagBatch schema containing a list of PageTag objects.

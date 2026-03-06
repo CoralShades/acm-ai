@@ -468,6 +468,10 @@ class ExtractionState(TypedDict):
     building_records: List[str]
     # E32-S2: True when extract_items_node produced >= 1 record
     items_extracted: bool
+    # Phase 1 building meta cache: building_code -> BuildingExtractionResult
+    # Populated by extract_building_node, consumed by extract_items_node to
+    # avoid duplicate Phase 1 LLM calls.
+    building_meta_cache: Dict[str, Any]
 
 
 def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
@@ -1108,7 +1112,7 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
         )
         if agui:
             await agui.emit_step_finished("extract_building", buildings=0)
-        return {"building_records": []}
+        return {"building_records": [], "building_meta_cache": {}}
 
     if pl:
         pl.stage_progress(
@@ -1117,6 +1121,7 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
         )
 
     saved_ids: List[str] = []
+    meta_cache: Dict[str, Any] = {}  # building_code -> BuildingExtractionResult
     source_id_str = str(source.id)
 
     for building_meta in inventory.buildings:
@@ -1150,6 +1155,10 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 state=state,
                 schema_bundle=schema_bundle,
             )
+
+            # Cache Phase 1 result for reuse in extract_items_node (avoids duplicate LLM call)
+            if result is not None:
+                meta_cache[building_meta.building_id] = result
 
             if result is None:
                 logger.warning(
@@ -1240,7 +1249,7 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
             total=len(inventory.buildings),
         )
 
-    return {"building_records": saved_ids}
+    return {"building_records": saved_ids, "building_meta_cache": meta_cache}
 
 
 # ---------------------------------------------------------------------------
@@ -1363,16 +1372,10 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                 strategy=ExtractionStrategy.FULL_LLM,
             )
 
-            # Re-run Phase 1 to get building_meta_result for picklist subsetting.
-            # Phase 1 is cheap (small prompt). This avoids state complexity of
-            # caching Phase 1 results across nodes.
-            # If None, _normalize_v3_records falls back to plan.building_name.
-            building_meta_result = await _v3_extract_building_meta(
-                building_content=building_content,
-                plan=plan,
-                state=state,
-                schema_bundle=schema_bundle,
-            )
+            # Look up cached Phase 1 result from extract_building_node.
+            # Falls back to None if cache miss (e.g. Phase 1 failed for this building).
+            meta_cache: Dict[str, Any] = state.get("building_meta_cache") or {}
+            building_meta_result = meta_cache.get(building_meta.building_id)
 
             # Phase 2: extract items (with chunking if content is large)
             item_result = await _chunk_and_extract_items(

@@ -511,11 +511,9 @@ RULES:
    - Add "No access - area could not be inspected" to data_issues
 {% endif %}
 
-## Content to Extract
+## Instructions
 
-```{% if input_format is defined and input_format == "html" %}html{% else %}text{% endif %}
-{{ content }}
-```
+Extract all ACM records from the building content provided in the user message. The content was extracted from a PDF — tables are in vertical format where each cell appears on its own line.
 
 ## ⚠️ FINAL VERIFICATION — DO THIS BEFORE RETURNING YOUR JSON
 

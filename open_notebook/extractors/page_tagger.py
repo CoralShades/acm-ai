@@ -329,17 +329,19 @@ async def _llm_tag_batch(
 
     from open_notebook.graphs.utils import provision_langchain_model
 
-    # Prepare batch data for the template
-    batch_pages = [{"page_number": pn, "text": text} for pn, text in batch]
-
     prompter = Prompter(prompt_template="acm/page_tagging")
     system_prompt = prompter.render(
         data={
-            "batch_pages": batch_pages,
             "previous_section_id": previous_section_id,
             "document_type": document_type,
         }
     )
+
+    # Build page content for HumanMessage
+    page_sections = []
+    for pn, text in batch:
+        page_sections.append(f"--- Page {pn} ---\n{text}")
+    pages_content = "\n\n".join(page_sections)
 
     # Concatenate batch text for model provisioning (token estimation)
     batch_text = "\n".join(text for _, text in batch)
@@ -360,7 +362,9 @@ async def _llm_tag_batch(
 
     messages = [
         SystemMessage(content=system_prompt),
-        HumanMessage(content="Classify each page into its document section."),
+        HumanMessage(
+            content=f"## Pages to Classify\n\n{pages_content}\n\nClassify each page into its document section."
+        ),
     ]
 
     raw_response = await model.ainvoke(messages)

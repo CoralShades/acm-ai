@@ -558,7 +558,6 @@ async def _llm_extract_building(
             system_prompt = prompter.render(
                 data={
                     "building_context": prompt_ctx,
-                    "content": budget_chunk,
                     "input_format": input_format,
                     "model_family": model_family,
                 }
@@ -566,10 +565,11 @@ async def _llm_extract_building(
 
             from langchain_core.messages import HumanMessage, SystemMessage
 
+            content_label = "html" if input_format == "html" else "text"
             messages = [
                 SystemMessage(content=system_prompt),
                 HumanMessage(
-                    content="Extract ACM records from the building content provided."
+                    content=f"## Building Content\n\n```{content_label}\n{budget_chunk}\n```\n\nExtract all ACM records from the building content above."
                 ),
             ]
 
@@ -762,7 +762,6 @@ async def _v3_extract_building_meta(
         system_prompt = prompter.render(
             data={
                 "building_context": prompt_ctx,
-                "content": building_content,
                 "picklists": picklists,
             }
         )
@@ -772,7 +771,7 @@ async def _v3_extract_building_meta(
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(
-                content="Extract the building metadata from the document header."
+                content=f"## Document Content\n\n{building_content}\n\nExtract the building metadata from the document content above."
             ),
         ]
 
@@ -848,7 +847,6 @@ async def _v3_extract_items(
         system_prompt = prompter.render(
             data={
                 "building_context": prompt_ctx,
-                "content": building_content,
                 "building_meta": building_meta_dict,
                 "picklists": picklists,
             }
@@ -859,7 +857,7 @@ async def _v3_extract_items(
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(
-                content="Extract all ACM item records from the building content."
+                content=f"## Document Content\n\n{building_content}\n\nExtract all ACM item records from the building content above."
             ),
         ]
 
