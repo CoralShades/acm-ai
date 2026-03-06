@@ -187,8 +187,10 @@ services:
       start_period: 30s
 
   # --- JSON Crack — Interactive JSON Viewer ---
+  # Official image (aykutsarac/jsoncrack.com) is not published to Docker Hub.
+  # Using shokohsc/jsoncrack — community build from the same upstream source.
   jsoncrack:
-    image: aykutsarac/jsoncrack.com:latest
+    image: shokohsc/jsoncrack:latest
     container_name: acm-ai-jsoncrack
     ports:
       - "8888:8080"

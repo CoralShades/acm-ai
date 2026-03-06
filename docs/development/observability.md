@@ -929,6 +929,7 @@ File: `langgraph.json`
 1. Check container is running: `docker ps | grep jsoncrack`
 2. Open `http://localhost:8888` — should show the JSON Crack UI
 3. If port conflict: change the host port in `docker-compose.observability.yml`
+4. **Pull access denied / repository does not exist:** The official `aykutsarac/jsoncrack.com` image is not published to Docker Hub. The compose file uses `shokohsc/jsoncrack:latest` (community build from the same source). If you see this error, ensure you have the latest `docker-compose.observability.yml` from the repo.
 
 ### erdantic fails to install
 
