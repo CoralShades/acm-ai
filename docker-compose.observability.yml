@@ -186,6 +186,14 @@ services:
       retries: 10
       start_period: 30s
 
+  # --- JSON Crack — Interactive JSON Viewer ---
+  jsoncrack:
+    image: aykutsarac/jsoncrack.com:latest
+    container_name: acm-ai-jsoncrack
+    ports:
+      - "8888:8080"
+    restart: unless-stopped
+
 volumes:
   langfuse_postgres_data:
     name: acm-ai-langfuse-postgres-data

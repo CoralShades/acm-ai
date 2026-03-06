@@ -350,4 +350,41 @@ LANGFUSE_BASE_URL=http://langfuse:3000
 1. ~~Wire Langfuse into remaining graphs~~ — DONE (all 6 routers via `langfuse_tracing()`)
 2. ~~Register supervisor_agent in langgraph.json~~ — DONE (Phase 2A)
 3. ~~Add Langfuse self-hosted to docker-compose.observability.yml~~ — DONE (Phase 2A, v3 full stack)
-4. Add format=json to correction LLM (#97 — one-line fix) — TODO (Phase 3)
+4. Add format=json to correction LLM (#97 — one-line fix) — TODO (Phase 4)
+
+---
+
+## 6. Phase 3 Tool Assessment — Visualization & Pydantic Tracing
+
+### 6A. Tool Value Matrix
+
+| Tool | Value | Complexity | Integration Path |
+|------|-------|------------|------------------|
+| **Logfire SDK** | HIGH — adds Pydantic validation traces to Langfuse | LOW — env vars + `logfire.configure()` | OTel → Langfuse (native) |
+| **erdantic** | MEDIUM — static ER diagrams of model relationships | LOW — Python one-liner, but needs Graphviz on Windows | Direct Python API |
+| **JSON Crack** | MEDIUM — interactive JSON tree viewer | LOW — Docker service + helper script | Docker container |
+
+### 6B. Logfire SDK — Pydantic-Aware Tracing
+
+**What it adds:** Every `ACMExtractionRecord.model_validate()`, `BuildingRoomContext()` construction, and failed parse shows up as a span in Langfuse. This fills the gap between "what the LLM returned" (Langfuse already captures via LangChain callbacks) and "what Pydantic did with it" (previously invisible).
+
+**Key design decisions:**
+- `send_to_logfire=False` — no Logfire cloud account needed
+- Routes to existing Langfuse via OTel env vars (reuses `LANGFUSE_*` credentials)
+- `LOGFIRE_ENABLED=false` by default — opt-in, non-fatal
+- Initialized at API startup before graph imports (`api/main.py`)
+
+### 6C. erdantic — Model Relationship Diagrams
+
+**What it adds:** 60+ Pydantic models with complex relationships. erdantic generates SVG ER diagrams showing fields and relationships between models. Serves as living documentation.
+
+**Limitation:** erdantic does NOT support TypedDict (used by LangGraph states). For graph state topology, use the LangGraph API's `GET /assistants` endpoint instead.
+
+### 6D. JSON Crack — Interactive JSON Exploration
+
+**What it adds:** When debugging extraction issues, JSON Crack provides an interactive graph view of nested JSON structures. Much better than scrolling through raw JSON in Langfuse or terminal output.
+
+**Usage pattern:**
+1. `uv run python scripts/dump_state_json.py <thread_id>` — fetch from LangGraph API
+2. Open `http://localhost:8888` — paste or upload the JSON
+3. Navigate the interactive tree to find the data you need

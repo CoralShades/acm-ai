@@ -394,27 +394,37 @@ Add to the story's Dev Agent Record:
 - AG Grid dynamic columns from `GET /api/acm/field-schema`
 
 ### Observability Stack
-Three tools, each with a distinct role:
+Six tools, each with a distinct role:
 
 | Tool | When to Use | Key Feature | Data Location |
 |------|------------|-------------|---------------|
 | **Langfuse** (self-hosted) | Production monitoring, cost tracking, trace archive | Per-provider cost breakdown, unlimited retention | Local Docker (`localhost:3000`) |
 | **LangSmith** (cloud) | Dev prompt iteration, auto-tracing all graphs | Prompt playground (edit + re-run), side-by-side comparison | Cloud (smith.langchain.com) |
 | **LangGraph API** (local) | Debug graph state, invoke/inspect threads | Swagger UI at `:2024/docs`, state inspection via REST | Local (`127.0.0.1:2024`) |
+| **Logfire SDK** (dev) | Pydantic validation traces → Langfuse via OTel | See every `model_validate()`, parse error, coercion as a span | Routes to Langfuse (no cloud) |
+| **erdantic** (dev CLI) | Static ER diagrams of Pydantic model relationships | `pip install erdantic` + Graphviz, then `python scripts/generate_model_diagrams.py` → `docs/diagrams/*.svg` | Local SVG files |
+| **JSON Crack** (Docker) | Interactive JSON tree viewer for graph state debugging | Paste JSON or upload `state_dump.json` at `localhost:8888` | Local Docker (`localhost:8888`) |
 
 **When to use which:**
 - **"Why did this extraction produce wrong data?"** → LangSmith (trace the LLM call, edit prompt in playground)
 - **"How much is this costing across all runs?"** → Langfuse (self-hosted, cost/token dashboards)
 - **"What's the graph state right now for thread X?"** → LangGraph API (`GET /threads/{id}/state`)
 - **"Is the pipeline healthy across many documents?"** → Langfuse (historical traces, score trends)
+- **"What did Pydantic do with the LLM output?"** → Logfire (validation spans in Langfuse)
+- **"How do our 60+ models relate?"** → erdantic (`docs/diagrams/*.svg`)
+- **"Let me explore this nested JSON interactively"** → JSON Crack (`localhost:8888`)
 - **Production** → Langfuse only (self-hosted, data stays local — required for government data)
 
 **Code patterns:**
-- Config: `open_notebook/observability/langfuse_config.py`
+- Langfuse config: `open_notebook/observability/langfuse_config.py`
+- Logfire config: `open_notebook/observability/logfire_config.py`
 - Use `langfuse_tracing()` context manager + `merge_langfuse_into_config()` for all new graph invocations in routers
 - Do NOT modify `acm_extraction.py` or `source_commands.py` Langfuse wiring (pre-existing, working)
-- All tracing is non-fatal — app works with Langfuse disabled
+- All tracing is non-fatal — app works with Langfuse/Logfire disabled
 - LangSmith auto-traces via `LANGCHAIN_TRACING_V2=true` env var (zero code changes)
+- Logfire auto-instruments Pydantic v2 when `LOGFIRE_ENABLED=true` (requires Langfuse keys)
+- JSON Crack: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d jsoncrack`
+- State dump: `uv run python scripts/dump_state_json.py <thread_id>` → paste into JSON Crack
 
 ### SSE Streaming (PipelineEventBus)
 - Backend: `open_notebook/extractors/pipeline_event_bus.py`

@@ -177,3 +177,63 @@ Updated to official v3 architecture with 7 services:
 1. Phase 3: Use observability to debug complex issues (#100, #99, #84)
 2. Start API + trigger chat/transformation to verify enriched traces in Langfuse dashboard
 3. `uv run langgraph dev` to access local API Swagger UI for graph state debugging
+
+---
+
+## Session 4: 2026-03-06 — Phase 3: Visualization & Pydantic Tracing
+
+### Completed
+- [x] **Logfire SDK -> Langfuse OTel bridge** — `open_notebook/observability/logfire_config.py`
+  - `init_logfire()` configures Logfire to export Pydantic validation spans to Langfuse via OTel
+  - `send_to_logfire=False` — no Logfire cloud account needed
+  - Reuses existing `LANGFUSE_*` env vars — no new credentials
+  - Non-fatal: returns False if disabled or misconfigured
+  - Wired into `api/main.py` startup (runs before graph imports)
+- [x] **erdantic model diagrams** — `scripts/generate_model_diagrams.py`
+  - Generates SVG ER diagrams for all major Pydantic model families
+  - Outputs to `docs/diagrams/*.svg`
+  - Requires Graphviz system install (one-time)
+- [x] **JSON Crack self-hosted** — added to `docker-compose.observability.yml`
+  - Interactive JSON tree viewer at `localhost:8888`
+  - `scripts/dump_state_json.py` fetches LangGraph thread state for visualization
+- [x] **Environment files updated** — `LOGFIRE_ENABLED=false` added to `.env`, `.env.example`, `.env.example.acm`
+- [x] **CLAUDE.md updated** — Observability Stack table expanded from 3 to 6 tools
+- [x] **pyproject.toml updated** — `logfire>=3.0.0` added to dev deps; erdantic documented as manual install (pygraphviz needs Graphviz C headers)
+- [x] **Ruff lint passes** on all new/modified files
+
+### New Files
+| File | Purpose |
+|------|---------|
+| `open_notebook/observability/logfire_config.py` | Logfire -> Langfuse OTel bridge |
+| `scripts/generate_model_diagrams.py` | erdantic ER diagram generator |
+| `scripts/dump_state_json.py` | LangGraph state -> JSON Crack helper |
+
+### Files Modified
+| File | Action |
+|------|--------|
+| `pyproject.toml` | EDITED — added logfire, erdantic to dev deps |
+| `open_notebook/observability/__init__.py` | EDITED — export init_logfire |
+| `api/main.py` | EDITED — call init_logfire() at startup |
+| `docker-compose.observability.yml` | EDITED — added jsoncrack service |
+| `.env` | EDITED — added LOGFIRE_ENABLED=false |
+| `.env.example` | EDITED — added LOGFIRE_ENABLED section |
+| `.env.example.acm` | EDITED — added LOGFIRE_ENABLED section |
+| `CLAUDE.md` | EDITED — expanded observability table (3->6 tools) |
+| `docs/sprint-artifacts/observability/progress.md` | EDITED — this file |
+| `docs/sprint-artifacts/observability/findings.md` | EDITED — Phase 3 tool assessment |
+| `docs/sprint-artifacts/observability/task_plan.md` | EDITED — Phase 3 tasks marked done |
+
+### Architecture (How Everything Fits)
+```
+Langfuse (:3000) <-- LangChain Callbacks (existing)
+                 <-- Logfire OTel spans (NEW — Pydantic validation)
+FastAPI Backend  --> LangSmith (cloud, auto-trace)
+                 --> LangGraph API (:2024, state inspection)
+                 --> dump_state_json.py --> JSON Crack (:8888)
+erdantic (dev CLI) --> docs/diagrams/*.svg
+```
+
+### Next Steps
+1. Install Graphviz (`winget install graphviz`) and run `uv run python scripts/generate_model_diagrams.py`
+2. Enable `LOGFIRE_ENABLED=true` and trigger an extraction to see Pydantic spans in Langfuse
+3. Phase 4: Use observability to fix complex issues (#100, #99, #84)

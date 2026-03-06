@@ -72,6 +72,7 @@ Resources for extending and contributing to Open Notebook.
 - **[API Reference](development/api-reference.md)** - REST API documentation
 - **[TUI Monitor](development/tui-monitor.md)** - Terminal dashboard for service control and monitoring
 - **[E2E Testing](e2e-testing/README.md)** - Self-healing E2E testing framework (guide, cheat sheet, agents, framework deep dive)
+- **[Observability & Tracing](development/observability.md)** - Six-tool stack: Langfuse, LangSmith, LangGraph API, Logfire, erdantic, JSON Crack — setup, debugging workflows, and issue matrix
 - **[Contributing](development/contributing.md)** - How to contribute
 
 ---

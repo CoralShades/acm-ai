@@ -67,6 +67,11 @@ def main():
 
     sc_worker.configure_logging = _patched_configure_logging
 
+    # Initialize Logfire -> Langfuse OTel bridge (non-fatal, before command imports)
+    from open_notebook.observability.logfire_config import init_logfire
+
+    init_logfire()
+
     # Import and run the worker after encoding is configured
     from surreal_commands.cli.worker import main as worker_main
 

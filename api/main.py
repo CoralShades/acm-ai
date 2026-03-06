@@ -39,6 +39,10 @@ logger.add(
 
 from api.auth import PasswordAuthMiddleware
 from api.model_provisioning import run_model_provisioning
+from open_notebook.observability.logfire_config import init_logfire
+
+# Initialize Logfire -> Langfuse OTel bridge (non-fatal, before graph imports)
+init_logfire()
 from api.routers import (
     a2a,
     acm,
