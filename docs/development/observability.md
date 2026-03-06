@@ -460,17 +460,19 @@ File: `langgraph.json` (project root):
 
 ### How It Works
 
-Logfire auto-instruments Pydantic v2 validation. Every `ACMExtractionRecord.model_validate()`, `BuildingRoomContext()` construction, and failed parse shows up as a span. These spans are sent to Langfuse via OpenTelemetry — no Logfire cloud account needed.
+Logfire exports Pydantic v2 validation spans to Langfuse via OpenTelemetry — no Logfire cloud account needed. When enabled, validation calls appear as spans alongside LangChain traces.
 
 This fills the gap between "what the LLM returned" (Langfuse already captures via LangChain callbacks) and "what Pydantic did with it" (previously invisible).
+
+> **IMPORTANT:** `logfire.instrument_pydantic()` is intentionally NOT called in `logfire_config.py`. See [Trace Explosion Risk](#trace-explosion-risk) below before enabling. Use the selective instrumentation pattern instead.
 
 ### Architecture
 
 ```
-Logfire SDK (logfire.instrument_pydantic())
+Logfire SDK (logfire.instrument_pydantic(include={...}))
     │
     ▼
-Pydantic v2 model_validate() / __init__()
+Pydantic v2 model_validate() / __init__() [ONLY selected models]
     │
     ▼ (OTel spans via OTLP/HTTP — gRPC is NOT supported by Langfuse)
 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = http://localhost:3000/api/public/otel
@@ -478,6 +480,73 @@ OTEL_EXPORTER_OTLP_TRACES_HEADERS  = Authorization=Basic base64(pk:sk)
     │  (SDK auto-appends /v1/traces to the base endpoint)
     ▼
 Langfuse (:3000) — spans appear alongside LangChain traces
+```
+
+### Trace Explosion Risk
+
+**WARNING: Blanket `instrument_pydantic()` causes ~48K Langfuse traces per extraction run.**
+
+Root cause: `logfire.instrument_pydantic()` creates one OTel span per `model_validate()` call across ALL Pydantic models. Docling (the PDF parser) creates a `PdfTextCell` per character and a `BoundingRectangle` per cell — approximately 1,200 cells/page × 20 pages = 24K cells × 2 models = **48K OTel spans**.
+
+Each span arrives at Langfuse's OTel endpoint without a parent trace context (Logfire trace_id ≠ Langfuse SDK traceId — they are separate namespacing systems). So each span becomes its own top-level Langfuse trace. Result: **81,912 traces from a single extraction session**.
+
+This is why `logfire_config.py` does NOT call `instrument_pydantic()`. The OTel bridge is configured and ready — you choose when to enable Pydantic instrumentation.
+
+### Selective Instrumentation Workaround
+
+Instead of blanket instrumentation, instrument only the ACM-specific models you actually want to trace:
+
+```python
+# In a debugging session, call this AFTER init_logfire():
+import logfire
+
+logfire.instrument_pydantic(
+    include={
+        "ACMExtractionRecord",
+        "BuildingRoomContext",
+        "ACMItemRecord",
+        "ACMExtractionResult",
+        "ACMItemExtractionResult",
+        "NormalizedExtractionResult",
+    }
+    # Omits: PdfTextCell, BoundingRectangle, and all LangChain internal models
+    # Result: ~10-50 top-level traces per extraction instead of 48K
+)
+```
+
+You can call this from a debugging script:
+
+```python
+# scripts/debug_pydantic.py — use during a debugging session, not in production
+from dotenv import load_dotenv
+load_dotenv()
+import os; os.environ["LOGFIRE_ENABLED"] = "true"
+
+from open_notebook.observability.logfire_config import init_logfire
+init_logfire()
+
+import logfire
+logfire.instrument_pydantic(
+    include={
+        "ACMExtractionRecord",
+        "BuildingRoomContext",
+        "ACMItemRecord",
+    }
+)
+
+# Now run your extraction — only ACM model validations appear in Langfuse
+from open_notebook.extractors.acm_schemas import ACMExtractionRecord
+record = ACMExtractionRecord.model_validate({...})  # → OTel span in Langfuse
+```
+
+Alternatively, use explicit spans for one-off debugging without any instrumentation:
+
+```python
+import logfire
+
+# Wrap specific validation calls you want to trace
+with logfire.span("debug.validate_acm_record", record_data=raw_dict):
+    record = ACMExtractionRecord.model_validate(raw_dict)
 ```
 
 ### Configuration
@@ -498,7 +567,7 @@ Langfuse (:3000) — spans appear alongside LangChain traces
 
 ### What It Captures
 
-When `LOGFIRE_ENABLED=true`, you'll see spans like:
+With selective instrumentation (see workaround above), you'll see spans in Langfuse like:
 
 ```
 ACMExtractionRecord validate_python    duration: 0.3ms   success
@@ -510,6 +579,8 @@ These appear in Langfuse alongside the LangChain callback spans, giving you a co
 1. What the LLM returned (LangChain span)
 2. How Pydantic parsed/validated it (Logfire OTel span)
 3. Which fields failed and why (Logfire span attributes)
+
+> **Note:** These will be top-level traces in Langfuse (not nested under the extraction trace). This is a known limitation — Logfire's OTel `trace_id` and the Langfuse SDK's `traceId` are separate systems with no automatic correlation. Cross-reference by timestamp.
 
 ### Per-Model Configuration
 

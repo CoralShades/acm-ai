@@ -64,8 +64,24 @@ def init_logfire() -> bool:
         # model_validate() call. Because Logfire OTel spans have no parent
         # trace context linking them to Langfuse SDK traces, each span
         # becomes its own top-level Langfuse trace — causing ~48K traces
-        # per extraction. Use explicit logfire.span() / @logfire.instrument
-        # decorators around specific operations that need tracing instead.
+        # per extraction (Docling creates 1 PdfTextCell per character in the PDF).
+        #
+        # To debug specific Pydantic models, call this AFTER init_logfire():
+        #
+        #   import logfire
+        #   logfire.instrument_pydantic(
+        #       include={
+        #           "ACMExtractionRecord",
+        #           "BuildingRoomContext",
+        #           "ACMItemRecord",
+        #           "ACMExtractionResult",
+        #           "ACMItemExtractionResult",
+        #       }
+        #   )
+        #
+        # This instruments only named ACM models (skips Docling's PdfTextCell /
+        # BoundingRectangle) — ~10-50 traces per run instead of 48K.
+        # See docs/development/observability.md § "Selective Instrumentation Workaround".
 
         _LOGFIRE_INITIALIZED = True
         logger.info(

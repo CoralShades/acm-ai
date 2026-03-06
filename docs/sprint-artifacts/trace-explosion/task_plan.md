@@ -18,11 +18,11 @@ top-level Langfuse trace. During ACM extraction: ~48K field validations = ~48K t
 ## Tasks
 
 - [x] Identify root cause (logfire.instrument_pydantic() blanket instrumentation)
-- [ ] Fix logfire_config.py: remove or limit instrument_pydantic()
-- [ ] Set LOGFIRE_ENABLED=false as default in .env (opt-in only)
-- [ ] Update observability.md to document the trace explosion risk
-- [ ] Verify Langfuse trace count drops to normal after fix
-- [ ] Commit and push fix
+- [x] Fix logfire_config.py: remove instrument_pydantic() — commit 27bd2060
+- [x] Set LOGFIRE_ENABLED=false as default in .env (opt-in only)
+- [x] Commit and push fix
+- [x] Update observability.md to document the trace explosion risk and selective instrumentation workaround
+- [ ] Verify Langfuse trace count drops to normal after restart
 
 ## Decision: Which Fix?
 

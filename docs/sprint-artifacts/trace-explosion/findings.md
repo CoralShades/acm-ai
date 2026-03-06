@@ -3,7 +3,15 @@
 ## Symptom
 47.98K Langfuse traces generated for a single ACM extraction run.
 
-## Evidence Gathered
+## Evidence Gathered (Confirmed by Langfuse API query)
+
+### Actual trace names in Langfuse (from API subagent)
+- ~24,000 traces: "Pydantic **PdfTextCell** validate_python succeeded"
+- ~24,000 traces: "Pydantic **BoundingRectangle** validate_python succeeded"
+- Total in DB: 81,912 traces from a single extraction session (2026-03-06 ~14:47 UTC)
+- Each trace: 1 span, 0.001ms latency — purely Logfire instrumentation overhead
+- Source: **Docling PDF parser** — PdfTextCell = 1 per character in PDF
+  (~1,200 chars/page × 20 pages = 24K cells × 2 models = 48K traces)
 
 ### .env state at time of explosion
 ```
