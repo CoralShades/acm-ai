@@ -59,8 +59,13 @@ def init_logfire() -> bool:
             service_name="acm-ai",
         )
 
-        # Instrument Pydantic models
-        logfire.instrument_pydantic()
+        # NOTE: instrument_pydantic() is intentionally NOT called here.
+        # Blanket Pydantic instrumentation creates an OTel span for every
+        # model_validate() call. Because Logfire OTel spans have no parent
+        # trace context linking them to Langfuse SDK traces, each span
+        # becomes its own top-level Langfuse trace — causing ~48K traces
+        # per extraction. Use explicit logfire.span() / @logfire.instrument
+        # decorators around specific operations that need tracing instead.
 
         _LOGFIRE_INITIALIZED = True
         logger.info(
