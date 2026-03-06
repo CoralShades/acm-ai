@@ -23,6 +23,12 @@ class AGUIEventEmitter:
     SSE endpoint to poll and relay to the frontend.
     """
 
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: Any) -> Any:
+        from pydantic_core import core_schema
+
+        return core_schema.any_schema()
+
     def __init__(self, command_id: str, source_id: str) -> None:
         self.command_id = command_id
         self.source_id = source_id

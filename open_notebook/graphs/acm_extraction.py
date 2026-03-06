@@ -18,7 +18,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from loguru import logger
-from pydantic import ConfigDict, ValidationError
+from pydantic import ValidationError
 from typing_extensions import TypedDict
 
 from open_notebook.database.repository import save_source_intelligence
@@ -430,9 +430,6 @@ def _preprocess_samp_format(
 
 class ExtractionState(TypedDict):
     """State for the ACM extraction graph."""
-
-    # Allow PipelineLogger and AGUIEventEmitter (non-Pydantic classes) in schema generation
-    __pydantic_config__ = ConfigDict(arbitrary_types_allowed=True)  # type: ignore[assignment]
 
     source: Source
     content: str

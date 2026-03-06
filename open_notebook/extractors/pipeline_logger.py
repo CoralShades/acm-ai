@@ -87,9 +87,18 @@ class PipelineLogger:
     """Structured pipeline logger that emits [PIPELINE] log lines.
 
     Each extraction run gets its own PipelineLogger instance (not a singleton).
+
+    The __get_pydantic_core_schema__ classmethod makes this class transparent to
+    Pydantic/LangGraph schema generation (treated as Any, maps to {} in JSON Schema).
     Methods update both terminal output (via loguru) and internal PipelineRunState.
     When command_id is provided, state is persisted to SurrealDB for SSE streaming.
     """
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, handler: Any) -> Any:
+        from pydantic_core import core_schema
+
+        return core_schema.any_schema()
 
     def __init__(
         self,
