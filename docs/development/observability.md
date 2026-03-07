@@ -19,6 +19,7 @@ This document covers the six observability tools used in ACM-AI, how they work t
 - [Wiring Langfuse Into New Graphs](#wiring-langfuse-into-new-graphs)
 - [Registering Graphs in LangGraph API](#registering-graphs-in-langgraph-api)
 - [Troubleshooting](#troubleshooting)
+- [AI Agent Tooling (Primary Knowledgebase)](#ai-agent-tooling-primary-knowledgebase)
 - [Reference Links](#reference-links)
 
 ---
@@ -1027,6 +1028,133 @@ No conflicts. They trace independently:
 - Logfire hooks in via OTel to Langfuse (separate protocol)
 - All three send trace data in parallel without interference
 - Negligible overhead (async HTTP posts)
+
+---
+
+## AI Agent Tooling (Primary Knowledgebase)
+
+> **This section is the primary reference for AI agents working with ACM-AI observability.** Before querying traces, inspecting graph state, or debugging extractions, start here to find the right tool for your task.
+
+### Quick Decision Tree
+
+| You Want To... | Use This | Type |
+|----------------|----------|------|
+| Check if observability services are running | `/observability-status` | Command |
+| See trace waterfall for a source extraction | `/trace-inspect <source_id>` | Command |
+| Root-cause a failed extraction | `/debug-extraction <source_id>` | Command |
+| Analyze costs across models/providers | `/provider-costs` | Command |
+| Inspect LangGraph thread state | `/graph-inspect <thread_id>` | Command |
+| Debug Pydantic validation failures | `/debug-pydantic <source_id>` | Command |
+| Delete old/test traces | `/trace-cleanup --dry-run` | Command |
+| Regenerate ER model diagrams | `/regenerate-diagrams` | Command |
+| Compare extraction accuracy across models | `/benchmark-compare <source_id>` | Command |
+| Preview a prompt template change | `/prompt-test <path>` | Command |
+
+### Dedicated Agents
+
+Three agents are purpose-built for observability tasks. Delegate to them via the `Task` tool:
+
+| Agent | Model | Role | When to Use |
+|-------|-------|------|-------------|
+| `acm-observability-debugger` | sonnet | Root-cause extraction failures via trace data | A specific extraction failed or produced wrong data — need to find why |
+| `acm-trace-analyst` | sonnet | Bulk cost/performance analysis, regression detection | Comparing runs over time, tracking cost trends, finding performance regressions |
+| `acm-graph-inspector` | sonnet | LangGraph thread state inspection | Need to understand what the graph did at runtime — node order, state values, checkpoints |
+
+**Example — Delegate a debug investigation:**
+```
+Task(
+    description="Debug extraction failure",
+    subagent_type="acm-observability-debugger",
+    model="sonnet",
+    prompt="Root-cause why extraction for source:abc123 produced 0 records. Check Langfuse traces, LangGraph state, and Docker logs."
+)
+```
+
+### Skill Reference
+
+The `acm-observability` skill (`.claude/skills/acm-observability/SKILL.md`) is the agent-actionable companion to this document. It contains:
+
+1. **Decision Tree** — maps problems to the right observability tool
+2. **Langfuse Query Patterns** — curl and Python SDK examples with auth
+3. **LangGraph API Patterns** — endpoints for `:2024` (list graphs, get state, dump to JSON Crack)
+4. **Logfire Safety Guardrails** — the `instrument_pydantic(include={...})` safe set and why blanket instrumentation causes 48K traces
+5. **Wiring Patterns** — `langfuse_tracing()` context manager vs manual handler
+6. **Cross-Tool Workflow Recipes** — multi-step debug, cost comparison, Pydantic validation, graph flow inspection
+
+### Rules (Auto-Applied)
+
+The `.claude/rules/observability-ops.md` rules file is automatically applied when editing files matching:
+- `open_notebook/observability/**/*`
+- `scripts/observability/**/*`
+- `scripts/dump_state_json.py`
+- `scripts/generate_model_diagrams.py`
+
+Key rules enforced:
+
+| Rule | Why |
+|------|-----|
+| All tracing code must be in try/except | Tracing must NEVER break extraction |
+| Never `instrument_pydantic()` without `include={}` | Blanket instrumentation = 48K traces per run |
+| New router endpoints must use `langfuse_tracing()` | Consistent tracing across all graphs |
+| Callbacks at invocation site only, never in graph nodes | LangGraph propagates callbacks automatically |
+| Do not modify `acm_extraction.py` or `source_commands.py` wiring | Pre-existing, tested integrations |
+| Use `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` (not generic) | Langfuse OTel only accepts traces, not metrics |
+
+### Pipeline Audit Workflow
+
+To audit the current extraction pipeline and plan changes:
+
+```
+# Step 1: Verify observability is running
+/observability-status
+
+# Step 2: Run an extraction to generate trace data
+# (use the UI or API to extract a known PDF)
+
+# Step 3: Audit the execution
+/graph-inspect                        # see node execution order, state
+/trace-inspect <source_id>            # see timing, cost, correction loops
+/debug-extraction <source_id>         # full cross-tool diagnostic
+
+# Step 4: Plan changes (use these skills)
+# - langgraph-fundamentals            → node/edge wiring patterns
+# - planning-with-files               → create task_plan.md for refactor
+# - acm-extraction-core agent         → delegate graph changes
+
+# Step 5: Modify prompts
+/prompt-test prompts/acm_extraction.jinja2 --preview-only
+
+# Step 6: Validate after changes
+/trace-inspect <source_id>            # compare new waterfall
+/benchmark-compare <source_id>        # accuracy/cost before vs after
+/debug-pydantic <source_id>           # check for parse regressions
+```
+
+### Complementary Skills
+
+| Skill | Relationship to Observability |
+|-------|-------------------------------|
+| `langgraph-fundamentals` | Understand StateGraph, nodes, edges before inspecting graph state |
+| `langchain-fundamentals` | Understand chains and agents that generate the traced LLM calls |
+| `systematic-debugging` | 4-phase root cause methodology — use trace data as evidence |
+| `acm-observability` | Agent-actionable patterns distilled from this document |
+| `planning-with-files` | Track multi-step pipeline changes in `task_plan.md` |
+
+### File Index for Agents
+
+Quick lookup for agents navigating the observability codebase:
+
+| File | What It Does | When to Read |
+|------|-------------|--------------|
+| `open_notebook/observability/langfuse_config.py` | `langfuse_tracing()`, `get_langfuse_handler()`, `merge_langfuse_into_config()` | Wiring new graphs, understanding callback flow |
+| `open_notebook/observability/logfire_config.py` | `init_logfire()`, OTel env var setup | Debugging Pydantic tracing, Logfire config |
+| `open_notebook/observability/langfuse_bridge.py` | `emit_pipeline_event()` for custom LangChain events | Adding pipeline stage events to traces |
+| `open_notebook/observability/__init__.py` | Public API re-exports | Import paths |
+| `scripts/dump_state_json.py` | Dump LangGraph thread state to JSON | `/graph-inspect --dump` |
+| `scripts/generate_model_diagrams.py` | erdantic ER diagrams | `/regenerate-diagrams` |
+| `scripts/observability/setup_langfuse_datasets.py` | Langfuse dataset/prompt setup | Evaluation workflows |
+| `langgraph.json` | Registered graphs (`acm_extraction`, `supervisor`) | Understanding what's available at `:2024` |
+| `docker-compose.observability.yml` | Langfuse v3 stack + JSON Crack containers | Service setup |
 
 ---
 

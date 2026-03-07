@@ -208,3 +208,5 @@ nul*
 /.venv-wsl
 /.venv-mineru
 opencode.json
+.langgraph_api/.langgraph_ops.pckl
+.langgraph_api/.langgraph_ops.pckl
