@@ -37,8 +37,8 @@ The following glossary is embedded in each session prompt so Claude Code doesn't
 | **SalesforcePicklistValidator** | Validates dependent picklist chains (e.g., friability → valid classifications for that friability). Located at `open_notebook/extractors/validators/sf_picklist_validator.py`. |
 | **PipelineEventBus** | SSE event publisher at `open_notebook/extractors/pipeline_event_bus.py`. Publishes extraction progress events consumed by the frontend. |
 | **S2 message fix** | Commit `c5aa555b` that moved document content from Jinja2 templates/SystemMessage to HumanMessage across all 7 LLM call sites. Pattern: SystemMessage = instructions + picklists only (<5K chars), HumanMessage = document content. |
-| **SAMP** | School Asbestos Management Plan — one of two document formats the pipeline handles. |
-| **ARA** | Asbestos Risk Assessment — the other document format. |
+| **SAMP** | School Asbestos Management Plan — one of two document formats the pipeline handles. - Outdated Not Using Anymore|
+| **ARA** | Asbestos Risk Assessment — the other document format. - Outdated Not Using Anymore|
 | **ACM_V3_PROMPTS** | Environment variable feature flag that switches between legacy and V3 extraction paths. V3 is the current path. |
 | **Correction loop** | `correct_records` node at `acm_extraction.py:2358` that uses LLM calls to fix invalid picklist values. Currently wastes 3-5 LLM calls for trivial mappings that `normalize_enum_value()` handles deterministically. |
 

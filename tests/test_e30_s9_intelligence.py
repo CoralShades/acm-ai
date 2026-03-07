@@ -433,14 +433,15 @@ class TestSaveIntelligenceNode:
 
         assert "save_intelligence" in agent_state.nodes
 
-    def test_node_positioned_between_tag_pages_and_orchestrate(self):
-        """Graph edges: tag_pages -> save_intelligence -> extract_building -> extract_items -> [conditional] (AC4, E32-S1/S2)."""
+    def test_node_positioned_between_inventory_and_orchestrate(self):
+        """S4: inventory -> save_intelligence -> extract_building -> extract_items -> [conditional]."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        assert ("tag_pages", "save_intelligence") in edges or any(
-            e == ("tag_pages", "save_intelligence") for e in edges
-        ), "tag_pages must connect to save_intelligence"
+        # S4: inventory connects directly to save_intelligence (tag_pages removed from edge chain)
+        assert ("inventory", "save_intelligence") in edges or any(
+            e == ("inventory", "save_intelligence") for e in edges
+        ), "inventory must connect to save_intelligence (S4)"
         # E32-S1: save_intelligence -> extract_building
         assert ("save_intelligence", "extract_building") in edges or any(
             e == ("save_intelligence", "extract_building") for e in edges

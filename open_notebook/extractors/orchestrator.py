@@ -803,6 +803,7 @@ async def _v3_extract_items(
     building_meta: Optional[Any],
     state: dict,
     schema_bundle: Optional[Any],
+    docling_tables: Optional[List[Dict[str, Any]]] = None,
 ) -> Any:
     """Phase 2: Extract Item__c records using v3_item_extraction.jinja.
 
@@ -854,11 +855,31 @@ async def _v3_extract_items(
 
         from langchain_core.messages import HumanMessage, SystemMessage
 
+        # Build HumanMessage with table priority when Docling tables are available
+        if docling_tables:
+            tables_html = "\n\n".join(
+                f"### Table (Page {t.get('page_start', '?')})\n{t.get('raw_text', '')}"
+                for t in docling_tables
+                if t.get("raw_text")
+            )
+            human_content = (
+                f"## Structured Tables (from PDF extraction — PRIMARY SOURCE)\n\n"
+                f"{tables_html}\n\n"
+                f"## Raw Text (for context only)\n\n"
+                f"{building_content}\n\n"
+                f"Extract all ACM items from the tables above. "
+                f"Use raw text only to resolve ambiguities."
+            )
+        else:
+            human_content = (
+                f"## Document Content\n\n"
+                f"{building_content}\n\n"
+                f"Extract all ACM item records from the building content above."
+            )
+
         messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(
-                content=f"## Document Content\n\n{building_content}\n\nExtract all ACM item records from the building content above."
-            ),
+            HumanMessage(content=human_content),
         ]
 
         raw_response = await model.ainvoke(messages, config=runnable_config)

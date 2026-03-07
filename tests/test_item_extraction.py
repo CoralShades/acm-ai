@@ -107,6 +107,10 @@ async def test_extract_items_node_happy_path():
 
     with (
         patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),
         ),
@@ -179,6 +183,10 @@ async def test_extract_items_node_multiple_buildings():
 
     with (
         patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),
         ),
@@ -210,7 +218,7 @@ async def test_extract_items_node_building_failure():
     call_count = {"n": 0}
     building_meta_result = BuildingExtractionResult(building_name="Building")
 
-    async def flaky_extract(content, plan, bm, st, sb):
+    async def flaky_extract(content, plan, bm, st, sb, **kwargs):
         call_count["n"] += 1
         if call_count["n"] == 1:
             raise RuntimeError("LLM timeout")
@@ -222,6 +230,10 @@ async def test_extract_items_node_building_failure():
         return records_b02
 
     with (
+        patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
         patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),
@@ -255,6 +267,10 @@ async def test_extract_items_node_zero_records():
     building_meta_result = BuildingExtractionResult(building_name="Building B01")
 
     with (
+        patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
         patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),

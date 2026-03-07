@@ -626,13 +626,13 @@ class TestLangGraphIntegration:
         assert "inventory" in node_names
 
     def test_graph_structure_to_inventory_edge(self):
-        """Graph wires structure -> inventory edge."""
+        """S4: Graph wires metadata_and_structure -> inventory edge."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        assert ("structure", "inventory") in edges or any(
-            e == ("structure", "inventory") for e in edges
-        ), "Missing edge: structure -> inventory"
+        assert ("metadata_and_structure", "inventory") in edges or any(
+            e == ("metadata_and_structure", "inventory") for e in edges
+        ), "Missing edge: metadata_and_structure -> inventory (S4)"
 
     @pytest.mark.asyncio
     async def test_compile_inventory_node_with_content(self):

@@ -863,16 +863,14 @@ class TestLangGraphIntegration:
         assert "tag_pages" in graph.nodes
 
     def test_graph_wiring_order(self):
+        """S4: inventory → save_intelligence (page_tags synthesized in inventory node)."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        assert ("inventory", "tag_pages") in edges or any(
-            e == ("inventory", "tag_pages") for e in edges
-        )
-        # E30-S9: tag_pages -> save_intelligence
-        assert ("tag_pages", "save_intelligence") in edges or any(
-            e == ("tag_pages", "save_intelligence") for e in edges
-        ), "tag_pages should connect to save_intelligence (E30-S9)"
+        # S4: inventory now connects directly to save_intelligence (tag_pages removed from edge chain)
+        assert ("inventory", "save_intelligence") in edges or any(
+            e == ("inventory", "save_intelligence") for e in edges
+        ), "inventory should connect to save_intelligence (S4)"
         # E32-S1: save_intelligence -> extract_building
         assert ("save_intelligence", "extract_building") in edges or any(
             e == ("save_intelligence", "extract_building") for e in edges

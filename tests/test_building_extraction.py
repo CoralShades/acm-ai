@@ -194,7 +194,7 @@ async def test_empty_inventory_returns_empty_list(mock_state):
 
     result = await extract_building_node(mock_state, config={})
 
-    assert result == {"building_records": []}
+    assert result == {"building_records": [], "building_meta_cache": {}}
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +213,7 @@ async def test_none_inventory_buildings_returns_empty(mock_state):
 
     result = await extract_building_node(mock_state, config={})
 
-    assert result == {"building_records": []}
+    assert result == {"building_records": [], "building_meta_cache": {}}
 
 
 # ---------------------------------------------------------------------------

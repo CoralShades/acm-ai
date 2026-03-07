@@ -1,0 +1,131 @@
+I'm implementing Session 7 of the ACM pipeline redesign: deterministic SF normalization.
+
+Load skills: /pydantic-models-py, /langgraph-fundamentals
+
+## Context
+
+### The Problem
+The current `correct_records` node (acm_extraction.py:2358) uses LLM calls to fix invalid Salesforce picklist values in extraction output. In the trace audit (see docs/sprint-artifacts/pipeline-audit/trace-audit-report.md), this node made 5 LLM calls just to map `"Good Condition"→"Stable"` — a trivial string mapping.
+Pre Read : @docs\sprint-artifacts\pipeline-audit\trace-audit-report.md , @docs\development\observability.md , @docs\sprint-artifacts\pipeline-audit\findings.md
+
+### Existing Deterministic Tools
+The codebase already has functions that handle these mappings without LLM calls:
+
+1. **`normalize_enum_value(raw_value, field_name)`** at `open_notebook/extractors/normalizers/enums.py:84`
+   - Maps raw LLM output to canonical Salesforce picklist values
+   - Example: `"Good Condition"→"Stable"`, `"Cement products (f)"→"Cement products"`
+   - Uses fuzzy matching for close matches
+
+2. **`SalesforcePicklistValidator`** at `open_notebook/extractors/validators/sf_picklist_validator.py`
+   - Validates dependent picklist chains (e.g., friability determines which classifications are valid)
+   - Has `validate_chain()` method that checks full dependency chains
+
+3. **`load_sf_field_schema()`** at `open_notebook/extractors/parsers/config_loader.py`
+   - Loads Salesforce field definitions from `V3/output/building_fields_summary.md` and `V3/output/item_fields_summary.md`
+   - Provides valid picklist values and dependency rules
+
+### ACMExtractionRecord Model
+Defined in `open_notebook/domain/acm.py`. Key SF-aligned fields that need normalization:
+- `friability` — "Friable" or "Non-friable"
+- `product_classification` — depends on friability
+- `material_condition` — "Stable", "Fair", "Poor", "Severely Damaged"
+- `surface_treatment` — "Painted", "Unpainted", "Coated", etc.
+- `accessibility` — "Accessible", "Inaccessible", "Restricted"
+- `asbestos_determination` — "Confirmed", "Assumed Positive", "Negative"
+- `building_type`, `building_category` — building_category is derived from building_type
+
+### Current Graph Flow (relevant section)
+extract_items → [should_run_orchestrate] → {orchestrate | validate}
+validate → [should_correct] → {correct → validate (loop) | deduplicate}
+
+The new normalize node should go between `extract_items` and `validate`.
+
+## What to Change
+
+### 1. Create normalizer module
+**File**: `open_notebook/extractors/normalizers/sf_normalizer.py`
+
+```python
+def normalize_record_to_sf(record: ACMExtractionRecord) -> ACMExtractionRecord:
+    """Apply deterministic SF picklist normalization to one record."""
+    # 1. Normalize friability first (other fields depend on it)
+    record.friability = normalize_enum_value(record.friability, "friability")
+
+    # 2. Normalize product_classification (constrained by friability)
+    record.product_classification = normalize_enum_value(
+        record.product_classification, "product_classification"
+    )
+
+    # 3. Normalize other picklist fields
+    for field in ["material_condition", "surface_treatment", "accessibility",
+                   "asbestos_determination", "building_type"]:
+        value = getattr(record, field, None)
+        if value:
+            setattr(record, field, normalize_enum_value(value, field))
+
+    # 4. Derive building_category from building_type
+    # (use existing logic or SalesforcePicklistValidator)
+
+    # 5. Business rules: negative determination → condition/disturbance = "N/A"
+    if record.asbestos_determination == "Negative":
+        record.material_condition = "N/A"
+        # ... other N/A fields
+
+    return record
+``` {data-source-line="434"}
+
+### 2. Add `normalize_to_sf_node` to graph
+**File**: `open_notebook/graphs/acm_extraction.py`
+
+```python
+async def normalize_to_sf_node(state: dict, config: RunnableConfig) -> dict:
+    """Deterministic SF picklist normalization — no LLM calls."""
+    records = state.get("records", [])
+    normalized = [normalize_record_to_sf(r) for r in records]
+    return {"records": normalized}
+``` {data-source-line="445"}
+
+Insert into graph topology (around line 3558):
+```python
+# After extract_items, normalize before validate {#after-extract_items-normalize-before-validate  data-source-line="449"}
+agent_state.add_node("normalize_to_sf", normalize_to_sf_node)
+
+# Update edges: extract_items → normalize_to_sf → validate (or orchestrate) {#update-edges-extract_items--normalize_to_sf--validate-or-orchestrate  data-source-line="452"}
+agent_state.add_edge("extract_items", "normalize_to_sf")  # NEW
+agent_state.add_conditional_edges(
+    "normalize_to_sf",  # Changed from "extract_items"
+    should_run_orchestrate,
+    {"orchestrate": "orchestrate", "validate": "validate"},
+)
+``` {data-source-line="459"}
+
+### 3. Optionally reduce correction loop
+After normalization handles most mappings, reduce `max_correction_attempts` from 3 to 1 (or remove the correction loop entirely in S8).
+
+## Verification Checklist
+1. `uv run pytest tests/` passes
+2. After normalization, records have valid SF picklist values
+3. Correction loop has 0 records to correct for common mappings like "Good Condition"→"Stable"
+4. `uv run ruff check .` passes
+5. Run benchmark comparison: correction LLM calls should drop to 0-1
+
+## Files Summary
+- 1 NEW: `open_notebook/extractors/normalizers/sf_normalizer.py`
+- 1 MODIFY: `open_notebook/graphs/acm_extraction.py` (add node + update edges)
+
+| Term | Definition |
+|------|-----------|
+| **Building__c extraction (Phase 1)** | LLM call that extracts building-level metadata (name, type, address, year built) from a building's section of the document. Implemented by `_v3_extract_building_meta()` in `open_notebook/extractors/orchestrator.py:726`. Returns a `BuildingExtractionResult`. |
+| **Item__c extraction (Phase 2)** | LLM call that extracts individual ACM item records (location, product, condition, sample number) from a building's section. Implemented by `_v3_extract_items()` in `open_notebook/extractors/orchestrator.py:800`. Returns a list of `ACMExtractionRecord`. |
+| **ExtractionState** | TypedDict at `open_notebook/graphs/acm_extraction.py:431`. The shared state for all graph nodes. Key fields: `source`, `content`, `document_structure`, `building_inventory`, `page_tags`, `document_metadata`, `records`, `building_records`, `building_meta_cache`. |
+| **building_meta_cache** | Dict field in ExtractionState (`acm_extraction.py:474`) that maps `building_code → BuildingExtractionResult`. Populated by `extract_building_node`, consumed by `extract_items_node` to avoid duplicate Phase 1 LLM calls. Added in S3. |
+| **Pre-extraction stages** | Four sequential LLM calls that analyze the document before per-building extraction: (1) `extract_metadata_node` → `DocumentMeta`, (2) `extract_structure` → `DocumentStructure`, (3) `compile_inventory` → `BuildingInventory`, (4) `tag_page_sections` → `PageTaggingResult`. |
+| **Docling tables** | HTML tables extracted from PDF by the Docling library. Fetched via `_get_docling_tables(source_id, page_start, page_end)` at `orchestrator.py:69`. More accurate than raw text for tabular data. |
+| **SF picklist normalization** | Mapping raw LLM output values to valid Salesforce picklist values. E.g., `"Good Condition"→"Stable"`, `"Cement products (f)"→"Cement products"`. Handled by `normalize_enum_value()` in `open_notebook/extractors/normalizers/enums.py:84`. |
+| **SalesforcePicklistValidator** | Validates dependent picklist chains (e.g., friability → valid classifications for that friability). Located at `open_notebook/extractors/validators/sf_picklist_validator.py`. |
+| **PipelineEventBus** | SSE event publisher at `open_notebook/extractors/pipeline_event_bus.py`. Publishes extraction progress events consumed by the frontend. |
+| **S2 message fix** | Commit `c5aa555b` that moved document content from Jinja2 templates/SystemMessage to HumanMessage across all 7 LLM call sites. Pattern: SystemMessage = instructions + picklists only (<5K chars), HumanMessage = document content. |
+| **SAMP** | School Asbestos Management Plan — one of two document formats the pipeline handles. |
+| **ARA** | Asbestos Risk Assessment — the other document format. |
+| **ACM_V3_PROMPTS** | Environment variable feature flag that switches between legacy and V3 extraction paths. V3 is the current path. |
+| **Correction loop** | `correct_records` node at `acm_extraction.py:2358` that uses LLM calls to fix invalid picklist values. Currently wastes 3-5 LLM calls for trivial mappings that `normalize_enum_value()` handles deterministically. |
