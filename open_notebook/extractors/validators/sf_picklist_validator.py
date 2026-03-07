@@ -48,7 +48,7 @@ class ChainValidationResult(BaseModel):
 
 
 # Internal field name → SF API name mapping for record key lookup.
-# The validator accepts both BAR internal names and SF API names.
+# The validator accepts both internal names and SF API names.
 _FIELD_ALIASES: dict[str, str] = {
     "friable": "Friability_of_Material__c",
     "acm_product_group": "ACM_Classification__c",
@@ -62,23 +62,20 @@ _FIELD_ALIASES: dict[str, str] = {
 }
 
 
-# BAR normalizer produces different casing than SF picklist values.
-# This mapping converts BAR-normalized values to SF picklist values.
-_BAR_TO_SF_VALUE: dict[str, dict[str, str]] = {
+# Common alternate values that need mapping to SF picklist values.
+# Handles legacy casing and alternate spellings from various extraction sources.
+_VALUE_ALIASES: dict[str, dict[str, str]] = {
     "Friability_of_Material__c": {
-        "Non Friable": "Non-friable",  # BAR normalizer uses "Non Friable"
-        "Friable": "Friable",  # Same in both
+        "Non Friable": "Non-friable",  # Space variant → hyphenated SF canonical
+        "Friable": "Friable",
     },
     "Condition__c": {
-        "Good": "Stable",  # BAR "Good" -> SF "Stable"
+        "Good": "Stable",  # Legacy "Good" → SF "Stable"
     },
     "Disturbance_Potential_of_Material__c": {
-        "Medium": "Moderate",  # BAR "Medium" -> SF "Moderate"
+        "Medium": "Moderate",  # "Medium" → SF "Moderate"
     },
-    "Sample_Analysis_Result_Material_Status__c": {
-        # No known BAR-to-SF mismatches for sample_result currently,
-        # but placeholder for future additions.
-    },
+    "Sample_Analysis_Result_Material_Status__c": {},
 }
 
 
@@ -90,9 +87,9 @@ SF_FLAT_ENUM_FIELD_MAP: dict[str, str] = {
     "disturbance_potential": "Disturbance_Potential_of_Material__c",
 }
 
-# BAR-only values absent from SF picklists.
+# Legacy values absent from SF picklists.
 # These should be flagged for user review, not rejected or auto-corrected.
-_BAR_ONLY_VALUES: set[str] = {"Not Sampled", "No Access"}
+_LEGACY_VALUES: set[str] = {"Not Sampled", "No Access"}
 
 
 def _normalize_to_sf_value(value: str, valid_values: list[str]) -> str:
@@ -127,7 +124,7 @@ def normalize_record_to_sf(
     """Normalize all SF-mappable fields to SF-canonical values in-place.
 
     Applies:
-    1. BAR-to-SF value mapping (_BAR_TO_SF_VALUE)
+    1. Value alias mapping (_VALUE_ALIASES)
     2. Case-insensitive normalization to SF picklist canonical casing
 
     Handles both flat enum fields (via SF_FLAT_ENUM_FIELD_MAP) and the
@@ -166,10 +163,10 @@ def normalize_record_to_sf(
 
         normalized = original
 
-        # Step 1a: Apply BAR-to-SF value mapping
-        bar_sf_map = _BAR_TO_SF_VALUE.get(sf_api_name)
-        if bar_sf_map and normalized in bar_sf_map:
-            normalized = bar_sf_map[normalized]
+        # Step 1a: Apply value alias mapping
+        alias_map = _VALUE_ALIASES.get(sf_api_name)
+        if alias_map and normalized in alias_map:
+            normalized = alias_map[normalized]
 
         # Step 1b: Case-insensitive normalization against SF picklist
         sf_values: list[str] = (
@@ -219,7 +216,7 @@ def normalize_record_to_sf(
 def _get_field_value(record: dict, sf_api_name: str) -> Optional[str]:
     """Get a field value from a record, trying SF API name first, then aliases.
 
-    Applies BAR→SF value normalization for known mismatches (e.g., BAR
+    Applies value alias normalization for known mismatches (e.g.,
     "Non Friable" → SF "Non-friable").
     """
     val: Optional[str] = None
@@ -240,8 +237,8 @@ def _get_field_value(record: dict, sf_api_name: str) -> Optional[str]:
     if val is None:
         return None
 
-    # Apply BAR→SF normalization if needed
-    bar_sf_map = _BAR_TO_SF_VALUE.get(sf_api_name)
+    # Apply value alias normalization if needed
+    bar_sf_map = _VALUE_ALIASES.get(sf_api_name)
     if bar_sf_map and val in bar_sf_map:
         val = bar_sf_map[val]
 
@@ -477,10 +474,10 @@ class SalesforcePicklistValidator:
         """Validate flat (non-chain) enum fields against SF picklist values.
 
         Checks sample_result, material_condition, friable, disturbance_potential
-        against SF picklist canonical values (not BAR register_enums.json).
+        against SF picklist canonical values.
 
         Special handling:
-        - "Not Sampled" / "No Access": BAR-only values flagged as needs_user_review
+        - "Not Sampled" / "No Access": Legacy values flagged as needs_user_review
           (not rejected, not auto-corrected).
 
         Args:
@@ -509,8 +506,8 @@ class SalesforcePicklistValidator:
                 # No SF picklist data available for this field — skip
                 continue
 
-            # BAR-only values: flag for user review (non-blocking)
-            if value in _BAR_ONLY_VALUES:
+            # Legacy values: flag for user review (non-blocking)
+            if value in _LEGACY_VALUES:
                 issues.append(
                     ChainValidationIssue(
                         chain_name="flat_enum",

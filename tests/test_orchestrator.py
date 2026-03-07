@@ -1049,14 +1049,14 @@ class TestGraphWiring:
         assert callable(prepare_context)
         assert callable(extract_records)
 
-    def test_unconditional_edge_from_tag_pages(self):
-        """E29-S3/E30-S9/E32-S1/S2: tag_pages -> save_intelligence -> extract_building -> extract_items -> [conditional]."""
+    def test_unconditional_edge_from_inventory(self):
+        """S4: inventory -> save_intelligence -> extract_building -> extract_items -> [conditional]."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        # E30-S9 inserted save_intelligence between tag_pages and orchestrate
-        assert ("tag_pages", "save_intelligence") in edges or any(
-            e == ("tag_pages", "save_intelligence") for e in edges
+        # S4: inventory connects directly to save_intelligence
+        assert ("inventory", "save_intelligence") in edges or any(
+            e == ("inventory", "save_intelligence") for e in edges
         )
         # E32-S1 inserted extract_building after save_intelligence
         assert ("save_intelligence", "extract_building") in edges or any(
@@ -1067,13 +1067,13 @@ class TestGraphWiring:
             e == ("extract_building", "extract_items") for e in edges
         )
 
-    def test_orchestrate_connects_to_validate(self):
-        """orchestrate node should connect to validate."""
+    def test_orchestrate_connects_to_normalize(self):
+        """orchestrate node should connect to normalize_to_sf (then validate)."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        assert ("orchestrate", "validate") in edges or any(
-            e == ("orchestrate", "validate") for e in edges
+        assert ("orchestrate", "normalize_to_sf") in edges or any(
+            e == ("orchestrate", "normalize_to_sf") for e in edges
         )
 
 

@@ -1202,25 +1202,6 @@ class BackfillParentsResponse(BaseModel):
     message: str = Field(..., description="Status message")
 
 
-class FieldMappingEntryRequest(BaseModel):
-    """Single field mapping entry for update requests."""
-
-    bar_column: str = Field(..., min_length=1, description="BAR export column name")
-    bar_column_index: int = Field(..., ge=0, description="0-based column position")
-    acm_field: Optional[str] = Field(None, description="ACMRecord field name")
-    is_computed: bool = Field(default=False)
-    formula: Optional[str] = Field(None)
-
-
-class FieldMappingUpdateRequest(BaseModel):
-    """Request to update field mapping configuration."""
-
-    name: Optional[str] = Field(None, min_length=1, description="Mapping profile name")
-    mappings: Optional[List[FieldMappingEntryRequest]] = Field(
-        None, description="Column mappings"
-    )
-    notes: Optional[str] = None
-
 
 # =============================================================================
 # SF Field Schema Config Models (E30-S1 — V3 Foundation)

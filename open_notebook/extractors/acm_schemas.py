@@ -21,7 +21,7 @@ from open_notebook.extractors.normalizers.enums import (
     normalize_enum_value,
 )
 
-# BAR field enums — canonical allowed values
+# ACM field enums — canonical allowed values
 RESULT_VALUES = {
     "Positive",
     "Assumed Positive",
@@ -145,7 +145,7 @@ class ACMExtractionRecord(BaseModel):
         description="Detailed description of the material (e.g., 'Vinyl floor tiles, grey/white mottled pattern').",
     )
     result: str = Field(
-        description="Asbestos test result using BAR vocabulary: 'Positive', 'Assumed Positive', 'Negative', 'Assumed Negative', 'Unknown'. REQUIRED."
+        description="Asbestos test result: 'Positive', 'Assumed Positive', 'Negative', 'Assumed Negative', 'Unknown'. REQUIRED."
     )
 
     # Optional context fields

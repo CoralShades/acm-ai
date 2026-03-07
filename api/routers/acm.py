@@ -56,7 +56,6 @@ from api.models import (
     ClassifyRequest,
     ClassifyResponse,
     FieldDefResponse,
-    FieldMappingUpdateRequest,
     FieldSchemaConfigResponse,
     FieldSchemaConfigUpdateRequest,
     NormalizeRequest,
@@ -315,24 +314,12 @@ async def trigger_acm_extraction(request: ACMExtractRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def _get_export_mapping() -> tuple[list[str], list[str | None]]:
-    """Get export headers and field names from active field mapping.
+def _get_export_columns() -> tuple[list[str], list[str | None]]:
+    """Return SF export headers and ACMRecord field names.
 
     Returns (headers, fields) where fields[i] is the ACMRecord attribute
-    for headers[i], or None if unmapped.
+    for headers[i].
     """
-    try:
-        from open_notebook.domain.field_mapping import FieldMapping
-
-        mapping = await FieldMapping.get_active()
-        if mapping.mappings:
-            headers = [m.bar_column for m in mapping.mappings]
-            fields = [m.acm_field for m in mapping.mappings]
-            return headers, fields
-    except Exception as e:
-        logger.debug(f"Failed to load field mapping, using defaults: {e}")
-
-    # Fallback to hardcoded defaults
     headers = [
         "Building Code",
         "Building Name",
@@ -415,7 +402,6 @@ async def export_acm_records(
     Export ACM records as CSV file.
 
     Downloads all records for the specified source as a CSV file.
-    Uses active field mapping for column order when available.
     """
     try:
         # Get all records for source
@@ -430,17 +416,14 @@ async def export_acm_records(
                 status_code=404, detail="No ACM records found for source"
             )
 
-        # Get export mapping
-        headers, fields = await _get_export_mapping()
+        headers, fields = _get_export_columns()
 
         # Create CSV in memory
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Write header — use field mapping
         writer.writerow(headers)
 
-        # Write data rows using field mapping
         for record in records:
             writer.writerow([_get_record_value(record, f) for f in fields])
 
@@ -512,8 +495,7 @@ async def export_acm_excel(
         ws = wb.active
         ws.title = "ACM Register"
 
-        # Get columns from active field mapping
-        export_headers, export_fields = await _get_export_mapping()
+        export_headers, export_fields = _get_export_columns()
         columns = [
             (h, f, max(12, len(h) + 2)) for h, f in zip(export_headers, export_fields)
         ]
@@ -2542,56 +2524,6 @@ async def get_taxonomy(
         logger.error(f"Error fetching taxonomy: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# --- Field Mapping Endpoints (E5-S4) ---
-
-
-@router.get("/field-mapping")
-async def get_field_mapping():
-    """Get the active export field mapping."""
-    from open_notebook.domain.field_mapping import FieldMapping
-
-    try:
-        mapping = await FieldMapping.get_active()
-        return mapping.model_dump()
-    except Exception as e:
-        logger.error(f"Error fetching field mapping: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.put("/field-mapping")
-async def update_field_mapping(data: FieldMappingUpdateRequest):
-    """Update the active field mapping."""
-    from open_notebook.domain.field_mapping import FieldMapping, FieldMappingEntry
-
-    try:
-        mapping = await FieldMapping.get_active()
-        if data.mappings is not None:
-            mapping.mappings = [
-                FieldMappingEntry.model_validate(m.model_dump()) for m in data.mappings
-            ]
-        if data.name is not None:
-            mapping.name = data.name
-        if data.notes is not None:
-            mapping.notes = data.notes
-        await mapping.update()
-        return mapping.model_dump()
-    except Exception as e:
-        logger.error(f"Error updating field mapping: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/field-mapping/reset")
-async def reset_field_mapping():
-    """Reset field mapping to defaults."""
-    from open_notebook.domain.field_mapping import FieldMapping
-
-    try:
-        mapping = await FieldMapping.reset_to_defaults()
-        return mapping.model_dump()
-    except Exception as e:
-        logger.error(f"Error resetting field mapping: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # =============================================================================

@@ -1,4 +1,4 @@
-"""Tests for BAR field type safety validators (E2-S11)."""
+"""Tests for ACM field type safety validators (E2-S11)."""
 
 import pytest
 from pydantic import ValidationError

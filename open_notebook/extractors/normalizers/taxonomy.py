@@ -1,8 +1,8 @@
 """
 ACM Product Taxonomy Classification
 
-Classifies ACM (Asbestos Containing Material) products into Victorian BAR
-(Building Asbestos Register) taxonomy groups and types.
+Classifies ACM (Asbestos Containing Material) products into ACM taxonomy
+groups and types.
 
 Classification Strategy:
 1. Pattern-based regex matching for common ACM product types (primary method)
@@ -610,7 +610,7 @@ def classify_product(
     product: Optional[str] = None,
 ) -> ClassificationResult:
     """
-    Classify an ACM item into Victorian BAR taxonomy.
+    Classify an ACM item into ACM taxonomy.
 
     Uses pattern-based regex matching as the primary classification method.
     Falls back to LLM classification if no pattern matches (when implemented).

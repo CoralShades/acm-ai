@@ -9,6 +9,7 @@ Story: E1-S7 AI-Powered ACM Extraction
 
 import asyncio
 import hashlib
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -53,6 +54,10 @@ from open_notebook.extractors.document_structure import (
     DocumentStructure,
     _extract_total_pages,
     extract_document_structure,
+)
+from open_notebook.extractors.metadata_and_structure import (
+    extract_metadata_and_structure,
+    synthesize_page_tags,
 )
 from open_notebook.extractors.metadata_extractor import (
     auto_populate_site_config,
@@ -752,10 +757,107 @@ def _assign_record_page(
     return assigned_page, pos
 
 
+async def metadata_and_structure_node(state: dict, config: RunnableConfig) -> dict:
+    """Combined metadata + structure extraction (S4: merged pre-extraction).
+
+    Replaces separate extract_metadata and structure nodes with a single LLM call.
+    """
+    source: Source = state["source"]
+    content = source.full_text or ""
+    model_id = state.get("model_id")
+    pl = _get_pipeline_logger(state)
+    agui = _get_agui_emitter(state)
+
+    if pl:
+        pl.stage_enter(StageId.STRUCTURE, "Extracting metadata and structure...")
+    if agui:
+        await agui.emit_step_started("metadata_and_structure")
+
+    if not content:
+        logger.warning(
+            f"Source {source.id} has no content for metadata+structure extraction"
+        )
+        if agui:
+            await agui.emit_step_finished("metadata_and_structure")
+        return {"document_metadata": None, "document_structure": None}
+
+    try:
+        metadata, structure = await extract_metadata_and_structure(
+            content, model_id=model_id
+        )
+
+        # PyMuPDF page-count fallback (from existing extract_structure node)
+        if structure.total_pages == 0:
+            pdf_path = (
+                getattr(source.asset, "file_path", None) if source.asset else None
+            )
+            if pdf_path:
+                try:
+                    import fitz  # PyMuPDF
+
+                    with fitz.open(pdf_path) as pdf_doc:
+                        structure.total_pages = len(pdf_doc)
+                    logger.info(
+                        f"[S4] PyMuPDF page-count fallback: {structure.total_pages} pages "
+                        f"for source {source.id}"
+                    )
+                except Exception as fitz_err:
+                    logger.debug(f"PyMuPDF fallback failed: {fitz_err}")
+
+        if metadata:
+            fields_count = len(metadata.get_extracted_fields())
+            consultant = metadata.consultant_name or "unknown"
+            logger.info(
+                f"[S4] Combined extraction for source {source.id}: "
+                f"consultant={consultant}, type={structure.document_type}, "
+                f"register_start={structure.register_start_page}, "
+                f"buildings={len(structure.building_ids)}"
+            )
+            if pl:
+                pl.stage_progress(
+                    StageId.STRUCTURE,
+                    f"Metadata+Structure: consultant={consultant}, type={structure.document_type}",
+                    consultant=consultant,
+                    document_type=structure.document_type,
+                    register_start=structure.register_start_page,
+                    buildings=len(structure.building_ids),
+                )
+            if agui:
+                await agui.emit_state_delta(
+                    [
+                        {
+                            "op": "replace",
+                            "path": "/metadata",
+                            "value": {"consultant": consultant, "fields": fields_count},
+                        },
+                        {
+                            "op": "replace",
+                            "path": "/toc",
+                            "value": {
+                                "type": structure.document_type,
+                                "buildings": len(structure.building_ids),
+                            },
+                        },
+                    ]
+                )
+
+        if agui:
+            await agui.emit_step_finished("metadata_and_structure")
+        return {"document_metadata": metadata, "document_structure": structure}
+    except Exception as e:
+        logger.warning(
+            f"Combined metadata+structure extraction failed for source {source.id}: {e}"
+        )
+        if agui:
+            await agui.emit_step_finished("metadata_and_structure")
+        return {"document_metadata": None, "document_structure": None}
+
+
 async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
     """Extract document metadata as Stage -2 pre-extraction intelligence.
 
     Story: E1-S19 Document Metadata Extraction Enhancement
+    NOTE: Kept for rollback safety. Unreachable in normal graph flow (S4).
     """
     source: Source = state["source"]
     content = source.full_text or ""
@@ -951,14 +1053,31 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
             await agui.emit_step_finished(
                 "inventory", buildings=inventory.total_buildings
             )
-        return {"building_inventory": inventory}
+
+        # S4: Synthesize page_tags from inventory + structure (replaces tag_pages LLM call)
+        page_tags = None
+        if inventory and doc_structure:
+            page_tags = synthesize_page_tags(inventory, doc_structure)
+            logger.info(
+                f"[S4] Synthesized page tags: {len(page_tags.pages)} pages, "
+                f"register_range={page_tags.register_page_range}"
+            )
+            if pl:
+                pl.stage_complete(
+                    StageId.STRUCTURE,
+                    f"Inventory + page tags synthesized: {inventory.total_buildings} buildings",
+                    pages_tagged=len(page_tags.pages),
+                    register_range=str(page_tags.register_page_range),
+                )
+
+        return {"building_inventory": inventory, "page_tags": page_tags}
     except Exception as e:
         logger.warning(
             f"Building inventory compilation failed for source {source.id}: {e}"
         )
         if agui:
             await agui.emit_step_finished("inventory")
-        return {"building_inventory": None}
+        return {"building_inventory": None, "page_tags": None}
 
 
 async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
@@ -1083,11 +1202,15 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
     return {}
 
 
+_MAX_CONCURRENT_BUILDINGS = int(os.getenv("ACM_MAX_CONCURRENT_BUILDINGS", "3"))
+
+
 async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
-    """Phase 1 Building__c extraction: one AI call per building section.
+    """Phase 1 Building__c extraction: concurrent AI calls per building section.
 
     Iterates over state["building_inventory"].buildings and calls
-    _v3_extract_building_meta() for each building, mapping results to
+    _v3_extract_building_meta() for each building concurrently (bounded by
+    ACM_MAX_CONCURRENT_BUILDINGS env var, default 3), mapping results to
     BuildingRecord domain objects and persisting them to the DB.
 
     Story: E32-S1 Building__c AI Extraction Node
@@ -1123,32 +1246,31 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     saved_ids: List[str] = []
     meta_cache: Dict[str, Any] = {}  # building_code -> BuildingExtractionResult
     source_id_str = str(source.id)
+    sem = asyncio.Semaphore(_MAX_CONCURRENT_BUILDINGS)
 
-    for building_meta in inventory.buildings:
-        _bldg_start = time.time()
-        try:
-            # Slice document content to this building's page range
-            page_start = building_meta.page_start
-            page_end = building_meta.page_end or page_start
+    async def _extract_one_building(building_meta_entry):
+        """Extract a single building's metadata (semaphore-bounded)."""
+        async with sem:
+            _bldg_start = time.time()
+            page_start = building_meta_entry.page_start
+            page_end = building_meta_entry.page_end or page_start
             building_content = _extract_building_content(content, page_start, page_end)
 
             if not building_content.strip():
                 logger.warning(
-                    f"[E32-S1] Empty content for building {building_meta.building_id} "
+                    f"[E32-S1] Empty content for building {building_meta_entry.building_id} "
                     f"(pages {page_start}-{page_end}) — skipping"
                 )
-                continue
+                return None
 
-            # Construct a minimal BuildingExtractionPlan so _v3_extract_building_meta
-            # can access building_id and page_range for logging/prompt context
             plan = BuildingExtractionPlan(
-                building_id=building_meta.building_id,
-                building_name=building_meta.name,
+                building_id=building_meta_entry.building_id,
+                building_name=building_meta_entry.name,
                 page_range=(page_start, page_end),
                 strategy=ExtractionStrategy.FULL_LLM,
             )
 
-            # Phase 1 LLM call — returns BuildingExtractionResult or None on failure
+            # Phase 1 LLM call
             result = await _v3_extract_building_meta(
                 building_content=building_content,
                 plan=plan,
@@ -1156,24 +1278,20 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 schema_bundle=schema_bundle,
             )
 
-            # Cache Phase 1 result for reuse in extract_items_node (avoids duplicate LLM call)
-            if result is not None:
-                meta_cache[building_meta.building_id] = result
-
             if result is None:
                 logger.warning(
-                    f"[E32-S1] Phase 1 returned None for building {building_meta.building_id} — skipping"
+                    f"[E32-S1] Phase 1 returned None for building "
+                    f"{building_meta_entry.building_id} — skipping"
                 )
-                continue
+                return None
 
-            # Generate server-side internal ID: BLD#{source_short}_{seq:03d}
+            # Generate server-side internal ID (sequential — safe under asyncio)
             internal_id = await BuildingRecord.generate_internal_id(source_id_str)
 
-            # Map BuildingExtractionResult fields to BuildingRecord domain model
             record = BuildingRecord(
                 internal_id=internal_id,
                 source_id=source_id_str,
-                building_code=building_meta.building_id,
+                building_code=building_meta_entry.building_id,
                 building_name=result.building_name,
                 building_type=result.building_type,
                 building_category=result.building_category,
@@ -1190,18 +1308,17 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
             if not saved_record or not saved_record.id:
                 logger.warning(
                     f"[E32-S1] BuildingRecord.save() returned no ID for building "
-                    f"{building_meta.building_id} — record may not have persisted"
+                    f"{building_meta_entry.building_id} — record may not have persisted"
                 )
-                continue
+                return None
             record_id = str(saved_record.id)
-            saved_ids.append(record_id)
 
             logger.info(
                 f"[E32-S1] Saved BuildingRecord {internal_id} for building "
-                f"{building_meta.building_id} (confidence={result.extraction_confidence})"
+                f"{building_meta_entry.building_id} (confidence={result.extraction_confidence})"
             )
 
-            # E34-S1: Publish ai.building_extracted event for real-time streaming
+            # E34-S1: Publish ai.building_extracted event
             if operation_id:
                 try:
                     _bldg_duration_ms = int((time.time() - _bldg_start) * 1000)
@@ -1210,7 +1327,8 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                             operation_id=operation_id,
                             data=AIBuildingExtractedData(
                                 building_id=internal_id,
-                                building_name=result.building_name or building_meta.building_id,
+                                building_name=result.building_name
+                                or building_meta_entry.building_id,
                                 records_extracted=1,
                                 model_used=model_id or "unknown",
                                 duration_ms=_bldg_duration_ms,
@@ -1220,15 +1338,32 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 except Exception as _pub_err:
                     logger.debug(
                         f"[E34-S1] Failed to publish ai.building_extracted for "
-                        f"{building_meta.building_id}: {_pub_err}"
+                        f"{building_meta_entry.building_id}: {_pub_err}"
                     )
 
-        except Exception as e:
+            return {
+                "record_id": record_id,
+                "building_id": building_meta_entry.building_id,
+                "result": result,
+            }
+
+    # Run all building extractions concurrently (bounded by semaphore)
+    outcomes = await asyncio.gather(
+        *[_extract_one_building(b) for b in inventory.buildings],
+        return_exceptions=True,
+    )
+
+    for outcome in outcomes:
+        if isinstance(outcome, Exception):
             logger.warning(
-                f"[E32-S1] Failed to extract/save building {building_meta.building_id}: {e} "
+                f"[E32-S1] Building extraction task failed: {outcome} "
                 "(skipping — partial results preserved)"
             )
             continue
+        if outcome is None:
+            continue
+        saved_ids.append(outcome["record_id"])
+        meta_cache[outcome["building_id"]] = outcome["result"]
 
     logger.info(
         f"[E32-S1] Building extraction complete for source {source_id_str}: "
@@ -1265,6 +1400,7 @@ async def _chunk_and_extract_items(
     building_meta: Optional[BuildingExtractionResult],
     state: dict,
     schema_bundle: Optional[Any],
+    docling_tables: Optional[List[Dict[str, Any]]] = None,
 ) -> ACMItemExtractionResult:
     """Split oversized building content and merge item results.
 
@@ -1276,7 +1412,8 @@ async def _chunk_and_extract_items(
     """
     if len(building_content) <= _ITEM_EXTRACTION_CHUNK_CHARS:
         return await _v3_extract_items(
-            building_content, plan, building_meta, state, schema_bundle
+            building_content, plan, building_meta, state, schema_bundle,
+            docling_tables=docling_tables,
         )
 
     # Split into N equal-sized char chunks
@@ -1288,7 +1425,8 @@ async def _chunk_and_extract_items(
     final_status = "valid"
     for chunk in chunks:
         result = await _v3_extract_items(
-            chunk, plan, building_meta, state, schema_bundle
+            chunk, plan, building_meta, state, schema_bundle,
+            docling_tables=docling_tables,
         )
         merged_records.extend(result.records)
         if result.status == "invalid":
@@ -1350,57 +1488,63 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
     all_records: List[ACMExtractionRecord] = []
     n_buildings = len(inventory.buildings)
+    meta_cache_state: Dict[str, Any] = state.get("building_meta_cache") or {}
+    sem = asyncio.Semaphore(_MAX_CONCURRENT_BUILDINGS)
 
-    for building_meta in inventory.buildings:
-        try:
-            page_start = building_meta.page_start
-            page_end = building_meta.page_end or page_start
+    async def _extract_items_for_building(building_meta_entry):
+        """Extract items for a single building (semaphore-bounded)."""
+        async with sem:
+            page_start = building_meta_entry.page_start
+            page_end = building_meta_entry.page_end or page_start
 
             building_content = _extract_building_content(content, page_start, page_end)
 
+            # S6: Fetch Docling tables for this building's page range
+            docling_tables = await _get_docling_tables(
+                source_id_str, page_start, page_end
+            )
+
             if not building_content.strip():
                 logger.warning(
-                    f"[E32-S2] Empty content for building {building_meta.building_id} "
+                    f"[E32-S2] Empty content for building {building_meta_entry.building_id} "
                     f"(pages {page_start}-{page_end}) — skipping"
                 )
-                continue
+                return None
 
             plan = BuildingExtractionPlan(
-                building_id=building_meta.building_id,
-                building_name=building_meta.name,
+                building_id=building_meta_entry.building_id,
+                building_name=building_meta_entry.name,
                 page_range=(page_start, page_end),
                 strategy=ExtractionStrategy.FULL_LLM,
             )
 
-            # Look up cached Phase 1 result from extract_building_node.
-            # Falls back to None if cache miss (e.g. Phase 1 failed for this building).
-            meta_cache: Dict[str, Any] = state.get("building_meta_cache") or {}
-            building_meta_result = meta_cache.get(building_meta.building_id)
+            # Look up cached Phase 1 result from extract_building_node
+            building_meta_result = meta_cache_state.get(building_meta_entry.building_id)
 
             # Phase 2: extract items (with chunking if content is large)
             item_result = await _chunk_and_extract_items(
-                building_content, plan, building_meta_result, state, schema_bundle
+                building_content, plan, building_meta_result, state, schema_bundle,
+                docling_tables=docling_tables,
             )
 
             # Normalise V3 SF fields -> ACMExtractionRecord
             records = _normalize_v3_records(building_meta_result, item_result, plan)
 
             # Populate building_record_id FK from lookup map
-            building_record_id = code_to_id_map.get(building_meta.building_id)
+            building_record_id = code_to_id_map.get(building_meta_entry.building_id)
             if building_record_id:
                 for rec in records:
                     rec.building_record_id = building_record_id
 
-            all_records.extend(records)
             logger.info(
-                f"[E32-S2] Building {building_meta.building_id}: {len(records)} items"
+                f"[E32-S2] Building {building_meta_entry.building_id}: {len(records)} items"
             )
 
-            # E34-S1: Publish ai.items_extracted event for real-time streaming
+            # E34-S1: Publish ai.items_extracted event
             if operation_id:
                 try:
                     _internal_id = code_to_internal_id_map.get(
-                        building_meta.building_id, building_meta.building_id
+                        building_meta_entry.building_id, building_meta_entry.building_id
                     )
                     items_rejected = (
                         len(item_result.records) - len(records)
@@ -1420,16 +1564,27 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                 except Exception as _pub_err:
                     logger.debug(
                         f"[E34-S1] Failed to publish ai.items_extracted for "
-                        f"{building_meta.building_id}: {_pub_err}"
+                        f"{building_meta_entry.building_id}: {_pub_err}"
                     )
 
-        except Exception as e:
+            return records
+
+    # Run all item extractions concurrently (bounded by semaphore)
+    outcomes = await asyncio.gather(
+        *[_extract_items_for_building(b) for b in inventory.buildings],
+        return_exceptions=True,
+    )
+
+    for outcome in outcomes:
+        if isinstance(outcome, Exception):
             logger.warning(
-                f"[E32-S2] Failed to extract items for building "
-                f"{building_meta.building_id}: {e} "
+                f"[E32-S2] Item extraction task failed: {outcome} "
                 "(skipping — partial results preserved)"
             )
             continue
+        if outcome is None:
+            continue
+        all_records.extend(outcome)
 
     logger.info(
         f"[E32-S2] Item extraction complete: {len(all_records)} records from "
@@ -2129,8 +2284,32 @@ async def validate_records(state: dict, config: RunnableConfig) -> dict:
     return {"records": validated_records, "records_rejected": rejected_count}
 
 
+async def normalize_to_sf_node(state: dict, config: RunnableConfig) -> dict:
+    """Normalize SF picklist fields before validation.
+
+    Runs deterministic SF normalization (case, synonyms, business rules)
+    to eliminate unnecessary LLM correction calls.
+    """
+    records = state.get("records", [])
+    if not records:
+        return {"records": []}
+    try:
+        from open_notebook.extractors.normalizers.sf_normalizer import (
+            normalize_extraction_records,
+        )
+
+        stats = normalize_extraction_records(records)
+        logger.info(
+            f"[NORMALIZE] {stats['records_modified']}/{stats['total_records']} "
+            f"records, {stats['fields_modified']} fields"
+        )
+    except Exception as e:
+        logger.warning(f"SF normalization failed (non-fatal): {e}")
+    return {"records": records}
+
+
 async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
-    """Validate extracted records against BAR enum values and business rules.
+    """Validate extracted records against SF/BAR enum values and business rules.
 
     Uses acm_validator for strict validation. Records with issues are flagged
     for correction by the corrective loop.
@@ -2328,10 +2507,9 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     if operation_id and _is_final_validation:
         try:
             _validation_duration_ms = int((time.time() - _validate_start) * 1000)
-            _records_corrected = (
-                correction_stats.get("auto_corrected", 0)
-                + correction_stats.get("llm_corrected", 0)
-            )
+            _records_corrected = correction_stats.get(
+                "auto_corrected", 0
+            ) + correction_stats.get("llm_corrected", 0)
             await get_event_bus().publish(
                 AIValidationCompleteEvent(
                     operation_id=operation_id,
@@ -3520,9 +3698,15 @@ def should_save(state: dict) -> str:
 agent_state = StateGraph(ExtractionState)
 
 # Add nodes
+agent_state.add_node(
+    "metadata_and_structure", metadata_and_structure_node
+)  # S4: combined
+agent_state.add_node(
+    "inventory", compile_inventory
+)  # E1-S17: Stage -1.5 (also synthesizes page_tags)
+# Old nodes kept registered for rollback safety (unreachable)
 agent_state.add_node("extract_metadata", extract_metadata_node)  # E1-S19: Stage -2
 agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
-agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
 agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
 agent_state.add_node(
     "save_intelligence", save_intelligence_node
@@ -3538,19 +3722,18 @@ agent_state.add_node(
 )  # E1-S20: Agentic orchestrator (wrapped with E1-S21 logging)
 agent_state.add_node("prepare", prepare_context)
 agent_state.add_node("extract", extract_records)
+agent_state.add_node("normalize_to_sf", normalize_to_sf_node)
 agent_state.add_node("validate", validate_records_strict)
 agent_state.add_node("correct", correct_records)
 agent_state.add_node("deduplicate", deduplicate_records)
 agent_state.add_node("recover_no_access", recover_no_access_node)
 agent_state.add_node("save", save_records)
 
-# Add edges: START → extract_metadata → structure → inventory → tag_pages → prepare → ...
-agent_state.add_edge(START, "extract_metadata")
-agent_state.add_edge("extract_metadata", "structure")
-agent_state.add_edge("structure", "inventory")
-agent_state.add_edge("inventory", "tag_pages")
-# E30-S9: Persist pre-extraction intelligence before orchestrator
-agent_state.add_edge("tag_pages", "save_intelligence")
+# S4: Merged pre-extraction flow (4→2 LLM calls)
+# START → metadata_and_structure (1 LLM) → inventory (1 LLM, synthesizes page_tags) → save_intelligence
+agent_state.add_edge(START, "metadata_and_structure")
+agent_state.add_edge("metadata_and_structure", "inventory")
+agent_state.add_edge("inventory", "save_intelligence")
 # E32-S1: Building__c extraction runs between save_intelligence and extract_items
 agent_state.add_edge("save_intelligence", "extract_building")
 # E32-S2: Item__c extraction runs after building extraction, with conditional fallback
@@ -3558,9 +3741,10 @@ agent_state.add_edge("extract_building", "extract_items")
 agent_state.add_conditional_edges(
     "extract_items",
     should_run_orchestrate,
-    {"orchestrate": "orchestrate", "validate": "validate"},
+    {"orchestrate": "orchestrate", "validate": "normalize_to_sf"},
 )
-agent_state.add_edge("orchestrate", "validate")
+agent_state.add_edge("orchestrate", "normalize_to_sf")
+agent_state.add_edge("normalize_to_sf", "validate")
 # Legacy edges removed — prepare/extract nodes kept but unreachable (AC-5)
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}
 agent_state.add_conditional_edges(
