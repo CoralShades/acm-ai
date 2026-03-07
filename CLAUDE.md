@@ -474,6 +474,16 @@ Custom slash commands are available in `.claude/commands/`:
 | `/logs [service]` | View service logs |
 | `/build [target]` | Build frontend or run backend checks |
 | `/test [path]` | Run pytest tests |
+| `/observability-status` | Health check observability services |
+| `/trace-inspect` | Inspect Langfuse traces for a source extraction |
+| `/trace-cleanup` | Delete Langfuse traces by tag/name/date |
+| `/debug-extraction` | Root-cause debug failed extraction |
+| `/provider-costs` | Analyze costs by provider/model |
+| `/graph-inspect` | Inspect LangGraph thread state |
+| `/debug-pydantic` | Debug Pydantic validation failures |
+| `/regenerate-diagrams` | Regenerate erdantic ER diagrams |
+| `/benchmark-compare` | Compare benchmark results across models |
+| `/prompt-test` | Test prompt template changes |
 
 BMAD workflow commands are also available in `.claude/commands/bmad/`.
 
@@ -489,6 +499,7 @@ Domain-specific rules in `.claude/rules/`:
 | `langgraph-ai.md` | `open_notebook/graphs/**/*`, `prompts/**/*` |
 | `surrealdb.md` | `migrations/**/*`, `open_notebook/database/**/*` |
 | `mcp-servers.md` | `.claude/settings*.json` files |
+| `observability-ops.md` | `open_notebook/observability/**/*`, `scripts/observability/**/*` |
 
 ## MCP Configuration
 
@@ -584,3 +595,11 @@ The `e36-lead` agent orchestrates E2E verification, benchmarking, and auditing:
 | `e36-ux-auditor` | sonnet | Visual/responsive/a11y audit |
 
 State files: `docs/sprint-artifacts/e36/` (task_plan.md, progress.md, findings.md)
+
+#### Observability Agents
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `acm-observability-debugger` | sonnet | Root-cause extraction failures via trace analysis |
+| `acm-trace-analyst` | sonnet | Bulk cost/performance analysis across runs |
+| `acm-graph-inspector` | sonnet | LangGraph thread state inspection |
