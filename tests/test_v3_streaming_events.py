@@ -70,6 +70,7 @@ class TestPipelineEventBusPublish:
     async def test_publish_delivers_to_subscriber(self):
         """publish() delivers the event to a subscribed queue."""
         import asyncio
+
         bus = PipelineEventBus()
 
         # Manually register a queue (like subscribe() does internally)
@@ -107,6 +108,7 @@ class TestPipelineEventBusPublish:
     async def test_publish_only_routes_to_matching_operation(self):
         """Events are only routed to subscribers for the matching operation_id."""
         import asyncio
+
         bus = PipelineEventBus()
 
         queue1: asyncio.Queue = asyncio.Queue()
@@ -135,6 +137,7 @@ class TestExtractionStateHasOperationId:
         import typing
 
         from open_notebook.graphs.acm_extraction import ExtractionState
+
         hints = typing.get_type_hints(ExtractionState)
         assert "operation_id" in hints, (
             "ExtractionState must include 'operation_id' key for E34-S1 streaming"

@@ -6,6 +6,8 @@ from open_notebook.observability.langfuse_config import (
     flush_langfuse_handler,
     get_langfuse_handler,
     is_langfuse_enabled,
+    langfuse_tracing,
+    merge_langfuse_into_config,
 )
 from open_notebook.observability.logfire_config import init_logfire
 
@@ -16,4 +18,6 @@ __all__ = [
     "get_langfuse_handler",
     "init_logfire",
     "is_langfuse_enabled",
+    "langfuse_tracing",
+    "merge_langfuse_into_config",
 ]

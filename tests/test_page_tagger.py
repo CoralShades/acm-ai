@@ -857,11 +857,6 @@ class TestSectionTitles:
 class TestLangGraphIntegration:
     """Test LangGraph pipeline integration (Task 5.10)."""
 
-    def test_graph_has_tag_pages_node(self):
-        from open_notebook.graphs.acm_extraction import graph
-
-        assert "tag_pages" in graph.nodes
-
     def test_graph_wiring_order(self):
         """S4: inventory → save_intelligence (page_tags synthesized in inventory node)."""
         from open_notebook.graphs.acm_extraction import agent_state
@@ -887,46 +882,3 @@ class TestLangGraphIntegration:
 
         annotations = typing.get_type_hints(ExtractionState)
         assert "page_tags" in annotations
-
-    @pytest.mark.asyncio
-    async def test_tag_page_sections_node_empty_content(self):
-        from unittest.mock import MagicMock
-
-        from open_notebook.graphs.acm_extraction import tag_page_sections
-
-        mock_source = MagicMock()
-        mock_source.id = "test:123"
-        mock_source.full_text = ""
-
-        state = {
-            "source": mock_source,
-            "model_id": None,
-            "document_structure": None,
-            "building_inventory": None,
-        }
-        config = MagicMock()
-
-        result = await tag_page_sections(state, config)
-        assert result["page_tags"] is None
-
-    @pytest.mark.asyncio
-    async def test_tag_page_sections_node_with_content(self):
-        from unittest.mock import MagicMock
-
-        from open_notebook.graphs.acm_extraction import tag_page_sections
-
-        mock_source = MagicMock()
-        mock_source.id = "test:456"
-        mock_source.full_text = SAMPLE_CONTENT
-
-        state = {
-            "source": mock_source,
-            "model_id": None,
-            "document_structure": None,
-            "building_inventory": None,
-        }
-        config = MagicMock()
-
-        result = await tag_page_sections(state, config)
-        assert result["page_tags"] is not None
-        assert len(result["page_tags"].pages) > 0

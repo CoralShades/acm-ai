@@ -1,7 +1,7 @@
 """
 Unit tests for E32-S2: Item__c AI Extraction Node.
 
-Tests extract_items_node, _chunk_and_extract_items, and should_run_orchestrate
+Tests extract_items_node and _chunk_and_extract_items
 using mocked LLM calls — no live SurrealDB required.
 
 Story: E32-S2 Item__c AI Extraction Node
@@ -25,7 +25,6 @@ from open_notebook.graphs.acm_extraction import (
     _ITEM_EXTRACTION_CHUNK_CHARS,
     _chunk_and_extract_items,
     extract_items_node,
-    should_run_orchestrate,
 )
 
 # ---------------------------------------------------------------------------
@@ -343,31 +342,6 @@ async def test_chunk_and_extract_items_large():
     # 3 calls × 2 records each = 6 merged records
     assert len(result.records) == 6
     assert result.status == "valid"
-
-
-# ---------------------------------------------------------------------------
-# Tests: should_run_orchestrate
-# ---------------------------------------------------------------------------
-
-
-def test_should_run_orchestrate_no_inventory():
-    """Returns 'orchestrate' when building_inventory is None."""
-    state = {"building_inventory": None, "items_extracted": False}
-    assert should_run_orchestrate(state) == "orchestrate"
-
-
-def test_should_run_orchestrate_not_extracted():
-    """Returns 'orchestrate' when items_extracted=False with a valid inventory."""
-    inventory = _make_inventory(("B01",))
-    state = {"building_inventory": inventory, "items_extracted": False}
-    assert should_run_orchestrate(state) == "orchestrate"
-
-
-def test_should_run_orchestrate_extracted():
-    """Returns 'validate' when items_extracted=True with a valid inventory."""
-    inventory = _make_inventory(("B01",))
-    state = {"building_inventory": inventory, "items_extracted": True}
-    assert should_run_orchestrate(state) == "validate"
 
 
 # ---------------------------------------------------------------------------

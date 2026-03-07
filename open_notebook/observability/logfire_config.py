@@ -19,10 +19,7 @@ def init_logfire() -> bool:
     if _LOGFIRE_INITIALIZED:
         return True
 
-    if (
-        os.getenv("LOGFIRE_ENABLED", "false").strip().lower()
-        not in _TRUE_VALUES
-    ):
+    if os.getenv("LOGFIRE_ENABLED", "false").strip().lower() not in _TRUE_VALUES:
         return False
 
     langfuse_base = os.getenv("LANGFUSE_BASE_URL", "http://localhost:3000")

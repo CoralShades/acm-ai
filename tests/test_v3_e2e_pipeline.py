@@ -108,6 +108,11 @@ async def _run_v3_extraction_mocked(
         dict with keys: result, building_records, acm_records, table_sections
     """
     from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
+    from open_notebook.extractors.building_inventory import (
+        BuildingInventory,
+        BuildingMeta,
+        ProcessingGroup,
+    )
     from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
     if docling_tables is None:
@@ -140,6 +145,30 @@ async def _run_v3_extraction_mocked(
 
     async def mock_generate_internal_id(source_id):
         return f"BLD#E32S5_{len(building_records):03d}"
+
+    # Provide a valid building inventory so the pipeline proceeds past the
+    # inventory stage (heuristic regex won't match generic "A1" building IDs).
+    mock_inventory = BuildingInventory(
+        buildings=[
+            BuildingMeta(
+                building_id="A1",
+                name="Admin Block",
+                page_start=1,
+                page_end=1,
+                rooms=[],
+            )
+        ],
+        processing_groups=[
+            ProcessingGroup(
+                group_id=0,
+                building_ids=["A1"],
+                page_start=1,
+                page_end=1,
+                estimated_pages=1,
+            )
+        ],
+        total_buildings=1,
+    )
 
     mock_llm = _make_mock_v3_llm()
 
@@ -175,6 +204,10 @@ async def _run_v3_extraction_mocked(
         patch(
             "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
             AsyncMock(return_value=building_records),
+        ),
+        patch(
+            "open_notebook.graphs.acm_extraction.compile_building_inventory",
+            AsyncMock(return_value=mock_inventory),
         ),
     ):
         result = await extract_acm_from_source(source=source, force=False)
@@ -337,7 +370,9 @@ class TestRawExtractionStorage:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        _, _ = await _run_dual_provider_extraction("source:raw_test_001", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction(
+            "source:raw_test_001", "/tmp/test.pdf"
+        )
 
         # Called once per provider (docling + mineru)
         assert mock_store_raw.call_count == 2
@@ -359,7 +394,9 @@ class TestRawExtractionStorage:
         )
         mock_registry.return_value.get_provider.return_value = mock_docling
 
-        _, _ = await _run_dual_provider_extraction("source:raw_test_002", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction(
+            "source:raw_test_002", "/tmp/test.pdf"
+        )
 
         assert mock_store_raw.call_count == 1
 

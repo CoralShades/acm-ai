@@ -48,7 +48,14 @@ SOURCES = {
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "docs" / "sprint-artifacts" / "e36" / "benchmark-results"
-GT_BROADMEADOWS = PROJECT_ROOT / "tests" / "e2e" / "fixtures" / "samps" / "broadmeadows-expected-results.json"
+GT_BROADMEADOWS = (
+    PROJECT_ROOT
+    / "tests"
+    / "e2e"
+    / "fixtures"
+    / "samps"
+    / "broadmeadows-expected-results.json"
+)
 GT_ALEXANDER = PROJECT_ROOT / "docs" / "samplePDF" / "Alexander_GroundTruth.csv"
 
 
@@ -97,7 +104,9 @@ def normalize(val) -> str:
     return str(val).lower().strip()
 
 
-def match_records(extracted: list[dict], ground_truth: list[dict], pdf_name: str) -> tuple[int, dict]:
+def match_records(
+    extracted: list[dict], ground_truth: list[dict], pdf_name: str
+) -> tuple[int, dict]:
     """Match extracted records to ground truth and compute field accuracy."""
     matched = 0
     total_field_checks = 0
@@ -126,9 +135,9 @@ def match_records(extracted: list[dict], ground_truth: list[dict], pdf_name: str
             if pdf_name == "alexander":
                 gt_building = normalize(gt.get("building_name", ""))
                 building_sim = fuzzy_match(ext_building, gt_building)
-                score = (building_sim * 0.3 + room_sim * 0.4 + product_sim * 0.3)
+                score = building_sim * 0.3 + room_sim * 0.4 + product_sim * 0.3
             else:
-                score = (room_sim * 0.5 + product_sim * 0.5)
+                score = room_sim * 0.5 + product_sim * 0.5
 
             if score > best_score:
                 best_score = score
@@ -169,9 +178,17 @@ def match_records(extracted: list[dict], ground_truth: list[dict], pdf_name: str
 
     field_accuracy = {}
     for f in field_total:
-        field_accuracy[f] = round(100 * field_correct.get(f, 0) / field_total[f], 1) if field_total[f] else 0.0
+        field_accuracy[f] = (
+            round(100 * field_correct.get(f, 0) / field_total[f], 1)
+            if field_total[f]
+            else 0.0
+        )
 
-    overall = round(100 * correct_field_checks / total_field_checks, 1) if total_field_checks else 0.0
+    overall = (
+        round(100 * correct_field_checks / total_field_checks, 1)
+        if total_field_checks
+        else 0.0
+    )
     return matched, {"overall": overall, "per_field": field_accuracy}
 
 
@@ -246,7 +263,9 @@ def poll_extraction(command_id: str, source_id: str, timeout: int = 600) -> str:
                         if resp2.status_code == 200:
                             count2 = resp2.json().get("total", 0)
                             if count2 >= count:
-                                print(f"    Stable at {count2} records — extraction complete")
+                                print(
+                                    f"    Stable at {count2} records — extraction complete"
+                                )
                                 return "completed"
             except requests.RequestException:
                 pass
@@ -303,7 +322,9 @@ def write_run_detail(result: RunResult):
 
     lines.extend(["", f"## Extracted Records ({result.records_extracted} total)", ""])
     for i, rec in enumerate(result.extracted_records[:10], 1):
-        lines.append(f"{i}. {rec.get('building_name', '?')} / {rec.get('room_name', '?')} / {rec.get('product', '?')}")
+        lines.append(
+            f"{i}. {rec.get('building_name', '?')} / {rec.get('room_name', '?')} / {rec.get('product', '?')}"
+        )
     if result.records_extracted > 10:
         lines.append(f"... and {result.records_extracted - 10} more")
 
@@ -350,26 +371,30 @@ def write_summary(results: list[RunResult]):
         avg_recall = sum(r.record_recall_pct for r in runs) / len(runs)
         avg_field = sum(r.field_scores.get("overall", 0) for r in runs) / len(runs)
         avg_time = sum(r.elapsed_seconds for r in runs) / len(runs)
-        composite = (avg_recall * 0.5 + avg_field * 0.5)
+        composite = avg_recall * 0.5 + avg_field * 0.5
         if composite > best_score:
             best_score = composite
             best_model = model
-        lines.append(f"| {model} | {avg_recall:.1f} | {avg_field:.1f} | {avg_time:.0f} |")
+        lines.append(
+            f"| {model} | {avg_recall:.1f} | {avg_field:.1f} | {avg_time:.0f} |"
+        )
 
-    lines.extend([
-        "",
-        "## Best Performing Model",
-        "",
-        f"**{best_model}** with composite score {best_score:.1f}% "
-        f"(50% recall + 50% field accuracy)",
-        "",
-        "## Methodology",
-        "",
-        "- Each model ran extraction with `force=true` (clean slate per run)",
-        "- Record matching uses fuzzy string similarity (threshold: 0.5)",
-        "- Field accuracy uses fuzzy match (threshold: 0.8 for correct)",
-        "- Composite score = 50% record recall + 50% field accuracy",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Best Performing Model",
+            "",
+            f"**{best_model}** with composite score {best_score:.1f}% "
+            f"(50% recall + 50% field accuracy)",
+            "",
+            "## Methodology",
+            "",
+            "- Each model ran extraction with `force=true` (clean slate per run)",
+            "- Record matching uses fuzzy string similarity (threshold: 0.5)",
+            "- Field accuracy uses fuzzy match (threshold: 0.8 for correct)",
+            "- Composite score = 50% record recall + 50% field accuracy",
+        ]
+    )
 
     path.write_text("\n".join(lines), encoding="utf-8")
     print(f"\nSummary written: {path}")
@@ -387,9 +412,9 @@ def run_benchmark(model_name: str, pdf_name: str, timeout: int) -> RunResult:
         ground_truth_count=31 if pdf_name == "broadmeadows" else 43,
     )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {model_name} x {pdf_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # 1. Set model
     print(f"  Setting extraction model to {model_name} ({model_id})...")
@@ -451,11 +476,17 @@ def run_benchmark(model_name: str, pdf_name: str, timeout: int) -> RunResult:
 
     matched, field_scores = match_records(records, gt, pdf_name)
     result.matched_records = matched
-    result.record_recall_pct = round(100 * matched / result.ground_truth_count, 1) if result.ground_truth_count else 0.0
+    result.record_recall_pct = (
+        round(100 * matched / result.ground_truth_count, 1)
+        if result.ground_truth_count
+        else 0.0
+    )
     result.field_scores = field_scores
     result.field_accuracy_pct = field_scores.get("overall", 0.0)
 
-    print(f"  Matched: {matched}/{result.ground_truth_count} ({result.record_recall_pct:.1f}% recall)")
+    print(
+        f"  Matched: {matched}/{result.ground_truth_count} ({result.record_recall_pct:.1f}% recall)"
+    )
     print(f"  Field accuracy: {result.field_accuracy_pct:.1f}%")
 
     # 6. Write detail file
@@ -467,7 +498,9 @@ def main():
     parser = argparse.ArgumentParser(description="E36-S4 Ollama Multi-Model Benchmark")
     parser.add_argument("--model", help="Run only this model")
     parser.add_argument("--pdf", help="Run only this PDF (broadmeadows/alexander)")
-    parser.add_argument("--timeout", type=int, default=600, help="Max seconds per extraction")
+    parser.add_argument(
+        "--timeout", type=int, default=600, help="Max seconds per extraction"
+    )
     args = parser.parse_args()
 
     # Validate API is up
@@ -483,7 +516,9 @@ def main():
     pdfs = {args.pdf: SOURCES[args.pdf]} if args.pdf else SOURCES
 
     total_runs = len(models) * len(pdfs)
-    print(f"\nE36-S4 Benchmark: {len(models)} models x {len(pdfs)} PDFs = {total_runs} runs")
+    print(
+        f"\nE36-S4 Benchmark: {len(models)} models x {len(pdfs)} PDFs = {total_runs} runs"
+    )
     print(f"Timeout per run: {args.timeout}s")
 
     results = []
@@ -501,20 +536,22 @@ def main():
     raw_path = RESULTS_DIR / "raw_results.json"
     raw_data = []
     for r in results:
-        raw_data.append({
-            "model": r.model,
-            "pdf": r.pdf,
-            "status": r.status,
-            "records_extracted": r.records_extracted,
-            "ground_truth_count": r.ground_truth_count,
-            "matched_records": r.matched_records,
-            "record_recall_pct": r.record_recall_pct,
-            "field_accuracy_pct": r.field_accuracy_pct,
-            "elapsed_seconds": r.elapsed_seconds,
-            "field_scores": r.field_scores,
-            "error": r.error,
-            "command_id": r.command_id,
-        })
+        raw_data.append(
+            {
+                "model": r.model,
+                "pdf": r.pdf,
+                "status": r.status,
+                "records_extracted": r.records_extracted,
+                "ground_truth_count": r.ground_truth_count,
+                "matched_records": r.matched_records,
+                "record_recall_pct": r.record_recall_pct,
+                "field_accuracy_pct": r.field_accuracy_pct,
+                "elapsed_seconds": r.elapsed_seconds,
+                "field_scores": r.field_scores,
+                "error": r.error,
+                "command_id": r.command_id,
+            }
+        )
     raw_path.write_text(json.dumps(raw_data, indent=2), encoding="utf-8")
     print(f"Raw results: {raw_path}")
 

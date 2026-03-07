@@ -25,7 +25,9 @@ def generate_all():
     try:
         import erdantic as erd
     except ImportError:
-        print("erdantic not installed. Run: uv pip install erdantic (requires pygraphviz + Graphviz)")
+        print(
+            "erdantic not installed. Run: uv pip install erdantic (requires pygraphviz + Graphviz)"
+        )
         return
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

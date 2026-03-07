@@ -550,13 +550,6 @@ class TestLangGraphIntegration:
         annotations = ExtractionState.__annotations__
         assert "document_structure" in annotations
 
-    def test_graph_has_structure_node(self):
-        """Graph should include the structure extraction node."""
-        from open_notebook.graphs.acm_extraction import graph
-
-        # The compiled graph should have a "structure" node
-        assert "structure" in graph.nodes
-
     def test_graph_structure_before_prepare(self):
         """S4: Combined metadata_and_structure node wired before inventory."""
         from open_notebook.graphs.acm_extraction import agent_state
@@ -582,49 +575,6 @@ class TestLangGraphIntegration:
         assert ("extract_building", "extract_items") in edges or any(
             e == ("extract_building", "extract_items") for e in edges
         ), "extract_building should connect to extract_items (E32-S2)"
-
-    @pytest.mark.asyncio
-    async def test_extract_structure_node_with_empty_content(self):
-        """Structure node should handle source with no content gracefully."""
-        from open_notebook.graphs.acm_extraction import extract_structure
-
-        mock_source = MagicMock()
-        mock_source.id = "test:123"
-        mock_source.full_text = ""
-
-        state = {"source": mock_source, "model_id": None}
-        config = MagicMock()
-
-        result = await extract_structure(state, config)
-        assert result["document_structure"] is None
-
-    @pytest.mark.asyncio
-    async def test_extract_structure_node_returns_structure(self):
-        """Structure node should return DocumentStructure on success."""
-        from open_notebook.graphs.acm_extraction import extract_structure
-
-        mock_source = MagicMock()
-        mock_source.id = "test:456"
-        mock_source.full_text = (
-            "--- Page 1 ---\nSome content\n--- Page 5 ---\nMore content"
-        )
-
-        state = {"source": mock_source, "model_id": None}
-        config = MagicMock()
-
-        mock_structure = DocumentStructure(
-            document_type=DocumentType.SAMP,
-            total_pages=5,
-        )
-
-        with patch(
-            "open_notebook.graphs.acm_extraction.extract_document_structure",
-            new_callable=AsyncMock,
-            return_value=mock_structure,
-        ):
-            result = await extract_structure(state, config)
-            assert result["document_structure"] is not None
-            assert result["document_structure"].document_type == DocumentType.SAMP
 
 
 class TestSectionTaxonomy:

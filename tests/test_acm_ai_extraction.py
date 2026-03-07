@@ -214,52 +214,6 @@ class TestACMRecordModel:
         assert record.data_issues is None
 
 
-class TestChunkingLogic:
-    """Test suite for content chunking."""
-
-    def test_chunk_small_content(self):
-        """Test that small content is not chunked."""
-        from open_notebook.graphs.acm_extraction import _chunk_content
-
-        content = "This is a small piece of content."
-        chunks = _chunk_content(content)
-
-        assert len(chunks) == 1
-        assert chunks[0]["content"] == content
-        assert chunks[0]["chunk_index"] == 0
-
-    def test_chunk_by_page_markers(self):
-        """Test chunking by page markers when content exceeds threshold."""
-        from open_notebook.graphs.acm_extraction import _chunk_content
-
-        # Create content large enough to trigger chunking (>50% of context window)
-        # With context_window=50, threshold is 25 tokens
-        # Each page needs enough content to be meaningful
-        content = """--- Page 1 ---
-This is page one with plenty of content to make it worth chunking.
-We need enough text here to exceed the 50% threshold of the context window.
-Adding more lines to ensure we have substantial content for testing.
-
---- Page 2 ---
-Page two also has lots of content for the chunking algorithm to process.
-The algorithm should split this at page boundaries when the total exceeds threshold.
-More content here to pad out the page and ensure proper token counts.
-
---- Page 3 ---
-The third page completes our test document with additional material.
-This should result in three separate chunks when the context is small enough.
-Final lines of content to ensure adequate length for testing purposes."""
-
-        # Use very small context window to force chunking
-        chunks = _chunk_content(content, context_window=50)
-
-        # With such a small window, content should be chunked
-        assert len(chunks) >= 1
-
-        # The first chunk should have page_number 1
-        assert chunks[0]["page_number"] == 1
-
-
 class TestDeduplicationLogic:
     """Test suite for record deduplication."""
 

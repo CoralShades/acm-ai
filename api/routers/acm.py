@@ -2525,7 +2525,6 @@ async def get_taxonomy(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 # =============================================================================
 # SF Field Schema Endpoint (E30-S1 — V3 Foundation)
 # =============================================================================

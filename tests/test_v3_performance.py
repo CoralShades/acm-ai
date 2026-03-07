@@ -214,9 +214,7 @@ class TestCleanupCalled:
     @patch.dict(os.environ, {"V3_DUAL_PROVIDER": "true", "MINERU_ENABLED": "true"})
     @patch("commands.source_commands._store_raw_extractions", new_callable=AsyncMock)
     @patch("commands.source_commands.get_provider_registry")
-    async def test_mineru_cleanup_called_dual_provider(
-        self, mock_registry, mock_store
-    ):
+    async def test_mineru_cleanup_called_dual_provider(self, mock_registry, mock_store):
         """MinerU cleanup called in dual-provider mode."""
         from commands.source_commands import _run_dual_provider_extraction
 
@@ -299,9 +297,7 @@ class TestGpuCacheFlush:
         mock_torch.cuda.is_available.return_value = True
 
         with patch("commands.source_commands._torch", mock_torch):
-            await _run_dual_provider_extraction(
-                "source:gpu_test", "/tmp/fake.pdf"
-            )
+            await _run_dual_provider_extraction("source:gpu_test", "/tmp/fake.pdf")
 
         mock_torch.cuda.empty_cache.assert_called_once()
 
@@ -325,9 +321,7 @@ class TestGpuCacheFlush:
         mock_torch.cuda.is_available.return_value = False
 
         with patch("commands.source_commands._torch", mock_torch):
-            await _run_dual_provider_extraction(
-                "source:gpu_test", "/tmp/fake.pdf"
-            )
+            await _run_dual_provider_extraction("source:gpu_test", "/tmp/fake.pdf")
 
         mock_torch.cuda.empty_cache.assert_not_called()
 
@@ -335,9 +329,7 @@ class TestGpuCacheFlush:
     @patch.dict(os.environ, {"V3_DUAL_PROVIDER": "true", "MINERU_ENABLED": "true"})
     @patch("commands.source_commands._store_raw_extractions", new_callable=AsyncMock)
     @patch("commands.source_commands.get_provider_registry")
-    async def test_cuda_flush_skipped_when_torch_none(
-        self, mock_registry, mock_store
-    ):
+    async def test_cuda_flush_skipped_when_torch_none(self, mock_registry, mock_store):
         """When _torch is None (not installed), no AttributeError is raised."""
         from commands.source_commands import _run_dual_provider_extraction
 
@@ -373,9 +365,7 @@ class TestGpuCacheFlush:
         mock_torch.cuda.is_available.return_value = True
 
         with patch("commands.source_commands._torch", mock_torch):
-            await _run_dual_provider_extraction(
-                "source:gpu_test", "/tmp/fake.pdf"
-            )
+            await _run_dual_provider_extraction("source:gpu_test", "/tmp/fake.pdf")
 
         # Flush only happens between providers; single-provider => no flush
         mock_torch.cuda.empty_cache.assert_not_called()
@@ -416,9 +406,7 @@ class TestMemoryLeakGuard:
         before = gc.get_count()
 
         for _ in range(10):
-            await _run_dual_provider_extraction(
-                "source:leak_test", "/tmp/fake.pdf"
-            )
+            await _run_dual_provider_extraction("source:leak_test", "/tmp/fake.pdf")
 
         gc.collect()
         gc.collect()

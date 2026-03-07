@@ -31,7 +31,9 @@ def dump_thread_state(thread_id: str, output: str = "state_dump.json"):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: uv run python scripts/dump_state_json.py <thread_id> [output_file]")
+        print(
+            "Usage: uv run python scripts/dump_state_json.py <thread_id> [output_file]"
+        )
         sys.exit(1)
     out = sys.argv[2] if len(sys.argv) > 2 else "state_dump.json"
     dump_thread_state(sys.argv[1], out)

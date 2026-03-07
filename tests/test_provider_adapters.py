@@ -187,6 +187,9 @@ class TestExtractionProviderProtocol:
             def get_field_confidence(self) -> Dict[str, float]:
                 return {}
 
+            def cleanup(self) -> None:
+                pass
+
         provider = FakeProvider()
         assert isinstance(provider, ExtractionProvider)
 
@@ -448,6 +451,9 @@ class TestProviderRegistry:
 
             def get_field_confidence(self) -> Dict[str, float]:
                 return {}
+
+            def cleanup(self) -> None:
+                pass
 
         return _Provider(pid)
 

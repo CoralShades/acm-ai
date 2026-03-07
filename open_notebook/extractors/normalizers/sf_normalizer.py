@@ -10,9 +10,7 @@ from typing import Optional
 from loguru import logger
 
 
-def normalize_extraction_record(
-    record, schema_bundle=None
-) -> list[str]:
+def normalize_extraction_record(record, schema_bundle=None) -> list[str]:
     """Normalize all SF picklist fields on an ACMExtractionRecord in-place.
 
     Steps:
@@ -35,7 +33,9 @@ def normalize_extraction_record(
     try:
         # Fields to normalize
         field_names = [
-            "sample_result", "material_condition", "friable",
+            "sample_result",
+            "material_condition",
+            "friable",
             "disturbance_potential",
         ]
 
@@ -85,7 +85,8 @@ def normalize_extraction_record(
             for clear_field in ("material_condition", "disturbance_potential"):
                 current = record_dict.get(clear_field, originals.get(clear_field))
                 if current and current not in {
-                    "N/A (negative)", "N/A (assumed negative)"
+                    "N/A (negative)",
+                    "N/A (assumed negative)",
                 }:
                     record_dict[clear_field] = na_value
 
@@ -97,9 +98,7 @@ def normalize_extraction_record(
             if new_val is not None and new_val != old_val:
                 setattr(record, f, new_val)
                 modified.append(f)
-                change_messages.append(
-                    f"SF normalized: {f} '{old_val}' -> '{new_val}'"
-                )
+                change_messages.append(f"SF normalized: {f} '{old_val}' -> '{new_val}'")
 
         # Step 5: Append to data_issues (non-fatal)
         if change_messages:
@@ -124,9 +123,7 @@ def normalize_extraction_record(
     return modified
 
 
-def normalize_extraction_records(
-    records, schema_bundle=None
-) -> dict[str, int]:
+def normalize_extraction_records(records, schema_bundle=None) -> dict[str, int]:
     """Batch normalize SF picklist fields on a list of ACMExtractionRecords.
 
     Args:

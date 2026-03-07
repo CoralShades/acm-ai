@@ -260,43 +260,6 @@ class TestPageNumberTracking:
         assert result[0]["page_number"] == 3
         assert result[1]["page_number"] == 4
 
-    def test_small_content_with_page_markers(self):
-        """Test that small content (below chunking threshold) still extracts page numbers.
-
-        Regression test for bug where _chunk_content would return page_number=1
-        for small content even when page markers indicated a different page.
-        """
-        from open_notebook.graphs.acm_extraction import _chunk_content
-
-        # Small content that won't trigger chunking, but starts at page 5
-        content = "--- Page 5 ---\nSmall ACM content here"
-        chunks = _chunk_content(content)
-
-        assert len(chunks) == 1
-        assert chunks[0]["page_number"] == 5, (
-            "Should extract page 5 from marker, not default to 1"
-        )
-
-    def test_small_content_without_page_markers(self):
-        """Test that small content without page markers defaults to page 1."""
-        from open_notebook.graphs.acm_extraction import _chunk_content
-
-        content = "Small ACM content with no page markers"
-        chunks = _chunk_content(content)
-
-        assert len(chunks) == 1
-        assert chunks[0]["page_number"] == 1, "Should default to page 1 when no markers"
-
-    def test_small_content_html_comment_page_marker(self):
-        """Test HTML comment style page markers in small content."""
-        from open_notebook.graphs.acm_extraction import _chunk_content
-
-        content = "<!-- Page 12 -->\nContent from page 12"
-        chunks = _chunk_content(content)
-
-        assert len(chunks) == 1
-        assert chunks[0]["page_number"] == 12
-
     def test_multi_page_table_per_row_page_numbers(self):
         """Bug 2: Table spanning multiple pages - rows after page marker get correct page.
 
@@ -386,92 +349,6 @@ class TestPageNumberTracking:
         assert len(result) == 2
         assert result[0]["page_number"] == 2
         assert result[1]["page_number"] == 5
-
-    def test_chunk_content_includes_page_markers_dict(self):
-        """Bug 4: _chunk_content should track ALL page markers in chunk, not just first.
-
-        When content fits in a single chunk, page_markers dict maps character offsets
-        to page numbers so extract_records can assign per-record pages.
-        """
-        from open_notebook.graphs.acm_extraction import _chunk_content
-
-        content = """--- Page 1 ---
-Building A data and ACM records here
---- Page 2 ---
-More building data on second page
---- Page 3 ---
-Third page content with ACM items"""
-
-        chunks = _chunk_content(content)
-        assert len(chunks) == 1
-        assert chunks[0]["page_number"] == 1
-        assert "page_markers" in chunks[0]
-        markers = chunks[0]["page_markers"]
-        # Should have 3 page markers
-        pages_found = sorted(markers.values())
-        assert pages_found == [1, 2, 3]
-
-    def test_assign_record_pages_from_markers(self):
-        """Bug 4: Records should get page numbers based on their position in content.
-
-        When LLM doesn't set page_number, the fallback should use page_markers
-        to find the nearest preceding page marker based on the record's product
-        text position in the chunk content.
-        """
-        from open_notebook.graphs.acm_extraction import _assign_record_page
-
-        chunk_content = """--- Page 1 ---
-| Floor Tiles | Vinyl asbestos tiles | Detected |
---- Page 3 ---
-| Pipe Lagging | Insulation wrap | Detected |
---- Page 5 ---
-| Rope Seals | Door gaskets | Detected |"""
-
-        # Build page_markers from known marker positions (no regex duplication)
-        page_markers = {}
-        for marker, page in [
-            ("--- Page 1 ---", 1),
-            ("--- Page 3 ---", 3),
-            ("--- Page 5 ---", 5),
-        ]:
-            page_markers[chunk_content.find(marker)] = page
-
-        page, pos = _assign_record_page("Floor Tiles", chunk_content, page_markers, 1)
-        assert page == 1 and pos >= 0
-        page, pos = _assign_record_page("Pipe Lagging", chunk_content, page_markers, 1)
-        assert page == 3 and pos >= 0
-        page, pos = _assign_record_page("Rope Seals", chunk_content, page_markers, 1)
-        assert page == 5 and pos >= 0
-
-    def test_assign_record_page_duplicate_products(self):
-        """Bug 4 edge case: duplicate product names get correct pages via search_after.
-
-        When the same product appears multiple times in a chunk (e.g., same product
-        in different rooms), search_after should advance past the first occurrence
-        so the second record gets the correct page.
-        """
-        from open_notebook.graphs.acm_extraction import _assign_record_page
-
-        chunk_content = """--- Page 1 ---
-| Tiles | Room A vinyl floor | Detected |
---- Page 4 ---
-| Tiles | Room B vinyl floor | Detected |"""
-
-        page_markers = {}
-        for marker, page in [("--- Page 1 ---", 1), ("--- Page 4 ---", 4)]:
-            page_markers[chunk_content.find(marker)] = page
-
-        # First "Tiles" is on page 1
-        page1, pos1 = _assign_record_page("Tiles", chunk_content, page_markers, 1)
-        assert page1 == 1
-        assert pos1 >= 0
-
-        # Second "Tiles" (searching after first) is on page 4
-        page2, pos2 = _assign_record_page(
-            "Tiles", chunk_content, page_markers, 1, search_after=pos1 + len("Tiles")
-        )
-        assert page2 == 4
-        assert pos2 > pos1
 
 
 class TestHasPipeContinuation:

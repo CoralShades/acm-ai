@@ -156,7 +156,9 @@ class TestDualProviderFeatureFlag:
         mock_registry.return_value.get_provider.side_effect = get_provider
 
         with patch.dict(os.environ, env_without_flag, clear=True):
-            result, _ = await _run_dual_provider_extraction("source:abc", "/tmp/test.pdf")
+            result, _ = await _run_dual_provider_extraction(
+                "source:abc", "/tmp/test.pdf"
+            )
 
         # MinerU was attempted (get_provider called with "mineru")
         calls = [

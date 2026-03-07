@@ -1,9 +1,5 @@
 """Tests for Docling content normalization (E21-S4)."""
 
-from unittest.mock import MagicMock, patch
-
-import pytest
-
 from open_notebook.extractors.normalizers.content import (
     normalize_docling_text,
     reconstruct_markdown_table_rows,
@@ -84,52 +80,3 @@ class TestNormalizeContent:
         raw_text = "Same as 34511-039001\nAssumed positive\nNo access\nN/A (negative)"
 
         assert normalize_docling_text(raw_text) == raw_text
-
-
-class TestPrepareContextNormalization:
-    """Integration tests for graph preflight normalization."""
-
-    @pytest.mark.asyncio
-    async def test_prepare_context_normalize_content_before_chunking(self):
-        """prepare_context should normalize Docling text before preprocessing."""
-        from open_notebook.graphs.acm_extraction import prepare_context
-
-        source = MagicMock()
-        source.id = "source:test"
-        source.title = "Test School"
-        source.full_text = "Same as\n34511-039001"
-
-        state = {"source": source}
-        config = MagicMock()
-
-        with (
-            patch(
-                "open_notebook.graphs.acm_extraction.normalize_docling_text",
-                return_value="Same as 34511-039001",
-            ) as mock_normalize,
-            patch(
-                "open_notebook.graphs.acm_extraction.log_extraction_preview"
-            ) as _mock_preview,
-            patch(
-                "open_notebook.graphs.acm_extraction.dump_content_to_file"
-            ) as _mock_dump,
-            patch(
-                "open_notebook.graphs.acm_extraction._preprocess_acm_content",
-                return_value=(
-                    "processed-content",
-                    {
-                        "acm_indicators_found": 0,
-                        "no_asbestos_found": 0,
-                    },
-                ),
-            ) as _mock_preprocess,
-            patch(
-                "open_notebook.graphs.acm_extraction._chunk_content",
-                return_value=[{"content": "processed-content", "page_number": 1}],
-            ) as _mock_chunk,
-        ):
-            result = await prepare_context(state, config)
-
-        mock_normalize.assert_called_once_with("Same as\n34511-039001")
-        assert result["content"] == "processed-content"
-        assert len(result["chunks"]) == 1

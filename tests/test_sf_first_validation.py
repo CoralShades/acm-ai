@@ -144,9 +144,7 @@ class TestFieldFreezing:
         valid = sf_valid_fields(record)
         assert "material_condition" in valid, "'Stable' is a valid SF Condition value"
         # "Bonded" has no case-insensitive SF match and should be invalid
-        assert "friable" not in valid, (
-            "'Bonded' is not a valid SF Friability value"
-        )
+        assert "friable" not in valid, "'Bonded' is not a valid SF Friability value"
 
     def test_frozen_fields_not_overwritten_by_correction(self):
         """Simulate the frozen-field guard in _llm_correct_records.
