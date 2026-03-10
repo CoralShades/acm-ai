@@ -53,6 +53,7 @@ class NormalizedTable:
     markdown: str
     csv: Optional[str] = None
     bbox: Optional[TableBBox] = None
+    docling_json: Optional[Dict] = None
 
 
 @dataclass

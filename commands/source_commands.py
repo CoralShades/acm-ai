@@ -186,6 +186,7 @@ async def _store_docling_tables(source_id: str, tables: List[Dict[str, Any]]) ->
                 "building_name": None,
                 "consensus_tier": table.get("consensus_tier"),
                 "consensus_scores": table.get("consensus_scores"),
+                "docling_document_json": table.get("docling_json"),
             },
         )
 
@@ -311,6 +312,7 @@ def _merge_provider_tables(
                     "html": d_table.html,
                     "consensus_tier": "single_provider",
                     "consensus_scores": None,
+                    "docling_json": d_table.docling_json,
                 }
             )
 
@@ -327,6 +329,7 @@ def _merge_provider_tables(
                     "html": m_table.html,
                     "consensus_tier": "single_provider",
                     "consensus_scores": None,
+                    "docling_json": None,
                 }
             )
 
@@ -372,6 +375,7 @@ def _merge_provider_tables(
                     or d_table.html,  # Prefer MinerU HTML  # type: ignore[union-attr]
                     "consensus_tier": consensus_tier,
                     "consensus_scores": scores,
+                    "docling_json": d_table.docling_json,  # type: ignore[union-attr]
                 }
             )
 
@@ -389,6 +393,7 @@ def _merge_provider_tables(
                 "html": t.html,
                 "consensus_tier": "single_provider",
                 "consensus_scores": None,
+                "docling_json": t.docling_json,
             }
         )
         _table_counter += 1
@@ -405,6 +410,7 @@ def _merge_provider_tables(
                 "html": t.html,
                 "consensus_tier": "single_provider",
                 "consensus_scores": None,
+                "docling_json": None,
             }
         )
         _table_counter += 1
@@ -482,6 +488,7 @@ async def _run_dual_provider_extraction(
                     "html": t.html,
                     "consensus_tier": "single_provider",
                     "consensus_scores": None,
+                    "docling_json": t.docling_json,
                 }
                 for t in docling_result.tables
             ],
@@ -531,6 +538,7 @@ async def _run_dual_provider_extraction(
                     "html": t.html,
                     "consensus_tier": "single_provider",
                     "consensus_scores": None,
+                    "docling_json": t.docling_json,
                 }
                 for t in docling_result.tables
             ],

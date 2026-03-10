@@ -1,0 +1,2 @@
+-- Down migration 48: Remove docling_document_json field from acm_table_section
+REMOVE FIELD IF EXISTS docling_document_json ON TABLE acm_table_section;

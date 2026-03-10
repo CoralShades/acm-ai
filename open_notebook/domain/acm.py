@@ -903,6 +903,14 @@ class BuildingRecord(ObjectModel):
             "possible_capital_works_project", "Possible_Capital_Works_Project__c"
         ),
     )
+    building_sub_category: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_sub_category", "Building_Sub_Category__c"),
+    )
+    building_risk_rating: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_risk_rating", "Building_Risk_Rating__c"),
+    )
 
     # --- Embedding fields (AC8) ---
     embedding: Optional[List[float]] = Field(

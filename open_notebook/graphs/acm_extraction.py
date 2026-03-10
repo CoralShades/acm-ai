@@ -612,6 +612,11 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 building_construction=result.construction_type,
                 date_of_audit_report=result.date_of_audit,
                 frequency_of_use=result.frequency_of_use,
+                state=result.state,
+                number_of_levels=result.number_of_levels,
+                owned_or_leased=result.owned_or_leased,
+                building_sub_category=result.building_sub_category,
+                building_risk_rating=result.building_risk_rating,
             )
 
             saved_record = await record.save()
@@ -721,7 +726,7 @@ async def _chunk_and_extract_items(
     Story: E32-S2 Item__c AI Extraction Node
     """
     if len(building_content) <= _ITEM_EXTRACTION_CHUNK_CHARS:
-        return await _v3_extract_items(
+        result = await _v3_extract_items(
             building_content,
             plan,
             building_meta,
@@ -729,6 +734,21 @@ async def _chunk_and_extract_items(
             schema_bundle,
             docling_tables=docling_tables,
         )
+        if result.status == "truncated":
+            logger.warning(
+                f"[E32-S2] Truncation detected for building {plan.building_id} "
+                "— retrying with cloud provider (model_id=None)"
+            )
+            cloud_state = {**state, "model_id": None}
+            result = await _v3_extract_items(
+                building_content,
+                plan,
+                building_meta,
+                cloud_state,
+                schema_bundle,
+                docling_tables=docling_tables,
+            )
+        return result
 
     # Split into N equal-sized char chunks
     chunks = [
@@ -746,6 +766,20 @@ async def _chunk_and_extract_items(
             schema_bundle,
             docling_tables=docling_tables,
         )
+        if result.status == "truncated":
+            logger.warning(
+                f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
+                "— retrying chunk with cloud provider (model_id=None)"
+            )
+            cloud_state = {**state, "model_id": None}
+            result = await _v3_extract_items(
+                chunk,
+                plan,
+                building_meta,
+                cloud_state,
+                schema_bundle,
+                docling_tables=docling_tables,
+            )
         merged_records.extend(result.records)
         if result.status == "invalid":
             final_status = "invalid"
@@ -809,6 +843,9 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
     meta_cache_state: Dict[str, Any] = state.get("building_meta_cache") or {}
     sem = asyncio.Semaphore(_MAX_CONCURRENT_BUILDINGS)
 
+    # Per-row vs bulk extraction mode (Phase 3 integration)
+    extraction_mode = os.getenv("ACM_ITEM_EXTRACTION_MODE", "per_row")
+
     async def _extract_items_for_building(building_meta_entry):
         """Extract items for a single building (semaphore-bounded)."""
         async with sem:
@@ -838,6 +875,123 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
             # Look up cached Phase 1 result from extract_building_node
             building_meta_result = meta_cache_state.get(building_meta_entry.building_id)
+
+            # ---------------------------------------------------------------
+            # Per-row extraction path (Phase 3)
+            # ---------------------------------------------------------------
+            if extraction_mode == "per_row":
+                from open_notebook.extractors.row_extractor import extract_all_rows
+                from open_notebook.extractors.row_segmenter import (
+                    scan_text_for_synthetics,
+                    segment_multiple_tables,
+                )
+
+                # Get DoclingDocument JSON from stored tables
+                docling_json_tables = [
+                    t.get("docling_document_json")
+                    for t in (docling_tables or [])
+                    if t.get("docling_document_json")
+                ]
+
+                if docling_json_tables:
+                    # Segment tables into individual rows
+                    rows = segment_multiple_tables(
+                        docling_json_tables,
+                        building_id=building_meta_entry.building_id,
+                        source_id=source_id_str,
+                        building_page_range=(page_start, page_end),
+                    )
+
+                    # Scan markdown for synthetic rows (Type D/F)
+                    synthetic_rows = scan_text_for_synthetics(
+                        building_content,
+                        building_meta_entry.building_id,
+                        source_id_str,
+                    )
+                    rows.extend(synthetic_rows)
+
+                    if rows:
+                        # Provision model for per-row extraction (small context)
+                        row_model = await provision_langchain_model(
+                            "",
+                            state.get("model_id"),
+                            "extraction",
+                            temperature=0,
+                            num_ctx=int(
+                                os.getenv("ACM_ROW_EXTRACTION_NUM_CTX", "2048")
+                            ),
+                        )
+
+                        # Get Langfuse handler for tracing (if available)
+                        langfuse_handler = get_langfuse_handler()
+
+                        # Build human-readable building context string
+                        building_context = (
+                            building_meta_entry.name
+                            or building_meta_entry.building_id
+                        )
+
+                        # Extract all rows -> list[ACMExtractionRecord]
+                        records = await extract_all_rows(
+                            rows=rows,
+                            building_context=building_context,
+                            model=row_model,
+                            source_id=source_id_str,
+                            building_id=building_meta_entry.building_id,
+                            langfuse_handler=langfuse_handler,
+                        )
+
+                        # Populate building_record_id FK
+                        building_record_id = code_to_id_map.get(
+                            building_meta_entry.building_id
+                        )
+                        if building_record_id:
+                            for rec in records:
+                                rec.building_record_id = building_record_id
+
+                        logger.info(
+                            f"[per-row] Building {building_meta_entry.building_id}: "
+                            f"{len(records)} items from {len(rows)} rows"
+                        )
+
+                        # Publish ai.items_extracted event (same as bulk path)
+                        if operation_id:
+                            try:
+                                _internal_id = code_to_internal_id_map.get(
+                                    building_meta_entry.building_id,
+                                    building_meta_entry.building_id,
+                                )
+                                await get_event_bus().publish(
+                                    AIItemsExtractedEvent(
+                                        operation_id=operation_id,
+                                        data=AIItemsExtractedData(
+                                            building_id=_internal_id,
+                                            items_count=len(records),
+                                            items_rejected=0,
+                                        ),
+                                    )
+                                )
+                            except Exception as _pub_err:
+                                logger.debug(
+                                    f"[E34-S1] Failed to publish ai.items_extracted for "
+                                    f"{building_meta_entry.building_id}: {_pub_err}"
+                                )
+
+                        return records
+                    else:
+                        logger.warning(
+                            f"No rows segmented for {building_meta_entry.building_id} "
+                            "— falling back to bulk"
+                        )
+                else:
+                    logger.warning(
+                        f"No DoclingDocument JSON for {building_meta_entry.building_id} "
+                        "— falling back to bulk"
+                    )
+
+            # ---------------------------------------------------------------
+            # Bulk extraction path (existing, unchanged)
+            # ---------------------------------------------------------------
 
             # Phase 2: extract items (with chunking if content is large)
             item_result = await _chunk_and_extract_items(
@@ -2076,6 +2230,14 @@ def _recover_not_sampled_records_ara(
 
 async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     """Graph node: recover no-access records missed by LLM extraction."""
+    # In per-row mode the segmenter already handles synthetic rows (Type D/F)
+    # so post-LLM recovery is unnecessary.
+    if os.getenv("ACM_ITEM_EXTRACTION_MODE", "per_row") == "per_row":
+        logger.info(
+            "Skipping no-access recovery in per-row mode (handled by segmenter)"
+        )
+        return state
+
     records: List[ACMExtractionRecord] = state.get("records", [])
     source: Source = state["source"]
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())

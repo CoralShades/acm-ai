@@ -39,6 +39,13 @@ class BuildingExtractionResult(BaseModel):
         None  # Identifying_Hygiene_Consulting_Company__c
     )
 
+    # Additional building details
+    state: Optional[str] = Field(None, description="Australian state, e.g. 'VIC', 'NSW'")
+    number_of_levels: Optional[int] = Field(None, description="Number of building levels/storeys")
+    owned_or_leased: Optional[str] = Field(None, description="'Owned' or 'Leased'")
+    building_sub_category: Optional[str] = Field(None, description="Sub-category dependent on Building_Category__c")
+    building_risk_rating: Optional[str] = Field(None, description="Overall risk rating, e.g. 'Low', 'Medium', 'High'")
+
     # Quality metadata
     extraction_confidence: str = "medium"  # "high" | "medium" | "low"
     extraction_notes: Optional[str] = None
@@ -88,5 +95,5 @@ class ACMItemExtractionResult(BaseModel):
     """Phase 2 output wrapper: all Item__c records for one building."""
 
     records: List[ACMItemRecord] = Field(default_factory=list)
-    status: str = "valid"  # "valid" | "no_acm_data" | "invalid"
+    status: str = "valid"  # "valid" | "no_acm_data" | "invalid" | "truncated"
     extraction_notes: Optional[str] = None

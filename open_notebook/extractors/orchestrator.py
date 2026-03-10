@@ -22,6 +22,7 @@ from open_notebook.extractors.document_structure import (
 )
 from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.graphs.utils import (
+    TruncationError,
     _get_v3_building_schema,
     _get_v3_item_schema,
     _inject_response_format,
@@ -424,6 +425,15 @@ async def _v3_extract_items(
             f"status={result.status}"
         )
         return result
+    except TruncationError as te:
+        logger.warning(
+            f"V3 Phase 2 [{plan.building_id}] JSON truncated — returning truncated result: {te}"
+        )
+        return ACMItemExtractionResult(
+            records=[],
+            status="truncated",
+            extraction_notes=f"JSON truncated: {te}",
+        )
     except Exception as e:
         logger.warning(
             f"V3 Phase 2 [{plan.building_id}] failed — returning empty result: {e}"

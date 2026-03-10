@@ -2,9 +2,9 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 53,
-  "totalStoryPoints": 158,
-  "sprints": 9,
+  "totalStories": 61,
+  "totalStoryPoints": 176,
+  "sprints": 10,
   "stories": [
     {
       "id": "E30-S1",
@@ -1781,6 +1781,251 @@
         "docs/sprint-artifacts/e36/progress.md"
       ],
       "notes": "Backlog"
+    },
+    {
+      "id": "E37-S1",
+      "title": "DoclingDocument JSON Storage",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "backend",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "E31-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: DoclingDocument JSON stored via export_to_dict() in NormalizedTable",
+        "AC2: docling_document_json propagated through source_commands pipeline",
+        "AC3: Migration 48 adds docling_document_json column to acm_table_section",
+        "AC4: 12 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/providers/base.py",
+        "open_notebook/extractors/providers/docling_adapter.py",
+        "commands/source_commands.py",
+        "migrations/48.surrealql",
+        "tests/test_docling_json_storage.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S2",
+      "title": "Building Schema + Prompt Gaps",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "backend",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "E31-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: building_sub_category, building_risk_rating added to BuildingRecord",
+        "AC2: 5 new fields on BuildingExtractionResult schema",
+        "AC3: v3_building_extraction.jinja updated with new fields",
+        "AC4: Migration 47 adds new columns",
+        "AC5: 19 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/domain/acm.py",
+        "open_notebook/extractors/acm_schemas_v3.py",
+        "prompts/acm/v3_building_extraction.jinja",
+        "migrations/47.surrealql",
+        "tests/test_building_schema_gaps.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S3",
+      "title": "Truncation Fallback + Output Budget",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 3,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [
+        "E32-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: TruncationError caught in _v3_extract_items(), returns status=truncated",
+        "AC2: Retry with cloud model on truncation in _chunk_and_extract_items()",
+        "AC3: 30% output budget reserved in _ollama_split_by_budget()",
+        "AC4: ACM_EXTRACTION_MODEL env var for configurable Ollama model",
+        "AC5: 17 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/orchestrator.py",
+        "open_notebook/graphs/utils.py",
+        "open_notebook/graphs/acm_extraction.py",
+        "tests/test_truncation_fallback.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S4",
+      "title": "Row Segmentation Engine",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 3,
+      "riskLevel": "HIGH",
+      "storyType": "backend",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: RawTableRow Pydantic model with cells, column_mapping, edge case metadata",
+        "AC2: 12 COLUMN_ALIASES with Jaro-Winkler fuzzy matching (reused from consensus/matcher.py)",
+        "AC3: segment_docling_table() handles Types A, C, E1-E3",
+        "AC4: segment_multiple_tables() handles Types B, H (multi-page, split tables)",
+        "AC5: scan_text_for_synthetics() handles Types D, F",
+        "AC6: generate_debug_table() produces HTML debug output",
+        "AC7: 32 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/row_segmenter.py",
+        "tests/test_row_segmenter.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S5",
+      "title": "9-Field Item Schema + Mapper",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: ACMItemRow with exactly 9 fields (room_name, floor_level, item_location, item_name, friability, acm_classification, acm_sub_classification, condition, disturbance_potential)",
+        "AC2: map_item_row_to_extraction_record() targets ACMExtractionRecord",
+        "AC3: normalize_friability() and is_friable_bool() deterministic helpers",
+        "AC4: 47 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/domain/acm_row_schemas.py",
+        "open_notebook/domain/acm_row_mappers.py",
+        "tests/test_acm_row_mappers.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S6",
+      "title": "Edge Case Table Fixtures",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 1,
+      "riskLevel": "LOW",
+      "storyType": "testing",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: 11 JSON fixtures for DoclingDocument table format (Types A, B x2, C x2, E1, E2, E3, G x2, H)",
+        "AC2: 2 Markdown fixtures (Types D, F)",
+        "AC3: README documenting each fixture",
+        "AC4: Realistic Australian school ACM data"
+      ],
+      "keyFiles": [
+        "tests/fixtures/edge_case_tables/"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S7",
+      "title": "Per-Row Extraction Orchestrator",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 3,
+      "riskLevel": "HIGH",
+      "storyType": "backend",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S4",
+        "E37-S5"
+      ],
+      "acceptanceCriteria": [
+        "AC1: build_kv_prompt() creates key-value prompt from RawTableRow cells",
+        "AC2: extract_single_row() with retry (max 2) and JSON parsing",
+        "AC3: split_multi_item_row() for Type E1 multi-item cells",
+        "AC4: extract_all_rows() main loop with SSE events and Langfuse spans",
+        "AC5: _build_fallback_record() for graceful extraction failure",
+        "AC6: 27 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/row_extractor.py",
+        "prompts/acm/row_extraction.jinja",
+        "prompts/acm/row_split.jinja",
+        "tests/test_row_extractor.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S8",
+      "title": "Pipeline Integration + Mode Toggle",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S7"
+      ],
+      "acceptanceCriteria": [
+        "AC1: ACM_ITEM_EXTRACTION_MODE env var (per_row | bulk, default: per_row)",
+        "AC2: Per-row path in extract_items_node calls segmenter + extractor",
+        "AC3: Recovery node (no-access) gated in per-row mode",
+        "AC4: Graceful fallback to bulk path when no DoclingDocument JSON",
+        "AC5: Bulk extraction path unchanged",
+        "AC6: 9 integration tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/acm_extraction.py",
+        ".env.example",
+        "tests/test_pipeline_integration.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
     }
   ],
   "gates": [
@@ -1820,6 +2065,14 @@
       "unlocked": true,
       "blocksEpics": [],
       "description": "All frontend views operational with AG Grid, provenance UI, and dashboards."
+    },
+    {
+      "id": "GATE:PER_ROW_EXTRACTION",
+      "name": "Per-Row Extraction",
+      "triggerStory": "E37-S8",
+      "unlocked": true,
+      "blocksEpics": [],
+      "description": "Per-row extraction pipeline operational with Ollama num_ctx=2048 support."
     }
   ],
   "metadata": {

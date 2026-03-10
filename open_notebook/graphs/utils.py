@@ -453,7 +453,8 @@ def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
         max_chars = int(env_override)
     else:
         num_ctx = getattr(lc_model, "num_ctx", None) or 8192
-        max_chars = int(num_ctx * 3.5)
+        output_reserve_ratio = 0.3
+        max_chars = int(num_ctx * 3.5 * (1 - output_reserve_ratio))
 
     if len(content) <= max_chars:
         return [content]
@@ -869,7 +870,7 @@ async def _provision_extraction_primary_model(
 
     # 1) Ollama first — free, local
     if os.getenv("OLLAMA_API_BASE"):
-        candidates.append(("ollama", "qwen2.5:7b", None))
+        candidates.append(("ollama", os.getenv("ACM_EXTRACTION_MODEL", "llama3.1:8b"), None))
 
     # 2) Anthropic Direct — ACM-namespaced key ONLY
     acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")

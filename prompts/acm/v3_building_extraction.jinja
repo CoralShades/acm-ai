@@ -31,6 +31,11 @@ Extract ONLY the following Salesforce Building__c fields. Leave fields `null` if
 | `date_of_audit` | Date of Audit/Report | Free text date string as it appears |
 | `frequency_of_use` | Frequency of Use | See Frequency_of_Use__c picklist below |
 | `identifying_company` | Identifying Hygiene/Consulting Company | Free text company name |
+| `state` | State | Australian state abbreviation, e.g. "VIC", "NSW", "QLD" |
+| `number_of_levels` | Number of Levels | Integer — number of building levels/storeys |
+| `owned_or_leased` | Owned or Leased | "Owned" or "Leased" |
+| `building_sub_category` | Building Sub-Category | Sub-category dependent on Building_Category__c |
+| `building_risk_rating` | Building Risk Rating | Overall risk rating: "Low", "Medium", or "High" |
 | `extraction_confidence` | Extraction Confidence | "high" / "medium" / "low" |
 | `extraction_notes` | Extraction Notes | Free text — note any ambiguity |
 
@@ -52,6 +57,11 @@ Extract ONLY the following Salesforce Building__c fields. Leave fields `null` if
 3. **building_type** MUST exactly match one value from the Building_Type__c picklist above. Use the closest match based on document context (e.g., "Police Complex" → "Police Station"). If no match, leave null.
 4. **extraction_confidence**: Use "high" when most fields are populated from explicit document text; "medium" when some inference was required; "low" when document header is sparse.
 5. **identifying_company**: Extract the hygiene or consulting company name from headers like "Identifying Company:", "Prepared by:", or "Hygiene Company:".
+6. **state**: Extract the two- or three-letter Australian state abbreviation (e.g., "VIC", "NSW", "QLD", "SA", "WA", "TAS", "NT", "ACT"). Derive from the address if not stated explicitly.
+7. **number_of_levels**: Extract as an integer (e.g., "Number of Levels: 2" → `2`). Leave null if not stated.
+8. **owned_or_leased**: Must be exactly "Owned" or "Leased" if present. Leave null if not stated.
+9. **building_sub_category**: Extract the sub-category value if present in the document; it must be consistent with `building_category`. Leave null if not stated.
+10. **building_risk_rating**: Must be exactly "Low", "Medium", or "High" if present. Leave null if not stated.
 
 ## Worked Example 1 — Prensa ARA Format
 
@@ -80,6 +90,11 @@ Identifying Company: Prensa Pty Ltd
   "date_of_audit": "March 2024",
   "frequency_of_use": null,
   "identifying_company": "Prensa Pty Ltd",
+  "state": "VIC",
+  "number_of_levels": 1,
+  "owned_or_leased": null,
+  "building_sub_category": null,
+  "building_risk_rating": null,
   "extraction_confidence": "high",
   "extraction_notes": null
 }
@@ -112,6 +127,11 @@ Frequency of Use: Daily
   "date_of_audit": "14 February 2023",
   "frequency_of_use": "Daily",
   "identifying_company": "Safety Environmental Consulting Pty Ltd",
+  "state": null,
+  "number_of_levels": null,
+  "owned_or_leased": null,
+  "building_sub_category": null,
+  "building_risk_rating": null,
   "extraction_confidence": "high",
   "extraction_notes": null
 }
@@ -134,6 +154,11 @@ Respond with a single JSON object matching the `BuildingExtractionResult` schema
   "date_of_audit": ...,
   "frequency_of_use": ...,
   "identifying_company": ...,
+  "state": ...,
+  "number_of_levels": ...,
+  "owned_or_leased": ...,
+  "building_sub_category": ...,
+  "building_risk_rating": ...,
   "extraction_confidence": "high" | "medium" | "low",
   "extraction_notes": ...
 }

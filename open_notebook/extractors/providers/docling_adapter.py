@@ -146,6 +146,15 @@ class DoclingAdapter:
                 # TODO: Extract bbox from table.prov[0].bbox when needed
                 # (out of scope for E31-S2 — leave as None)
 
+                # Capture lossless cell-level representation for per-row extraction
+                try:
+                    docling_json = table.export_to_dict()
+                except Exception as export_err:
+                    logger.warning(
+                        f"DoclingAdapter table {idx}: export_to_dict() failed: {export_err}"
+                    )
+                    docling_json = None
+
                 normalized = NormalizedTable(
                     table_index=idx,
                     page=page_no,
@@ -156,6 +165,7 @@ class DoclingAdapter:
                     markdown=df.to_markdown(index=False) or "",
                     csv=df.to_csv(index=False),
                     bbox=None,
+                    docling_json=docling_json,
                 )
                 tables.append(normalized)
 
