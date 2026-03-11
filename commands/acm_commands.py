@@ -65,6 +65,34 @@ async def _try_claim_command(command_id: str, worker_id: str) -> bool:
     return False
 
 
+async def _write_terminal_status(command_id: str, status: str, records: int = 0) -> None:
+    """Write terminal status to extraction_progress table.
+
+    The PipelineLogger inside the graph writes 'running' status but may not
+    write terminal status reliably. This ensures the frontend and polling
+    scripts always see completion.
+
+    Args:
+        command_id: The SurrealDB command record ID (e.g., 'command:abc123').
+        status: Terminal status string — 'completed' or 'failed'.
+        records: Total records extracted (0 for failure paths).
+    """
+    try:
+        import re
+        safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", str(command_id))
+        await repo_query(
+            f"""
+            UPDATE extraction_progress:{safe_id} SET
+                status = $status,
+                records_total = $records,
+                updated_at = time::now();
+            """,
+            {"status": status, "records": records},
+        )
+    except Exception as e:
+        logger.warning(f"Failed to write terminal status for {command_id}: {e}")
+
+
 class ACMExtractionInput(CommandInput):
     """Input for ACM extraction command."""
 
@@ -224,6 +252,8 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         # 4. Return result
         if result.status == "failed":
             logger.error(f"AI ACM extraction failed for {source_id}: {result.error}")
+            if command_id:
+                await _write_terminal_status(command_id, "failed", 0)
             return ACMExtractionOutput(
                 success=False,
                 source_id=source_id,
@@ -237,6 +267,8 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
 
         if result.status == "no_data":
             logger.info(f"No ACM records found in source {source_id}")
+            if command_id:
+                await _write_terminal_status(command_id, "completed", 0)
             return ACMExtractionOutput(
                 success=True,
                 source_id=source_id,
@@ -300,6 +332,9 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         if result.confidence_distribution:
             conf_dist = result.confidence_distribution.model_dump()
 
+        if command_id:
+            await _write_terminal_status(command_id, "completed", result.total_records)
+
         return ACMExtractionOutput(
             success=True,
             source_id=source_id,
@@ -320,6 +355,8 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
     except Exception as e:
         processing_time = time.time() - start_time
         logger.error(f"ACM extraction failed for {source_id}: {e}")
+        if command_id:
+            await _write_terminal_status(command_id, "failed", 0)
         return ACMExtractionOutput(
             success=False,
             source_id=source_id,

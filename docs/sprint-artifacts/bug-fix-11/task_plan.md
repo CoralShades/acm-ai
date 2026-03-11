@@ -19,90 +19,62 @@
 
 ## Execution Plan
 
-### Phase 1: Record Recovery (P0 — fixes record count) [estimated +15 records]
+### Phase 1: Record Recovery (P0 — fixes record count) [estimated +15 records] ✅ DONE
 
-#### Task 1.1: Fix `_merge_provider_tables` multi-table-per-page overwrite
-- **File**: `commands/source_commands.py:276-317`
-- **Change**: `docling_by_page[t.page] = t` → `docling_by_page[t.page].append(t)` (defaultdict(list))
-- **Update**: All downstream consumers of `docling_by_page` to handle lists
-- **Test**: Fixture with 2 tables on same page → both preserved
-- **Status**: [ ] Not started
+#### Task 1.1: Fix `_merge_provider_tables` multi-table-per-page overwrite — ✅
+#### Task 1.2: Fix building `page_end` for single-building documents — ✅
+#### Task 1.3: Fix page filter silent fallback + page_number=0 handling — ✅
+#### Task 1.4: Add page range exclusion warning in orchestrator — ✅
 
-#### Task 1.2: Fix building `page_end` for single-building documents
-- **File**: `open_notebook/extractors/building_inventory.py`
-- **Change**: When only 1 building in inventory, set `page_end = total_pages` (no cross-building risk)
-- **Also**: Use `site_name` from metadata as building name instead of "Main Building"
-- **Test**: Single-building doc → page_end equals total_pages
-- **Status**: [ ] Not started
+### Phase 2: Field Completeness (P0 — fixes field accuracy) ✅ DONE
 
-#### Task 1.3: Fix page filter silent fallback + page_number=0 handling
-- **File**: `open_notebook/extractors/row_segmenter.py:486-494`
-- **Change**: Log warning on fallback; include `page_number=0` tables in all buildings
-- **Test**: Tables with page_number=0 included in extraction
-- **Status**: [ ] Not started
-
-#### Task 1.4: Add page range exclusion warning in orchestrator
-- **File**: `open_notebook/extractors/orchestrator.py:51-57`
-- **Change**: Log count of excluded tables when page filter removes any
-- **Test**: Warning logged when tables outside building range exist
-- **Status**: [ ] Not started
-
-### Phase 2: Field Completeness (P0 — fixes field accuracy) [estimated +5 fields per record]
-
-#### Task 2.1: Add `sample_number`, `sample_result`, `acm_product` to ACMItemRow
-- **File**: `open_notebook/domain/acm_row_schemas.py`
-- **Change**: Add 3-4 new Optional fields to ACMItemRow model
-- **Test**: Pydantic validation accepts new fields
-- **Status**: [ ] Not started
-
-#### Task 2.2: Update row extraction prompt for new fields
-- **File**: `prompts/acm/row_extraction.jinja`
-- **Change**: Add extraction instructions for sample_number, sample_result, product
-- **Constraint**: Keep within num_ctx=2048 budget (9→12-13 fields)
-- **Test**: Prompt renders correctly with new field instructions
-- **Status**: [ ] Not started
-
-#### Task 2.3: Update mapper to use new fields
-- **File**: `open_notebook/domain/acm_row_mappers.py`
-- **Change**: Map `sample_result` → `result`, `sample_number` → `sample_number`, `acm_product` → `acm_product`
-- **Remove**: `result="Unknown"` hardcode
-- **Test**: Mapped record has correct field values
-- **Status**: [ ] Not started
-
-#### Task 2.4: Add `internal_external` to ACMItemRow + segmenter
-- **File**: `open_notebook/domain/acm_row_schemas.py`, `row_segmenter.py`
-- **Change**: Add `INTERNAL` to `_LEVEL_REGEX`, track `internal_external` context, add field to schema
-- **Test**: "Internal" sub-header sets context for subsequent rows
-- **Status**: [ ] Not started
+#### Task 2.1: Add `sample_number`, `sample_result`, `acm_product` to ACMItemRow — ✅
+#### Task 2.2: Update row extraction prompt for new fields — ✅
+#### Task 2.3: Update mapper to use new fields — ✅
+#### Task 2.4: Add `internal_external` to ACMItemRow + segmenter — ✅
 
 ### Phase 3: Building Persistence (P1 — fixes frontend) [enables building view]
 
-#### Task 3.1: Persist buildings to `building_record` table
-- **File**: `open_notebook/graphs/acm_extraction.py`
-- **Change**: After inventory compilation, UPSERT each BuildingMeta to `building_record`
-- **Verify**: Migration exists for `building_record` table
-- **Test**: After extraction, `building_record` table has entries
+> **Finding F1**: `extract_building_node` already has persistence code (lines 613-644)
+> but skips entirely when LLM returns None (line 606-611). Need fallback.
+> **Finding F2**: `_heuristic_fallback` lacks `document_metadata` param — can't use `site_name`.
+
+#### Task 3.1: Fallback BuildingRecord when LLM extraction fails
+- **File**: `open_notebook/graphs/acm_extraction.py:606-611`
+- **Change**: When `result is None`, create minimal BuildingRecord from BuildingMeta fields (name, building_id, source_id) instead of returning None
+- **Rationale**: LLM enrichment (address, type, category) is nice-to-have; the basic record is essential for FK linkage and frontend building view
+- **Test**: Building with failed LLM still creates a BuildingRecord in DB
 - **Status**: [ ] Not started
 
-#### Task 3.2: Use site_name for generic fallback building names
-- **File**: `open_notebook/extractors/building_inventory.py`
-- **Change**: When generic fallback creates buildings, use `document_metadata.site_name` as name
-- **Test**: Building name = "Broadmeadows Police Station" not "Main Building"
+#### Task 3.2: Pass `document_metadata` to `_heuristic_fallback` + use site_name
+- **File**: `open_notebook/extractors/building_inventory.py:326, 463-471, 665-667`
+- **Change**:
+  1. Add `document_metadata: Optional[dict] = None` param to `_heuristic_fallback`
+  2. In catch-all (line 463-471): use `document_metadata.get("site_name", "Main Building")` as name
+  3. In `compile_building_inventory` (line 667): pass `document_metadata` to `_heuristic_fallback`
+- **Test**: Catch-all building uses actual site name ("Broadmeadows Police Station")
 - **Status**: [ ] Not started
 
 ### Phase 4: Correction + Progress Fixes (P1 — existing issues)
 
+> **Finding F3**: Correction model never gets `_apply_ollama_extraction_settings()` — line 1595.
+> **Finding F4**: PipelineLogger has no `finalize()` method.
+> **Finding F5**: `acm_commands.py` has no pipeline_logger reference — use direct DB write (Option B).
+
 #### Task 4.1: Apply `format="json"` to correction stage
-- **File**: `open_notebook/graphs/acm_extraction.py` (~line 2600)
-- **Change**: `correction_model = _apply_ollama_extraction_settings(correction_model)`
-- **Test**: Ollama correction returns valid JSON
+- **File**: `open_notebook/graphs/acm_extraction.py:1601` (after model provisioning)
+- **Change**: Add `model = _apply_ollama_extraction_settings(model)` after line 1601
+- **Import**: `_apply_ollama_extraction_settings` already in scope via `from .utils import ...`
+- **Test**: Ollama correction model has `format="json"` set
 - **Status**: [ ] Not started
 - **Ref**: `docs/issues/bug-correction-stage-format-json.md`
 
 #### Task 4.2: Add terminal status write for extraction progress
-- **File**: `commands/acm_commands.py`
-- **Change**: Explicit status="completed" write after graph END node
-- **Test**: extraction_progress shows "completed" after extraction finishes
+- **File**: `commands/acm_commands.py:220-253` (after `extract_acm_from_source` returns)
+- **Approach**: Option B — direct SurrealDB write (no PipelineLogger reference needed)
+- **Change**: After line 220, write `status="completed"` to `extraction_progress` table using `repo_query` + the command_id
+- **Also**: Write `status="failed"` in the error path (line 226)
+- **Test**: `extraction_progress` shows "completed" after extraction finishes
 - **Status**: [ ] Not started
 - **Ref**: `docs/issues/bug-extraction-progress-stuck-running.md`
 

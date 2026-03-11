@@ -98,6 +98,7 @@ from open_notebook.extractors.validators.acm_validator import (
     validate_acm_record,
 )
 from open_notebook.graphs.utils import (
+    _apply_ollama_extraction_settings,
     _is_qwen_model,
     _verify_provider_routing,
     is_auth_error,
@@ -606,9 +607,34 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
             if result is None:
                 logger.warning(
                     f"[E32-S1] Phase 1 returned None for building "
-                    f"{building_meta_entry.building_id} — skipping"
+                    f"{building_meta_entry.building_id} — creating minimal record"
                 )
-                return None
+                # Bug Fix 11 Phase 3: Create minimal BuildingRecord so FK linkage
+                # and frontend display work even when LLM extraction fails.
+                internal_id = await BuildingRecord.generate_internal_id(source_id_str)
+                minimal_record = BuildingRecord(
+                    internal_id=internal_id,
+                    source_id=source_id_str,
+                    building_code=building_meta_entry.building_id,
+                    building_name=building_meta_entry.name,
+                )
+                saved_minimal = await minimal_record.save()
+                if not saved_minimal or not saved_minimal.id:
+                    logger.warning(
+                        f"[E32-S1] Minimal BuildingRecord.save() failed for building "
+                        f"{building_meta_entry.building_id} — skipping"
+                    )
+                    return None
+                minimal_record_id = str(saved_minimal.id)
+                logger.info(
+                    f"[E32-S1] Saved minimal BuildingRecord {internal_id} for building "
+                    f"{building_meta_entry.building_id} (LLM Phase 1 failed)"
+                )
+                return {
+                    "record_id": minimal_record_id,
+                    "building_id": building_meta_entry.building_id,
+                    "result": None,
+                }
 
             # Generate server-side internal ID (sequential — safe under asyncio)
             internal_id = await BuildingRecord.generate_internal_id(source_id_str)
@@ -1599,6 +1625,8 @@ async def _llm_correct_records(
                 temperature=0.0 if _correction_qwen else 0.1,
                 max_tokens=1024,
             )
+            # Bug Fix 11 Phase 4: Apply format="json" for Ollama correction models
+            model = _apply_ollama_extraction_settings(model)
             # Track resolved model for observability (E1-S21, AC #4)
             if pl:
                 actual_model = (

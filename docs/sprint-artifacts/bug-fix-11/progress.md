@@ -71,7 +71,33 @@ All 4 were already fixed in commit `034fdb9d`:
 - Sprint status updated with 5 new story entries
 - Workflow status changelog updated
 
-### Phase 2 Status: PLANNED — Ready for execution
+### Phase 2 Status: COMPLETE (committed in `7eb73f27`)
+
+---
+
+## Phase 3+4: Building Persistence + Correction/Progress Fixes (2026-03-11)
+
+### Changes Made (4 tasks)
+
+| Task | File | Change | Status |
+|------|------|--------|--------|
+| 3.1 | `acm_extraction.py:606-637` | Fallback: create minimal BuildingRecord when LLM extraction fails (instead of skip) | Done |
+| 3.2 | `building_inventory.py:326,449,468,672,708` | Pass `document_metadata` to `_heuristic_fallback`, use `site_name` in catch-all | Done |
+| 4.1 | `acm_extraction.py:1628-1629` | Apply `_apply_ollama_extraction_settings()` to correction model | Done |
+| 4.2 | `acm_commands.py:68-93,254-255,270-271,335-336,358-359` | Terminal `status=completed/failed` write to `extraction_progress` table | Done |
+
+### Review Process
+- **Spec compliance review**: Found 1 defect — exception-path `_heuristic_fallback` call missing `document_metadata`. Fixed.
+- **Code quality review**: Found 2 important issues:
+  1. `no_data` path missing terminal status write → Fixed
+  2. `safe_id` injection surface with only `:` replacement → Hardened with `re.sub(r"[^a-zA-Z0-9_]", "_", ...)`
+
+### Verification
+- 2161 tests passed, 14 skipped, 2 xfailed
+- Ruff lint: all checks passed
+- Pre-existing failures baseline: `docs/sprint-artifacts/bug-fix-11/pre-existing-failures.md`
+
+### Phase 3+4 Status: COMPLETE
 
 ---
 

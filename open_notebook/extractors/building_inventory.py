@@ -326,6 +326,7 @@ def _find_ara_building_section_end(
 def _heuristic_fallback(
     content: str,
     document_structure: Optional[DocumentStructure] = None,
+    document_metadata: Optional[dict] = None,
 ) -> BuildingInventory:
     """Heuristic-based building inventory extraction (Task 3.5).
 
@@ -437,6 +438,7 @@ def _heuristic_fallback(
             reg_start = document_structure.register_start_page or 1
             total = document_structure.total_pages or 999
             n_ids = len(document_structure.building_ids)
+            site_name = (document_metadata or {}).get("site_name")
             for idx, bid in enumerate(document_structure.building_ids):
                 # Estimate page ranges by dividing register evenly
                 pages_per_building = max(1, (total - reg_start + 1) // n_ids)
@@ -445,10 +447,12 @@ def _heuristic_fallback(
                     reg_start + (idx + 1) * pages_per_building - 1,
                     total,
                 )
+                # If we have a site_name and only one building, use it. Otherwise keep bid as name.
+                bldg_name = site_name if (site_name and n_ids == 1) else bid
                 buildings.append(
                     BuildingMeta(
                         building_id=bid,
-                        name=bid,
+                        name=bldg_name,
                         page_start=b_start,
                         page_end=b_end,
                         complexity=BuildingComplexity.COMPLEX,
@@ -460,10 +464,11 @@ def _heuristic_fallback(
                 "Generic fallback: creating single catch-all building "
                 f"from register_start={document_structure.register_start_page}"
             )
+            site_name = (document_metadata or {}).get("site_name") or "Main Building"
             buildings.append(
                 BuildingMeta(
                     building_id="BUILDING_1",
-                    name="Main Building",
+                    name=site_name,
                     page_start=document_structure.register_start_page,
                     page_end=document_structure.total_pages or 999,
                     complexity=BuildingComplexity.COMPLEX,
@@ -664,7 +669,7 @@ async def compile_building_inventory(
 
         # Cross-validate: run heuristic on FULL content (not trimmed) to catch
         # buildings whose register data precedes the detected register_start_page
-        heuristic = _heuristic_fallback(content, document_structure)
+        heuristic = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
         if heuristic.buildings:
             llm_ids = {b.building_id.lower() for b in inventory.buildings}
             llm_names = {(b.name or "").lower() for b in inventory.buildings}
@@ -700,5 +705,5 @@ async def compile_building_inventory(
             f"LLM building inventory compilation failed: {e}. Using heuristic fallback."
         )
         # Use FULL content for heuristic to catch buildings before register_start_page
-        fallback = _heuristic_fallback(content, document_structure)
+        fallback = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
         return fallback

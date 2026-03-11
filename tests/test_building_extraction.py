@@ -217,11 +217,15 @@ async def test_none_inventory_buildings_returns_empty(mock_state):
 
 
 # ---------------------------------------------------------------------------
-# Test: LLM returns None -> building skipped, generate_internal_id not called
+# Test: LLM returns None -> minimal BuildingRecord created (Bug Fix 11 Phase 3)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
+@patch(
+    "open_notebook.graphs.acm_extraction.BuildingRecord.save",
+    new_callable=AsyncMock,
+)
 @patch(
     "open_notebook.graphs.acm_extraction.BuildingRecord.generate_internal_id",
     new_callable=AsyncMock,
@@ -233,13 +237,19 @@ async def test_none_inventory_buildings_returns_empty(mock_state):
 @patch(
     "open_notebook.graphs.acm_extraction._extract_building_content",
 )
-async def test_llm_returns_none_skips_building(
+async def test_llm_returns_none_creates_minimal_building(
     mock_extract_content,
     mock_v3_extract,
     mock_gen_id,
+    mock_save,
     mock_state,
 ):
-    """_v3_extract_building_meta returns None -> building skipped, generate_internal_id not called."""
+    """_v3_extract_building_meta returns None -> minimal BuildingRecord saved (not skipped).
+
+    Bug Fix 11 Phase 3: Instead of silently skipping a building when Phase 1 LLM
+    fails, a minimal BuildingRecord is created using building_meta_entry fields so
+    that FK linkage and frontend display still work.
+    """
     mock_state["building_inventory"] = BuildingInventory(
         buildings=[
             BuildingMeta(building_id="B001", name="Main", page_start=1, page_end=5),
@@ -249,11 +259,18 @@ async def test_llm_returns_none_skips_building(
     )
     mock_extract_content.return_value = "Some building content"
     mock_v3_extract.return_value = None
+    mock_gen_id.return_value = "BLD#TEST1234_001"
+    mock_save.return_value = _make_saved_record("building_record:001")
 
     result = await extract_building_node(mock_state, config={})
 
-    assert result["building_records"] == []
-    mock_gen_id.assert_not_called()
+    # Minimal record must be saved and its ID included in the result
+    assert len(result["building_records"]) == 1
+    assert result["building_records"][0] == "building_record:001"
+    mock_gen_id.assert_called_once()
+    mock_save.assert_called_once()
+    # meta_cache entry for this building_id should be None (no LLM result)
+    assert result["building_meta_cache"].get("B001") is None
 
 
 # ---------------------------------------------------------------------------
