@@ -1442,6 +1442,17 @@ class BuildingRecordResponse(BaseModel):
     created: Optional[str] = None
     updated: Optional[str] = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_datetime_fields(cls, data: Any) -> Any:
+        """SurrealDB returns datetime objects for created/updated; coerce to str."""
+        if isinstance(data, dict):
+            for field in ("created", "updated", "embedded_at"):
+                val = data.get(field)
+                if val is not None and not isinstance(val, str):
+                    data[field] = str(val)
+        return data
+
 
 class BuildingRecordListResponse(BaseModel):
     """Response for building record list endpoint."""

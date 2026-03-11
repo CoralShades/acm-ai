@@ -618,14 +618,14 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                     building_code=building_meta_entry.building_id,
                     building_name=building_meta_entry.name,
                 )
-                saved_minimal = await minimal_record.save()
-                if not saved_minimal or not saved_minimal.id:
+                await minimal_record.save()
+                if not minimal_record.id:
                     logger.warning(
                         f"[E32-S1] Minimal BuildingRecord.save() failed for building "
                         f"{building_meta_entry.building_id} — skipping"
                     )
                     return None
-                minimal_record_id = str(saved_minimal.id)
+                minimal_record_id = str(minimal_record.id)
                 logger.info(
                     f"[E32-S1] Saved minimal BuildingRecord {internal_id} for building "
                     f"{building_meta_entry.building_id} (LLM Phase 1 failed)"
@@ -660,14 +660,14 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 building_risk_rating=result.building_risk_rating,
             )
 
-            saved_record = await record.save()
-            if not saved_record or not saved_record.id:
+            await record.save()
+            if not record.id:
                 logger.warning(
                     f"[E32-S1] BuildingRecord.save() returned no ID for building "
                     f"{building_meta_entry.building_id} — record may not have persisted"
                 )
                 return None
-            record_id = str(saved_record.id)
+            record_id = str(record.id)
 
             logger.info(
                 f"[E32-S1] Saved BuildingRecord {internal_id} for building "
