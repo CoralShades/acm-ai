@@ -70,6 +70,11 @@
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "computedHash": "41777ec7edc4504e45564917459202021245f3cdf90157e4a65dd6641cd0c1d7"
+    },
+    "uncodixfy": {
+      "source": "cyxzdev/Uncodixfy",
+      "sourceType": "github",
+      "computedHash": "ba92cc325f5f1f6a7efa4a405ccd3ef8c12ae7c123324d15bdaab419decd4f48"
     }
   }
 }
