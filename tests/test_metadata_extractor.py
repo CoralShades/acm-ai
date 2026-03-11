@@ -420,8 +420,8 @@ Page 6 content
 """
         cover = _extract_cover_pages(content)
         assert "Page 1 content" in cover
-        assert "Page 5 content" in cover
-        assert "Page 6 content" not in cover
+        assert "Page 3 content" in cover
+        assert "Page 4 content" not in cover
 
     def test_extract_cover_pages_short_doc(self):
         """Returns full content for documents shorter than 5 pages."""

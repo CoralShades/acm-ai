@@ -426,6 +426,50 @@ def _heuristic_fallback(
                     )
                 )
 
+    # Generic fallback: use document_structure intelligence when no format matched
+    if not buildings and document_structure:
+        if document_structure.building_ids:
+            # Create buildings from IDs detected by metadata_and_structure
+            logger.info(
+                f"Generic fallback: creating {len(document_structure.building_ids)} "
+                "buildings from document_structure.building_ids"
+            )
+            reg_start = document_structure.register_start_page or 1
+            total = document_structure.total_pages or 999
+            n_ids = len(document_structure.building_ids)
+            for idx, bid in enumerate(document_structure.building_ids):
+                # Estimate page ranges by dividing register evenly
+                pages_per_building = max(1, (total - reg_start + 1) // n_ids)
+                b_start = reg_start + idx * pages_per_building
+                b_end = min(
+                    reg_start + (idx + 1) * pages_per_building - 1,
+                    total,
+                )
+                buildings.append(
+                    BuildingMeta(
+                        building_id=bid,
+                        name=bid,
+                        page_start=b_start,
+                        page_end=b_end,
+                        complexity=BuildingComplexity.COMPLEX,
+                    )
+                )
+        elif document_structure.register_start_page:
+            # Last resort: single catch-all building for entire register
+            logger.info(
+                "Generic fallback: creating single catch-all building "
+                f"from register_start={document_structure.register_start_page}"
+            )
+            buildings.append(
+                BuildingMeta(
+                    building_id="BUILDING_1",
+                    name="Main Building",
+                    page_start=document_structure.register_start_page,
+                    page_end=document_structure.total_pages or 999,
+                    complexity=BuildingComplexity.COMPLEX,
+                )
+            )
+
     # Extend boundary pages so records on shared pages are captured (E20-S1)
     _apply_boundary_overlap(buildings)
 
@@ -464,6 +508,24 @@ def _coerce_rooms_in_inventory(parsed: dict) -> None:
             if isinstance(room, str):
                 coerced.append({"room_id": room, "name": room})
             elif isinstance(room, dict):
+                # Remap common LLM field name variants to expected schema
+                if "room_id" not in room:
+                    for alt_key in ("room_code", "code", "id"):
+                        if alt_key in room:
+                            room["room_id"] = room.pop(alt_key)
+                            break
+                    if "room_id" not in room:
+                        room["room_id"] = next(
+                            (v for v in room.values() if isinstance(v, str)),
+                            "unknown",
+                        )
+                if "name" not in room:
+                    for alt_key in ("room_name", "room_code", "description", "label"):
+                        if alt_key in room:
+                            room["name"] = room.pop(alt_key)
+                            break
+                    if "name" not in room:
+                        room["name"] = room.get("room_id", "unknown")
                 coerced.append(room)
             # skip non-str/dict entries silently
         building["rooms"] = coerced
@@ -472,12 +534,15 @@ def _coerce_rooms_in_inventory(parsed: dict) -> None:
 async def _llm_compile_inventory(
     content: str,
     model_id: Optional[str] = None,
+    document_metadata: Optional[dict] = None,
 ) -> BuildingInventory:
     """Use LLM with structured output for building inventory compilation (Task 3.3).
 
     Args:
         content: Document content (trimmed to register section).
         model_id: Optional model ID override.
+        document_metadata: Optional dict with site_name, consultant_name, document_type
+            for prompt context injection.
 
     Returns:
         BuildingInventory from LLM analysis.
@@ -488,7 +553,8 @@ async def _llm_compile_inventory(
     from open_notebook.graphs.utils import provision_langchain_model
 
     prompter = Prompter(prompt_template="acm/building_inventory")
-    system_prompt = prompter.render(data={})
+    template_data = document_metadata or {}
+    system_prompt = prompter.render(data=template_data)
 
     # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
@@ -507,7 +573,7 @@ async def _llm_compile_inventory(
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
-            content=f"## Document Content\n\n{content}\n\nCompile a building inventory with page ranges, room codes, and complexity classifications."
+            content=f"## Document Content\n\n{content}\n\nCompile a building inventory with page ranges, room identifiers, and complexity classifications."
         ),
     ]
     raw_response = await model.ainvoke(messages)
@@ -549,6 +615,7 @@ async def compile_building_inventory(
     content: Optional[str],
     document_structure: Optional[DocumentStructure] = None,
     model_id: Optional[str] = None,
+    document_metadata: Optional[dict] = None,
 ) -> BuildingInventory:
     """Compile a building inventory from document content (Task 3).
 
@@ -559,6 +626,8 @@ async def compile_building_inventory(
         content: Full document markdown content.
         document_structure: Optional DocumentStructure from E1-S16.
         model_id: Optional model ID override for LLM.
+        document_metadata: Optional dict with site_name, consultant_name, document_type
+            for prompt context injection.
 
     Returns:
         BuildingInventory with buildings, rooms, page ranges, and processing groups.
@@ -575,7 +644,9 @@ async def compile_building_inventory(
     register_content = _trim_to_register(content, document_structure)
 
     try:
-        inventory = await _llm_compile_inventory(register_content, model_id)
+        inventory = await _llm_compile_inventory(
+            register_content, model_id, document_metadata=document_metadata
+        )
         # Ensure processing groups are generated
         if not inventory.processing_groups and inventory.buildings:
             inventory.processing_groups = _create_processing_groups(inventory.buildings)

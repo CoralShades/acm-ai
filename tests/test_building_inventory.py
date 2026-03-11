@@ -153,9 +153,10 @@ class TestPromptTemplate:
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/building_inventory")
-        result = prompter.render(data={"content": "Sample document content"})
+        result = prompter.render(data={"site_name": "Test School", "consultant_name": "Test Corp"})
         assert "Building Inventory Compilation" in result
-        assert "Sample document content" in result
+        assert "Test School" in result
+        assert "Test Corp" in result
 
     def test_prompt_contains_building_detection_instructions(self):
         from ai_prompter import Prompter

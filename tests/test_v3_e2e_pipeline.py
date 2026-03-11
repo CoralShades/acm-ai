@@ -54,43 +54,58 @@ def _make_mock_source(
 def _make_mock_v3_llm() -> AsyncMock:
     """Mock LLM that returns minimal valid JSON for building or item extraction.
 
-    The same response is returned for all graph stages (metadata, structure,
-    inventory, page-tagger, orchestrator).  Stages that do not receive valid
-    JSON for their schema fall back to heuristic logic gracefully.  The
-    orchestrator stage requires a valid ACMExtractionResult: records must have
-    a ``result`` field and ``status`` must be the lowercase enum value.
+    The first call returns MetadataAndStructureLLM-shaped JSON (for the
+    metadata_and_structure node).  All subsequent calls return
+    ACMItemExtractionResult-shaped JSON using V3 SF API field names so that
+    the item records pass validation.
     """
-    # Used by: build_inventory, page_tagger, orchestrator item extraction, etc.
-    # ACMExtractionResult validator requires: records[*].result (required),
-    # status in {"valid", "invalid", "no_acm_data"} (lowercase).
+    # V3 item extraction uses SF API field names (ACMItemRecord schema).
     item_json = json.dumps(
         {
             "records": [
                 {
-                    "building_id": "A1",
-                    "building_name": "Admin Block",
-                    "room_id": "101",
-                    "room_name": "Office",
-                    "product": "Vinyl Floor Tiles",
-                    "material_description": "300mm x 300mm vinyl floor tiles with backing",
-                    "location": "Throughout office area",
-                    "extent": "50 m²",
-                    "friable": "Non-friable",
-                    "material_condition": "Good",
-                    "risk_status": "Low",
-                    "result": "Positive",
-                    "page_number": 1,
+                    "room_or_area": "Office",
+                    "location_in_room": "Throughout office area",
+                    "item_name": "Vinyl Floor Tiles",
+                    "acm_sub_classification": "Vinyl Floor Tiles with Backing",
+                    "friability_of_material": "Non-friable",
+                    "condition": "Good",
+                    "sample_result": "Positive",
                     "extraction_confidence": "high",
+                    "page_number": 1,
                 }
             ],
             "status": "valid",
-            "total_records": 1,
         }
     )
 
+    # MetadataAndStructureLLM-shaped response for the first (metadata) node call.
+    metadata_json = json.dumps(
+        {
+            "metadata": {
+                "consultant_name": "Test Consultant",
+                "document_type": "ACM",
+                "report_date": None,
+                "school_name": "Test School",
+            },
+            "structure": {
+                "register_start_page": 1,
+                "register_end_page": 1,
+                "buildings": [],
+                "sections": [],
+            },
+        }
+    )
+
+    call_count = {"n": 0}
+
     async def _mock_ainvoke(messages, **kwargs):
+        # First LLM call is always the metadata_and_structure node.
+        # Subsequent calls are building/item extraction.
+        call_count["n"] += 1
+        response_content = metadata_json if call_count["n"] == 1 else item_json
         response = MagicMock()
-        response.content = item_json
+        response.content = response_content
         return response
 
     model = AsyncMock()

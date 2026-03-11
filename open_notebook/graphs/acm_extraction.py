@@ -377,8 +377,22 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
     content = source.full_text or ""
     model_id = state.get("model_id")
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
+    doc_meta = state.get("document_metadata")
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
+
+    # Build metadata context for prompt injection
+    meta_context: Optional[dict] = None
+    if doc_meta:
+        meta_context = {
+            "site_name": getattr(doc_meta, "site_name", None) or "",
+            "consultant_name": getattr(doc_meta, "consultant_name", None) or "",
+            "document_type": (
+                doc_structure.document_type.value
+                if doc_structure and doc_structure.document_type
+                else ""
+            ),
+        }
 
     if pl:
         pl.stage_progress(StageId.STRUCTURE, "Compiling building inventory...")
@@ -396,6 +410,7 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
             content,
             document_structure=doc_structure,
             model_id=model_id,
+            document_metadata=meta_context,
         )
         logger.info(
             f"Building inventory compiled for source {source.id}: "
@@ -886,12 +901,14 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                     segment_multiple_tables,
                 )
 
-                # Get DoclingDocument JSON from stored tables
-                docling_json_tables = [
-                    t.get("docling_document_json")
-                    for t in (docling_tables or [])
-                    if t.get("docling_document_json")
-                ]
+                # Get DoclingDocument JSON from stored tables + inject page_number
+                docling_json_tables = []
+                for t in (docling_tables or []):
+                    dj = t.get("docling_document_json")
+                    if dj:
+                        # Inject page_number from outer acm_table_section row
+                        dj["page_number"] = t.get("page_start", 0)
+                        docling_json_tables.append(dj)
 
                 if docling_json_tables:
                     # Segment tables into individual rows

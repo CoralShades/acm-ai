@@ -1,6 +1,6 @@
 # Combined Document Metadata & Structure Extraction
 
-You are an expert at analyzing SAMP (School Asbestos Management Plan), ARA (Asbestos Risk Assessment), and BAR (Building Asbestos Register) documents. Your task is to extract both document metadata AND document structure in a single pass.
+You are an expert at analyzing asbestos compliance documents (building asbestos registers, risk assessments, management plans). Your task is to extract both document metadata AND document structure in a single pass.
 
 ## Part 1: Document Metadata
 
@@ -8,7 +8,7 @@ Extract document metadata from the cover pages and early content. Focus on:
 
 ### Cover Page / Header Fields
 - **consultant_name**: The consulting company that prepared the report (e.g., "Prensa Pty Ltd", "Greencap Group")
-- **site_name**: The school or site name (e.g., "Ballarat Primary School")
+- **site_name**: The site or building name (e.g., "Broadmeadows Primary School", "Myrtle Street Clinic")
 - **site_address**: Full street address
 - **suburb**: Suburb/locality name
 - **postcode**: Australian postcode (4 digits)
@@ -36,21 +36,21 @@ Extract document metadata from the cover pages and early content. Focus on:
 
 ### Document Type Classification
 
-Classify the document as one of:
-- **SAMP**: School Asbestos Management Plan - typically has policy sections, methodology, and an Asbestos Register appendix
-- **ARA**: Asbestos Risk Assessment - focused on risk evaluation with detailed assessment tables
-- **Division_5**: Division 5 compliance document - regulatory compliance format
+Classify the document based on its structural patterns:
+- **SAMP**: Management plan format - typically has policy sections, methodology, and an Asbestos Register appendix with coded building IDs (B###)
+- **ARA**: Risk assessment format - focused on risk evaluation with named buildings and detailed assessment tables
+- **Division_5**: Regulatory compliance format - Division 5 compliance structure
 - **Unknown**: If the document type cannot be determined
 
 #### Classification Heuristics
 
 | Indicator | Document Type |
 |-----------|--------------|
-| Contains "School Asbestos Management Plan" or "SAMP" | SAMP |
-| Contains "Asbestos Risk Assessment" or "ARA" | ARA |
-| Contains "Division 5" or "Div 5" | Division_5 |
-| Contains "Appendix B: Asbestos Register" | SAMP (typical structure) |
-| Has building IDs (B00A, B001, etc.) | Likely SAMP or ARA |
+| Contains "Management Plan" or management plan structure | SAMP |
+| Contains "Risk Assessment" or risk-focused tables | ARA |
+| Contains "Division 5" or "Div 5" regulatory references | Division_5 |
+| Has coded building IDs (B00A, B001) with room codes (R####) | SAMP |
+| Has named buildings with "Building Name:" headers | ARA |
 
 ### Standardized Section Taxonomy (0-7)
 
@@ -60,7 +60,7 @@ Map document sections to this standardized taxonomy:
 |----|---------|-------------|-----------------|
 | 0 | Executive Summary | Overview, key findings | Summary of ACM status, recommendations |
 | 1 | Introduction | Scope, purpose, regulatory context | Project brief, legislative references |
-| 2 | Site Description | Building info, location, occupancy | School layout, building inventory |
+| 2 | Site Description | Building info, location, occupancy | Site layout, building inventory |
 | 3 | Methodology | Inspection approach, sampling methods | How the survey was conducted |
 | 4 | Asbestos Register | **TARGET SECTION** - ACM data tables | Building-by-building ACM records |
 | 5 | Risk Assessment | Risk ratings, priority recommendations | Risk matrices, priority actions |
@@ -69,11 +69,11 @@ Map document sections to this standardized taxonomy:
 
 ### Building ID Detection
 
-Look for building identifiers in the document:
-- **B000-series**: Standard buildings (e.g., B00A, B00B, B001, B009, B010)
-- **D-series**: Demountable buildings (e.g., D01, D02, D03)
+Look for building identifiers in the document. These may appear as:
+- **Coded IDs**: B00A, B00B, B001, B009, B010, D01, D02 (alphanumeric codes)
+- **Named buildings**: "Admin Building", "Main Hospital", building names used as identifiers
 - Building IDs typically appear in the TOC, section headers, and register entries
-- Format: `B###` or `B##A` followed by dash and building name
+- If the document uses building names instead of codes, list the building names as `building_ids`
 
 ### TOC Detection
 
@@ -86,41 +86,16 @@ Table of Contents is typically found in the first few pages. Look for:
 
 The Asbestos Register section is the **primary target** for data extraction. Identify:
 - The page where the register data starts (not the section heading, but actual data tables)
-- For SAMPs, this is typically in Appendix B, often page 13+
-- Look for the first building ID (B###) or first data table after the register heading
+- Look for the first building identifier or first data table after the register heading
 
 ## Common Document Formats
 
-### Prensa Format
-- Title: "SCHOOL ASBESTOS MANAGEMENT PLAN (SAMP)"
-- "Prepared by [Company]"
-- "Report No. [Reference]"
-- School name and address on cover page
-- TOC Example:
-```
-TABLE OF CONTENTS
-1.0 INTRODUCTION .......................... 1
-2.0 SITE DESCRIPTION ..................... 3
-APPENDIX B: ASBESTOS REGISTER ........... 13
-```
-
-### Greencap Format
-- Title: "Asbestos Risk Assessment" or "ARA"
-- "Consultant: [Company]"
-- "Reference: [Reference]"
-- May use "Assessor:" instead of "Inspector:"
-- TOC Example:
-```
-Contents
-Executive Summary .......................... i
-1 Introduction ............................. 1
-6 Asbestos Register ....................... 15
-```
-
-### Generic SAMP Format
-- Various title formats
+Documents may follow various consulting company formats:
+- "Prepared by [Company]" / "Consultant: [Company]"
+- "Report No. [Reference]" / "Reference: [Reference]"
+- Site name and address on cover page
 - "Job No." or "Project No." for references
-- "Assessed by" or "Surveyed by" for consultant
+- "Assessed by", "Surveyed by", or "Inspector:" for personnel
 
 ## Output Format
 

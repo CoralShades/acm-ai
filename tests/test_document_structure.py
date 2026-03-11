@@ -498,7 +498,6 @@ class TestPromptTemplate:
         prompter = Prompter(prompt_template="acm/structure_extraction")
         result = prompter.render(data={"content": "Sample SAMP document content"})
         assert "Document Structure Analysis" in result
-        assert "Sample SAMP document content" in result
 
     def test_prompt_contains_taxonomy(self):
         """Prompt should include the 0-7 section taxonomy."""

@@ -57,8 +57,8 @@ async def _upsert_sf_schema(schema: SFSchemaBundle) -> None:
     schema_dict = schema.model_dump()
 
     await repo_query(
-        """
-        UPSERT $id SET
+        f"""
+        UPSERT {SF_SCHEMA_RECORD_ID} SET
             version = $version,
             building_fields = $building_fields,
             item_fields = $item_fields,
@@ -68,7 +68,6 @@ async def _upsert_sf_schema(schema: SFSchemaBundle) -> None:
             updated = time::now()
         """,
         {
-            "id": SF_SCHEMA_RECORD_ID,
             "version": schema.version,
             "building_fields": json.dumps(schema_dict["building_fields"]),
             "item_fields": json.dumps(schema_dict["item_fields"]),
