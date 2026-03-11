@@ -64,7 +64,31 @@ async def _get_docling_tables(
                 "page_end": page_end,
             },
         )
-        return results if results else []
+        matched = results if results else []
+
+        # Log warning if page range is excluding tables
+        total_query = (
+            "SELECT count() as cnt FROM acm_table_section "
+            "WHERE source_id = $source_id "
+            "AND table_type = 'docling_direct_api' "
+            "GROUP ALL"
+        )
+        total_result = await repo_query(
+            total_query,
+            {"source_id": ensure_record_id(source_id)},
+        )
+        total_count = total_result[0].get("cnt", 0) if total_result else 0
+        if total_count > len(matched):
+            logger.warning(
+                "Page range filter [%d-%d] excluded %d of %d total tables "
+                "for source %s",
+                page_start,
+                page_end,
+                total_count - len(matched),
+                total_count,
+                source_id,
+            )
+        return matched
     except Exception as e:
         logger.warning(f"Docling table query failed for {source_id}: {e}")
         return []

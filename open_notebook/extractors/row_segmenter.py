@@ -8,8 +8,11 @@ No LLM calls — all deterministic Python with Jaro-Winkler fuzzy matching.
 """
 
 import html
+import logging
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from pydantic import BaseModel, Field
 
@@ -63,7 +66,7 @@ _MATERIAL_KEYWORDS = (
 
 # Sub-header level regex (Type E3)
 _LEVEL_REGEX = re.compile(
-    r"^(LEVEL|GROUND|FIRST|SECOND|THIRD|ROOF|BASEMENT|EXTERNAL|MEZZANINE)\b",
+    r"^(LEVEL|GROUND|FIRST|SECOND|THIRD|ROOF|BASEMENT|EXTERNAL|INTERNAL|MEZZANINE)\b",
     re.IGNORECASE,
 )
 
@@ -491,6 +494,15 @@ def segment_multiple_tables(
             page = t.get("page_number", 0)
             if start_page <= page <= end_page:
                 filtered.append(t)
+        if not filtered:
+            logger.warning(
+                "Page filter returned 0 tables for building %s (range %s-%s) — "
+                "falling back to all %d tables",
+                building_id or "?",
+                start_page,
+                end_page,
+                len(tables),
+            )
         tables = filtered if filtered else tables
 
     if len(tables) == 1:

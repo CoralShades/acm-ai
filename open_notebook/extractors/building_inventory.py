@@ -470,6 +470,17 @@ def _heuristic_fallback(
                 )
             )
 
+    # Single-building fix: when only 1 building, set page_end = total_pages
+    # so tables on later pages aren't excluded by the orchestrator page query
+    if len(buildings) == 1 and document_structure:
+        total = document_structure.total_pages
+        if total and buildings[0].page_end < total:
+            logger.info(
+                f"Single-building doc: expanding page_end from "
+                f"{buildings[0].page_end} to {total}"
+            )
+            buildings[0].page_end = total
+
     # Extend boundary pages so records on shared pages are captured (E20-S1)
     _apply_boundary_overlap(buildings)
 

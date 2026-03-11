@@ -106,7 +106,7 @@ class TestGetDoclingTables:
         assert len(result) == 2
         assert result[0]["page_start"] == 5
         assert result[1]["page_start"] == 6
-        mock_query.assert_called_once()
+        assert mock_query.call_count == 2  # main query + exclusion count query
 
     @pytest.mark.asyncio
     async def test_returns_empty_for_no_tables(self):

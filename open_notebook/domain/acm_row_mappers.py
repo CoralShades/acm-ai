@@ -175,13 +175,14 @@ def map_item_row_to_extraction_record(
         floor_level=row.floor_level,
         location=row.item_location,
         # Product / material
-        product=row.item_name,
+        product=row.acm_product or row.item_name,
         material_description=final_sub_classification,
         # Friability
         friable=normalized_friability,
-        # Result — default to "Unknown" for per-row extraction
-        # (user fills sample_result in Salesforce)
-        result="Unknown",
+        # Result — use extracted sample_result, fallback to "Unknown"
+        result=row.sample_result or "Unknown",
+        # Sample number
+        sample_no=row.sample_number,
         # Condition & disturbance
         material_condition=normalized_condition,
         disturbance_potential=normalized_disturbance,

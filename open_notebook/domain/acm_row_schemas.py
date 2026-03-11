@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 class ACMItemRow(BaseModel):
     """LLM output for a single ACM register row.
 
-    9 fields only -- deliberately simple for Ollama extraction.
+    13 fields — kept simple for Ollama extraction (num_ctx=2048).
     The LLM extracts raw values; Python post-processing handles
     normalization and Salesforce picklist alignment.
     """
@@ -53,4 +53,20 @@ class ACMItemRow(BaseModel):
     disturbance_potential: Optional[str] = Field(
         None,
         description="Likelihood of disturbance, e.g. 'Low', 'Medium', 'High'",
+    )
+    sample_number: Optional[str] = Field(
+        None,
+        description="Sample/lab number, e.g. '34511-039-001', 'S001'",
+    )
+    sample_result: Optional[str] = Field(
+        None,
+        description="Analysis result, e.g. 'Positive', 'Negative', 'Assumed Positive', 'Not Sampled'",
+    )
+    acm_product: Optional[str] = Field(
+        None,
+        description="ACM product type, e.g. 'Floor covering', 'Skirting', 'Flange joints'",
+    )
+    internal_external: Optional[str] = Field(
+        None,
+        description="Whether item is internal or external, e.g. 'Internal', 'External'",
     )

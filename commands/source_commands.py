@@ -268,27 +268,31 @@ def _merge_provider_tables(
         List of table dicts with keys: table_index, page, rows, columns, csv,
         markdown, html, consensus_tier, consensus_scores.
     """
+    from collections import defaultdict
+
     from open_notebook.extractors.strategy_registry import (
         FallbackId,
         emit_fallback_telemetry,
     )
 
     # Index by page number; page <= 0 means unknown — handle separately
-    docling_by_page: Dict[int, Any] = {}
-    mineru_by_page: Dict[int, Any] = {}
+    # Use lists to support multiple tables per page (Bug Fix 11 Phase 2)
+
+    docling_by_page: Dict[int, list] = defaultdict(list)
+    mineru_by_page: Dict[int, list] = defaultdict(list)
 
     unknown_docling = []
     unknown_mineru = []
 
     for t in docling_result.tables:
         if t.page > 0:
-            docling_by_page[t.page] = t
+            docling_by_page[t.page].append(t)
         else:
             unknown_docling.append(t)
 
     for t in mineru_result.tables:
         if t.page > 0:
-            mineru_by_page[t.page] = t
+            mineru_by_page[t.page].append(t)
         else:
             unknown_mineru.append(t)
 
@@ -296,88 +300,127 @@ def _merge_provider_tables(
     all_pages = sorted(set(docling_by_page.keys()) | set(mineru_by_page.keys()))
 
     for page in all_pages:
-        d_table = docling_by_page.get(page)
-        m_table = mineru_by_page.get(page)
+        d_tables = docling_by_page.get(page, [])
+        m_tables = mineru_by_page.get(page, [])
 
-        if d_table and not m_table:
-            # Only Docling has this page
-            merged.append(
-                {
-                    "table_index": d_table.table_index,
-                    "page": page,
-                    "rows": d_table.row_count,
-                    "columns": d_table.columns,
-                    "csv": d_table.csv,
-                    "markdown": d_table.markdown,
-                    "html": d_table.html,
-                    "consensus_tier": "single_provider",
-                    "consensus_scores": None,
-                    "docling_json": d_table.docling_json,
-                }
-            )
+        if d_tables and not m_tables:
+            # Only Docling has this page — emit each table
+            for dt in d_tables:
+                merged.append(
+                    {
+                        "table_index": dt.table_index,
+                        "page": page,
+                        "rows": dt.row_count,
+                        "columns": dt.columns,
+                        "csv": dt.csv,
+                        "markdown": dt.markdown,
+                        "html": dt.html,
+                        "consensus_tier": "single_provider",
+                        "consensus_scores": None,
+                        "docling_json": dt.docling_json,
+                    }
+                )
 
-        elif m_table and not d_table:
-            # Only MinerU has this page
-            merged.append(
-                {
-                    "table_index": m_table.table_index,
-                    "page": page,
-                    "rows": m_table.row_count,
-                    "columns": m_table.columns,
-                    "csv": m_table.csv,
-                    "markdown": m_table.markdown,
-                    "html": m_table.html,
-                    "consensus_tier": "single_provider",
-                    "consensus_scores": None,
-                    "docling_json": None,
-                }
-            )
+        elif m_tables and not d_tables:
+            # Only MinerU has this page — emit each table
+            for mt in m_tables:
+                merged.append(
+                    {
+                        "table_index": mt.table_index,
+                        "page": page,
+                        "rows": mt.row_count,
+                        "columns": mt.columns,
+                        "csv": mt.csv,
+                        "markdown": mt.markdown,
+                        "html": mt.html,
+                        "consensus_tier": "single_provider",
+                        "consensus_scores": None,
+                        "docling_json": None,
+                    }
+                )
 
         else:
-            # Both providers have this page — compute consensus
-            d_rows = d_table.row_count  # type: ignore[union-attr]
-            m_rows = m_table.row_count  # type: ignore[union-attr]
+            # Both providers have this page — pair by index, compute consensus
+            # Pair tables positionally; extras from either side go as single_provider
+            max_len = max(len(d_tables), len(m_tables))
+            for i in range(max_len):
+                d_table = d_tables[i] if i < len(d_tables) else None
+                m_table = m_tables[i] if i < len(m_tables) else None
 
-            denom = max(d_rows, m_rows)
-            row_divergence = abs(d_rows - m_rows) / denom if denom > 0 else 0.0
-            total_rows = d_rows + m_rows
-            scores = {
-                "docling": d_rows / total_rows if total_rows > 0 else 0.0,
-                "mineru": m_rows / total_rows if total_rows > 0 else 0.0,
-                "row_divergence": row_divergence,
-                "agreement": 1.0 - row_divergence,
-            }
+                if d_table and not m_table:
+                    merged.append(
+                        {
+                            "table_index": d_table.table_index,
+                            "page": page,
+                            "rows": d_table.row_count,
+                            "columns": d_table.columns,
+                            "csv": d_table.csv,
+                            "markdown": d_table.markdown,
+                            "html": d_table.html,
+                            "consensus_tier": "single_provider",
+                            "consensus_scores": None,
+                            "docling_json": d_table.docling_json,
+                        }
+                    )
+                elif m_table and not d_table:
+                    merged.append(
+                        {
+                            "table_index": m_table.table_index,
+                            "page": page,
+                            "rows": m_table.row_count,
+                            "columns": m_table.columns,
+                            "csv": m_table.csv,
+                            "markdown": m_table.markdown,
+                            "html": m_table.html,
+                            "consensus_tier": "single_provider",
+                            "consensus_scores": None,
+                            "docling_json": None,
+                        }
+                    )
+                else:
+                    d_rows = d_table.row_count  # type: ignore[union-attr]
+                    m_rows = m_table.row_count  # type: ignore[union-attr]
 
-            if row_divergence > 0.40:
-                consensus_tier = "multi_provider_conflict"
-                emit_fallback_telemetry(
-                    FallbackId.F9_PROVIDER_CONFLICT,
-                    building_name=f"page={page}",
-                    reason=f"row_divergence={row_divergence:.3f} (docling={d_rows}, mineru={m_rows})",
-                )
-            else:
-                consensus_tier = "multi_provider_agreement"
-                emit_fallback_telemetry(
-                    FallbackId.F10_CONSENSUS_ARBITRATION,
-                    building_name=f"page={page}",
-                    reason=f"row_divergence={row_divergence:.3f} — MinerU HTML preferred",
-                )
+                    denom = max(d_rows, m_rows)
+                    row_divergence = abs(d_rows - m_rows) / denom if denom > 0 else 0.0
+                    total_rows = d_rows + m_rows
+                    scores = {
+                        "docling": d_rows / total_rows if total_rows > 0 else 0.0,
+                        "mineru": m_rows / total_rows if total_rows > 0 else 0.0,
+                        "row_divergence": row_divergence,
+                        "agreement": 1.0 - row_divergence,
+                    }
 
-            merged.append(
-                {
-                    "table_index": d_table.table_index,  # type: ignore[union-attr]
-                    "page": page,
-                    "rows": d_rows,
-                    "columns": d_table.columns,  # type: ignore[union-attr]
-                    "csv": d_table.csv,  # type: ignore[union-attr]
-                    "markdown": d_table.markdown,  # type: ignore[union-attr]
-                    "html": m_table.html
-                    or d_table.html,  # Prefer MinerU HTML  # type: ignore[union-attr]
-                    "consensus_tier": consensus_tier,
-                    "consensus_scores": scores,
-                    "docling_json": d_table.docling_json,  # type: ignore[union-attr]
-                }
-            )
+                    if row_divergence > 0.40:
+                        consensus_tier = "multi_provider_conflict"
+                        emit_fallback_telemetry(
+                            FallbackId.F9_PROVIDER_CONFLICT,
+                            building_name=f"page={page}",
+                            reason=f"row_divergence={row_divergence:.3f} (docling={d_rows}, mineru={m_rows})",
+                        )
+                    else:
+                        consensus_tier = "multi_provider_agreement"
+                        emit_fallback_telemetry(
+                            FallbackId.F10_CONSENSUS_ARBITRATION,
+                            building_name=f"page={page}",
+                            reason=f"row_divergence={row_divergence:.3f} — MinerU HTML preferred",
+                        )
+
+                    merged.append(
+                        {
+                            "table_index": d_table.table_index,  # type: ignore[union-attr]
+                            "page": page,
+                            "rows": d_rows,
+                            "columns": d_table.columns,  # type: ignore[union-attr]
+                            "csv": d_table.csv,  # type: ignore[union-attr]
+                            "markdown": d_table.markdown,  # type: ignore[union-attr]
+                            "html": m_table.html
+                            or d_table.html,  # Prefer MinerU HTML  # type: ignore[union-attr]
+                            "consensus_tier": consensus_tier,
+                            "consensus_scores": scores,
+                            "docling_json": d_table.docling_json,  # type: ignore[union-attr]
+                        }
+                    )
 
     # Append unknown-page tables (page <= 0), Docling first, then MinerU
     _table_counter = len(merged)
