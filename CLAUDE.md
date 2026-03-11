@@ -264,6 +264,11 @@ OLLAMA_API_BASE=http://localhost:11434
 # Content truncation guard for Ollama — auto-sized from model's num_ctx (3.5 chars/token).
 # Override only if the auto-size is wrong for your specific model/hardware combo.
 OLLAMA_MAX_CONTENT_CHARS=24000  # explicit override (optional; default: num_ctx * 3.5)
+
+# Per-row extraction (v3.5)
+ACM_ITEM_EXTRACTION_MODE=per_row    # per_row (default) or bulk
+ACM_ROW_EXTRACTION_NUM_CTX=2048     # Context window for per-row extraction
+ACM_EXTRACTION_MODEL=llama3.1:8b    # Ollama model for extraction (configurable)
 ```
 
 ## Code Style
@@ -425,6 +430,23 @@ Six tools, each with a distinct role:
 - Logfire auto-instruments Pydantic v2 when `LOGFIRE_ENABLED=true` (requires Langfuse keys)
 - JSON Crack: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d jsoncrack`
 - State dump: `uv run python scripts/dump_state_json.py <thread_id>` → paste into JSON Crack
+
+### Per-Row Extraction Pipeline (v3.5)
+
+Item__c extraction supports two modes controlled by `ACM_ITEM_EXTRACTION_MODE` env var:
+
+**Per-row mode** (default): One LLM call per table row → 9 fields → deterministic post-processing
+- Row segmenter: `open_notebook/extractors/row_segmenter.py` (RawTableRow, 8 edge case types)
+- Row extractor: `open_notebook/extractors/row_extractor.py` (KV prompt, extract_all_rows)
+- Schema: `open_notebook/domain/acm_row_schemas.py` (ACMItemRow, 9 fields)
+- Mapper: `open_notebook/domain/acm_row_mappers.py` (ACMItemRow → ACMExtractionRecord)
+- Prompts: `prompts/acm/row_extraction.jinja`, `prompts/acm/row_split.jinja`
+- Ollama config: `ACM_ROW_EXTRACTION_NUM_CTX=2048`, `ACM_EXTRACTION_MODEL=llama3.1:8b`
+
+**Bulk mode**: Original V3 path — one LLM call per building, all items at once
+- Activated by `ACM_ITEM_EXTRACTION_MODE=bulk` or automatic fallback when no DoclingDocument JSON
+
+**Truncation protection**: TruncationError detection → cloud model retry, 30% output budget reservation
 
 ### SSE Streaming (PipelineEventBus)
 - Backend: `open_notebook/extractors/pipeline_event_bus.py`

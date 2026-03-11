@@ -1,9 +1,10 @@
 # Technical Architecture - ACM-AI
 
-> **Project:** ACM-AI v3.1
-> **Date:** 2025-12-07 (Updated: 2026-03-05)
-> **Status:** v3.1 - V3 Implementation Complete (verified component names, file paths, and diagrams against actual code)
+> **Project:** ACM-AI v3.5
+> **Date:** 2025-12-07 (Updated: 2026-03-11)
+> **Status:** v3.5 - Per-Row Extraction Pipeline (E37: 8 stories, 18 SP; all offline verification passed)
 > **Change Log:**
+> - 2026-03-11 - v3.5: Per-Row Extraction Pipeline (E37) — new Section 14.13 documenting per-row Item__c extraction architecture, row segmentation engine, 9-field schema, deterministic post-processing, Ollama truncation fallback, and DoclingDocument JSON storage. 6 new source files, 163 new tests
 > - 2026-03-05 - v3.1: Implementation audit — verified all V3 component names and file paths against actual code. Key corrections: RecordMatcher is in consensus/matcher.py (not engine.py), E31-S8 added (Pre-Extraction Quality Hardening), E32-S8 added (Ollama Token-Budget Chunking), frontend port corrected to 8503
 > - 2026-03-02 - v3.0: V3 Architecture Expansion: 10 new sections (data model, extraction pipeline, AI batching, picklist validation, provenance, SSE, frontend, export, migration, API). Source: Party Mode + PRD v3.0 + audit W1-W12
 > - 2026-02-23 - v1.3: Marketing-app dual-project Vercel architecture, env-driven host contract, root-domain cutover and bidirectional navigation model
@@ -2086,17 +2087,18 @@ Phase 2: Structure Analysis (existing + enhanced)
 |  -> Building Inventory + Page Tags                               |
 +------------------------------------------------------------------+
 
-Phase 3: AI Extraction -- per building (E32)
+Phase 3: AI Extraction -- per building (E32 + E37)
 +------------------------------------------------------------------+
 |  Orchestrator (per building):                                    |
-|  Step A: Extract Building__c fields (Claude Sonnet)              |
+|  Step A: Extract Building__c fields (Claude Sonnet, 14 fields)   |
 |    -> BuildingExtractionResult (Pydantic structured output)      |
 |    -> building_record in SurrealDB                               |
-|  Step B: Extract Item__c fields (Claude Sonnet)                  |
-|    -> ACMItemExtractionResult[] (Pydantic structured output)     |
-|    -> acm_record[] linked to building_record via FK              |
+|  Step B: Extract Item__c fields — TWO MODES (V3.5):             |
+|    per_row (default): See Section 14.13 — one LLM call/row      |
+|    bulk (legacy): Claude Sonnet, all items per building          |
+|    -> ACMExtractionRecord[] linked to building_record via FK     |
 |                                                                   |
-|  Fallback: Anthropic direct -> OpenRouter -> skip building       |
+|  Fallback: per_row -> bulk -> Anthropic -> OpenRouter -> skip    |
 +------------------------------------------------------------------+
 
 Phase 4: Validation & Correction (E32)
@@ -3096,3 +3098,146 @@ interface ValidationResult {
 | `frontend/src/components/acm/UploadWizard.tsx` | NEW | 3-step upload wizard |
 | `frontend/src/components/acm/SFExportDialog.tsx` | NEW | SF Data Loader export dialog |
 | Tests (33+ files) | HIGH | BAR->SF vocabulary, BuildingRecord fixtures |
+
+---
+
+### 14.13 V3.5 Per-Row Extraction Pipeline (NEW - 2026-03-11)
+
+> **Addresses:** FR-1901–FR-1906, E37 (8 stories, 18 SP)
+> **Extends:** Section 14.3.1 Phase B (Item__c Extraction) with per-row alternative
+> **Source:** [v3.5 Task Plan](../../../v3.5/task_plan.md), [v3.5 Findings](../../../v3.5/findings.md)
+
+#### 14.13.1 Per-Row Pipeline Flow
+
+Replaces the bulk Item__c extraction (Phase 3, Step B) with a per-row pipeline when `ACM_ITEM_EXTRACTION_MODE=per_row` (default):
+
+```
+For each building:
+  Step 4a: Get DoclingDocument JSON
+  +------------------------------------------------------------------+
+  |  Fetch docling_document_json from acm_table_section              |
+  |  (stored during Phase 1 by DoclingAdapter via migration 48)      |
+  |  Filter tables by building's page range                          |
+  +------------------------------------------------------------------+
+
+  Step 4b: Row Segmentation (NO LLM)
+  +------------------------------------------------------------------+
+  |  Parse JSON table_cells -> group by start_row_offset_idx         |
+  |  Handle: merged cells (row_span/col_span carry-forward)          |
+  |  Handle: multi-page tables (merge + deduplicate overlap rows)    |
+  |  Handle: sub-headers -> update current_level context             |
+  |  Handle: note rows -> store in extraction_notes                  |
+  |  Detect: multi-item cells -> flag needs_llm_split (Type E1)     |
+  |  Text scan: "Not Sampled"/"No Access" -> synthetic rows          |
+  |  Column mapping: COLUMN_ALIASES + Jaro-Winkler fuzzy matching   |
+  |  -> list[RawTableRow]                                            |
+  +------------------------------------------------------------------+
+
+  Step 4c: Per-Row LLM Extraction
+  +------------------------------------------------------------------+
+  |  For each RawTableRow:                                           |
+  |    build_kv_prompt(row, building_context) -> key-value pairs    |
+  |    ChatOllama(format="json", temperature=0, num_ctx=2048)       |
+  |    -> ACMItemRow (9 fields: room_name, floor_level,             |
+  |       item_location, item_name, friability,                      |
+  |       acm_classification, acm_sub_classification,               |
+  |       condition, disturbance_potential)                           |
+  |    If needs_llm_split: split_multi_item_row() first             |
+  |    If extraction fails: _build_fallback_record() (low confidence)|
+  |    SSE events via PipelineEventBus                               |
+  +------------------------------------------------------------------+
+
+  Step 4d: Deterministic Post-Processing (NO LLM)
+  +------------------------------------------------------------------+
+  |  is_friable bool -> "Friable" / "Non-friable"                   |
+  |  item_name -> classify_product() -> Classification +            |
+  |    Sub-Classification (regex taxonomy, no LLM)                   |
+  |  condition -> normalize_enum_value() -> SF picklist value       |
+  |  Dependency chain validation (Friability->Class->SubClass)       |
+  +------------------------------------------------------------------+
+
+  Step 4e: Map to Pipeline
+  +------------------------------------------------------------------+
+  |  map_item_row_to_extraction_record() -> ACMExtractionRecord     |
+  |  -> existing validate/correct/save pipeline (Phase 4+5)         |
+  |  -> acm_record linked to building_record via FK                 |
+  +------------------------------------------------------------------+
+```
+
+#### 14.13.2 Edge Case Types
+
+The row segmenter handles 8 edge case types without LLM involvement:
+
+| Type | Description | Detection | Strategy |
+|------|-------------|-----------|----------|
+| A | Standard single-page table | `len(tables) == 1`, regular rows | Direct grouping by `start_row_offset_idx` |
+| B | Multi-page table | Multiple tables, same `num_cols` | Merge tables, deduplicate overlap rows |
+| C | Merged cells (room spanning) | `row_span > 1` on cell | Span registry: carry-forward cell values |
+| D | Hierarchical text (no table) | No table objects in page range | Markdown regex fallback, synthetic rows |
+| E1 | Multi-item cell | `\n`-separated items + material keywords | Flag `needs_llm_split`, LLM splits before extraction |
+| E2 | Note/comment row | Single cell spanning all columns, no keywords | Skip, store text in `extraction_notes` |
+| E3 | Sub-header row | Single cell matching level regex | Update `current_level` for subsequent rows |
+| F | Not Sampled / No Access | Not in tables, in raw text | Regex scan, synthetic rows with `is_synthetic=True` |
+| G | Different column orders | Headers don't match canonical names | `COLUMN_ALIASES` dict + Jaro-Winkler (≥70%) |
+| H | Split/fragmented tables | Different `num_cols`, shared key column | JOIN on shared column by header fuzzy match |
+
+#### 14.13.3 V3.5 Components
+
+| File | Type | Purpose |
+|------|------|---------|
+| `open_notebook/extractors/row_segmenter.py` | NEW | `RawTableRow` model, `COLUMN_ALIASES`, `segment_docling_table()`, `segment_multiple_tables()`, `scan_text_for_synthetics()`, `generate_debug_table()` |
+| `open_notebook/domain/acm_row_schemas.py` | NEW | `ACMItemRow` — 9-field Pydantic model for per-row LLM output |
+| `open_notebook/domain/acm_row_mappers.py` | NEW | `map_item_row_to_extraction_record()`, `normalize_friability()`, `is_friable_bool()` |
+| `open_notebook/extractors/row_extractor.py` | NEW | `build_kv_prompt()`, `extract_single_row()`, `split_multi_item_row()`, `extract_all_rows()`, `_build_fallback_record()` |
+| `prompts/acm/row_extraction.jinja` | NEW | Per-row system prompt (9-field JSON schema) |
+| `prompts/acm/row_split.jinja` | NEW | Multi-item cell splitting prompt (Type E1) |
+| `open_notebook/graphs/acm_extraction.py` | MODIFIED | Per-row path in `_extract_items_for_building()`, recovery node gating |
+| `open_notebook/graphs/utils.py` | MODIFIED | 30% output budget reserve, configurable `ACM_EXTRACTION_MODEL` |
+| `open_notebook/extractors/orchestrator.py` | MODIFIED | `TruncationError` catch + cloud retry |
+| `open_notebook/extractors/providers/docling_adapter.py` | MODIFIED | `export_to_dict()` for DoclingDocument JSON storage |
+| `commands/source_commands.py` | MODIFIED | Store + propagate `docling_document_json` |
+| `migrations/47.surrealql` | NEW | `building_sub_category`, `building_risk_rating` fields |
+| `migrations/48.surrealql` | NEW | `docling_document_json` field on `acm_table_section` |
+
+#### 14.13.4 Ollama Configuration
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `ACM_ITEM_EXTRACTION_MODE` | `per_row` | Extraction mode: `per_row` (1 call/row) or `bulk` (1 call/building) |
+| `ACM_ROW_EXTRACTION_NUM_CTX` | `2048` | Ollama context window for per-row extraction (9 fields fit easily) |
+| `ACM_EXTRACTION_MODEL` | `llama3.1:8b` | Ollama model for extraction (configurable; was hardcoded `qwen2.5:7b`) |
+| `ACM_PRE_EXTRACTION_MODEL` | `qwen2.5:14b-instruct-q4_K_M` | Ollama model for building metadata (large context) |
+| `ACM_PRE_EXTRACTION_NUM_CTX` | `32768` | Ollama context window for pre-extraction |
+
+**Truncation Fallback:** When Ollama produces incomplete JSON (detected as `TruncationError`), the system automatically retries with a cloud model (Anthropic direct → OpenRouter fallback). The `_ollama_split_by_budget()` function reserves 30% of the token budget for output to prevent truncation proactively.
+
+#### 14.13.5 Fallback Strategy
+
+```
+ACM_ITEM_EXTRACTION_MODE decision tree:
+
+  "per_row" (default)
+    ├── DoclingDocument JSON available?
+    │   ├── YES → segment_multiple_tables() + scan_text_for_synthetics()
+    │   │   ├── Rows segmented? → extract_all_rows() (per-row LLM)
+    │   │   └── No rows → FALLBACK to bulk
+    │   └── NO → FALLBACK to bulk
+    └── "bulk"
+        └── _chunk_and_extract_items() + _normalize_v3_records() (unchanged V3 path)
+```
+
+Per-row mode gates the `recover_no_access_node` (returns state unchanged) since the row segmenter already handles Type D/F edge cases via `scan_text_for_synthetics()`.
+
+#### 14.13.6 V3.5 Test Coverage
+
+| Test File | Tests | Covers |
+|-----------|------:|--------|
+| `tests/test_row_segmenter.py` | 32 | All edge case types A-H, column mapping, debug table |
+| `tests/test_acm_row_mappers.py` | 47 | 9-field mapping, friability normalization, dependency chains |
+| `tests/test_row_extractor.py` | 27 | KV prompt building, single-row extraction, multi-item split, fallback records |
+| `tests/test_pipeline_integration.py` | 9 | Per-row/bulk mode switching, fallback triggers, recovery node gating |
+| `tests/test_docling_json_storage.py` | 12 | DoclingDocument JSON storage + propagation |
+| `tests/test_building_schema_gaps.py` | 19 | 5 new building fields, prompt rendering |
+| `tests/test_truncation_fallback.py` | 17 | TruncationError detection, cloud retry, output budget |
+| `tests/fixtures/edge_case_tables/` | 14 files | JSON + Markdown fixtures for Types A-H |
+| **Total** | **163** | |

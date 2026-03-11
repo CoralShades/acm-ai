@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-05
+updated: 2026-03-11
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -518,6 +518,26 @@ development_status:
   epic-35-retrospective: optional
 
   # ─────────────────────────────────────────────────────
+  # Epic 37: Per-Row ACM Extraction Pipeline (v3.5)
+  # 8 stories, 18 SP
+  # Dependencies: E30-E35 (builds on V3 foundation)
+  # Planning: v3.5/ directory (CLAUDE_CODE_SESSION_PROMPT.md, task_plan.md, progress.md, findings.md, gap_analysis.md)
+  # Goal: Replace bulk-per-building Item__c extraction with per-row LLM calls (9 fields, num_ctx=2048)
+  # New components: row_segmenter.py, row_extractor.py, acm_row_schemas.py, acm_row_mappers.py
+  # 163 new tests, 2154 total suite passing
+  # ─────────────────────────────────────────────────────
+  epic-37: done  # All 8 stories done. Completed 2026-03-10.
+  e37-s1-store-docling-document-json: done              # 2 SP. Phase 0A. Store DoclingDocument JSON on acm_table_section. Migration 48. 12 tests.
+  e37-s2-building-schema-gaps-prompt: done              # 2 SP. Phase 0B. 5 new Building__c fields + prompt update. Migration 47. 19 tests.
+  e37-s3-truncation-fallback-output-budget: done        # 3 SP. Phase 0C. TruncationError catch, cloud retry, 30% output budget reserve. 17 tests.
+  e37-s4-row-segmentation-engine: done                  # 3 SP. Phase 1. RawTableRow model, COLUMN_ALIASES, segment_docling_table(), 8 edge case types (A-H). 32 tests.
+  e37-s5-nine-field-schema-mapper: done                 # 2 SP. Phase 1. ACMItemRow (9 fields), map_item_row_to_extraction_record(). 47 tests.
+  e37-s6-edge-case-fixtures: done                       # 1 SP. Phase 1. 14 fixture files (11 JSON + 2 MD + 1 README) for Types A-H.
+  e37-s7-per-row-extraction-orchestrator: done          # 3 SP. Phase 2. build_kv_prompt(), extract_single_row(), extract_all_rows(), SSE events. 27 tests.
+  e37-s8-pipeline-integration: done                     # 2 SP. Phase 3. ACM_ITEM_EXTRACTION_MODE env var, per-row/bulk toggle, recovery gating. 9 tests.
+  epic-37-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
   # Epic 36: E2E Verification & Agent Orchestration
   # 8 stories, 26 SP
   # Dependencies: E35 (all fixes code-complete, need browser verification)
@@ -534,6 +554,18 @@ development_status:
   e36-s7-devils-advocate-review: backlog                  # 2 SP. Adversarial review of fixes and benchmark results.
   e36-s8-bmad-documentation-closeout: backlog             # 1 SP. Final artifact updates.
   epic-36-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # Bug Fix 11: Per-Row Extraction Quality (2026-03-11)
+  # 6 pipeline bugs fixed: 0→16 records. Gap analysis reveals 6 more bugs for 16→31.
+  # Issues: bug-page-range-table-loss, bug-row-segmenter-subheaders,
+  #         bug-per-row-schema-missing-fields, bug-building-record-not-persisted
+  # ─────────────────────────────────────────────────────
+  bug-fix-11-pipeline-6-bugs: done           # 2026-03-11. 6 bugs: room key remap, generic fallback, UPSERT fix, prompts, metadata injection, page_number injection. 0→16 records.
+  bug-page-range-table-loss: ready-for-dev   # P0. Building page_end underestimation + _merge_provider_tables overwrite + silent page filter fallback. ~15 records lost.
+  bug-per-row-schema-missing-fields: ready-for-dev  # P0. ACMItemRow missing sample_no, sample_result, acm_product, internal_external. Mapper hardcodes result="Unknown".
+  bug-row-segmenter-subheaders: drafted      # P1. _LEVEL_REGEX missing INTERNAL. Partial-width span check. Wrong internal_external field values.
+  bug-building-record-not-persisted: drafted # P1. Buildings not persisted to building_record table. Frontend shows 0 buildings.
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
@@ -569,30 +601,52 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 35  (+6 V3 epics: E30-E35, +1 E36 verification)
-# Total Stories: 229  (176 pre-V3 + 37 V3 + 8 V3-hardening + 8 E36-verification)
-# Stories Done: 207 (90%)  -- 160 pre-V3 + 37 V3 + 8 V3-hardening + 4 E36 (E36-S1, S2, S3, S4)
+# Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
+# Total Stories: 242  (237 prior + 5 bug-fix-11 stories)
+# Stories Done: 216 (89%)  -- 215 prior + 1 bug-fix-11-pipeline-6-bugs
 # Stories Review: 0
 # Stories In-Progress: 0
 # Stories Blocked: 0
-# Stories Ready-For-Dev: 0
-# Stories Drafted: 0
-# Stories Backlog: 0
+# Stories Ready-For-Dev: 2 (bug-page-range-table-loss, bug-per-row-schema-missing-fields)
+# Stories Drafted: 2 (bug-row-segmenter-subheaders, bug-building-record-not-persisted)
+# Stories Backlog: 4 (E36-S4..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-05
-# Reconciliation note: E35 epic added (8 stories, 22 SP) for post-V3 hardening.
-# V3 core complete (37/37). E35 hardening: 8/8 stories done (E35-S1..S8 all complete). ALL V3 stories delivered (45/45, 132 SP).
-# E36 epic added (8 stories, 26 SP) for E2E verification, Ollama benchmarking, and agent orchestration.
+# Last Updated: 2026-03-11
+# Bug Fix 11: 6 pipeline bugs fixed (0→16 records). Gap analysis vs ground truth (31 records)
+# revealed 4 more issues: page range/table loss (P0), missing schema fields (P0),
+# segmenter sub-headers (P1), building persistence (P1).
+# Issues created: docs/issues/bug-page-range-table-loss.md, bug-per-row-schema-missing-fields.md,
+#   bug-row-segmenter-subheaders.md, bug-building-record-not-persisted.md
+#
+# KEY CHANGES (2026-03-11 - Bug Fix 11 + Gap Analysis):
+# ======================================================
+# Phase 1 (Bug Fix 11 - DONE): 6 bugs causing 0 records extracted from Broadmeadows PDF
+#   - Room key remapping (_coerce_rooms_in_inventory): room_code/room_name → room_id/name
+#   - Generic heuristic fallback for all doc types (not just SAMP/ARA)
+#   - SF Schema UPSERT inline record ID (SurrealDB parameterized ID bug)
+#   - Prompt terminology made document-agnostic (removed SAMP/ARA references)
+#   - Building ID generation + metadata injection (sequential B001/B002)
+#   - page_number injection into docling JSON for row segmenter
+#   Result: 0→16 records, 2119 tests pass, ruff clean
+#
+# Phase 2 (Gap Analysis - 4 NEW ISSUES): 16 vs 31 ground truth records
+#   - bug-page-range-table-loss (P0): page_end underestimation + multi-table-per-page overwrite
+#   - bug-per-row-schema-missing-fields (P0): ACMItemRow missing sample_no, sample_result, product
+#   - bug-row-segmenter-subheaders (P1): _LEVEL_REGEX missing INTERNAL, partial span check
+#   - bug-building-record-not-persisted (P1): buildings not saved to DB, frontend shows 0
+# 163 new tests (Phase 0-3), 2154 total suite passing. ACM_ITEM_EXTRACTION_MODE env var (per_row|bulk).
+# V3 core complete (37/37). V3 hardening: 8/8. V3.5 per-row: 8/8. ALL V3+ stories delivered (53/53, 150 SP).
+# E36 verification in progress (3/8 done, 5 backlog).
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
-#                  E30, E31, E32, E33, E34
-# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived), E36 (4/8 done, 4 backlog)
+#                  E30, E31, E32, E33, E34, E35, E37
+# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived), E36 (3/8 done, 5 backlog)
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: COMPLETE. 37/37 core + 8/8 hardening done (100%). E36 verification in progress (4/8).
+# V3 STATUS: COMPLETE. 37/37 core + 8/8 hardening + 8/8 per-row done (100%). E36 verification in progress (3/8).
 # All 5 core V3 epics done. Schema freeze gate unlocked 2026-03-03. Final core story 2026-03-05.
 #
 # INFRASTRUCTURE: Self-Healing E2E Testing Workflow (2026-03-05):
