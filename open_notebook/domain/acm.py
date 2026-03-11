@@ -1009,8 +1009,9 @@ class BuildingRecord(ObjectModel):
         if isinstance(source_id, str) and not source_id.startswith("source:"):
             source_id = f"source:{source_id}"
         source = await Source.get(source_id)
+        source_label = source.title or ""
         source_short = (
-            source.name[:8].upper().replace(" ", "_") if source.name else "UNKNOWN"
+            source_label[:8].upper().replace(" ", "_") if source_label else "UNKNOWN"
         )
         existing = await cls.get_by_source(source_id)
         seq = len(existing) + 1

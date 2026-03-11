@@ -80,13 +80,9 @@ async def _get_docling_tables(
         total_count = total_result[0].get("cnt", 0) if total_result else 0
         if total_count > len(matched):
             logger.warning(
-                "Page range filter [%d-%d] excluded %d of %d total tables "
-                "for source %s",
-                page_start,
-                page_end,
-                total_count - len(matched),
-                total_count,
-                source_id,
+                f"Page range filter [{page_start}-{page_end}] excluded "
+                f"{total_count - len(matched)} of {total_count} total tables "
+                f"for source {source_id}"
             )
         return matched
     except Exception as e:
