@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { getFilteredNavigation, type NavGroup } from '@/config/navigation'
 import { toast } from 'sonner'
+import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 
 const isAcmMode = process.env.NEXT_PUBLIC_ACM_MODE !== 'false'
 
@@ -45,6 +46,7 @@ export function AppSidebar() {
     useSidebarStore()
   const { mode, setMode } = useUserModeStore()
   const router = useRouter()
+  const { openSourceDialog } = useCreateDialogs()
 
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
 
@@ -123,7 +125,7 @@ export function AppSidebar() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={() => router.push('/upload')}
+                    onClick={openSourceDialog}
                     variant="default"
                     size="sm"
                     className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
@@ -136,7 +138,7 @@ export function AppSidebar() {
               </Tooltip>
             ) : (
               <Button
-                onClick={() => router.push('/upload')}
+                onClick={openSourceDialog}
                 variant="default"
                 size="sm"
                 className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"

@@ -28,12 +28,14 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs';
 import { RiskChart } from '@/components/dashboard/RiskChart';
 import { RecentSourcesList } from '@/components/dashboard/RecentSourcesList';
 
 function DashboardPageContent() {
   const { data: sources, isLoading: sourcesLoading, error: sourcesError } = useSources();
   const { data: acmSummary, isLoading: acmLoading, error: acmError } = useACMSummary();
+  const { openSourceDialog } = useCreateDialogs();
 
   const totalSources = sources?.length || 0;
 
@@ -208,11 +210,9 @@ function DashboardPageContent() {
             <BentoCardTitle>Quick Actions</BentoCardTitle>
           </BentoCardHeader>
           <BentoCardContent className="space-y-3">
-            <Button asChild className="w-full justify-start">
-              <Link href="/upload">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload New Document
-              </Link>
+            <Button onClick={openSourceDialog} className="w-full justify-start">
+              <Upload className="w-4 h-4 mr-2" />
+              Upload New Document
             </Button>
             <Button variant="outline" asChild className="w-full justify-start">
               <Link href="/sources">

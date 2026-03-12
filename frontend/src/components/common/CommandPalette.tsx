@@ -31,6 +31,7 @@ import {
   BookText,
 } from 'lucide-react'
 import { MARKETING_DOCS_URL, MARKETING_URL } from '@/lib/site-urls'
+import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 
 const navigationItems = [
   { name: 'Sources', href: '/sources', icon: FileText, keywords: ['files', 'documents', 'upload'] },
@@ -130,11 +131,13 @@ export function CommandPalette() {
     handleSelect(() => router.push(`/search?q=${encodeURIComponent(query)}&mode=ask`))
   }, [handleSelect, router, query])
 
+  const { openSourceDialog } = useCreateDialogs()
+
   const handleCreate = useCallback((action: string) => {
     handleSelect(() => {
-      if (action === 'source') router.push('/upload')
+      if (action === 'source') openSourceDialog()
     })
-  }, [handleSelect, router])
+  }, [handleSelect, openSourceDialog])
 
   const handleTheme = useCallback((theme: 'light' | 'dark' | 'system') => {
     handleSelect(() => setTheme(theme))
@@ -142,10 +145,14 @@ export function CommandPalette() {
 
   const handleAction = useCallback((action: string) => {
     handleSelect(() => {
-      const event = new CustomEvent('acm-command', { detail: { action } })
-      window.dispatchEvent(event)
+      if (action === 'upload') {
+        openSourceDialog()
+      } else {
+        const event = new CustomEvent('acm-command', { detail: { action } })
+        window.dispatchEvent(event)
+      }
     })
-  }, [handleSelect])
+  }, [handleSelect, openSourceDialog])
 
   // Check if query matches any command (navigation, create, theme, or notebook)
   const queryLower = query.toLowerCase().trim()
