@@ -2,10 +2,10 @@
 
 ## Reboot Check (read this FIRST every session)
 
-- **Last completed milestone**: E36-S4 (Ollama Multi-Model Benchmark)
+- **Last completed milestone**: Bug Fix: Frontend Navigation Performance (2026-03-13)
 - **Current active task**: None — ready for E36-S5
 - **Blockers**: None known
-- **Last modified files**: `docs/sprint-artifacts/e36/benchmark-results/`, `task_plan.md`, `progress.md`, `findings.md`
+- **Last modified files**: `frontend/src/components/common/ConnectionGuard.tsx`, 17x `loading.tsx` files (see progress.md 2026-03-13 entry), `tests/e2e/specs/navigation-timing.spec.ts`
 - **Next planned action**: E36-S5 (Functional Verification)
 
 ---

@@ -42,6 +42,18 @@
   - npm run build passes
 - **Next**: E36-S4 (Ollama Multi-Model Benchmark)
 
+## 2026-03-13 — Bug Fix: Frontend Navigation Performance (ACMV3 branch)
+
+- **Status**: DONE
+- **What completed**:
+  - Fixed ConnectionGuard (`frontend/src/components/common/ConnectionGuard.tsx`) — replaced `return null` during API health check with a full app-shell skeleton. Eliminated blank white screen on cold start.
+  - Created 17 new `loading.tsx` files across all data-fetching routes that were missing them: `(dashboard)/loading.tsx`, `notebooks/loading.tsx`, `notebooks/[id]/loading.tsx`, `sources/[id]/loading.tsx`, `source/[id]/loading.tsx`, `source/[id]/raw/loading.tsx`, `source/[id]/building/[buildingId]/loading.tsx`, `source/[id]/provenance/[recordId]/loading.tsx`, `settings/loading.tsx`, `settings/models/loading.tsx`, `settings/processing/loading.tsx`, `settings/field-schema/loading.tsx`, `settings/extraction/loading.tsx`, `extraction-monitor/loading.tsx`, `extraction/[id]/loading.tsx`, `transformations/loading.tsx`, `jobs/[id]/chat/loading.tsx`
+  - Created navigation timing E2E test at `tests/e2e/specs/navigation-timing.spec.ts`
+  - Findings report at `docs/temp/frontend-nav-audit-report.md`
+  - `npm run build` passes clean
+- **Root cause**: All 34 pages are Client Components (not async Server Components). 27/34 routes had no `loading.tsx` so Next.js kept old page visible during transitions. `ConnectionGuard` rendered null on cold start.
+- **Next**: E36-S5 (Functional Verification)
+
 ## 2026-03-05 — E36-S4: Ollama Multi-Model Benchmark
 
 - **Status**: DONE

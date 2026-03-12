@@ -323,7 +323,7 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 - ✅ **Comprehensive Test Suite**: 47 passing tests (unit + integration)
 - ✅ **High Accuracy**: 90%+ field accuracy on real ACM register samples
 
-**Phase 2 - V3 Salesforce Integration (COMPLETE -- 35/37 stories, 110 SP)**
+**Phase 2 - V3 Salesforce Integration (COMPLETE -- 37/37 stories, 110 SP)**
 - ✅ **Salesforce Schema Alignment**: Building__c + Item__c field mappings (143+154 fields, 41 picklists)
 - ✅ **Multi-Provider Extraction**: Docling + MinerU dual-provider pipeline with consensus layer
 - ✅ **Two-View Register UI**: Building Grid + Item Grid with AG Grid dynamic columns
@@ -333,9 +333,13 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 - ✅ **Bulk Operations**: Bulk edit, validate, and Salesforce-ready CSV/Excel export
 - ✅ **Performance Optimization**: GPU memory management, pipeline instrumentation
 - ✅ **Pre-Extraction Intelligence**: Document structure analysis, building inventory, page tagging
+- ✅ **Ollama-First Provider Priority**: Local-first extraction with Anthropic/OpenRouter cloud fallback
+
+**Phase 3 - Per-Row Extraction + UX Hardening (COMPLETE)**
+- ✅ **Per-Row ACM Extraction**: One LLM call per table row, 9-field schema, deterministic post-processing (E37)
+- ✅ **Navigation Performance**: App-shell skeleton on cold start, 17 route-level loading skeletons, navigation timing E2E test
 
 ### Next for ACM-AI
-- **Ollama-First Provider Priority**: Local-first extraction with cloud fallback (E30-S8, deferred)
 - **Salesforce Data Push**: Direct sync of validated records to Salesforce org
 - **Multi-Tenant Deployment**: Support multiple school districts with isolated data
 - **Role-Based Access Control**: User roles and permissions for compliance teams
