@@ -136,8 +136,7 @@ export function UploadWizard() {
     }
 
     try {
-      // TODO: pass mode when backend supports it (e.g. force: mode === 'ai_enhanced')
-      const extractResponse = await acmApi.extract(sourceId)
+      const extractResponse = await acmApi.extract(sourceId, { mode })
       const commandId = extractResponse.command_id
 
       // Persist commandId under the simpler key for extract/page.tsx fallback compatibility
@@ -163,7 +162,7 @@ export function UploadWizard() {
     }
 
     router.push(`/extraction/${encodeURIComponent(sourceId)}`)
-  }, [file, isSubmitting, router, toastError])
+  }, [file, isSubmitting, mode, router, toastError])
 
   // ─── Render helpers ───────────────────────────────────────────────────────
 

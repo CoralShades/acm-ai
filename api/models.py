@@ -484,6 +484,10 @@ class ACMRecordResponse(BaseModel):
     floor_level: Optional[str] = None
     no_access: Optional[bool] = None
     smf_present: Optional[str] = None
+    table_bbox: Optional[dict] = Field(
+        default=None,
+        description="Table bounding box: {x, y, width, height, page}",
+    )
     # Validation fields (E33-S4)
     validation_status: Optional[str] = (
         None  # "valid", "corrected", "failed_correction", "invalid"
@@ -509,6 +513,10 @@ class ACMExtractRequest(BaseModel):
     source_id: str = Field(..., description="Source ID to extract ACM data from")
     force: bool = Field(
         default=False, description="Delete existing records before re-extraction"
+    )
+    mode: str = Field(
+        default="standard",
+        description="Extraction mode: 'standard' or 'ai_enhanced'",
     )
 
 

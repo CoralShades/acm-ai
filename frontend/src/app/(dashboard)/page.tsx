@@ -209,7 +209,7 @@ function DashboardPageContent() {
           </BentoCardHeader>
           <BentoCardContent className="space-y-3">
             <Button asChild className="w-full justify-start">
-              <Link href="/sources?action=upload">
+              <Link href="/upload">
                 <Upload className="w-4 h-4 mr-2" />
                 Upload New Document
               </Link>

@@ -42,8 +42,8 @@ function buildPdfUrl(sourceId: string, filePath: string | null): string | null {
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
     return filePath
   }
-  // Proxy through backend: /api/sources/{sourceId}/file
-  return `/api/sources/${encodeURIComponent(sourceId)}/file`
+  // Proxy through backend: /api/sources/{sourceId}/download
+  return `/api/sources/${encodeURIComponent(sourceId)}/download`
 }
 
 /** Inner content — shared between panel and page modes */
@@ -95,11 +95,9 @@ function ProvenanceContent({
   const { record, table_section, raw_extractions, source_file_path, source_title } = data
   const pdfUrl = buildPdfUrl(sourceId, source_file_path)
 
-  // Extract bbox from record.table_bbox if available (TableBoundingBox from generated types)
-  // The ACMRecord type currently doesn't include table_bbox — access via unknown cast
-  const tableBbox = (record as unknown as Record<string, unknown>)['table_bbox'] as PDFBbox | null | undefined
-  const bbox: PDFBbox | null = tableBbox
-    ? { x: tableBbox.x, y: tableBbox.y, width: tableBbox.width, height: tableBbox.height }
+  // Extract bbox from record.table_bbox if available
+  const bbox: PDFBbox | null = record.table_bbox
+    ? { x: record.table_bbox.x, y: record.table_bbox.y, width: record.table_bbox.width, height: record.table_bbox.height }
     : null
 
   const pageNumber = record.page_number ?? 1

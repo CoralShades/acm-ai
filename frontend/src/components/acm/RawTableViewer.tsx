@@ -10,6 +10,8 @@ import type { ACMRawTable } from '@/lib/types/acm'
 
 interface RawTableViewerProps {
   sourceId: string
+  /** When set, the query will refetch at this interval (ms). Useful for live polling during extraction. */
+  refetchInterval?: number | false
 }
 
 function getTableTypeMeta(tableType?: string | null): {
@@ -112,7 +114,7 @@ function getTableMarkup(rawHtml: string): string {
 </html>`
 }
 
-export function RawTableViewer({ sourceId }: RawTableViewerProps) {
+export function RawTableViewer({ sourceId, refetchInterval }: RawTableViewerProps) {
   const {
     data: tables = [],
     isLoading,
@@ -123,6 +125,7 @@ export function RawTableViewer({ sourceId }: RawTableViewerProps) {
     queryFn: () => acmApi.getRawTables(sourceId),
     enabled: !!sourceId,
     staleTime: 60_000,
+    refetchInterval: refetchInterval ?? false,
   })
 
   const summary = useMemo(() => {

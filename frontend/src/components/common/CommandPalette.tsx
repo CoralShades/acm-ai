@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 import { useTheme } from '@/lib/stores/theme-store'
 import {
   CommandDialog,
@@ -70,7 +69,6 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const router = useRouter()
-  const { openSourceDialog } = useCreateDialogs()
   const { setTheme } = useTheme()
 
   // Global keyboard listener for ⌘K / Ctrl+K
@@ -134,9 +132,9 @@ export function CommandPalette() {
 
   const handleCreate = useCallback((action: string) => {
     handleSelect(() => {
-      if (action === 'source') openSourceDialog()
+      if (action === 'source') router.push('/upload')
     })
-  }, [handleSelect, openSourceDialog])
+  }, [handleSelect, router])
 
   const handleTheme = useCallback((theme: 'light' | 'dark' | 'system') => {
     handleSelect(() => setTheme(theme))

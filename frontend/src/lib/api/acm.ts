@@ -78,10 +78,11 @@ export const acmApi = {
    * Trigger ACM extraction for a source.
    * Pass { force: true } to clear existing records and re-run extraction.
    */
-  extract: async (sourceId: string, opts?: { force?: boolean }): Promise<ACMExtractResponse> => {
+  extract: async (sourceId: string, opts?: { force?: boolean; mode?: string }): Promise<ACMExtractResponse> => {
     const response = await apiClient.post<ACMExtractResponse>('/acm/extract', {
       source_id: sourceId,
       force: opts?.force ?? false,
+      mode: opts?.mode ?? 'standard',
     })
     return response.data
   },

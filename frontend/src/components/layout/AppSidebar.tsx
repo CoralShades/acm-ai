@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
 import { useUserModeStore } from '@/lib/stores/user-mode-store'
-import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 import { Logo } from '@/components/brand/Logo'
 import {
   Tooltip,
@@ -45,7 +44,7 @@ export function AppSidebar() {
   const { isCollapsed, expandedSections, toggleCollapse, toggleSection } =
     useSidebarStore()
   const { mode, setMode } = useUserModeStore()
-  const { openSourceDialog } = useCreateDialogs()
+  const router = useRouter()
 
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
 
@@ -124,7 +123,7 @@ export function AppSidebar() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={() => openSourceDialog()}
+                    onClick={() => router.push('/upload')}
                     variant="default"
                     size="sm"
                     className="w-full justify-center px-2 bg-primary hover:bg-primary/90 text-primary-foreground border-0"
@@ -137,7 +136,7 @@ export function AppSidebar() {
               </Tooltip>
             ) : (
               <Button
-                onClick={() => openSourceDialog()}
+                onClick={() => router.push('/upload')}
                 variant="default"
                 size="sm"
                 className="w-full justify-start bg-primary hover:bg-primary/90 text-primary-foreground border-0"

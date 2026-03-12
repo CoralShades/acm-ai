@@ -12,7 +12,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSourcesPaginated } from '@/lib/hooks/use-sources-paginated'
-import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 import { cn } from '@/lib/utils'
 import { ClipboardList, Plus, RefreshCw, Search } from 'lucide-react'
 
@@ -42,8 +41,6 @@ function JobsPageContent() {
     sortBy: 'updated',
     sortOrder: 'desc',
   })
-
-  const { openSourceDialog } = useCreateDialogs()
 
   useEffect(() => {
     sources.slice(0, 6).forEach((source) => {
@@ -122,7 +119,7 @@ function JobsPageContent() {
               Track extraction and review progress for your SAMP documents
             </p>
           </div>
-          <Button onClick={openSourceDialog} className="flex-shrink-0">
+          <Button onClick={() => router.push('/upload')} className="flex-shrink-0">
             <Plus className="mr-2 h-4 w-4" />
             New Job
           </Button>
@@ -134,7 +131,7 @@ function JobsPageContent() {
             title="No jobs yet"
             description="Upload your first SAMP document to start extracting ACM register data."
             action={
-              <Button onClick={openSourceDialog}>
+              <Button onClick={() => router.push('/upload')}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Job
               </Button>
