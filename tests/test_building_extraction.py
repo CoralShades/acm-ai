@@ -30,6 +30,7 @@ def mock_state():
     """Minimal state dict for extract_building_node tests."""
     source = MagicMock()
     source.id = "source:test123"
+    source.title = "TestDoc.pdf"
     source.full_text = "<!-- Page 1 -->\nBuilding content for B001...\n<!-- Page 6 -->\nBuilding content for B002..."
     return {
         "source": source,
@@ -57,13 +58,6 @@ def _make_extraction_result(**kwargs) -> BuildingExtractionResult:
     return BuildingExtractionResult(**defaults)
 
 
-def _make_saved_record(record_id: str) -> MagicMock:
-    """Helper: create a mock saved record with an id attribute (legacy)."""
-    saved = MagicMock()
-    saved.id = record_id
-    return saved
-
-
 def _make_fake_save(record_ids: list):
     """Create an async replacement for BuildingRecord.save() that sets self.id.
 
@@ -88,8 +82,9 @@ def _make_fake_save(record_ids: list):
 
 @pytest.mark.asyncio
 @patch(
-    "open_notebook.graphs.acm_extraction.BuildingRecord.generate_internal_id",
+    "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
     new_callable=AsyncMock,
+    return_value=[],  # No existing buildings
 )
 @patch(
     "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
@@ -101,7 +96,7 @@ def _make_fake_save(record_ids: list):
 async def test_normal_path_saves_all_buildings(
     mock_extract_content,
     mock_v3_extract,
-    mock_gen_id,
+    mock_get_by_source,
     mock_state,
 ):
     """3-building inventory -> 3 BuildingRecord saves + 3 IDs returned."""
@@ -117,11 +112,6 @@ async def test_normal_path_saves_all_buildings(
     )
     mock_extract_content.return_value = "Some building content"
     mock_v3_extract.return_value = _make_extraction_result()
-    mock_gen_id.side_effect = [
-        "BLD#TEST1234_001",
-        "BLD#TEST1234_002",
-        "BLD#TEST1234_003",
-    ]
     fake_save = _make_fake_save(
         ["building_record:001", "building_record:002", "building_record:003"]
     )
@@ -132,7 +122,6 @@ async def test_normal_path_saves_all_buildings(
     assert "building_records" in result
     assert len(result["building_records"]) == 3
     assert len(fake_save.calls) == 3
-    assert mock_gen_id.call_count == 3
     assert mock_v3_extract.call_count == 3
 
 
@@ -143,8 +132,9 @@ async def test_normal_path_saves_all_buildings(
 
 @pytest.mark.asyncio
 @patch(
-    "open_notebook.graphs.acm_extraction.BuildingRecord.generate_internal_id",
+    "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
     new_callable=AsyncMock,
+    return_value=[],
 )
 @patch(
     "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
@@ -156,7 +146,7 @@ async def test_normal_path_saves_all_buildings(
 async def test_partial_failure_preserves_results(
     mock_extract_content,
     mock_v3_extract,
-    mock_gen_id,
+    mock_get_by_source,
     mock_state,
 ):
     """Second building raises RuntimeError -> first and third still produce records."""
@@ -176,7 +166,6 @@ async def test_partial_failure_preserves_results(
         RuntimeError("LLM provider failure"),
         _make_extraction_result(building_name="Hall Building"),
     ]
-    mock_gen_id.side_effect = ["BLD#TEST1234_001", "BLD#TEST1234_003"]
     fake_save = _make_fake_save(["building_record:001", "building_record:003"])
 
     with patch.object(BuildingRecord, "save", fake_save):
@@ -228,8 +217,9 @@ async def test_none_inventory_buildings_returns_empty(mock_state):
 
 @pytest.mark.asyncio
 @patch(
-    "open_notebook.graphs.acm_extraction.BuildingRecord.generate_internal_id",
+    "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
     new_callable=AsyncMock,
+    return_value=[],
 )
 @patch(
     "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
@@ -241,7 +231,7 @@ async def test_none_inventory_buildings_returns_empty(mock_state):
 async def test_llm_returns_none_creates_minimal_building(
     mock_extract_content,
     mock_v3_extract,
-    mock_gen_id,
+    mock_get_by_source,
     mock_state,
 ):
     """_v3_extract_building_meta returns None -> minimal BuildingRecord saved (not skipped).
@@ -259,7 +249,6 @@ async def test_llm_returns_none_creates_minimal_building(
     )
     mock_extract_content.return_value = "Some building content"
     mock_v3_extract.return_value = None
-    mock_gen_id.return_value = "BLD#TEST1234_001"
     fake_save = _make_fake_save(["building_record:001"])
 
     with patch.object(BuildingRecord, "save", fake_save):
@@ -268,7 +257,6 @@ async def test_llm_returns_none_creates_minimal_building(
     # Minimal record must be saved and its ID included in the result
     assert len(result["building_records"]) == 1
     assert result["building_records"][0] == "building_record:001"
-    mock_gen_id.assert_called_once()
     assert len(fake_save.calls) == 1
     # meta_cache entry for this building_id should be None (no LLM result)
     assert result["building_meta_cache"].get("B001") is None
@@ -281,6 +269,11 @@ async def test_llm_returns_none_creates_minimal_building(
 
 @pytest.mark.asyncio
 @patch(
+    "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
+    new_callable=AsyncMock,
+    return_value=[],
+)
+@patch(
     "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
     new_callable=AsyncMock,
 )
@@ -290,6 +283,7 @@ async def test_llm_returns_none_creates_minimal_building(
 async def test_empty_building_content_skips(
     mock_extract_content,
     mock_v3_extract,
+    mock_get_by_source,
     mock_state,
 ):
     """_extract_building_content returns '' -> _v3_extract_building_meta not called."""
@@ -315,8 +309,9 @@ async def test_empty_building_content_skips(
 
 @pytest.mark.asyncio
 @patch(
-    "open_notebook.graphs.acm_extraction.BuildingRecord.generate_internal_id",
+    "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
     new_callable=AsyncMock,
+    return_value=[],
 )
 @patch(
     "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
@@ -328,13 +323,12 @@ async def test_empty_building_content_skips(
 async def test_state_dict_has_correct_keys(
     mock_extract_content,
     mock_v3_extract,
-    mock_gen_id,
+    mock_get_by_source,
     mock_state,
 ):
     """Returned dict always has key 'building_records' with a list value."""
     mock_extract_content.return_value = "Some building content"
     mock_v3_extract.return_value = _make_extraction_result()
-    mock_gen_id.side_effect = ["BLD#TEST1234_001", "BLD#TEST1234_002"]
     fake_save = _make_fake_save(["building_record:001", "building_record:002"])
 
     with patch.object(BuildingRecord, "save", fake_save):

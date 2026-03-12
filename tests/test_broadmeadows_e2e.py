@@ -270,7 +270,7 @@ async def test_broadmeadows_all_records_extracted():
     Supports OpenRouter (primary) and direct Anthropic (fallback).
     Expected: all 31 records from Clutch_Broadmeadows.csv are extracted.
     """
-    from open_notebook.domain.acm import ACMRecord, ACMTableSection
+    from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
     from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
     # 1. Load expected records from CSV
@@ -298,6 +298,9 @@ async def test_broadmeadows_all_records_extracted():
     async def noop_section_save(self):
         pass
 
+    async def noop_building_save(self):
+        self.id = f"building_record:mock_{id(self)}"
+
     async def noop_auto_populate(document_metadata, source_id):
         pass
 
@@ -308,6 +311,11 @@ async def test_broadmeadows_all_records_extracted():
     with (
         patch.object(ACMRecord, "save", capture_record_save),
         patch.object(ACMTableSection, "save", noop_section_save),
+        patch.object(BuildingRecord, "save", noop_building_save),
+        patch.object(
+            BuildingRecord, "get_by_source",
+            new_callable=AsyncMock, return_value=[],
+        ),
         patch(
             "open_notebook.graphs.acm_extraction.auto_populate_site_config",
             noop_auto_populate,

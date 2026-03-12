@@ -39,6 +39,28 @@ def _configure_file_logging():
         diagnose=True,
     )
 
+    # Per-run worker log tee: routes ALL worker log lines to active
+    # extraction run directories during the run's time window.
+    def _per_run_worker_tee(message):
+        try:
+            from open_notebook.extractors.pipeline_logger import _run_registry
+
+            line = str(message)
+            for active_run in _run_registry.all_active():
+                if active_run.worker_fh:
+                    active_run.worker_fh.write(line)
+                    active_run.worker_fh.flush()
+        except Exception:
+            pass
+
+    logger.add(
+        _per_run_worker_tee,
+        level=os.getenv("LOG_LEVEL", "INFO"),
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} | {message}",
+        backtrace=False,
+        diagnose=False,
+    )
+
 
 def main():
     """Configure UTF-8 encoding and start the worker."""

@@ -148,10 +148,10 @@ class DoclingAdapter:
 
                 # Capture lossless cell-level representation for per-row extraction
                 try:
-                    docling_json = table.export_to_dict()
+                    docling_json = table.data.model_dump(mode="json")
                 except Exception as export_err:
                     logger.warning(
-                        f"DoclingAdapter table {idx}: export_to_dict() failed: {export_err}"
+                        f"DoclingAdapter table {idx}: model_dump() failed: {export_err}"
                     )
                     docling_json = None
 

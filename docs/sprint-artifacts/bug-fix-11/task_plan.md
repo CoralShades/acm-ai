@@ -44,7 +44,7 @@
 - **Change**: When `result is None`, create minimal BuildingRecord from BuildingMeta fields (name, building_id, source_id) instead of returning None
 - **Rationale**: LLM enrichment (address, type, category) is nice-to-have; the basic record is essential for FK linkage and frontend building view
 - **Test**: Building with failed LLM still creates a BuildingRecord in DB
-- **Status**: [ ] Not started
+- **Status**: [x] Done (commit b05c91ab) — minimal BuildingRecord fallback created
 
 #### Task 3.2: Pass `document_metadata` to `_heuristic_fallback` + use site_name
 - **File**: `open_notebook/extractors/building_inventory.py:326, 463-471, 665-667`
@@ -53,7 +53,7 @@
   2. In catch-all (line 463-471): use `document_metadata.get("site_name", "Main Building")` as name
   3. In `compile_building_inventory` (line 667): pass `document_metadata` to `_heuristic_fallback`
 - **Test**: Catch-all building uses actual site name ("Broadmeadows Police Station")
-- **Status**: [ ] Not started
+- **Status**: [x] Done (commit b05c91ab) — document_metadata propagated, site_name used in catch-all
 
 ### Phase 4: Correction + Progress Fixes (P1 — existing issues)
 
@@ -66,7 +66,7 @@
 - **Change**: Add `model = _apply_ollama_extraction_settings(model)` after line 1601
 - **Import**: `_apply_ollama_extraction_settings` already in scope via `from .utils import ...`
 - **Test**: Ollama correction model has `format="json"` set
-- **Status**: [ ] Not started
+- **Status**: [x] Done (commit b05c91ab) — format="json" applied to correction model
 - **Ref**: `docs/issues/bug-correction-stage-format-json.md`
 
 #### Task 4.2: Add terminal status write for extraction progress
@@ -75,7 +75,7 @@
 - **Change**: After line 220, write `status="completed"` to `extraction_progress` table using `repo_query` + the command_id
 - **Also**: Write `status="failed"` in the error path (line 226)
 - **Test**: `extraction_progress` shows "completed" after extraction finishes
-- **Status**: [ ] Not started
+- **Status**: [x] Done (commit b05c91ab) — terminal status writes for completed/failed/no_data paths
 - **Ref**: `docs/issues/bug-extraction-progress-stuck-running.md`
 
 ### Phase 5: Verification
@@ -83,12 +83,12 @@
 #### Task 5.1: Run benchmark harness against ground truth
 - **Command**: `uv run python scripts/research/e29_benchmark_harness.py`
 - **Target**: Broadmeadows ≥28/31 records (90% recall), ≥70% field accuracy
-- **Status**: [ ] Not started
+- **Status**: [x] Partial — 3/3 buildings persist. Per-row path was blocked by docling_document_json NULL (now fixed). Full benchmark pending.
 
 #### Task 5.2: Live extraction with agent-browser screenshots
 - **Steps**: Upload Broadmeadows PDF → extract → verify records in UI → screenshots
 - **Target**: All 31 records visible, building name correct, fields populated
-- **Status**: [ ] Not started
+- **Status**: [x] Partial — buildings verified via API. Full E2E with agent-browser pending.
 
 ## Subagent Routing
 
@@ -105,8 +105,33 @@
 
 - [ ] Broadmeadows: ≥28/31 records (90% recall)
 - [ ] Broadmeadows: ≥70% field accuracy (sample_no, sample_result, product, room_name)
-- [ ] `building_record` table populated with correct building name
+- [x] `building_record` table populated (3/3 buildings saved)
 - [ ] Source register view shows building(s) with record counts
-- [ ] Extraction progress reaches "completed" status
-- [ ] All existing tests pass (2119+)
-- [ ] Ruff lint clean
+- [x] Extraction progress reaches "completed" status
+- [x] All existing tests pass (2123 passed)
+- [x] Ruff lint clean
+
+## Phase 6-7 Addendum (2026-03-11)
+
+Additional fixes discovered during live verification:
+
+| Fix | File | Issue |
+|-----|------|-------|
+| Docling export_to_dict | `docling_adapter.py:151` | `TableItem` has no `export_to_dict()` — use `table.data.model_dump(mode="python")` |
+| Table re-extraction on force | `acm_commands.py` | `force=true` now re-extracts tables when `docling_document_json` IS NULL |
+| Truncation retry guard | `acm_extraction.py` | Checks cloud API keys before retrying (prevents infinite loop in Ollama-only mode) |
+| Field schema query | `acm.py:2350` | Query now targets `field_schema:default` directly (avoids sf_v1 NULL config_json error) |
+
+## Phase 8: Post-Restart Fixes (2026-03-12)
+
+4 bugs found after restarting services with Phase 1-7 fixes:
+
+| # | Severity | File | Fix | Status |
+|---|----------|------|-----|--------|
+| 8.1 | PRIMARY | `utils.py:860-897` | `_get_db_extraction_model()` resolves SurrealDB record IDs (`model:xxx`) to model names via DB lookup | [x] Done |
+| 8.2 | CRITICAL | `docling_adapter.py:151` | `model_dump(mode="python")` → `mode="json"` (non-serializable enums/Pydantic objects) | [x] Done |
+| 8.3 | CRITICAL | `utils.py:281-285` | `_apply_ollama_extraction_settings` respects caller's explicit `num_ctx` (per-row: 2048, was overwritten to 32768) | [x] Done |
+| 8.4 | HIGH | `row_extractor.py:149` | loguru `{max}` → `{max_retries}` (Python builtin shadow) | [x] Done |
+
+### Phase 8 Root Cause
+`default_extraction_model` in SurrealDB stores a record ID (`model:znay2wr8u9q39lxj2q37`) from `find_or_create_model()`, not a model name. `_get_db_extraction_model()` returned it as-is → Ollama 404 → all LLM calls fail → 0 buildings → 0 records.

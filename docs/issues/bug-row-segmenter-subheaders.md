@@ -63,3 +63,11 @@ The segmenter tracks only one `current_level`, losing the Internal/External dist
 | `open_notebook/extractors/row_segmenter.py` | Add `INTERNAL` to regex, relax span check, add area tracking |
 | `open_notebook/domain/acm_row_schemas.py` | Add `internal_external` field to `ACMItemRow` if not present |
 | `open_notebook/domain/acm_row_mappers.py` | Map `internal_external` from row to extraction record |
+
+---
+
+## Status: RESOLVED (2026-03-11)
+
+Fixed in Bug Fix 11 Phase 1 (commit `7eb73f27`):
+- `_LEVEL_REGEX` updated to include `INTERNAL` keyword
+- Partial-width span check for sub-header detection

@@ -262,6 +262,35 @@ class TestACMItemExtractionResult:
         assert restored.status == "valid"
         assert restored.extraction_notes == "Clean extraction"
 
+    def test_model_validate_with_bool_labelled_and_null_data_issues(self):
+        """End-to-end: normalize + model_validate with Ollama-style JSON."""
+        from open_notebook.extractors.orchestrator import _normalize_extraction_json
+
+        raw = {
+            "records": [
+                {
+                    "room_or_area": "Room 1",
+                    "item_name": "Ceiling tiles",
+                    "labelled": False,
+                    "data_issues": None,
+                },
+                {
+                    "room_or_area": "Room 2",
+                    "item_name": "Floor",
+                    "labelled": True,
+                    "data_issues": "missing sample",
+                },
+            ],
+            "status": "valid",
+        }
+        _normalize_extraction_json(raw)
+        result = ACMItemExtractionResult.model_validate(raw)
+        assert len(result.records) == 2
+        assert result.records[0].labelled == "No"
+        assert result.records[0].data_issues == []
+        assert result.records[1].labelled == "Yes"
+        assert result.records[1].data_issues == ["missing sample"]
+
 
 class TestBroadmeadowsBenchmarkStructure:
     """Verifies test structure for benchmark validation (AC6).

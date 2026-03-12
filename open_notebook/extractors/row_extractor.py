@@ -146,10 +146,10 @@ async def extract_single_row(
         except Exception as exc:
             last_error = str(exc)
             logger.warning(
-                "Row extraction attempt {attempt}/{max} failed for row "
+                "Row extraction attempt {attempt}/{max_retries} failed for row "
                 "{row_idx}: {error}",
                 attempt=attempt,
-                max=max_attempts,
+                max_retries=max_attempts,
                 row_idx=row.row_index,
                 error=last_error,
             )

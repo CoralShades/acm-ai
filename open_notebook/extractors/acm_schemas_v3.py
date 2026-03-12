@@ -12,7 +12,7 @@ Story: E30-S7 Two-Phase Extraction Prompts
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class BuildingExtractionResult(BaseModel):
@@ -79,6 +79,14 @@ class ACMItemRecord(BaseModel):
     quantity: Optional[float] = None  # Quantity__c
     labelled: Optional[str] = None  # Labelled__c (Yes | No)
     labelled_details: Optional[str] = None  # Labelled_Details__c
+
+    @field_validator("labelled", mode="before")
+    @classmethod
+    def coerce_labelled(cls, v):
+        """Coerce bool→str: LLMs often return true/false instead of 'Yes'/'No'."""
+        if isinstance(v, bool):
+            return "Yes" if v else "No"
+        return v
 
     # Notes
     hygienist_recommendations: Optional[str] = None

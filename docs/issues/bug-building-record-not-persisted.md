@@ -44,3 +44,12 @@ From Bug Fix 11 live test:
 | `open_notebook/extractors/building_inventory.py` | Use site_name for generic fallback building names |
 | `open_notebook/database/` | Verify `building_record` table schema exists in migrations |
 | `migrations/` | Add building_record CREATE if missing |
+
+---
+
+## Status: RESOLVED (2026-03-11)
+
+Fixed across Bug Fix 11 Phases 3-5:
+- Phase 3 (commit `b05c91ab`): Minimal BuildingRecord fallback when LLM extraction fails
+- Phase 5 (commit `a757c141`): CRITICAL `ObjectModel.save()` return value fix — `save()` returns `None`, code was checking return value instead of `self.id`. Root cause of ALL building persistence failures.
+- Result: 3/3 buildings now persist correctly

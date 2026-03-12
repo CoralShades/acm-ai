@@ -48,12 +48,14 @@ async def _get_docling_tables(
     from open_notebook.database.repository import ensure_record_id, repo_query
 
     try:
+        # Use overlap logic: table overlaps building page range if
+        # table.page_start <= building.page_end AND table.page_end >= building.page_start
         query = (
             "SELECT * FROM acm_table_section "
             "WHERE source_id = $source_id "
             "AND table_type = 'docling_direct_api' "
-            "AND page_start >= $page_start "
-            "AND page_end <= $page_end "
+            "AND page_start <= $page_end "
+            "AND page_end >= $page_start "
             "ORDER BY page_start ASC"
         )
         results = await repo_query(
@@ -132,11 +134,11 @@ def _inject_docling_tables(
 
 
 def _normalize_extraction_json(parsed: dict) -> dict:
-    """Normalize LLM-generated JSON to match ACMExtractionResult schema.
+    """Normalize LLM-generated JSON to match extraction schema.
 
-    When using direct ainvoke() (no structured output grammar), the LLM
-    may return fields with the wrong type.  Common mismatches:
-      - ``data_issues`` as a plain string instead of ``List[str]``.
+    Handles common LLM type mismatches:
+      - ``data_issues`` as null or plain string → ``List[str]``
+      - ``labelled`` as bool (true/false) → ``"Yes"``/``"No"`` string
 
     This function mutates *parsed* in-place and returns it.
     """
@@ -150,6 +152,10 @@ def _normalize_extraction_json(parsed: dict) -> dict:
             # LLM often returns "data_issues": null — coerce to empty list so
             # ACMExtractionRecord(List[str]) validation does not fail.
             record["data_issues"] = []
+        # Coerce labelled bool→str (Ollama returns true/false instead of Yes/No)
+        labelled = record.get("labelled")
+        if isinstance(labelled, bool):
+            record["labelled"] = "Yes" if labelled else "No"
     return parsed
 
 
@@ -439,6 +445,7 @@ async def _v3_extract_items(
             else str(raw_response)
         )
         parsed = parse_json_response(response_text)
+        _normalize_extraction_json(parsed)  # coerce data_issues null→[], labelled bool→str
         result: ACMItemExtractionResult = ACMItemExtractionResult.model_validate(parsed)
         logger.info(
             f"V3 Phase 2 [{plan.building_id}]: {len(result.records)} records, "

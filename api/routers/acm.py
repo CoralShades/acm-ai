@@ -2347,7 +2347,7 @@ async def _load_db_field_config() -> dict | None:
     """Load field config override from SurrealDB field_schema table."""
     try:
         result = await repo_query(
-            "SELECT * FROM field_schema ORDER BY updated DESC LIMIT 1"
+            "SELECT config_json FROM field_schema:default"
         )
         if result and result[0].get("config_json"):
             import json

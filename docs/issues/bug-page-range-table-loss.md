@@ -80,3 +80,12 @@ When page filtering produces 0 matches (because `page_number=0` for unknown-page
 | `open_notebook/extractors/orchestrator.py` | Add page range exclusion warning |
 | `commands/source_commands.py` | `docling_by_page` → list-based, support multi-table pages |
 | `open_notebook/extractors/row_segmenter.py` | Log warning on silent fallback, include page_number=0 tables |
+
+---
+
+## Status: RESOLVED (2026-03-11)
+
+Fixed in Bug Fix 11 Phase 1 (commit `7eb73f27`):
+- `_merge_provider_tables` multi-table-per-page overwrite → uses `defaultdict(list)` instead of dict assignment
+- Building `page_end` expansion for single-building documents
+- Page filter silent fallback + `page_number=0` handling

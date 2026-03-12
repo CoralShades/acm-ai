@@ -17,7 +17,7 @@ from loguru import logger
 from surreal_commands import CommandInput, CommandOutput, command
 
 from open_notebook.database.repository import repo_query
-from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.acm import ACMRecord, BuildingRecord
 from open_notebook.domain.notebook import Source
 from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
@@ -231,10 +231,54 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         deleted_count = 0
         if force:
             deleted_count = await ACMRecord.delete_by_source(source_id)
-            if deleted_count > 0:
+            # Also delete building records to avoid unique index collision on re-extraction
+            bldg_deleted = await BuildingRecord.delete_by_source(source_id)
+            if deleted_count > 0 or bldg_deleted > 0:
                 logger.info(
-                    f"Deleted {deleted_count} existing ACM records for source {source_id}"
+                    f"Deleted {deleted_count} ACM records and {bldg_deleted} building records "
+                    f"for source {source_id}"
                 )
+
+            # Check if table sections need re-extraction
+            # (docling_document_json may be NULL for sources processed before v3.5)
+            table_check = await repo_query(
+                "SELECT count() as cnt FROM acm_table_section "
+                "WHERE source_id=$sid AND docling_document_json IS NULL "
+                "GROUP ALL;",
+                {"sid": source_id},
+            )
+            null_count = (
+                table_check[0]["cnt"]
+                if isinstance(table_check, list) and len(table_check) > 0
+                else 0
+            )
+            if null_count > 0:
+                logger.info(
+                    f"Found {null_count} stale acm_table_section rows "
+                    f"(missing docling_document_json) for {source_id} — re-extracting"
+                )
+                await repo_query(
+                    "DELETE FROM acm_table_section WHERE source_id=$sid;",
+                    {"sid": source_id},
+                )
+                # Re-run table extraction to populate docling_document_json
+                from commands.source_commands import (
+                    _resolve_source_pdf_path,
+                    _run_dual_provider_extraction,
+                    _store_docling_tables,
+                )
+
+                pdf_path = _resolve_source_pdf_path(source)
+                if pdf_path:
+                    merged_tables, _timings = await _run_dual_provider_extraction(
+                        source_id=source_id,
+                        pdf_path=pdf_path,
+                    )
+                    if merged_tables:
+                        await _store_docling_tables(source_id, merged_tables)
+                        logger.info(
+                            f"Re-extracted {len(merged_tables)} tables for {source_id}"
+                        )
 
         # Extract command_id from execution context for progress tracking
         # (command_id already set above during atomic claim)

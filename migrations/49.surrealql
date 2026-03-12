@@ -1,0 +1,28 @@
+-- Migration 49: Complete cascade delete for source deletion
+-- Currently cascaded (migration 1): source_embedding, source_insight
+-- Currently cascaded (migration 10): acm_record
+-- This migration adds the 6 missing cascades:
+
+DEFINE EVENT IF NOT EXISTS building_record_source_delete ON TABLE source WHEN ($after == NONE) THEN {
+    DELETE building_record WHERE source_id == $before.id;
+};
+
+DEFINE EVENT IF NOT EXISTS acm_table_section_source_delete ON TABLE source WHEN ($after == NONE) THEN {
+    DELETE acm_table_section WHERE source_id == $before.id;
+};
+
+DEFINE EVENT IF NOT EXISTS site_config_source_delete ON TABLE source WHEN ($after == NONE) THEN {
+    DELETE site_config WHERE source_id == $before.id;
+};
+
+DEFINE EVENT IF NOT EXISTS source_intelligence_source_delete ON TABLE source WHEN ($after == NONE) THEN {
+    DELETE source_intelligence WHERE source_id == $before.id;
+};
+
+DEFINE EVENT IF NOT EXISTS raw_extraction_source_delete ON TABLE source WHEN ($after == NONE) THEN {
+    DELETE raw_extraction WHERE source_id == $before.id;
+};
+
+DEFINE EVENT IF NOT EXISTS extraction_progress_source_delete ON TABLE source WHEN ($after == NONE) THEN {
+    DELETE extraction_progress WHERE source_id == $before.id;
+};

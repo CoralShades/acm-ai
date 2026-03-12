@@ -184,6 +184,26 @@ class TestNormalizeExtractionJson:
         assert result["records"][1]["data_issues"] == ["bad value"]
         assert result["records"][2]["data_issues"] == ["ok"]
 
+    def test_bool_true_labelled_coerced_to_yes(self):
+        parsed = {"records": [{"building_id": "B01", "labelled": True}]}
+        result = self._normalize(parsed)
+        assert result["records"][0]["labelled"] == "Yes"
+
+    def test_bool_false_labelled_coerced_to_no(self):
+        parsed = {"records": [{"building_id": "B01", "labelled": False}]}
+        result = self._normalize(parsed)
+        assert result["records"][0]["labelled"] == "No"
+
+    def test_str_labelled_unchanged(self):
+        parsed = {"records": [{"building_id": "B01", "labelled": "Yes"}]}
+        result = self._normalize(parsed)
+        assert result["records"][0]["labelled"] == "Yes"
+
+    def test_null_labelled_unchanged(self):
+        parsed = {"records": [{"building_id": "B01", "labelled": None}]}
+        result = self._normalize(parsed)
+        assert result["records"][0]["labelled"] is None
+
 
 # ---------------------------------------------------------------------------
 # _merge_records — null-safe data_issues merge

@@ -1,0 +1,3 @@
+-- Rollback migration 47: Remove building_sub_category and building_risk_rating
+REMOVE FIELD IF EXISTS building_sub_category ON TABLE building_record;
+REMOVE FIELD IF EXISTS building_risk_rating ON TABLE building_record;

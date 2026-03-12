@@ -22,7 +22,7 @@ from loguru import logger
 from pydantic import ValidationError
 from typing_extensions import TypedDict
 
-from open_notebook.database.repository import save_source_intelligence
+from open_notebook.database.repository import repo_query, save_source_intelligence
 from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
 from open_notebook.domain.models import Model
 from open_notebook.domain.notebook import Source
@@ -574,6 +574,21 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     source_id_str = str(source.id)
     sem = asyncio.Semaphore(_MAX_CONCURRENT_BUILDINGS)
 
+    # Pre-assign sequential internal_ids to avoid race condition in asyncio.gather.
+    # NOTE: Cannot use generate_internal_id() here because it counts DB rows,
+    # but no buildings are saved yet — all would get seq=1.
+    # Instead, query the existing count ONCE and assign incrementally.
+    existing_buildings = await BuildingRecord.get_by_source(source_id_str)
+    base_seq = len(existing_buildings)
+    # Use source from state (already loaded) — avoids extra DB call and works in tests
+    _src_label = getattr(source, "title", "") or ""
+    _src_short = _src_label[:8].upper().replace(" ", "_") if _src_label else "UNKNOWN"
+
+    pre_assigned_ids: dict[str, str] = {}
+    for idx, b in enumerate(inventory.buildings):
+        seq = base_seq + idx + 1
+        pre_assigned_ids[b.building_id] = f"BLD#{_src_short}_{seq:03d}"
+
     async def _extract_one_building(building_meta_entry):
         """Extract a single building's metadata (semaphore-bounded)."""
         async with sem:
@@ -611,14 +626,29 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 )
                 # Bug Fix 11 Phase 3: Create minimal BuildingRecord so FK linkage
                 # and frontend display work even when LLM extraction fails.
-                internal_id = await BuildingRecord.generate_internal_id(source_id_str)
+                internal_id = pre_assigned_ids[building_meta_entry.building_id]
                 minimal_record = BuildingRecord(
                     internal_id=internal_id,
                     source_id=source_id_str,
                     building_code=building_meta_entry.building_id,
                     building_name=building_meta_entry.name,
                 )
-                await minimal_record.save()
+                try:
+                    await minimal_record.save()
+                except Exception as save_err:
+                    if "idx_building_internal_id" in str(save_err):
+                        logger.warning(
+                            f"[BF11-P8] Duplicate internal_id {internal_id} — updating existing"
+                        )
+                        existing = await repo_query(
+                            "SELECT * FROM building_record WHERE internal_id = $iid LIMIT 1;",
+                            {"iid": internal_id},
+                        )
+                        if existing:
+                            minimal_record.id = existing[0]["id"]
+                            await minimal_record.save()
+                    else:
+                        raise save_err
                 if not minimal_record.id:
                     logger.warning(
                         f"[E32-S1] Minimal BuildingRecord.save() failed for building "
@@ -636,8 +666,8 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                     "result": None,
                 }
 
-            # Generate server-side internal ID (sequential — safe under asyncio)
-            internal_id = await BuildingRecord.generate_internal_id(source_id_str)
+            # Use pre-assigned sequential ID (avoids race condition in asyncio.gather)
+            internal_id = pre_assigned_ids[building_meta_entry.building_id]
 
             record = BuildingRecord(
                 internal_id=internal_id,
@@ -660,7 +690,22 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 building_risk_rating=result.building_risk_rating,
             )
 
-            await record.save()
+            try:
+                await record.save()
+            except Exception as save_err:
+                if "idx_building_internal_id" in str(save_err):
+                    logger.warning(
+                        f"[BF11-P8] Duplicate internal_id {internal_id} — updating existing"
+                    )
+                    existing = await repo_query(
+                        "SELECT * FROM building_record WHERE internal_id = $iid LIMIT 1;",
+                        {"iid": internal_id},
+                    )
+                    if existing:
+                        record.id = existing[0]["id"]
+                        await record.save()
+                else:
+                    raise save_err
             if not record.id:
                 logger.warning(
                     f"[E32-S1] BuildingRecord.save() returned no ID for building "
@@ -776,19 +821,35 @@ async def _chunk_and_extract_items(
             docling_tables=docling_tables,
         )
         if result.status == "truncated":
-            logger.warning(
-                f"[E32-S2] Truncation detected for building {plan.building_id} "
-                "— retrying with cloud provider (model_id=None)"
+            # Only retry with cloud fallback if cloud API keys are configured;
+            # otherwise retrying re-provisions the same Ollama model → infinite loop
+            cloud_available = bool(
+                os.environ.get("ACM_ANTHROPIC_API_KEY")
+                or os.environ.get("ACM_OPENROUTER_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
             )
-            cloud_state = {**state, "model_id": None}
-            result = await _v3_extract_items(
-                building_content,
-                plan,
-                building_meta,
-                cloud_state,
-                schema_bundle,
-                docling_tables=docling_tables,
-            )
+            if cloud_available:
+                logger.warning(
+                    f"[E32-S2] Truncation detected for building {plan.building_id} "
+                    "— retrying with cloud provider (model_id=None)"
+                )
+                cloud_state = {**state, "model_id": None}
+                result = await _v3_extract_items(
+                    building_content,
+                    plan,
+                    building_meta,
+                    cloud_state,
+                    schema_bundle,
+                    docling_tables=docling_tables,
+                )
+            else:
+                current_num_ctx = os.getenv("OLLAMA_NUM_CTX", "auto")
+                logger.warning(
+                    f"[E32-S2] Truncation detected for building {plan.building_id} "
+                    f"but no cloud API keys configured (OLLAMA_NUM_CTX={current_num_ctx}) "
+                    f"— skipping retry. Increase OLLAMA_NUM_CTX or configure "
+                    f"ACM_ANTHROPIC_API_KEY."
+                )
         return result
 
     # Split into N equal-sized char chunks
@@ -808,19 +869,32 @@ async def _chunk_and_extract_items(
             docling_tables=docling_tables,
         )
         if result.status == "truncated":
-            logger.warning(
-                f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
-                "— retrying chunk with cloud provider (model_id=None)"
+            cloud_available = bool(
+                os.environ.get("ACM_ANTHROPIC_API_KEY")
+                or os.environ.get("ACM_OPENROUTER_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
             )
-            cloud_state = {**state, "model_id": None}
-            result = await _v3_extract_items(
-                chunk,
-                plan,
-                building_meta,
-                cloud_state,
-                schema_bundle,
-                docling_tables=docling_tables,
-            )
+            if cloud_available:
+                logger.warning(
+                    f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
+                    "— retrying chunk with cloud provider (model_id=None)"
+                )
+                cloud_state = {**state, "model_id": None}
+                result = await _v3_extract_items(
+                    chunk,
+                    plan,
+                    building_meta,
+                    cloud_state,
+                    schema_bundle,
+                    docling_tables=docling_tables,
+                )
+            else:
+                current_num_ctx = os.getenv("OLLAMA_NUM_CTX", "auto")
+                logger.warning(
+                    f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
+                    f"but no cloud API keys configured (OLLAMA_NUM_CTX={current_num_ctx}) "
+                    f"— skipping retry. Increase OLLAMA_NUM_CTX."
+                )
         merged_records.extend(result.records)
         if result.status == "invalid":
             final_status = "invalid"
@@ -878,6 +952,26 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
         )
         code_to_id_map = {}
         code_to_internal_id_map = {}
+
+    # Diagnostic: detect stale acm_table_section rows missing docling_document_json
+    try:
+        from open_notebook.database.repository import ensure_record_id, repo_query
+
+        diag = await repo_query(
+            "SELECT count() as total FROM acm_table_section "
+            "WHERE source_id = $sid AND docling_document_json IS NONE GROUP ALL",
+            {"sid": ensure_record_id(source_id_str)},
+        )
+        stale_count = diag[0].get("total", 0) if diag else 0
+        if stale_count > 0:
+            logger.warning(
+                f"[E32-S2] {stale_count} acm_table_section rows for {source_id_str} "
+                f"have NULL docling_document_json — per-row extraction will fall back "
+                f"to bulk for all buildings. Re-upload the source or re-extract with "
+                f"force=True to refresh Docling tables."
+            )
+    except Exception:
+        pass  # Non-fatal diagnostic
 
     all_records: List[ACMExtractionRecord] = []
     n_buildings = len(inventory.buildings)
@@ -1027,9 +1121,11 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                             "— falling back to bulk"
                         )
                 else:
+                    tables_found = len(docling_tables) if docling_tables else 0
                     logger.warning(
-                        f"No DoclingDocument JSON for {building_meta_entry.building_id} "
-                        "— falling back to bulk"
+                        f"[E32-S2] Building {building_meta_entry.building_id}: "
+                        f"{tables_found} table(s) in DB but none have docling_document_json. "
+                        f"Per-row disabled, using bulk. Fix: re-extract with force=True."
                     )
 
             # ---------------------------------------------------------------

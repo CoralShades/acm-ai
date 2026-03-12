@@ -1,5 +1,9 @@
 # Progress: Trace Explosion Fix
 
+## Status: COMPLETE
+
+Fix applied: `LOGFIRE_ENABLED=false` as default, removed `instrument_pydantic()` call that created thousands of Langfuse traces.
+
 ## Session: 2026-03-07
 
 ### Last Completed Milestone

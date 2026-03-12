@@ -11,8 +11,11 @@ Story: E1-S21 Extraction Pipeline Observability & Structured Logging
 
 import asyncio
 import os
+import shutil
+import threading
 import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -54,11 +57,16 @@ _LOG_MAX_BYTES = 10 * 1024 * 1024  # 10MB
 _LOG_BACKUP_COUNT = 5
 
 # Module-level file handler (shared across PipelineLogger instances)
+# DEPRECATED: monolithic acm-extraction.log replaced by per-run dirs.
+# Kept for backward compat; no longer called from _log().
 _file_handler: Optional[RotatingFileHandler] = None
 
 
 def _get_file_handler() -> RotatingFileHandler:
-    """Get or create the rotating file handler for extraction logs."""
+    """Get or create the rotating file handler for extraction logs.
+
+    DEPRECATED: Use per-run directories instead (logs/runs/<ts>_<source>/).
+    """
     global _file_handler
     if _file_handler is None:
         _LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -72,7 +80,10 @@ def _get_file_handler() -> RotatingFileHandler:
 
 
 def _write_to_file(message: str) -> None:
-    """Write a timestamped message to the extraction log file."""
+    """Write a timestamped message to the extraction log file.
+
+    DEPRECATED: Use per-run directories instead (logs/runs/<ts>_<source>/).
+    """
     try:
         handler = _get_file_handler()
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -81,6 +92,49 @@ def _write_to_file(message: str) -> None:
         handler.stream.flush()
     except Exception:
         pass  # File logging is best-effort
+
+
+# ---------------------------------------------------------------------------
+# Per-run log directory registry
+# ---------------------------------------------------------------------------
+
+_LOG_RUN_RETENTION_DAYS = int(os.getenv("LOG_RUN_RETENTION_DAYS", "30"))
+
+
+@dataclass
+class _ActiveRun:
+    """Metadata for an active extraction run being logged to its own directory."""
+
+    run_id: str
+    source_id: str
+    run_dir: Path
+    extraction_fh: Any  # open file handle for run's extraction.log
+    worker_fh: Any  # open file handle for run's worker.log
+    start_time: datetime
+    start_monotonic: float
+
+
+class _RunRegistry:
+    """Thread-safe registry of active extraction runs for log routing."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._runs: dict[str, _ActiveRun] = {}
+
+    def register(self, run: _ActiveRun) -> None:
+        with self._lock:
+            self._runs[run.source_id] = run
+
+    def unregister(self, source_id: str) -> Optional[_ActiveRun]:
+        with self._lock:
+            return self._runs.pop(source_id, None)
+
+    def all_active(self) -> list[_ActiveRun]:
+        with self._lock:
+            return list(self._runs.values())
+
+
+_run_registry = _RunRegistry()
 
 
 class PipelineLogger:
@@ -126,7 +180,14 @@ class PipelineLogger:
         self._pipeline_start = time.monotonic()
         self._emit_custom_events = emit_custom_events
 
-        # Emit pipeline start banner
+        # Per-run log directory — MUST be before any _log() calls
+        # (_log → _write_to_run_file checks self._run_extraction_fh)
+        self._run_dir: Optional[Path] = None
+        self._run_extraction_fh: Any = None
+        self._run_start_dt = datetime.now(timezone.utc)
+        self._setup_run_directory()
+
+        # Emit pipeline start banner (now safe — _run_extraction_fh exists)
         start_msg = f"Starting extraction for {source_id} ({total_pages} pages)"
         self._log(f"[PIPELINE] {'=' * _SEP_WIDTH}")
         self._log(f"[PIPELINE] {start_msg}")
@@ -134,6 +195,114 @@ class PipelineLogger:
 
         # Persist initial state
         self._schedule_persist()
+
+    # ------------------------------------------------------------------
+    # Per-run log directory management
+    # ------------------------------------------------------------------
+
+    def _setup_run_directory(self) -> None:
+        """Create per-run log directory and register for worker log capture."""
+        try:
+            ts = self._run_start_dt.strftime("%Y-%m-%dT%H-%M-%S")
+            suffix = self.source_id.replace("source:", "")[-12:]
+            self._run_dir = _LOG_DIR / "runs" / f"{ts}_{suffix}"
+            self._run_dir.mkdir(parents=True, exist_ok=True)
+
+            self._run_extraction_fh = open(
+                self._run_dir / "extraction.log", "a", encoding="utf-8"
+            )
+            self._run_extraction_fh.write(
+                f"# Extraction Run: {self.run_id}\n"
+                f"# Source: {self.source_id}\n"
+                f"# Started: {self._run_start_dt.isoformat()}\n\n"
+            )
+            self._run_extraction_fh.flush()
+
+            worker_fh = open(self._run_dir / "worker.log", "a", encoding="utf-8")
+            _run_registry.register(
+                _ActiveRun(
+                    run_id=self.run_id,
+                    source_id=self.source_id,
+                    run_dir=self._run_dir,
+                    extraction_fh=self._run_extraction_fh,
+                    worker_fh=worker_fh,
+                    start_time=self._run_start_dt,
+                    start_monotonic=time.monotonic(),
+                )
+            )
+        except Exception:
+            pass  # Non-fatal — extraction works without per-run logs
+
+    def _write_to_run_file(self, message: str) -> None:
+        """Write to per-run extraction.log (replaces monolithic acm-extraction.log)."""
+        if self._run_extraction_fh:
+            try:
+                ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                self._run_extraction_fh.write(f"[{ts}] {message}\n")
+                self._run_extraction_fh.flush()
+            except Exception:
+                pass
+
+    def _write_summary(self) -> None:
+        """Write summary.txt with run metadata at run end."""
+        if not self._run_dir:
+            return
+        try:
+            elapsed = time.monotonic() - self._pipeline_start
+            lines = [
+                f"Source ID:    {self.source_id}",
+                f"Run ID:      {self.run_id}",
+                f"Started:     {self._run_start_dt.isoformat()}",
+                f"Duration:    {elapsed:.1f}s",
+                f"Status:      {self._state.status.value}",
+                f"Records:     {self._state.total_records}",
+                f"Rejected:    {self._state.records_rejected}",
+                f"Errors:      {sum(sum(c.values()) for c in self._error_counts.values())}",
+                f"Models used: {', '.join(self._state.models_used) or 'none'}",
+                f"Pages:       {self._state.total_pages}",
+                f"Buildings:   {self._state.total_buildings}",
+                "",
+                "Stages:",
+            ]
+            for stage in self._state.stages:
+                dur = stage.duration_ms / 1000.0 if stage.duration_ms else 0.0
+                lines.append(f"  {stage.stage_id}: {stage.status.value} ({dur:.1f}s)")
+            (self._run_dir / "summary.txt").write_text(
+                "\n".join(lines) + "\n", encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+    def _finalize_run_directory(self) -> None:
+        """Close file handles, write summary, unregister, cleanup old dirs."""
+        self._write_summary()
+        if self._run_extraction_fh:
+            try:
+                self._run_extraction_fh.close()
+            except Exception:
+                pass
+            self._run_extraction_fh = None
+        run = _run_registry.unregister(self.source_id)
+        if run and run.worker_fh:
+            try:
+                run.worker_fh.close()
+            except Exception:
+                pass
+        self._cleanup_old_run_dirs()
+
+    @staticmethod
+    def _cleanup_old_run_dirs() -> None:
+        """Delete per-run directories older than LOG_RUN_RETENTION_DAYS."""
+        try:
+            runs_dir = _LOG_DIR / "runs"
+            if not runs_dir.exists():
+                return
+            cutoff = time.time() - (_LOG_RUN_RETENTION_DAYS * 86400)
+            for entry in runs_dir.iterdir():
+                if entry.is_dir() and entry.stat().st_mtime < cutoff:
+                    shutil.rmtree(entry, ignore_errors=True)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Internal logging + persistence
@@ -152,8 +321,8 @@ class PipelineLogger:
         ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
         self._log_entries.append(f"[{ts}] {message}")
 
-        # Write to dedicated log file
-        _write_to_file(message)
+        # Write to per-run extraction log
+        self._write_to_run_file(message)
 
     def _schedule_persist(self) -> None:
         """Schedule async state persistence (fire-and-forget from sync context)."""
@@ -494,6 +663,7 @@ class PipelineLogger:
         )
 
         self._schedule_persist()
+        self._finalize_run_directory()
         return self._state
 
     def fail(self, error: str) -> PipelineRunState:
@@ -524,6 +694,7 @@ class PipelineLogger:
         )
 
         self._schedule_persist()
+        self._finalize_run_directory()
         return self._state
 
     def summary(self) -> PipelineRunState:

@@ -92,3 +92,12 @@ More fields = more tokens per row. May need to increase `ACM_ROW_EXTRACTION_NUM_
 | `prompts/acm/row_extraction.jinja` | Add extraction instructions for new fields |
 | `open_notebook/extractors/row_extractor.py` | Verify token budget accommodates new fields |
 | `tests/test_row_extraction.py` | Update tests for new schema |
+
+---
+
+## Status: RESOLVED (2026-03-11)
+
+Fixed in Bug Fix 11 Phase 1 (commit `7eb73f27`):
+- Added `sample_number`, `sample_result`, `acm_product`, `internal_external` to `ACMItemRow`
+- Updated row extraction prompt (`prompts/acm/row_extraction.jinja`)
+- Updated mapper (`open_notebook/domain/acm_row_mappers.py`) to use new fields

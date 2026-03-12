@@ -34,14 +34,14 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-11
+updated: 2026-03-12
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-03-04
+  last_reconciled: 2026-03-11
   reconciled_branches: [main, ACMV3]
   notes: "V3 Sprint Planning 2026-03-03: 5 V3 epics (E30-E34) added, 34 stories, 100 SP. Schema freeze gate after E30-S6. Critical path: E30→E31→E32→E33-S3→E34. Parallel lane: E33-S1,S2 after E30. E32-S6 and E30-S8 independent. E30-S9 added 2026-03-04 (GitHub #85, persist pre-extraction intelligence, 3 SP). Source: Party Mode plan, readiness report Step 08 (CONDITIONAL GO → fixes applied Step 08b), PRD v3.0, Architecture v3.0."
 
@@ -562,10 +562,24 @@ development_status:
   #         bug-per-row-schema-missing-fields, bug-building-record-not-persisted
   # ─────────────────────────────────────────────────────
   bug-fix-11-pipeline-6-bugs: done           # 2026-03-11. 6 bugs: room key remap, generic fallback, UPSERT fix, prompts, metadata injection, page_number injection. 0→16 records.
-  bug-page-range-table-loss: ready-for-dev   # P0. Building page_end underestimation + _merge_provider_tables overwrite + silent page filter fallback. ~15 records lost.
-  bug-per-row-schema-missing-fields: ready-for-dev  # P0. ACMItemRow missing sample_no, sample_result, acm_product, internal_external. Mapper hardcodes result="Unknown".
-  bug-row-segmenter-subheaders: drafted      # P1. _LEVEL_REGEX missing INTERNAL. Partial-width span check. Wrong internal_external field values.
-  bug-building-record-not-persisted: drafted # P1. Buildings not persisted to building_record table. Frontend shows 0 buildings.
+  bug-page-range-table-loss: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 1 (commit 7eb73f27). page_end expansion + multi-table-per-page overwrite + silent fallback.
+  bug-per-row-schema-missing-fields: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 1 (commit 7eb73f27). Added sample_no, sample_result, acm_product, internal_external to ACMItemRow.
+  bug-row-segmenter-subheaders: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 1 (commit 7eb73f27). _LEVEL_REGEX + INTERNAL keyword.
+  bug-building-record-not-persisted: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 5 (commits b05c91ab + a757c141). ObjectModel.save() return value fix + minimal fallback.
+  bug-docling-json-null-reextract: done  # 2026-03-11. force=true re-extracts tables when docling_document_json IS NULL + truncation retry cloud-key guard.
+  bug-docling-export-to-dict: done  # 2026-03-11. ROOT CAUSE: TableItem.export_to_dict() never existed — table.data.model_dump(mode="python") is correct. Per-row extraction unblocked.
+  bug-model-record-id-as-name: done  # 2026-03-12. _get_db_extraction_model() returned SurrealDB record ID (model:xxx) instead of model name. ALL LLM calls 404'd. Fixed: resolve via DB lookup.
+  bug-model-dump-mode-python: done  # 2026-03-12. model_dump(mode="python") produces non-serializable enums. Fixed: mode="json".
+  bug-num-ctx-overwrite: done  # 2026-03-12. _apply_ollama_extraction_settings overwrote per-row num_ctx=2048→32768. Fixed: respect caller's value.
+  bug-loguru-max-builtin: done  # 2026-03-12. loguru {max} shadows Python builtin. Fixed: {max_retries}.
+
+  # ─────────────────────────────────────────────────────
+  # Bug Fix 12: Extraction Audit + Per-Run Log Categorization (2026-03-12)
+  # 9 issues found (N1-N9), 3 LangSmith observations (L1-L3)
+  # Infra: pipeline_logger.py per-run dirs, run_worker.py tee sink, scripts/split_logs.py
+  # GitHub: #103
+  # ─────────────────────────────────────────────────────
+  bug-fix-12-extraction-audit: in_progress  # 2026-03-12. Extraction log audit + per-run log categorization. 8 issue docs, per-run log infra complete. Fixes pending.
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
@@ -602,22 +616,66 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 242  (237 prior + 5 bug-fix-11 stories)
-# Stories Done: 216 (89%)  -- 215 prior + 1 bug-fix-11-pipeline-6-bugs
+# Total Stories: 249  (248 prior + 1 bug-fix-12 audit entry)
+# Stories Done: 226 (91%)  -- 215 prior + 7 bug-fix-11 + 4 Phase 8
 # Stories Review: 0
-# Stories In-Progress: 0
+# Stories In-Progress: 1 (bug-fix-12-extraction-audit)
 # Stories Blocked: 0
-# Stories Ready-For-Dev: 2 (bug-page-range-table-loss, bug-per-row-schema-missing-fields)
-# Stories Drafted: 2 (bug-row-segmenter-subheaders, bug-building-record-not-persisted)
+# Stories Ready-For-Dev: 0
+# Stories Drafted: 0
 # Stories Backlog: 4 (E36-S4..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-11
-# Bug Fix 11: 6 pipeline bugs fixed (0→16 records). Gap analysis vs ground truth (31 records)
-# revealed 4 more issues: page range/table loss (P0), missing schema fields (P0),
+# Last Updated: 2026-03-12
+# Bug Fix 12 (2026-03-12): Extraction log audit + per-run log categorization.
+# 9 issues found (N1-N9) across multi-run log review. 8 issue docs created.
+# Per-run log infra complete: pipeline_logger.py dirs, run_worker.py tee sink, scripts/split_logs.py.
+# Fixes for N1-N9 pending. GitHub #103.
+# Bug Fix 11 Phase 8: 4 more bugs fixed after service restart. PRIMARY: _get_db_extraction_model()
+# returned SurrealDB record ID instead of model name → ALL LLM calls 404'd → 0 buildings → 0 records.
+# Also: model_dump mode="json", num_ctx overwrite fix, loguru builtin shadow.
 # segmenter sub-headers (P1), building persistence (P1).
 # Issues created: docs/issues/bug-page-range-table-loss.md, bug-per-row-schema-missing-fields.md,
 #   bug-row-segmenter-subheaders.md, bug-building-record-not-persisted.md
+#
+# KEY CHANGES (2026-03-12 - Bug Fix 11 Phase 8b — 3 Post-Restart Fixes):
+# =====================================================================
+# After worker restart, extraction still failed with 3 bugs:
+# 1. Model ID resolution: SurrealDB param binding doesn't cast string→RecordID.
+#    Fix: use direct record reference `SELECT name FROM model:{id}` with sanitization.
+# 2. Building internal_id race condition: asyncio.gather concurrent buildings all got seq=1.
+#    Fix: pre-assign IDs with manual counter before gather (query count ONCE).
+# 3. Docling page range filter: containment logic excluded all tables at boundaries.
+#    Fix: changed to overlap logic (page_start <= end AND page_end >= start).
+# Also fixed: broadmeadows E2E test mocks for new BuildingRecord.get_by_source call.
+# Test suite: 2105 passed, 0 failed. Lint clean.
+#
+# KEY CHANGES (2026-03-11 - Docling export_to_dict Fix — Per-Row Extraction Unblocked):
+# ====================================================================================
+# ROOT CAUSE FOUND: DoclingAdapter.export_to_dict() was never a valid method on TableItem.
+# TableItem is a Pydantic model — correct method is table.data.model_dump(mode="python").
+# This caused docling_document_json to be NULL for ALL tables since the feature was added,
+# making per-row extraction impossible (always fell back to bulk).
+# Fix: docling_adapter.py:151 — table.export_to_dict() → table.data.model_dump(mode="python")
+# Also fixed: acm.py:2350 — field_schema query now targets field_schema:default directly
+#   (was SELECT * FROM field_schema which hit sf_v1 record lacking config_json field)
+# Test suite: 2123 passed. Lint clean.
+#
+# KEY CHANGES (2026-03-11 - Bug Fix 11 Complete + Docling JSON NULL Guard):
+# ========================================================================
+# Bug Fix 11 Phases 3-5 completed:
+#   Phase 3+4 (commit b05c91ab): Minimal BuildingRecord fallback, document_metadata propagation,
+#     Ollama format="json" on correction stage, terminal status writes to extraction_progress.
+#   Phase 5 (commit a757c141): CRITICAL ObjectModel.save() return value bug — save() returns None,
+#     code checked return value instead of self.id. All building persistence failures traced here.
+#     Also: BuildingRecordResponse datetime coercion, test mock descriptor pattern.
+#   Result: 3/3 buildings now persist correctly.
+# Docling JSON NULL fix (uncommitted):
+#   acm_commands.py: force=true now checks for NULL docling_document_json and re-extracts tables.
+#   acm_extraction.py: Truncation retry guarded by cloud API key availability (prevents infinite loop).
+# Stories resolved: bug-page-range-table-loss, bug-per-row-schema-missing-fields,
+#   bug-row-segmenter-subheaders, bug-building-record-not-persisted, bug-docling-json-null-reextract.
+# Test suite: 2123 passed, 14 skipped, 2 xfailed.
 #
 # KEY CHANGES (2026-03-11 - Bug Fix 11 + Gap Analysis):
 # ======================================================
