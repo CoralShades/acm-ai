@@ -165,6 +165,9 @@ class ExtractionState(TypedDict):
     building_records: List[str]
     # E32-S2: True when extract_items_node produced >= 1 record
     items_extracted: bool
+    # True when per-row extraction ran for all buildings (not fell back to bulk).
+    # Used by recover_no_access_node to decide whether recovery is needed.
+    per_row_actually_ran: bool
     # Phase 1 building meta cache: building_code -> BuildingExtractionResult
     # Populated by extract_building_node, consumed by extract_items_node to
     # avoid duplicate Phase 1 LLM calls.
@@ -926,7 +929,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
         logger.info(
             f"[E32-S2] No building inventory for source {source_id_str} — skipping item extraction"
         )
-        return {"records": [], "items_extracted": False}
+        return {"records": [], "items_extracted": False, "per_row_actually_ran": False}
 
     if agui:
         await agui.emit_step_started("extract_items")
@@ -980,9 +983,13 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
     # Per-row vs bulk extraction mode (Phase 3 integration)
     extraction_mode = os.getenv("ACM_ITEM_EXTRACTION_MODE", "per_row")
+    # Track whether per-row extraction actually ran for ALL buildings.
+    # If any building falls back to bulk, recover_no_access_node must run.
+    _all_per_row_ran = True
 
     async def _extract_items_for_building(building_meta_entry):
         """Extract items for a single building (semaphore-bounded)."""
+        nonlocal _all_per_row_ran
         async with sem:
             page_start = building_meta_entry.page_start
             page_end = building_meta_entry.page_end or page_start
@@ -1116,11 +1123,13 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
                         return records
                     else:
+                        _all_per_row_ran = False
                         logger.warning(
                             f"No rows segmented for {building_meta_entry.building_id} "
                             "— falling back to bulk"
                         )
                 else:
+                    _all_per_row_ran = False
                     tables_found = len(docling_tables) if docling_tables else 0
                     logger.warning(
                         f"[E32-S2] Building {building_meta_entry.building_id}: "
@@ -1219,7 +1228,11 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
             buildings=n_buildings,
         )
 
-    return {"records": all_records, "items_extracted": len(all_records) > 0}
+    return {
+        "records": all_records,
+        "items_extracted": len(all_records) > 0,
+        "per_row_actually_ran": _all_per_row_ran and extraction_mode == "per_row",
+    }
 
 
 async def normalize_to_sf_node(state: dict, config: RunnableConfig) -> dict:
@@ -2371,11 +2384,12 @@ def _recover_not_sampled_records_ara(
 
 async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     """Graph node: recover no-access records missed by LLM extraction."""
-    # In per-row mode the segmenter already handles synthetic rows (Type D/F)
-    # so post-LLM recovery is unnecessary.
-    if os.getenv("ACM_ITEM_EXTRACTION_MODE", "per_row") == "per_row":
+    # Only skip recovery if per-row extraction ACTUALLY ran for all buildings.
+    # When docling_document_json is NULL, per-row falls back to bulk but the env
+    # var still says "per_row" — recovery must run in that case.
+    if state.get("per_row_actually_ran"):
         logger.info(
-            "Skipping no-access recovery in per-row mode (handled by segmenter)"
+            "Skipping no-access recovery (per-row segmenter handled synthetic rows)"
         )
         return state
 

@@ -138,6 +138,13 @@ async def _extract_tables_with_docling(
 
             page_no = table.prov[0].page_no if table.prov else -1
 
+            # Capture lossless cell-level JSON for per-row extraction
+            try:
+                docling_json = table.data.model_dump(mode="json")
+            except Exception as dj_err:
+                logger.warning(f"Docling table {idx}: model_dump() failed: {dj_err}")
+                docling_json = None
+
             tables.append(
                 {
                     "table_index": idx,
@@ -147,6 +154,7 @@ async def _extract_tables_with_docling(
                     "csv": df.to_csv(index=False),
                     "markdown": df.to_markdown(index=False),
                     "html": table.export_to_html(doc=doc),
+                    "docling_json": docling_json,
                 }
             )
 
