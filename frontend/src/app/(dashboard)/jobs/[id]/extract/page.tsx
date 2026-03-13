@@ -260,7 +260,7 @@ function ExtractPageContent() {
           {/* Raw Records Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Raw Extracted Records</CardTitle>
+              <CardTitle className="text-base">AI Mapped Records</CardTitle>
             </CardHeader>
             <CardContent>
               <RawExtractionTable

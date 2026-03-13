@@ -198,17 +198,19 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
           Uploaded {formatRelativeDate(source.created)}
         </p>
 
-        {/* Record / insights count for published jobs */}
-        {isPublished && source.insights_count > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {source.insights_count} record{source.insights_count !== 1 ? 's' : ''}
-          </p>
-        )}
-
-        {isPublished && typeof source.building_count === 'number' && source.building_count > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {source.building_count} building{source.building_count !== 1 ? 's' : ''}
-          </p>
+        {/* Building and record counts */}
+        {(typeof source.building_count === 'number' && source.building_count > 0 || source.insights_count > 0) && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {typeof source.building_count === 'number' && source.building_count > 0 && (
+              <span>{source.building_count} building{source.building_count !== 1 ? 's' : ''}</span>
+            )}
+            {typeof source.building_count === 'number' && source.building_count > 0 && source.insights_count > 0 && (
+              <span className="text-border">|</span>
+            )}
+            {source.insights_count > 0 && (
+              <span>{source.insights_count} record{source.insights_count !== 1 ? 's' : ''}</span>
+            )}
+          </div>
         )}
       </CardContent>
 

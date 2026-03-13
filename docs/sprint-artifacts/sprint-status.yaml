@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-12
+updated: 2026-03-13
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -588,6 +588,15 @@ development_status:
   # Fix: 17 new loading.tsx skeleton files + ConnectionGuard app-shell skeleton
   # ─────────────────────────────────────────────────────
   bug-frontend-nav-performance: done  # 2026-03-13. ConnectionGuard null→skeleton fix. 17 new loading.tsx files across all data-fetching routes. navigation-timing.spec.ts E2E test. npm run build clean.
+
+  # ─────────────────────────────────────────────────────
+  # Frontend Audit & Fix (2026-03-13)
+  # Branch: ACMV3
+  # 8 tasks, 13 files modified. UI label corrections, type alignment,
+  # computed metrics, V3 grid unification, job metadata, provenance fixes.
+  # Artifact: docs/sprint-artifacts/frontend-audit/progress.md
+  # ─────────────────────────────────────────────────────
+  frontend-audit-2026-03-13: done  # 2026-03-13. 8 tasks across 13 files. T1: label renames (Raw→AI Mapped, reloadUrl fix, ConfirmDialog). T2: BuildingReviewGrid canonical 57-field type + V3 API. T3: computed missingFieldsPercent + extractionQualityScore. T4: ACM page V3 ItemGrid+BuildingTabStrip. T5: aggregate building/record stat cards on jobs page. T6: intelligence API wired into JobOverviewTab. T7: provider tab subtitles (Docling/MinerU/Consensus). T8: bbox overlay teal color + page mismatch guard.
 
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress

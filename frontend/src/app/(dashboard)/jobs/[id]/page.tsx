@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useCallback, useEffect } from 'react'
+import { use, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -18,17 +18,22 @@ import {
   BuildingTabFilter,
   getRecordBuildingTabId,
 } from '@/components/acm/BuildingTabFilter'
-import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
+import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
+import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
+import { ACMRecordDetailDialog } from '@/components/acm/ACMRecordDetailDialog'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { RawTableViewer } from '@/components/acm/RawTableViewer'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { useSource } from '@/lib/hooks/use-sources'
-import { useACMStats } from '@/lib/hooks/use-acm'
+import { useACMStats, useDeleteACMRecord } from '@/lib/hooks/use-acm'
 import { sourcesApi } from '@/lib/api/sources'
 import type { ACMRecord } from '@/lib/types/acm'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, MessageSquare, LayoutDashboard } from 'lucide-react'
+
+const KEY_FIELDS = ['room_name', 'product', 'result', 'friable', 'material_condition', 'sample_no', 'sample_result'] as const
 
 /**
  * JobDetailPageContent — inner content for the job detail page.
@@ -47,6 +52,16 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
   const [chatExpanded, setChatExpanded] = useState(true)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
+
+  // ACM Records tab state (ACMGrid + dialogs)
+  const gridRef = useRef<ACMGridRef>(null)
+  const [editingRecord, setEditingRecord] = useState<ACMRecord | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deletingRecord, setDeletingRecord] = useState<ACMRecord | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [detailRecord, setDetailRecord] = useState<ACMRecord | null>(null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const deleteRecordMutation = useDeleteACMRecord()
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
@@ -125,9 +140,39 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
           ? 'failed'
           : 'idle'
 
-  const handleRecordsDataChanged = useCallback(() => {
-    void refetchRecords()
-  }, [refetchRecords])
+  // ACM Records tab handlers
+  const handleEditRecord = useCallback((record: ACMRecord) => {
+    setEditingRecord(record)
+    setEditDialogOpen(true)
+  }, [])
+
+  const handleDeleteRecord = useCallback((record: ACMRecord) => {
+    setDeletingRecord(record)
+    setDeleteDialogOpen(true)
+  }, [])
+
+  const confirmDeleteRecord = useCallback(async () => {
+    if (deletingRecord) {
+      await deleteRecordMutation.mutateAsync({
+        recordId: deletingRecord.id,
+        sourceId,
+      })
+      setDeleteDialogOpen(false)
+      setDeletingRecord(null)
+      void refetchRecords()
+    }
+  }, [deletingRecord, deleteRecordMutation, sourceId, refetchRecords])
+
+  const handleRowClick = useCallback((record: ACMRecord) => {
+    setDetailRecord(record)
+    setDetailDialogOpen(true)
+  }, [])
+
+  const handleEditFromDetail = useCallback((record: ACMRecord) => {
+    setDetailDialogOpen(false)
+    setDetailRecord(null)
+    handleEditRecord(record)
+  }, [handleEditRecord])
 
   useEffect(() => {
     setSelectedBuilding(null)
@@ -145,6 +190,48 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
       setSelectedBuilding(null)
     }
   }, [records, selectedBuilding])
+
+  // Filter records by selected building for the ACM Records tab
+  const filteredRecords = useMemo(() => {
+    if (!selectedBuilding) return records
+    return records.filter(
+      (record) => getRecordBuildingTabId(record) === selectedBuilding
+    )
+  }, [records, selectedBuilding])
+
+  // Compute missing fields % and extraction quality score from actual record data
+
+  const missingFieldsPercent = useMemo<number | null>(() => {
+    if (records.length === 0) return null
+    let emptyCount = 0
+    for (const record of records) {
+      for (const field of KEY_FIELDS) {
+        const value = record[field]
+        if (value === null || value === undefined || value === '') {
+          emptyCount++
+        }
+      }
+    }
+    const pct = (emptyCount / (records.length * KEY_FIELDS.length)) * 100
+    return Math.round(pct * 10) / 10
+  }, [records])
+
+  const extractionQualityScore = useMemo<number | null>(() => {
+    if (records.length === 0) return null
+    let score = 100
+    for (const record of records) {
+      if (!record.sample_no) score -= 2
+      if (!record.room_name) score -= 3
+      // Check for "Unknown" in key text fields
+      const textFields = [record.product, record.result, record.friable, record.material_condition, record.room_name] as const
+      for (const val of textFields) {
+        if (typeof val === 'string' && val.toLowerCase() === 'unknown') {
+          score -= 1
+        }
+      }
+    }
+    return Math.max(0, Math.min(100, score))
+  }, [records])
 
   return (
     <AppShell>
@@ -198,8 +285,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                     recordCount={stats?.total_records ?? 0}
                     buildingCount={stats?.building_count ?? 0}
                     reviewStatus={source?.review_status}
-                    missingFieldsPercent={null}
-                    extractionQualityScore={null}
+                    missingFieldsPercent={missingFieldsPercent}
+                    extractionQualityScore={extractionQualityScore}
                     onReExtract={handleReExtract}
                   />
                 </TabsContent>
@@ -226,10 +313,13 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                         selectedBuilding={selectedBuilding}
                         onBuildingChange={setSelectedBuilding}
                       />
-                      <ACMReviewGrid
+                      <ACMGrid
+                        ref={gridRef}
+                        records={filteredRecords}
+                        onEdit={handleEditRecord}
+                        onDelete={handleDeleteRecord}
+                        onRowClick={handleRowClick}
                         sourceId={sourceId}
-                        buildingId={selectedBuilding}
-                        onDataChanged={handleRecordsDataChanged}
                       />
                     </CardContent>
                   </Card>
@@ -347,6 +437,33 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
             </div>
           </SheetContent>
         </Sheet>
+
+        {/* ACM Records tab dialogs */}
+        <ACMRecordDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          sourceId={sourceId}
+          record={editingRecord}
+          mode="edit"
+        />
+
+        <ACMRecordDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          record={detailRecord}
+          onEdit={handleEditFromDetail}
+        />
+
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete ACM Record"
+          description="Are you sure you want to delete this ACM record? This action cannot be undone."
+          confirmText="Delete"
+          confirmVariant="destructive"
+          onConfirm={confirmDeleteRecord}
+          isLoading={deleteRecordMutation.isPending}
+        />
       </div>
     </AppShell>
   )

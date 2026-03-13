@@ -338,6 +338,7 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 **Phase 3 - Per-Row Extraction + UX Hardening (COMPLETE)**
 - ✅ **Per-Row ACM Extraction**: One LLM call per table row, 9-field schema, deterministic post-processing (E37)
 - ✅ **Navigation Performance**: App-shell skeleton on cold start, 17 route-level loading skeletons, navigation timing E2E test
+- ✅ **Frontend Audit & Fix**: 8 tasks across 13 files — label corrections, canonical type alignment, computed overview metrics, V3 grid unification, job metadata cards, intelligence API wiring, provider tab labels, provenance overlay hardening
 
 ### Next for ACM-AI
 - **Salesforce Data Push**: Direct sync of validated records to Salesforce org

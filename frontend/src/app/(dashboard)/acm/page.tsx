@@ -340,6 +340,7 @@ function ACMPageContent() {
                     onDelete={handleDelete}
                     quickFilterText={searchText}
                     onRowClick={handleRowClick}
+                    sourceId={selectedSourceId}
                   />
                 )}
               </CardContent>

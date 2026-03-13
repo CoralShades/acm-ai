@@ -9,11 +9,9 @@ import { cn } from '@/lib/utils'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString()
+// Use CDN worker — avoids webpack bundling the worker .mjs entirely
+// (recommended by react-pdf docs, prevents eval-* devtool crash in Next.js dev)
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 export interface PDFBbox {
   x: number
@@ -105,10 +103,11 @@ export function PDFPageViewer({ pdfUrl, pageNumber, bbox, className }: PDFPageVi
       top: `${cssTop}px`,
       width: `${cssWidth}px`,
       height: `${cssHeight}px`,
-      backgroundColor: 'rgba(234, 179, 8, 0.25)',
-      border: '2px solid rgba(234, 179, 8, 0.8)',
-      borderRadius: '2px',
+      backgroundColor: 'rgba(20, 184, 166, 0.10)',
+      border: '2.5px solid rgba(20, 184, 166, 0.75)',
+      borderRadius: '3px',
       pointerEvents: 'none',
+      boxShadow: '0 0 0 1px rgba(20, 184, 166, 0.15)',
     }
   }
 

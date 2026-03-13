@@ -9,8 +9,8 @@ import { BuildingTabFilter } from '@/components/acm/BuildingTabFilter'
 import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import type { ACMRecord } from '@/lib/types/acm'
 
 /**
@@ -99,32 +99,15 @@ function RecordsReviewPageContent({ sourceId }: { sourceId: string }) {
       </div>
 
       {/* Publish confirmation dialog */}
-      {showPublishDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg border p-6 max-w-md mx-4 shadow-lg">
-            <h2 className="text-lg font-semibold mb-2">
-              Publish to ACM Register?
-            </h2>
-            <p className="text-muted-foreground mb-4 text-sm">
-              This will publish {records.length} record
-              {records.length !== 1 ? 's' : ''} to the ACM Register. This
-              action marks the job as complete.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowPublishDialog(false)}
-                disabled={isPublishing}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handlePublish} disabled={isPublishing}>
-                {isPublishing ? 'Publishing...' : 'Publish'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showPublishDialog}
+        onOpenChange={setShowPublishDialog}
+        title="Publish to ACM Register?"
+        description={`This will publish ${records.length} record${records.length !== 1 ? 's' : ''} to the ACM Register. This action marks the job as complete.`}
+        confirmText="Publish"
+        onConfirm={handlePublish}
+        isLoading={isPublishing}
+      />
     </AppShell>
   )
 }

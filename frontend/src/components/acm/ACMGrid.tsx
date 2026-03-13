@@ -6,8 +6,9 @@ import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridAp
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { PRESET_COLUMNS, useColumnPresetStore } from '@/lib/stores/column-visibility-store'
 import { Button } from '@/components/ui/button'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Edit2, Eye, Trash2 } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
+import { ProvenanceViewer } from './ProvenanceViewer'
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -51,6 +52,8 @@ interface ACMGridProps {
   onRowClick?: (record: ACMRecord) => void
   // ID of the currently selected/highlighted record
   selectedRecordId?: string | null
+  // Source ID for ProvenanceViewer PDF lookup
+  sourceId?: string
 }
 
 // Custom cell renderer for boolean labelled field
@@ -64,13 +67,30 @@ function ActionsRenderer({
   data,
   onEdit,
   onDelete,
+  onShowProvenance,
 }: {
   data: ACMRecord
   onEdit: (record: ACMRecord) => void
   onDelete: (record: ACMRecord) => void
+  onShowProvenance?: (record: ACMRecord) => void
 }) {
   return (
     <div className="flex gap-1">
+      {onShowProvenance && (
+        <button
+          type="button"
+          title="View source provenance"
+          aria-label="View source provenance"
+          onClick={(e) => {
+            e.stopPropagation()
+            onShowProvenance(data)
+          }}
+          className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Eye className="h-3.5 w-3.5 mr-0.5" />
+          Source
+        </button>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -100,11 +120,12 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, previewRecords, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId },
+  { records, previewRecords, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId, sourceId },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMGridRecord>>(null)
   const [gridApi, setGridApi] = useState<GridApi<ACMGridRecord> | null>(null)
+  const [provenanceRecordId, setProvenanceRecordId] = useState<string | null>(null)
 
   // Merge saved records with preview (streaming) records
   const mergedRows = useMemo<ACMGridRecord[]>(() => {
@@ -396,17 +417,22 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       },
       {
         headerName: 'Actions',
-        width: 90,
+        width: sourceId ? 155 : 90,
         pinned: 'right',
         cellRenderer: (params: { data: ACMRecord }) =>
           params.data ? (
-            <ActionsRenderer data={params.data} onEdit={onEdit} onDelete={onDelete} />
+            <ActionsRenderer
+              data={params.data}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onShowProvenance={sourceId ? (record) => setProvenanceRecordId(record.id) : undefined}
+            />
           ) : null,
         sortable: false,
         filter: false,
       },
     ],
-    [onEdit, onDelete, enableGrouping]
+    [onEdit, onDelete, enableGrouping, sourceId]
   )
 
   const defaultColDef = useMemo<ColDef>(
@@ -609,6 +635,16 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         <span>Space to expand/collapse</span>
         <span>? for all shortcuts</span>
       </div>
+
+      {/* Provenance viewer panel */}
+      {provenanceRecordId && sourceId && (
+        <ProvenanceViewer
+          sourceId={sourceId}
+          recordId={provenanceRecordId}
+          mode="panel"
+          onClose={() => setProvenanceRecordId(null)}
+        />
+      )}
     </div>
   )
 })

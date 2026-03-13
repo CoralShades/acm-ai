@@ -2,8 +2,11 @@
 
 import { use, useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
-import { ItemGrid } from '@/components/acm/ItemGrid'
+import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
+import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { BulkOperationsBar } from '@/components/acm/BulkOperationsBar'
 import { ExportDialog } from '@/components/acm/ExportDialog'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -13,7 +16,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBuildingStore } from '@/lib/stores/buildingStore'
 import { useBuildings } from '@/lib/hooks/useBuildings'
-import { useValidationSummary, useBulkFix, useFieldSchema } from '@/lib/hooks/useACMItems'
+import { useACMItems, useValidationSummary, useBulkFix, useFieldSchema, ACM_ITEMS_QUERY_KEYS } from '@/lib/hooks/useACMItems'
+import { useDeleteACMRecord } from '@/lib/hooks/use-acm'
 import { useV3BuildingStream } from '@/lib/hooks/useV3BuildingStream'
 import type { ACMRecord } from '@/lib/types/acm'
 import type { BuildingRecord } from '@/lib/types/building'
@@ -158,8 +162,19 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   const [exportOpen, setExportOpen] = useState(false)
   const [commandId, setCommandId] = useState<string | null>(null)
   const [selectedRecords, setSelectedRecords] = useState<ACMRecord[]>([])
+  const [editingRecord, setEditingRecord] = useState<ACMRecord | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deletingRecord, setDeletingRecord] = useState<ACMRecord | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const gridRef = useRef<ACMGridRef>(null)
+  const queryClient = useQueryClient()
   const { selectedBuildingId, setSelectedBuilding } = useBuildingStore()
   const { data: fieldSchema } = useFieldSchema()
+  const deleteRecord = useDeleteACMRecord()
+
+  // Fetch ACM items for the selected building
+  const { data: itemsData, isLoading: isLoadingItems } = useACMItems(sourceId, selectedBuildingId)
+  const items = useMemo(() => itemsData?.records ?? [], [itemsData])
 
   // Read commandId from sessionStorage to subscribe to the active extraction SSE stream
   useEffect(() => {
@@ -207,6 +222,31 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
 
   const handleBulkFix = () => {
     bulkFix.mutate({ sourceId })
+  }
+
+  const handleEdit = (record: ACMRecord) => {
+    setEditingRecord(record)
+    setEditDialogOpen(true)
+  }
+
+  const handleDelete = (record: ACMRecord) => {
+    setDeletingRecord(record)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (deletingRecord) {
+      await deleteRecord.mutateAsync({
+        recordId: deletingRecord.id,
+        sourceId,
+      })
+      // Also invalidate the items query used by this page
+      queryClient.invalidateQueries({
+        queryKey: ACM_ITEMS_QUERY_KEYS.byBuilding(sourceId, selectedBuildingId),
+      })
+      setDeleteDialogOpen(false)
+      setDeletingRecord(null)
+    }
   }
 
   return (
@@ -310,12 +350,15 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
         {/* Full-width item grid */}
         <div className="flex-1 overflow-hidden p-4 min-h-0">
           {selectedBuildingId ? (
-            <ItemGrid
+            <ACMGrid
+              ref={gridRef}
+              records={items}
+              isLoading={isLoadingItems}
               sourceId={sourceId}
-              buildingId={selectedBuildingId}
-              quickFilterText={quickFilter}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
               enableGrouping={enableGrouping}
-              onSelectionChanged={(recs) => setSelectedRecords(recs)}
+              quickFilterText={quickFilter}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3">
@@ -334,6 +377,30 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
           )}
         </div>
       </div>
+
+      {/* Edit record dialog */}
+      <ACMRecordDialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open)
+          if (!open) setEditingRecord(null)
+        }}
+        sourceId={sourceId}
+        record={editingRecord}
+        mode="edit"
+      />
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete ACM Record"
+        description="Are you sure you want to delete this ACM record? This action cannot be undone."
+        confirmText="Delete"
+        confirmVariant="destructive"
+        onConfirm={confirmDelete}
+        isLoading={deleteRecord.isPending}
+      />
 
       {/* Export dialog */}
       <ExportDialog
@@ -362,7 +429,7 @@ export default function SourceACMPage({
   return (
     <ErrorBoundary
       fallback={(props) => (
-        <PageErrorFallback {...props} pageName="Source ACM View" reloadUrl="/sources" />
+        <PageErrorFallback {...props} pageName="Source ACM View" reloadUrl="/jobs" />
       )}
     >
       <SourceACMViewContent sourceId={decodeURIComponent(sourceId)} />

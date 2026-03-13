@@ -81,11 +81,21 @@ function JobsPageContent() {
       const status = source.review_status ?? 'published'
       return status === 'published'
     }).length
+    const totalBuildings = sources.reduce(
+      (sum, s) => sum + (s.building_count ?? 0),
+      0
+    )
+    const totalRecords = sources.reduce(
+      (sum, s) => sum + (s.insights_count ?? 0),
+      0
+    )
     return {
       total: sources.length,
       extracting,
       inReview,
       published,
+      totalBuildings,
+      totalRecords,
     }
   }, [sources])
 
@@ -141,7 +151,7 @@ function JobsPageContent() {
           />
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
               <Card className="rounded-xl shadow-sm">
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Total Jobs</p>
@@ -170,6 +180,18 @@ function JobsPageContent() {
                   <p className="mt-2 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
                     {stats.published}
                   </p>
+                </CardContent>
+              </Card>
+              <Card className="rounded-xl shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">Buildings</p>
+                  <p className="mt-2 text-2xl font-semibold">{stats.totalBuildings}</p>
+                </CardContent>
+              </Card>
+              <Card className="rounded-xl shadow-sm">
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">ACM Records</p>
+                  <p className="mt-2 text-2xl font-semibold">{stats.totalRecords}</p>
                 </CardContent>
               </Card>
             </div>

@@ -95,12 +95,26 @@ function ProvenanceContent({
   const { record, table_section, raw_extractions, source_file_path, source_title } = data
   const pdfUrl = buildPdfUrl(sourceId, source_file_path)
 
-  // Extract bbox from record.table_bbox if available
-  const bbox: PDFBbox | null = record.table_bbox
-    ? { x: record.table_bbox.x, y: record.table_bbox.y, width: record.table_bbox.width, height: record.table_bbox.height }
-    : null
-
   const pageNumber = record.page_number ?? 1
+
+  // Extract bbox from record.table_bbox if available.
+  // Only show the overlay when:
+  //   1. table_bbox exists with valid positive dimensions
+  //   2. bbox page matches the displayed page (or bbox has no page field)
+  const rawBbox = record.table_bbox
+  const bboxPageMatches =
+    rawBbox && (rawBbox.page == null || rawBbox.page === pageNumber)
+  const bboxValid =
+    rawBbox &&
+    isFinite(rawBbox.x) &&
+    isFinite(rawBbox.y) &&
+    rawBbox.width > 0 &&
+    rawBbox.height > 0
+
+  const bbox: PDFBbox | null =
+    rawBbox && bboxPageMatches && bboxValid
+      ? { x: rawBbox.x, y: rawBbox.y, width: rawBbox.width, height: rawBbox.height }
+      : null
 
   return (
     <div className="flex flex-col gap-6 p-4 overflow-y-auto">
