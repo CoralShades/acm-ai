@@ -40,6 +40,7 @@
 12. [File Map](#12-file-map)
 13. [Worked Examples](#13-worked-examples)
 14. [Troubleshooting](#14-troubleshooting)
+15. [Community Skills](#15-community-skills)
 
 -----
 
@@ -52,7 +53,7 @@
 ```
 
 That's it. The system will:
-- Scan your project's 135+ skills
+- Scan your project's 135+ core skills (plus any installed community skills)
 - Classify the request as `bug-fix / medium / plan ON`
 - Route to `/systematic-debugging` + solo agent strategy
 - Output a complete session prompt with glossary, key files, verification checklist
@@ -554,7 +555,7 @@ D:/ailocal/acm-ai/skills-registry.json
 
 | Category | Count |
 |----------|-------|
-| Skills | 135 |
+| Skills | 135 (core) + 11 community |
 | Commands | 5 |
 | Hooks | 12 |
 | CLAUDE.md rule sections | 19 |
@@ -847,4 +848,55 @@ Context7 is only included when the routing matrix says so. Quick-tasks and docum
 
 -----
 
-*Built across 6 implementation sessions (17 SP). Planning documents: [task_plan.md](task_plan.md) | [findings.md](findings.md) | [progress.md](progress.md)*
+## 15. Community Skills
+
+Beyond the 135 core project skills, the prompt generator system supports **community skills** published via the [skills.sh](https://skills.sh) marketplace and installed globally with the `npx skills` CLI.
+
+### Agent & Workflow Skills (8)
+
+These were installed with `npx skills add ... -g -y`:
+
+| # | Skill | Source | Purpose |
+|---|-------|--------|---------|
+| 1 | `prompt-engineering` | `inferen-sh/skills` | Master prompt engineering patterns |
+| 2 | `prompt-generator` | `hoangvantuan/claude-plugin` | Meta-prompting (global, complements project-level) |
+| 3 | `skill-creator` | `langchain-ai/deepagents` | Create new skills from templates |
+| 4 | `ai-agents-architect` | `sickn33/antigravity-awesome-skills` | Design autonomous agent systems |
+| 5 | `agent-orchestration` | `yonatangross/orchestkit` | Multi-agent orchestration patterns |
+| 6 | `strategic-planning` | `404kidwiz/claude-supercode-skills` | Strategic planning for complex tasks |
+| 7 | `mcp-builder` | `skillcreatorai/ai-agent-skills` | Build MCP server tools |
+| 8 | `code-review-checklist` | `sickn33/antigravity-awesome-skills` | Code review checklist |
+
+### Obsidian Skills (3)
+
+| # | Skill | Source | Purpose |
+|---|-------|--------|---------|
+| 9 | `obsidian-canvas-creator` | `axtonliu/axton-obsidian-visual-skills` | Create Obsidian Canvas mind maps |
+| 10 | `obsidian` | `steipete/clawdis` | Obsidian vault automation |
+| 11 | `obsidian-clipper-template-creator` | `sickn33/antigravity-awesome-skills` | Obsidian clipper templates |
+
+### Installation
+
+Community skills are installed **globally** (available to all projects on the machine):
+
+```bash
+npx skills add inferen-sh/skills@prompt-engineering -g -y
+npx skills add hoangvantuan/claude-plugin@prompt-generator -g -y
+# ... etc
+```
+
+Global skills land in `~/.agents/skills/` and are symlinked into `.claude/skills/` for each project. The registry scanner (`scan_registry.sh`) automatically discovers them — no manual registry updates needed.
+
+### Discovery & Maintenance
+
+```bash
+# Search the marketplace
+npx skills find [query]
+
+# Check for updates to installed skills
+npx skills check
+```
+
+-----
+
+*Built across 6 implementation sessions (17 SP) + post-implementation community skills addition. Planning documents: [task_plan.md](task_plan.md) | [findings.md](findings.md) | [progress.md](progress.md)*

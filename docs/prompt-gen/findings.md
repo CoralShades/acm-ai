@@ -164,3 +164,54 @@ From the project's existing patterns:
   - Task has 3+ independent subtasks
   - Task spans both frontend and backend
   - Task requires parallel research + implementation
+
+-----
+
+## 8. Community Skills Ecosystem
+
+### The `npx skills` CLI and skills.sh Marketplace
+
+The [skills.sh](https://skills.sh) marketplace hosts community-published AI skills that can be installed alongside project-local skills. The `npx skills` CLI manages discovery, installation, and updates.
+
+**Key CLI commands**:
+
+```bash
+npx skills find [query]      # Search the marketplace
+npx skills add <ref> -g -y   # Install globally, auto-confirm
+npx skills check             # Check installed skills for updates
+```
+
+The `-g` flag installs globally into `~/.agents/skills/`, making skills available across all projects on the machine. A symlink is created in the project's `.claude/skills/` directory so Claude Code picks them up automatically.
+
+### Community Skills Installed (11 total)
+
+**Agent & Workflow Skills (8)** — installed via `npx skills add ... -g -y`:
+
+| Skill | Source | Purpose |
+|-------|--------|---------|
+| `prompt-engineering` | `inferen-sh/skills` | Master prompt engineering patterns — complements the project-level generator |
+| `prompt-generator` | `hoangvantuan/claude-plugin` | Meta-prompting from the global marketplace; works alongside the local 4-skill pipeline |
+| `skill-creator` | `langchain-ai/deepagents` | Create new skills from templates; useful when extending the registry |
+| `ai-agents-architect` | `sickn33/antigravity-awesome-skills` | Design autonomous agent systems — relevant for V3 pipeline orchestration |
+| `agent-orchestration` | `yonatangross/orchestkit` | Multi-agent orchestration patterns for tmux team coordination |
+| `strategic-planning` | `404kidwiz/claude-supercode-skills` | Strategic planning for complex tasks; complements plan mode scaffolding |
+| `mcp-builder` | `skillcreatorai/ai-agent-skills` | Build MCP server tools — useful for extending observability integrations |
+| `code-review-checklist` | `sickn33/antigravity-awesome-skills` | Structured code review checklist; appended to complex feature prompts |
+
+**Obsidian Skills (3)**:
+
+| Skill | Source | Purpose |
+|-------|--------|---------|
+| `obsidian-canvas-creator` | `axtonliu/axton-obsidian-visual-skills` | Create Obsidian Canvas mind maps from planning artifacts |
+| `obsidian` | `steipete/clawdis` | Obsidian vault automation — used with `C:\Users\User\Documents\Obsidian Vault\prompt-gen\` |
+| `obsidian-clipper-template-creator` | `sickn33/antigravity-awesome-skills` | Generate Obsidian clipper templates for capturing prompt outputs |
+
+### Integration with the Prompt Generator
+
+The registry scanner (`scan_registry.sh`) walks both `.claude/skills/` and `.agents/skills/` — which includes the global skill symlinks. Community skills are automatically included in `skills-registry.json` and become available for routing decisions with no manual configuration required.
+
+**Key insight**: The prompt generator's registry-based design means community skills integrate transparently. A newly installed community skill will appear in the next `/skill-discovery` run and can immediately be referenced by the router's domain signal matching.
+
+### Security Assessments
+
+All 11 community skills were reviewed before installation. Each was rated **Safe / Low Risk**: read-only instructions with no shell execution, no network calls, and no access to sensitive project files.
