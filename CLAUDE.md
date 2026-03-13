@@ -276,6 +276,43 @@ ACM_EXTRACTION_MODEL=llama3.1:8b    # Ollama model for extraction (configurable)
 - **Python**: Ruff for linting/formatting, 88 char line length, type hints required, Google-style docstrings
 - **Commits**: Conventional commits (feat:, fix:, docs:, refactor:, test:)
 
+## Prompt Generator System
+
+### Quick Start
+Use `/generate-prompt <request>` to auto-generate optimized Claude Code prompts.
+
+Examples:
+- `/generate-prompt "Fix the extraction pipeline timeout error"`
+- `/generate-prompt "Add a new extraction provider" --save --tmux`
+- `/generate-prompt "Update the README" --no-plan`
+
+### How It Works
+The prompt generator is a 4-skill pipeline:
+1. **Discovery** (`/skill-discovery`): Scans `.claude/skills/`, `.agents/skills/`, `commands/`, and `CLAUDE.md` to build `skills-registry.json`
+2. **Classification** (`/request-classifier`): Parses your request → type (feature/bug/research/...), complexity (1-10), plan mode (on/off)
+3. **Routing** (`/prompt-router`): Maps classification → skill bundle, agent strategy (solo/subagent/tmux), Context7 directives
+4. **Generation** (`/prompt-generator`): Assembles a complete prompt with glossary, verification checklist, and files summary
+
+### Plan Mode
+Automatically activated for features, bug fixes, research, and improvements. Creates:
+- `task_plan.md` — Numbered steps with file paths
+- `findings.md` — Research template
+- `progress.md` — Checkbox tracker
+
+Override: add `--no-plan` to skip, or `--with-plan` to force.
+
+### Agent Strategies
+- **Solo**: Simple tasks, 1 skill, direct execution
+- **Subagent Dispatch**: Medium tasks, parallel subtasks via `/dispatching-parallel-agents`
+- **Tmux Agent Team**: Complex tasks, 3+ panes for implementation/testing/research
+
+### Skills Registry
+Auto-updated on session start (via pre-session hook). Manual refresh: `/skill-discovery`.
+Location: `skills-registry.json` at repo root.
+
+### Available Skills
+Run `/skill-discovery` to see the current catalog.
+
 ## Sub-Agent Model Selection
 
 When delegating tasks to sub-agents via the Task tool:
