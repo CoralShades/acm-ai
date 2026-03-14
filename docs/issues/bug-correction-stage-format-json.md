@@ -4,7 +4,7 @@
 > **Discovered**: 2026-03-05 (E36-S2 + E36-S4 benchmark)
 > **Findings**: F003, F008, F014
 > **Priority**: CONCERN
-> **Status**: Open
+> **Status**: Open — correction stage still unresolved (metadata/inventory stages fixed in commit `476c285e`)
 
 ## Problem
 
@@ -50,3 +50,7 @@ correction_model = _apply_ollama_extraction_settings(correction_model)  # ADD TH
 - Findings: F003, F008, F014 in [`docs/sprint-artifacts/e36/findings.md`](../sprint-artifacts/e36/findings.md)
 - Log sentinel: [`docs/sprint-artifacts/e36/evidence/log-sentinel-e36s4.md`](../sprint-artifacts/e36/evidence/log-sentinel-e36s4.md)
 - Stories: E35-S3 (Ollama Hardening), E35-S4 (Provider Priority)
+
+## Note (2026-03-14)
+
+Commit `476c285e` applied `_apply_ollama_extraction_settings()` to the **metadata_and_structure** and **building_inventory** extraction stages — not to `_llm_correct_records()`. The correction stage remains unpatched. This issue stays open.

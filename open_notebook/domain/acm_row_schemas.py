@@ -1,6 +1,6 @@
 """Simplified per-row LLM extraction schemas for ACM items.
 
-These schemas are intentionally minimal (9 fields) to work reliably with
+These schemas are intentionally minimal (13 fields) to work reliably with
 small Ollama models (num_ctx=2048). The LLM fills only what it sees in the
 row data. Deterministic Python mapping handles normalization, classification
 validation, and conversion to ACMExtractionRecord.

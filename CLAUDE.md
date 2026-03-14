@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical** : Always use AskUserQuestion Tool when you want to clarify, interview or ask questions from the user.
 
+## User Documetation Location : C:\Users\User\Documents\Obsidian Vault\ACM
+
 ## CRITICAL PATH RULE (WSL/Windows)
 
 - Never `cd` to `/d/...` or `D:\...` in Bash commands.
@@ -472,10 +474,10 @@ Six tools, each with a distinct role:
 
 Item__c extraction supports two modes controlled by `ACM_ITEM_EXTRACTION_MODE` env var:
 
-**Per-row mode** (default): One LLM call per table row → 9 fields → deterministic post-processing
+**Per-row mode** (default): One LLM call per table row → 13 fields → deterministic post-processing
 - Row segmenter: `open_notebook/extractors/row_segmenter.py` (RawTableRow, 8 edge case types)
 - Row extractor: `open_notebook/extractors/row_extractor.py` (KV prompt, extract_all_rows)
-- Schema: `open_notebook/domain/acm_row_schemas.py` (ACMItemRow, 9 fields)
+- Schema: `open_notebook/domain/acm_row_schemas.py` (ACMItemRow, 13 fields)
 - Mapper: `open_notebook/domain/acm_row_mappers.py` (ACMItemRow → ACMExtractionRecord)
 - Prompts: `prompts/acm/row_extraction.jinja`, `prompts/acm/row_split.jinja`
 - Ollama config: `ACM_ROW_EXTRACTION_NUM_CTX=2048`, `ACM_EXTRACTION_MODEL=llama3.1:8b`

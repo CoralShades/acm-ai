@@ -18,3 +18,6 @@ Date: 2026-03-14
 
 ## Blocked
 (none)
+
+## Post-Audit Updates
+- 2026-03-14: Cross-reference added to findings.md §"Post-Audit: Pipeline Debug" — commit `476c285e` resolved RC1/RC2 (format="json" + prompt rewrites), RC6/RC7 (stale docling detection + param binding). 0→29 records on Broadmeadows.

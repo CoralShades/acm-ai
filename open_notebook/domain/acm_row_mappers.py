@@ -104,7 +104,7 @@ def map_item_row_to_extraction_record(
       f. LLM sub-classification used as fallback when deterministic confidence < 0.5
 
     Args:
-        row: Simplified LLM extraction output (9 fields).
+        row: Simplified LLM extraction output (13 fields).
         building_id: Building record ID or identifier.
         source_id: Source document ID.
         page_number: Optional PDF page number for provenance.
@@ -165,6 +165,11 @@ def map_item_row_to_extraction_record(
     if row_index is not None:
         data_issues.append(f"row_index: {row_index}")
 
+    # (g) Ensure material_description is never None — ACMRecord requires it
+    safe_material_description = (
+        final_sub_classification or row.acm_sub_classification or row.item_name or "Unknown"
+    )
+
     # Build the full ACMExtractionRecord
     record = ACMExtractionRecord(
         # Building identity
@@ -174,15 +179,17 @@ def map_item_row_to_extraction_record(
         room_name=row.room_name,
         floor_level=row.floor_level,
         location=row.item_location,
+        area_type=row.internal_external,
         # Product / material
         product=row.acm_product or row.item_name,
-        material_description=final_sub_classification,
+        material_description=safe_material_description,
         # Friability
         friable=normalized_friability,
         # Result — use extracted sample_result, fallback to "Unknown"
         result=row.sample_result or "Unknown",
         # Sample number
         sample_no=row.sample_number,
+        sample_result=row.sample_result,
         # Condition & disturbance
         material_condition=normalized_condition,
         disturbance_potential=normalized_disturbance,

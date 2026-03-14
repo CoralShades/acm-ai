@@ -21,3 +21,6 @@ Audit the full ACM extraction pipeline to document: (1) all SurrealDB tables and
 - Some tables may be populated by background workers (`commands/`) rather than the graph — need to check both paths
 - V3 tables may shadow V1/V2 tables with similar names but different schemas
 - Some domain models may be "planned but not implemented" (from BMAD stories)
+
+## Follow-Up
+- 2026-03-14: Post-audit pipeline debug (commit `476c285e`) resolved several node-level failures identified in §3.2. See cross-reference in findings.md and `docs/sprint-artifacts/pipeline-debug/` for full details.

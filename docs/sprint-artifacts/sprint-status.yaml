@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-13
+updated: 2026-03-14
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -598,6 +598,20 @@ development_status:
   # ─────────────────────────────────────────────────────
   frontend-audit-2026-03-13: done  # 2026-03-13. 8 tasks across 13 files. T1: label renames (Raw→AI Mapped, reloadUrl fix, ConfirmDialog). T2: BuildingReviewGrid canonical 57-field type + V3 API. T3: computed missingFieldsPercent + extractionQualityScore. T4: ACM page V3 ItemGrid+BuildingTabStrip. T5: aggregate building/record stat cards on jobs page. T6: intelligence API wired into JobOverviewTab. T7: provider tab subtitles (Docling/MinerU/Consensus). T8: bbox overlay teal color + page mismatch guard.
 
+  # ─────────────────────────────────────────────────────
+  # Pipeline Debug (2026-03-14)
+  # Branch: ACMV3
+  # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
+  # Root causes traced via Langfuse + LangSmith. 4 phases: trace analysis, synthesis, apply, verify.
+  # 8 code/prompt fixes across 12 files. Result: 0 → 29 records (93.5% Broadmeadows ground truth).
+  # Artifact: docs/sprint-artifacts/pipeline-debug/
+  #   findings.md — RC1-RC8 root causes, applied fixes, verification metrics
+  #   progress.md — All 4 phases complete, known remaining issues documented
+  #   task_plan.md — All tasks checked off
+  # Remaining: RC8 (docling_document_json stored as {}), blocks per-row path. Deferred.
+  # ─────────────────────────────────────────────────────
+  pipeline-debug-2026-03-14: done  # 2026-03-14. Commit 476c285e. Trace-driven debug: RC1 format="json" on metadata+inventory Ollama calls, RC2 prompt rewrite (141→56 lines metadata, 130→58 lines inventory, 3→15 lines row_split), RC6 stale docling_document_json detection ({} not caught), RC7 SurrealDB param binding (ensure_record_id). Plus WebSocket retry in orchestrator.py. Result: 0→29 records (93.5% vs ground truth of 31). Per-row still blocked by RC8 (docling_json empty dict — deferred).
+
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
   bug-worker-race-condition: done  # 2026-02-25: Atomic claim pattern (_try_claim_command + _generate_worker_id) in acm_commands.py. Migration 34: claimed_by/claimed_at fields. Prevents duplicate command processing.
@@ -633,8 +647,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 250  (249 prior + 1 bug-frontend-nav-performance)
-# Stories Done: 227 (91%)  -- 226 prior + 1 bug-frontend-nav-performance (2026-03-13)
+# Total Stories: 252  (250 prior + frontend-audit-2026-03-13 + pipeline-debug-2026-03-14)
+# Stories Done: 229 (91%)  -- 227 prior + frontend-audit (2026-03-13) + pipeline-debug (2026-03-14)
 # Stories Review: 0
 # Stories In-Progress: 1 (bug-fix-12-extraction-audit)
 # Stories Blocked: 0
@@ -643,10 +657,13 @@ development_status:
 # Stories Backlog: 4 (E36-S4..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-12
-# Bug Fix 12 (2026-03-12): Extraction log audit + per-run log categorization.
-# 9 issues found (N1-N9) across multi-run log review. 8 issue docs created.
-# Per-run log infra complete: pipeline_logger.py dirs, run_worker.py tee sink, scripts/split_logs.py.
+# Last Updated: 2026-03-14
+# Pipeline Debug (2026-03-14): Commit 476c285e. Trace-driven debug session. 8 fixes across 12 files.
+# 0→29 records (93.5% Broadmeadows ground truth). RC1-RC7 fixed. RC8 deferred.
+# format="json" applied to metadata+inventory Ollama calls. 3 prompts rewritten for 8b models.
+# Stale docling_document_json detection fixed ({}). SurrealDB param binding fixed.
+# Frontend Audit (2026-03-13): 8 tasks across 18 files. V3 grid unification, computed metrics,
+# provenance fixes, loading states, label corrections. Commit: c9ff25d4.
 # Fixes for N1-N9 pending. GitHub #103.
 # Bug Fix 11 Phase 8: 4 more bugs fixed after service restart. PRIMARY: _get_db_extraction_model()
 # returned SurrealDB record ID instead of model name → ALL LLM calls 404'd → 0 buildings → 0 records.

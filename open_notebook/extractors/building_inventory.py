@@ -274,21 +274,27 @@ def _create_processing_groups(buildings: List[BuildingMeta]) -> List[ProcessingG
 
 
 def _detect_ara_buildings(content: str) -> List[Tuple[str, int]]:
-    """Detect ARA-format buildings from 'Building Name:\\n<name>' header blocks.
+    """Detect ARA-format buildings from 'Building Name:' header blocks.
 
     ARA documents (Greencap, Prensa, etc.) use repeated header blocks with
-    'Building Name:' followed by the building name on the next line.
+    'Building Name:' followed by the building name either on the same line
+    or on the next line. Supports both formats:
+      - Two-line: ``Building Name:\\n  Broadmeadows Police Station``
+      - One-line: ``Building Name: Broadmeadows Police Station``
     Returns list of (building_name, first_occurrence_position) tuples,
     deduplicated by building name.
     """
     ara_building_pattern = re.compile(
-        r"Building Name:\s*\n\s*(.+?)(?:\n|$)", re.IGNORECASE
+        r"Building Name:\s*\n\s*(.+?)(?:\n|$)"  # two-line format
+        r"|"
+        r"Building Name:\s+(.+?)(?:\n|$)",  # one-line format
+        re.IGNORECASE,
     )
     seen_names: set = set()
     results: List[Tuple[str, int]] = []
 
     for match in ara_building_pattern.finditer(content):
-        name = match.group(1).strip()
+        name = (match.group(1) or match.group(2) or "").strip()
         if name and name not in seen_names:
             seen_names.add(name)
             results.append((name, match.start()))

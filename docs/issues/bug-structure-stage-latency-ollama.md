@@ -3,7 +3,7 @@
 > **Discovered**: 2026-03-12 (Bug Fix 11 live extraction verification)
 > **Source**: acm-extraction.log 03:33, 09:01; LangSmith trace `eed83b6e`
 > **Priority**: P2
-> **Status**: Open
+> **Status**: Partially resolved — commit `476c285e` (2026-03-14)
 > **Blocks**: Pipeline performance on Ollama; metadata quality for consultant and building detection
 
 ## Problem
@@ -43,3 +43,15 @@ LangSmith trace analysis (trace `eed83b6e`, L2 finding) confirms:
 |------|--------|
 | `open_notebook/graphs/acm_extraction.py` | Add content truncation for metadata extraction prompt |
 | `prompts/acm/` | Review metadata extraction prompt for efficiency |
+
+## Partial Resolution (2026-03-14)
+
+Commit `476c285e` applied fixes addressing items 1 and partly 3:
+
+- **`prompts/acm/metadata_and_structure.jinja`**: Rewritten from 141 → 56 lines (removes verbose field descriptions, retains JSON schema + key rules). Reduces system prompt token count significantly.
+- **`prompts/acm/building_inventory.jinja`**: Rewritten from 130 → 58 lines for the same reason.
+- **`open_notebook/extractors/metadata_and_structure.py`** + **`building_inventory.py`**: Added `_apply_ollama_extraction_settings(model)` after model provisioning to enforce `format="json"`. This resolves the primary quality failure (`consultant=Unknown`, empty sections).
+
+Verification result on Broadmeadows: STRUCTURE stage now returns valid metadata (building detected, consultant partially resolved via phi4:14b). Execution time was 203s total (not broken out per-stage post-fix).
+
+**Remaining**: Items 2 (content truncation to first N pages) and 4 (timeout guard) are not yet implemented. Content truncation would further reduce latency for large documents.

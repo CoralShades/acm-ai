@@ -620,3 +620,18 @@ Export ─────────► SF export ────────► acm_
 4. **No orphaned domain models** — all Pydantic models are actively used.
 5. **Migration 21 duplication noted** — files 21.surrealql and 22.surrealql contain identical content (both define `agui_events` and `a2a_tasks`). Appears to be a copy artifact.
 6. **`KnowledgeGraph.tsx` does NOT use knowledge graph tables** — it queries `acm_record` directly via `/api/graph/source/{id}`, making the M25 graph tables fully orphaned.
+
+---
+
+## Post-Audit: Pipeline Debug (2026-03-14)
+
+A follow-up debug session (commit `476c285e`) resolved several root causes that this audit identified or implied:
+
+| Root Cause | Audit Finding | Debug Fix |
+|------------|--------------|-----------|
+| `metadata_and_structure_node` produces `consultant=Unknown, buildings=0` | §3.2 node I/O matrix: this node reads `source.full_text` + `model_id` and has no fallback on failure | RC1 + RC2: Added `format="json"` to Ollama call + rewrote prompt 141→56 lines |
+| `compile_inventory` similarly fails | §3.2: node depends on output of metadata node | RC1 + RC2: Added `format="json"` + rewrote prompt 130→58 lines |
+| Stale `docling_document_json` blocks per-row path | §3.2 `extract_items_node`: selects `acm_table_section` with `docling_document_json` present | RC6: `IS NULL` → `IS NULL OR = {}` in `acm_commands.py` + `acm_extraction.py` |
+| SurrealDB param binding for source FK | §2 domain model table: `acm_table_section.source_id` is `record<source>` | RC7: Added `ensure_record_id()` before `$sid` param binding |
+
+**Outcome**: 0 → 29 records (93.5% Broadmeadows ground truth). Per-row extraction still blocked by RC8 (`docling_document_json` stores as `{}`). See `docs/sprint-artifacts/pipeline-debug/findings.md` for full details.

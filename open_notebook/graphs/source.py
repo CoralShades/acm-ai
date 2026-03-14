@@ -99,6 +99,30 @@ async def content_process(state: SourceState) -> dict:
     return {"content_state": processed_state}
 
 
+def _inject_page_markers(pdf_path: str) -> Optional[str]:
+    """Re-read PDF with PyMuPDF to produce full text with page markers.
+
+    content_core concatenates pages without separators, so downstream
+    page-range slicing (``_extract_page_range_text``) finds no markers
+    and returns empty text. This function provides page-marked text as
+    a post-processing replacement.
+    """
+    try:
+        import fitz  # PyMuPDF
+
+        doc = fitz.open(pdf_path)
+        parts: list[str] = []
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            text = page.get_text()
+            parts.append(f"--- Page {page_num + 1} ---\n{text}")
+        doc.close()
+        return "\n".join(parts)
+    except Exception as e:
+        logger.warning(f"Failed to inject page markers from {pdf_path}: {e}")
+        return None
+
+
 async def save_source(state: SourceState) -> dict:
     content_state = state["content_state"]
 
@@ -109,7 +133,19 @@ async def save_source(state: SourceState) -> dict:
 
     # Update the source with processed content
     source.asset = Asset(url=content_state.url, file_path=content_state.file_path)
-    source.full_text = content_state.content
+
+    # For PDFs, inject page markers into full_text so that downstream
+    # page-range slicing works correctly (content_core omits markers).
+    file_path = str(content_state.file_path or "")
+    if file_path.lower().endswith(".pdf") and os.path.isfile(file_path):
+        marked_text = _inject_page_markers(file_path)
+        if marked_text:
+            source.full_text = marked_text
+            logger.info(f"Injected page markers into full_text for {file_path}")
+        else:
+            source.full_text = content_state.content
+    else:
+        source.full_text = content_state.content
 
     # Preserve existing title if none provided in processed content
     if content_state.title:
