@@ -286,13 +286,33 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         # Extract command_id from execution context for progress tracking
         # (command_id already set above during atomic claim)
 
-        # 3. Run AI extraction (deletion already handled above, so pass force=False)
-        result = await extract_acm_from_source(
-            source=source,
-            model_id=model_id,
-            force=False,  # Don't delete again, we already handled it
-            command_id=command_id,
-        )
+        # 3. Run AI extraction with timeout guard (F8: concurrent executions can deadlock)
+        try:
+            result = await asyncio.wait_for(
+                extract_acm_from_source(
+                    source=source,
+                    model_id=model_id,
+                    force=False,  # Don't delete again, we already handled it
+                    command_id=command_id,
+                ),
+                timeout=1800,  # 30 minutes max per extraction
+            )
+        except asyncio.TimeoutError:
+            processing_time = time.time() - start_time
+            logger.error(
+                f"ACM extraction timed out after 1800s for {source_id}"
+            )
+            if command_id:
+                await _write_terminal_status(command_id, "failed", 0)
+            return ACMExtractionOutput(
+                success=False,
+                source_id=source_id,
+                records_created=0,
+                records_deleted=deleted_count,
+                processing_time=processing_time,
+                error_message="Extraction timed out after 30 minutes",
+                extraction_method="ai",
+            )
 
         processing_time = time.time() - start_time
 
