@@ -1,39 +1,23 @@
-# Task Plan: Revise Prompt Pack for Claude Code Sessions
+# Task Plan: Audit ACM Pipeline — Tables, Data Flow, Graph Nodes, and Frontend Mapping
+Date: 2026-03-14
+Status: COMPLETE
 
 ## Goal
-Revise `prompt-pack.md` (S4-S9) into self-contained Claude Code session prompts that:
-1. Include all necessary context inline (no undefined references to "Phase 1/2", "S2", etc.)
-2. Use proper Claude Code skill invocation patterns
-3. Leverage subagents, tools, and context7 effectively
-4. Minimize token waste from context searching
+Audit the full ACM extraction pipeline to document: (1) all SurrealDB tables and their relationships, (2) which tables map to which frontend screens, (3) how LangGraph nodes populate each table, (4) which tables/models are outdated or disconnected from active graph nodes.
 
-## Tasks
+## Steps
+- [x] Step 1: Enumerate all SurrealDB tables from migrations (1–49) — 42 tables (40 active + 2 removed)
+- [x] Step 2: Map Pydantic domain models (`open_notebook/domain/`) — 14 models mapped
+- [x] Step 3: Trace LangGraph `acm_extraction` graph — 11 nodes with full I/O matrix
+- [x] Step 4: Trace `source_commands.py` pre-graph steps — 7-step sequence documented
+- [x] Step 5: Map API endpoints to SurrealDB queries — 40+ endpoints cataloged
+- [x] Step 6: Map frontend components to API endpoints — 10 screens/panels traced
+- [x] Step 7: Identify orphaned tables — 11 orphaned (8 knowledge graph + 3 config singletons)
+- [x] Step 8: Identify orphaned domain models — 0 orphaned (all active)
+- [x] Step 9: Produce final audit document — 9-section findings.md
+- [x] Step 10: Save findings to `docs/sprint-artifacts/pipeline-audit/findings.md`
 
-### Phase 1: Research (subagents running)
-- [x] Read existing prompt-pack.md
-- [x] Read trace-audit-report.md for context
-- [x] Spawn subagent: Claude Code skills/tools/subagent patterns
-- [x] Spawn subagent: ACM pipeline terminology glossary
-- [x] Spawn subagent: Skill file contents analysis
-
-### Phase 2: Analysis
-- [x] Collect subagent findings
-- [x] Identify all undefined/ambiguous references in prompt-pack.md
-- [x] Map each reference to its concrete definition (see findings.md)
-- [x] Identify optimal Claude Code patterns for each session
-
-### Phase 3: Write Revised Document
-- [x] Write preamble with full pipeline glossary
-- [x] Revise S4: Merge Pre-Extraction — self-contained prompt
-- [x] Revise S5: Per-Building Parallelization — self-contained prompt
-- [x] Revise S6: Docling Tables — self-contained prompt
-- [x] Revise S7: SF Normalization — self-contained prompt
-- [x] Revise S8: Dead Code Cleanup — self-contained prompt
-- [x] Revise S9: Benchmark — self-contained prompt
-- [x] Add Claude Code usage guide section
-- [x] Save to `docs/sprint-artifacts/pipeline-audit/prompt-pack-v2.md`
-
-### Phase 4: Validation
-- [x] Compare v1 vs v2 side-by-side for scope preservation (all 6 sessions match)
-- [x] Verify all undefined terms are resolved (8/8 terms resolved in glossary)
-- [x] Verify skill invocations match actual skill names (6/6 verified against .claude/skills/)
+## Risks
+- Some tables may be populated by background workers (`commands/`) rather than the graph — need to check both paths
+- V3 tables may shadow V1/V2 tables with similar names but different schemas
+- Some domain models may be "planned but not implemented" (from BMAD stories)
