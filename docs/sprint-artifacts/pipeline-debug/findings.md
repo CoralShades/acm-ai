@@ -41,6 +41,22 @@ The traced ACM extraction ran on `sCF_Broadmead.pdf` (source:ddp29u9shs6w3s4m8lb
 - Per-row mapper passes `row.sample_result` through raw without normalization.
 - LLM variants like "Detected", "NAD", "AP" persist as non-canonical values.
 
+### RC6 (MEDIUM): Stale `docling_document_json` detection too narrow
+- `acm_commands.py` and `acm_extraction.py` checked only `IS NULL` / `IS NONE`
+- Actual DB values were `{}` (empty dict), not NULL — stale detection never triggered
+- **Fix**: Changed queries to `(docling_document_json IS NULL OR docling_document_json = {})`
+
+### RC7 (MEDIUM): SurrealDB param binding in stale table check
+- `acm_commands.py:248` passed raw string `source_id` as `$sid` param
+- SurrealDB string param doesn't match record link field → query returned 0 rows
+- **Fix**: Added `ensure_record_id(source_id)` before param binding
+
+### RC8 (MEDIUM): `docling_document_json` stored as empty dict
+- DoclingAdapter calls `table.data.model_dump(mode="json")` which produces valid data
+- But SurrealDB stores it as `{}` (empty dict) — root cause unclear
+- Blocks per-row extraction entirely; bulk mode used as fallback
+- **Status**: Deferred to separate investigation
+
 ## Persistence Path: CLEAN
 All 6 previously known critical bugs are FIXED in current code:
 1. ObjectModel.save() returns None — correct pattern used everywhere
@@ -70,3 +86,35 @@ Added `_apply_ollama_extraction_settings(model)` after model provisioning.
 ### Fix 6: Updated test assertions
 - `test_building_inventory.py`: 3 assertions updated for new prompt wording
 - `test_ara_format.py`: 3 assertions updated for new prompt wording
+
+### Fix 7: Stale `docling_document_json` detection (RC6+RC7)
+- `acm_commands.py`: `IS NULL` → `IS NULL OR = {}` + `ensure_record_id()` for param binding
+- `acm_extraction.py`: `IS NONE` → `IS NONE OR = {}` in diagnostic warning
+
+## Verification Results
+
+### Extraction Run (2026-03-14)
+- **Source**: `source:mc5llofksqsglrjsfssj` (Clutch_Broadmeadows (28).pdf)
+- **Model**: `phi4:14b-q4_K_M` (Ollama)
+- **Mode**: Bulk (per-row blocked by empty `docling_document_json`)
+- **Records**: 29 created (31 raw → 2 deduped)
+- **Confidence**: 29 high, 0 medium, 0 low
+- **Building**: 1 ("Broadmeadows Police Station", internal_id BLD#CLUTCH_B_001)
+- **Execution time**: 203s
+
+### Ground Truth Comparison (31 records)
+- **Match rate**: 29/31 (93.5%)
+- **Progression**: 0 → 12 → 22 → 29 records across debug iterations
+- **Missing items** (2): Likely items at chunk boundaries or "As Per" cross-references that LLM didn't generate as separate records
+- **Duplicates removed**: 2 (dedup caught exact matches)
+- **Field quality**: room_name, location, sample_no, sample_result all populated; product field often "Other" instead of specific values (LLM limitation)
+
+### Key Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Records extracted | 0 | 29 |
+| Ground truth match | 0% | 93.5% |
+| Buildings detected | 0 | 1 |
+| Consultant | Unknown | Unknown (phi4 metadata failure → fallback) |
+| Per-row extraction | Never triggered | Still blocked (docling_json empty) |
+| Test suite | 2123 pass | 2123 pass (same 5 pre-existing failures) |

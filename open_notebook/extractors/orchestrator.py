@@ -44,52 +44,62 @@ async def _get_docling_tables(
     Returns tables where table_type='docling_direct_api' and page falls
     within the building's page range.  Returns empty list if none found
     (graceful fallback to existing behavior).
+
+    Retries once on connection timeout (common on Windows WebSocket).
     """
+    import asyncio
+
     from open_notebook.database.repository import ensure_record_id, repo_query
 
-    try:
-        # Use overlap logic: table overlaps building page range if
-        # table.page_start <= building.page_end AND table.page_end >= building.page_start
-        query = (
-            "SELECT * FROM acm_table_section "
-            "WHERE source_id = $source_id "
-            "AND table_type = 'docling_direct_api' "
-            "AND page_start <= $page_end "
-            "AND page_end >= $page_start "
-            "ORDER BY page_start ASC"
-        )
-        results = await repo_query(
-            query,
-            {
-                "source_id": ensure_record_id(source_id),
-                "page_start": page_start,
-                "page_end": page_end,
-            },
-        )
-        matched = results if results else []
+    query = (
+        "SELECT * FROM acm_table_section "
+        "WHERE source_id = $source_id "
+        "AND table_type = 'docling_direct_api' "
+        "AND page_start <= $page_end "
+        "AND page_end >= $page_start "
+        "ORDER BY page_start ASC"
+    )
+    params = {
+        "source_id": ensure_record_id(source_id),
+        "page_start": page_start,
+        "page_end": page_end,
+    }
 
-        # Log warning if page range is excluding tables
-        total_query = (
-            "SELECT count() as cnt FROM acm_table_section "
-            "WHERE source_id = $source_id "
-            "AND table_type = 'docling_direct_api' "
-            "GROUP ALL"
-        )
-        total_result = await repo_query(
-            total_query,
-            {"source_id": ensure_record_id(source_id)},
-        )
-        total_count = total_result[0].get("cnt", 0) if total_result else 0
-        if total_count > len(matched):
-            logger.warning(
-                f"Page range filter [{page_start}-{page_end}] excluded "
-                f"{total_count - len(matched)} of {total_count} total tables "
-                f"for source {source_id}"
+    # Retry once on timeout (WebSocket handshake can fail on Windows)
+    for attempt in range(2):
+        try:
+            results = await repo_query(query, params)
+            matched = results if results else []
+
+            # Log warning if page range is excluding tables
+            total_query = (
+                "SELECT count() as cnt FROM acm_table_section "
+                "WHERE source_id = $source_id "
+                "AND table_type = 'docling_direct_api' "
+                "GROUP ALL"
             )
-        return matched
-    except Exception as e:
-        logger.warning(f"Docling table query failed for {source_id}: {e}")
-        return []
+            total_result = await repo_query(
+                total_query,
+                {"source_id": ensure_record_id(source_id)},
+            )
+            total_count = total_result[0].get("cnt", 0) if total_result else 0
+            if total_count > len(matched):
+                logger.warning(
+                    f"Page range filter [{page_start}-{page_end}] excluded "
+                    f"{total_count - len(matched)} of {total_count} total tables "
+                    f"for source {source_id}"
+                )
+            return matched
+        except Exception as e:
+            if attempt == 0 and "timed out" in str(e).lower():
+                logger.warning(
+                    f"Docling table query timed out for {source_id}, retrying..."
+                )
+                await asyncio.sleep(1)
+                continue
+            logger.warning(f"Docling table query failed for {source_id}: {e}")
+            return []
+    return []
 
 
 def _inject_docling_tables(

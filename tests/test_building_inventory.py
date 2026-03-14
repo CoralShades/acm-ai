@@ -154,7 +154,7 @@ class TestPromptTemplate:
 
         prompter = Prompter(prompt_template="acm/building_inventory")
         result = prompter.render(data={"site_name": "Test School", "consultant_name": "Test Corp"})
-        assert "Building Inventory Compilation" in result
+        assert "building inventory" in result.lower()
         assert "Test School" in result
         assert "Test Corp" in result
 
@@ -163,15 +163,15 @@ class TestPromptTemplate:
 
         prompter = Prompter(prompt_template="acm/building_inventory")
         result = prompter.render(data={"content": ""})
-        assert "B##A" in result or "B###" in result
-        assert "D##" in result or "Demountable" in result.lower()
+        assert "B00A" in result or "B###" in result
+        assert "D01" in result or "Demountable" in result.lower()
 
     def test_prompt_contains_room_detection_instructions(self):
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/building_inventory")
         result = prompter.render(data={"content": ""})
-        assert "R####" in result or "R0001" in result
+        assert "R0001" in result or "room_id" in result
 
     def test_prompt_contains_complexity_classification(self):
         from ai_prompter import Prompter
@@ -180,7 +180,7 @@ class TestPromptTemplate:
         result = prompter.render(data={"content": ""})
         assert "simple" in result
         assert "complex" in result
-        assert "No Asbestos" in result
+        assert "no acm" in result.lower() or "no asbestos" in result.lower()
 
     def test_prompt_contains_page_range_instructions(self):
         from ai_prompter import Prompter

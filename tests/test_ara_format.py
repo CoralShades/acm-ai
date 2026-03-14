@@ -130,6 +130,6 @@ class TestBuildingInventoryPrompt:
         )
         content = prompt_path.read_text(encoding="utf-8")
 
-        assert "FORMAT B:" in content or "ARA Format" in content
-        assert "Building Name:" in content
-        assert "Section Dividers" in content or "section divider" in content.lower()
+        assert "Named buildings" in content or "ARA" in content
+        assert "Building Name:" in content or "building name" in content.lower()
+        assert "Interior/Exterior" in content or "section divider" in content.lower()

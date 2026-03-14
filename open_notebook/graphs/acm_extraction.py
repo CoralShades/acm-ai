@@ -962,7 +962,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
         diag = await repo_query(
             "SELECT count() as total FROM acm_table_section "
-            "WHERE source_id = $sid AND docling_document_json IS NONE GROUP ALL",
+            "WHERE source_id = $sid AND (docling_document_json IS NONE OR docling_document_json = {}) GROUP ALL",
             {"sid": ensure_record_id(source_id_str)},
         )
         stale_count = diag[0].get("total", 0) if diag else 0

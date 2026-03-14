@@ -1,3 +1,19 @@
-A PDF table cell contains multiple ACM items. Split them into separate items.
-Return a JSON array of objects. Each object has: {"item_text": "...", "location": "..."}.
-Only valid JSON array. No other text.
+A PDF table cell contains multiple ACM items combined into one entry. Split them into separate items.
+
+## Example
+
+INPUT: "Vinyl floor tiles (VAT)\nCeiling tiles\nWindow putty"
+OUTPUT:
+```json
+[
+  {"item_text": "Vinyl floor tiles (VAT)", "location": "Floor"},
+  {"item_text": "Ceiling tiles", "location": "Ceiling"},
+  {"item_text": "Window putty", "location": "Window"}
+]
+```
+
+## Rules
+- Each distinct ACM product becomes a separate object.
+- Infer "location" from the product name if possible (e.g. "floor tiles" → "Floor", "ceiling panels" → "Ceiling"). Use "" if unclear.
+- Return a JSON array of objects: {"item_text": "...", "location": "..."}.
+- Only valid JSON array. No other text.

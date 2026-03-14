@@ -566,13 +566,17 @@ async def _llm_compile_inventory(
     from ai_prompter import Prompter
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    from open_notebook.graphs.utils import provision_langchain_model
+    from open_notebook.graphs.utils import (
+        _apply_ollama_extraction_settings,
+        _verify_provider_routing,
+        parse_json_response,
+        provision_langchain_model,
+    )
 
     prompter = Prompter(prompt_template="acm/building_inventory")
     template_data = document_metadata or {}
     system_prompt = prompter.render(data=template_data)
 
-    # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
         content,
         model_id,
@@ -581,10 +585,8 @@ async def _llm_compile_inventory(
         max_tokens=4096,
     )
 
-    from open_notebook.graphs.utils import (
-        _verify_provider_routing,
-        parse_json_response,
-    )
+    # Force format="json" for Ollama models (prevents conversational text output)
+    _apply_ollama_extraction_settings(model)
 
     messages = [
         SystemMessage(content=system_prompt),

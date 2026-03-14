@@ -240,12 +240,15 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 )
 
             # Check if table sections need re-extraction
-            # (docling_document_json may be NULL for sources processed before v3.5)
+            # (docling_document_json may be NULL or empty {} for sources processed before v3.5)
+            from open_notebook.database.repository import ensure_record_id as _eri
+
+            _sid = _eri(source_id)
             table_check = await repo_query(
                 "SELECT count() as cnt FROM acm_table_section "
-                "WHERE source_id=$sid AND docling_document_json IS NULL "
+                "WHERE source_id=$sid AND (docling_document_json IS NULL OR docling_document_json = {}) "
                 "GROUP ALL;",
-                {"sid": source_id},
+                {"sid": _sid},
             )
             null_count = (
                 table_check[0]["cnt"]
@@ -259,7 +262,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 )
                 await repo_query(
                     "DELETE FROM acm_table_section WHERE source_id=$sid;",
-                    {"sid": source_id},
+                    {"sid": _sid},
                 )
                 # Re-run table extraction to populate docling_document_json
                 from commands.source_commands import (

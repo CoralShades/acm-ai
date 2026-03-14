@@ -1,129 +1,71 @@
-# Building Inventory Compilation
+Compile a building inventory from an asbestos compliance document. Respond with ONLY valid JSON.
 
-You are an expert at analyzing asbestos compliance documents. Your task is to compile a complete building inventory from the Asbestos Register section.
+{% if site_name %}Site: {{ site_name }}{% endif %}
+{% if consultant_name %}Consultant: {{ consultant_name }}{% endif %}
+{% if document_type %}Document Type: {{ document_type }}{% endif %}
 
-**IMPORTANT:** Documents come in different formats. Detect the format used and extract buildings accordingly.
+## Building Detection
 
-{% if site_name %}**Site:** {{ site_name }}{% endif %}
-{% if consultant_name %}**Consultant:** {{ consultant_name }}{% endif %}
-{% if document_type %}**Document Type:** {{ document_type }}{% endif %}
+Find all buildings. They appear as:
+- Coded IDs: "B00A - Admin Building - 1924 - Brick" or "D01 - Demountable"
+- Named buildings: "Building Name: Main Building" or building names as section headers
+- If no coded IDs exist, generate sequential IDs (B001, B002...) and set `name` to the actual building name
 
----
+Interior/Exterior sections within a building are NOT separate buildings.
 
-## FORMAT A: Coded Building IDs (B###/R#### Patterns)
+## For Each Building Extract
 
-### Building ID Detection
-- Format: `B##A` or `B###` (e.g., B00A, B00B, B001, B009, B010)
-- Typically followed by dash and building name: `B00A - Admin Building`
-- May include year and construction: `B00A - Admin Building - 1924 - Brick`
-- Demountable buildings: `D##` (e.g., D01, D02, D03)
+- building_id: code (B00A, D01) or generated (B001)
+- name: building name
+- year: year built (integer or null)
+- construction: construction type or null
+- purpose: building purpose or null
+- levels: number of levels or null
+- page_start: first page with building data (from "--- Page N ---" markers)
+- page_end: last page with building data
+- complexity: "simple" (no ACM found, or <3 items) or "complex" (multiple rooms/items)
+- rooms: list of rooms found (see schema below)
+- acm_item_count_estimate: estimated ACM item count or null
 
-### Room Detection
-- Format: `{BuildingID}-R####` (e.g., B00A-R0001, B009-R0005)
-- Count rooms per building to inform complexity classification
+## Room Schema
 
----
-
-## FORMAT B: Named Buildings (No Coded IDs)
-
-### Building Detection
-Some documents identify buildings by **name** rather than codes:
-```
-Building Name:   Main Building
-```
-or building names appear as section headers, table group headers, or repeated page headers.
-
-Each building typically starts on a new page with metadata such as:
-- Building name
-- Number of Levels
-- Construction Type
-- Address
-
-### Section Dividers
-Buildings may have section dividers for Interior/Exterior areas:
-```
-Main Building - Exterior - Ground Level
-Main Building - Interior - Ground Level
-```
-These are NOT separate buildings - they are areas within the same building.
-
-### Room Detection
-When no coded room IDs exist, rooms are identified by name:
-- "Boiler Room", "Ward 12", "Kitchen", "External - Throughout"
-- Count distinct room names per building for complexity estimation
-
-### When No Building Codes Exist
-If the document does not use coded building identifiers (B###, D## etc.):
-- Generate sequential IDs: B001, B002, B003, etc.
-- Set `building_id` to the generated code AND `name` to the actual building name
-- Example: building_id = "B001", name = "Main Building"
-- NEVER use the building name as the building_id — always generate a short code
-
----
-
-## Complexity Classification
-
-Classify each building as **simple** or **complex**:
-
-| Complexity | Criteria |
-|-----------|----------|
-| **simple** | Contains "No Asbestos" or "No ACM" keyword for the building, OR has fewer than 3 ACM items total |
-| **complex** | Has multiple rooms with ACM items, OR has 3+ distinct ACM products, OR spans multiple pages |
-
-### Heuristics
-- "No Asbestos Containing Materials Found" → **simple**
-- "Not Detected" for all items → **simple**
-- Multiple rooms with ACM entries → **complex**
-- Building spans 2+ pages → likely **complex**
-
-## Page Range Extraction
-
-Determine each building's page range using page markers in the content:
-- Page markers appear as `--- Page N ---` or `<!-- Page N -->`
-- `page_start`: The page where the building's section begins
-- `page_end`: The page where the building's section ends (last page with building data)
-- For buildings on a single page: `page_end` = `page_start`
-
-## Building Metadata Extraction
-
-For each building, extract available metadata:
-- **name**: Building name (e.g., "Admin Building", "Main Building")
-- **year**: Year built (4-digit number, e.g., 1924, 1950)
-- **construction**: Construction type (e.g., "Brick", "Steel", "Timber", "Weatherboard")
-- **purpose**: Building purpose/use (e.g., "Administration", "Hospital")
-- **area_m2**: Total area in square meters (if available)
-- **levels**: Number of levels/stories (if available)
-
-## Room Output Schema
-
-Each room in the `rooms` array MUST have these exact fields:
 ```json
-{
-  "room_id": "B001-R0001 or descriptive ID",
-  "name": "Human-readable room name",
-  "area_m2": null,
-  "page": null
-}
+{"room_id": "B001-R0001", "name": "Room Name", "area_m2": null, "page": null}
 ```
-- `room_id` (required): A unique identifier — use coded ID if available, otherwise generate one (e.g., "R001", "R002")
-- `name` (required): Human-readable room name (e.g., "Ground Floor Corridor", "External - North Wall")
 
 ## Processing Groups
 
-After compiling the building list, create processing groups:
-- Target **3-5 pages per group** for efficient batched extraction
-- Group buildings by **page proximity** (adjacent page ranges)
-- Simple ("No Asbestos") buildings can be grouped together regardless of page proximity
-- Each group has: group_id (1-indexed), building_ids, page_start, page_end, estimated_pages
+Group buildings by page proximity, targeting 3-5 pages per group:
+```json
+{"group_id": 1, "building_ids": ["B001"], "page_start": 1, "page_end": 4, "estimated_pages": 4}
+```
 
-## Output Format
+## Output JSON Schema
 
-Provide a structured output with:
-- `buildings`: List of all buildings with metadata, page ranges, rooms, and complexity
-- `processing_groups`: List of page-based groups for batched extraction
-- `total_buildings`: Total count of buildings found
-- `document_type`: Document classification (SAMP, ARA, Division_5, or null if unknown)
+```json
+{
+  "buildings": [
+    {
+      "building_id": "B001",
+      "name": "Main Building",
+      "year": 1985,
+      "construction": "Brick",
+      "purpose": null,
+      "area_m2": null,
+      "levels": 2,
+      "page_start": 3,
+      "page_end": 8,
+      "complexity": "complex",
+      "rooms": [{"room_id": "R001", "name": "Foyer", "area_m2": null, "page": 3}],
+      "acm_item_count_estimate": 15
+    }
+  ],
+  "processing_groups": [
+    {"group_id": 1, "building_ids": ["B001"], "page_start": 3, "page_end": 8, "estimated_pages": 6}
+  ],
+  "total_buildings": 1,
+  "document_type": "ARA"
+}
+```
 
-## Instructions
-
-Analyze the document content provided in the user message and compile the building inventory as described above. Respond with a JSON object matching the BuildingInventory schema.
+Respond with ONLY the JSON object. No explanations.

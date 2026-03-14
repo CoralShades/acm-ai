@@ -1,6 +1,6 @@
 # Pipeline Debug Progress
 
-## Status: Phase 3 — Fixes Applied, Awaiting Verification
+## Status: Phase 4 — Verification Complete
 
 | Step | Status | Notes |
 |------|--------|-------|
@@ -16,6 +16,22 @@
 | 3.2 Apply code fixes | DONE | format="json" in metadata_and_structure.py, building_inventory.py |
 | 3.3 Lint | DONE | ruff check passes |
 | 3.4 Tests | DONE | 2123 passed, 5 pre-existing failures (unrelated) |
-| 4.1 Re-run extraction | PENDING | |
-| 4.2 Ground truth compare | PENDING | |
-| 4.3 DB verification | PENDING | |
+| 4.1 Re-run extraction | DONE | 29 records extracted (up from 0) |
+| 4.2 Ground truth compare | DONE | 29/31 (93.5%) — see findings.md for details |
+| 4.3 DB verification | DONE | 1 building, 29 records, all high confidence |
+
+## Additional Fixes Applied (Phase 3b)
+
+| Fix | Status | Notes |
+|-----|--------|-------|
+| RC6: Stale `docling_document_json` detection | DONE | `IS NULL` → `IS NULL OR = {}` in acm_commands.py + acm_extraction.py |
+| RC7: SurrealDB param binding in stale check | DONE | Added `ensure_record_id()` for `$sid` param in acm_commands.py |
+| WebSocket retry in orchestrator.py | DONE | Retry once on timeout for `_get_docling_tables` |
+
+## Known Remaining Issues
+
+| Issue | Severity | Notes |
+|-------|----------|-------|
+| `docling_document_json` stores as `{}` | MEDIUM | DoclingAdapter `model_dump()` returns data but SurrealDB stores empty dict — prevents per-row extraction |
+| Per-row extraction never triggers | MEDIUM | Blocked by empty docling_document_json — bulk mode used as fallback |
+| Model selection: phi4:14b used instead of configured qwen2.5:7b | LOW | DB model default resolves to phi4 record ID |

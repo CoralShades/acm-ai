@@ -111,6 +111,7 @@ async def _llm_extract_combined(
     from langchain_core.messages import HumanMessage, SystemMessage
 
     from open_notebook.graphs.utils import (
+        _apply_ollama_extraction_settings,
         _verify_provider_routing,
         parse_json_response,
         provision_langchain_model,
@@ -126,6 +127,9 @@ async def _llm_extract_combined(
         temperature=0.1,
         max_tokens=16384,
     )
+
+    # Force format="json" for Ollama models (prevents conversational text output)
+    _apply_ollama_extraction_settings(model)
 
     messages = [
         SystemMessage(content=system_prompt),
