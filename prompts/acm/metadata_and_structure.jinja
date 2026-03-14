@@ -3,7 +3,7 @@ Extract document metadata and structure from an asbestos compliance document. Re
 ## Fields to Extract
 
 **metadata** — from cover pages:
-- consultant_name: company that prepared the report (e.g. "Prensa Pty Ltd")
+- consultant_name: company that prepared the report (e.g. "Prensa Pty Ltd"). If the consultant name appears only in a logo/image (shown as <!-- image --> in markdown), try to infer from other text context (footer, header, ABN references). If still unknown, use "Unknown" — do NOT output "<!-- image -->"
 - site_name: site or building name
 - site_address: full street address
 - suburb: suburb name
@@ -21,7 +21,7 @@ Extract document metadata and structure from an asbestos compliance document. Re
 - methodology: brief methodology description
 
 **structure** — from document layout:
-- document_type: "SAMP" (management plan with B### codes), "ARA" (risk assessment with named buildings), "Division_5" (regulatory), or "Unknown"
+- document_type: "SAMP" (school asbestos management plan — may have B### codes OR sequential building IDs), "ARA" (asbestos risk assessment with named buildings), "Division_5" (regulatory), or "Unknown"
 - toc_present: true/false
 - total_pages: total page count
 - register_start_page: page where ACM data tables begin (not section heading)
