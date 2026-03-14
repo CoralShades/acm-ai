@@ -941,3 +941,34 @@ class TestTypeDHierarchicalText:
         assert len(rows) >= 2
         assert all(r.is_synthetic for r in rows)
         assert all(r.edge_case_type == "D" for r in rows)
+
+
+# ---------------------------------------------------------------------------
+# F9: Column alias coverage for Greencap ARA and NSW DoE SAMP
+# ---------------------------------------------------------------------------
+
+
+def test_greencap_column_aliases_mapped():
+    """F9: Greencap ARA column headers should map to canonical names."""
+    all_aliases = {}
+    for canonical, aliases in COLUMN_ALIASES.items():
+        for alias in aliases:
+            all_aliases[alias.lower()] = canonical
+
+    assert "item no" in all_aliases or "item no." in all_aliases
+    assert "building element" in all_aliases
+    assert "risk rating" in all_aliases
+    assert "acm status" in all_aliases
+    assert "material type" in all_aliases
+    assert "priority" in all_aliases
+
+
+def test_nsw_doe_column_aliases_mapped():
+    """F9: NSW DoE SAMP column headers should map to canonical names."""
+    all_aliases = {}
+    for canonical, aliases in COLUMN_ALIASES.items():
+        for alias in aliases:
+            all_aliases[alias.lower()] = canonical
+
+    assert "location description" in all_aliases
+    assert "assumed/confirmed" in all_aliases

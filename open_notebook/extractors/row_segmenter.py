@@ -24,7 +24,10 @@ from open_notebook.extractors.normalizers.content import normalize_docling_text
 # ---------------------------------------------------------------------------
 
 COLUMN_ALIASES: dict[str, list[str]] = {
-    "room_location": ["room", "room/area", "area", "location", "room no"],
+    "room_location": [
+        "room", "room/area", "area", "location", "room no",
+        "location description",  # NSW DoE SAMP
+    ],
     "item_description": [
         "material",
         "product",
@@ -32,16 +35,31 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "description",
         "product description",
         "acm type",
+        "building element",  # Greencap ARA
+        "material type",  # Greencap ARA
     ],
-    "friability": ["friable", "f/nf", "friability", "type"],
+    "friability": [
+        "friable", "f/nf", "friability", "type",
+        "assumed/confirmed",  # NSW DoE SAMP
+    ],
     "condition": ["condition", "material condition", "state", "assessment"],
-    "sample_number": ["sample", "sample#", "sample no", "nata no"],
-    "sample_result": ["result", "lab result", "analysis"],
+    "sample_number": [
+        "sample", "sample#", "sample no", "nata no",
+        "item no", "item no.",  # Greencap ARA / NSW DoE
+    ],
+    "sample_result": [
+        "result", "lab result", "analysis",
+        "acm status",  # Greencap ARA
+    ],
     "quantity": ["quantity", "qty", "area", "extent", "m²"],
     "recommendation": ["recommendation", "action", "management"],
     "accessibility": ["access", "accessible"],
     "asbestos_type": ["asbestos type", "fibre type", "fibre"],
-    "disturbance_potential": ["disturbance", "dp", "risk"],
+    "disturbance_potential": [
+        "disturbance", "dp", "risk",
+        "risk rating",  # Greencap ARA
+        "priority",  # Greencap ARA
+    ],
     "specific_location": [
         "specific location",
         "position",
