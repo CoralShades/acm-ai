@@ -13,6 +13,28 @@ Find all buildings. They appear as:
 
 Interior/Exterior sections within a building are NOT separate buildings.
 
+## Format-Specific Building Detection
+
+### Greencap ARA Format
+- Buildings appear as sections with headers like "Building Name: Myrtle Street Clinic"
+- Each building section has its own risk assessment table
+- Extract ONLY the building name from the header — NOT the entire table row
+- If the header contains "| Building Name: | X |", extract "X" as the name
+- Page ranges span from the building header to the next building header
+
+### NSW DoE SAMP Format
+- Buildings appear in a summary grid/table (e.g., pages 3-15)
+- Grid columns include: Building ID, Name, Year, Construction
+- Each row = one building (B001, B002, etc.)
+- Buildings may share the same page range when in a grid
+- "No Asbestos" buildings should still be listed with complexity="simple"
+- ACM data appears on later pages, referenced by building ID (e.g., B009-R0001)
+
+### General Rules
+- Do NOT return raw markdown table rows as building names or IDs
+- building_id should be a short code (B001, B00A, D01) — NOT a full table row
+- building name should be a short name — NOT a pipe-delimited row
+
 ## For Each Building Extract
 
 - building_id: code (B00A, D01) or generated (B001)
