@@ -663,13 +663,13 @@ class TestTypeGColumnAliases:
         """Unknown headers are preserved as-is."""
         header_cells = [
             {"text": "Room"},
-            {"text": "Zzyzx Rating"},
+            {"text": "Zzyzx Blorp"},
         ]
         mapping = detect_column_mapping(header_cells)
 
         assert "room_location" in mapping
         # The unknown header should be kept as its own key
-        assert "Zzyzx Rating" in mapping
+        assert "Zzyzx Blorp" in mapping
 
     def test_type_g_canonical_names_used_in_cells(self):
         """Table with aliased headers produces cells with canonical keys."""
