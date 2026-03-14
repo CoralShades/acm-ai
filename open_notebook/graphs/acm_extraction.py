@@ -676,7 +676,7 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 internal_id=internal_id,
                 source_id=source_id_str,
                 building_code=building_meta_entry.building_id,
-                building_name=result.building_name,
+                building_name=building_meta_entry.name or result.building_name,
                 building_type=result.building_type,
                 building_category=result.building_category,
                 building_address=result.building_address,

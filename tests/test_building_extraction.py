@@ -337,3 +337,104 @@ async def test_state_dict_has_correct_keys(
     assert "building_records" in result
     assert isinstance(result["building_records"], list)
     assert len(result["building_records"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Test: F10/F1 — BuildingRecord.building_name prefers inventory name
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@patch(
+    "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
+    new_callable=AsyncMock,
+    return_value=[],
+)
+@patch(
+    "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
+    new_callable=AsyncMock,
+)
+@patch(
+    "open_notebook.graphs.acm_extraction._extract_building_content",
+)
+async def test_building_name_prefers_inventory_over_llm(
+    mock_extract_content,
+    mock_v3_extract,
+    mock_get_by_source,
+    mock_state,
+):
+    """F1/F10: BuildingRecord.building_name should use inventory name,
+    not the Phase 1 LLM output which often returns the site name."""
+    mock_state["building_inventory"] = BuildingInventory(
+        buildings=[
+            BuildingMeta(
+                building_id="B001",
+                name="Administration",  # Correct name from inventory
+                page_start=1,
+                page_end=5,
+            ),
+        ],
+        processing_groups=[],
+        total_buildings=1,
+    )
+    mock_extract_content.return_value = "Some building content"
+    # LLM returns the site name instead of the building name
+    mock_v3_extract.return_value = _make_extraction_result(
+        building_name="Aldavilla Public School"
+    )
+    fake_save = _make_fake_save(["building_record:001"])
+
+    with patch.object(BuildingRecord, "save", fake_save):
+        result = await extract_building_node(mock_state, config={})
+
+    assert len(result["building_records"]) == 1
+    assert len(fake_save.calls) == 1
+    # The saved record should use the inventory name, not the LLM output
+    saved_record = fake_save.calls[0]
+    assert saved_record.building_name == "Administration"
+
+
+@pytest.mark.asyncio
+@patch(
+    "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
+    new_callable=AsyncMock,
+    return_value=[],
+)
+@patch(
+    "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
+    new_callable=AsyncMock,
+)
+@patch(
+    "open_notebook.graphs.acm_extraction._extract_building_content",
+)
+async def test_building_name_falls_back_to_llm_when_no_inventory_name(
+    mock_extract_content,
+    mock_v3_extract,
+    mock_get_by_source,
+    mock_state,
+):
+    """F10: When inventory has no name, fall back to LLM building_name."""
+    mock_state["building_inventory"] = BuildingInventory(
+        buildings=[
+            BuildingMeta(
+                building_id="B001",
+                name="",  # Empty inventory name
+                page_start=1,
+                page_end=5,
+            ),
+        ],
+        processing_groups=[],
+        total_buildings=1,
+    )
+    mock_extract_content.return_value = "Some building content"
+    mock_v3_extract.return_value = _make_extraction_result(
+        building_name="Main Building"
+    )
+    fake_save = _make_fake_save(["building_record:001"])
+
+    with patch.object(BuildingRecord, "save", fake_save):
+        result = await extract_building_node(mock_state, config={})
+
+    assert len(result["building_records"]) == 1
+    saved_record = fake_save.calls[0]
+    assert saved_record.building_name == "Main Building"
