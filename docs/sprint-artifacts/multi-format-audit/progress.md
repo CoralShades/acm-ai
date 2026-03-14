@@ -31,17 +31,17 @@ Date: 2026-03-14
 
 | ID | Severity | Finding | Status |
 |----|----------|---------|--------|
-| F1 | CRITICAL | Building names use site_name, not inventory name | Confirmed |
-| F2 | CRITICAL | Alexander inventory returns raw markdown rows | Confirmed |
-| F3 | CRITICAL | Alexander total_pages=4 (actual=24) | Confirmed |
-| F4 | HIGH | Consultant detected as `<!-- image -->` | Confirmed |
-| F5 | HIGH | Aldavilla page ranges all identical (3-15) | Confirmed |
-| F6 | HIGH | 3980: 20 buildings → 1 in inventory | Confirmed |
-| F7 | MEDIUM | Default model phi4:14b instead of llama3.1:8b | Confirmed |
-| F8 | HIGH | Concurrent extraction hang (40+ min) | Confirmed |
-| F9 | HIGH | Column aliases Clutch-specific only | Confirmed (code audit) |
-| F10 | HIGH | BuildingRecord.building_name missing fallback | Confirmed (code audit) |
-| F11 | CRITICAL | N*M record duplication for shared page ranges | Confirmed (code audit) |
+| F1 | CRITICAL | Building names use site_name, not inventory name | **FIXED** (825d0010) |
+| F2 | CRITICAL | Alexander inventory returns raw markdown rows | **FIXED** (972d7038) |
+| F3 | CRITICAL | Alexander total_pages=4 (actual=24) | **FIXED** (be805d4d) |
+| F4 | HIGH | Consultant detected as `<!-- image -->` | **FIXED** (7c7df01b) |
+| F5 | HIGH | Aldavilla page ranges all identical (3-15) | Design only (5de788ef) |
+| F6 | HIGH | 3980: 20 buildings → 1 in inventory | **FIXED** (972d7038) |
+| F7 | MEDIUM | Default model phi4:14b instead of llama3.1:8b | **FIXED** (.env local) |
+| F8 | HIGH | Concurrent extraction hang (40+ min) | **FIXED** (772a9b0a) |
+| F9 | HIGH | Column aliases Clutch-specific only | **FIXED** (f374332b) |
+| F10 | HIGH | BuildingRecord.building_name missing fallback | **FIXED** (825d0010) |
+| F11 | CRITICAL | N*M record duplication for shared page ranges | Design only (5de788ef) |
 
 ### Extraction Results
 
