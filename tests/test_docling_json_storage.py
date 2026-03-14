@@ -2,7 +2,7 @@
 
 Covers:
 - NormalizedTable.docling_json field presence and typing
-- DoclingAdapter populates docling_json from export_to_dict()
+- DoclingAdapter populates docling_json from table.data.model_dump(mode="json")
 - _store_docling_tables persists docling_document_json field
 - _get_docling_tables retrieves docling_document_json via SELECT *
 
@@ -48,7 +48,7 @@ def _make_normalized_table(
 
 
 def _sample_docling_json(num_rows: int = 2, num_cols: int = 3) -> Dict[str, Any]:
-    """Return a minimal export_to_dict()-shaped dict for testing."""
+    """Return a minimal model_dump(mode='json')-shaped dict for testing."""
     return {
         "num_rows": num_rows,
         "num_cols": num_cols,
@@ -90,7 +90,7 @@ class TestNormalizedTableDoclingJson:
         assert t.docling_json["num_cols"] == 4
 
     def test_docling_json_has_expected_keys(self):
-        """A Docling export_to_dict() payload contains table_cells, num_rows, num_cols."""
+        """A Docling model_dump(mode='json') payload contains table_cells, num_rows, num_cols."""
         payload = _sample_docling_json()
         assert "table_cells" in payload
         assert "num_rows" in payload
@@ -106,23 +106,26 @@ class TestNormalizedTableDoclingJson:
 
 
 # ---------------------------------------------------------------------------
-# Test 2: DoclingAdapter populates docling_json via export_to_dict()
+# Test 2: DoclingAdapter populates docling_json via table.data.model_dump()
 # ---------------------------------------------------------------------------
 
 
-class TestDoclingAdapterExportToDict:
-    def test_export_to_dict_called_per_table(self):
-        """DoclingAdapter calls export_to_dict() on each TableItem."""
+class TestDoclingAdapterModelDump:
+    def test_model_dump_called_per_table(self):
+        """DoclingAdapter calls table.data.model_dump(mode='json') on each TableItem."""
         import pandas as pd
 
         payload = _sample_docling_json()
 
+        mock_data = MagicMock()
+        mock_data.model_dump.return_value = payload
+
         mock_table = MagicMock()
+        mock_table.data = mock_data
         mock_table.export_to_dataframe.return_value = pd.DataFrame(
             {"Col A": ["v1"], "Col B": ["v2"]}
         )
         mock_table.export_to_html.return_value = "<table><tr><td>v1</td></tr></table>"
-        mock_table.export_to_dict.return_value = payload
         prov = MagicMock()
         prov.page_no = 3
         mock_table.prov = [prov]
@@ -130,7 +133,7 @@ class TestDoclingAdapterExportToDict:
         mock_doc = MagicMock()
         mock_doc.tables = [mock_table]
 
-        # Simulate the DoclingAdapter extraction loop
+        # Simulate the DoclingAdapter extraction loop (docling_adapter.py:150-156)
         from open_notebook.extractors.providers.base import NormalizedTable
 
         tables = []
@@ -138,7 +141,7 @@ class TestDoclingAdapterExportToDict:
             df = table.export_to_dataframe(doc=mock_doc)
             page_no = table.prov[0].page_no if table.prov else -1
             try:
-                docling_json = table.export_to_dict()
+                docling_json = table.data.model_dump(mode="json")
             except Exception:
                 docling_json = None
 
@@ -158,25 +161,28 @@ class TestDoclingAdapterExportToDict:
         assert len(tables) == 1
         assert tables[0].docling_json is not None
         assert tables[0].docling_json["num_rows"] == payload["num_rows"]
-        mock_table.export_to_dict.assert_called_once()
+        mock_data.model_dump.assert_called_once_with(mode="json")
 
-    def test_export_to_dict_failure_produces_none(self):
-        """If export_to_dict() raises, docling_json is set to None (graceful fallback)."""
+    def test_model_dump_failure_produces_none(self):
+        """If table.data.model_dump() raises, docling_json is set to None (graceful fallback)."""
         import pandas as pd
 
+        mock_data = MagicMock()
+        mock_data.model_dump.side_effect = RuntimeError("Docling internal error")
+
         mock_table = MagicMock()
+        mock_table.data = mock_data
         mock_table.export_to_dataframe.return_value = pd.DataFrame({"A": ["1"]})
         mock_table.export_to_html.return_value = "<table/>"
-        mock_table.export_to_dict.side_effect = RuntimeError("Docling internal error")
         prov = MagicMock()
         prov.page_no = 1
         mock_table.prov = [prov]
 
         from open_notebook.extractors.providers.base import NormalizedTable
 
-        # Replicate the try/except guard from the adapter
+        # Replicate the try/except guard from the adapter (docling_adapter.py:150-156)
         try:
-            docling_json = mock_table.export_to_dict()
+            docling_json = mock_table.data.model_dump(mode="json")
         except Exception:
             docling_json = None
 

@@ -429,22 +429,22 @@ class TestRecoveryNodeGating:
     """Tests that recover_no_access_node is gated in per-row mode."""
 
     @pytest.mark.asyncio
-    async def test_recovery_skipped_in_per_row_mode(self):
-        """recover_no_access_node returns state unchanged in per_row mode."""
-        with patch.dict(os.environ, {"ACM_ITEM_EXTRACTION_MODE": "per_row"}):
-            from open_notebook.graphs.acm_extraction import recover_no_access_node
+    async def test_recovery_skipped_when_per_row_actually_ran(self):
+        """recover_no_access_node returns state unchanged when per_row actually ran."""
+        from open_notebook.graphs.acm_extraction import recover_no_access_node
 
-            records = [_make_extraction_record()]
-            state = {
-                "records": records,
-                "source": _make_mock_source(),
-                "context": MagicMock(),
-            }
-            config = MagicMock()
-            result = await recover_no_access_node(state, config)
+        records = [_make_extraction_record()]
+        state = {
+            "records": records,
+            "source": _make_mock_source(),
+            "context": MagicMock(),
+            "per_row_actually_ran": True,
+        }
+        config = MagicMock()
+        result = await recover_no_access_node(state, config)
 
-            # Should return state unchanged (no-op)
-            assert result is state
+        # Should return state unchanged (no-op)
+        assert result is state
 
     @pytest.mark.asyncio
     async def test_recovery_runs_in_bulk_mode(self):

@@ -1,0 +1,3 @@
+-- Down migration 51: Revert docling_document_json to non-FLEXIBLE TYPE
+REMOVE FIELD IF EXISTS docling_document_json ON TABLE acm_table_section;
+DEFINE FIELD docling_document_json ON TABLE acm_table_section TYPE option<object>;

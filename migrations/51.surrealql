@@ -1,0 +1,7 @@
+-- Migration 51: Fix docling_document_json to FLEXIBLE TYPE
+-- Root cause of GitHub #104: SurrealDB TYPE option<object> (non-FLEXIBLE) silently
+-- strips nested arrays during INSERT. The docling_json contains table_cells: [...]
+-- which was being discarded, storing {} instead.
+-- The FLEXIBLE keyword allows arbitrary nested structures (arrays, sub-objects).
+REMOVE FIELD IF EXISTS docling_document_json ON TABLE acm_table_section;
+DEFINE FIELD docling_document_json ON TABLE acm_table_section FLEXIBLE TYPE option<object>;

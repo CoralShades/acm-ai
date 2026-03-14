@@ -144,7 +144,7 @@ async def test_extract_items_node_no_inventory():
         result = await extract_items_node(state, config=None)
         mock_extract.assert_not_called()
 
-    assert result == {"records": [], "items_extracted": False}
+    assert result == {"records": [], "items_extracted": False, "per_row_actually_ran": False}
 
 
 @pytest.mark.asyncio
@@ -160,7 +160,7 @@ async def test_extract_items_node_empty_buildings():
         result = await extract_items_node(state, config=None)
         mock_extract.assert_not_called()
 
-    assert result == {"records": [], "items_extracted": False}
+    assert result == {"records": [], "items_extracted": False, "per_row_actually_ran": False}
 
 
 @pytest.mark.asyncio
