@@ -2711,6 +2711,25 @@ async def extract_acm_from_source(
     # which handles: "--- Page N ---", "<!-- Page N -->", and "PAGE N OF M" formats.
     # Returns the highest page number seen (accurate for display) rather than a marker count.
     total_pages = _extract_total_pages(source.full_text) if source.full_text else 0
+    # F3 fix: if text markers give 0 pages, fall back to max page from acm_table_section
+    if total_pages == 0 and source.id:
+        try:
+            from open_notebook.database.repository import ensure_record_id, repo_query
+
+            _sid = ensure_record_id(str(source.id))
+            page_result = await repo_query(
+                "SELECT math::max(page_end) AS max_page FROM acm_table_section "
+                "WHERE source_id = $sid GROUP ALL;",
+                {"sid": _sid},
+            )
+            if page_result and page_result[0].get("max_page"):
+                total_pages = int(page_result[0]["max_page"])
+                logger.info(
+                    f"[PIPELINE] Page count from acm_table_section: {total_pages} "
+                    f"(text markers returned 0)"
+                )
+        except Exception as e:
+            logger.warning(f"[PIPELINE] Failed to get page count from tables: {e}")
     if source.full_text and total_pages == 0:
         logger.warning(
             f"[PIPELINE] No page markers found in source {source.id} "
