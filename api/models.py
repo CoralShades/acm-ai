@@ -373,6 +373,9 @@ class SourceListResponse(BaseModel):
     review_status: Optional[str] = None
     # Jobs dashboard enrichment
     building_count: Optional[int] = None
+    # PDF metadata for job card icons
+    page_count: Optional[int] = None
+    file_size: Optional[int] = None
 
 
 # Context API models

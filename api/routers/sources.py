@@ -187,7 +187,8 @@ async def get_sources(
             query = f"""
                 SELECT id, asset, created, title, updated, topics, command, review_status,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
-                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded
+                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded,
+                (SELECT VALUE total_pages FROM source_intelligence WHERE source_id = $parent.id LIMIT 1)[0] OR 0 AS page_count
                 FROM (select value in from reference where out=$notebook_id)
                 {order_clause}
                 LIMIT $limit START $offset
@@ -205,7 +206,8 @@ async def get_sources(
             query = f"""
                 SELECT id, asset, created, title, updated, topics, command, review_status,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
-                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded
+                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded,
+                (SELECT VALUE total_pages FROM source_intelligence WHERE source_id = $parent.id LIMIT 1)[0] OR 0 AS page_count
                 FROM source
                 {order_clause}
                 LIMIT $limit START $offset
@@ -325,18 +327,29 @@ async def get_sources(
                 # Command exists but status couldn't be fetched
                 status = "unknown"
 
+                # Derive file_size from asset path if available
+            file_size = None
+            asset_data = row.get("asset")
+            if asset_data and asset_data.get("file_path"):
+                try:
+                    fp = Path(asset_data["file_path"])
+                    if fp.exists():
+                        file_size = fp.stat().st_size
+                except Exception:
+                    pass
+
             response_list.append(
                 SourceListResponse(
                     id=row["id"],
                     title=row.get("title"),
                     topics=row.get("topics") or [],
                     asset=AssetModel(
-                        file_path=row["asset"].get("file_path")
-                        if row.get("asset")
+                        file_path=asset_data.get("file_path")
+                        if asset_data
                         else None,
-                        url=row["asset"].get("url") if row.get("asset") else None,
+                        url=asset_data.get("url") if asset_data else None,
                     )
-                    if row.get("asset")
+                    if asset_data
                     else None,
                     embedded=row.get("embedded", False),
                     embedded_chunks=0,  # Removed from query - not needed in list view
@@ -349,6 +362,9 @@ async def get_sources(
                     processing_info=processing_info,
                     review_status=row.get("review_status"),
                     building_count=building_counts.get(str(row["id"]), 0),
+                    # PDF metadata
+                    page_count=row.get("page_count") or None,
+                    file_size=file_size,
                 )
             )
 
