@@ -59,8 +59,11 @@ fi
 
 # ── 3. API Server ─────────────────────
 echo "[3/5] Starting API server (port 5055)..."
+# Use .venv/bin/python directly (NOT uv run) — uv run re-syncs the venv from
+# the lockfile, which overwrites the cu128 PyTorch installed by setup-pod.sh
+# Phase 5b with cu126 from pyproject.toml. Direct venv python preserves cu128.
 tmux new-session -d -s api -c "$REPO_DIR" \
-    "export PATH=\"$HOME/.local/bin:\$PATH\"; cd $REPO_DIR && API_HOST=0.0.0.0 API_RELOAD=false uv run python run_api.py 2>&1 | tee logs/api.log"
+    "cd $REPO_DIR && API_HOST=0.0.0.0 API_RELOAD=false .venv/bin/python run_api.py 2>&1 | tee logs/api.log"
 
 if ! wait_for_service "API" "http://localhost:5055/health" 30 3; then
     echo -e "${RED}API failed to start. Check: tmux attach -t api${NC}"
@@ -69,8 +72,9 @@ fi
 
 # ── 4. Background Worker ──────────────
 echo "[4/5] Starting background worker..."
+# Same as API — use .venv/bin/python to preserve cu128 PyTorch on Blackwell GPUs
 tmux new-session -d -s worker -c "$REPO_DIR" \
-    "export PATH=\"$HOME/.local/bin:\$PATH\"; cd $REPO_DIR && uv run python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log"
+    "cd $REPO_DIR && .venv/bin/python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log"
 # Worker has no HTTP endpoint — just verify the tmux session exists
 sleep 2
 if tmux has-session -t worker 2>/dev/null; then
