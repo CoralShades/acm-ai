@@ -1,105 +1,313 @@
 #!/bin/bash
-# ACM-AI RunPod Pod Setup Script
-# Run this ONCE after creating the pod to install all dependencies
-# Usage: bash /workspace/acm-ai/scripts/runpod/setup-pod.sh
+# ACM-AI RunPod Pod Bootstrap Script
+# Comprehensive setup: from fresh pod to running services in one command.
+#
+# Usage:
+#   bash /workspace/acm-ai/scripts/runpod/setup-pod.sh          # Full bootstrap
+#   bash /workspace/acm-ai/scripts/runpod/setup-pod.sh --phase N # Run single phase
+#   bash /workspace/acm-ai/scripts/runpod/setup-pod.sh --help    # Show usage
+#
+# Phases:
+#   1: System deps (apt: tmux, htop, jq, curl)
+#   2: Install tools (uv, Node.js 20, SurrealDB v2.2.1, Ollama)
+#   3: Clone/update repo + checkout ACMV3
+#   4: Copy .env template
+#   5: Install dependencies (uv sync + npm install)
+#   6: Start services (SurrealDB, Ollama, API, Worker, Frontend)
+#   7: Pull Ollama models (parallel, config-driven)
+#   8: Health check + print next steps
+#
+# IMPORTANT: Docker-in-Docker is NOT supported on RunPod community pods.
+#            All services run natively in tmux sessions.
 set -euo pipefail
 
-echo "========================================"
-echo "  ACM-AI RunPod Pod Setup"
-echo "========================================"
-
+# ────────────────────────────────────────
+# Configuration
+# ────────────────────────────────────────
 WORKSPACE="/workspace"
 REPO_DIR="$WORKSPACE/acm-ai"
 DATA_DIR="$WORKSPACE/data"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SURREALDB_VERSION="v2.2.1"
+NODE_MAJOR=20
 
-# Create persistent data directories on network volume
-echo "[1/8] Creating data directories..."
-mkdir -p "$DATA_DIR"/{surrealdb,ollama,langfuse/{postgres,clickhouse,clickhouse-logs,redis,minio}}
-echo "Done."
+# ────────────────────────────────────────
+# Helpers
+# ────────────────────────────────────────
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# Install system dependencies
-echo "[2/8] Installing system dependencies..."
-apt-get update -qq
-apt-get install -y -qq curl git tmux htop jq unzip > /dev/null 2>&1
-echo "Done."
+log()  { echo -e "${CYAN}[$1/8]${NC} $2"; }
+ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
+warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
+fail() { echo -e "  ${RED}✗${NC} $1"; }
 
-# Install uv (Python package manager)
-echo "[3/8] Installing uv..."
-if ! command -v uv &> /dev/null; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+wait_for_service() {
+    local name="$1" url="$2" max_attempts="${3:-30}" interval="${4:-2}"
+    for i in $(seq 1 "$max_attempts"); do
+        if curl -sf "$url" > /dev/null 2>&1; then
+            ok "$name is ready (attempt $i)"
+            return 0
+        fi
+        sleep "$interval"
+    done
+    fail "$name did not become ready after $((max_attempts * interval))s"
+    return 1
+}
+
+usage() {
+    echo "ACM-AI RunPod Pod Bootstrap"
+    echo ""
+    echo "Usage:"
+    echo "  $0              Full bootstrap (phases 1-8)"
+    echo "  $0 --phase N    Run only phase N (1-8)"
+    echo "  $0 --from N     Run from phase N onwards"
+    echo "  $0 --help       Show this help"
+    echo ""
+    echo "Phases:"
+    echo "  1  System dependencies (apt packages)"
+    echo "  2  Install tools (uv, Node.js, SurrealDB, Ollama)"
+    echo "  3  Clone/update repository"
+    echo "  4  Copy .env template"
+    echo "  5  Install Python + frontend dependencies"
+    echo "  6  Start all services"
+    echo "  7  Pull Ollama models"
+    echo "  8  Health check + next steps"
+    exit 0
+}
+
+# ────────────────────────────────────────
+# Phase 1: System Dependencies
+# ────────────────────────────────────────
+phase_1() {
+    log 1 "Installing system dependencies..."
+    apt-get update -qq
+    apt-get install -y -qq curl git tmux htop jq unzip wget > /dev/null 2>&1
+    ok "System deps installed"
+}
+
+# ────────────────────────────────────────
+# Phase 2: Install Tools
+# ────────────────────────────────────────
+phase_2() {
+    log 2 "Installing tools..."
+
+    # --- uv ---
+    if ! command -v uv &> /dev/null; then
+        echo "  Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.local/bin:$PATH"
+        # Persist in .bashrc if not already there
+        grep -q 'local/bin' ~/.bashrc 2>/dev/null || \
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    fi
+    ok "uv $(uv --version 2>/dev/null || echo 'unknown')"
+
+    # --- Node.js ---
+    if ! command -v node &> /dev/null || [[ $(node -v | cut -d. -f1 | tr -d v) -lt $NODE_MAJOR ]]; then
+        echo "  Installing Node.js ${NODE_MAJOR}..."
+        curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - > /dev/null 2>&1
+        apt-get install -y -qq nodejs > /dev/null 2>&1
+    fi
+    ok "Node.js $(node -v), npm $(npm -v)"
+
+    # --- SurrealDB (pinned version, native binary) ---
+    local current_surreal=""
+    if command -v surreal &> /dev/null; then
+        current_surreal=$(surreal version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' | head -1 || echo "")
+    fi
+    local target_surreal="${SURREALDB_VERSION#v}"
+    if [[ "$current_surreal" != "$target_surreal" ]]; then
+        echo "  Installing SurrealDB ${SURREALDB_VERSION}..."
+        curl -sSf https://install.surrealdb.com | sh -s -- --version "${SURREALDB_VERSION}" > /dev/null 2>&1
+    fi
+    ok "SurrealDB $(surreal version 2>/dev/null || echo 'unknown')"
+
+    # --- Ollama (native binary, GPU passthrough) ---
+    if ! command -v ollama &> /dev/null; then
+        echo "  Installing Ollama..."
+        curl -fsSL https://ollama.com/install.sh | sh > /dev/null 2>&1
+    fi
+    ok "Ollama $(ollama --version 2>/dev/null || echo 'unknown')"
+}
+
+# ────────────────────────────────────────
+# Phase 3: Clone/Update Repository
+# ────────────────────────────────────────
+phase_3() {
+    log 3 "Setting up repository..."
+    if [ -d "$REPO_DIR/.git" ]; then
+        echo "  Repo exists, pulling latest..."
+        cd "$REPO_DIR"
+        git fetch --all --prune
+        git checkout ACMV3
+        git pull --ff-only origin ACMV3 || warn "Pull failed (maybe local changes?) — continuing"
+    else
+        echo "  Cloning repo..."
+        git clone https://github.com/CoralShades/acm-ai.git "$REPO_DIR"
+        cd "$REPO_DIR"
+        git checkout ACMV3
+    fi
+    ok "Repository at $REPO_DIR (branch: $(git rev-parse --abbrev-ref HEAD))"
+}
+
+# ────────────────────────────────────────
+# Phase 4: Environment Setup
+# ────────────────────────────────────────
+phase_4() {
+    log 4 "Setting up environment..."
+    mkdir -p "$DATA_DIR"/{surrealdb,ollama}
+
+    if [ ! -f "$REPO_DIR/.env" ]; then
+        cp "$REPO_DIR/scripts/runpod/.env.runpod" "$REPO_DIR/.env"
+        ok "Copied .env.runpod → .env"
+        warn "Edit $REPO_DIR/.env to add your API keys!"
+    else
+        ok ".env already exists"
+    fi
+
+    # Validate critical env vars
+    local missing=()
+    source "$REPO_DIR/.env" 2>/dev/null || true
+    [[ -z "${SURREAL_URL:-}" ]] && missing+=("SURREAL_URL")
+    [[ -z "${OLLAMA_API_BASE:-}" ]] && missing+=("OLLAMA_API_BASE")
+    [[ -z "${CORS_ALLOWED_ORIGINS:-}" ]] && missing+=("CORS_ALLOWED_ORIGINS")
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        warn "Missing env vars: ${missing[*]}"
+    else
+        ok "Critical env vars present"
+    fi
+}
+
+# ────────────────────────────────────────
+# Phase 5: Install Dependencies
+# ────────────────────────────────────────
+phase_5() {
+    log 5 "Installing dependencies..."
     export PATH="$HOME/.local/bin:$PATH"
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-fi
-echo "uv version: $(uv --version)"
 
-# Install Node.js 20+ (if not present)
-echo "[4/8] Installing Node.js..."
-if ! command -v node &> /dev/null || [[ $(node -v | cut -d. -f1 | tr -d v) -lt 20 ]]; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - > /dev/null 2>&1
-    apt-get install -y -qq nodejs > /dev/null 2>&1
-fi
-echo "Node.js version: $(node -v)"
-echo "npm version: $(npm -v)"
-
-# Install Docker Compose plugin (if not present)
-echo "[5/8] Checking Docker Compose..."
-if ! docker compose version &> /dev/null; then
-    echo "Installing Docker Compose plugin..."
-    DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
-    mkdir -p "$DOCKER_CONFIG/cli-plugins"
-    curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
-        -o "$DOCKER_CONFIG/cli-plugins/docker-compose"
-    chmod +x "$DOCKER_CONFIG/cli-plugins/docker-compose"
-fi
-echo "Docker Compose version: $(docker compose version --short)"
-
-# Clone or update repo
-echo "[6/8] Setting up repository..."
-if [ -d "$REPO_DIR/.git" ]; then
-    echo "Repo exists, pulling latest..."
-    cd "$REPO_DIR" && git pull --ff-only
-else
-    echo "Cloning repo..."
-    git clone https://github.com/CoralShades/acm-ai.git "$REPO_DIR"
+    # Python
     cd "$REPO_DIR"
-    git checkout ACMV3
-fi
+    echo "  Installing Python dependencies..."
+    uv sync --quiet
+    ok "Python deps installed"
 
-# Copy RunPod env template if .env doesn't exist
-if [ ! -f "$REPO_DIR/.env" ]; then
-    echo "Copying .env.runpod template to .env..."
-    cp "$REPO_DIR/scripts/runpod/.env.runpod" "$REPO_DIR/.env"
-    echo "IMPORTANT: Edit $REPO_DIR/.env to add your API keys!"
-fi
+    # Phase 5b: Fix PyTorch CUDA for RTX 5090 (Blackwell/sm_120)
+    # uv sync installs torch+cu126 (from pyproject.toml pin) which lacks
+    # Blackwell kernels. Reinstall from cu128 index which includes sm_120.
+    # This only affects the pod — local dev (RTX 4090) keeps cu126 via uv sync.
+    if command -v nvidia-smi &> /dev/null; then
+        local gpu_name
+        gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
+        if [[ "$gpu_name" == *"5090"* ]] || [[ "$gpu_name" == *"5080"* ]] || [[ "$gpu_name" == *"Blackwell"* ]]; then
+            echo "  Detected Blackwell GPU ($gpu_name) — reinstalling PyTorch with cu128..."
+            uv pip install torch torchvision \
+                --index-url https://download.pytorch.org/whl/cu128 \
+                --force-reinstall --no-deps --quiet
+            ok "PyTorch reinstalled with CUDA 12.8 (Blackwell support)"
+        else
+            ok "Non-Blackwell GPU ($gpu_name) — keeping default PyTorch"
+        fi
+    fi
 
-# Install Python dependencies
-echo "[7/8] Installing Python dependencies..."
-cd "$REPO_DIR"
-uv sync --quiet
-echo "Python deps installed."
+    # Frontend
+    echo "  Installing frontend dependencies..."
+    cd "$REPO_DIR/frontend"
+    npm install --quiet 2>/dev/null
+    ok "Frontend deps installed"
+}
 
-# Install frontend dependencies
-echo "[8/8] Installing frontend dependencies..."
-cd "$REPO_DIR/frontend"
-npm install --quiet
-echo "Frontend deps installed."
+# ────────────────────────────────────────
+# Phase 6: Start Services
+# ────────────────────────────────────────
+phase_6() {
+    log 6 "Starting services..."
+    bash "$REPO_DIR/scripts/runpod/start-services.sh"
+    ok "Services started"
+}
 
-echo ""
-echo "========================================"
-echo "  Setup Complete!"
-echo "========================================"
-echo ""
-echo "Next steps:"
-echo "  1. Edit .env: nano $REPO_DIR/.env"
-echo "  2. Start Docker services:"
-echo "     cd $REPO_DIR/scripts/runpod"
-echo "     docker compose -f docker-compose.runpod.yml up -d"
-echo "  3. Pull Ollama models:"
-echo "     docker exec acm-ai-ollama ollama pull llama3.1:8b-instruct-q8_0"
-echo "     docker exec acm-ai-ollama ollama pull qwen2.5:7b"
-echo "     docker exec acm-ai-ollama ollama pull qwen3:latest"
-echo "     docker exec acm-ai-ollama ollama pull mxbai-embed-large"
-echo "  4. Start app services:"
-echo "     bash $REPO_DIR/scripts/runpod/start-services.sh"
-echo "  5. Run health checks:"
-echo "     bash $REPO_DIR/scripts/runpod/health-check.sh"
+# ────────────────────────────────────────
+# Phase 7: Pull Ollama Models
+# ────────────────────────────────────────
+phase_7() {
+    log 7 "Pulling Ollama models..."
+
+    # Wait for Ollama to be ready
+    if ! wait_for_service "Ollama" "http://localhost:11434/api/tags" 15 2; then
+        fail "Ollama not ready — skipping model pulls"
+        return 1
+    fi
+
+    bash "$REPO_DIR/scripts/runpod/pull-models.sh"
+    ok "Model pulls complete"
+}
+
+# ────────────────────────────────────────
+# Phase 8: Health Check + Next Steps
+# ────────────────────────────────────────
+phase_8() {
+    log 8 "Running health check..."
+    echo ""
+    bash "$REPO_DIR/scripts/runpod/health-check.sh" || true
+
+    echo ""
+    echo -e "${GREEN}========================================"
+    echo "  Bootstrap Complete!"
+    echo -e "========================================${NC}"
+    echo ""
+    echo "  Pod services are running. Next steps:"
+    echo ""
+    echo "  1. Connect Vercel to this pod:"
+    echo "     bash $REPO_DIR/scripts/runpod/update-vercel-env.sh <pod-id>"
+    echo ""
+    echo "  2. Set GitHub Actions secrets (for CI/CD):"
+    echo "     RUNPOD_POD_ID=<pod-id>"
+    echo ""
+    echo "  3. Verify the app:"
+    echo "     curl https://<pod-id>-5055.proxy.runpod.net/health"
+    echo ""
+    echo "  4. Edit .env if needed:"
+    echo "     nano $REPO_DIR/.env"
+    echo ""
+}
+
+# ────────────────────────────────────────
+# Main
+# ────────────────────────────────────────
+main() {
+    local single_phase="" from_phase=1
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --phase)
+                single_phase="$2"; shift 2 ;;
+            --from)
+                from_phase="$2"; shift 2 ;;
+            --help|-h)
+                usage ;;
+            *)
+                echo "Unknown option: $1"; usage ;;
+        esac
+    done
+
+    echo "========================================"
+    echo "  ACM-AI RunPod Pod Bootstrap"
+    echo "========================================"
+    echo ""
+
+    if [[ -n "$single_phase" ]]; then
+        echo "Running phase $single_phase only..."
+        "phase_$single_phase"
+    else
+        for phase in $(seq "$from_phase" 8); do
+            "phase_$phase"
+            echo ""
+        done
+    fi
+}
+
+main "$@"
