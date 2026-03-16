@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 69,
-  "totalStoryPoints": 203,
+  "totalStories": 70,
+  "totalStoryPoints": 208,
   "sprints": 10,
   "stories": [
     {
@@ -2262,6 +2262,43 @@
       "passes": true,
       "notes": "HITL replaces toast-based 'type confirm' pattern. Backend handles both dict and JSON string from resolve().",
       "model": "opus",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "CPK-S3",
+      "title": "P2/P3 UI Polish + Chat Model Selector",
+      "epic": "CPK",
+      "sprint": "CopilotKit",
+      "storyPoints": 5,
+      "riskLevel": "LOW",
+      "storyType": "feature",
+      "complexity": "moderate",
+      "priority": "P2",
+      "dependencies": ["CPK-S2"],
+      "acceptanceCriteria": [
+        "AC1: 15 P2/P3 UI/UX fixes applied (HITL double-submit guard, aria roles, dead code removal, standardised margins)",
+        "AC2: TOOL_LABELS extracted to frontend/src/lib/constants/tool-labels.ts (single source of truth)",
+        "AC3: BuildingListResult extracted as standalone component from ACMStatsResult",
+        "AC4: ACMTableResult caps rows at 20 with expandable 'Show all X results' button",
+        "AC5: ChatModelSelector component — compact popover picker, renders when 2+ language models registered",
+        "AC6: ChatModelSelector added to SmartChatPanel and JobCrudChatPanel headers",
+        "AC7: model_id field in SupervisorAgentState and CRUDAgentState TypedDicts",
+        "AC8: Backend supervisor_agent.py and crud_agent.py read state.get('model_id') first, fall back to config.configurable.model_id",
+        "AC9: Selection persists to localStorage per chat context",
+        "AC10: Frontend build and lint pass"
+      ],
+      "keyFiles": [
+        "frontend/src/lib/constants/tool-labels.ts",
+        "frontend/src/components/chat/ChatModelSelector.tsx",
+        "frontend/src/components/chat/renderers/BuildingListResult.tsx",
+        "frontend/src/components/chat/SmartChatPanel.tsx",
+        "frontend/src/components/jobs/JobCrudChatPanel.tsx",
+        "open_notebook/graphs/supervisor_agent.py",
+        "open_notebook/graphs/crud_agent.py"
+      ],
+      "passes": true,
+      "notes": "P2/P3 cosmetic fixes + in-chat model switching. Model selector only visible when 2+ language models registered.",
+      "model": "sonnet",
       "implementedDate": "2026-03-16"
     }
   ],

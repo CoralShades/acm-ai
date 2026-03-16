@@ -570,6 +570,19 @@ The CRUD agent uses LangGraph's `interrupt()` for human-in-the-loop write approv
 - copilotkit_emit_state streams intermediate state for progress display
 - MemorySaver checkpointer for conversation persistence
 
+### Chat Model Selector
+
+Both chat panels expose a compact in-header model picker (`ChatModelSelector.tsx`). Selecting a model:
+
+1. Writes the chosen `model_id` into CoAgent state via `useCoAgent` (`chatModelId`/`setChatModelId`)
+2. Frontend persists the selection to `localStorage` per chat context (key: `chat-model-supervisor` / `chat-model-crud`)
+3. On the next graph invocation the backend reads `state.get("model_id")` first; falls back to `config.configurable.model_id` if not set
+4. The selector only renders when 2 or more language models are registered in the model table
+
+Backend state fields:
+- `SupervisorAgentState.model_id: Optional[str]` in `supervisor_agent.py`
+- `CRUDAgentState.model_id: Optional[str]` in `crud_agent.py`
+
 ### Key Patterns
 
 | Pattern | Implementation | Purpose |
@@ -580,6 +593,7 @@ The CRUD agent uses LangGraph's `interrupt()` for human-in-the-loop write approv
 | HITL approval | interrupt() + useLangGraphInterrupt | Gate irreversible writes behind user approval |
 | State streaming | copilotkit_emit_state | Show agent progress in real-time |
 | Page context | useCopilotReadable | Expose frontend state to agent |
+| In-chat model switching | ChatModelSelector + useCoAgent state_id | User selects model per conversation; state flows to backend |
 
 ### Dependencies
 

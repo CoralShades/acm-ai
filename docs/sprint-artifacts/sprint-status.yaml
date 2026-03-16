@@ -607,6 +607,8 @@ development_status:
   # ─────────────────────────────────────────────────────
   copilotkit-audit-2026-03-16: done  # Session 1: 5 bugs fixed (BUG-1..5), useRenderToolCall refactor (11 renderers), useCopilotReadable, useCopilotChatSuggestions, ToolErrorCard, @ag-ui/client explicit dep
   copilotkit-hitl-impl-2026-03-16: done  # Session 2: copilotkit>=0.1.78 SDK, LangGraph interrupt() HITL for CRUD writes, check_write_approval node, copilotkit_emit_state on supervisor, useLangGraphInterrupt + HITLApprovalDialog, useDefaultTool, useCoAgentStateRender, 6 new generative UI components
+  copilotkit-p2p3-fixes-2026-03-16: done  # Session 3: 15 P2/P3 UI/UX fixes — HITL double-submit guard, aria roles, TOOL_LABELS constant, dead code removal, ACMTableResult row cap (20) with expand, renderer root div standardisation (my-2), showDevConsole=false, BuildingListResult extracted, MAC constant
+  chat-model-selector-2026-03-16: done  # Session 3: ChatModelSelector component — compact popover picker in SmartChatPanel + JobCrudChatPanel headers; model_id in SupervisorAgentState + CRUDAgentState; backend reads state.get("model_id") first; persists to localStorage; renders only when 2+ language models registered
 
   # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
@@ -657,8 +659,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 252  (250 prior + frontend-audit-2026-03-13 + pipeline-debug-2026-03-14)
-# Stories Done: 229 (91%)  -- 227 prior + frontend-audit (2026-03-13) + pipeline-debug (2026-03-14)
+# Total Stories: 254  (252 prior + copilotkit-p2p3-fixes + chat-model-selector)
+# Stories Done: 231 (91%)  -- 229 prior + copilotkit-p2p3-fixes + chat-model-selector
 # Stories Review: 0
 # Stories In-Progress: 1 (bug-fix-12-extraction-audit)
 # Stories Blocked: 0
@@ -667,7 +669,7 @@ development_status:
 # Stories Backlog: 4 (E36-S4..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-14
+# Last Updated: 2026-03-16
 # Pipeline Debug (2026-03-14): Commit 476c285e. Trace-driven debug session. 8 fixes across 12 files.
 # 0→29 records (93.5% Broadmeadows ground truth). RC1-RC7 fixed. RC8 deferred.
 # format="json" applied to metadata+inventory Ollama calls. 3 prompts rewritten for 8b models.
