@@ -98,6 +98,40 @@ _NO_ASBESTOS_MARKERS = [
 ]
 
 
+def _extract_site_name_from_cover(content: str) -> Optional[str]:
+    """Extract the site/building name from the first page of the document.
+
+    Works for Prensa/GRE-style cover pages where the site name appears
+    prominently (e.g. 'Broadmeadows Police Station') before the address.
+    Also matches common patterns like 'Assessment of <Site Name>'.
+    """
+    # Get page 1 text
+    page1_end = content.find("--- Page 2 ---")
+    if page1_end < 0:
+        page1_end = min(1500, len(content))
+    page1 = content[:page1_end]
+
+    # Pattern 1: Line ending with common building suffixes
+    # e.g. "Broadmeadows Police Station", "Alexander District Hospital"
+    suffixes = (
+        r"(?:Police Station|Hospital|School|Centre|Center|Building|"
+        r"College|Academy|Office|Depot|Clinic|Station|Hall|Library|"
+        r"Complex|Facility|Campus|House|Lodge|Court)"
+    )
+    m = re.search(
+        rf"^\s*(.{{3,60}}\b{suffixes})\s*$",
+        page1,
+        re.MULTILINE | re.IGNORECASE,
+    )
+    if m:
+        name = m.group(1).strip()
+        # Avoid matching generic headers like "Division 5 Assessment"
+        if len(name) > 5 and "assessment" not in name.lower():
+            return name
+
+    return None
+
+
 def _find_page_at_position(content: str, position: int) -> int:
     """Find the page number at a given character position in content."""
     page = 1
@@ -435,6 +469,11 @@ def _heuristic_fallback(
 
     # Generic fallback: use document_structure intelligence when no format matched
     if not buildings and document_structure:
+        # Try to derive site_name from metadata or cover page heuristic
+        site_name = (document_metadata or {}).get("site_name")
+        if not site_name:
+            site_name = _extract_site_name_from_cover(content)
+
         if document_structure.building_ids:
             # Create buildings from IDs detected by metadata_and_structure
             logger.info(
@@ -444,7 +483,6 @@ def _heuristic_fallback(
             reg_start = document_structure.register_start_page or 1
             total = document_structure.total_pages or 999
             n_ids = len(document_structure.building_ids)
-            site_name = (document_metadata or {}).get("site_name")
             for idx, bid in enumerate(document_structure.building_ids):
                 # Estimate page ranges by dividing register evenly
                 pages_per_building = max(1, (total - reg_start + 1) // n_ids)
@@ -470,7 +508,7 @@ def _heuristic_fallback(
                 "Generic fallback: creating single catch-all building "
                 f"from register_start={document_structure.register_start_page}"
             )
-            site_name = (document_metadata or {}).get("site_name") or "Main Building"
+            site_name = site_name or "Main Building"
             buildings.append(
                 BuildingMeta(
                     building_id="BUILDING_1",
