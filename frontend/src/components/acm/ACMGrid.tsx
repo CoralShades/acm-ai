@@ -244,6 +244,48 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
 
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(
     () => [
+      // Record ID — short display, click to copy full ID
+      {
+        field: 'id',
+        headerName: 'Record ID',
+        headerTooltip: 'SurrealDB record ID — click to copy',
+        width: 130,
+        pinned: 'left',
+        sortable: true,
+        filter: true,
+        valueFormatter: (params) => {
+          const id = params.value as string
+          if (!id) return ''
+          // Show short form: acm_record:abc123 → abc123…
+          const parts = id.split(':')
+          const key = parts[parts.length - 1] || id
+          return key.length > 10 ? key.slice(0, 10) + '…' : key
+        },
+        cellRenderer: (params: { value: string }) => {
+          const id = params.value
+          if (!id) return null
+          const parts = id.split(':')
+          const shortKey = parts[parts.length - 1] || id
+          const display = shortKey.length > 10 ? shortKey.slice(0, 10) + '…' : shortKey
+          return (
+            <span
+              title={`${id}\nClick to copy`}
+              className="font-mono text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-all"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(id).catch(() => {})
+                }
+                const el = e.currentTarget
+                el.textContent = 'copied!'
+                setTimeout(() => { el.textContent = display }, 1200)
+              }}
+            >
+              {display}
+            </span>
+          )
+        },
+      },
       // --- Default visible columns (user's 15 required fields) ---
       {
         field: 'building_id',
@@ -488,8 +530,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
 
   const onCellClicked = useCallback(
     (event: CellClickedEvent<ACMRecord>) => {
-      // Skip if clicking on Actions column or group row
-      if (event.colDef.headerName === 'Actions' || event.node.group || !event.data) {
+      // Skip if clicking on Record ID, Actions column, or group row
+      if (event.colDef.field === 'id' || event.colDef.headerName === 'Actions' || event.node.group || !event.data) {
         return
       }
 

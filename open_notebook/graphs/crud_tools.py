@@ -17,6 +17,15 @@ from loguru import logger
 
 from open_notebook.database.repository import ensure_record_id, repo_query
 
+# --- Allowed ACM fields for UPDATE (SQL injection prevention) ---
+ALLOWED_ACM_FIELDS = {
+    'building_id', 'building_name', 'product', 'friable', 'acm_product_group',
+    'acm_product_type', 'material_condition', 'disturbance_potential', 'location',
+    'room_name', 'room_id', 'floor_level', 'quantity', 'sample_result',
+    'risk_status', 'identifying_company', 'material_description', 'extent',
+    'hygienist_recommendations', 'area_type', 'no_access', 'acm_labelled',
+}
+
 # --- Pending write store ---
 # Stores previewed operations keyed by operation_id.
 # Operations are cleared after execution or expiry.
@@ -57,7 +66,7 @@ def _run_async(coro):
 
 
 @tool
-def query_job_records(query: str, source_id: Optional[str] = None) -> str:
+def query_job_records(query: str) -> str:
     """Execute a read-only query about ACM records for the current job.
 
     Use this to answer questions about buildings, rooms, products, risk levels, etc.
@@ -73,13 +82,8 @@ def query_job_records(query: str, source_id: Optional[str] = None) -> str:
 
     Args:
         query: Natural language description of what you want to find
-        source_id: Optional source ID override. If not provided, uses the current job context.
     """
-    if not source_id:
-        source_id = get_crud_context()
-    if source_id and not get_crud_context():
-        # Tool was called with explicit source_id but context wasn't set — set it now
-        set_crud_context(source_id)
+    source_id = get_crud_context()
     if not source_id:
         return "Error: No job context set. Cannot query records. The source_id should be provided in the system prompt."
 
@@ -202,7 +206,9 @@ def preview_write(
 
     operation_id = str(uuid.uuid4())[:8]
 
-    # Store pending operation
+    import time
+
+    # Store pending operation with timestamp for same-turn guard
     _pending_writes[operation_id] = {
         "operation_id": operation_id,
         "operation": operation,
@@ -212,10 +218,11 @@ def preview_write(
         "new_value": new_value,
         "reason": reason,
         "status": "pending",
+        "_created_at": time.time(),
     }
 
-    # Return as JSON — the check_write_approval graph node will interrupt
-    # for user approval via CopilotKit's useLangGraphInterrupt
+    # Return as JSON — the frontend renders an approval dialog
+    # and sends the user's decision as a chat message
     preview = {
         "type": "preview_write",
         "operation_id": operation_id,
@@ -229,29 +236,37 @@ def preview_write(
     return json.dumps(preview)
 
 
+@tool
 def execute_pending_write(
     operation_id: str,
     source_id: Optional[str] = None,
     edits: Optional[dict] = None,
 ) -> str:
-    """Execute a pending write operation after HITL approval.
+    """Execute a previously previewed write operation ONLY after the user explicitly approves.
 
-    Called by the check_write_approval graph node after interrupt() resumes
-    with an approved decision. NOT a LangChain tool — called directly.
+    CRITICAL: Only call this tool when the user's LAST message contains "Approved" or
+    "Execute operation". NEVER call this in the same turn as preview_write.
+    If the user has not approved, DO NOT call this tool.
 
     Args:
-        operation_id: The operation_id from preview_write
-        source_id: Override source_id (from graph state). Falls back to context.
-        edits: Optional field edits from the approval dialog
+        operation_id: The operation_id from the preview_write result
+        source_id: Optional source_id override. Falls back to context.
+        edits: Optional field edits from the user
     """
     source_id = source_id or get_crud_context()
     pending = _pending_writes.get(operation_id)
 
     if not pending:
-        return f"Error: No pending operation found with ID {operation_id}."
+        return f"Error: No pending operation found with ID {operation_id}. The user must approve before execution."
 
     if pending.get("status") == "executed":
         return f"Operation {operation_id} was already executed."
+
+    # Safety: block if previewed less than 2 seconds ago (prevent same-turn self-approval)
+    import time
+    created_at = pending.get("_created_at", 0)
+    if time.time() - created_at < 2.0:
+        return f"Error: Operation {operation_id} was just previewed. Wait for user approval before executing."
 
     if pending.get("source_id") != source_id:
         return "Error: Operation source_id mismatch — security violation."
@@ -271,6 +286,8 @@ def execute_pending_write(
         new_value = pending.get("new_value")
 
         if op == "UPDATE" and record_id and field:
+            if field not in ALLOWED_ACM_FIELDS:
+                return f"Error: Field '{field}' is not a valid ACM field."
             rid = ensure_record_id(record_id)
             check = await repo_query(
                 "SELECT id FROM acm_record WHERE id = $rid AND source_id = $sid",
@@ -345,14 +362,3 @@ def execute_pending_write(
         return f"Error executing write: {str(e)}"
 
 
-@tool
-def confirm_write(operation_id: str) -> str:
-    """Execute a previously previewed write operation (legacy fallback).
-
-    This tool is kept for backwards compatibility with text-based confirmation.
-    The preferred flow uses LangGraph interrupt() + CopilotKit HITL dialog.
-
-    Args:
-        operation_id: The operation_id from the preview_write response
-    """
-    return execute_pending_write(operation_id)

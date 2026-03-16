@@ -2393,6 +2393,53 @@
       "notes": "Two-tab layout rework: BuildingGrid (13 cols, AG Grid, autoHeight, localStorage) + ACMGrid (13 required fields reorder). Per-building export. Applied to both source and jobs pages. 3 commits: 2f2eeadf, 1fbf321f, e9dcd67f.",
       "model": "opus",
       "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "CRUD-SEC-S1",
+      "title": "CRUD Chat + Grid Security & Audit Fix (23 issues)",
+      "epic": "CPK",
+      "sprint": "Post-V3",
+      "storyPoints": 5,
+      "riskLevel": "HIGH",
+      "storyType": "bugfix",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "CPK-S2"
+      ],
+      "acceptanceCriteria": [
+        "S1: execute_pending_write removed from LLM tool list — graph-level route_entry + execute_write_node enforce approval barrier",
+        "S2: confirm_write dead code deleted from crud_tools.py",
+        "S3: ALLOWED_ACM_FIELDS allowlist added to crud_tools.py — prevents SQL injection in UPDATE queries",
+        "S4: source_id param removed from query_job_records — always read from agent context",
+        "F1: surrealdb>=1.0.8 pinned in pyproject.toml",
+        "F2: Record ID column added to PRESET_COLUMNS.essential — visible by default in ACMGrid",
+        "F3: React.MouseEvent<HTMLElement> type fixed in BuildingGrid click handler",
+        "F4: Click-to-copy on Record ID cell no longer propagates to row dialog",
+        "F5: navigator.clipboard.writeText guarded with try/catch for non-HTTPS contexts",
+        "U1-U8: HITLApprovalDialog timeout removed, escape key wired, duplicate button IDs fixed, dead Zustand import removed, tool call labels cleaned up, JobCrudChatPanel sourceId guard added",
+        "Pre-existing: ACM Records grid fixed (building_id -> building_record_id in useACMItems)",
+        "Pre-existing: SurrealDB docker image pinned to v2.2.1 (v2.6.3 incompatibility)"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/crud_tools.py",
+        "open_notebook/graphs/crud_agent.py",
+        "frontend/src/components/acm/ACMGrid.tsx",
+        "frontend/src/components/acm/BuildingGrid.tsx",
+        "frontend/src/components/chat/renderers/HITLApprovalDialog.tsx",
+        "frontend/src/components/jobs/CrudToolRenderers.tsx",
+        "frontend/src/components/jobs/JobCrudChatPanel.tsx",
+        "frontend/src/lib/stores/column-visibility-store.ts",
+        "frontend/src/lib/hooks/useACMItems.ts",
+        "frontend/src/lib/types/acm.ts",
+        "api/routers/agui_chat.py",
+        "pyproject.toml",
+        "docker-compose.yml"
+      ],
+      "passes": true,
+      "notes": "Security audit of CRUD chat (23 issues: 4 P0 security, 5 P1 functionality, 8 P2 UX, 6 P3 UX). P0 items: structural HITL barrier enforcement, dead code removal, SQL injection allowlist, source_id context binding. Pre-existing bugs also fixed: ACM Records grid empty (building_id param wrong), SurrealDB v2.6.3 incompatibility (docker image pinned to v2.2.1).",
+      "model": "sonnet",
+      "implementedDate": "2026-03-16"
     }
   ],
   "gates": [

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle2, XCircle, Pencil } from 'lucide-react'
+import { Check, X, Pencil } from 'lucide-react'
 
 interface WritePreview {
   type: string
@@ -28,39 +28,47 @@ export function HITLApprovalDialog({
   const [editedValue, setEditedValue] = useState(preview.new_value || '')
   const [submitting, setSubmitting] = useState(false)
 
+  // Reset submitting state after 10s timeout (fallback if dialog isn't replaced)
+  useEffect(() => {
+    if (submitting) {
+      const t = setTimeout(() => setSubmitting(false), 10000)
+      return () => clearTimeout(t)
+    }
+  }, [submitting])
+
   const { operation_id, operation, record_id, field, new_value, reason } = preview
 
-  // Sync editedValue when preview.new_value changes
-  useEffect(() => {
-    setEditedValue(preview.new_value || '')
-  }, [preview.new_value])
-
   return (
-    <div className="border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 rounded-lg p-4 my-2 shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded">
-          {operation} — Approval Required
-        </span>
-        <span className="text-xs text-muted-foreground font-mono">#{operation_id}</span>
+    <div className="border rounded-lg p-3 my-2 text-sm bg-background">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+            {operation}
+          </span>
+          <span className="text-xs text-muted-foreground font-mono">
+            #{operation_id}
+          </span>
+        </div>
       </div>
 
       {field && (
-        <div className="text-sm mb-2">
-          <span className="font-medium">Field:</span>{' '}
-          <code className="bg-white dark:bg-muted px-1.5 py-0.5 rounded text-xs">{field}</code>
+        <div className="mb-1.5">
+          <span className="text-muted-foreground">Field:</span>{' '}
+          <code className="bg-muted px-1 py-0.5 rounded text-xs">{field}</code>
         </div>
       )}
 
       {field && new_value && !editing && (
-        <div className="text-sm mb-2 flex items-center gap-2">
-          <span className="font-medium">New value:</span>
-          <code className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded text-xs">
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className="text-muted-foreground">Value:</span>
+          <code className="text-xs px-1 py-0.5 rounded bg-muted">
             {new_value}
           </code>
           <button
+            type="button"
             onClick={() => setEditing(true)}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            title="Edit value before approving"
+            className="text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Edit value"
             aria-label="Edit value before approving"
           >
             <Pencil className="h-3 w-3" />
@@ -69,27 +77,31 @@ export function HITLApprovalDialog({
       )}
 
       {editing && (
-        <div className="text-sm mb-2">
-          <label className="font-medium block mb-1">Edit value:</label>
+        <div className="mb-2">
+          <label htmlFor={`edit-${operation_id}`} className="text-xs text-muted-foreground block mb-1">
+            Edit value:
+          </label>
           <input
+            id={`edit-${operation_id}`}
             type="text"
             value={editedValue}
             onChange={(e) => setEditedValue(e.target.value)}
-            className="w-full border rounded px-2 py-1 text-sm bg-white dark:bg-muted"
+            onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false) }}
+            className="w-full border rounded px-2 py-1 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
             autoFocus
           />
         </div>
       )}
 
       {record_id && record_id !== 'new' && (
-        <div className="text-xs text-muted-foreground mb-2">Record: {record_id}</div>
+        <div className="text-xs text-muted-foreground mb-1.5 font-mono">{record_id}</div>
       )}
 
       {reason && (
-        <div className="text-sm text-muted-foreground mb-3 italic">{reason}</div>
+        <div className="text-xs text-muted-foreground mb-2">{reason}</div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 pt-1">
         <button
           disabled={submitting}
           onClick={() => {
@@ -99,10 +111,10 @@ export function HITLApprovalDialog({
               : undefined
             onApprove(edits)
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2.5 py-1 bg-foreground text-background text-xs rounded-md cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          {submitting ? 'Approving...' : 'Approve'}
+          <Check className="h-3 w-3" />
+          {submitting ? 'Applying...' : 'Approve'}
         </button>
         <button
           disabled={submitting}
@@ -110,9 +122,9 @@ export function HITLApprovalDialog({
             setSubmitting(true)
             onReject()
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 border text-sm rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2.5 py-1 border text-xs rounded-md cursor-pointer hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <XCircle className="h-3.5 w-3.5" />
+          <X className="h-3 w-3" />
           Reject
         </button>
       </div>

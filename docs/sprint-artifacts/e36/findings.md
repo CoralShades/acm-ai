@@ -175,3 +175,36 @@ Each finding follows:
 - **Description**: qwen2.5:7b is the best-performing Ollama model for ACM extraction. It was the only model to complete both PDFs within 600s timeout. Broadmeadows: 20/31 records (64.5%) in 252s. Alexander: 37/43 records (86.0%) in 82s. Fastest average time across all models (167s). llama3.1:8b extracted fewer records (3 for Broadmeadows) and was slower (403s). mistral:7b showed promise for Alexander (~42 detected) but timed out for Broadmeadows.
 - **Evidence**: `docs/sprint-artifacts/e36/benchmark-results/summary.md`
 - **Recommendation**: Set qwen2.5:7b as the default Ollama extraction model. Consider increasing timeout to 900s for production to accommodate larger PDFs.
+
+---
+
+## Finding 016 — 2026-03-16
+
+- **Date**: 2026-03-16 (CRUD audit fix E2E session)
+- **Category**: functional
+- **Severity**: BLOCKER
+- **Description**: SurrealDB v2.6.3 wire protocol incompatibility. The `surrealdb/surrealdb:v2` Docker tag with `pull_policy: always` pulled v2.6.3, which uses CBOR revision 157. Neither Python SDK 1.0.6 nor 1.0.8 can deserialize this revision. The `source` table is unreadable via the Python SDK. The `acm_record` table has intermittent corrupt records. The `validation-summary` endpoint returns HTTP 500 due to this deserialization failure on the source table.
+- **Evidence**: `docs/sprint-artifacts/crud-audit-fix/audit-fix-report.md` (Pre-existing Issues, Issue P1)
+- **Recommendation**: Pin the Docker image to a specific patch version (e.g., `surrealdb/surrealdb:v2.2.1`) and remove `pull_policy: always` from `docker-compose.yml`. This is the root cause of Issues P1 and P3 in the audit session.
+
+---
+
+## Finding 017 — 2026-03-16
+
+- **Date**: 2026-03-16 (CRUD audit fix E2E session)
+- **Category**: functional
+- **Severity**: CONCERN
+- **Description**: ACM Records grid renders empty when navigated by building record ID. `useACMItems` hook passes the building record ID (`building_record:xxx`) as the `building_id` query parameter, but `acm_record.building_id` stores string codes such as `"B00L"`. The API exposes a separate `building_record_id` parameter for record-based lookups, but the hook does not use it.
+- **Evidence**: `docs/sprint-artifacts/crud-audit-fix/audit-fix-report.md` (Pre-existing Issues, Issue P2)
+- **Recommendation**: Change `useACMItems` to pass `building_record_id` instead of `building_id` when the caller holds a record ID.
+
+---
+
+## Finding 018 — 2026-03-16
+
+- **Date**: 2026-03-16 (CRUD audit fix E2E session)
+- **Category**: functional
+- **Severity**: BLOCKER
+- **Description**: Missing `EventEncoder` in the custom `/api/agui/crud-chat` SSE endpoint. The endpoint was streaming raw AG-UI event objects without serializing them to SSE `data:` format. Every message returned `RUN_ERROR: "Run ended without emitting a terminal event" (INCOMPLETE_STREAM)`. The fix wraps the event generator with `EventEncoder` from `ag_ui.encoder`. This was a prerequisite for the HITL write flow (T10) to function.
+- **Evidence**: `docs/sprint-artifacts/e2e-chat-test/e2e-crud-chat-test-report.md` (Critical Bug Found section); `api/routers/agui_chat.py`
+- **Recommendation**: Fixed in this session (2026-03-16). No further action needed. Add an SSE smoke test to the test suite to catch similar regressions.

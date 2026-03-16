@@ -633,6 +633,20 @@ development_status:
   ui-building-acm-grid-rework-2026-03-16: done  # 3 commits. Two-tab layout (Buildings + ACM Records) on source/[id] and jobs/[id]. New BuildingGrid.tsx (AG Grid, 13 default columns, View button → BuildingViewDialog, autoHeight, localStorage column state). New BuildingViewDialog.tsx (dialog modal wrapping BuildingDetailForm). ACMGrid reordered to 13 required Item__c fields. Per-building export dropdown (current building + all). PRESET_COLUMNS.essential updated. DependentPicklistEditor/BuildingDetailForm/RecordWizard styling fixes.
 
   # ─────────────────────────────────────────────────────
+  # CRUD Chat + Grid Security & Audit Fix (2026-03-16)
+  # Branch: ACMV3
+  # 23 issues resolved: 4 P0 security, 5 P1 functionality, 14 P2/P3 UX
+  # Files changed: 13 (pyproject.toml, crud_tools.py, crud_agent.py,
+  #   column-visibility-store.ts, ACMGrid.tsx, BuildingGrid.tsx,
+  #   HITLApprovalDialog.tsx, CrudToolRenderers.tsx, JobCrudChatPanel.tsx,
+  #   tool-labels.ts, useACMItems.ts, acm.ts, docker-compose.yml)
+  # Pre-existing bugs also fixed (found during E2E):
+  #   - ACM Records grid empty: building_id -> building_record_id in useACMItems
+  #   - SurrealDB v2.6.3 incompatibility: docker image pinned to v2.2.1
+  # ─────────────────────────────────────────────────────
+  crud-chat-security-audit-2026-03-16: done  # 23 issues. P0: execute_pending_write removed from LLM tools (graph enforces HITL barrier), confirm_write dead code deleted, ALLOWED_ACM_FIELDS SQL injection allowlist, source_id context binding. P1: surrealdb>=1.0.8, Record ID column in essential preset, MouseEvent type fix, click-to-copy propagation guard, clipboard HTTPS guard. P2/P3: HITLApprovalDialog timeout/escape/button fixes, dead code cleanup, tool labels, sourceId guard. Pre-existing: ACMGrid empty fix + SurrealDB docker pin.
+
+  # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
   # Branch: ACMV3
   # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
@@ -681,8 +695,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 256  (255 prior + ui-building-acm-grid-rework)
-# Stories Done: 233 (91%)  -- 232 prior + ui-building-acm-grid-rework
+# Total Stories: 257  (256 prior + crud-chat-security-audit-2026-03-16)
+# Stories Done: 234 (91%)  -- 233 prior + crud-chat-security-audit-2026-03-16
 # Stories Review: 0
 # Stories In-Progress: 1 (bug-fix-12-extraction-audit)
 # Stories Blocked: 0
@@ -692,6 +706,14 @@ development_status:
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-16
+# CRUD Chat + Grid Security Audit Fix (2026-03-16): 23 issues resolved across 13 files.
+# 4 P0 security fixes: HITL barrier enforcement (execute_pending_write removed from LLM tools),
+# dead code cleanup (confirm_write), SQL injection allowlist (ALLOWED_ACM_FIELDS), source_id
+# context binding. 5 P1 functionality: surrealdb>=1.0.8, Record ID in essential preset,
+# MouseEvent type fix, click-to-copy propagation guard, clipboard HTTPS guard.
+# 14 P2/P3 UX: HITLApprovalDialog fixes, tool labels, JobCrudChatPanel sourceId guard.
+# Pre-existing bugs also fixed: ACM Records grid empty (building_id->building_record_id),
+# SurrealDB v2.6.3 incompatibility (docker image pinned to v2.2.1).
 # Building Grid + ACM Records Grid Rework (2026-03-16): Two-tab layout on source/[id] and
 # jobs/[id] pages. New BuildingGrid.tsx (AG Grid, 13 cols, View→BuildingViewDialog, autoHeight,
 # localStorage column state). ACMGrid reordered to 13 required Item__c fields. Per-building

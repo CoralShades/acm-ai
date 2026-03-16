@@ -1,27 +1,28 @@
 """CRUD Agent — conversational CRUD chat for job-scoped ACM data (E19-S8).
 
 Provides read + write operations on ACM records, scoped to a specific job
-(source_id). All writes use the preview_write → interrupt → approve/reject
-protocol via LangGraph's interrupt() for CopilotKit HITL integration.
+(source_id). All writes use the preview_write → user approval → graph-routed
+execution protocol with a structural HITL barrier.
 """
 
 import asyncio
 import concurrent.futures
 import json
+import re
 from typing import Annotated, Optional
 
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
-from langgraph.types import interrupt
 from loguru import logger
 from typing_extensions import TypedDict
 
 from open_notebook.graphs.crud_tools import (
     execute_pending_write,
+    get_crud_context,
     preview_write,
     query_job_records,
     set_crud_context,
@@ -35,7 +36,9 @@ class CRUDAgentState(TypedDict):
     model_id: Optional[str]
 
 
-# Only read + preview tools — writes are executed via interrupt approval
+# Read + preview tools only — the LLM cannot call execute_pending_write directly.
+# Write execution is handled structurally by the graph's execute_write node
+# after the user approves via the frontend HITL dialog.
 crud_tools = [query_job_records, preview_write]
 
 SYSTEM_PROMPT = """You are an ACM (Asbestos Containing Material) data assistant with the ability to read and write records for the current job.
@@ -43,22 +46,22 @@ SYSTEM_PROMPT = """You are an ACM (Asbestos Containing Material) data assistant 
 IMPORTANT RULES:
 1. You are scoped to ONE JOB ONLY. Never modify records from other jobs.
 2. ALWAYS call preview_write before any UPDATE, DELETE, or INSERT operation.
-3. The system will automatically show a confirmation dialog to the user after preview_write.
-4. Do NOT ask the user to type "confirm" — the UI handles approval automatically.
-5. All field values must match the ACM register schema (e.g., friable must be "Friable" or "Non-friable").
-6. For sample_result, valid values are: "Positive", "Negative", "Not Sampled", "No Access".
-7. Be helpful — explain what you're doing in plain English.
+3. After preview_write, the UI shows an approval dialog. The system handles execution automatically when the user clicks Approve.
+4. When the user says "Rejected" or "Cancel", acknowledge and do NOT attempt further writes for that operation.
+5. NEVER call execute_pending_write. The system handles execution automatically when the user clicks Approve.
+6. All field values must match the ACM register schema (e.g., friable must be "Friable" or "Non-friable").
+7. For sample_result, valid values are: "Positive", "Negative", "Not Sampled", "No Access".
+8. Be helpful — explain what you're doing in plain English.
 
 You have these tools:
 - query_job_records: Read records, count, filter
-- preview_write: Preview an update/delete before executing (triggers approval dialog)
+- preview_write: Preview an update/delete before executing (shows approval dialog)
 
-When a user asks to update something, call preview_write. The system will present an approval dialog to the user and handle execution automatically."""
+WORKFLOW: preview_write → user approves via UI → system executes automatically → confirm success."""
 
 
 def _extract_source_id_from_messages(messages: list) -> Optional[str]:
     """Fallback: extract source_id from CopilotKit system messages."""
-    import re
     for msg in messages:
         content = getattr(msg, "content", "")
         if isinstance(content, str) and "source:" in content:
@@ -138,66 +141,6 @@ def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
     return {"messages": [response]}
 
 
-def check_write_approval(state: CRUDAgentState) -> dict:
-    """Check if the last tool result was a preview_write and interrupt for approval.
-
-    This node runs after tool execution. If a preview_write was generated,
-    it uses LangGraph's interrupt() to pause and wait for user approval via
-    CopilotKit's useLangGraphInterrupt hook. On resume:
-    - If approved: executes the write and returns a success message
-    - If rejected: returns a cancellation message
-    """
-    messages = state.get("messages", [])
-    source_id = state.get("source_id")
-
-    # Walk backwards through messages to find the most recent ToolMessage
-    for msg in reversed(messages):
-        if not isinstance(msg, ToolMessage):
-            continue
-        try:
-            data = json.loads(msg.content)
-        except (json.JSONDecodeError, TypeError):
-            break
-
-        if data.get("type") != "preview_write":
-            break
-
-        operation_id = data.get("operation_id", "")
-
-        # Pause execution — CopilotKit renders approval dialog via useLangGraphInterrupt
-        decision = interrupt({
-            "type": "write_approval",
-            "preview": data,
-        })
-
-        # Handle both dict and JSON string from CopilotKit resolve()
-        if isinstance(decision, str):
-            try:
-                decision = json.loads(decision)
-            except (json.JSONDecodeError, TypeError):
-                decision = {}
-
-        if isinstance(decision, dict) and decision.get("approved"):
-            edits = decision.get("edits", {})
-            result = execute_pending_write(
-                operation_id,
-                source_id=source_id,
-                edits=edits,
-            )
-            return {"messages": [AIMessage(content=result)]}
-        else:
-            return {
-                "messages": [
-                    AIMessage(
-                        content=f"Write operation #{operation_id} was cancelled."
-                    )
-                ]
-            }
-
-    # No preview_write found — pass through
-    return state
-
-
 def should_continue(state: CRUDAgentState) -> str:
     """Check if the last message has tool calls that need execution."""
     messages = state.get("messages", [])
@@ -209,17 +152,94 @@ def should_continue(state: CRUDAgentState) -> str:
     return END
 
 
-# Build the graph
+def route_entry(state: CRUDAgentState) -> str:
+    """Route at graph entry: intercept user approval messages for pending writes.
+
+    This is the structural HITL barrier — approval messages are handled by the
+    execute_write node directly, never reaching the LLM.
+    """
+    messages = state.get("messages", [])
+    if not messages:
+        return "agent"
+    last_msg = messages[-1]
+    content = getattr(last_msg, "content", "")
+    if isinstance(content, str) and re.search(
+        r"Approved\.\s*Execute operation #\w+", content
+    ):
+        return "execute_write"
+    return "agent"
+
+
+def execute_write_node(state: CRUDAgentState) -> dict:
+    """Execute an approved write operation.
+
+    Called by the graph router when user approval is detected, never by the LLM.
+    This ensures the LLM cannot self-approve write operations.
+    """
+    messages = state.get("messages", [])
+    last_msg = messages[-1]
+    content = getattr(last_msg, "content", "")
+
+    # Ensure source context is set
+    source_id = state.get("source_id")
+    if not source_id:
+        source_id = _extract_source_id_from_messages(messages)
+    if not source_id:
+        source_id = get_crud_context()
+    if source_id:
+        set_crud_context(source_id)
+
+    match = re.search(r"Execute operation #(\w+)", content)
+    if not match:
+        return {
+            "messages": [
+                AIMessage(content="Could not parse operation ID from approval.")
+            ]
+        }
+
+    operation_id = match.group(1)
+
+    # Extract optional user edits from approval message
+    edits = None
+    edits_match = re.search(r"with edits:\s*(\{.*\})", content)
+    if edits_match:
+        try:
+            edits = json.loads(edits_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    try:
+        result = execute_pending_write.invoke(
+            {
+                "operation_id": operation_id,
+                "source_id": source_id,
+                "edits": edits,
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error in execute_write_node: {e}")
+        result = f"Error executing write: {str(e)}"
+
+    return {"messages": [AIMessage(content=result)]}
+
+
+# Build the graph — structural HITL barrier:
+# START → route_entry → agent (normal) or execute_write (user approval)
+# agent → should_continue → tools/END
+# tools → agent
+# execute_write → END
 _tool_node = ToolNode(crud_tools)
 
 _builder = StateGraph(CRUDAgentState)
 _builder.add_node("agent", call_crud_agent)
 _builder.add_node("tools", _tool_node)
-_builder.add_node("check_approval", check_write_approval)
-_builder.add_edge(START, "agent")
+_builder.add_node("execute_write", execute_write_node)
+_builder.add_conditional_edges(
+    START, route_entry, {"agent": "agent", "execute_write": "execute_write"}
+)
 _builder.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
-_builder.add_edge("tools", "check_approval")
-_builder.add_edge("check_approval", "agent")
+_builder.add_edge("tools", "agent")
+_builder.add_edge("execute_write", END)
 
 _memory = MemorySaver()
 crud_graph = _builder.compile(checkpointer=_memory)

@@ -2,10 +2,10 @@
 
 ## Reboot Check (read this FIRST every session)
 
-- **Last completed milestone**: Bug Fix: Frontend Navigation Performance (2026-03-13)
+- **Last completed milestone**: CRUD Chat + Grid Audit Fix E2E (2026-03-16)
 - **Current active task**: None — ready for E36-S5
-- **Blockers**: None known
-- **Last modified files**: `frontend/src/components/common/ConnectionGuard.tsx`, 17x `loading.tsx` files (see progress.md 2026-03-13 entry), `tests/e2e/specs/navigation-timing.spec.ts`
+- **Blockers**: SurrealDB v2.6.3 wire protocol (Finding 016) — pin Docker image before running extractions
+- **Last modified files**: `api/routers/agui_chat.py` (EventEncoder fix), `docs/sprint-artifacts/crud-audit-fix/audit-fix-report.md` (new), `docs/sprint-artifacts/e36/findings.md` (Findings 016-018 added)
 - **Next planned action**: E36-S5 (Functional Verification)
 
 ---

@@ -1,40 +1,44 @@
 'use client'
 
 import React from 'react'
-import { useRenderToolCall, useDefaultTool, useLangGraphInterrupt } from '@copilotkit/react-core'
+import {
+  useRenderToolCall,
+  useDefaultTool,
+  useCopilotChat,
+} from '@copilotkit/react-core'
+import { TextMessage, Role } from '@copilotkit/runtime-client-gql'
 import { AgentActivityIndicator } from '@/components/chat/renderers/AgentActivityIndicator'
 import { HITLApprovalDialog } from '@/components/chat/renderers/HITLApprovalDialog'
 import { ToolErrorCard } from '@/components/chat/renderers/ToolErrorCard'
 import { isErrorResult } from '@/lib/utils/tool-result'
 
 /**
- * Registers CopilotKit tool-call renderers for CRUD write previews.
+ * Parse a value that may be a JSON string or an already-parsed object.
+ */
+function parseJsonSafe(val: unknown): Record<string, unknown> | null {
+  if (!val) return null
+  if (typeof val === 'object') return val as Record<string, unknown>
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val)
+      return typeof parsed === 'object' ? parsed : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+/**
+ * Registers CopilotKit tool-call renderers for CRUD operations.
  *
- * Uses useLangGraphInterrupt for HITL approval dialogs (replaces the old
- * toast-based confirmation pattern), and useRenderToolCall for in-progress
- * and result states.
+ * Uses preview_write tool renderer to render approval UI from the tool result
+ * and sends the decision as a chat message.
  *
  * Must be rendered inside a CopilotKit provider configured with /copilot-crud.
  */
 export function CrudToolRenderers() {
-  // HITL: Render approval dialog when the backend graph interrupts for write approval
-  useLangGraphInterrupt({
-    enabled: ({ eventValue }) => eventValue?.type === 'write_approval',
-    render: ({ event, resolve }) => {
-      const preview = event.value?.preview
-      if (!preview) return <></>
-
-      return (
-        <HITLApprovalDialog
-          preview={preview}
-          onApprove={(edits) =>
-            resolve(JSON.stringify({ approved: true, edits: edits || {} }))
-          }
-          onReject={() => resolve(JSON.stringify({ approved: false }))}
-        />
-      )
-    },
-  })
+  const { appendMessage } = useCopilotChat()
 
   // Render query_job_records results
   useRenderToolCall({
@@ -46,9 +50,9 @@ export function CrudToolRenderers() {
       if (isErrorResult(result)) return <ToolErrorCard tool="query_job_records" />
       if (!result) return <></>
       return (
-        <div className="border rounded-lg p-3 my-2 text-sm bg-muted/10">
-          <div className="text-xs font-medium text-muted-foreground mb-1">Query Results</div>
-          <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-60">
+        <div className="border rounded-lg p-3 my-2 text-sm bg-background">
+          <div className="text-xs text-muted-foreground mb-1">Query Results</div>
+          <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-60 leading-relaxed">
             {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
           </pre>
         </div>
@@ -56,41 +60,66 @@ export function CrudToolRenderers() {
     },
   })
 
-  // Render preview_write tool results as loading indicators
-  // (the actual approval UI comes from useLangGraphInterrupt above)
+  // Render preview_write — show approval dialog from tool result as fallback
   useRenderToolCall({
     name: 'preview_write',
     render: ({ status, result }) => {
       if (status === 'inProgress' || status === 'executing') {
         return <AgentActivityIndicator tool="preview_write" status="executing" />
       }
-      if (isErrorResult(result))
-        return <ToolErrorCard tool="preview_write" />
-      // Preview result is handled by the interrupt approval dialog
-      return <></>
+      if (isErrorResult(result)) return <ToolErrorCard tool="preview_write" />
+      if (!result) return <></>
+
+      // Parse the preview_write result
+      const parsed = parseJsonSafe(result)
+      if (!parsed || parsed.type !== 'preview_write') return <></>
+
+      return (
+        <HITLApprovalDialog
+          preview={parsed as never}
+          onApprove={(edits) => {
+            const opId = parsed.operation_id as string
+            const editStr = edits ? ` with edits: ${JSON.stringify(edits)}` : ''
+            appendMessage(
+              new TextMessage({
+                role: Role.User,
+                content: `Approved. Execute operation #${opId}${editStr}`,
+              })
+            )
+          }}
+          onReject={() => {
+            const opId = parsed.operation_id as string
+            appendMessage(
+              new TextMessage({
+                role: Role.User,
+                content: `Rejected. Cancel operation #${opId}`,
+              })
+            )
+          }}
+        />
+      )
     },
   })
 
-  // Render write_acm_record results
+  // Render write_acm_record / execute_pending_write results
   useRenderToolCall({
-    name: 'write_acm_record',
+    name: 'execute_pending_write',
     render: ({ status, result }) => {
       if (status === 'inProgress' || status === 'executing') {
-        return <AgentActivityIndicator tool="write_acm_record" status="executing" />
+        return <AgentActivityIndicator tool="execute_pending_write" status="executing" />
       }
-      if (isErrorResult(result))
-        return <ToolErrorCard tool="write_acm_record" />
+      if (isErrorResult(result)) return <ToolErrorCard tool="execute_pending_write" />
       if (!result) return <></>
       const content = typeof result === 'string' ? result : JSON.stringify(result)
       return (
-        <div className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded px-3 py-2 my-1">
+        <div className="text-xs border border-green-200 dark:border-green-900 rounded-lg px-3 py-2 my-1 text-green-700 dark:text-green-400">
           {content}
         </div>
       )
     },
   })
 
-  // Fallback renderer for any unregistered tools
+  // Fallback for any unregistered tools
   useDefaultTool({
     render: ({ name, status, result }): React.ReactElement => {
       if (status === 'inProgress' || status === 'executing') {
@@ -99,8 +128,8 @@ export function CrudToolRenderers() {
       if (isErrorResult(result)) return <ToolErrorCard tool={name} />
       if (!result) return <></>
       return (
-        <div className="border rounded-lg p-3 my-1 text-sm bg-muted/30">
-          <div className="text-xs font-medium text-muted-foreground mb-1">{name}</div>
+        <div className="border rounded-lg p-3 my-1 text-sm bg-background">
+          <div className="text-xs text-muted-foreground mb-1">{name}</div>
           <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-40">
             {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
           </pre>

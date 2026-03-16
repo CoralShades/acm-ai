@@ -149,6 +149,7 @@ export interface ACMExtractResponse {
 export interface ACMListParams {
   source_id: string
   building_id?: string
+  building_record_id?: string
   room_id?: string
   risk_status?: string
   page?: number

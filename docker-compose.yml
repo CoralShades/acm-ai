@@ -1,8 +1,18 @@
 services:
   # SurrealDB Database
   # Used for hybrid development: DB in Docker, code runs locally
+  #
+  # IMAGE VERSION PINNED — DO NOT CHANGE WITHOUT TESTING
+  # Pinned to v2.2.1 because surrealdb/surrealdb:v2 is a rolling tag that
+  # advanced to v2.6.3, which uses CBOR serialization revision 157.
+  # The Python SDK (surrealdb==1.0.8, latest) cannot deserialize revision 157,
+  # causing "Versioned error: A deserialization error occured: Invalid revision 157"
+  # on SELECT queries. v2.2.1 is the last known version compatible with SDK 1.0.8.
+  #
+  # pull_policy is set to "missing" to prevent accidental upgrades when the
+  # rolling v2 tag moves forward.
   surrealdb:
-    image: surrealdb/surrealdb:v2
+    image: surrealdb/surrealdb:v2.2.1
     container_name: acm-ai-db
     ports:
       - "8000:8000"
@@ -11,7 +21,7 @@ services:
     environment:
       - SURREAL_EXPERIMENTAL_GRAPHQL=true
     command: start --log info --user root --pass root surrealkv://mydata/open_notebook.db
-    pull_policy: always
+    pull_policy: missing
     user: root
     restart: unless-stopped
     healthcheck:

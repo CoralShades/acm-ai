@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { CopilotKit } from '@copilotkit/react-core'
 import { CopilotChat } from '@copilotkit/react-ui'
 import { useCoAgent, useCopilotReadable } from '@copilotkit/react-core'
@@ -19,6 +19,7 @@ interface CrudChatContentProps {
 
 function CrudChatContent({ sourceId }: CrudChatContentProps) {
   const [chatModelId, setChatModelIdState] = useState('')
+  const didSyncRef = useRef(false)
 
   const { setState } = useCoAgent<CRUDAgentState>({
     name: 'crud',
@@ -35,6 +36,32 @@ function CrudChatContent({ sourceId }: CrudChatContentProps) {
     value: JSON.stringify({ source_id: sourceId }),
   })
 
+  // Reset sync guard when sourceId changes so state re-syncs
+  useEffect(() => {
+    didSyncRef.current = false
+  }, [sourceId])
+
+  // Force source_id sync once on mount (or when sourceId changes) — use ref guard
+  // to prevent re-render loop (useCoAgent's setState may return a new reference)
+  useEffect(() => {
+    if (didSyncRef.current) return
+    didSyncRef.current = true
+    setState((prev: CRUDAgentState | undefined): CRUDAgentState => ({
+      ...(prev ?? { source_id: sourceId, model_id: null }),
+      source_id: sourceId,
+    }))
+    // Restore model from localStorage
+    const saved = localStorage.getItem('acm-crud-chat-model')
+    if (saved) {
+      setChatModelIdState(saved)
+      setState((prev: CRUDAgentState | undefined): CRUDAgentState => ({
+        ...(prev ?? { source_id: sourceId, model_id: null }),
+        model_id: saved,
+      }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceId])
+
   const setChatModelId = useCallback(
     (modelId: string) => {
       setChatModelIdState(modelId)
@@ -43,27 +70,14 @@ function CrudChatContent({ sourceId }: CrudChatContentProps) {
         model_id: modelId || null,
       }))
     },
-    [setState, sourceId],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sourceId],
   )
-
-  // Force source_id sync to backend on mount — initialState alone doesn't trigger sync
-  useEffect(() => {
-    setState((prev: CRUDAgentState | undefined): CRUDAgentState => ({
-      ...(prev ?? { source_id: sourceId, model_id: null }),
-      source_id: sourceId,
-    }))
-  }, [sourceId, setState])
-
-  // Restore model from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('acm-crud-chat-model')
-    if (saved) setChatModelId(saved)
-  }, [setChatModelId])
 
   return (
     <>
       <CrudToolRenderers />
-      <div className="px-4 py-1.5 border-b flex items-center gap-2">
+      <div className="px-3 py-1.5 border-b flex items-center gap-2">
         <ChatModelSelector
           value={chatModelId}
           onChange={setChatModelId}
@@ -73,7 +87,7 @@ function CrudChatContent({ sourceId }: CrudChatContentProps) {
       <CopilotChat
         className="h-full"
         labels={{
-          title: 'ACM CRUD Assistant',
+          title: 'CRUD Assistant',
           initial:
             "Ask me to update, create, or delete ACM records for this job. I'll preview any changes before applying them.",
         }}

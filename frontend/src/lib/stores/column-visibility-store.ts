@@ -5,7 +5,7 @@ export type PresetName = 'essential' | 'full-bar' | 'assessment-focus' | 'remova
 // Preset column definitions — field keys that should be VISIBLE for each preset
 export const PRESET_COLUMNS: Record<Exclude<PresetName, 'custom'>, string[]> = {
   essential: [
-    'building_id', 'product', 'friable', 'acm_product_group', 'acm_product_type',
+    'id', 'building_id', 'product', 'friable', 'acm_product_group', 'acm_product_type',
     'material_condition', 'disturbance_potential', 'location', 'room_name',
     'floor_level', 'quantity', 'sample_result', 'identifying_company',
   ],

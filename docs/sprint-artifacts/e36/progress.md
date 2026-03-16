@@ -54,6 +54,22 @@
 - **Root cause**: All 34 pages are Client Components (not async Server Components). 27/34 routes had no `loading.tsx` so Next.js kept old page visible during transitions. `ConnectionGuard` rendered null on cold start.
 - **Next**: E36-S5 (Functional Verification)
 
+## 2026-03-16 — CRUD Chat + Grid Audit Fix E2E Verification
+
+- **Status**: DONE
+- **What completed**:
+  - Created `docs/sprint-artifacts/crud-audit-fix/audit-fix-report.md` documenting all 23 audit fixes across P0/P1/P2 tiers
+  - Fixed missing `EventEncoder` in `/api/agui/crud-chat` SSE endpoint (`api/routers/agui_chat.py`) — this was blocking all SSE streaming for the CRUD chat panel
+  - E2E verified 11/11 planned tests: page load, source ID injection, count query, buildings query, full HITL write flow (T10), SSE streaming, Record ID column visibility (F2)
+  - HITL write flow (T10) confirmed PASS: backend interrupt fires, `HITLApprovalDialog` renders, user approve action confirmed, DB write reflected
+  - Record ID column confirmed visible in both Buildings tab and ACM Records tab
+  - Added Findings 016-018 to e36/findings.md: SurrealDB v2.6.3 wire protocol issue, ACM Records grid empty state, EventEncoder missing
+- **Pre-existing issues documented** (not caused by audit fix):
+  - SurrealDB v2.6.3 CBOR incompatibility (Finding 016 — BLOCKER)
+  - ACM Records grid empty due to building_id vs building_record_id mismatch (Finding 017 — CONCERN)
+  - validation-summary endpoint 500 (downstream of Finding 016)
+- **Next**: E36-S5 (Functional Verification)
+
 ## 2026-03-05 — E36-S4: Ollama Multi-Model Benchmark
 
 - **Status**: DONE

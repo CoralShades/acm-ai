@@ -180,6 +180,48 @@ export function BuildingGrid({
             'possible_capital_works_project',
           ]
 
+    // Record ID column — first, pinned left, click to copy
+    const idCol: ColDef<BuildingRecord> = {
+      field: 'id' as keyof BuildingRecord,
+      headerName: 'Record ID',
+      headerTooltip: 'SurrealDB record ID — click to copy',
+      width: 130,
+      pinned: 'left',
+      sortable: true,
+      filter: true,
+      valueFormatter: (params) => {
+        const id = params.value as string
+        if (!id) return ''
+        const parts = id.split(':')
+        const key = parts[parts.length - 1] || id
+        return key.length > 10 ? key.slice(0, 10) + '…' : key
+      },
+      cellRenderer: (params: { value: string }) => {
+        const id = params.value
+        if (!id) return null
+        const parts = id.split(':')
+        const shortKey = parts[parts.length - 1] || id
+        const display = shortKey.length > 10 ? shortKey.slice(0, 10) + '…' : shortKey
+        return (
+          <span
+            title={`${id}\nClick to copy`}
+            className="font-mono text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-all"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(id).catch(() => {})
+              }
+              const el = e.currentTarget
+              el.textContent = 'copied!'
+              setTimeout(() => { el.textContent = display }, 1200)
+            }}
+          >
+            {display}
+          </span>
+        )
+      },
+    }
+
     const cols: ColDef<BuildingRecord>[] = fieldKeys.map((key) => {
       const isDefault = DEFAULT_VISIBLE_FIELDS.has(key)
       const headerName = HEADER_NAME_MAP[key] ?? humanize(key)
@@ -230,7 +272,7 @@ export function BuildingGrid({
       filter: false,
     })
 
-    return cols
+    return [idCol, ...cols]
   }, [buildings, handleViewBuilding])
 
   const defaultColDef = useMemo<ColDef>(

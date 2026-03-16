@@ -14,6 +14,7 @@ export const TOOL_LABELS: Record<string, string> = {
   preview_acm_write: 'write preview',
   write_acm_record: 'record write',
   query_job_records: 'job records query',
+  execute_pending_write: 'write execution',
 }
 
 export const TOOL_ACTIVITY_LABELS: Record<string, string> = {
@@ -28,4 +29,5 @@ export const TOOL_ACTIVITY_LABELS: Record<string, string> = {
   search_documents_text: 'Searching documents (text)...',
   query_job_records: 'Querying ACM records...',
   preview_write: 'Preparing write preview...',
+  execute_pending_write: 'Executing approved write...',
 }

@@ -339,6 +339,10 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 - ✅ **Per-Row ACM Extraction**: One LLM call per table row, 9-field schema, deterministic post-processing (E37)
 - ✅ **Navigation Performance**: App-shell skeleton on cold start, 17 route-level loading skeletons, navigation timing E2E test
 - ✅ **Frontend Audit & Fix**: 8 tasks across 13 files — label corrections, canonical type alignment, computed overview metrics, V3 grid unification, job metadata cards, intelligence API wiring, provider tab labels, provenance overlay hardening
+- ✅ **CopilotKit Integration**: HITL interrupt() flow, generative UI components, chat model selector, P2/P3 UX polish (3 sessions)
+- ✅ **Provenance PDF Viewer**: Zoom controls, text search (Ctrl+F), bbox pulse animation, scrollable canvas, auto-scroll to record
+- ✅ **Building + ACM Grid Rework**: Two-tab layout (Buildings + ACM Records) on source/jobs pages, new BuildingGrid AG Grid with localStorage column state, View button dialog, 13-field column presets
+- ✅ **CRUD Chat Security Audit**: 23 issues fixed — structural HITL barrier (execute_pending_write removed from LLM tools), SQL injection allowlist (ALLOWED_ACM_FIELDS), source_id context binding, Record ID column, clipboard HTTPS guard, HITLApprovalDialog fixes
 
 ### Next for ACM-AI
 - **Salesforce Data Push**: Direct sync of validated records to Salesforce org
