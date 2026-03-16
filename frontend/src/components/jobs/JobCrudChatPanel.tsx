@@ -21,7 +21,7 @@ function CrudChatContent({ sourceId }: CrudChatContentProps) {
   const [chatModelId, setChatModelIdState] = useState('')
 
   const { setState } = useCoAgent<CRUDAgentState>({
-    name: 'crud_agent',
+    name: 'crud',
     initialState: {
       source_id: sourceId,
       model_id: null,
