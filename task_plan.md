@@ -1,114 +1,41 @@
-# E29-R2: Match-Gap Remediation — Task Plan
+# Task Plan: Pipeline Fix Integrity Audit (2026-03-17)
 
-## Story Context
+## Objective
 
-> As a pipeline developer, I want the LLM inventory compilation to return proper
-> `RoomMeta` objects and extraction output to use normalized room/material names,
-> so that Gate 2 thresholds are met.
-
-R2 scope only. S3/S4 architecture unchanged. No scope creep into S5/S6.
+Verify that all fixes from 3 prior debug sessions (pipeline-debug, pdf-format-audit, docling-json-fix) survived ~25 subsequent commits. If any fix was overwritten or regressed, restore it.
 
 ---
 
-## Tasks
+## Phase 1 — Fix Inventory & Spot Check
 
-### T1: Fix RoomMeta Typing in LLM Inventory Compilation
-- [x] Add `_coerce_rooms_in_inventory(parsed: dict)` to `building_inventory.py`
-  - Convert string rooms → `{"room_id": name, "name": name}`
-  - Handle dict rooms (pass through)
-  - Handle None/missing rooms (default to empty list)
-- [x] Call `_coerce_rooms_in_inventory(parsed)` before `BuildingInventory.model_validate(parsed)` at line 503
-- [x] Write `test_coerces_string_rooms_to_roommeta` — strings → RoomMeta objects
-- [x] Write `test_preserves_dict_rooms` — dicts pass through
-- [x] Write `test_handles_mixed_rooms` — mix of strings and dicts
-- [x] Write `test_handles_none_rooms` — None → empty list
-- [x] Write `test_handles_missing_rooms_key` — missing key → empty list
-- [x] Write `test_coerced_rooms_validate_as_building_inventory` — full Pydantic validation
+- [x] **1.1** Build complete fix inventory from prior sessions (RC1-RC8, C1-C3, H1, M2, Migration 51)
+- [x] **1.2** Grep each fix signature in current HEAD — present/absent/modified → **16/16 PRESENT**
+- [x] **1.3** Check migration 51 applied in running SurrealDB → **NOT APPLIED (version=49)**
+- [x] **1.4** Check per-row extraction path still reachable (acm_extraction.py ~line 1024) → **Code exists but data empty**
+- [x] **1.5** Check `_get_docling_tables()` page overlap logic intact (orchestrator.py) → **PRESENT lines 58-59**
+- [x] **1.6** Check `ensure_record_id()` calls in acm_commands.py stale detection → **PRESENT lines 185, 244, 246**
 
-**AC**: R2-AC1
-**Files**: `building_inventory.py`, `tests/test_orchestrator.py`
-**Result**: 6/6 tests pass
+## Phase 2 — Data Flow Trace (Docling → DB → Graph)
 
-### T2: Add Building Name Normalization to Benchmark Matching
-- [x] Add `BUILDING_SYNONYMS` map to `e29_benchmark_harness.py`
-  - `"old alexandra hospital"` → `["main hospital building", "alexandra hospital", "old alexander hospital"]`
-- [x] Add `_normalize_building(building: str) -> str` function
-- [x] Apply `_normalize_building()` in tier 2 composite key construction (both GT and extracted)
-- [x] Apply `_normalize_building()` in field accuracy calculator
+- [x] **2.1** Query `acm_table_section` — is `docling_document_json` populated? → **NO, all 28 rows = {}**
+- [x] **2.2** Query `building_record` — are buildings stored with clean names? → **1/11 clean, 10 corrupted**
+- [x] **2.3** Query `acm_record` — count records vs ground truth → **142 total (but stale data)**
+- [x] **2.4** Check `_store_docling_tables()` maps `docling_json` → `docling_document_json` → **CORRECT (line 220)**
+- [x] **2.5** Check `_merge_provider_tables()` preserves `docling_json` → **CORRECT (lines 343-490)**
 
-**AC**: R2-AC3, R2-AC5
-**Files**: `e29_benchmark_harness.py`
-**Result**: 44/44 existing tests pass
+## Phase 3 — Regression Fix
 
-### T3: Expand Product Synonyms
-- [x] Add missing product synonyms to `PRODUCT_SYNONYMS`:
-  - `"heater flue"` → `["heater"]`
-  - `"ceiling"` → `["porch ceiling"]` (added to existing)
-  - `"floor covering"` → `["floor covering (beneath carpet)"]` (added to existing)
-  - `"electrical board"` → `["electrical distribution board"]`
-- [x] Add parenthetical stripping to `_normalize_product()`: `"Floor covering (beneath carpet)"` → `"floor covering"`
+- [x] **3.1** Add migrations 50-52 to AsyncMigrationManager in async_migrate.py
+- [x] **3.2** Apply migrations 50, 51, 52 to running SurrealDB → **DB now at version 52**
+- [x] **3.3** Verify FLEXIBLE keyword in schema → **CONFIRMED via INFO FOR TABLE**
 
-**AC**: R2-AC3
-**Files**: `e29_benchmark_harness.py`
+## Phase 4 — Test & Lint
 
-### T4: Normalize Room Names in Matching
-- [x] Add `ROOM_SYNONYMS` map:
-  - `"exterior"` → `["external"]`
-- [x] Add `_normalize_room(room: str) -> str` function
-  - Resolve room synonyms
-  - Strip leading/trailing dashes with surrounding spaces
-  - Collapse multiple whitespace to single space (via _normalize)
-- [x] Apply `_normalize_room()` in tier 2, tier 3, and field accuracy
-- [x] `_normalize_room` applied in GT and extracted sides
+- [x] **4.1** Run `uv run pytest tests/ -x` → **2018 passed, 1 pre-existing failure**
+- [x] **4.2** Run `uv run ruff check .` → **All checks passed**
 
-**AC**: R2-AC2
-**Files**: `e29_benchmark_harness.py`
+## Phase 5 — Documentation
 
-### T5: Run Verification Suite (Pre-Benchmark)
-- [x] `uv run ruff check .` — zero errors
-- [x] `uv run pytest tests/test_orchestrator.py -x` — 67/67 pass (6 new)
-- [x] `uv run pytest tests/test_strategy_registry.py -x` — 33/33 pass
-- [x] `uv run pytest tests/integration/test_benchmark_harness.py -x` — 44/44 pass
-
-**AC**: R2-AC7, R2-AC8
-
-### T6: Run Gate 2 Benchmark Rerun
-- [ ] `uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows --output-tag gate2_rerun`
-- [ ] `uv run python scripts/research/e29_benchmark_harness.py --doc alexander --output-tag gate2_rerun`
-- [ ] Verify: Broadmeadows >= 31/31 matched (R2-AC4)
-- [ ] Verify: Alexander >= 36/43 matched (R2-AC5)
-- [ ] Verify: All 6 Alexander buildings producing records (R2-AC5)
-- [ ] Verify: Docling injection firing, no F2 fallback (R2-AC6)
-- [ ] Document per-building Alexander counts
-
-**AC**: R2-AC4, R2-AC5, R2-AC6
-
-### T7: Update Recovery Spec + Worklog + Sprint Status
-- [ ] Update R2 section in `e29-gate2-recovery-spec.md` with Dev Agent Record
-- [ ] Append R2 session to `e29-worklog.md`
-- [ ] Set `e29-r2` status to `review` in `sprint-status.yaml`
-
----
-
-## File Changes Summary
-
-| File | Action | Task |
-|------|--------|------|
-| `open_notebook/extractors/building_inventory.py` | Modified | T1 |
-| `scripts/research/e29_benchmark_harness.py` | Modified | T2, T3, T4 |
-| `tests/test_orchestrator.py` | Modified | T1 |
-| `benchmarks/results/gate2_rerun_results.json` | Created (by harness) | T6 |
-| `docs/reviews/e29-gate2_rerun-benchmark-report.md` | Created (by harness) | T6 |
-| `docs/sprint-artifacts/e29-gate2-recovery-spec.md` | Modified | T7 |
-| `docs/sprint-artifacts/e29-worklog.md` | Modified | T7 |
-| `docs/sprint-artifacts/sprint-status.yaml` | Modified | T7 |
-
-## Verification Commands
-
-```bash
-uv run ruff check .
-uv run pytest tests/test_orchestrator.py -x
-uv run pytest tests/test_strategy_registry.py -x
-uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows --output-tag gate2_rerun
-uv run python scripts/research/e29_benchmark_harness.py --doc alexander --output-tag gate2_rerun
-```
+- [x] **5.1** Update findings.md with complete audit results
+- [x] **5.2** Update progress.md with session summary
+- [x] **5.3** Update task_plan.md checkboxes
