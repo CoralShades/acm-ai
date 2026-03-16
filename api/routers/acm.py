@@ -1226,9 +1226,30 @@ async def backfill_building_records(
     for each unique building, and sets building_record_id FK on the acm_records.
     Idempotent: skips buildings that already exist and never overwrites
     non-NULL FK values.
+
+    Returns 422 if the building_record table does not yet exist (migrations
+    not run).  Returns 500 for all other internal errors.
     """
     try:
-        from scripts.v3_building_backfill import backfill_all, backfill_source
+        from scripts.v3_building_backfill import (
+            backfill_all,
+            backfill_source,
+            verify_schema,
+        )
+
+        # Guard: ensure building_record table exists before proceeding.
+        # Without this check the DB query inside backfill_source/backfill_all
+        # raises an opaque error that surfaces as a 500 with no guidance.
+        schema_ok = await verify_schema()
+        if not schema_ok:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "building_record table does not exist. "
+                    "Run pending database migrations first "
+                    "(start the API to auto-apply migrations)."
+                ),
+            )
 
         if request.source_id:
             result = await backfill_source(request.source_id)
@@ -1248,6 +1269,8 @@ async def backfill_building_records(
             ),
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error backfilling building records: {e}")
         raise HTTPException(status_code=500, detail=str(e))

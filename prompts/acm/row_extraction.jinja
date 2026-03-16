@@ -3,9 +3,9 @@ Fill JSON fields using ONLY the row data. If not present, set null.
 Respond with ONLY valid JSON matching this schema:
 
 {
-  "room_name": "string or null",
-  "floor_level": "string or null",
-  "item_location": "string or null",
+  "room_name": "string or null — room or area name where the ACM item is located, e.g. 'Room 101', 'Library', 'Corridor', 'Main Hall'",
+  "floor_level": "string or null — floor or level, e.g. 'Ground Floor', 'Level 1', 'Roof Space'",
+  "item_location": "string or null — position within the room, e.g. 'Ceiling', 'Walls', 'Floor', 'Eaves'",
   "item_name": "string (required)",
   "friability": "string or null",
   "acm_classification": "string or null",

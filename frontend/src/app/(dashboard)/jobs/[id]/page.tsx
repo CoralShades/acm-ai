@@ -278,6 +278,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                   <TabsTrigger value="buildings">Buildings</TabsTrigger>
                   <TabsTrigger value="records">ACM Records</TabsTrigger>
                   <TabsTrigger value="content">Content</TabsTrigger>
+                  <TabsTrigger value="raw-tables">Raw Tables</TabsTrigger>
+                  <TabsTrigger value="log">Log</TabsTrigger>
                 </TabsList>
               </div>
 

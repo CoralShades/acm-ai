@@ -11,12 +11,12 @@ These block core extraction or make features unusable.
 
 | # | ID | Layer | Issue | File | Notes |
 |---|-----|-------|-------|------|-------|
-| 1 | BUG-CORRECT-BYPASS | Worker | CORRECT stage bypassed when `rejected>0, with_issues=0` — records silently discarded | `open_notebook/graphs/acm_extraction.py` (should_correct node) | Condition checks `with_issues` but not `rejected`; rejected records vanish |
-| 2 | BUG-CORRECT-JSON | Worker | `_apply_ollama_extraction_settings()` not called on correction LLM — 100% Ollama failure | `open_notebook/graphs/acm_extraction.py:~2600` | Correction model gets no `format="json"` → Ollama returns prose → parse fails |
-| 3 | BUG-NO-ACCESS-DEAD | Worker | No-Access recovery catch-22: per-row skips recovery, bulk has no docling data | `open_notebook/graphs/acm_extraction.py:1024-1031` | Per-row path never enters recovery; bulk path lacks docling_document_json |
-| 4 | BUG-PROGRESS-STUCK | Worker/API | `extraction_progress` stuck at "running" — 58% false timeout rate | `open_notebook/extractors/pipeline_logger.py`, `commands/acm_commands.py` | Final stage never emits "completed"; frontend shows spinner forever |
-| 5 | BUG-BACKFILL-500 | API | `/api/acm/backfill-buildings` crashes: `source.name` should be `source.title` | `api/routers/acm.py` | AttributeError on backfill endpoint — dead on arrival |
-| 6 | BUG-HITL-INFINITE | Frontend | HITL dialog infinite re-render — ALL write operations blocked | `frontend/src/components/jobs/CrudToolRenderers.tsx` | useEffect dependency loop; dialog renders, re-renders, never stabilizes |
+| 1 | BUG-CORRECT-BYPASS | Worker | FIXED: CORRECT stage bypassed when `rejected>0, with_issues=0` | `open_notebook/graphs/acm_extraction.py` (should_correct node) | Added `validation_status == "rejected"` early check before enum validation loop |
+| 2 | BUG-CORRECT-JSON | Worker | FIXED (pre-existing): `_apply_ollama_extraction_settings()` already applied at L1743 | `open_notebook/graphs/acm_extraction.py:~1743` | Was fixed in Bug Fix 11 Phase 4 |
+| 3 | BUG-NO-ACCESS-DEAD | Worker | TODO: No-Access recovery catch-22: per-row skips recovery | `open_notebook/graphs/acm_extraction.py:1024-1031` | Documented fix needed in recover_no_access_node docstring; deferred (low frequency) |
+| 4 | BUG-PROGRESS-STUCK | Worker/API | FIXED: `extraction_progress` stuck at "running" | `commands/acm_commands.py` | Changed UPDATE → UPSERT in `_write_terminal_status()` to create record if missing |
+| 5 | BUG-BACKFILL-500 | API | FIXED: `/api/acm/backfill-buildings` crashes without schema | `api/routers/acm.py` | Root cause: missing schema check. Added `verify_schema()` guard with HTTP 422 |
+| 6 | BUG-HITL-INFINITE | Frontend | FIXED: HITL dialog infinite re-render | `frontend/src/components/jobs/CrudToolRenderers.tsx` | Stabilized `appendMessage` via useRef + useCallback to break re-render loop |
 
 ---
 
@@ -26,11 +26,11 @@ Significant bugs affecting data quality or user workflows.
 
 | # | ID | Layer | Issue | File | Notes |
 |---|-----|-------|-------|------|-------|
-| 7 | BUG-TWO-BUILDING | Worker | Two-building extractions silently abort after building 1 | `open_notebook/graphs/acm_extraction.py` | `asyncio.gather` error handling swallows building 2+ failures |
-| 8 | BUG-COMPOUND-SAMPLE | Worker | Compound `sample_result` values + empty correction JSON | `open_notebook/extractors/orchestrator.py` | Multi-sample results like "Positive/Negative" not split; correction returns `{}` |
-| 9 | BUG-ROOM-NAME | Backend | `room_name` field misalignment — 0% recall on Alexander Hospital | `open_notebook/graphs/acm_extraction.py`, `prompts/acm/` | Prompt asks for `room_name` but schema expects `Specific_Location__c` |
-| 10 | BUG-HIDDEN-TABS | Frontend | "Raw Tables" and "Log" tabs have content but no triggers (unreachable) | `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` | Tab content exists but tab triggers missing from TabsList |
-| 11 | BUG-REREV-NULLIFY | API/Frontend | Re-Review Buildings silently nullifies intelligence fields | `open_notebook/database/repository.py:179-203` | MERGE update with partial object zeros out unset fields |
+| 7 | BUG-TWO-BUILDING | Worker | FIXED (pre-existing): `return_exceptions=True` already present | `open_notebook/graphs/acm_extraction.py` | Added DEBUG-level traceback logging for swallowed exceptions |
+| 8 | BUG-COMPOUND-SAMPLE | Worker | FIXED: Compound `sample_result` values not split | `open_notebook/domain/acm_row_mappers.py` | Added `normalize_sample_result()` — strips parentheticals, splits on `/;|` |
+| 9 | BUG-ROOM-NAME | Backend | FIXED: `room_name` prompt too vague — 0% recall | `prompts/acm/row_extraction.jinja` | Improved prompt description with examples; field mapping was correct |
+| 10 | BUG-HIDDEN-TABS | Frontend | FIXED: "Raw Tables" and "Log" tabs unreachable | `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` | Added missing TabsTrigger elements to TabsList |
+| 11 | BUG-REREV-NULLIFY | API/Frontend | FIXED: Re-Review Buildings nullifies intelligence fields | `open_notebook/database/repository.py:179-203` | Dynamic SET clause — only non-None fields included in UPSERT |
 | 12 | BUG-CLOUD-RETRY | Worker | Cloud retry fires with `model_id=None` in Ollama-only mode | `open_notebook/graphs/acm_extraction.py` | TruncationError → cloud retry → no cloud model configured → crash |
 
 ---

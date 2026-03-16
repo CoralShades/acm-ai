@@ -182,25 +182,28 @@ async def save_source_intelligence(
     """Upsert pre-extraction intelligence for a source (E30-S9).
 
     Keyed on source_id — creates on first call, merges on subsequent calls.
+
+    Only fields that are explicitly present and non-None in *data* are written.
+    This prevents a partial update (e.g. only document_meta supplied) from
+    nullifying fields that already exist in the database row (BUG-REREV-NULLIFY).
+    source_id and updated_at are always included because the WHERE clause
+    depends on source_id.
     """
     data["source_id"] = ensure_record_id(source_id)
     data["updated_at"] = datetime.now(timezone.utc)
+
+    # Filter out None values so that unset fields are not overwritten with NULL.
+    set_fields = {k: v for k, v in data.items() if v is not None}
+
+    # Build a dynamic SET clause from the surviving keys only.
+    set_clauses = ", ".join(f"{k} = $data.{k}" for k in set_fields)
+
     query = (
-        "UPSERT source_intelligence SET "
-        "source_id = $data.source_id, "
-        "document_meta = $data.document_meta, "
-        "document_structure = $data.document_structure, "
-        "building_inventory = $data.building_inventory, "
-        "page_tags = $data.page_tags, "
-        "total_pages = $data.total_pages, "
-        "total_buildings = $data.total_buildings, "
-        "document_type = $data.document_type, "
-        "register_page_range = $data.register_page_range, "
-        "field_confidence = $data.field_confidence, "
-        "updated_at = $data.updated_at "
+        f"UPSERT source_intelligence SET "
+        f"{set_clauses} "
         "WHERE source_id = $data.source_id;"
     )
-    return await repo_query(query, {"data": data})
+    return await repo_query(query, {"data": set_fields})
 
 
 async def get_source_intelligence(source_id: str) -> Optional[Dict[str, Any]]:

@@ -759,10 +759,14 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
 
     for outcome in outcomes:
         if isinstance(outcome, Exception):
+            # Log with full traceback so silent exception swallowing is visible
+            # in worker logs (Bug A5: return_exceptions=True was already set but
+            # the exception detail was lost after the warning message).
             logger.warning(
                 f"[E32-S1] Building extraction task failed: {outcome} "
                 "(skipping — partial results preserved)"
             )
+            logger.opt(exception=outcome).debug("[E32-S1] Building task exception detail")
             continue
         if outcome is None:
             continue
@@ -1201,10 +1205,14 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
     for outcome in outcomes:
         if isinstance(outcome, Exception):
+            # Log with full traceback so silent exception swallowing is visible
+            # in worker logs (Bug A5: return_exceptions=True was already set but
+            # the exception detail was lost after the warning message).
             logger.warning(
                 f"[E32-S2] Item extraction task failed: {outcome} "
                 "(skipping — partial results preserved)"
             )
+            logger.opt(exception=outcome).debug("[E32-S2] Item task exception detail")
             continue
         if outcome is None:
             continue
@@ -1825,6 +1833,19 @@ def should_correct(state: dict) -> str:
     if attempt >= max_attempts:
         return "deduplicate"
 
+    # Check if any records were explicitly rejected by the validate node.
+    # The validate node may set validation_status="rejected" for reasons (e.g.
+    # missing required fields) that the per-record re-validation below does not
+    # catch, because that loop only looks for enum/business-rule issues.
+    # Routing to "correct" here gives those records another correction attempt.
+    for record in records:
+        if getattr(record, "validation_status", None) == "rejected":
+            logger.debug(
+                f"[should_correct] Found rejected record — routing to correct "
+                f"(attempt {attempt}/{max_attempts})"
+            )
+            return "correct"
+
     # Check if any records have validation issues
     enum_fields = [
         "sample_result",
@@ -2388,7 +2409,28 @@ def _recover_not_sampled_records_ara(
 
 
 async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
-    """Graph node: recover no-access records missed by LLM extraction."""
+    """Graph node: recover no-access records missed by LLM extraction.
+
+    TODO (Bug A3 — BUG-NO-ACCESS-DEAD): Per-row extraction handles synthetic
+    rows (Type D/F — "No Access" / "Previously Removed") via
+    ``scan_text_for_synthetics()`` inside ``_extract_items_for_building``, and
+    ``per_row_actually_ran`` is set True when ALL buildings used that path.
+
+    However, ``_recover_no_access_records()`` below uses ``context.building_id``
+    and ``context.building_name`` which come from the OLD single-building
+    ``BuildingRoomContext`` — it does not iterate over all buildings in the
+    multi-building inventory.  If per-row extraction ran but missed a "No
+    Access" entry in a building whose ``building_id`` differs from
+    ``context.building_id``, recovery is silently skipped for that building.
+
+    Correct fix: replace the single-building ``_recover_no_access_records``
+    call with a loop over all buildings in ``state["inventory"].buildings``,
+    calling it once per building with that building's id/name, then merging
+    recovered records back into state["records"].  This requires surfacing
+    ``BuildingInventory`` from state (it is already stored there as
+    ``"inventory"``).  Deferred because the per-row segmenter covers the
+    common case and this is a rare edge-case; track as BUG-NO-ACCESS-DEAD.
+    """
     # Only skip recovery if per-row extraction ACTUALLY ran for all buildings.
     # When docling_document_json is NULL, per-row falls back to bulk but the env
     # var still says "per_row" — recovery must run in that case.

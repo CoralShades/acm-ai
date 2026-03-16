@@ -80,14 +80,18 @@ async def _write_terminal_status(command_id: str, status: str, records: int = 0)
     try:
         import re
         safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", str(command_id))
+        # Use UPSERT so the record is created when the PipelineLogger never
+        # successfully persisted an initial "running" row (e.g. event-loop
+        # shutdown before the fire-and-forget persist task executed).
         await repo_query(
             f"""
-            UPDATE extraction_progress:{safe_id} SET
+            UPSERT extraction_progress:{safe_id} SET
+                command_id = $command_id,
                 status = $status,
                 records_total = $records,
                 updated_at = time::now();
             """,
-            {"status": status, "records": records},
+            {"command_id": str(command_id), "status": status, "records": records},
         )
     except Exception as e:
         logger.warning(f"Failed to write terminal status for {command_id}: {e}")
