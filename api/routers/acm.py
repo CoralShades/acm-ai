@@ -2583,12 +2583,13 @@ async def list_building_records(
         if buildings:
             from open_notebook.database.repository import repo_query
 
+            sid = ensure_record_id(source_id)
             rows = await repo_query(
                 "SELECT building_record_id, count() AS cnt "
                 "FROM acm_record WHERE source_id = $source_id "
                 "AND building_record_id != NONE "
                 "GROUP BY building_record_id",
-                {"source_id": source_id},
+                {"source_id": sid},
             )
             for row in rows:
                 bid = str(row.get("building_record_id", ""))
