@@ -27,7 +27,7 @@ const FILTER_OPTIONS: Array<{ id: JobFilter; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'extracting', label: 'Extracting' },
   { id: 'pending_review', label: 'Pending' },
-  { id: 'acm_review', label: 'Records' },
+  { id: 'acm_review', label: 'In Review' },
   { id: 'published', label: 'Published' },
 ]
 

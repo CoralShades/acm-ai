@@ -29,6 +29,8 @@ export interface NavItem {
   hideInAcm?: boolean
   /** Only show this item when ACM mode is active */
   acmOnly?: boolean
+  /** Hide from sidebar nav (available elsewhere, e.g. settings dropdown or footer) */
+  hiddenFromNav?: boolean
 }
 
 export interface NavGroup {
@@ -46,13 +48,13 @@ export const navigationConfig: NavGroup[] = [
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
       { name: 'Jobs', href: '/jobs', icon: ClipboardList },
-      { name: 'ACM Register', href: '/acm', icon: FileWarning, acmOnly: true },
+      { name: 'ACM Register', href: '/acm', icon: FileWarning, acmOnly: true, hiddenFromNav: true },
       { name: 'Notebooks', href: '/notebooks', icon: BookOpen, hideInAcm: true },
       { name: 'Podcasts', href: '/podcasts', icon: Podcast, hideInAcm: true },
       { name: 'Transformations', href: '/transformations', icon: Wand2, hideInAcm: true },
-      { name: 'Search', href: '/search', icon: Search },
-      { name: 'Visit Landing', href: MARKETING_URL, icon: House, external: true },
-      { name: 'Documentation', href: MARKETING_DOCS_URL, icon: BookText, external: true },
+      { name: 'Search', href: '/search', icon: Search, hiddenFromNav: true },
+      { name: 'Visit Landing', href: MARKETING_URL, icon: House, external: true, hiddenFromNav: true },
+      { name: 'Documentation', href: MARKETING_DOCS_URL, icon: BookText, external: true, hiddenFromNav: true },
     ],
   },
   {
@@ -83,10 +85,22 @@ export function getFilteredNavigation(isAcmMode: boolean): NavGroup[] {
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
+        if (item.hiddenFromNav) return false
         if (isAcmMode && item.hideInAcm) return false
         if (!isAcmMode && item.acmOnly) return false
         return true
       }),
     }))
     .filter((group) => group.items.length > 0)
+}
+
+/** Get Configure section items (for settings dropdown) */
+export function getConfigureItems(isAcmMode: boolean): NavItem[] {
+  const configGroup = navigationConfig.find((g) => g.title === 'Configure')
+  if (!configGroup) return []
+  return configGroup.items.filter((item) => {
+    if (isAcmMode && item.hideInAcm) return false
+    if (!isAcmMode && item.acmOnly) return false
+    return true
+  })
 }

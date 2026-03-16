@@ -50,7 +50,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
-  const [chatExpanded, setChatExpanded] = useState(true)
+  const [chatExpanded, setChatExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
 
   // ACM Records tab state (ACMGrid + dialogs)
@@ -264,15 +264,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                   <TabsTrigger value="buildings">Buildings</TabsTrigger>
                   <TabsTrigger value="records">ACM Records</TabsTrigger>
                   <TabsTrigger value="content">Content</TabsTrigger>
-                  <TabsTrigger value="raw-tables">Raw Tables</TabsTrigger>
-                  <TabsTrigger value="log">Extraction Log</TabsTrigger>
                 </TabsList>
-                <Button variant="outline" size="sm" asChild className="shrink-0">
-                  <Link href={`/source/${sourceId}`}>
-                    <LayoutDashboard className="h-4 w-4 mr-1" />
-                    ACM Register
-                  </Link>
-                </Button>
               </div>
 
               <div className="min-h-0 flex-1 overflow-hidden">

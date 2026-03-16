@@ -8,7 +8,6 @@ import type { ColDef, CellValueChangedEvent } from 'ag-grid-community'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
 import { Eye, Plus, RefreshCw, Search } from 'lucide-react'
 import type { BuildingRecord, BuildingRecordUpdateRequest } from '@/lib/types/building'
 
@@ -29,7 +28,6 @@ interface BuildingReviewGridProps {
   onDataChanged?: () => void
 }
 
-type ScopeFilter = 'all' | 'in_scope' | 'out_of_scope'
 
 /**
  * Fetch buildings from the V3 API.
@@ -70,12 +68,10 @@ async function saveBuilding(
 function ActionsRenderer({
   data,
   onView,
-  onMarkOutOfScope,
   onRemove,
 }: {
   data: BuildingRowData
   onView: () => void
-  onMarkOutOfScope: (buildingId: string) => void
   onRemove: (buildingId: string) => void
 }) {
   return (
@@ -92,18 +88,6 @@ function ActionsRenderer({
       >
         <Eye className="h-3 w-3 mr-1" />
         View
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-6 px-2 text-xs"
-        onClick={(e) => {
-          e.stopPropagation()
-          onMarkOutOfScope(data.id)
-        }}
-        title="Mark building as out of scope"
-      >
-        Out of Scope
       </Button>
       <Button
         variant="ghost"
@@ -131,7 +115,6 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
   const router = useRouter()
   const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
 
   // Local state for rows — starts from query data, allows optimistic adds/removes
   const [localRows, setLocalRows] = useState<BuildingRowData[] | null>(null)
@@ -157,13 +140,6 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
   const rows: BuildingRowData[] = localRows ?? fetchedBuildings ?? []
   const baseRows = rows.filter((row) => !row._removed)
   const displayRows = baseRows.filter((row) => {
-    if (scopeFilter === 'in_scope' && row.building_out_of_scope) {
-      return false
-    }
-    if (scopeFilter === 'out_of_scope' && !row.building_out_of_scope) {
-      return false
-    }
-
     const normalizedSearch = searchText.trim().toLowerCase()
     if (!normalizedSearch) return true
 
@@ -356,13 +332,12 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
             <ActionsRenderer
               data={params.data}
               onView={handleView}
-              onMarkOutOfScope={handleMarkOutOfScope}
               onRemove={handleRemove}
             />
           ) : null,
       },
     ],
-    [handleView, handleMarkOutOfScope, handleRemove]
+    [handleView, handleRemove]
   )
 
   const defaultColDef = useMemo<ColDef>(
@@ -406,45 +381,6 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant={scopeFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              className={cn(
-                'rounded-full',
-                scopeFilter === 'all' &&
-                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
-              )}
-              onClick={() => setScopeFilter('all')}
-            >
-              All
-            </Button>
-            <Button
-              variant={scopeFilter === 'in_scope' ? 'default' : 'outline'}
-              size="sm"
-              className={cn(
-                'rounded-full',
-                scopeFilter === 'in_scope' &&
-                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
-              )}
-              onClick={() => setScopeFilter('in_scope')}
-            >
-              In Scope
-            </Button>
-            <Button
-              variant={scopeFilter === 'out_of_scope' ? 'default' : 'outline'}
-              size="sm"
-              className={cn(
-                'rounded-full',
-                scopeFilter === 'out_of_scope' &&
-                  'bg-[color:var(--vaea-teal-500)] text-white hover:bg-[color:var(--vaea-teal-700)]'
-              )}
-              onClick={() => setScopeFilter('out_of_scope')}
-            >
-              Out of Scope
-            </Button>
-          </div>
-
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCw className="mr-1.5 h-4 w-4" />
@@ -466,6 +402,21 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
           Showing {displayRows.length} of {baseRows.length} building
           {baseRows.length !== 1 ? 's' : ''}
         </div>
+
+        {/* Completion summary */}
+        {baseRows.length > 0 && (() => {
+          const missingAddress = baseRows.filter((r) => !r.building_address).length
+          const missingName = baseRows.filter((r) => !r.building_name || r.building_name === 'Unknown').length
+          const totalMissing = missingAddress + missingName
+          if (totalMissing === 0) return null
+          return (
+            <div className="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs dark:border-amber-800 dark:bg-amber-950/30">
+              <span className="font-medium text-amber-700 dark:text-amber-300">Details needed:</span>
+              {missingName > 0 && <span className="text-amber-600 dark:text-amber-400">{missingName} missing name{missingName !== 1 ? 's' : ''}</span>}
+              {missingAddress > 0 && <span className="text-amber-600 dark:text-amber-400">{missingAddress} missing address{missingAddress !== 1 ? 'es' : ''}</span>}
+            </div>
+          )
+        })()}
       </div>
 
       {/* AG Grid */}

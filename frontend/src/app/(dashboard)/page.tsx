@@ -22,10 +22,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Upload,
-  Search,
   TrendingUp,
   Clock,
-  ExternalLink,
+  Building2,
+  ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs';
@@ -61,6 +61,12 @@ function DashboardPageContent() {
       }).length
     : 0;
 
+  // Document extraction stats
+  const extracting = sources?.filter((s) => s.review_status === 'extracting').length ?? 0;
+  const published = sources?.filter((s) => !s.review_status || s.review_status === 'published').length ?? 0;
+  const totalBuildings = sources?.reduce((sum, s) => sum + (s.building_count ?? 0), 0) ?? 0;
+  const totalRecords = sources?.reduce((sum, s) => sum + (s.insights_count ?? 0), 0) ?? 0;
+
   if (sourcesLoading || acmLoading) {
     return <DashboardSkeleton />
   }
@@ -75,34 +81,123 @@ function DashboardPageContent() {
       </div>
 
       <BentoGrid columns={4} gap="md">
-        {/* Total Sources - Small */}
+        {/* === Row 1: Document-centric stats (primary) === */}
+
+        {/* Total Documents */}
         <BentoCard size="sm" isLoading={sourcesLoading}>
           <BentoCardHeader>
-            <BentoCardTitle>Total Sources</BentoCardTitle>
+            <BentoCardTitle>Total Documents</BentoCardTitle>
             <BentoCardIcon>
               <FileText className="w-5 h-5" />
             </BentoCardIcon>
           </BentoCardHeader>
           <BentoCardContent>
             {sourcesError ? (
-              <p className="text-sm text-destructive">Failed to load sources</p>
+              <p className="text-sm text-destructive">Failed to load</p>
             ) : (
               <>
                 <BentoCardValue>{totalSources}</BentoCardValue>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {recentActivityCount > 0
-                    ? `${recentActivityCount} added this week`
-                    : 'Documents uploaded'}
+                  {recentActivityCount > 0 ? `${recentActivityCount} added this week` : 'Uploaded'}
                 </p>
               </>
             )}
           </BentoCardContent>
         </BentoCard>
 
-        {/* High Risk Count - Small */}
+        {/* AI Extracted */}
+        <BentoCard size="sm" isLoading={sourcesLoading}>
+          <BentoCardHeader>
+            <BentoCardTitle>AI Extracted</BentoCardTitle>
+            <BentoCardIcon className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300">
+              <CheckCircle className="w-5 h-5" />
+            </BentoCardIcon>
+          </BentoCardHeader>
+          <BentoCardContent>
+            <BentoCardValue className="text-emerald-600 dark:text-emerald-400">{published}</BentoCardValue>
+            <p className="text-sm text-muted-foreground mt-1">
+              {extracting > 0 ? `${extracting} in progress` : 'Completed'}
+            </p>
+          </BentoCardContent>
+        </BentoCard>
+
+        {/* Total Buildings */}
+        <BentoCard size="sm" isLoading={sourcesLoading}>
+          <BentoCardHeader>
+            <BentoCardTitle>Buildings</BentoCardTitle>
+            <BentoCardIcon>
+              <Building2 className="w-5 h-5" />
+            </BentoCardIcon>
+          </BentoCardHeader>
+          <BentoCardContent>
+            <BentoCardValue>{totalBuildings}</BentoCardValue>
+            <p className="text-sm text-muted-foreground mt-1">
+              Across all documents
+            </p>
+          </BentoCardContent>
+        </BentoCard>
+
+        {/* Total ACM Records */}
+        <BentoCard size="sm" isLoading={sourcesLoading}>
+          <BentoCardHeader>
+            <BentoCardTitle>ACM Records</BentoCardTitle>
+            <BentoCardIcon>
+              <ClipboardList className="w-5 h-5" />
+            </BentoCardIcon>
+          </BentoCardHeader>
+          <BentoCardContent>
+            <BentoCardValue>{totalRecords}</BentoCardValue>
+            <p className="text-sm text-muted-foreground mt-1">
+              Items extracted
+            </p>
+          </BentoCardContent>
+        </BentoCard>
+
+        {/* === Row 2: Recent Uploads + Quick Actions (primary) === */}
+
+        {/* Recent Uploads - Large */}
+        <BentoCard size="lg" isLoading={sourcesLoading}>
+          <BentoCardHeader>
+            <BentoCardTitle>Recent Uploads</BentoCardTitle>
+            <BentoCardIcon>
+              <Clock className="w-5 h-5" />
+            </BentoCardIcon>
+          </BentoCardHeader>
+          <BentoCardContent>
+            <RecentSourcesList sources={recentSources} />
+          </BentoCardContent>
+          <BentoCardFooter>
+            <Link href="/jobs" className="text-sm text-primary hover:underline">
+              View all jobs →
+            </Link>
+          </BentoCardFooter>
+        </BentoCard>
+
+        {/* Quick Actions */}
+        <BentoCard size="md">
+          <BentoCardHeader>
+            <BentoCardTitle>Quick Actions</BentoCardTitle>
+          </BentoCardHeader>
+          <BentoCardContent className="space-y-3">
+            <Button onClick={openSourceDialog} className="w-full justify-start">
+              <Upload className="w-4 h-4 mr-2" />
+              Upload New Document
+            </Button>
+            <Button variant="outline" asChild className="w-full justify-start">
+              <Link href="/jobs">
+                <ClipboardList className="w-4 h-4 mr-2" />
+                View All Jobs
+              </Link>
+            </Button>
+          </BentoCardContent>
+        </BentoCard>
+
+        {/* === Row 3: Risk profile (secondary priority) === */}
+
+        {/* High Risk */}
         <BentoCard size="sm" isLoading={acmLoading}>
           <BentoCardHeader>
-            <BentoCardTitle>High Risk Items</BentoCardTitle>
+            <BentoCardTitle>High Risk</BentoCardTitle>
             <BentoCardIcon className="bg-danger-100 text-danger-600">
               <AlertTriangle className="w-5 h-5" />
             </BentoCardIcon>
@@ -112,18 +207,14 @@ function DashboardPageContent() {
               <p className="text-sm text-destructive">Failed to load</p>
             ) : (
               <>
-                <BentoCardValue className="text-danger-600">
-                  {acmSummary?.highRisk || 0}
-                </BentoCardValue>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Require attention
-                </p>
+                <BentoCardValue className="text-danger-600">{acmSummary?.highRisk || 0}</BentoCardValue>
+                <p className="text-sm text-muted-foreground mt-1">Require attention</p>
               </>
             )}
           </BentoCardContent>
         </BentoCard>
 
-        {/* Medium Risk Count - Small */}
+        {/* Medium Risk */}
         <BentoCard size="sm" isLoading={acmLoading}>
           <BentoCardHeader>
             <BentoCardTitle>Medium Risk</BentoCardTitle>
@@ -136,18 +227,14 @@ function DashboardPageContent() {
               <p className="text-sm text-destructive">Failed to load</p>
             ) : (
               <>
-                <BentoCardValue className="text-warning-600">
-                  {acmSummary?.mediumRisk || 0}
-                </BentoCardValue>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Monitor regularly
-                </p>
+                <BentoCardValue className="text-warning-600">{acmSummary?.mediumRisk || 0}</BentoCardValue>
+                <p className="text-sm text-muted-foreground mt-1">Monitor regularly</p>
               </>
             )}
           </BentoCardContent>
         </BentoCard>
 
-        {/* Low Risk Count - Small */}
+        {/* Low Risk */}
         <BentoCard size="sm" isLoading={acmLoading}>
           <BentoCardHeader>
             <BentoCardTitle>Low Risk</BentoCardTitle>
@@ -160,72 +247,20 @@ function DashboardPageContent() {
               <p className="text-sm text-destructive">Failed to load</p>
             ) : (
               <>
-                <BentoCardValue className="text-success-600">
-                  {acmSummary?.lowRisk || 0}
-                </BentoCardValue>
-                <p className="text-sm text-muted-foreground mt-1">
-                  In good condition
-                </p>
+                <BentoCardValue className="text-success-600">{acmSummary?.lowRisk || 0}</BentoCardValue>
+                <p className="text-sm text-muted-foreground mt-1">In good condition</p>
               </>
             )}
           </BentoCardContent>
         </BentoCard>
 
-        {/* Risk Distribution Chart - Large */}
-        <BentoCard size="lg" isLoading={acmLoading}>
+        {/* Risk Distribution Chart */}
+        <BentoCard size="sm" isLoading={acmLoading}>
           <BentoCardHeader>
             <BentoCardTitle>Risk Distribution</BentoCardTitle>
           </BentoCardHeader>
           <BentoCardContent>
             <RiskChart data={acmSummary} />
-          </BentoCardContent>
-          <BentoCardFooter>
-            <Link href="/acm" className="text-sm text-primary hover:underline">
-              View all ACM data →
-            </Link>
-          </BentoCardFooter>
-        </BentoCard>
-
-        {/* Recent Uploads - Medium */}
-        <BentoCard size="md" isLoading={sourcesLoading}>
-          <BentoCardHeader>
-            <BentoCardTitle>Recent Uploads</BentoCardTitle>
-            <BentoCardIcon>
-              <Clock className="w-5 h-5" />
-            </BentoCardIcon>
-          </BentoCardHeader>
-          <BentoCardContent>
-            <RecentSourcesList sources={recentSources} />
-          </BentoCardContent>
-          <BentoCardFooter>
-            <Link href="/sources" className="text-sm text-primary hover:underline">
-              View all sources →
-            </Link>
-          </BentoCardFooter>
-        </BentoCard>
-
-        {/* Quick Actions - Medium */}
-        <BentoCard size="md">
-          <BentoCardHeader>
-            <BentoCardTitle>Quick Actions</BentoCardTitle>
-          </BentoCardHeader>
-          <BentoCardContent className="space-y-3">
-            <Button onClick={openSourceDialog} className="w-full justify-start">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload New Document
-            </Button>
-            <Button variant="outline" asChild className="w-full justify-start">
-              <Link href="/sources">
-                <Search className="w-4 h-4 mr-2" />
-                Search Sources
-              </Link>
-            </Button>
-            <Button variant="outline" asChild className="w-full justify-start">
-              <Link href="/acm">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                View ACM Register
-              </Link>
-            </Button>
           </BentoCardContent>
         </BentoCard>
       </BentoGrid>

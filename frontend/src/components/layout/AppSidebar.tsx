@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
-import { useUserModeStore } from '@/lib/stores/user-mode-store'
 import { Logo } from '@/components/brand/Logo'
 import {
   Tooltip,
@@ -25,16 +24,24 @@ import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
 import { VendorAttribution } from '@/components/brand/VendorAttribution'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   LogOut,
   ChevronLeft,
   ChevronDown,
   Menu,
   Upload,
   Command,
-  Shield,
+  Settings,
+  ExternalLink,
 } from 'lucide-react'
-import { getFilteredNavigation, type NavGroup } from '@/config/navigation'
-import { toast } from 'sonner'
+import { getFilteredNavigation, getConfigureItems, type NavGroup } from '@/config/navigation'
+import { MARKETING_URL, MARKETING_DOCS_URL } from '@/lib/site-urls'
 import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 
 const isAcmMode = process.env.NEXT_PUBLIC_ACM_MODE !== 'false'
@@ -44,13 +51,13 @@ export function AppSidebar() {
   const { logout } = useAuth()
   const { isCollapsed, expandedSections, toggleCollapse, toggleSection } =
     useSidebarStore()
-  const { mode, setMode } = useUserModeStore()
   const router = useRouter()
   const { openSourceDialog } = useCreateDialogs()
 
   const [isMac, setIsMac] = useState(true) // Default to Mac for SSR
 
   const navigation = useMemo(() => getFilteredNavigation(isAcmMode), [])
+  const configureItems = useMemo(() => getConfigureItems(isAcmMode), [])
 
   // Detect platform for keyboard shortcut display
   useEffect(() => {
@@ -153,7 +160,7 @@ export function AppSidebar() {
 
           {/* Navigation Sections with Collapsible Groups */}
           {navigation
-            .filter((section) => mode === 'admin' || section.title !== 'Configure')
+            .filter((section) => section.title !== 'Configure')
             .map((section, index) => {
             const isExpanded = expandedSections[section.title] ?? true
             const hasActiveItem = isSectionActive(section)
@@ -287,99 +294,72 @@ export function AppSidebar() {
             </div>
           )}
 
-          {/* User Mode Toggle */}
-          {!isCollapsed && (
-            <div className="flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-1">
-              <button
-                onClick={() => {
-                  setMode('standard')
-                  if (mode !== 'standard') {
-                    toast.info('Configure features hidden. Switch to Admin to access them.')
-                  }
-                }}
-                className={cn(
-                  'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
-                  mode === 'standard'
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-                )}
-              >
-                Standard
-              </button>
-              <button
-                onClick={() => setMode('admin')}
-                className={cn(
-                  'flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
-                  mode === 'admin'
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
-                )}
-              >
-                Admin
-              </button>
-            </div>
-          )}
-          {isCollapsed && (
+          {/* Settings Dropdown */}
+          {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   className="w-full justify-center"
-                  onClick={() => setMode(mode === 'standard' ? 'admin' : 'standard')}
-                  aria-label={`Switch to ${mode === 'standard' ? 'Admin' : 'Standard'} mode`}
+                  onClick={() => router.push('/settings')}
+                  aria-label="Settings"
                 >
-                  <Shield className={cn('h-4 w-4', mode === 'admin' && 'text-primary')} />
+                  <Settings className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                Mode: {mode === 'standard' ? 'Standard' : 'Admin'}
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          <div
-            className={cn(
-              'flex',
-              isCollapsed ? 'justify-center' : 'justify-start'
-            )}
-          >
-            {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <ThemeToggle iconOnly />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">Theme</TooltipContent>
-              </Tooltip>
-            ) : (
-              <ThemeToggle />
-            )}
-          </div>
-
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-center"
-                  onClick={logout}
-                  aria-label="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Sign Out</TooltipContent>
+              <TooltipContent side="right">Settings</TooltipContent>
             </Tooltip>
           ) : (
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3"
-              onClick={logout}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-3"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top" className="w-56">
+                {configureItems.map((item) => (
+                  <DropdownMenuItem key={item.name} asChild>
+                    <Link href={item.href} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <div className="flex items-center gap-2">
+                    <ThemeToggle />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Footer links */}
+          {!isCollapsed && (
+            <div className="flex items-center justify-center gap-3 pt-1 text-[10px] text-sidebar-foreground/40">
+              <a href={MARKETING_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 hover:text-sidebar-foreground/60 transition-colors">
+                VAEA
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+              <span>·</span>
+              <a href={MARKETING_DOCS_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-0.5 hover:text-sidebar-foreground/60 transition-colors">
+                Docs
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            </div>
           )}
         </div>
       </div>
