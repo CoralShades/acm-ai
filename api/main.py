@@ -161,9 +161,15 @@ app.add_middleware(
 )
 
 # Add CORS middleware last (so it processes first)
+_cors_env = os.environ.get("CORS_ALLOWED_ORIGINS", "*")
+_cors_origins: list[str] = (
+    [o.strip() for o in _cors_env.split(",") if o.strip()]
+    if _cors_env != "*"
+    else ["*"]
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

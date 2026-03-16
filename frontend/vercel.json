@@ -1,5 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "installCommand": "npm install --force"
+  "installCommand": "npm install --force",
+  "functions": {
+    "src/app/api/copilotkit/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/copilot-crud/route.ts": {
+      "maxDuration": 60
+    }
+  }
 }

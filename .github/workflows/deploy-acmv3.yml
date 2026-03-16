@@ -1,0 +1,119 @@
+name: Deploy ACMV3
+
+on:
+  push:
+    branches: [ACMV3]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-acmv3
+  cancel-in-progress: true
+
+jobs:
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Pull Vercel environment
+        working-directory: ./frontend
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build
+        working-directory: ./frontend
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy
+        working-directory: ./frontend
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  deploy-backend:
+    name: Deploy Backend to RunPod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.RUNPOD_SSH_HOST }}
+          port: ${{ secrets.RUNPOD_SSH_PORT }}
+          key: ${{ secrets.RUNPOD_SSH_KEY }}
+          username: root
+          command_timeout: 5m
+          script: |
+            export PATH="$HOME/.local/bin:$PATH"
+            cd /workspace/acm-ai
+
+            echo "=== Pulling latest ACMV3 ==="
+            git fetch origin ACMV3
+            git checkout ACMV3
+            git reset --hard origin/ACMV3
+
+            echo "=== Syncing dependencies ==="
+            uv sync --quiet
+
+            echo "=== Restarting API ==="
+            tmux send-keys -t api C-c
+            sleep 2
+            tmux send-keys -t api "cd /workspace/acm-ai && API_HOST=0.0.0.0 API_RELOAD=false uv run python run_api.py 2>&1 | tee logs/api.log" Enter
+
+            echo "=== Restarting Worker ==="
+            tmux send-keys -t worker C-c
+            sleep 2
+            tmux send-keys -t worker "cd /workspace/acm-ai && uv run python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log" Enter
+
+            echo "=== Waiting for API health ==="
+            for i in $(seq 1 20); do
+              if curl -sf http://localhost:5055/health > /dev/null 2>&1; then
+                echo "API is healthy!"
+                exit 0
+              fi
+              sleep 3
+            done
+            echo "WARNING: API health check timed out"
+            exit 1
+
+  verify:
+    name: End-to-End Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-backend]
+    steps:
+      - name: Wait for services to stabilize
+        run: sleep 15
+
+      - name: Check Vercel frontend
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w '%{http_code}' https://demo.vaea.coralshades.ai/)
+          echo "Vercel frontend: HTTP $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
+
+      - name: Check API through Vercel proxy
+        run: |
+          RESPONSE=$(curl -sf https://demo.vaea.coralshades.ai/api/health || echo '{"status":"error"}')
+          echo "API via Vercel: $RESPONSE"
+          echo "$RESPONSE" | grep -q '"healthy"' || exit 1
+
+      - name: Check runtime config
+        run: |
+          RESPONSE=$(curl -sf https://demo.vaea.coralshades.ai/config || echo '{}')
+          echo "Runtime config: $RESPONSE"
+          echo "$RESPONSE" | grep -q 'demo.vaea.coralshades.ai' || exit 1
