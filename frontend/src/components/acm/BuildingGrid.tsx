@@ -12,7 +12,8 @@ import type {
 } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { Button } from '@/components/ui/button'
-import { Eye } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Eye, Columns3, Check } from 'lucide-react'
 import { BuildingViewDialog } from '@/components/acm/BuildingViewDialog'
 import type { BuildingRecord } from '@/lib/types/building'
 import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
@@ -20,7 +21,7 @@ import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
 
-const COLUMN_STATE_KEY = 'building-grid-column-state'
+const COLUMN_STATE_KEY = 'building-grid-column-state-v2'
 
 /**
  * Default visible column field keys (16 fields).
@@ -35,6 +36,8 @@ const DEFAULT_VISIBLE_FIELDS = new Set([
   'state',
   'building_type',
   'building_category',
+  'building_sub_category',
+  'building_risk_rating',
   'building_construction',
   'building_year',
   'number_of_levels',
@@ -76,6 +79,8 @@ const HEADER_NAME_MAP: Record<string, string> = {
   state: 'State',
   building_type: 'Asset Type',
   building_category: 'Asset Category',
+  building_sub_category: 'Sub Category',
+  building_risk_rating: 'Asset Rating',
   building_construction: 'Construction Type',
   building_year: 'Year Built',
   number_of_levels: 'Number of Levels',
@@ -99,6 +104,8 @@ export function BuildingGrid({
   const [gridApi, setGridApi] = useState<GridApi<BuildingRecord> | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingRecord | null>(null)
+  const [colPickerOpen, setColPickerOpen] = useState(false)
+  const [colPickerKey, setColPickerKey] = useState(0)
 
   const handleViewBuilding = useCallback((building: BuildingRecord) => {
     setSelectedBuilding(building)
@@ -133,6 +140,8 @@ export function BuildingGrid({
             'state',
             'building_type',
             'building_category',
+            'building_sub_category',
+            'building_risk_rating',
             'building_construction',
             'building_year',
             'number_of_levels',
@@ -227,7 +236,6 @@ export function BuildingGrid({
   const defaultColDef = useMemo<ColDef>(
     () => ({
       resizable: true,
-      suppressMenu: true,
     }),
     []
   )
@@ -261,6 +269,45 @@ export function BuildingGrid({
     }
   }, [])
 
+  // Column visibility picker: get current columns for the popover
+  const pickerColumns = useMemo(() => {
+    if (!gridApi) return []
+    const allCols = gridApi.getColumns() ?? []
+    return allCols
+      .filter((col) => {
+        const id = col.getColId()
+        return id && col.getColDef().headerName !== 'Actions'
+      })
+      .map((col) => {
+        const id = col.getColId()
+        return {
+          colId: id,
+          displayName: HEADER_NAME_MAP[id] ?? humanize(id),
+          visible: col.isVisible(),
+        }
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute when popover opens or column toggled
+  }, [gridApi, colPickerOpen, colPickerKey])
+
+  const handleToggleColumn = useCallback(
+    (colId: string) => {
+      if (!gridApi) return
+      const col = gridApi.getColumn(colId)
+      if (!col) return
+      gridApi.setColumnsVisible([colId], !col.isVisible())
+      // Force re-render of picker columns
+      setColPickerKey((k) => k + 1)
+    },
+    [gridApi]
+  )
+
+  const handleResetColumns = useCallback(() => {
+    if (!gridApi) return
+    localStorage.removeItem(COLUMN_STATE_KEY)
+    gridApi.resetColumnState()
+    setColPickerOpen(false)
+  }, [gridApi])
+
   // Row click opens the BuildingViewDialog
   const onRowClicked = useCallback(
     (event: RowClickedEvent<BuildingRecord>) => {
@@ -273,6 +320,56 @@ export function BuildingGrid({
 
   return (
     <>
+      {/* Column visibility toolbar */}
+      <div className="flex items-center justify-end mb-2">
+        <Popover open={colPickerOpen} onOpenChange={setColPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" title="Column visibility">
+              <Columns3 className="mr-1 h-4 w-4" />
+              Columns
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-0" align="end">
+            <div
+              className="max-h-[320px] overflow-y-auto p-2"
+              role="listbox"
+              aria-label="Toggle column visibility"
+            >
+              {pickerColumns.map((col) => (
+                <button
+                  key={col.colId}
+                  role="option"
+                  aria-selected={col.visible}
+                  className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted cursor-pointer text-left"
+                  onClick={() => handleToggleColumn(col.colId)}
+                >
+                  <div
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                      col.visible
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : 'border-muted-foreground/30'
+                    }`}
+                  >
+                    {col.visible && <Check className="h-3 w-3" />}
+                  </div>
+                  <span className="truncate">{col.displayName}</span>
+                </button>
+              ))}
+            </div>
+            <div className="border-t p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs"
+                onClick={handleResetColumns}
+              >
+                Reset to Default
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
       <div
         className="ag-theme-alpine w-full"
         role="region"

@@ -20,6 +20,8 @@ export interface BuildingRecord {
   postcode: string | null
   building_type: string | null
   building_category: string | null
+  building_sub_category: string | null
+  building_risk_rating: string | null
   building_address_lga: string | null
   building_address_region: string | null
   roof_type: string | null
@@ -81,6 +83,8 @@ export interface BuildingRecordUpdateRequest {
   postcode?: string | null
   building_type?: string | null
   building_category?: string | null
+  building_sub_category?: string | null
+  building_risk_rating?: string | null
   building_address_lga?: string | null
   building_address_region?: string | null
   roof_type?: string | null

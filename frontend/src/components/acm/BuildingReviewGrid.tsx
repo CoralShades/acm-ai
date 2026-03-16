@@ -221,6 +221,8 @@ export function BuildingReviewGrid({ sourceId, onDataChanged }: BuildingReviewGr
       postcode: null,
       building_type: null,
       building_category: null,
+      building_sub_category: null,
+      building_risk_rating: null,
       building_address_lga: null,
       building_address_region: null,
       roof_type: null,

@@ -13,7 +13,7 @@ import { ProvenanceViewer } from './ProvenanceViewer'
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
 
-const COLUMN_STATE_KEY = 'acm-grid-column-state'
+const COLUMN_STATE_KEY = 'acm-grid-column-state-v2'
 
 // Expose grid control methods via ref
 export interface ACMGridRef {
@@ -473,7 +473,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
   const defaultColDef = useMemo<ColDef>(
     () => ({
       resizable: true,
-      suppressMenu: true,
     }),
     []
   )

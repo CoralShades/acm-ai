@@ -77,9 +77,9 @@ export function BuildingViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
-          <DialogTitle>{displayName}</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-3 shrink-0 border-b">
+          <DialogTitle className="truncate">{displayName}</DialogTitle>
           <DialogDescription className="text-xs">
             {localBuilding?.internal_id ?? ''}{' '}
             {localBuilding?.record_count != null && (

@@ -324,7 +324,6 @@ export function ACMRecordDialog({
                       onChange={(val) => setValue('building_type', val)}
                       placeholder="Select building type"
                       id="building_type"
-                      className="border border-input rounded-md px-3 py-2"
                     />
                   ) : (
                     <Input
@@ -346,7 +345,6 @@ export function ACMRecordDialog({
                       onChange={(val) => setValue('building_construction', val)}
                       placeholder="Select category"
                       id="building_construction"
-                      className="border border-input rounded-md px-3 py-2"
                     />
                   ) : (
                     <Input
@@ -475,7 +473,6 @@ export function ACMRecordDialog({
                       onChange={(val) => setValue('friable', val)}
                       placeholder="Select friability"
                       id="friable"
-                      className="border border-input rounded-md px-3 py-2"
                     />
                   ) : (
                     <Select
@@ -504,7 +501,6 @@ export function ACMRecordDialog({
                       onChange={(val) => setValue('acm_product_group', val)}
                       placeholder="Select classification"
                       id="acm_product_group"
-                      className="border border-input rounded-md px-3 py-2"
                     />
                   ) : (
                     <Select
@@ -530,7 +526,6 @@ export function ACMRecordDialog({
                       onChange={(val) => setValue('acm_product_type', val)}
                       placeholder="Select sub-classification"
                       id="acm_product_type"
-                      className="border border-input rounded-md px-3 py-2"
                     />
                   ) : (
                     <Select

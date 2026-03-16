@@ -19,6 +19,7 @@ import {
   getRecordBuildingTabId,
 } from '@/components/acm/BuildingTabFilter'
 import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
+import { ColumnVisibilityPicker } from '@/components/acm/ColumnVisibilityPicker'
 import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
 import { ACMRecordDetailDialog } from '@/components/acm/ACMRecordDetailDialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -323,6 +324,11 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                           records={records}
                           selectedBuilding={selectedBuilding}
                           onBuildingChange={setSelectedBuilding}
+                        />
+                        {/* Column visibility picker */}
+                        <ColumnVisibilityPicker
+                          gridApi={gridRef.current?.getGridApi() ?? null}
+                          onResetColumns={() => gridRef.current?.resetColumns()}
                         />
                         {/* Per-building + complete export */}
                         <DropdownMenu>

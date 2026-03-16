@@ -67,6 +67,12 @@ export function PDFPageViewer({ pdfUrl, pageNumber: initialPage, bbox, className
 
   // Zoom state
   const [scale, setScale] = useState(1.0)
+  const prevScaleRef = useRef(1.0)
+
+  // Space+drag panning state
+  const [isPanning, setIsPanning] = useState(false)
+  const [isPanningActive, setIsPanningActive] = useState(false)
+  const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
 
   // Page dimensions for bbox overlay
   const [pageDimensions, setPageDimensions] = useState<{
@@ -286,6 +292,88 @@ export function PDFPageViewer({ pdfUrl, pageNumber: initialPage, bbox, className
     root.addEventListener('keydown', handler)
     return () => root.removeEventListener('keydown', handler)
   }, [searchOpen, toggleSearch, zoomIn, zoomOut, resetZoom])
+
+  // Space key for panning mode (Photoshop-style space+drag)
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't activate panning if focused on search input
+      if (e.key === ' ' && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault()
+        setIsPanning(true)
+      }
+    }
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        setIsPanning(false)
+        setIsPanningActive(false)
+      }
+    }
+
+    root.addEventListener('keydown', handleKeyDown)
+    root.addEventListener('keyup', handleKeyUp)
+    return () => {
+      root.removeEventListener('keydown', handleKeyDown)
+      root.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [])
+
+  // Preserve scroll center when zoom changes
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container || prevScaleRef.current === scale) return
+
+    const prevScale = prevScaleRef.current
+    prevScaleRef.current = scale
+
+    // Calculate viewport center point relative to content
+    const centerX = (container.scrollLeft + container.clientWidth / 2) / prevScale
+    const centerY = (container.scrollTop + container.clientHeight / 2) / prevScale
+
+    requestAnimationFrame(() => {
+      container.scrollLeft = centerX * scale - container.clientWidth / 2
+      container.scrollTop = centerY * scale - container.clientHeight / 2
+    })
+  }, [scale])
+
+  // Mouse handlers for space+drag panning
+  const handlePanMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isPanning) return
+      e.preventDefault()
+      setIsPanningActive(true)
+      const container = scrollContainerRef.current
+      if (container) {
+        panStartRef.current = {
+          x: e.clientX,
+          y: e.clientY,
+          scrollLeft: container.scrollLeft,
+          scrollTop: container.scrollTop,
+        }
+      }
+    },
+    [isPanning]
+  )
+
+  const handlePanMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isPanningActive) return
+      e.preventDefault()
+      const container = scrollContainerRef.current
+      if (!container) return
+      const dx = e.clientX - panStartRef.current.x
+      const dy = e.clientY - panStartRef.current.y
+      container.scrollLeft = panStartRef.current.scrollLeft - dx
+      container.scrollTop = panStartRef.current.scrollTop - dy
+    },
+    [isPanningActive]
+  )
+
+  const handlePanMouseUp = useCallback(() => {
+    setIsPanningActive(false)
+  }, [])
 
   // ─── Render ─────────────────────────────────────────
 
@@ -522,37 +610,47 @@ export function PDFPageViewer({ pdfUrl, pageNumber: initialPage, bbox, className
       <div
         ref={scrollContainerRef}
         className={cn(
-          'overflow-auto flex justify-center p-4 bg-muted/10',
-          loading || error ? 'hidden' : ''
+          'overflow-auto p-4 bg-muted/10',
+          loading || error ? 'hidden' : '',
+          isPanning && !isPanningActive && 'cursor-grab',
+          isPanningActive && 'cursor-grabbing select-none'
         )}
         style={{ maxHeight: '65vh' }}
+        onMouseDown={handlePanMouseDown}
+        onMouseMove={handlePanMouseMove}
+        onMouseUp={handlePanMouseUp}
+        onMouseLeave={handlePanMouseUp}
       >
-        <Document
-          file={pdfUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading=""
-          error=""
-        >
-          <div ref={pageContainerRef} className="relative inline-block">
-            <Page
-              pageNumber={pageNumber}
-              scale={scale}
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-              className="shadow-md"
-              onRenderSuccess={onPageRenderSuccess}
-            />
-            {overlayStyle && (
-              <div
-                ref={bboxOverlayRef}
-                className="pdf-bbox-highlight"
-                style={overlayStyle}
-                aria-hidden="true"
+        {/* Centering wrapper: margin auto centers when content < container,
+            left-aligns when content overflows so scrollbar reaches both edges */}
+        <div style={{ width: 'fit-content', margin: '0 auto' }}>
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading=""
+            error=""
+          >
+            <div ref={pageContainerRef} className="relative inline-block">
+              <Page
+                pageNumber={pageNumber}
+                scale={scale}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                className="shadow-md"
+                onRenderSuccess={onPageRenderSuccess}
               />
-            )}
-          </div>
-        </Document>
+              {overlayStyle && (
+                <div
+                  ref={bboxOverlayRef}
+                  className="pdf-bbox-highlight"
+                  style={overlayStyle}
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+          </Document>
+        </div>
       </div>
 
       {/* ─── Status Bar ─── */}
