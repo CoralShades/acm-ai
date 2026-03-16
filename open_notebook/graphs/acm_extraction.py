@@ -1346,7 +1346,12 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
         if not record.product:
             issues.append("Missing required field: product")
         if not record.material_description:
-            issues.append("Missing required field: material_description")
+            # Auto-fill from product (same pattern as no-access recovery)
+            if record.product:
+                record.material_description = record.product
+                issues.append("material_description auto-filled from product")
+            else:
+                issues.append("Missing required field: material_description")
 
         # Validate confidence value
         if record.extraction_confidence not in {"high", "medium", "low"}:

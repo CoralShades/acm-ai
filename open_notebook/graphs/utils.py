@@ -858,7 +858,13 @@ def is_provider_schema_error(error: Exception) -> bool:
 
 
 async def _get_db_extraction_model() -> Optional[str]:
-    """Read user-configured extraction model from SurrealDB defaults."""
+    """Read user-configured extraction model from SurrealDB defaults.
+
+    Returns a plain model name (e.g. "qwen2.5:7b") suitable for passing to
+    any provider. Provider prefixes like "ollama/" or "anthropic/" are stripped.
+    If the resolved model belongs to a non-Ollama provider, returns None so
+    the caller falls back to env var / hardcoded default.
+    """
     try:
         from open_notebook.database.repository import repo_query
 
@@ -881,11 +887,21 @@ async def _get_db_extraction_model() -> Optional[str]:
                     logger.warning(f"Invalid model record ID format: {model_val}")
                     return None
                 model_record = await repo_query(
-                    f"SELECT name FROM model:{record_part};"
+                    f"SELECT name, provider FROM model:{record_part};"
                 )
                 if model_record and len(model_record) > 0:
                     resolved = model_record[0].get("name")
+                    provider = model_record[0].get("provider", "")
                     if resolved:
+                        # Only return if this is an Ollama model — non-Ollama
+                        # models (e.g. openrouter/anthropic/claude-sonnet-4)
+                        # should not be passed to the Ollama candidate.
+                        if provider and provider != "ollama":
+                            logger.warning(
+                                f"DB extraction model {model_val} is {provider}/{resolved}, "
+                                "not Ollama — skipping for Ollama candidate"
+                            )
+                            return None
                         logger.info(
                             f"Resolved extraction model {model_val} -> {resolved}"
                         )
