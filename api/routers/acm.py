@@ -206,6 +206,7 @@ async def list_acm_records(
                     floor_level=r.get("floor_level"),
                     no_access=r.get("no_access"),
                     smf_present=r.get("smf_present"),
+                    table_bbox=r.get("table_bbox"),
                     created=str(r.get("created", "")) if r.get("created") else None,
                     updated=str(r.get("updated", "")) if r.get("updated") else None,
                 )
@@ -273,6 +274,7 @@ async def get_acm_record(record_id: str):
             floor_level=record.floor_level,
             no_access=record.no_access,
             smf_present=record.smf_present,
+            table_bbox=record.table_bbox,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -1322,6 +1324,7 @@ async def create_acm_record(request: ACMRecordCreateRequest):
             floor_level=record.floor_level,
             no_access=None,
             smf_present=None,
+            table_bbox=record.table_bbox,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -1395,6 +1398,7 @@ async def update_acm_record(record_id: str, request: ACMRecordUpdateRequest):
             floor_level=record.floor_level,
             no_access=record.no_access,
             smf_present=record.smf_present,
+            table_bbox=record.table_bbox,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -2986,6 +2990,7 @@ async def get_provenance(record_id: str):
         floor_level=record.floor_level,
         no_access=record.no_access,
         smf_present=record.smf_present,
+        table_bbox=record.table_bbox,
         validation_status=getattr(record, "validation_status", None),
         validation_errors=getattr(record, "validation_errors", []) or [],
         created=str(record.created) if record.created else None,

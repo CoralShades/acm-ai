@@ -22,28 +22,36 @@ This section provides comprehensive guides for deploying Open Notebook in differ
 - Ideal for cloud hosting platforms
 - Lower resource requirements
 
-### 3. [Development Setup](development.md)
+### 3. [RunPod GPU Cloud](runpod/index.md)
+**For GPU-accelerated extraction with cloud GPUs**
+- Deploy on RTX 5090, A100, H100 GPUs
+- Pay-per-hour pricing ($0.69/hr for RTX 5090)
+- Native services (no Docker-in-Docker needed)
+- SSH + tmux + proxy URL access
+- [Setup](runpod/setup.md) | [Services](runpod/services.md) | [Access](runpod/access.md) | [Optimization](runpod/optimization.md) | [Maintenance](runpod/maintenance.md) | [Troubleshooting](runpod/troubleshooting.md)
+
+### 4. [Development Setup](development.md)
 **For contributors and advanced users**
 - Local development environment
 - Source code installation
 - Development tools and debugging
 - Contributing to the project
 
-### 4. [Reverse Proxy Configuration](reverse-proxy.md)
+### 5. [Reverse Proxy Configuration](reverse-proxy.md)
 **For production deployments with custom domains**
 - nginx, Caddy, Traefik configurations
 - Custom domain setup
 - SSL/HTTPS configuration
 - Runtime API URL configuration
 
-### 5. [Security Configuration](security.md)
+### 6. [Security Configuration](security.md)
 **Essential for public deployments**
 - Password protection setup
 - Security best practices
 - Production deployment considerations
 - Troubleshooting security issues
 
-### 6. [Retry Configuration](retry-configuration.md)
+### 7. [Retry Configuration](retry-configuration.md)
 **For reliable background job processing**
 - Automatic retry for transient failures
 - Database transaction conflict handling
@@ -57,6 +65,13 @@ This section provides comprehensive guides for deploying Open Notebook in differ
 - You want the easiest setup experience
 - You need multiple AI provider support
 - You're running locally or on a private server
+
+### Use RunPod GPU Cloud if:
+- You need more GPU power than your local machine
+- You want RTX 5090 (32GB), A100, or H100 GPUs
+- You need to run large models (32b+ parameter)
+- You want on-demand scaling without hardware investment
+- You're benchmarking extraction performance
 
 ### Use Single Container if:
 - You're deploying on PikaPods, Railway, or similar platforms

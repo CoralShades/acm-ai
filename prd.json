@@ -2,7 +2,7 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 70,
+  "totalStories": 71,
   "totalStoryPoints": 208,
   "sprints": 10,
   "stories": [
@@ -2037,7 +2037,9 @@
       "storyType": "bugfix",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["E37-S8"],
+      "dependencies": [
+        "E37-S8"
+      ],
       "acceptanceCriteria": [
         "AC1: Room key remapping in _coerce_rooms_in_inventory",
         "AC2: Generic heuristic fallback for all document types",
@@ -2068,7 +2070,9 @@
       "storyType": "bugfix",
       "complexity": "complex",
       "priority": "P0",
-      "dependencies": ["BF11-S1"],
+      "dependencies": [
+        "BF11-S1"
+      ],
       "acceptanceCriteria": [
         "AC1: Fix _merge_provider_tables multi-table-per-page overwrite",
         "AC2: Fix building page_end for single-building documents",
@@ -2098,7 +2102,9 @@
       "storyType": "bugfix",
       "complexity": "moderate",
       "priority": "P1",
-      "dependencies": ["BF11-S2"],
+      "dependencies": [
+        "BF11-S2"
+      ],
       "acceptanceCriteria": [
         "AC1: Minimal BuildingRecord fallback when LLM extraction fails",
         "AC2: document_metadata flows to heuristic_fallback + site_name used",
@@ -2125,7 +2131,9 @@
       "storyType": "bugfix",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["BF11-S3"],
+      "dependencies": [
+        "BF11-S3"
+      ],
       "acceptanceCriteria": [
         "AC1: save() pattern uses await record.save(); if not record.id: instead of checking return value",
         "AC2: BuildingRecordResponse datetime coercion via model_validator",
@@ -2152,7 +2160,9 @@
       "storyType": "bugfix",
       "complexity": "moderate",
       "priority": "P0",
-      "dependencies": ["BF11-S4"],
+      "dependencies": [
+        "BF11-S4"
+      ],
       "acceptanceCriteria": [
         "AC1: force=true re-extracts acm_table_section when docling_document_json IS NULL",
         "AC2: Truncation retry guarded by cloud API key availability",
@@ -2178,7 +2188,9 @@
       "storyType": "bugfix",
       "complexity": "simple",
       "priority": "P0",
-      "dependencies": ["BF11-S5"],
+      "dependencies": [
+        "BF11-S5"
+      ],
       "acceptanceCriteria": [
         "AC1: table.data.model_dump(mode=python) replaces table.export_to_dict()",
         "AC2: docling_document_json populated for all tables (not NULL)",
@@ -2239,7 +2251,9 @@
       "storyType": "feature",
       "complexity": "complex",
       "priority": "P1",
-      "dependencies": ["CPK-S1"],
+      "dependencies": [
+        "CPK-S1"
+      ],
       "acceptanceCriteria": [
         "AC1: copilotkit>=0.1.78 Python SDK installed",
         "AC2: CRUD graph uses LangGraph interrupt() for write approval (check_write_approval node)",
@@ -2274,7 +2288,9 @@
       "storyType": "feature",
       "complexity": "moderate",
       "priority": "P2",
-      "dependencies": ["CPK-S2"],
+      "dependencies": [
+        "CPK-S2"
+      ],
       "acceptanceCriteria": [
         "AC1: 15 P2/P3 UI/UX fixes applied (HITL double-submit guard, aria roles, dead code removal, standardised margins)",
         "AC2: TOOL_LABELS extracted to frontend/src/lib/constants/tool-labels.ts (single source of truth)",
@@ -2299,6 +2315,43 @@
       "passes": true,
       "notes": "P2/P3 cosmetic fixes + in-chat model switching. Model selector only visible when 2+ language models registered.",
       "model": "sonnet",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "PROV-S1",
+      "title": "Enhanced PDF Viewer — Zoom, Search, Record Highlighting",
+      "epic": "E33",
+      "sprint": "Post-V3",
+      "storyPoints": 3,
+      "riskLevel": "LOW",
+      "storyType": "feature",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "E33-S6"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Zoom controls (50-300%) with +/- buttons, reset, keyboard shortcuts (Ctrl+/Ctrl-/Ctrl+0)",
+        "AC2: Page navigation (prev/next) with page counter and go-to-source-page shortcut",
+        "AC3: In-page text search with Ctrl+F toggle, yellow/orange match highlighting, next/prev navigation, match counter",
+        "AC4: Scrollable PDF canvas (maxHeight 65vh) with overflow-auto",
+        "AC5: Bbox overlay auto-scrolls into view after page render (350ms delay)",
+        "AC6: Bbox pulse animation (3-cycle glow) for visual attention",
+        "AC7: Crosshair button in toolbar to re-scroll to highlighted record",
+        "AC8: Status bar shows highlight status and current zoom/page",
+        "AC9: table_bbox field populated in all 5 ACMRecordResponse builders (bug fix — was missing)",
+        "AC10: CSS respects prefers-reduced-motion",
+        "AC11: Frontend build passes clean"
+      ],
+      "keyFiles": [
+        "frontend/src/components/acm/PDFPageViewer.tsx",
+        "frontend/src/app/globals.css",
+        "frontend/src/components/acm/ProvenanceViewer.tsx",
+        "api/routers/acm.py"
+      ],
+      "passes": true,
+      "notes": "Enhanced provenance PDF viewer. Ports zoom/nav patterns from ACMCellViewer, adds search + bbox auto-scroll. Bug fix: table_bbox was defined on ACMRecordResponse model but never populated in any response builder.",
+      "model": "opus",
       "implementedDate": "2026-03-16"
     }
   ],

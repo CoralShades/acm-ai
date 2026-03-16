@@ -2,6 +2,9 @@
 
 ## Completed Milestones
 
+### Provenance PDF Viewer Enhancement (2026-03-16) — COMPLETE
+PDFPageViewer rewrite: zoom (50-300%), page navigation, text search (Ctrl+F), scrollable canvas (65vh), bbox pulse animation, auto-scroll to highlighted record, crosshair re-scroll button, status bar. Bug fix: table_bbox missing from all 5 ACMRecordResponse builders (bbox overlay was never rendering). 4 files changed.
+
 ### Frontend Audit & Fix Session (2026-03-13) — COMPLETE
 8 tasks, 13 files modified across the frontend. All tasks completed in a single session.
 

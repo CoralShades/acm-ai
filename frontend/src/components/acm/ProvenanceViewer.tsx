@@ -152,7 +152,7 @@ function ProvenanceContent({
         )}
       </div>
 
-      {/* PDF page viewer */}
+      {/* PDF page viewer — full-featured with zoom, scroll, search, and bbox highlight */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Source Document</h3>
         <PDFPageViewer

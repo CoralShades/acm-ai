@@ -89,4 +89,19 @@ Frontend UI audit and fix session: 8 tasks, 13 files modified. Addressed label i
 
 ---
 
+## Follow-Up Session: Provenance PDF Viewer Enhancement (2026-03-16)
+
+### T9 — Enhanced PDF Viewer in ProvenanceViewer
+**Status:** Done
+**Files:**
+- `frontend/src/components/acm/PDFPageViewer.tsx` — Major rewrite: zoom (50-300%), page navigation, text search (Ctrl+F with match highlighting), scrollable canvas (65vh), bbox pulse animation, auto-scroll to bbox, crosshair re-scroll button, status bar
+- `frontend/src/app/globals.css` — `.pdf-search-highlight`, `.pdf-search-highlight-active`, `@keyframes pdf-bbox-pulse`
+- `frontend/src/components/acm/ProvenanceViewer.tsx` — Minor comment update
+- `api/routers/acm.py` — **Bug fix**: `table_bbox` added to all 5 `ACMRecordResponse` builders (was missing — bbox overlay never rendered)
+
+**Bug discovered during audit:**
+- `table_bbox` field existed on `ACMRecordResponse` model but was never populated in any of the 5 response builder sites (list, get, create, update, provenance endpoints). This meant the bbox overlay in the provenance viewer was always empty — the feature appeared broken but was actually a data omission bug.
+
+---
+
 ## Session Status: COMPLETE
