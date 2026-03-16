@@ -1,10 +1,12 @@
 'use client'
 
-import { useCopilotAction } from '@copilotkit/react-core'
+import React from 'react'
+import { useRenderToolCall, useDefaultTool } from '@copilotkit/react-core'
 import { ACMTableResult } from './renderers/ACMTableResult'
 import { ACMStatsResult } from './renderers/ACMStatsResult'
 import { SearchResult } from './renderers/SearchResult'
 import { AgentActivityIndicator } from './renderers/AgentActivityIndicator'
+import { ToolErrorCard } from './renderers/ToolErrorCard'
 
 function safeParseJSON(str: string): Record<string, unknown> | null {
   try {
@@ -14,136 +16,175 @@ function safeParseJSON(str: string): Record<string, unknown> | null {
   }
 }
 
+/** Parse a tool result into a record, returning null for error/empty results. */
+function parseResult(result: unknown): Record<string, unknown> | null {
+  if (!result) return null
+  if (typeof result === 'string') {
+    // Check if the string is an error message (not JSON)
+    const parsed = safeParseJSON(result)
+    if (!parsed) return null
+    // Check for error shape in parsed result
+    if ('error' in parsed) return null
+    return parsed
+  }
+  if (typeof result === 'object' && result !== null && 'error' in result) return null
+  return result as Record<string, unknown>
+}
+
+/** Check if a result represents an error from the backend. */
+function isErrorResult(result: unknown): boolean {
+  if (!result) return false
+  if (typeof result === 'string') {
+    const parsed = safeParseJSON(result)
+    return parsed !== null && 'error' in parsed
+  }
+  return typeof result === 'object' && result !== null && 'error' in result
+}
+
 /**
- * Registers CopilotKit action renderers for all 9 backend tools.
+ * Registers CopilotKit tool-call renderers for all 9 backend tools.
+ *
+ * Uses useRenderToolCall (the correct hook for rendering backend-emitted
+ * tool calls) instead of useCopilotAction with available:'disabled'.
+ *
  * Must be rendered inside a CopilotKit provider.
  */
 export function ToolResultRenderers() {
   // ACM tools - render as structured table/cards
-  useCopilotAction({
+  useRenderToolCall({
     name: 'search_acm_by_risk',
-    description: 'Search ACM records by risk status',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="search_acm_by_risk" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="search_acm_by_risk" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <ACMTableResult data={data} queryType="Risk Status" />
     },
   })
 
-  useCopilotAction({
+  useRenderToolCall({
     name: 'search_acm_by_building',
-    description: 'Search ACM records by building',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="search_acm_by_building" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="search_acm_by_building" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <ACMTableResult data={data} queryType="Building" />
     },
   })
 
-  useCopilotAction({
+  useRenderToolCall({
     name: 'search_acm_by_room',
-    description: 'Search ACM records by room',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="search_acm_by_room" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="search_acm_by_room" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <ACMTableResult data={data} queryType="Room" />
     },
   })
 
-  useCopilotAction({
+  useRenderToolCall({
     name: 'search_acm_by_product',
-    description: 'Search ACM records by product/material',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="search_acm_by_product" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="search_acm_by_product" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <ACMTableResult data={data} queryType="Product" />
     },
   })
 
-  useCopilotAction({
+  useRenderToolCall({
     name: 'get_acm_stats',
-    description: 'Get ACM statistics summary',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="get_acm_stats" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="get_acm_stats" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <ACMStatsResult data={data} />
     },
   })
 
-  useCopilotAction({
+  useRenderToolCall({
     name: 'get_acm_record_detail',
-    description: 'Get detailed ACM record',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="get_acm_record_detail" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="get_acm_record_detail" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <ACMTableResult data={{ records: [data], total: 1 }} queryType="Detail" />
     },
   })
 
-  useCopilotAction({
+  useRenderToolCall({
     name: 'list_acm_buildings',
-    description: 'List buildings with ACM data',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="list_acm_buildings" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="list_acm_buildings" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <ACMStatsResult data={data} />
     },
   })
 
   // Document search tools
-  useCopilotAction({
+  useRenderToolCall({
     name: 'search_documents_vector',
-    description: 'Search documents using vector similarity',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="search_documents_vector" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="search_documents_vector" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <SearchResult data={data} searchType="Vector" />
     },
   })
 
-  useCopilotAction({
+  useRenderToolCall({
     name: 'search_documents_text',
-    description: 'Search documents using full-text search',
-    parameters: [],
-    available: 'disabled',
     render: ({ status, result }) => {
-      if (status === 'executing')
+      if (status === 'inProgress' || status === 'executing')
         return <AgentActivityIndicator tool="search_documents_text" status="executing" />
-      const data = typeof result === 'string' ? safeParseJSON(result) : result
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="search_documents_text" />
+      const data = parseResult(result)
       if (!data) return <></>
       return <SearchResult data={data} searchType="Text" />
+    },
+  })
+
+  // Fallback renderer for any tool not explicitly handled above
+  useDefaultTool({
+    render: ({ name, status, result }): React.ReactElement => {
+      if (status === 'inProgress' || status === 'executing') {
+        return <AgentActivityIndicator tool={name} status="executing" />
+      }
+      if (isErrorResult(result)) return <ToolErrorCard tool={name} />
+      if (!result) return <></>
+      return (
+        <div className="border rounded-lg p-3 my-1 text-sm bg-muted/30">
+          <div className="text-xs font-medium text-muted-foreground mb-1">{name}</div>
+          <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-40">
+            {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      )
     },
   })
 

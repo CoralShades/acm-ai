@@ -209,7 +209,8 @@ def preview_write(
         "status": "pending",
     }
 
-    # Return as JSON that the frontend WriteConfirmationCard component can parse
+    # Return as JSON — the check_write_approval graph node will interrupt
+    # for user approval via CopilotKit's useLangGraphInterrupt
     preview = {
         "type": "preview_write",
         "operation_id": operation_id,
@@ -218,25 +219,27 @@ def preview_write(
         "field": field,
         "new_value": new_value,
         "reason": reason,
-        "instruction": (
-            f"Reply with 'confirm {operation_id}' to execute, "
-            f"or 'cancel {operation_id}' to abort."
-        ),
     }
 
     return json.dumps(preview)
 
 
-@tool
-def confirm_write(operation_id: str) -> str:
-    """Execute a previously previewed write operation after the user has confirmed it.
+def execute_pending_write(
+    operation_id: str,
+    source_id: Optional[str] = None,
+    edits: Optional[dict] = None,
+) -> str:
+    """Execute a pending write operation after HITL approval.
 
-    Only call this after the user explicitly says to confirm.
+    Called by the check_write_approval graph node after interrupt() resumes
+    with an approved decision. NOT a LangChain tool — called directly.
 
     Args:
-        operation_id: The operation_id from the preview_write response
+        operation_id: The operation_id from preview_write
+        source_id: Override source_id (from graph state). Falls back to context.
+        edits: Optional field edits from the approval dialog
     """
-    source_id = get_crud_context()
+    source_id = source_id or get_crud_context()
     pending = _pending_writes.get(operation_id)
 
     if not pending:
@@ -248,6 +251,13 @@ def confirm_write(operation_id: str) -> str:
     if pending.get("source_id") != source_id:
         return "Error: Operation source_id mismatch — security violation."
 
+    # Apply any user edits from the approval dialog
+    if edits:
+        if "new_value" in edits:
+            pending["new_value"] = edits["new_value"]
+        if "field" in edits:
+            pending["field"] = edits["field"]
+
     async def execute():
         sid = ensure_record_id(source_id)
         op = pending["operation"]
@@ -257,7 +267,6 @@ def confirm_write(operation_id: str) -> str:
 
         if op == "UPDATE" and record_id and field:
             rid = ensure_record_id(record_id)
-            # Verify record belongs to this source
             check = await repo_query(
                 "SELECT id FROM acm_record WHERE id = $rid AND source_id = $sid",
                 {"rid": rid, "sid": sid},
@@ -270,7 +279,6 @@ def confirm_write(operation_id: str) -> str:
                 {"rid": rid, "val": new_value},
             )
 
-            # Log to crud_audit
             await repo_query(
                 """INSERT INTO crud_audit {
                     job_id: $sid,
@@ -278,7 +286,7 @@ def confirm_write(operation_id: str) -> str:
                     natural_language: $reason,
                     generated_surql: $surql,
                     operation: $op,
-                    confirmed_by: 'user'
+                    confirmed_by: 'user_hitl'
                 }""",
                 {
                     "sid": sid,
@@ -309,7 +317,7 @@ def confirm_write(operation_id: str) -> str:
                     natural_language: $reason,
                     generated_surql: $surql,
                     operation: $op,
-                    confirmed_by: 'user'
+                    confirmed_by: 'user_hitl'
                 }""",
                 {
                     "sid": sid,
@@ -330,3 +338,16 @@ def confirm_write(operation_id: str) -> str:
     except Exception as e:
         logger.error(f"Error executing write {operation_id}: {e}")
         return f"Error executing write: {str(e)}"
+
+
+@tool
+def confirm_write(operation_id: str) -> str:
+    """Execute a previously previewed write operation (legacy fallback).
+
+    This tool is kept for backwards compatibility with text-based confirmation.
+    The preferred flow uses LangGraph interrupt() + CopilotKit HITL dialog.
+
+    Args:
+        operation_id: The operation_id from the preview_write response
+    """
+    return execute_pending_write(operation_id)

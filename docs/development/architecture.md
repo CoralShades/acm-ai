@@ -493,6 +493,105 @@ FROM python:3.11-slim as runtime
 - Memory optimization for large documents
 - Efficient embedding storage
 
+## CopilotKit Chat Architecture
+
+### Overview
+
+ACM-AI integrates CopilotKit v1.51.4 for two AI-powered chat interfaces that connect to LangGraph agents via the AG-UI protocol.
+
+### Service Flow
+
+```
+Frontend (Next.js 15, port 8503)
+├── CopilotProvider (root, /api/copilotkit)
+│   └── SmartChatPanel (supervisor agent)
+│       ├── useCopilotReadable (page context → LLM)
+│       ├── useCopilotChatSuggestions (domain prompts)
+│       ├── useCoAgentStateRender (progress display)
+│       ├── useCoAgent (shared state)
+│       ├── ToolResultRenderers (9 tools + useDefaultTool)
+│       └── CopilotChat (UI)
+│
+├── CopilotKit (/copilot-crud, job-scoped)
+│   └── JobCrudChatPanel (CRUD agent)
+│       ├── CrudToolRenderers
+│       │   ├── useLangGraphInterrupt → HITLApprovalDialog
+│       │   └── useRenderToolCall (preview_write, write_acm_record)
+│       └── CopilotChat (UI)
+│
+Next.js API Routes
+├── /api/copilotkit → CopilotRuntime (singleton) → HttpAgent
+│   → FastAPI /api/agui/chat → LangGraphAgent("supervisor") → supervisor_graph
+│
+└── /copilot-crud → CopilotRuntime (singleton) → HttpAgent
+    → FastAPI /api/agui/crud-chat → LangGraphAgent("crud_agent") → crud_graph
+```
+
+### HITL Write Approval Flow
+
+The CRUD agent uses LangGraph's `interrupt()` for human-in-the-loop write approval:
+
+```
+1. User requests update → agent calls preview_write tool
+2. ToolNode executes preview_write → returns JSON preview
+3. check_write_approval node detects preview_write result
+4. interrupt() pauses graph → AG-UI interrupt event → SSE
+5. CopilotRuntime forwards interrupt → useLangGraphInterrupt hook
+6. HITLApprovalDialog renders (approve/reject/edit)
+7. User approves → resolve({approved: true}) → Command(resume=value)
+8. Graph resumes → execute_pending_write() → SurrealDB write + crud_audit log
+9. AIMessage("Updated field X to Y") → agent responds
+```
+
+### CRUD Graph Structure
+
+```
+[START] → agent → should_continue → {tools, END}
+                                      ↓
+                                    tools → check_write_approval → agent
+                                                    ↓ (if preview_write)
+                                              interrupt() → resume
+```
+
+- **agent**: Calls LLM with CRUD tools bound
+- **tools**: ToolNode executes query_job_records or preview_write
+- **check_write_approval**: Inspects tool results, interrupts for write approval
+- **MemorySaver**: Checkpointer for conversation persistence + interrupt state
+
+### Supervisor Graph Structure
+
+```
+[START] → supervisor → should_continue → {tools, END}
+                                           ↓
+                                         tools → supervisor
+```
+
+- 9 tools: 7 ACM search tools + 2 document search tools
+- copilotkit_emit_state streams intermediate state for progress display
+- MemorySaver checkpointer for conversation persistence
+
+### Key Patterns
+
+| Pattern | Implementation | Purpose |
+|---------|---------------|---------|
+| Lazy singleton runtime | Module-level promise in route.ts | Avoid per-request CopilotRuntime instantiation |
+| Backend tool rendering | useRenderToolCall | Render custom UI for LangGraph tool results |
+| Default tool fallback | useDefaultTool | Catch-all for unregistered tool calls |
+| HITL approval | interrupt() + useLangGraphInterrupt | Gate irreversible writes behind user approval |
+| State streaming | copilotkit_emit_state | Show agent progress in real-time |
+| Page context | useCopilotReadable | Expose frontend state to agent |
+
+### Dependencies
+
+| Layer | Package | Version | Purpose |
+|-------|---------|---------|---------|
+| Frontend | @copilotkit/react-core | ^1.51.3 | Hooks (useRenderToolCall, useLangGraphInterrupt, etc.) |
+| Frontend | @copilotkit/react-ui | ^1.51.3 | CopilotChat component |
+| Frontend | @copilotkit/runtime | ^1.51.3 | CopilotRuntime, copilotRuntimeNextJSAppRouterEndpoint |
+| Frontend | @ag-ui/client | ^0.0.43 | HttpAgent for AG-UI protocol |
+| Backend | ag-ui-langgraph | >=0.0.25 | LangGraphAgent, add_langgraph_fastapi_endpoint |
+| Backend | copilotkit | >=0.1.78 | copilotkit_emit_state, LangGraphAgent (SDK) |
+
 ---
 
 This architecture provides a solid foundation for Open Notebook's current capabilities while supporting future enhancements and scaling requirements. The modular design allows for easy extension and modification of individual components without affecting the overall system.

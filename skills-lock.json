@@ -31,6 +31,11 @@
       "sourceType": "github",
       "computedHash": "f1c7275a03cd8a69335e5b28670c3c2e6033f4ba9214264b6403f47207eb0514"
     },
+    "flash": {
+      "source": "runpod/skills",
+      "sourceType": "github",
+      "computedHash": "855993bf9d8604e03b11ad94f47769350d9823bdf75844e68cc3cfc43f7a59a0"
+    },
     "framework-selection": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
@@ -70,6 +75,11 @@
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "computedHash": "41777ec7edc4504e45564917459202021245f3cdf90157e4a65dd6641cd0c1d7"
+    },
+    "runpodctl": {
+      "source": "runpod/skills",
+      "sourceType": "github",
+      "computedHash": "1bd76da567ea12ab1d1fc851d99b602c8106cdc5a92a484911f2d263db7008f6"
     },
     "uncodixfy": {
       "source": "cyxzdev/Uncodixfy",

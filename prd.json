@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 67,
-  "totalStoryPoints": 190,
+  "totalStories": 69,
+  "totalStoryPoints": 203,
   "sprints": 10,
   "stories": [
     {
@@ -2193,6 +2193,76 @@
       "notes": "ROOT CAUSE: TableItem is a Pydantic model with no export_to_dict(). Bug existed since feature was added — silently caught AttributeError, set docling_json=None.",
       "model": "opus",
       "implementedDate": "2026-03-11"
+    },
+    {
+      "id": "CPK-S1",
+      "title": "CopilotKit Audit — Bug Fixes & Hook Migration",
+      "epic": "CPK",
+      "sprint": "CopilotKit",
+      "storyPoints": 5,
+      "riskLevel": "MEDIUM",
+      "storyType": "bugfix",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "AC1: CopilotRuntime instantiated as module-level singleton (not per-request)",
+        "AC2: MemorySaver checkpointer on CRUD graph",
+        "AC3: All 11 tool renderers migrated to useRenderToolCall with error handling",
+        "AC4: CopilotProvider has onError callback and env-conditional showDevConsole",
+        "AC5: useCopilotReadable exposes page context to LLM",
+        "AC6: useCopilotChatSuggestions provides domain-aware suggestions",
+        "AC7: @ag-ui/client added as explicit dependency",
+        "AC8: Frontend build and lint pass"
+      ],
+      "keyFiles": [
+        "frontend/src/app/api/copilotkit/route.ts",
+        "frontend/src/app/copilot-crud/route.ts",
+        "frontend/src/components/chat/ToolResultRenderers.tsx",
+        "frontend/src/components/jobs/CrudToolRenderers.tsx",
+        "frontend/src/components/providers/CopilotProvider.tsx",
+        "frontend/src/components/chat/SmartChatPanel.tsx",
+        "open_notebook/graphs/crud_agent.py"
+      ],
+      "passes": true,
+      "notes": "5 critical bugs fixed, tool renderer pattern corrected, UX hooks added",
+      "model": "opus",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "CPK-S2",
+      "title": "HITL Approval Flow, Generative UI & State Streaming",
+      "epic": "CPK",
+      "sprint": "CopilotKit",
+      "storyPoints": 8,
+      "riskLevel": "MEDIUM",
+      "storyType": "feature",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": ["CPK-S1"],
+      "acceptanceCriteria": [
+        "AC1: copilotkit>=0.1.78 Python SDK installed",
+        "AC2: CRUD graph uses LangGraph interrupt() for write approval (check_write_approval node)",
+        "AC3: useLangGraphInterrupt renders HITLApprovalDialog on write_approval interrupt",
+        "AC4: useDefaultTool provides fallback rendering for unregistered tool calls",
+        "AC5: useCoAgentStateRender shows supervisor progress in SmartChatPanel",
+        "AC6: copilotkit_emit_state streams intermediate state from supervisor graph",
+        "AC7: 6 new generative UI components created (HITLApprovalDialog, WriteDiffView, BuildingSummaryCard, ItemDetailCard, ExtractionProgress, DefaultToolFallback)",
+        "AC8: Frontend build and backend lint pass"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/crud_agent.py",
+        "open_notebook/graphs/crud_tools.py",
+        "open_notebook/graphs/supervisor_agent.py",
+        "frontend/src/components/jobs/CrudToolRenderers.tsx",
+        "frontend/src/components/chat/ToolResultRenderers.tsx",
+        "frontend/src/components/chat/SmartChatPanel.tsx",
+        "frontend/src/components/chat/renderers/HITLApprovalDialog.tsx"
+      ],
+      "passes": true,
+      "notes": "HITL replaces toast-based 'type confirm' pattern. Backend handles both dict and JSON string from resolve().",
+      "model": "opus",
+      "implementedDate": "2026-03-16"
     }
   ],
   "gates": [

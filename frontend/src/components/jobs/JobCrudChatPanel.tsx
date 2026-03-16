@@ -25,13 +25,14 @@ export function JobCrudChatPanel({ sourceId, className }: JobCrudChatPanelProps)
             initial:
               "Ask me to update, create, or delete ACM records for this job. I'll preview any changes before applying them.",
           }}
-          makeSystemMessage={() =>
+          makeSystemMessage={(contextString) =>
             `You are an ACM (Asbestos Containing Material) compliance data editor. ` +
             `Your role is to help users create, update, and delete ACM records through natural language. ` +
             `Current job source: ${sourceId}. ` +
             `IMPORTANT: Always preview write operations before executing them. ` +
             `Present a preview_write JSON payload and wait for the user to confirm by replying with "confirm <operation_id>". ` +
-            `Never apply changes without explicit user confirmation.`
+            `Never apply changes without explicit user confirmation.` +
+            (contextString ? `\n\nAdditional context:\n${contextString}` : '')
           }
         />
       </div>

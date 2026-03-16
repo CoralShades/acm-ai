@@ -50,6 +50,9 @@ dependencies = [
     "typer>=0.20.0",
     "langfuse>=3.14.5",
     "mineru>=2.7.0",
+    "runpod>=1.8.1",
+    "runpod-flash>=1.9.1",
+    "copilotkit>=0.1.78",
 ]
 
 [tool.setuptools]

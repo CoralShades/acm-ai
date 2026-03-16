@@ -1,7 +1,6 @@
 "use client";
 
 import { CopilotKit } from "@copilotkit/react-core";
-import "@copilotkit/react-ui/styles.css";
 import React from "react";
 
 interface CopilotProviderProps {
@@ -44,7 +43,13 @@ class CopilotErrorBoundary extends React.Component<
       return this.props.children;
     }
     return (
-      <CopilotKit runtimeUrl={this.props.runtimeUrl} showDevConsole={false}>
+      <CopilotKit
+        runtimeUrl={this.props.runtimeUrl}
+        showDevConsole={process.env.NODE_ENV !== "production"}
+        onError={(error) => {
+          console.error("[CopilotKit] Runtime error:", error);
+        }}
+      >
         {this.props.children}
       </CopilotKit>
     );

@@ -21,6 +21,13 @@ from loguru import logger
 from typing_extensions import TypedDict
 
 from open_notebook.graphs.chat_tools import get_acm_tools, get_search_tools
+
+try:
+    from copilotkit.langgraph import copilotkit_emit_state
+
+    _HAS_COPILOTKIT = True
+except ImportError:
+    _HAS_COPILOTKIT = False
 from open_notebook.graphs.chat_tools.acm_tools import set_tool_context
 from open_notebook.graphs.utils import provision_langchain_model_with_tools
 
@@ -111,6 +118,27 @@ def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
         )
 
     ai_message = model.invoke(payload)
+
+    # Emit intermediate state for CopilotKit's useCoAgentStateRender
+    if _HAS_COPILOTKIT:
+        try:
+            emit_loop = asyncio.new_event_loop()
+            try:
+                emit_loop.run_until_complete(
+                    copilotkit_emit_state(
+                        config,
+                        {
+                            "active_agents": state.get("active_agents", []),
+                            "include_acm_context": include_acm,
+                            "status": "responding",
+                        },
+                    )
+                )
+            finally:
+                emit_loop.close()
+        except Exception:
+            pass  # Non-fatal — app works without copilotkit
+
     return {"messages": [ai_message]}
 
 

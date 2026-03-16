@@ -1,6 +1,7 @@
 'use client'
 
 import { CopilotChat } from '@copilotkit/react-ui'
+import { useCopilotReadable, useCopilotChatSuggestions, useCoAgentStateRender } from '@copilotkit/react-core'
 import { SmartChatProvider } from './SmartChatProvider'
 import { useSmartChat } from '@/lib/hooks/useSmartChat'
 import { ToolResultRenderers } from './ToolResultRenderers'
@@ -24,6 +25,46 @@ export function SmartChatPanel({
     sourceId,
     notebookId,
     hasAcmData,
+  })
+
+  // Expose page-level context to the LLM as structured data.
+  // This supplements the system message with machine-readable context
+  // that the agent can reference in tool calls and responses.
+  useCopilotReadable({
+    description: 'Current page context: source ID, notebook ID, and ACM data availability',
+    value: {
+      sourceId: sourceId || null,
+      notebookId: notebookId || null,
+      hasAcmData,
+      acmContextEnabled: includeAcmContext,
+    },
+  })
+
+  // Domain-aware chat suggestions to guide users toward useful queries.
+  useCopilotChatSuggestions(
+    {
+      instructions: hasAcmData && includeAcmContext
+        ? 'Suggest 2-3 ACM compliance queries relevant to this document. Examples: risk summaries, building searches, material lookups, statistics.'
+        : 'Suggest 2-3 general document queries. Examples: summarize content, find specific sections, explain terminology.',
+      maxSuggestions: 3,
+    },
+    [hasAcmData, includeAcmContext],
+  )
+
+  // Show a lightweight in-chat indicator while the supervisor agent is running
+  useCoAgentStateRender({
+    name: 'supervisor',
+    render: ({ nodeName, status }) => {
+      if (status !== 'inProgress') return null
+      return (
+        <div className="text-xs text-muted-foreground italic px-4 py-1 flex items-center gap-2">
+          <span className="inline-block h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+          {nodeName === 'tools'
+            ? 'Searching...'
+            : 'Thinking...'}
+        </div>
+      )
+    },
   })
 
   return (

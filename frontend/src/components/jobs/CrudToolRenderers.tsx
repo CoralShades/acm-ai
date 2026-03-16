@@ -1,73 +1,93 @@
 'use client'
 
-import { useCallback } from 'react'
-import { useCopilotAction } from '@copilotkit/react-core'
-import { toast } from 'sonner'
-import { WriteConfirmationCard } from '@/components/chat/WriteConfirmationCard'
+import { useRenderToolCall, useLangGraphInterrupt } from '@copilotkit/react-core'
+import { HITLApprovalDialog } from '@/components/chat/renderers/HITLApprovalDialog'
+import { ToolErrorCard } from '@/components/chat/renderers/ToolErrorCard'
 
 interface CrudToolRenderersProps {
   sourceId: string
 }
 
+function isErrorResult(result: unknown): boolean {
+  if (!result) return false
+  if (typeof result === 'string') {
+    try {
+      const parsed = JSON.parse(result)
+      return typeof parsed === 'object' && parsed !== null && 'error' in parsed
+    } catch {
+      return false
+    }
+  }
+  return typeof result === 'object' && result !== null && 'error' in result
+}
+
 /**
- * Registers CopilotKit tool renderers for CRUD write previews.
+ * Registers CopilotKit tool-call renderers for CRUD write previews.
+ *
+ * Uses useLangGraphInterrupt for HITL approval dialogs (replaces the old
+ * toast-based confirmation pattern), and useRenderToolCall for in-progress
+ * and result states.
  *
  * Must be rendered inside a CopilotKit provider configured with /copilot-crud.
  */
 export function CrudToolRenderers({ sourceId }: CrudToolRenderersProps) {
-  const handleConfirm = useCallback((operationId: string) => {
-    toast.info(`Type "confirm ${operationId}" in the chat to execute this operation.`, {
-      duration: 8000,
-    })
-  }, [])
+  // HITL: Render approval dialog when the backend graph interrupts for write approval
+  useLangGraphInterrupt({
+    enabled: ({ eventValue }) => eventValue?.type === 'write_approval',
+    render: ({ event, resolve }) => {
+      const preview = event.value?.preview
+      if (!preview) return <></>
 
-  const handleCancel = useCallback((operationId: string) => {
-    toast.info(`Type "cancel ${operationId}" in the chat to discard this operation.`, {
-      duration: 5000,
-    })
-  }, [])
-
-  useCopilotAction({
-    name: 'preview_acm_write',
-    description: 'Preview a proposed ACM record write operation for user confirmation',
-    parameters: [],
-    available: 'disabled',
-    render: ({ result }) => {
-      if (!result) return <></>
-      const content = typeof result === 'string' ? result : JSON.stringify(result)
       return (
-        <WriteConfirmationCard
-          content={content}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
+        <HITLApprovalDialog
+          preview={preview}
+          onApprove={(edits) =>
+            resolve(JSON.stringify({ approved: true, edits: edits || {} }))
+          }
+          onReject={() => resolve(JSON.stringify({ approved: false }))}
         />
       )
     },
   })
 
-  useCopilotAction({
-    name: 'write_acm_record',
-    description: 'Write (create/update/delete) an ACM record after user confirmation',
-    parameters: [],
-    available: 'disabled',
+  // Render preview_write tool results as loading indicators
+  // (the actual approval UI comes from useLangGraphInterrupt above)
+  useRenderToolCall({
+    name: 'preview_acm_write',
     render: ({ status, result }) => {
-      if (status === 'executing') {
+      if (status === 'inProgress' || status === 'executing') {
+        return (
+          <div className="text-sm text-muted-foreground italic py-2">
+            Preparing write preview...
+          </div>
+        )
+      }
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="preview_acm_write" />
+      // Preview result is handled by the interrupt approval dialog
+      return <></>
+    },
+  })
+
+  // Render write_acm_record results
+  useRenderToolCall({
+    name: 'write_acm_record',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') {
         return (
           <div className="text-sm text-muted-foreground italic py-2">
             Applying change...
           </div>
         )
       }
-
+      if (isErrorResult(result))
+        return <ToolErrorCard tool="write_acm_record" />
       if (!result) return <></>
-
       const content = typeof result === 'string' ? result : JSON.stringify(result)
       return (
-        <WriteConfirmationCard
-          content={content}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-        />
+        <div className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded px-3 py-2 my-1">
+          {content}
+        </div>
       )
     },
   })

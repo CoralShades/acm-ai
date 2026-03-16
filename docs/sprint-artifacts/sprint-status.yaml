@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-14
+updated: 2026-03-16
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -597,6 +597,16 @@ development_status:
   # Artifact: docs/sprint-artifacts/frontend-audit/progress.md
   # ─────────────────────────────────────────────────────
   frontend-audit-2026-03-13: done  # 2026-03-13. 8 tasks across 13 files. T1: label renames (Raw→AI Mapped, reloadUrl fix, ConfirmDialog). T2: BuildingReviewGrid canonical 57-field type + V3 API. T3: computed missingFieldsPercent + extractionQualityScore. T4: ACM page V3 ItemGrid+BuildingTabStrip. T5: aggregate building/record stat cards on jobs page. T6: intelligence API wired into JobOverviewTab. T7: provider tab subtitles (Docling/MinerU/Consensus). T8: bbox overlay teal color + page mismatch guard.
+
+  # ─────────────────────────────────────────────────────
+  # CopilotKit Audit & HITL Implementation (2026-03-16)
+  # Branch: ACMV3
+  # Two sessions: (1) Audit — 5 critical bugs fixed, tool renderers refactored
+  #   (2) HITL — interrupt() flow, generative UI, copilotkit SDK
+  # Artifacts: docs/sprint-artifacts/copilotkit-audit/, copilotkit-impl/
+  # ─────────────────────────────────────────────────────
+  copilotkit-audit-2026-03-16: done  # Session 1: 5 bugs fixed (BUG-1..5), useRenderToolCall refactor (11 renderers), useCopilotReadable, useCopilotChatSuggestions, ToolErrorCard, @ag-ui/client explicit dep
+  copilotkit-hitl-impl-2026-03-16: done  # Session 2: copilotkit>=0.1.78 SDK, LangGraph interrupt() HITL for CRUD writes, check_write_approval node, copilotkit_emit_state on supervisor, useLangGraphInterrupt + HITLApprovalDialog, useDefaultTool, useCoAgentStateRender, 6 new generative UI components
 
   # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
