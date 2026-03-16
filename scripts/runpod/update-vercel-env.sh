@@ -1,17 +1,16 @@
 #!/bin/bash
-# Update Vercel env vars when RunPod pod ID changes
-# Usage: bash scripts/runpod/update-vercel-env.sh <new-pod-id>
+# Set Vercel INTERNAL_API_URL to the stable local Docker API tunnel
+# No pod-id needed — api.coralshades.ai is a stable Cloudflare tunnel URL.
+# Usage: bash scripts/runpod/update-vercel-env.sh
 set -euo pipefail
 
-POD_ID="${1:?Usage: $0 <pod-id>}"
-RUNPOD_API_URL="https://${POD_ID}-5055.proxy.runpod.net"
+API_URL="https://api.coralshades.ai"
 
-echo "Updating Vercel INTERNAL_API_URL → $RUNPOD_API_URL"
+echo "Setting Vercel INTERNAL_API_URL → $API_URL"
 cd "$(dirname "$0")/../../frontend"
 
 vercel env rm INTERNAL_API_URL production --yes 2>/dev/null || true
-echo "$RUNPOD_API_URL" | vercel env add INTERNAL_API_URL production
+echo "$API_URL" | vercel env add INTERNAL_API_URL production
 
-echo "Done. Changes take effect on next Vercel serverless invocation (no redeploy needed)."
-echo ""
-echo "API_URL and NEXT_PUBLIC_API_URL stay as https://demo.vaea.coralshades.ai (unchanged)."
+echo "Done. Vercel frontend will proxy API calls to $API_URL"
+echo "No pod-id needed — this is a stable Cloudflare tunnel URL."

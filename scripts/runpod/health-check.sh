@@ -92,6 +92,14 @@ if [[ -f "$ENV_FILE" ]]; then
     CORS=$(grep '^CORS_ALLOWED_ORIGINS=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)
     if [[ -n "$CORS" ]]; then
         echo -e "  ${GREEN}[PASS]${NC} CORS_ALLOWED_ORIGINS is set"
+        # Check for RunPod tunnel domain
+        if echo "$CORS" | grep -q "acmv3.coralshades.ai"; then
+            echo -e "  ${GREEN}[PASS]${NC} RunPod tunnel domain in CORS origins"
+            ((PASS++))
+        else
+            echo -e "  ${YELLOW}[WARN]${NC} acmv3.coralshades.ai not in CORS origins"
+            ((WARN++))
+        fi
         # Check for Vercel domain
         if echo "$CORS" | grep -q "demo.vaea.coralshades.ai"; then
             echo -e "  ${GREEN}[PASS]${NC} Vercel domain in CORS origins"
@@ -107,6 +115,21 @@ if [[ -f "$ENV_FILE" ]]; then
     fi
 else
     echo -e "  ${YELLOW}[WARN]${NC} .env file not found"
+    ((WARN++))
+fi
+
+# ── Cloudflare Tunnel ────────────────
+echo ""
+echo "--- Cloudflare Tunnel ---"
+if tmux has-session -t tunnel 2>/dev/null; then
+    echo -e "  ${GREEN}[PASS]${NC} Tunnel tmux session running"
+    ((PASS++))
+    warn_check "Frontend via tunnel (acmv3.coralshades.ai)" \
+        "curl -sf -o /dev/null -w '%{http_code}' https://acmv3.coralshades.ai/ | grep -q 200"
+    warn_check "API via tunnel (api.acmv3.coralshades.ai)" \
+        "curl -sf https://api.acmv3.coralshades.ai/health -o /dev/null"
+else
+    echo -e "  ${YELLOW}[WARN]${NC} Tunnel not running (start with: bash scripts/runpod/start-tunnel.sh)"
     ((WARN++))
 fi
 

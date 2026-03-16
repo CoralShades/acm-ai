@@ -132,6 +132,14 @@ phase_2() {
         curl -fsSL https://ollama.com/install.sh | sh > /dev/null 2>&1
     fi
     ok "Ollama $(ollama --version 2>/dev/null || echo 'unknown')"
+
+    # --- cloudflared (Cloudflare Tunnel) ---
+    if ! command -v cloudflared &> /dev/null; then
+        echo "  Installing cloudflared..."
+        curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+            -o /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared
+    fi
+    ok "cloudflared $(cloudflared --version 2>/dev/null || echo 'unknown')"
 }
 
 # ────────────────────────────────────────
@@ -196,24 +204,6 @@ phase_5() {
     uv sync --quiet
     ok "Python deps installed"
 
-    # Phase 5b: Fix PyTorch CUDA for RTX 5090 (Blackwell/sm_120)
-    # uv sync installs torch+cu126 (from pyproject.toml pin) which lacks
-    # Blackwell kernels. Reinstall from cu128 index which includes sm_120.
-    # This only affects the pod — local dev (RTX 4090) keeps cu126 via uv sync.
-    if command -v nvidia-smi &> /dev/null; then
-        local gpu_name
-        gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1)
-        if [[ "$gpu_name" == *"5090"* ]] || [[ "$gpu_name" == *"5080"* ]] || [[ "$gpu_name" == *"Blackwell"* ]]; then
-            echo "  Detected Blackwell GPU ($gpu_name) — reinstalling PyTorch with cu128..."
-            uv pip install torch torchvision \
-                --index-url https://download.pytorch.org/whl/cu128 \
-                --force-reinstall --no-deps --quiet
-            ok "PyTorch reinstalled with CUDA 12.8 (Blackwell support)"
-        else
-            ok "Non-Blackwell GPU ($gpu_name) — keeping default PyTorch"
-        fi
-    fi
-
     # Frontend
     echo "  Installing frontend dependencies..."
     cd "$REPO_DIR/frontend"
@@ -261,14 +251,16 @@ phase_8() {
     echo ""
     echo "  Pod services are running. Next steps:"
     echo ""
-    echo "  1. Connect Vercel to this pod:"
-    echo "     bash $REPO_DIR/scripts/runpod/update-vercel-env.sh <pod-id>"
+    echo "  1. Set up Cloudflare tunnel (one-time):"
+    echo "     cloudflared tunnel login"
+    echo "     bash $REPO_DIR/scripts/runpod/setup-tunnel.sh"
     echo ""
-    echo "  2. Set GitHub Actions secrets (for CI/CD):"
-    echo "     RUNPOD_POD_ID=<pod-id>"
+    echo "  2. Start the tunnel:"
+    echo "     bash $REPO_DIR/scripts/runpod/start-tunnel.sh"
     echo ""
     echo "  3. Verify the app:"
-    echo "     curl https://<pod-id>-5055.proxy.runpod.net/health"
+    echo "     curl https://api.acmv3.coralshades.ai/health"
+    echo "     curl https://acmv3.coralshades.ai/"
     echo ""
     echo "  4. Edit .env if needed:"
     echo "     nano $REPO_DIR/.env"
