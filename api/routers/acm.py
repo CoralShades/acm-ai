@@ -2711,7 +2711,7 @@ async def get_validation_summary(
                    count() as error_count
             FROM acm_record
             WHERE source_id = $source_id
-              AND array::len(validation_errors) > 0
+              AND validation_errors IS NOT NONE AND array::len(validation_errors) > 0
             GROUP BY building_id;
         """
         rows = await repo_query(query, {"source_id": sid})

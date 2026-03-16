@@ -1,3 +1,4 @@
+from datetime import datetime as dt
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -499,6 +500,13 @@ class ACMRecordResponse(BaseModel):
     created: Optional[str] = None
     updated: Optional[str] = None
 
+    @field_validator("created", "updated", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
+
 
 class ACMRecordListResponse(BaseModel):
     """Paginated list of ACM records."""
@@ -678,6 +686,13 @@ class RawExtractionResponse(BaseModel):
     confidence: Optional[float] = None
     officer_edits: List[Dict[str, Any]] = Field(default_factory=list)
     created_at: Optional[str] = None
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
 
 
 class RawExtractionListResponse(BaseModel):
@@ -919,6 +934,13 @@ class SiteConfigResponse(BaseModel):
     )
     created: Optional[str] = None
     updated: Optional[str] = None
+
+    @field_validator("created", "updated", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
 
 
 class BuildingResponse(BaseModel):
@@ -1536,6 +1558,13 @@ class SourceIntelligenceResponse(BaseModel):
     register_page_range: Optional[Dict[str, Any]] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
 
 
 # =============================================================================

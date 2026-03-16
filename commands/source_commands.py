@@ -72,9 +72,18 @@ class SourceProcessingOutput(CommandOutput):
 
 
 def _resolve_source_pdf_path(source: Source) -> Optional[str]:
-    """Resolve the PDF path from a processed source."""
+    """Resolve the PDF path from a processed source.
+
+    Resolves relative paths (e.g. 'data/uploads/file.pdf') to absolute
+    so the worker can find files regardless of its CWD.
+    """
     if source.asset and source.asset.file_path:
-        return str(source.asset.file_path)
+        from pathlib import Path
+
+        p = Path(source.asset.file_path)
+        if not p.is_absolute():
+            p = p.resolve()
+        return str(p)
     return None
 
 

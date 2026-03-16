@@ -55,7 +55,7 @@ def generate_unique_filename(original_filename: str, upload_folder: str) -> str:
 
         full_path = file_path / new_filename
         if not full_path.exists():
-            return str(full_path)
+            return str(full_path.resolve())
         counter += 1
 
 
@@ -562,17 +562,9 @@ async def create_source(
 
                 if not result.is_success():
                     logger.error(f"Sync processing failed: {result.error_message}")
-                    # Clean up source record
-                    try:
-                        await source.delete()
-                    except Exception:
-                        pass
-                    # Clean up uploaded file if we created it
-                    if file_path and upload_file:
-                        try:
-                            os.unlink(file_path)
-                        except Exception:
-                            pass
+                    # Do NOT delete source or file — the source record is
+                    # already in the DB and visible in the UI.  Deleting it
+                    # would orphan any partial data the worker produced.
                     raise HTTPException(
                         status_code=500,
                         detail=f"Processing failed: {result.error_message}",
@@ -612,12 +604,10 @@ async def create_source(
 
             except Exception as e:
                 logger.error(f"Sync processing failed: {e}")
-                # Clean up uploaded file if we created it
-                if file_path and upload_file:
-                    try:
-                        os.unlink(file_path)
-                    except Exception:
-                        pass
+                # Do NOT delete the uploaded file here — the worker may still
+                # be processing the command (e.g. timeout just means the API
+                # gave up waiting, not that the worker failed).  The file is
+                # referenced by source.asset.file_path in the DB.
                 raise
 
     except HTTPException:
