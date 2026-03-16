@@ -98,6 +98,87 @@ _NO_ASBESTOS_MARKERS = [
 ]
 
 
+def _deduplicate_overlapping_buildings(
+    buildings: List["BuildingMeta"],
+) -> List["BuildingMeta"]:
+    """Merge buildings whose page ranges overlap by ≥80%.
+
+    Small LLMs sometimes output multiple entries for the same physical
+    building (e.g. "Main Building" pages 5-18 and "Broadmeadows Police
+    Station" pages 5-19). When two buildings overlap heavily, keep the
+    one with the more specific name (longer name wins, then lower index).
+    """
+    if len(buildings) <= 1:
+        return buildings
+
+    merged: List["BuildingMeta"] = []
+    used = set()
+
+    for i, a in enumerate(buildings):
+        if i in used:
+            continue
+        best = a
+        for j, b in enumerate(buildings):
+            if j <= i or j in used:
+                continue
+            # Compute page overlap
+            a_start, a_end = a.page_start, a.page_end or a.page_start
+            b_start, b_end = b.page_start, b.page_end or b.page_start
+            overlap_start = max(a_start, b_start)
+            overlap_end = min(a_end, b_end)
+            if overlap_end < overlap_start:
+                continue  # no overlap
+            overlap_pages = overlap_end - overlap_start + 1
+            a_pages = a_end - a_start + 1
+            b_pages = b_end - b_start + 1
+            min_pages = min(a_pages, b_pages)
+            if min_pages <= 0:
+                continue
+            overlap_ratio = overlap_pages / min_pages
+            if overlap_ratio >= 0.8:
+                # Merge: prefer longer/more specific name
+                used.add(j)
+                if len(b.name or "") > len(best.name or ""):
+                    best = BuildingMeta(
+                        building_id=best.building_id,
+                        name=b.name,
+                        year=best.year or b.year,
+                        construction=best.construction or b.construction,
+                        page_start=min(a_start, b_start),
+                        page_end=max(a_end, b_end),
+                        complexity=best.complexity,
+                        rooms=best.rooms or b.rooms,
+                        acm_item_count_estimate=(
+                            best.acm_item_count_estimate or b.acm_item_count_estimate
+                        ),
+                    )
+                else:
+                    best = BuildingMeta(
+                        building_id=best.building_id,
+                        name=best.name,
+                        year=best.year or b.year,
+                        construction=best.construction or b.construction,
+                        page_start=min(a_start, b_start),
+                        page_end=max(a_end, b_end),
+                        complexity=best.complexity,
+                        rooms=best.rooms or b.rooms,
+                        acm_item_count_estimate=(
+                            best.acm_item_count_estimate or b.acm_item_count_estimate
+                        ),
+                    )
+                logger.info(
+                    f"Merged overlapping building '{b.name}' into '{best.name}' "
+                    f"(overlap={overlap_ratio:.0%})"
+                )
+        merged.append(best)
+
+    if len(merged) < len(buildings):
+        logger.info(
+            f"Deduplicated {len(buildings)} buildings → {len(merged)} after overlap merge"
+        )
+    return merged
+
+
 def _extract_site_name_from_cover(content: str) -> Optional[str]:
     """Extract the site/building name from the first page of the document.
 
@@ -712,6 +793,13 @@ async def compile_building_inventory(
         # Ensure processing groups are generated
         if not inventory.processing_groups and inventory.buildings:
             inventory.processing_groups = _create_processing_groups(inventory.buildings)
+
+        # Deduplicate buildings with heavily overlapping page ranges.
+        # Small LLMs (phi4, llama3.1:8b) sometimes split one building into
+        # multiple entries with near-identical page ranges (e.g. "Main Building"
+        # pages 5-18 and "Broadmeadows Police Station" pages 5-19).
+        inventory.buildings = _deduplicate_overlapping_buildings(inventory.buildings)
+        inventory.total_buildings = len(inventory.buildings)
 
         # Cross-validate: run heuristic on FULL content (not trimmed) to catch
         # buildings whose register data precedes the detected register_start_page
