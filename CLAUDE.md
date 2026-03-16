@@ -136,6 +136,9 @@ frontend/src/
   components/           # React components
     ui/                 # Base shadcn/ui-style components
     common/             # Shared (CommandPalette, ModelSelector)
+    acm/                # ACM domain (BuildingGrid, ACMGrid, BuildingViewDialog, ProvenanceViewer, etc.)
+    chat/               # Chat components (SmartChatPanel, renderers/)
+    jobs/               # Job-related components
     notebooks/, sources/, notes/  # Feature components
   hooks/                # Custom React hooks
   lib/                  # Utilities and API clients
@@ -430,10 +433,16 @@ Add to the story's Dev Agent Record:
 - Normalizer enums: `open_notebook/extractors/normalizers/enums.py`
 - ACM domain model uses SF API names as field aliases: `open_notebook/domain/acm.py`
 
-### Two-View Frontend (Building Grid + Item Grid)
+### Two-Tab Frontend (Building Grid + ACM Records Grid)
 - Route: `/source/[id]` at `frontend/src/app/(dashboard)/source/[id]/page.tsx`
-- Components: `BuildingSidebar`, `ItemGrid` in `frontend/src/components/acm/`
+- Layout: Two-tab — "Buildings" tab (`BuildingGrid`) + "ACM Records" tab (`BuildingTabStrip` + `ACMGrid`)
+- `BuildingGrid` in `frontend/src/components/acm/BuildingGrid.tsx` — AG Grid with 13 default building columns, autoHeight, localStorage column state, View button
+- `BuildingViewDialog` in `frontend/src/components/acm/BuildingViewDialog.tsx` — Dialog modal wrapping `BuildingDetailForm`
+- `ACMGrid` column defs: 13 required Item__c fields (Building Code, Item Name, Friability, etc.)
+- Per-building export dropdown: "Export Current Building" + "Export All" (Excel/CSV)
+- Same layout applied to `/jobs/[id]` page
 - Store: `frontend/src/lib/stores/buildingStore.ts` (Zustand)
+- Column visibility presets: `frontend/src/lib/stores/column-visibility-store.ts`
 - Hooks: `useBuildings`, `useACMItems` in `frontend/src/lib/hooks/`
 - AG Grid dynamic columns from `GET /api/acm/field-schema`
 

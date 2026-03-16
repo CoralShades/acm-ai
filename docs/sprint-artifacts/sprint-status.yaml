@@ -621,6 +621,18 @@ development_status:
   provenance-pdf-viewer-enhancement-2026-03-16: done  # Major PDFPageViewer rewrite: zoom (50-300%, Ctrl+/Ctrl-), page nav (prev/next, go-to-source), text search (Ctrl+F, highlight matches, next/prev), scrollable canvas (65vh), bbox pulse animation (3-cycle glow), auto-scroll to bbox, crosshair re-scroll button, status bar. Bug fix: table_bbox added to all 5 ACMRecordResponse builders in api/routers/acm.py (was missing — bbox overlay never rendered). CSS: .pdf-search-highlight (yellow), .pdf-search-highlight-active (orange), @keyframes pdf-bbox-pulse, prefers-reduced-motion support.
 
   # ─────────────────────────────────────────────────────
+  # Building Grid + ACM Records Grid Rework (2026-03-16)
+  # Branch: ACMV3
+  # Commits: 2f2eeadf, 1fbf321f, e9dcd67f
+  # Two-tab layout on /source/[id]: Buildings tab (BuildingGrid) + ACM Records tab.
+  # New components: BuildingGrid.tsx (AG Grid, 13 cols, localStorage state),
+  #   BuildingViewDialog.tsx (dialog modal for view/edit building).
+  # ACMGrid column defs reordered to 13 required fields. Per-building export.
+  # Applied to both /source/[id] and /jobs/[id] pages.
+  # ─────────────────────────────────────────────────────
+  ui-building-acm-grid-rework-2026-03-16: done  # 3 commits. Two-tab layout (Buildings + ACM Records) on source/[id] and jobs/[id]. New BuildingGrid.tsx (AG Grid, 13 default columns, View button → BuildingViewDialog, autoHeight, localStorage column state). New BuildingViewDialog.tsx (dialog modal wrapping BuildingDetailForm). ACMGrid reordered to 13 required Item__c fields. Per-building export dropdown (current building + all). PRESET_COLUMNS.essential updated. DependentPicklistEditor/BuildingDetailForm/RecordWizard styling fixes.
+
+  # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
   # Branch: ACMV3
   # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
@@ -669,8 +681,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 255  (254 prior + provenance-pdf-viewer-enhancement)
-# Stories Done: 232 (91%)  -- 231 prior + provenance-pdf-viewer-enhancement
+# Total Stories: 256  (255 prior + ui-building-acm-grid-rework)
+# Stories Done: 233 (91%)  -- 232 prior + ui-building-acm-grid-rework
 # Stories Review: 0
 # Stories In-Progress: 1 (bug-fix-12-extraction-audit)
 # Stories Blocked: 0
@@ -680,6 +692,10 @@ development_status:
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-16
+# Building Grid + ACM Records Grid Rework (2026-03-16): Two-tab layout on source/[id] and
+# jobs/[id] pages. New BuildingGrid.tsx (AG Grid, 13 cols, View→BuildingViewDialog, autoHeight,
+# localStorage column state). ACMGrid reordered to 13 required Item__c fields. Per-building
+# export dropdown. 3 commits: 2f2eeadf, 1fbf321f, e9dcd67f.
 # Provenance PDF Viewer Enhancement (2026-03-16): PDFPageViewer rewrite — zoom (50-300%),
 # page nav, text search (Ctrl+F), scrollable canvas (65vh), bbox pulse animation, auto-scroll
 # to highlighted record, crosshair re-scroll. Bug fix: table_bbox missing from all 5

@@ -104,4 +104,28 @@ Frontend UI audit and fix session: 8 tasks, 13 files modified. Addressed label i
 
 ---
 
+## Follow-Up Session: Building Grid + ACM Records Grid Rework (2026-03-16)
+
+### T10 — Two-Tab Layout + BuildingGrid Component
+**Status:** Done
+**Commits:** 2f2eeadf, 1fbf321f, e9dcd67f
+**New Files:**
+- `frontend/src/components/acm/BuildingGrid.tsx` — AG Grid for buildings with 13 default columns (Asset Name, Address, Suburb, Postcode, State, Asset Type, Category, Construction, Year, Levels, Ownership, Frequency, Records), View button opening BuildingViewDialog, autoHeight layout, column state persisted to localStorage
+- `frontend/src/components/acm/BuildingViewDialog.tsx` — Dialog modal wrapping BuildingDetailForm for view/edit a single building
+
+**Modified Files:**
+- `frontend/src/app/(dashboard)/source/[id]/page.tsx` — Two-tab layout: "Buildings" tab (BuildingGrid) + "ACM Records" tab (BuildingTabStrip + ACMGrid). Per-tab search inputs. Export dropdown with "Export Current Building" + "Export All"
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` — Replaced BuildingReviewGrid with BuildingGrid on Buildings tab. Added per-building export dropdown to ACM Records tab
+- `frontend/src/components/acm/ACMGrid.tsx` — Column defs reordered to 13 required fields: Building Code, Item Name, Friability, ACM Product Group, ACM Product Type, Condition, Disturbance Potential, Location in Room, Room/Area, Floor Level, Quantity, Sample Result, Assessor
+- `frontend/src/lib/stores/column-visibility-store.ts` — PRESET_COLUMNS.essential updated to match 13 required ACM item fields
+- `frontend/src/components/acm/DependentPicklistEditor.tsx` — Form mode uses full Input-matching styles
+- `frontend/src/components/acm/BuildingDetailForm.tsx` — Picklist selects get custom dropdown arrow, removed double-border wrapper
+- `frontend/src/components/acm/RecordWizard.tsx` — Improved spacing: space-y-6 between groups, gap-y-3 between fields, border-bottom on group headers
+
+**Gaps resolved from previous audit:**
+- Gap #1 (BuildingReviewGrid missing `state` column) — resolved: BuildingGrid includes State column
+- Gap #2 (BuildingSidebar missing Postcode and State fields) — resolved: BuildingGrid shows Postcode, State
+
+---
+
 ## Session Status: COMPLETE

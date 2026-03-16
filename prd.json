@@ -2,8 +2,8 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 71,
-  "totalStoryPoints": 208,
+  "totalStories": 72,
+  "totalStoryPoints": 213,
   "sprints": 10,
   "stories": [
     {
@@ -2351,6 +2351,46 @@
       ],
       "passes": true,
       "notes": "Enhanced provenance PDF viewer. Ports zoom/nav patterns from ACMCellViewer, adds search + bbox auto-scroll. Bug fix: table_bbox was defined on ACMRecordResponse model but never populated in any response builder.",
+      "model": "opus",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "UI-S1",
+      "title": "Building Grid + ACM Records Grid Rework",
+      "epic": "UI",
+      "sprint": "Post-V3",
+      "storyPoints": 5,
+      "riskLevel": "LOW",
+      "storyType": "feature",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "E33-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Two-tab layout on /source/[id] page — Buildings tab (BuildingGrid) + ACM Records tab (BuildingTabStrip + ACMGrid)",
+        "AC2: New BuildingGrid component with AG Grid showing 13 default building columns (Asset Name, Address, Suburb, Postcode, State, Asset Type, Category, Construction, Year, Levels, Ownership, Frequency, Records)",
+        "AC3: BuildingGrid View button opens BuildingViewDialog (dialog modal wrapping BuildingDetailForm)",
+        "AC4: BuildingGrid uses autoHeight layout and persists column state to localStorage",
+        "AC5: ACMGrid column defs reordered to 13 required Item__c fields (Building Code, Item Name, Friability, ACM Product Group, ACM Product Type, Condition, Disturbance Potential, Location in Room, Room/Area, Floor Level, Quantity, Sample Result, Assessor)",
+        "AC6: PRESET_COLUMNS.essential updated to match 13 required ACM item fields",
+        "AC7: Per-building export dropdown on ACM Records tab — Export Current Building + Export All (Excel/CSV)",
+        "AC8: BuildingGrid applied to both /source/[id] and /jobs/[id] pages (replaces BuildingReviewGrid on jobs page)",
+        "AC9: DependentPicklistEditor, BuildingDetailForm, and RecordWizard styling improvements",
+        "AC10: Frontend build passes clean"
+      ],
+      "keyFiles": [
+        "frontend/src/components/acm/BuildingGrid.tsx",
+        "frontend/src/components/acm/BuildingViewDialog.tsx",
+        "frontend/src/app/(dashboard)/source/[id]/page.tsx",
+        "frontend/src/app/(dashboard)/jobs/[id]/page.tsx",
+        "frontend/src/components/acm/ACMGrid.tsx",
+        "frontend/src/lib/stores/column-visibility-store.ts",
+        "frontend/src/components/acm/DependentPicklistEditor.tsx",
+        "frontend/src/components/acm/BuildingDetailForm.tsx"
+      ],
+      "passes": true,
+      "notes": "Two-tab layout rework: BuildingGrid (13 cols, AG Grid, autoHeight, localStorage) + ACMGrid (13 required fields reorder). Per-building export. Applied to both source and jobs pages. 3 commits: 2f2eeadf, 1fbf321f, e9dcd67f.",
       "model": "opus",
       "implementedDate": "2026-03-16"
     }
