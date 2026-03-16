@@ -70,7 +70,7 @@ fi
 # ── 4. Background Worker ──────────────
 echo "[4/5] Starting background worker..."
 tmux new-session -d -s worker -c "$REPO_DIR" \
-    "export PATH=\"$HOME/.local/bin:\$PATH\"; export CUDA_VISIBLE_DEVICES=''; cd $REPO_DIR && uv run python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log"
+    "export PATH=\"$HOME/.local/bin:\$PATH\"; export CUDA_VISIBLE_DEVICES=''; export HF_HUB_ENABLE_HF_TRANSFER=0; cd $REPO_DIR && uv run python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log"
 # Worker has no HTTP endpoint — just verify the tmux session exists
 sleep 2
 if tmux has-session -t worker 2>/dev/null; then
