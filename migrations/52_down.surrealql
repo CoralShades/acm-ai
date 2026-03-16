@@ -1,0 +1,2 @@
+-- Down Migration 52: Revert config_json to non-nullable string
+DEFINE FIELD config_json ON TABLE field_schema TYPE string;
