@@ -548,7 +548,7 @@ development_status:
   e36-s1-agent-team-creation: done                        # 3 SP. Agent files, state files, prd.json, sprint-status.
   e36-s2-e35-fix-reverification: done                     # 5 SP. All 8 E35 fixes verified with code analysis + API tests + 315 unit tests.
   e36-s3-route-coverage-gaps: done                        # 3 SP. Verified 12 DYNAMIC_ROUTES, 36/36 route coverage confirmed with smoke-walker spec + screenshots.
-  e36-s4-ollama-multi-model-benchmark: backlog            # 5 SP. 12 runs: 6 models x 2 PDFs vs ground truth.
+  e36-s4-ollama-multi-model-benchmark: done                # 5 SP. 12 runs: 6 models x 2 PDFs vs ground truth. Completed 2026-03-05.
   e36-s5-functional-verification: backlog                 # 5 SP. Verify all major features E2E with real data.
   e36-s6-ux-audit: backlog                                # 2 SP. 3 viewports, loading/empty/error states, data-testid.
   e36-s7-devils-advocate-review: backlog                  # 2 SP. Adversarial review of fixes and benchmark results.
@@ -647,6 +647,19 @@ development_status:
   crud-chat-security-audit-2026-03-16: done  # 23 issues. P0: execute_pending_write removed from LLM tools (graph enforces HITL barrier), confirm_write dead code deleted, ALLOWED_ACM_FIELDS SQL injection allowlist, source_id context binding. P1: surrealdb>=1.0.8, Record ID column in essential preset, MouseEvent type fix, click-to-copy propagation guard, clipboard HTTPS guard. P2/P3: HITLApprovalDialog timeout/escape/button fixes, dead code cleanup, tool labels, sourceId guard. Pre-existing: ACMGrid empty fix + SurrealDB docker pin.
 
   # ─────────────────────────────────────────────────────
+  # Dogfood Session: Live Extraction + Validation (2026-03-17)
+  # Branch: ACMV3
+  # Commits: 6fd92aaf, c0832fa8, 0785f1b8
+  # Live extraction run on Broadmeadows Police Station PDF (18 pages, 31 ground truth records).
+  # Found and fixed 4 bugs blocking extraction + 1 UX crash + 1 data hygiene gap.
+  # Result: 0→28 records (90% ground truth match).
+  # Full report: dogfood-output/extraction-run-report.md
+  # ─────────────────────────────────────────────────────
+  dogfood-fix-provider-model-mismatch-2026-03-17: done  # Commit 6fd92aaf. _get_db_extraction_model() returned non-Ollama model names (openrouter/anthropic/claude-sonnet-4) to Ollama candidate → 404 → 0 records. Fixed: check provider field, reject non-Ollama. Also: validate_records_strict() auto-fills material_description from product.
+  dogfood-fix-quantity-parse-job-crash-2026-03-17: done  # Commit c0832fa8. ACMItemRecord.quantity Optional[float]→Optional[str] — LLMs return "2m 2", "10 lm". Pydantic rejected entire building records. Also: JobOverviewTab.tsx optional chaining on buildingInventory?.buildings?.length (crash fix).
+  dogfood-fix-cascade-delete-orphaned-2026-03-17: done  # Commit 0785f1b8. Source delete now cascade-cleans: uploaded PDF file, reference edges, command+agui_events, chat refers_to. New POST /api/sources/cleanup-orphaned-files endpoint. First run deleted 92 orphaned files (149MB→0MB).
+
+  # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
   # Branch: ACMV3
   # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
@@ -695,17 +708,25 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 257  (256 prior + crud-chat-security-audit-2026-03-16)
-# Stories Done: 234 (91%)  -- 233 prior + crud-chat-security-audit-2026-03-16
+# Total Stories: 261  (257 prior + 3 dogfood fixes + E36-S4 done)
+# Stories Done: 238 (91%)  -- 234 prior + 3 dogfood-2026-03-17 + E36-S4 status corrected
 # Stories Review: 0
 # Stories In-Progress: 1 (bug-fix-12-extraction-audit)
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 4 (E36-S4..S7)
+# Stories Backlog: 3 (E36-S5..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-16
+# Last Updated: 2026-03-17
+# Dogfood Session (2026-03-17): Live extraction on Broadmeadows PDF, 4 bugs found + fixed:
+# 1) _get_db_extraction_model() non-Ollama model rejection (0→28 records)
+# 2) validate_records_strict() material_description auto-fill from product
+# 3) ACMItemRecord.quantity float→str (Pydantic crash discarding entire buildings)
+# 4) JobOverviewTab.tsx optional chaining crash fix
+# 5) Source cascade delete (file+edges+commands) + orphaned file cleanup (92 files/149MB)
+# E36-S4 status corrected: backlog→done (was completed 2026-03-05 per e36/progress.md)
+#
 # CRUD Chat + Grid Security Audit Fix (2026-03-16): 23 issues resolved across 13 files.
 # 4 P0 security fixes: HITL barrier enforcement (execute_pending_write removed from LLM tools),
 # dead code cleanup (confirm_write), SQL injection allowlist (ALLOWED_ACM_FIELDS), source_id

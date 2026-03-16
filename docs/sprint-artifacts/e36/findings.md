@@ -208,3 +208,58 @@ Each finding follows:
 - **Description**: Missing `EventEncoder` in the custom `/api/agui/crud-chat` SSE endpoint. The endpoint was streaming raw AG-UI event objects without serializing them to SSE `data:` format. Every message returned `RUN_ERROR: "Run ended without emitting a terminal event" (INCOMPLETE_STREAM)`. The fix wraps the event generator with `EventEncoder` from `ag_ui.encoder`. This was a prerequisite for the HITL write flow (T10) to function.
 - **Evidence**: `docs/sprint-artifacts/e2e-chat-test/e2e-crud-chat-test-report.md` (Critical Bug Found section); `api/routers/agui_chat.py`
 - **Recommendation**: Fixed in this session (2026-03-16). No further action needed. Add an SSE smoke test to the test suite to catch similar regressions.
+
+---
+
+## Finding 019 — 2026-03-17
+
+- **Date**: 2026-03-17 (Dogfood extraction session)
+- **Category**: functional
+- **Severity**: BLOCKER (was blocking all extractions)
+- **Description**: `_get_db_extraction_model()` in `open_notebook/graphs/utils.py` resolved a SurrealDB model record ID to a non-Ollama model name (`anthropic/claude-sonnet-4` from OpenRouter provider) and passed it to the Ollama candidate in `_provision_extraction_primary_model()`. Ollama returned 404 for `anthropic/claude-sonnet-4`, causing 0 records extracted. The function queried `SELECT name FROM model:{id}` but did not check the `provider` field.
+- **Evidence**: Worker log: `Primary extraction model: ollama/anthropic/claude-sonnet-4` → `model "anthropic/claude-sonnet-4" not found (status code: 404)` → `0 items`
+- **Recommendation**: Fixed in commit `6fd92aaf`. Now queries `SELECT name, provider FROM model:{id}` and rejects non-Ollama models.
+
+---
+
+## Finding 020 — 2026-03-17
+
+- **Date**: 2026-03-17 (Dogfood extraction session)
+- **Category**: functional
+- **Severity**: BLOCKER
+- **Description**: `validate_records_strict()` in `acm_extraction.py` hard-rejected records where `material_description` was `None`, even when `product` was populated. The rejection gate at line 1362 treated `material_description` as equally critical as `building_id` and `product`. All 30 LLM-extracted records were rejected, leaving only 3 no-access recovery records.
+- **Evidence**: Worker log: `Validated 0 records, rejected 30` — all with `Missing required field: material_description`
+- **Recommendation**: Fixed in commit `6fd92aaf`. Auto-fills `material_description` from `product` (same pattern as no-access recovery).
+
+---
+
+## Finding 021 — 2026-03-17
+
+- **Date**: 2026-03-17 (Dogfood extraction session)
+- **Category**: functional
+- **Severity**: BLOCKER
+- **Description**: `ACMItemRecord.quantity` in `acm_schemas_v3.py` was typed as `Optional[float]`, but LLMs return measurement strings like `"2m 2"` and `"10 lm"`. Pydantic's float coercion rejected these, and the `except` handler in `_v3_extract_items` discarded ALL records for the entire building — not just the 2 malformed rows. Every other layer (domain model, legacy schemas, orchestrator) uses `Optional[str]` for quantity.
+- **Evidence**: Worker log: `V3 Phase 2 [B001] failed — 2 validation errors for ACMItemExtractionResult: records.12.quantity float_parsing "2m 2", records.18.quantity float_parsing "10 lm"`
+- **Recommendation**: Fixed in commit `c0832fa8`. Changed to `Optional[str]`. Removed redundant float→str conversion in orchestrator.py.
+
+---
+
+## Finding 022 — 2026-03-17
+
+- **Date**: 2026-03-17 (Dogfood extraction session)
+- **Category**: functional
+- **Severity**: CONCERN
+- **Description**: `JobOverviewTab.tsx` crashed with `Cannot read properties of undefined (reading 'length')` when navigating to `/jobs/{source_id}` after extraction. The guard `buildingInventory && buildingInventory.buildings.length` only checked the outer object, not the `buildings` property which can be `null`/`undefined` when `building_inventory` dict in SurrealDB lacks the key. The safe pattern `inventory?.buildings?.length` was already used in `SourceIntelligencePanel.tsx`.
+- **Evidence**: Browser error: "Failed to load Job Detail — Cannot read properties of undefined (reading 'length')". Screenshot: `dogfood-output/screenshots/09-job-detail-error.png`
+- **Recommendation**: Fixed in commit `c0832fa8`. Added optional chaining.
+
+---
+
+## Finding 023 — 2026-03-17
+
+- **Date**: 2026-03-17 (Dogfood extraction session)
+- **Category**: data-hygiene
+- **Severity**: CONCERN
+- **Description**: Source deletion (`DELETE /api/sources/{id}`) only deleted the source record from SurrealDB (triggering 9 DB cascade events) but left behind: (1) uploaded PDF file on disk, (2) `reference` relation edges, (3) `command` records, (4) `agui_events`, (5) `chat_session`/`refers_to` edges. Additionally, 92 orphaned PDF files (149MB) existed in `data/uploads/` from previous DB volumes with no matching source records.
+- **Evidence**: `data/uploads/` contained 93 files (149MB) but only 1 source in DB. After cleanup: 1 file (1.8MB).
+- **Recommendation**: Fixed in commit `0785f1b8`. Delete endpoint now cascades all 5 gaps. New `POST /api/sources/cleanup-orphaned-files` endpoint for batch cleanup.
