@@ -102,24 +102,26 @@ class DoclingAdapter:
                 StageId.DOCLING_EXTRACTION, "Starting Docling table extraction"
             )
 
-        from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
-
         pipeline_options = PdfPipelineOptions(do_table_structure=True)
         pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
         pipeline_options.table_structure_options.do_cell_matching = True
 
         # Force CPU for Docling ML models — RTX 5090 (Blackwell/sm_120) needs
         # PyTorch built with CUDA 12.8+ kernels. Ollama handles its own CUDA.
-        accelerator_options = AcceleratorOptions(
-            device=AcceleratorDevice.CPU,
-        )
-
-        converter = DocumentConverter(
-            format_options={
+        converter_kwargs: dict = {
+            "format_options": {
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
             },
-            accelerator_options=accelerator_options,
-        )
+        }
+        try:
+            from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
+            converter_kwargs["accelerator_options"] = AcceleratorOptions(
+                device=AcceleratorDevice.CPU,
+            )
+        except ImportError:
+            pass  # Older docling version without accelerator_options
+
+        converter = DocumentConverter(**converter_kwargs)
 
         result = converter.convert(pdf_path)
         doc = result.document

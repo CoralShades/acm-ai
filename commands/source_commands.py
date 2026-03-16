@@ -99,7 +99,6 @@ async def _extract_tables_with_docling(
     Uses DocumentConverter directly, bypassing content-core's serialization
     layer that caused E24's row-fragmentation regression.
     """
-    from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -115,16 +114,20 @@ async def _extract_tables_with_docling(
 
     # Force CPU for Docling ML models — RTX 5090 (Blackwell/sm_120) needs
     # PyTorch built with CUDA 12.8+ kernels. Ollama handles its own CUDA.
-    accelerator_options = AcceleratorOptions(
-        device=AcceleratorDevice.CPU,
-    )
-
-    converter = DocumentConverter(
-        format_options={
+    converter_kwargs: dict = {
+        "format_options": {
             InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
         },
-        accelerator_options=accelerator_options,
-    )
+    }
+    try:
+        from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
+        converter_kwargs["accelerator_options"] = AcceleratorOptions(
+            device=AcceleratorDevice.CPU,
+        )
+    except ImportError:
+        pass  # Older docling version without accelerator_options
+
+    converter = DocumentConverter(**converter_kwargs)
 
     result = converter.convert(pdf_path)
     doc = result.document
