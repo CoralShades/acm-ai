@@ -21,6 +21,10 @@ interface ItemDetailCardProps {
   data: ACMItemData
 }
 
+function humanizeKey(key: string): string {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 const RISK_COLORS: Record<string, string> = {
   High: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   Medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
@@ -32,7 +36,7 @@ export function ItemDetailCard({ data }: ItemDetailCardProps) {
 
   const riskColor =
     RISK_COLORS[data.risk_status || ''] ||
-    'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+    'bg-gray-100 text-gray-800 dark:bg-muted dark:text-gray-400'
 
   const primaryFields = ['building_name', 'room_name', 'product', 'risk_status', 'friable', 'sample_result']
   const extraFields = Object.entries(data).filter(
@@ -89,6 +93,7 @@ export function ItemDetailCard({ data }: ItemDetailCardProps) {
       {extraFields.length > 0 && (
         <button
           onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-2 transition-colors"
         >
           {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -100,7 +105,7 @@ export function ItemDetailCard({ data }: ItemDetailCardProps) {
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1 text-xs border-t pt-1">
           {extraFields.map(([key, val]) => (
             <div key={key}>
-              <span className="text-muted-foreground">{key}:</span>{' '}
+              <span className="text-muted-foreground">{humanizeKey(key)}:</span>{' '}
               {String(val)}
             </div>
           ))}

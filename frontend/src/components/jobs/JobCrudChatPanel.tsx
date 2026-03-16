@@ -30,8 +30,8 @@ export function JobCrudChatPanel({ sourceId, className }: JobCrudChatPanelProps)
             `Your role is to help users create, update, and delete ACM records through natural language. ` +
             `Current job source: ${sourceId}. ` +
             `IMPORTANT: Always preview write operations before executing them. ` +
-            `Present a preview_write JSON payload and wait for the user to confirm by replying with "confirm <operation_id>". ` +
-            `Never apply changes without explicit user confirmation.` +
+            `The system will present an approval dialog for write operations. ` +
+            `Never apply changes without explicit user approval.` +
             (contextString ? `\n\nAdditional context:\n${contextString}` : '')
           }
         />

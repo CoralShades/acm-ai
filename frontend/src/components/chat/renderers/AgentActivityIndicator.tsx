@@ -26,11 +26,11 @@ export function AgentActivityIndicator({
   const label = TOOL_LABELS[tool] || `Running ${tool}...`
 
   return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+    <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs text-muted-foreground py-1">
       {status === 'executing' ? (
         <Loader2 className="h-3 w-3 animate-spin" />
       ) : (
-        <CheckCircle2 className="h-3 w-3 text-green-500" />
+        <CheckCircle2 className="h-3 w-3 text-green-500 dark:text-green-400" />
       )}
       <span>{status === 'executing' ? label : label.replace('...', ' - done')}</span>
     </div>

@@ -7,7 +7,7 @@ import { useSmartChat } from '@/lib/hooks/useSmartChat'
 import { ToolResultRenderers } from './ToolResultRenderers'
 import { ACMAssistantMessage } from './ACMAssistantMessage'
 import { SmartChatInput } from './SmartChatInput'
-import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import { TableProperties } from 'lucide-react'
 
 interface SmartChatPanelProps {
@@ -58,7 +58,7 @@ export function SmartChatPanel({
       if (status !== 'inProgress') return null
       return (
         <div className="text-xs text-muted-foreground italic px-4 py-1 flex items-center gap-2">
-          <span className="inline-block h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+          <span className="inline-block h-2 w-2 bg-primary rounded-full animate-pulse" />
           {nodeName === 'tools'
             ? 'Searching...'
             : 'Thinking...'}
@@ -117,14 +117,19 @@ export function SmartChatPanel({
         {/* ACM toggle badge */}
         {hasAcmData && (
           <div className="px-4 py-2 border-t flex items-center gap-2">
-            <Badge
-              variant={includeAcmContext ? 'default' : 'outline'}
-              className="cursor-pointer text-xs"
+            <button
+              type="button"
               onClick={() => setIncludeAcmContext(!includeAcmContext)}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                includeAcmContext
+                  ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80'
+                  : 'border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground'
+              )}
             >
-              <TableProperties className="h-3 w-3 mr-1" />
+              <TableProperties className="h-3 w-3" />
               ACM Data {includeAcmContext ? 'ON' : 'OFF'}
-            </Badge>
+            </button>
           </div>
         )}
       </div>

@@ -41,7 +41,7 @@ export function HITLApprovalDialog({
       {field && (
         <div className="text-sm mb-2">
           <span className="font-medium">Field:</span>{' '}
-          <code className="bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">{field}</code>
+          <code className="bg-white dark:bg-muted px-1.5 py-0.5 rounded text-xs">{field}</code>
         </div>
       )}
 
@@ -55,6 +55,7 @@ export function HITLApprovalDialog({
             onClick={() => setEditing(true)}
             className="text-muted-foreground hover:text-foreground transition-colors"
             title="Edit value before approving"
+            aria-label="Edit value before approving"
           >
             <Pencil className="h-3 w-3" />
           </button>
@@ -68,7 +69,7 @@ export function HITLApprovalDialog({
             type="text"
             value={editedValue}
             onChange={(e) => setEditedValue(e.target.value)}
-            className="w-full border rounded px-2 py-1 text-sm bg-white dark:bg-gray-800"
+            className="w-full border rounded px-2 py-1 text-sm bg-white dark:bg-muted"
             autoFocus
           />
         </div>

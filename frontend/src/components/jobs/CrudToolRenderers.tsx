@@ -3,22 +3,10 @@
 import { useRenderToolCall, useLangGraphInterrupt } from '@copilotkit/react-core'
 import { HITLApprovalDialog } from '@/components/chat/renderers/HITLApprovalDialog'
 import { ToolErrorCard } from '@/components/chat/renderers/ToolErrorCard'
+import { isErrorResult } from '@/lib/utils/tool-result'
 
 interface CrudToolRenderersProps {
   sourceId: string
-}
-
-function isErrorResult(result: unknown): boolean {
-  if (!result) return false
-  if (typeof result === 'string') {
-    try {
-      const parsed = JSON.parse(result)
-      return typeof parsed === 'object' && parsed !== null && 'error' in parsed
-    } catch {
-      return false
-    }
-  }
-  return typeof result === 'object' && result !== null && 'error' in result
 }
 
 /**
@@ -57,7 +45,7 @@ export function CrudToolRenderers({ sourceId }: CrudToolRenderersProps) {
     render: ({ status, result }) => {
       if (status === 'inProgress' || status === 'executing') {
         return (
-          <div className="text-sm text-muted-foreground italic py-2">
+          <div role="status" aria-live="polite" className="text-sm text-muted-foreground italic py-2">
             Preparing write preview...
           </div>
         )
@@ -75,7 +63,7 @@ export function CrudToolRenderers({ sourceId }: CrudToolRenderersProps) {
     render: ({ status, result }) => {
       if (status === 'inProgress' || status === 'executing') {
         return (
-          <div className="text-sm text-muted-foreground italic py-2">
+          <div role="status" aria-live="polite" className="text-sm text-muted-foreground italic py-2">
             Applying change...
           </div>
         )

@@ -7,6 +7,7 @@ import { ACMStatsResult } from './renderers/ACMStatsResult'
 import { SearchResult } from './renderers/SearchResult'
 import { AgentActivityIndicator } from './renderers/AgentActivityIndicator'
 import { ToolErrorCard } from './renderers/ToolErrorCard'
+import { isErrorResult } from '@/lib/utils/tool-result'
 
 function safeParseJSON(str: string): Record<string, unknown> | null {
   try {
@@ -29,16 +30,6 @@ function parseResult(result: unknown): Record<string, unknown> | null {
   }
   if (typeof result === 'object' && result !== null && 'error' in result) return null
   return result as Record<string, unknown>
-}
-
-/** Check if a result represents an error from the backend. */
-function isErrorResult(result: unknown): boolean {
-  if (!result) return false
-  if (typeof result === 'string') {
-    const parsed = safeParseJSON(result)
-    return parsed !== null && 'error' in parsed
-  }
-  return typeof result === 'object' && result !== null && 'error' in result
 }
 
 /**

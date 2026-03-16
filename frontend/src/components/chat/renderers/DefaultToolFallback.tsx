@@ -20,9 +20,9 @@ export function DefaultToolFallback({
     <div className="border rounded-lg p-3 my-1 text-sm bg-muted/20">
       <div className="flex items-center gap-2 mb-1">
         {status === 'inProgress' || status === 'executing' ? (
-          <Loader2 className="h-3.5 w-3.5 text-blue-600 animate-spin" />
+          <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
         ) : status === 'complete' ? (
-          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+          <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
         ) : (
           <AlertCircle className="h-3.5 w-3.5 text-red-500" />
         )}

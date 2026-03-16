@@ -60,7 +60,8 @@ export function ACMTableResult({ data, queryType }: ACMTableResultProps) {
         </span>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full min-w-[480px] text-xs">
+          <caption className="sr-only">ACM Records — {queryType}</caption>
           <thead>
             <tr className="border-b bg-muted/30">
               <th className="px-3 py-1.5 text-left font-medium">Building</th>

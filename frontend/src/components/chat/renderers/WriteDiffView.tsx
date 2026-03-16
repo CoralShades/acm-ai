@@ -19,7 +19,7 @@ export function WriteDiffView({ field, oldValue, newValue }: WriteDiffViewProps)
             <span className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded line-through">
               {oldValue}
             </span>
-            <span className="text-muted-foreground">→</span>
+            <span className="text-muted-foreground" aria-hidden="true">→</span>
           </>
         )}
         <span className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
