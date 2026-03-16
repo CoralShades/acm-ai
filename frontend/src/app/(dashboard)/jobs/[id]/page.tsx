@@ -13,7 +13,7 @@ import { JobDetailHeader } from '@/components/jobs/JobDetailHeader'
 import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
 import { JobContentPanel } from '@/components/jobs/JobContentPanel'
 import { JobCrudChatPanel } from '@/components/jobs/JobCrudChatPanel'
-import { BuildingReviewGrid } from '@/components/acm/BuildingReviewGrid'
+import { BuildingGrid } from '@/components/acm/BuildingGrid'
 import {
   BuildingTabFilter,
   getRecordBuildingTabId,
@@ -27,11 +27,21 @@ import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPane
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { useSource } from '@/lib/hooks/use-sources'
+import { useBuildings } from '@/lib/hooks/useBuildings'
+import { useFieldSchema } from '@/lib/hooks/useACMItems'
 import { useACMStats, useDeleteACMRecord } from '@/lib/hooks/use-acm'
 import { sourcesApi } from '@/lib/api/sources'
+import { acmApi } from '@/lib/api/acm'
 import type { ACMRecord } from '@/lib/types/acm'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, MessageSquare, LayoutDashboard } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ChevronLeft, ChevronRight, MessageSquare, Download } from 'lucide-react'
 
 const KEY_FIELDS = ['room_name', 'product', 'result', 'friable', 'material_condition', 'sample_no', 'sample_result'] as const
 
@@ -65,6 +75,9 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
+  const { data: buildingsData, isLoading: isLoadingBuildings } = useBuildings(sourceId)
+  const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
+  const { data: fieldSchema } = useFieldSchema()
   const { data: records = [], refetch: refetchRecords } = useQuery<ACMRecord[]>({
     queryKey: ['acm-records', sourceId],
     queryFn: () =>
@@ -289,7 +302,12 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 >
                   <Card className="rounded-xl shadow-sm">
                     <CardContent className="p-4 sm:p-6">
-                      <BuildingReviewGrid sourceId={sourceId} />
+                      <BuildingGrid
+                        buildings={buildings}
+                        isLoading={isLoadingBuildings}
+                        sourceId={sourceId}
+                        schema={fieldSchema ?? null}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -300,11 +318,56 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 >
                   <Card className="rounded-xl shadow-sm">
                     <CardContent className="space-y-4 p-4 sm:p-6">
-                      <BuildingTabFilter
-                        records={records}
-                        selectedBuilding={selectedBuilding}
-                        onBuildingChange={setSelectedBuilding}
-                      />
+                      <div className="flex items-center justify-between">
+                        <BuildingTabFilter
+                          records={records}
+                          selectedBuilding={selectedBuilding}
+                          onBuildingChange={setSelectedBuilding}
+                        />
+                        {/* Per-building + complete export */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4 mr-1" />
+                              Export
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            {selectedBuilding && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    const buildingRecord = buildings.find(
+                                      (b) => b.id === selectedBuilding || b.internal_id === selectedBuilding
+                                    )
+                                    const label = buildingRecord?.building_name ?? 'building'
+                                    const buildingIds = buildingRecord ? [buildingRecord.id] : [selectedBuilding]
+                                    const blob = await acmApi.exportSfExcel(sourceId, buildingIds)
+                                    const url = URL.createObjectURL(blob)
+                                    const a = document.createElement('a')
+                                    a.href = url
+                                    a.download = `acm-${label.replace(/\s+/g, '-')}.xlsx`
+                                    a.click()
+                                    URL.revokeObjectURL(url)
+                                  }}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Export Current Building
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            <DropdownMenuItem onClick={handleExportExcel}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Export All (Excel)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportCsv}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Export All (CSV)
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                       <ACMGrid
                         ref={gridRef}
                         records={filteredRecords}
