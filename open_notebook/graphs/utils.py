@@ -278,9 +278,11 @@ def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
     # phi4:14b without OOM risk on 16GB VRAM).
     num_ctx_env = os.getenv("OLLAMA_NUM_CTX")
     num_ctx_target = int(num_ctx_env) if num_ctx_env else 32768
-    # Only raise num_ctx — never lower it if already configured larger.
+    # Only set num_ctx if the caller didn't explicitly configure it.
+    # A non-zero current_num_ctx means the caller deliberately chose a value
+    # (e.g. per-row extraction uses num_ctx=2048 via ACM_ROW_EXTRACTION_NUM_CTX).
     current_num_ctx = getattr(lc_model, "num_ctx", None) or 0
-    if num_ctx_target > current_num_ctx:
+    if current_num_ctx == 0:
         object.__setattr__(lc_model, "num_ctx", num_ctx_target)
 
     logger.debug(
@@ -453,7 +455,8 @@ def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
         max_chars = int(env_override)
     else:
         num_ctx = getattr(lc_model, "num_ctx", None) or 8192
-        max_chars = int(num_ctx * 3.5)
+        output_reserve_ratio = 0.3
+        max_chars = int(num_ctx * 3.5 * (1 - output_reserve_ratio))
 
     if len(content) <= max_chars:
         return [content]
@@ -854,6 +857,68 @@ def is_provider_schema_error(error: Exception) -> bool:
     return False
 
 
+async def _get_db_extraction_model() -> Optional[str]:
+    """Read user-configured extraction model from SurrealDB defaults.
+
+    Returns a plain model name (e.g. "qwen2.5:7b") suitable for passing to
+    any provider. Provider prefixes like "ollama/" or "anthropic/" are stripped.
+    If the resolved model belongs to a non-Ollama provider, returns None so
+    the caller falls back to env var / hardcoded default.
+    """
+    try:
+        from open_notebook.database.repository import repo_query
+
+        result = await repo_query(
+            "SELECT default_extraction_model FROM open_notebook:default_models LIMIT 1;"
+        )
+        if result and isinstance(result, list) and len(result) > 0:
+            model_val = result[0].get("default_extraction_model")
+            if not model_val:
+                return None
+            model_val = str(model_val)
+            # model_val may be a SurrealDB record ID (e.g. "model:znay2wr8u9q39lxj2q37")
+            # — resolve it to the actual model name from the model table.
+            if model_val.startswith("model:"):
+                # Use direct record reference — SurrealDB param binding
+                # doesn't auto-cast strings to record IDs.
+                # Sanitize: record ID part should be alphanumeric only
+                record_part = model_val[len("model:"):]
+                if not record_part.isalnum():
+                    logger.warning(f"Invalid model record ID format: {model_val}")
+                    return None
+                model_record = await repo_query(
+                    f"SELECT name, provider FROM model:{record_part};"
+                )
+                if model_record and len(model_record) > 0:
+                    resolved = model_record[0].get("name")
+                    provider = model_record[0].get("provider", "")
+                    if resolved:
+                        # Only return if this is an Ollama model — non-Ollama
+                        # models (e.g. openrouter/anthropic/claude-sonnet-4)
+                        # should not be passed to the Ollama candidate.
+                        if provider and provider != "ollama":
+                            logger.warning(
+                                f"DB extraction model {model_val} is {provider}/{resolved}, "
+                                "not Ollama — skipping for Ollama candidate"
+                            )
+                            return None
+                        logger.info(
+                            f"Resolved extraction model {model_val} -> {resolved}"
+                        )
+                        return str(resolved)
+                logger.warning(
+                    f"Could not resolve extraction model record ID: {model_val}"
+                )
+                return None
+            # Plain string model name (e.g. "ollama/qwen2.5:32b" or "llama3.1:8b")
+            if "/" in model_val:
+                model_val = model_val.split("/", 1)[1]
+            return model_val
+    except Exception as e:
+        logger.debug(f"Could not read DB extraction model default: {e}")
+    return None
+
+
 async def _provision_extraction_primary_model(
     **kwargs,
 ) -> Optional[BaseChatModel]:
@@ -869,7 +934,10 @@ async def _provision_extraction_primary_model(
 
     # 1) Ollama first — free, local
     if os.getenv("OLLAMA_API_BASE"):
-        candidates.append(("ollama", "qwen2.5:7b", None))
+        # Check SurrealDB for user-configured model, then env var, then hardcoded default
+        db_model = await _get_db_extraction_model()
+        model_name = db_model or os.getenv("ACM_EXTRACTION_MODEL", "llama3.1:8b")
+        candidates.append(("ollama", model_name, None))
 
     # 2) Anthropic Direct — ACM-namespaced key ONLY
     acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")

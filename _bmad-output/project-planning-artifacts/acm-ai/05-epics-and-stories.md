@@ -2,7 +2,7 @@
 
 > **Project:** ACM-AI v3.1
 > **Date:** 2025-12-07 (Updated: 2026-03-05)
-> **Status:** Epics 1-28 complete; E29 S1-S4 done (S5-S8 archived); V3 epics 30-34 done (36/37 stories, E30-S8 deferred to V4). Total: 37 V3 stories, 110 SP.
+> **Status:** Epics 1-28 complete; E29 S1-S4 done (S5-S8 archived); V3 epics 30-34 done (36/37 stories, E30-S8 deferred to V4). V3.5 E37 done (8/8 stories, 18 SP). Total: 45 V3/V3.5 stories, 128 SP.
 > **Change Log:** 2026-03-05 - V3 Implementation Audit: E30-E34 statuses updated to Done with actual completion dates from prd.json. E30: 8/9 done (S8 deferred), E31: 8/8, E32: 8/8, E33: 8/8, E34: 4/4; 2026-03-03 - V3 Epics 30-34 added (33 stories, 97 SP, SF alignment + multi-provider extraction + two-view UI). Source: Party Mode plan, multi-agent audit, PRD v3.0, Architecture v3.0, UX Design spec; 2026-03-01 - Epic 29 added (Pipeline Unification, 8 stories, measure-first gates, reconciled from audit + SCP + YAML); 2026-02-28 - Epic 28 closed (36/43 partial-success gate); 2026-02-26 - Epic 22 added (Post-Audit Remediation & Feature Completion, 5 stories, SCP-20260226B); 2026-02-26 - Epic 21 added (UX Loading States & Layout Consistency) + 3 post-audit bugs; 2026-02-23 - Epic 20 added (cross-site marketing-app navigation, env-driven URLs, Vercel domain cutover); 2026-02-22 - Final reconciliation: 7 remaining stories (E9-S3, E10-S1, E12-S2..S4, E13-S2, E13-S3) verified as implemented, marked Done; 112/122 done (92%); ALL feature epics complete; 2026-02-20 - E15 + E16 added, E9-S3/E10-S1 promoted
 
 ---
@@ -43,6 +43,7 @@
 | **E32** | **V3 AI Processing & Validation** | **P0** | **8** | **Done** (8/8) |
 | **E33** | **V3 Frontend & UX** | **P0** | **8** | **Done** (8/8) |
 | **E34** | **V3 Integration, Streaming & Polish** | **P0** | **4** | **Done** (4/4) |
+| **E37** | **V3.5 Per-Row ACM Extraction Pipeline** | **P0** | **8** | **Done** (8/8) |
 
 > **2026-02-04 Update:** Victorian BAR format expansion added 6 new stories across E1, E2, E5, E7.
 > E5 promoted from P1 to P0 (BAR Excel export is critical).
@@ -3823,6 +3824,211 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 
 ---
 
+## Epic 37: V3.5 Per-Row ACM Extraction Pipeline
+
+> **Goal:** Redesign Item__c extraction from bulk-per-building to per-row, enabling Ollama extraction with num_ctx=2048. DoclingDocument JSON provides lossless table cell data, row segmentation handles 8 edge case types (A-H), and a 9-field schema minimizes LLM context requirements.
+> **Sprint:** V3.5
+> **Dependencies:** E31-S2 (Provider Adapter Framework), E32-S2 (Item Extraction Node)
+> **Total:** 8 stories, 18 SP
+> **Status:** Done (8/8). Completed 2026-03-10.
+> **Internal dependency chain:** S1-S3 parallel, S4-S6 parallel (after S1-S3), S7 sequential (after S4-S5), S8 sequential (after S7)
+
+### E37-S1: DoclingDocument JSON Storage [2 SP]
+
+**As a** developer,
+**I want** DoclingDocument JSON stored alongside extracted tables,
+**So that** the per-row segmenter has access to lossless cell data including row_span, col_span, and page provenance.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E31-S2
+
+**Acceptance Criteria:**
+- [x] DoclingDocument JSON stored via export_to_dict() in NormalizedTable
+- [x] docling_document_json propagated through source_commands pipeline
+- [x] Migration 48 adds docling_document_json column to acm_table_section
+- [x] 12 unit tests pass
+
+**Files Affected:**
+- `open_notebook/extractors/providers/base.py` -- UPDATE: add docling_json to NormalizedTable
+- `open_notebook/extractors/providers/docling_adapter.py` -- UPDATE: call export_to_dict()
+- `commands/source_commands.py` -- UPDATE: store + propagate docling_document_json
+- `migrations/48.surrealql` -- NEW
+- `tests/test_docling_json_storage.py` -- NEW
+
+---
+
+### E37-S2: Building Schema + Prompt Gaps [2 SP]
+
+**As a** developer,
+**I want** BuildingRecord to include sub_category and risk_rating fields,
+**So that** the building extraction prompt captures all 14 SF Building__c fields from PDF.
+
+**Story Points:** 2
+**Risk Level:** LOW
+**Dependencies:** E31-S2
+
+**Acceptance Criteria:**
+- [x] building_sub_category, building_risk_rating added to BuildingRecord
+- [x] 5 new fields on BuildingExtractionResult schema
+- [x] v3_building_extraction.jinja updated with new fields
+- [x] Migration 47 adds new columns
+- [x] 19 unit tests pass
+
+**Files Affected:**
+- `open_notebook/domain/acm.py` -- UPDATE: add fields
+- `open_notebook/extractors/acm_schemas_v3.py` -- UPDATE: 5 new fields
+- `prompts/acm/v3_building_extraction.jinja` -- UPDATE
+- `migrations/47.surrealql` -- NEW
+- `tests/test_building_schema_gaps.py` -- NEW
+
+---
+
+### E37-S3: Truncation Fallback + Output Budget [3 SP]
+
+**As a** developer,
+**I want** truncation errors handled gracefully with cloud model fallback,
+**So that** Ollama extraction failures don't lose data and automatically retry with a larger model.
+
+**Story Points:** 3
+**Risk Level:** MEDIUM
+**Dependencies:** E32-S2
+
+**Acceptance Criteria:**
+- [x] TruncationError caught in _v3_extract_items(), returns status=truncated
+- [x] Retry with cloud model on truncation in _chunk_and_extract_items()
+- [x] 30% output budget reserved in _ollama_split_by_budget()
+- [x] ACM_EXTRACTION_MODEL env var for configurable Ollama model
+- [x] 17 unit tests pass
+
+**Files Affected:**
+- `open_notebook/extractors/orchestrator.py` -- UPDATE: TruncationError catch
+- `open_notebook/graphs/utils.py` -- UPDATE: 30% output budget reserve + configurable model
+- `open_notebook/graphs/acm_extraction.py` -- UPDATE: truncation retry
+- `tests/test_truncation_fallback.py` -- NEW
+
+---
+
+### E37-S4: Row Segmentation Engine [3 SP]
+
+**As a** developer,
+**I want** DoclingDocument JSON tables segmented into individual RawTableRow objects,
+**So that** each row can be extracted independently with minimal LLM context.
+
+**Story Points:** 3
+**Risk Level:** HIGH
+**Dependencies:** E37-S1
+
+**Acceptance Criteria:**
+- [x] RawTableRow Pydantic model with cells, column_mapping, edge case metadata
+- [x] 12 COLUMN_ALIASES with Jaro-Winkler fuzzy matching (reused from consensus/matcher.py)
+- [x] segment_docling_table() handles Types A, C, E1-E3
+- [x] segment_multiple_tables() handles Types B, H (multi-page, split tables)
+- [x] scan_text_for_synthetics() handles Types D, F
+- [x] generate_debug_table() produces HTML debug output
+- [x] 32 unit tests pass
+
+**Files Affected:**
+- `open_notebook/extractors/row_segmenter.py` -- NEW
+- `tests/test_row_segmenter.py` -- NEW
+
+---
+
+### E37-S5: 9-Field Item Schema + Mapper [2 SP]
+
+**As a** developer,
+**I want** a minimal 9-field ACMItemRow schema with deterministic mapping to ACMExtractionRecord,
+**So that** the per-row LLM only needs to fill 9 fields (fits in num_ctx=2048) and post-processing is deterministic.
+
+**Story Points:** 2
+**Risk Level:** MEDIUM
+**Dependencies:** E37-S1
+
+**Acceptance Criteria:**
+- [x] ACMItemRow with exactly 9 fields (room_name, floor_level, item_location, item_name, friability, acm_classification, acm_sub_classification, condition, disturbance_potential)
+- [x] map_item_row_to_extraction_record() targets ACMExtractionRecord
+- [x] normalize_friability() and is_friable_bool() deterministic helpers
+- [x] 47 unit tests pass
+
+**Files Affected:**
+- `open_notebook/domain/acm_row_schemas.py` -- NEW
+- `open_notebook/domain/acm_row_mappers.py` -- NEW
+- `tests/test_acm_row_mappers.py` -- NEW
+
+---
+
+### E37-S6: Edge Case Table Fixtures [1 SP]
+
+**As a** test engineer,
+**I want** realistic fixture files covering all 8 edge case types (A-H),
+**So that** the row segmenter can be tested against known table formats from Australian school SAMP documents.
+
+**Story Points:** 1
+**Risk Level:** LOW
+**Dependencies:** E37-S1
+
+**Acceptance Criteria:**
+- [x] 11 JSON fixtures for DoclingDocument table format (Types A, B x2, C x2, E1, E2, E3, G x2, H)
+- [x] 2 Markdown fixtures (Types D, F)
+- [x] README documenting each fixture
+- [x] Realistic Australian school ACM data
+
+**Files Affected:**
+- `tests/fixtures/edge_case_tables/` -- NEW (14 files)
+
+---
+
+### E37-S7: Per-Row Extraction Orchestrator [3 SP]
+
+**As a** developer,
+**I want** an orchestrator that extracts one ACM item per table row via LLM,
+**So that** each row gets a focused 9-field extraction with retry and fallback on failure.
+
+**Story Points:** 3
+**Risk Level:** HIGH
+**Dependencies:** E37-S4, E37-S5
+
+**Acceptance Criteria:**
+- [x] build_kv_prompt() creates key-value prompt from RawTableRow cells
+- [x] extract_single_row() with retry (max 2) and JSON parsing
+- [x] split_multi_item_row() for Type E1 multi-item cells
+- [x] extract_all_rows() main loop with SSE events and Langfuse spans
+- [x] _build_fallback_record() for graceful extraction failure
+- [x] 27 unit tests pass
+
+**Files Affected:**
+- `open_notebook/extractors/row_extractor.py` -- NEW
+- `prompts/acm/row_extraction.jinja` -- NEW
+- `prompts/acm/row_split.jinja` -- NEW
+- `tests/test_row_extractor.py` -- NEW
+
+---
+
+### E37-S8: Pipeline Integration + Mode Toggle [2 SP]
+
+**As a** developer,
+**I want** per-row extraction wired into the main pipeline with a mode toggle,
+**So that** operators can switch between per-row and bulk extraction via environment variable.
+
+**Story Points:** 2
+**Risk Level:** MEDIUM
+**Dependencies:** E37-S7
+
+**Acceptance Criteria:**
+- [x] ACM_ITEM_EXTRACTION_MODE env var (per_row | bulk, default: per_row)
+- [x] Per-row path in extract_items_node calls segmenter + extractor
+- [x] Recovery node (no-access) gated in per-row mode
+- [x] Graceful fallback to bulk path when no DoclingDocument JSON
+- [x] Bulk extraction path unchanged
+- [x] 9 integration tests pass
+
+**Files Affected:**
+- `open_notebook/graphs/acm_extraction.py` -- UPDATE: per-row path in extract_items_node
+- `.env.example` -- UPDATE: ACM_ITEM_EXTRACTION_MODE, ACM_ROW_EXTRACTION_NUM_CTX
+- `tests/test_pipeline_integration.py` -- NEW
+
+---
+
 ## V3 Cross-Epic Dependencies
 
 | Dependency | Source | Target | Type |
@@ -3842,6 +4048,11 @@ Decision gate: PARTIAL SUCCESS (36/43 >= 36 threshold). 7 remaining gaps are val
 | AI pipeline complete | E32-S3 | E32-S5, E33-S3, E33-S4 | Sequential |
 | SSE infrastructure | E31-S7 | E33-S1, E34-S1, E34-S2 | Parallel (can develop with mock SSE) |
 | Grid infrastructure | E33-S2 | E33-S3, S4, S5, S6, S7, S8 | Sequential |
+| Provider adapters | E31-S2 | E37-S1, E37-S2 | Sequential |
+| Item extraction node | E32-S2 | E37-S3 | Sequential |
+| DoclingDoc JSON | E37-S1 | E37-S4, E37-S5, E37-S6 | Sequential |
+| Row segmenter + schema | E37-S4, E37-S5 | E37-S7 | Sequential |
+| Per-row orchestrator | E37-S7 | E37-S8 | Sequential |
 
 ## V3 FR Traceability Matrix
 

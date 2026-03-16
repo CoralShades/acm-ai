@@ -25,6 +25,7 @@ def client():
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_event_bus_mock():
     """Return a mock PipelineEventBus with an async publish method."""
     bus = MagicMock()
@@ -88,8 +89,7 @@ class TestBulkEdit:
         )
         # Each UPDATE call contains "UPDATE" in the query string
         update_calls = [
-            c for c in self.mock_repo_query.call_args_list
-            if "UPDATE" in str(c.args[0])
+            c for c in self.mock_repo_query.call_args_list if "UPDATE" in str(c.args[0])
         ]
         assert len(update_calls) == 2
 

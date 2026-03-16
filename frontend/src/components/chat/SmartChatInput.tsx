@@ -7,6 +7,10 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Send, Loader2, TableProperties } from 'lucide-react'
 
+const IS_MAC =
+  typeof navigator !== 'undefined' &&
+  navigator.userAgent.toUpperCase().indexOf('MAC') >= 0
+
 interface SmartChatInputProps {
   inProgress: boolean
   onSend: (message: string) => void
@@ -26,10 +30,7 @@ export function SmartChatInput({
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const isMac =
-    typeof navigator !== 'undefined' &&
-    navigator.userAgent.toUpperCase().indexOf('MAC') >= 0
-  const keyHint = isMac ? '\u2318+Enter' : 'Ctrl+Enter'
+  const keyHint = IS_MAC ? '\u2318+Enter' : 'Ctrl+Enter'
 
   const handleSend = () => {
     if (input.trim() && !inProgress) {
@@ -39,7 +40,7 @@ export function SmartChatInput({
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    const isModifierPressed = isMac ? e.metaKey : e.ctrlKey
+    const isModifierPressed = IS_MAC ? e.metaKey : e.ctrlKey
     if (e.key === 'Enter' && isModifierPressed) {
       e.preventDefault()
       handleSend()

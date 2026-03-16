@@ -1,0 +1,3 @@
+-- Migration 47: Add building_sub_category and building_risk_rating to building_record
+DEFINE FIELD IF NOT EXISTS building_sub_category ON TABLE building_record TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS building_risk_rating ON TABLE building_record TYPE option<string>;

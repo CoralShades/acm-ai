@@ -1,0 +1,4 @@
+-- Migration 48: Add docling_document_json field to acm_table_section
+-- Stores lossless TableItem.export_to_dict() output for per-row extraction pipeline.
+-- Provides cell position, span, and header data not available in HTML/Markdown/CSV.
+DEFINE FIELD IF NOT EXISTS docling_document_json ON TABLE acm_table_section TYPE option<object>;

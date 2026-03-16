@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-10"
-updated: "2026-03-02"
+updated: "2026-03-11"
 project: "acm-ai"
 project_type: "brownfield"
 selected_track: "method"
@@ -54,9 +54,26 @@ workflow_status:
   correct-course-generic-parser: "_bmad-output/planning-artifacts/sprint-change-proposal-2026-02-08.md"
   correct-course-extraction-monitor-ux: "_bmad-output/sprint-change-proposal-20260220-extraction-monitor-ux.md"
   correct-course-v3-scope-expansion: "V3/output/SCP-V3-scope-expansion.md"
+  correct-course-per-row-extraction: "v3.5/CLAUDE_CODE_SESSION_PROMPT.md"
 
 # CHANGE LOG:
 # ===========
+# 2026-03-11: Bug Fix 11 + Gap Analysis — 16/31 records, 4 new issues created
+#   - 6 pipeline bugs fixed (0→16 records from Broadmeadows PDF)
+#   - Gap analysis vs ground truth: 15 records still missing
+#   - Root causes: page range exclusion, table merge overwrite, missing schema fields, segmenter gaps
+#   - 4 issues created in docs/issues/: page-range-table-loss (P0), per-row-schema-missing-fields (P0),
+#     row-segmenter-subheaders (P1), building-record-not-persisted (P1)
+#   - Sprint status updated with 5 new story entries (1 done, 2 ready-for-dev, 2 drafted)
+#   - Task plan created: docs/sprint-artifacts/bug-fix-11/task_plan.md
+# 2026-03-10: V3.5 Per-Row ACM Extraction Pipeline — COMPLETE
+#   - E37 epic (8 stories, 18 SP): per-row Item__c extraction replacing bulk-per-building
+#   - New components: row_segmenter.py, row_extractor.py, acm_row_schemas.py, acm_row_mappers.py
+#   - 163 new tests (Phase 0-3), 2154 total suite passing
+#   - Truncation fallback + 30% output budget fix for Ollama
+#   - ACM_ITEM_EXTRACTION_MODE env var (per_row|bulk, default: per_row)
+#   - 8 edge case types handled (A-H) with 14 test fixtures
+#   - Planning artifacts: v3.5/ directory (CLAUDE_CODE_SESSION_PROMPT.md, task_plan.md, progress.md, findings.md, gap_analysis.md)
 # 2026-03-02: V3 Scope Expansion — Course Correction
 #   - E29 S5-S8 archived: Superseded by V3 multi-provider extraction + SF alignment design
 #   - E29 R1/R2 archived: Fixes incorporated into V3 extraction requirements

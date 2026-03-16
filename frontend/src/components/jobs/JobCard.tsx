@@ -19,6 +19,8 @@ import {
   Download,
   ClipboardList,
   FileSpreadsheet,
+  FileText,
+  HardDrive,
   Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -30,6 +32,12 @@ import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
 interface JobCardProps {
   source: SourceListResponse
   onRefetch: () => void
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function formatRelativeDate(dateStr: string): string {
@@ -114,13 +122,13 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
   const exportXlsxHref = `/api/acm/export/excel?source_id=${rawId}`
 
   return (
-    <Card className="relative transition-shadow hover:shadow-md flex flex-col gap-0 py-0">
+    <Card className="relative overflow-hidden transition-shadow hover:shadow-md flex flex-col gap-0 py-0">
       <CardHeader className="px-4 pt-4 pb-3">
         <div className="flex items-start justify-between gap-2">
           {/* Icon + title */}
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
             <ClipboardList className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-            <h3 className="font-medium line-clamp-2 leading-snug text-sm">
+            <h3 className="font-medium line-clamp-2 leading-snug text-sm break-words overflow-hidden">
               {source.title || 'Untitled Job'}
             </h3>
           </div>
@@ -193,23 +201,40 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
           </div>
         )}
 
-        {/* Uploaded date */}
-        <p className="text-xs text-muted-foreground">
-          Uploaded {formatRelativeDate(source.created)}
-        </p>
-
-        {/* Record / insights count for published jobs */}
-        {isPublished && source.insights_count > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {source.insights_count} record{source.insights_count !== 1 ? 's' : ''}
-          </p>
+        {/* PDF metadata icons */}
+        {(source.page_count || source.file_size) && (
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            {source.page_count != null && source.page_count > 0 && (
+              <span className="flex items-center gap-1">
+                <FileText className="h-3.5 w-3.5" />
+                {source.page_count} pg{source.page_count !== 1 ? 's' : ''}
+              </span>
+            )}
+            {source.file_size != null && source.file_size > 0 && (
+              <span className="flex items-center gap-1">
+                <HardDrive className="h-3.5 w-3.5" />
+                {formatFileSize(source.file_size)}
+              </span>
+            )}
+          </div>
         )}
 
-        {isPublished && typeof source.building_count === 'number' && source.building_count > 0 && (
-          <p className="text-xs text-muted-foreground">
-            {source.building_count} building{source.building_count !== 1 ? 's' : ''}
-          </p>
-        )}
+        {/* Uploaded date + counts */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Uploaded {formatRelativeDate(source.created)}</span>
+          {typeof source.building_count === 'number' && source.building_count > 0 && (
+            <>
+              <span className="text-border">·</span>
+              <span>{source.building_count} building{source.building_count !== 1 ? 's' : ''}</span>
+            </>
+          )}
+          {source.insights_count > 0 && (
+            <>
+              <span className="text-border">·</span>
+              <span>{source.insights_count} record{source.insights_count !== 1 ? 's' : ''}</span>
+            </>
+          )}
+        </div>
       </CardContent>
 
       <CardFooter className="px-4 pb-4 pt-0 flex flex-col gap-2 items-stretch">

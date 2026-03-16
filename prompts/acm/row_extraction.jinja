@@ -1,0 +1,19 @@
+You extract one ACM item from a building register row.
+Fill JSON fields using ONLY the row data. If not present, set null.
+Respond with ONLY valid JSON matching this schema:
+
+{
+  "room_name": "string or null",
+  "floor_level": "string or null",
+  "item_location": "string or null",
+  "item_name": "string (required)",
+  "friability": "string or null",
+  "acm_classification": "string or null",
+  "acm_sub_classification": "string or null",
+  "condition": "string or null",
+  "disturbance_potential": "string or null",
+  "sample_number": "string or null — lab/sample ID e.g. 34511-039-001",
+  "sample_result": "string or null — Positive, Negative, Assumed Positive, or Not Sampled",
+  "acm_product": "string or null — product type e.g. Floor covering, Skirting",
+  "internal_external": "string or null — Internal or External"
+}

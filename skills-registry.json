@@ -1,0 +1,1761 @@
+{
+  "version": "1.0",
+  "scanned_at": "2026-03-13T00:06:52Z",
+  "skills": [
+    {
+      "name": "a2a-protocol",
+      "description": "Comprehensive guide and utilities for building AI agents using the Agent2Agent (A2A) Protocol. Use when implementing agent-to-agent communication, creating A2A servers/clients, or working with JSON-RPC based agent systems.",
+      "location": ".claude/skills/a2a-protocol/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "acm-observability",
+      "description": "Agent-actionable reference for ACM-AI's 6-tool observability stack. Teaches how to query traces, inspect graph state, debug Pydantic failures, and analyze costs programmatically.",
+      "location": ".claude/skills/acm-observability/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "agent-browser",
+      "description": "Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to \"open a website\", \"fill out a form\", \"click a button\", \"take a screenshot\", \"scrape data from a page\", \"test this web app\", \"login to a site\", \"automate browser actions\", or any task requiring programmatic web interaction.",
+      "location": ".claude/skills/agent-browser/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/agent-browser/SKILL.md"
+      ]
+    },
+    {
+      "name": "baseline-ui",
+      "description": "Validates animation durations, enforces typography scale, checks component accessibility, and prevents layout anti-patterns in Tailwind CSS projects. Use when building UI components, reviewing CSS utilities, styling React views, or enforcing design consistency.",
+      "location": ".claude/skills/baseline-ui/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/baseline-ui/SKILL.md"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmad-master",
+      "description": "bmad-master agent",
+      "location": ".agents/skills/bmad-agent-bmad-master/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-analyst",
+      "description": "analyst agent",
+      "location": ".agents/skills/bmad-agent-bmm-analyst/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-architect",
+      "description": "architect agent",
+      "location": ".agents/skills/bmad-agent-bmm-architect/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-dev",
+      "description": "dev agent",
+      "location": ".agents/skills/bmad-agent-bmm-dev/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-pm",
+      "description": "pm agent",
+      "location": ".agents/skills/bmad-agent-bmm-pm/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-qa",
+      "description": "qa agent",
+      "location": ".agents/skills/bmad-agent-bmm-qa/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-quick-flow-solo-dev",
+      "description": "quick-flow-solo-dev agent",
+      "location": ".agents/skills/bmad-agent-bmm-quick-flow-solo-dev/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-sm",
+      "description": "sm agent",
+      "location": ".agents/skills/bmad-agent-bmm-sm/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-tech-writer",
+      "description": "tech-writer agent",
+      "location": ".agents/skills/bmad-agent-bmm-tech-writer/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-bmm-ux-designer",
+      "description": "ux-designer agent",
+      "location": ".agents/skills/bmad-agent-bmm-ux-designer/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-agent-tea-tea",
+      "description": "tea agent",
+      "location": ".agents/skills/bmad-agent-tea-tea/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-check-implementation-readiness",
+      "description": "bmad-bmm-check-implementation-readiness skill",
+      "location": ".agents/skills/bmad-bmm-check-implementation-readiness/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-code-review",
+      "description": "bmad-bmm-code-review skill",
+      "location": ".agents/skills/bmad-bmm-code-review/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-correct-course",
+      "description": "bmad-bmm-correct-course skill",
+      "location": ".agents/skills/bmad-bmm-correct-course/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-create-architecture",
+      "description": "bmad-bmm-create-architecture skill",
+      "location": ".agents/skills/bmad-bmm-create-architecture/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-create-epics-and-stories",
+      "description": "bmad-bmm-create-epics-and-stories skill",
+      "location": ".agents/skills/bmad-bmm-create-epics-and-stories/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-create-prd",
+      "description": "bmad-bmm-create-prd skill",
+      "location": ".agents/skills/bmad-bmm-create-prd/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-create-product-brief",
+      "description": "bmad-bmm-create-product-brief skill",
+      "location": ".agents/skills/bmad-bmm-create-product-brief/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-create-story",
+      "description": "bmad-bmm-create-story skill",
+      "location": ".agents/skills/bmad-bmm-create-story/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-create-ux-design",
+      "description": "bmad-bmm-create-ux-design skill",
+      "location": ".agents/skills/bmad-bmm-create-ux-design/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-dev-story",
+      "description": "bmad-bmm-dev-story skill",
+      "location": ".agents/skills/bmad-bmm-dev-story/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-document-project",
+      "description": "bmad-bmm-document-project skill",
+      "location": ".agents/skills/bmad-bmm-document-project/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-domain-research",
+      "description": "bmad-bmm-domain-research skill",
+      "location": ".agents/skills/bmad-bmm-domain-research/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-edit-prd",
+      "description": "bmad-bmm-edit-prd skill",
+      "location": ".agents/skills/bmad-bmm-edit-prd/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-generate-project-context",
+      "description": "bmad-bmm-generate-project-context skill",
+      "location": ".agents/skills/bmad-bmm-generate-project-context/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-market-research",
+      "description": "bmad-bmm-market-research skill",
+      "location": ".agents/skills/bmad-bmm-market-research/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-qa-generate-e2e-tests",
+      "description": "bmad-bmm-qa-generate-e2e-tests skill",
+      "location": ".agents/skills/bmad-bmm-qa-generate-e2e-tests/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-quick-dev",
+      "description": "bmad-bmm-quick-dev skill",
+      "location": ".agents/skills/bmad-bmm-quick-dev/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-quick-spec",
+      "description": "bmad-bmm-quick-spec skill",
+      "location": ".agents/skills/bmad-bmm-quick-spec/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-retrospective",
+      "description": "bmad-bmm-retrospective skill",
+      "location": ".agents/skills/bmad-bmm-retrospective/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-sprint-planning",
+      "description": "bmad-bmm-sprint-planning skill",
+      "location": ".agents/skills/bmad-bmm-sprint-planning/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-sprint-status",
+      "description": "bmad-bmm-sprint-status skill",
+      "location": ".agents/skills/bmad-bmm-sprint-status/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-technical-research",
+      "description": "bmad-bmm-technical-research skill",
+      "location": ".agents/skills/bmad-bmm-technical-research/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-bmm-validate-prd",
+      "description": "bmad-bmm-validate-prd skill",
+      "location": ".agents/skills/bmad-bmm-validate-prd/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-brainstorming",
+      "description": "bmad-brainstorming skill",
+      "location": ".agents/skills/bmad-brainstorming/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-editorial-review-prose",
+      "description": "Execute editorial-review-prose",
+      "location": ".agents/skills/bmad-editorial-review-prose/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-editorial-review-structure",
+      "description": "Execute editorial-review-structure",
+      "location": ".agents/skills/bmad-editorial-review-structure/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-help",
+      "description": "Execute help",
+      "location": ".agents/skills/bmad-help/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-index-docs",
+      "description": "Execute index-docs",
+      "location": ".agents/skills/bmad-index-docs/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-party-mode",
+      "description": "bmad-party-mode skill",
+      "location": ".agents/skills/bmad-party-mode/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-review-adversarial-general",
+      "description": "Execute review-adversarial-general",
+      "location": ".agents/skills/bmad-review-adversarial-general/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-shard-doc",
+      "description": "Execute shard-doc",
+      "location": ".agents/skills/bmad-shard-doc/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-teach-me-testing",
+      "description": "bmad-tea-teach-me-testing skill",
+      "location": ".agents/skills/bmad-tea-teach-me-testing/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-atdd",
+      "description": "bmad-tea-testarch-atdd skill",
+      "location": ".agents/skills/bmad-tea-testarch-atdd/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-automate",
+      "description": "bmad-tea-testarch-automate skill",
+      "location": ".agents/skills/bmad-tea-testarch-automate/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-ci",
+      "description": "bmad-tea-testarch-ci skill",
+      "location": ".agents/skills/bmad-tea-testarch-ci/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-framework",
+      "description": "bmad-tea-testarch-framework skill",
+      "location": ".agents/skills/bmad-tea-testarch-framework/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-nfr",
+      "description": "bmad-tea-testarch-nfr skill",
+      "location": ".agents/skills/bmad-tea-testarch-nfr/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-test-design",
+      "description": "bmad-tea-testarch-test-design skill",
+      "location": ".agents/skills/bmad-tea-testarch-test-design/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-test-review",
+      "description": "bmad-tea-testarch-test-review skill",
+      "location": ".agents/skills/bmad-tea-testarch-test-review/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "bmad-tea-testarch-trace",
+      "description": "bmad-tea-testarch-trace skill",
+      "location": ".agents/skills/bmad-tea-testarch-trace/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "agents"
+      ]
+    },
+    {
+      "name": "brainstorming",
+      "description": "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.",
+      "location": ".claude/skills/brainstorming/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/brainstorming/SKILL.md"
+      ]
+    },
+    {
+      "name": "claw-release",
+      "description": "Release automation for Claw skills and website. Guides through version bumping, tagging, and release verification.",
+      "location": ".claude/skills/claw-release/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/claw-release/SKILL.md"
+      ]
+    },
+    {
+      "name": "clawsec-clawhub-checker",
+      "description": "ClawHub reputation checker for ClawSec suite. Enhances guarded skill installer with VirusTotal Code Insight reputation scores and additional safety checks.",
+      "location": ".claude/skills/clawsec-clawhub-checker/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/clawsec-clawhub-checker/SKILL.md"
+      ]
+    },
+    {
+      "name": "clawsec-feed",
+      "description": "Security advisory feed with automated NVD CVE polling for OpenClaw-related vulnerabilities. Updated daily.",
+      "location": ".claude/skills/clawsec-feed/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/clawsec-feed/SKILL.md"
+      ]
+    },
+    {
+      "name": "clawsec-nanoclaw",
+      "description": "Use when checking for security vulnerabilities in NanoClaw skills, before installing new skills, or when asked about security advisories affecting the bot",
+      "location": ".claude/skills/clawsec-nanoclaw/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/clawsec-nanoclaw/SKILL.md"
+      ]
+    },
+    {
+      "name": "clawsec-suite",
+      "description": "ClawSec suite manager with embedded advisory-feed monitoring, cryptographic signature verification, approval-gated malicious-skill response, and guided setup for additional security skills.",
+      "location": ".claude/skills/clawsec-suite/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/clawsec-suite/SKILL.md"
+      ]
+    },
+    {
+      "name": "clawtributor",
+      "description": "Community incident reporting for AI agents. Contribute to collective security by reporting threats.",
+      "location": ".claude/skills/clawtributor/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/clawtributor/SKILL.md"
+      ]
+    },
+    {
+      "name": "code-review",
+      "description": "Perform code reviews following Sentry engineering practices. Use when reviewing pull requests, examining code changes, or providing feedback on code quality. Covers security, performance, testing, and design review.",
+      "location": ".claude/skills/code-review/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/code-review/SKILL.md"
+      ]
+    },
+    {
+      "name": "codeql",
+      "description": ">-",
+      "location": ".claude/skills/codeql/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/codeql/SKILL.md"
+      ]
+    },
+    {
+      "name": "commit",
+      "description": "ALWAYS use this skill when committing code changes — never commit directly without it. Creates commits following Sentry conventions with proper conventional commit format and issue references. Trigger on any commit, git commit, save changes, or commit message task.",
+      "location": ".claude/skills/commit/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/commit/SKILL.md"
+      ]
+    },
+    {
+      "name": "context-compression",
+      "description": "This skill should be used when the user asks to \"compress context\", \"summarize conversation history\", \"implement compaction\", \"reduce token usage\", or mentions context compression, structured summarization, tokens-per-task optimization, or long-running agent sessions exceeding context limits.",
+      "location": ".claude/skills/context-compression/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/context-compression/SKILL.md"
+      ]
+    },
+    {
+      "name": "context-optimization",
+      "description": "This skill should be used when the user asks to \"optimize context\", \"reduce token costs\", \"improve context efficiency\", \"implement KV-cache optimization\", \"partition context\", or mentions context limits, observation masking, context budgeting, or extending effective context capacity.",
+      "location": ".claude/skills/context-optimization/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/context-optimization/SKILL.md"
+      ]
+    },
+    {
+      "name": "copilotkit",
+      "description": "Build AI copilots, chatbots, and agentic UIs in React and Next.js using CopilotKit. Use this skill when the user wants to add an AI assistant, copilot, chat interface, AI-powered textarea, or agentic UI to their app. Covers setup, hooks (useCopilotAction, useCopilotReadable, useCoAgent, useAgent), chat components (CopilotPopup, CopilotSidebar, CopilotChat), generative UI, human-in-the-loop, CoAgents with LangGraph, AG-UI protocol, MCP Apps, and Python SDK integration. Triggers on CopilotKit, copilotkit, useCopilotAction, useCopilotReadable, useCoAgent, useAgent, CopilotRuntime, CopilotChat, CopilotSidebar, CopilotPopup, CopilotTextarea, AG-UI, agentic frontend, in-app AI copilot, AI assistant React, chatbot React, useFrontendTool, useRenderToolCall, useDefaultTool, useCoAgentStateRender, useLangGraphInterrupt, useCopilotChat, useCopilotAdditionalInstructions, useCopilotChatSuggestions, useHumanInTheLoop, CopilotTask, copilot runtime, LangGraphAgent, BasicAgent, BuiltInAgent, CopilotKitRemoteEndpoint, A2UI, MCP Apps, AI textarea, AI form completion, add AI to React app.",
+      "location": ".claude/skills/copilotkit/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "create-pr",
+      "description": "ALWAYS use this skill when creating pull requests — never create a PR directly without it. Follows Sentry conventions for PR titles, descriptions, and issue references. Trigger on any create PR, open PR, submit PR, make PR, push and create PR, or prepare changes for review task.",
+      "location": ".claude/skills/create-pr/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/create-pr/SKILL.md"
+      ]
+    },
+    {
+      "name": "data-structure-protocol",
+      "description": ">-",
+      "location": ".claude/skills/data-structure-protocol/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/data-structure-protocol/SKILL.md"
+      ]
+    },
+    {
+      "name": "deep-agents-core",
+      "description": "INVOKE THIS SKILL when building ANY Deep Agents application. Covers create_deep_agent(), harness architecture, SKILL.md format, and configuration options.",
+      "location": ".claude/skills/deep-agents-core/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/deep-agents-core/SKILL.md"
+      ]
+    },
+    {
+      "name": "deep-agents-memory",
+      "description": "INVOKE THIS SKILL when your Deep Agent needs memory, persistence, or filesystem access. Covers StateBackend (ephemeral), StoreBackend (persistent), FilesystemMiddleware, and CompositeBackend for routing.",
+      "location": ".claude/skills/deep-agents-memory/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/deep-agents-memory/SKILL.md"
+      ]
+    },
+    {
+      "name": "deep-agents-orchestration",
+      "description": "INVOKE THIS SKILL when using subagents, task planning, or human approval in Deep Agents. Covers SubAgentMiddleware, TodoList for planning, and HITL interrupts.",
+      "location": ".claude/skills/deep-agents-orchestration/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/deep-agents-orchestration/SKILL.md"
+      ]
+    },
+    {
+      "name": "design-system-creation",
+      "description": ">",
+      "location": ".claude/skills/design-system-creation/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "design-taste-frontend",
+      "description": "Senior UI/UX Engineer. Architect digital interfaces overriding default LLM biases. Enforces metric-based rules, strict component architecture, CSS hardware acceleration, and balanced design engineering.",
+      "location": ".claude/skills/taste-skill/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/taste-skill/SKILL.md"
+      ]
+    },
+    {
+      "name": "differential-review",
+      "description": ">",
+      "location": ".claude/skills/differential-review/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/differential-review/SKILL.md"
+      ]
+    },
+    {
+      "name": "dispatching-parallel-agents",
+      "description": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
+      "location": ".claude/skills/dispatching-parallel-agents/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/dispatching-parallel-agents/SKILL.md"
+      ]
+    },
+    {
+      "name": "docx",
+      "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files). Triggers include: any mention of 'Word doc', 'word document', '.docx', or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .docx files, inserting or replacing images in documents, performing find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a 'report', 'memo', 'letter', 'template', or similar deliverable as a Word or .docx file, use this skill. Do NOT use for PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document generation.",
+      "location": ".claude/skills/docx/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/docx/SKILL.md"
+      ]
+    },
+    {
+      "name": "dogfood",
+      "description": "Systematically explore and test a web application to find bugs, UX issues, and other problems. Use when asked to \"dogfood\", \"QA\", \"exploratory test\", \"find issues\", \"bug hunt\", \"test this app/site/platform\", or review the quality of a web application. Produces a structured report with full reproduction evidence -- step-by-step screenshots, repro videos, and detailed repro steps for every issue -- so findings can be handed directly to the responsible teams.",
+      "location": ".claude/skills/dogfood/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/dogfood/SKILL.md"
+      ]
+    },
+    {
+      "name": "e2e-test",
+      "description": "Self-Healing E2E Testing Workflow for ACM-AI. Runs Playwright tests with autonomous failure recovery, selector healing, API contract validation, and evidence collection. Integrates with agent-browser and chrome-devtools MCP.",
+      "location": ".claude/skills/e2e-test/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "electron",
+      "description": "Automate Electron desktop apps (VS Code, Slack, Discord, Figma, Notion, Spotify, etc.) using agent-browser via Chrome DevTools Protocol. Use when the user needs to interact with an Electron app, automate a desktop app, connect to a running app, control a native app, or test an Electron application. Triggers include \"automate Slack app\", \"control VS Code\", \"interact with Discord app\", \"test this Electron app\", \"connect to desktop app\", or any task requiring automation of a native Electron application.",
+      "location": ".claude/skills/electron/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/electron/SKILL.md"
+      ]
+    },
+    {
+      "name": "executing-plans",
+      "description": "Use when you have a written implementation plan to execute in a separate session with review checkpoints",
+      "location": ".claude/skills/executing-plans/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/executing-plans/SKILL.md"
+      ]
+    },
+    {
+      "name": "fastapi-router-py",
+      "description": "Create FastAPI routers with CRUD operations, authentication dependencies, and proper response models. Use when building REST API endpoints, creating new routes, implementing CRUD operations, or adding authenticated endpoints in FastAPI applications.",
+      "location": ".claude/skills/fastapi-router-py/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/fastapi-router-py/SKILL.md"
+      ]
+    },
+    {
+      "name": "find-bugs",
+      "description": "Find bugs, security vulnerabilities, and code quality issues in local branch changes. Use when asked to review changes, find bugs, security review, or audit code on the current branch.",
+      "location": ".claude/skills/find-bugs/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/find-bugs/SKILL.md"
+      ]
+    },
+    {
+      "name": "finishing-a-development-branch",
+      "description": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup",
+      "location": ".claude/skills/finishing-a-development-branch/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/finishing-a-development-branch/SKILL.md"
+      ]
+    },
+    {
+      "name": "fixing-accessibility",
+      "description": "Audit and fix HTML accessibility issues including ARIA labels, keyboard navigation, focus management, color contrast, and form errors. Use when adding interactive controls, forms, dialogs, or reviewing WCAG compliance.",
+      "location": ".claude/skills/fixing-accessibility/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/fixing-accessibility/SKILL.md"
+      ]
+    },
+    {
+      "name": "fixing-metadata",
+      "description": ">",
+      "location": ".claude/skills/fixing-metadata/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/fixing-metadata/SKILL.md"
+      ]
+    },
+    {
+      "name": "fixing-motion-performance",
+      "description": "Audit and fix animation performance issues including layout thrashing, compositor properties, scroll-linked motion, and blur effects. Use when animations stutter, transitions jank, or reviewing CSS/JS animation performance.",
+      "location": ".claude/skills/fixing-motion-performance/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/fixing-motion-performance/SKILL.md"
+      ]
+    },
+    {
+      "name": "framework-selection",
+      "description": "INVOKE THIS SKILL at the START of any LangChain/LangGraph/Deep Agents project, before writing any agent code. Determines which framework layer is right for the task: LangChain, LangGraph, Deep Agents, or a combination. Must be consulted before other agent skills.",
+      "location": ".claude/skills/framework-selection/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/framework-selection/SKILL.md"
+      ]
+    },
+    {
+      "name": "frontend-design",
+      "description": "Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics.",
+      "location": ".claude/skills/frontend-design/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/frontend-design/SKILL.md"
+      ]
+    },
+    {
+      "name": "insecure-defaults",
+      "description": "Detects fail-open insecure defaults (hardcoded secrets, weak auth, permissive security) that allow apps to run insecurely in production. Use when auditing security, reviewing config management, or analyzing environment variable handling.",
+      "location": ".claude/skills/insecure-defaults/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/insecure-defaults/SKILL.md"
+      ]
+    },
+    {
+      "name": "langchain-dependencies",
+      "description": "INVOKE THIS SKILL when setting up a new project or when asked about package versions, installation, or dependency management for LangChain, LangGraph, LangSmith, or Deep Agents. Covers required packages, minimum versions, environment requirements, versioning best practices, and common community tool packages for both Python and TypeScript.",
+      "location": ".claude/skills/langchain-dependencies/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/langchain-dependencies/SKILL.md"
+      ]
+    },
+    {
+      "name": "langchain-fundamentals",
+      "description": "Create LangChain agents with create_agent, define tools, and use middleware for human-in-the-loop and error handling.",
+      "location": ".claude/skills/langchain-fundamentals/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/langchain-fundamentals/SKILL.md"
+      ]
+    },
+    {
+      "name": "langchain-middleware",
+      "description": "INVOKE THIS SKILL when you need human-in-the-loop approval, custom middleware, or structured output. Covers HumanInTheLoopMiddleware for human approval of dangerous tool calls, creating custom middleware with hooks, Command resume patterns, and structured output with Pydantic/Zod.",
+      "location": ".claude/skills/langchain-middleware/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/langchain-middleware/SKILL.md"
+      ]
+    },
+    {
+      "name": "langchain-rag",
+      "description": "INVOKE THIS SKILL when building ANY retrieval-augmented generation (RAG) system. Covers document loaders, RecursiveCharacterTextSplitter, embeddings (OpenAI), and vector stores (Chroma, FAISS, Pinecone).",
+      "location": ".claude/skills/langchain-rag/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/langchain-rag/SKILL.md"
+      ]
+    },
+    {
+      "name": "langgraph-fundamentals",
+      "description": "INVOKE THIS SKILL when writing ANY LangGraph code. Covers StateGraph, state schemas, nodes, edges, Command, Send, invoke, streaming, and error handling.",
+      "location": ".claude/skills/langgraph-fundamentals/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/langgraph-fundamentals/SKILL.md"
+      ]
+    },
+    {
+      "name": "langgraph-human-in-the-loop",
+      "description": "INVOKE THIS SKILL when implementing human-in-the-loop patterns, pausing for approval, or handling errors in LangGraph. Covers interrupt(), Command(resume=...), approval/validation workflows, and the 4-tier error handling strategy.",
+      "location": ".claude/skills/langgraph-human-in-the-loop/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/langgraph-human-in-the-loop/SKILL.md"
+      ]
+    },
+    {
+      "name": "langgraph-persistence",
+      "description": "INVOKE THIS SKILL when your LangGraph needs to persist state, remember conversations, travel through history, or configure subgraph checkpointer scoping. Covers checkpointers, thread_id, time travel, Store, and subgraph persistence modes.",
+      "location": ".claude/skills/langgraph-persistence/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/langgraph-persistence/SKILL.md"
+      ]
+    },
+    {
+      "name": "mcp-builder",
+      "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).",
+      "location": ".claude/skills/mcp-builder/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/mcp-builder/SKILL.md"
+      ]
+    },
+    {
+      "name": "modern-python",
+      "description": "Configures Python projects with modern tooling (uv, ruff, ty). Use when creating projects, writing standalone scripts, or migrating from pip/Poetry/mypy/black.",
+      "location": ".claude/skills/modern-python/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/modern-python/SKILL.md"
+      ]
+    },
+    {
+      "name": "multi-agent-patterns",
+      "description": "This skill should be used when the user asks to \"design multi-agent system\", \"implement supervisor pattern\", \"create swarm architecture\", \"coordinate multiple agents\", or mentions multi-agent patterns, context isolation, agent handoffs, sub-agents, or parallel agent execution.",
+      "location": ".claude/skills/multi-agent-patterns/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/multi-agent-patterns/SKILL.md"
+      ]
+    },
+    {
+      "name": "next-best-practices",
+      "description": "Next.js best practices - file conventions, RSC boundaries, data patterns, async APIs, metadata, error handling, route handlers, image/font optimization, bundling",
+      "location": ".claude/skills/next-best-practices/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/next-best-practices/SKILL.md"
+      ]
+    },
+    {
+      "name": "openclaw-audit-watchdog",
+      "description": "Automated daily security audits for OpenClaw agents with email reporting. Runs deep audits and sends formatted reports.",
+      "location": ".claude/skills/openclaw-audit-watchdog/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/openclaw-audit-watchdog/SKILL.md"
+      ]
+    },
+    {
+      "name": "pdf",
+      "description": "Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill.",
+      "location": ".claude/skills/pdf/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/pdf/SKILL.md"
+      ]
+    },
+    {
+      "name": "planning-with-files",
+      "description": "",
+      "location": ".claude/skills/planning-with-files/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "playwright-skill",
+      "description": "Complete browser automation with Playwright. Auto-detects dev servers, writes clean test scripts to /tmp. Test pages, fill forms, take screenshots, check responsive design, validate UX, test login flows, check links, automate any browser task. Use when user wants to test websites, automate browser interactions, validate web functionality, or perform any browser-based testing.",
+      "location": ".claude/skills/playwright-skill/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/playwright-skill/SKILL.md"
+      ]
+    },
+    {
+      "name": "pptx",
+      "description": "Use this skill any time a .pptx file is involved in any way — as input, output, or both. This includes: creating slide decks, pitch decks, or presentations; reading, parsing, or extracting text from any .pptx file (even if the extracted content will be used elsewhere, like in an email or summary); editing, modifying, or updating existing presentations; combining or splitting slide files; working with templates, layouts, speaker notes, or comments. Trigger whenever the user mentions \\\"deck,\\\" \\\"slides,\\\" \\\"presentation,\\\" or references a .pptx filename, regardless of what they plan to do with the content afterward. If a .pptx file needs to be opened, created, or touched, use this skill.",
+      "location": ".claude/skills/pptx/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/pptx/SKILL.md"
+      ]
+    },
+    {
+      "name": "prompt-agent",
+      "description": "Security audit enforcement for AI agents. Automated security scans and health verification.",
+      "location": ".claude/skills/prompt-agent/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/prompt-agent/SKILL.md"
+      ]
+    },
+    {
+      "name": "prompt-generator",
+      "description": "Generate optimized Claude Code prompts for any request. This is the main entry point for the prompt generation system. Use this skill whenever you need to create a prompt for a Claude Code session, generate a session prompt pack, prepare a multi-session plan, or translate a natural language request into a structured, actionable Claude Code prompt. Trigger on: 'generate a prompt for', 'create a prompt', 'help me write a prompt', 'what prompt should I use', '/generate-prompt', any use of the generate-prompt slash command, or when you want to ensure a Claude Code session starts with the right skills, context, glossary, and verification checklist loaded. Also trigger when someone wants to create session prompts similar to the S4-S9 pipeline prompt packs.",
+      "location": ".claude/skills/prompt-generator/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/prompt-generator/SKILL.md"
+      ]
+    },
+    {
+      "name": "prompt-router",
+      "description": "Route a classified request to the right skills, agent strategy, Context7 directives, and output format. Use this skill whenever you need to decide which skills to load for a task, choose between solo agent vs subagent dispatch vs tmux agent team, determine if Context7 library docs are needed, or select the right output format for a prompt. Trigger on: any request that has been classified and needs routing, when someone asks 'what skills should I use for this', 'should I use subagents', 'do I need tmux mode', or any prompt generation workflow that needs skill selection and strategy planning.",
+      "location": ".claude/skills/prompt-router/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/prompt-router/SKILL.md"
+      ]
+    },
+    {
+      "name": "pydantic-models-py",
+      "description": "Create Pydantic models following the multi-model pattern with Base, Create, Update, Response, and InDB variants. Use when defining API request/response schemas, database models, or data validation in Python applications using Pydantic v2.",
+      "location": ".claude/skills/pydantic-models-py/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/pydantic-models-py/SKILL.md"
+      ]
+    },
+    {
+      "name": "receiving-code-review",
+      "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
+      "location": ".claude/skills/receiving-code-review/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/receiving-code-review/SKILL.md"
+      ]
+    },
+    {
+      "name": "request-classifier",
+      "description": "Classify any user request into a structured format for prompt generation. Use this skill whenever you need to understand what type of task a request represents, determine complexity, decide whether planning is needed, or route a request to the right skills and agent strategy. Trigger on: any request that needs to be analyzed before generating a Claude Code prompt, when someone says 'classify this', 'what kind of task is this', when the prompt-generator or prompt-router skills need input classification, or when deciding between solo agent vs subagent vs tmux team execution.",
+      "location": ".claude/skills/request-classifier/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/request-classifier/SKILL.md"
+      ]
+    },
+    {
+      "name": "requesting-code-review",
+      "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
+      "location": ".claude/skills/requesting-code-review/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/requesting-code-review/SKILL.md"
+      ]
+    },
+    {
+      "name": "sarif-parsing",
+      "description": ">-",
+      "location": ".claude/skills/sarif-parsing/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/sarif-parsing/SKILL.md"
+      ]
+    },
+    {
+      "name": "security-best-practices",
+      "description": "Perform language and framework specific security best-practice reviews and suggest improvements. Trigger only when the user explicitly requests security best practices guidance, a security review/report, or secure-by-default coding help. Trigger only for supported languages (python, javascript/typescript, go). Do not trigger for general code review, debugging, or non-security tasks.",
+      "location": ".claude/skills/security-best-practices/SKILL.md",
+      "has_scripts": false,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/security-best-practices/SKILL.md"
+      ]
+    },
+    {
+      "name": "semgrep",
+      "description": ">-",
+      "location": ".claude/skills/semgrep/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/semgrep/SKILL.md"
+      ]
+    },
+    {
+      "name": "skill-creator",
+      "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, update or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
+      "location": ".claude/skills/skill-creator/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/skill-creator/SKILL.md"
+      ]
+    },
+    {
+      "name": "skill-discovery",
+      "description": "Scan and catalog all available skills, agents, commands, hooks, and rules in the project. Use this skill whenever someone asks 'what skills are available', 'list agents', 'show me the registry', 'update the skill catalog', 'what can I use', 'what tools do I have', or any question about discovering, listing, or inventorying the project's AI capabilities. Also trigger when generating prompts that need to know what skills exist, or when setting up a new session and wanting to confirm available tooling.",
+      "location": ".claude/skills/skill-discovery/SKILL.md",
+      "has_scripts": true,
+      "has_references": true,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/skill-discovery/SKILL.md"
+      ]
+    },
+    {
+      "name": "soul-guardian",
+      "description": "Drift detection + baseline integrity guard for agent workspace files with automatic alerting support",
+      "location": ".claude/skills/soul-guardian/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/soul-guardian/SKILL.md"
+      ]
+    },
+    {
+      "name": "sse-streaming",
+      "description": "Implement Server-Sent Events (SSE) for real-time updates with automatic reconnection and heartbeats. Use when building live dashboards, notifications, progress indicators, or any feature needing server-to-client push.",
+      "location": ".claude/skills/sse-streaming/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "subagent-driven-development",
+      "description": "Use when executing implementation plans with independent tasks in the current session",
+      "location": ".claude/skills/subagent-driven-development/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/subagent-driven-development/SKILL.md"
+      ]
+    },
+    {
+      "name": "systematic-debugging",
+      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+      "location": ".claude/skills/systematic-debugging/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/systematic-debugging/SKILL.md"
+      ]
+    },
+    {
+      "name": "test-driven-development",
+      "description": "Use when implementing any feature or bugfix, before writing implementation code",
+      "location": ".claude/skills/test-driven-development/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/test-driven-development/SKILL.md"
+      ]
+    },
+    {
+      "name": "uncodixfy",
+      "description": "Prevents generic AI/Codex UI patterns when generating frontend code. Use this skill whenever generating HTML, CSS, React, Vue, Svelte, or any frontend UI code to enforce clean, human-designed aesthetics inspired by Linear, Raycast, Stripe, and GitHub instead of typical AI-generated UI.",
+      "location": ".claude/skills/uncodixfy/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/uncodixfy/SKILL.md"
+      ]
+    },
+    {
+      "name": "using-git-worktrees",
+      "description": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - creates isolated git worktrees with smart directory selection and safety verification",
+      "location": ".claude/skills/using-git-worktrees/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/using-git-worktrees/SKILL.md"
+      ]
+    },
+    {
+      "name": "using-superpowers",
+      "description": "Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions",
+      "location": ".claude/skills/using-superpowers/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/using-superpowers/SKILL.md"
+      ]
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "description": "React and Next.js performance optimization guidelines from Vercel Engineering. This skill should be used when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns. Triggers on tasks involving React components, Next.js pages, data fetching, bundle optimization, or performance improvements.",
+      "location": ".claude/skills/react-best-practices/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/react-best-practices/SKILL.md"
+      ]
+    },
+    {
+      "name": "verification-before-completion",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+      "location": ".claude/skills/verification-before-completion/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/verification-before-completion/SKILL.md"
+      ]
+    },
+    {
+      "name": "web-artifacts-builder",
+      "description": "Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS, shadcn/ui). Use for complex artifacts requiring state management, routing, or shadcn/ui components - not for simple single-file HTML/JSX artifacts.",
+      "location": ".claude/skills/web-artifacts-builder/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code"
+      ]
+    },
+    {
+      "name": "web-design-guidelines",
+      "description": "Review UI code for Web Interface Guidelines compliance. Use when asked to \"review my UI\", \"check accessibility\", \"audit design\", \"review UX\", or \"check my site against best practices\".",
+      "location": ".claude/skills/web-design-guidelines/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/web-design-guidelines/SKILL.md"
+      ]
+    },
+    {
+      "name": "webapp-testing",
+      "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
+      "location": ".claude/skills/webapp-testing/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/webapp-testing/SKILL.md"
+      ]
+    },
+    {
+      "name": "writing-plans",
+      "description": "Use when you have a spec or requirements for a multi-step task, before touching code",
+      "location": ".claude/skills/writing-plans/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/writing-plans/SKILL.md"
+      ]
+    },
+    {
+      "name": "writing-skills",
+      "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+      "location": ".claude/skills/writing-skills/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/writing-skills/SKILL.md"
+      ]
+    },
+    {
+      "name": "xlsx",
+      "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \\\"the xlsx in my downloads\\\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved.",
+      "location": ".claude/skills/xlsx/SKILL.md",
+      "has_scripts": true,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/xlsx/SKILL.md"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "name": "acm_commands",
+      "description": "ACM Extraction Background Commands",
+      "location": "commands/acm_commands.py"
+    },
+    {
+      "name": "embedding_commands",
+      "description": "Python command handler",
+      "location": "commands/embedding_commands.py"
+    },
+    {
+      "name": "example_commands",
+      "description": "Python command handler",
+      "location": "commands/example_commands.py"
+    },
+    {
+      "name": "podcast_commands",
+      "description": "Python command handler",
+      "location": "commands/podcast_commands.py"
+    },
+    {
+      "name": "source_commands",
+      "description": "Python command handler",
+      "location": "commands/source_commands.py"
+    }
+  ],
+  "hooks": [
+    {
+      "name": "auto-commit.sh",
+      "trigger": "PostCommit"
+    },
+    {
+      "name": "post-task-progress.md",
+      "trigger": "Custom"
+    },
+    {
+      "name": "pre-commit-gate.sh",
+      "trigger": "PreCommit"
+    },
+    {
+      "name": "pre-session-scan.md",
+      "trigger": "Custom"
+    },
+    {
+      "name": "pre-tool-use.sh",
+      "trigger": "PreToolUse"
+    },
+    {
+      "name": "ralph-gate-guard.sh",
+      "trigger": "RalphGate"
+    },
+    {
+      "name": "ralph-progress.sh",
+      "trigger": "RalphProgress"
+    },
+    {
+      "name": "ralph-stop-gate.sh",
+      "trigger": "RalphStop"
+    },
+    {
+      "name": "scope-guard.sh",
+      "trigger": "ScopeGuard"
+    },
+    {
+      "name": "session-start.sh",
+      "trigger": "SessionStart"
+    },
+    {
+      "name": "story-done-check.sh",
+      "trigger": "StoryDone"
+    },
+    {
+      "name": "task-quality-gate.sh",
+      "trigger": "TaskQualityGate"
+    }
+  ],
+  "rules": {
+    "source": "CLAUDE.md",
+    "sections": [
+      "CRITICAL PATH RULE (WSL/Windows)",
+      "Project Overview",
+      "Essential Commands",
+      "Browser Automation",
+      "Architecture",
+      "Python Environments: MinerU 2.x (E31-S1 Validated)",
+      "Database",
+      "Environment Variables",
+      "Code Style",
+      "Prompt Generator System",
+      "Sub-Agent Model Selection",
+      "Story Verification Protocol",
+      "V3 Architecture Patterns",
+      "Documentation",
+      "Claude Code Custom Commands",
+      "Claude Code Modular Rules",
+      "MCP Configuration",
+      "Docker Local Overrides",
+      "Ralph Loop Configuration"
+    ]
+  }
+}

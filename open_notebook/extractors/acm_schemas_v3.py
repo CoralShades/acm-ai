@@ -12,7 +12,7 @@ Story: E30-S7 Two-Phase Extraction Prompts
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class BuildingExtractionResult(BaseModel):
@@ -38,6 +38,13 @@ class BuildingExtractionResult(BaseModel):
     identifying_company: Optional[str] = (
         None  # Identifying_Hygiene_Consulting_Company__c
     )
+
+    # Additional building details
+    state: Optional[str] = Field(None, description="Australian state, e.g. 'VIC', 'NSW'")
+    number_of_levels: Optional[int] = Field(None, description="Number of building levels/storeys")
+    owned_or_leased: Optional[str] = Field(None, description="'Owned' or 'Leased'")
+    building_sub_category: Optional[str] = Field(None, description="Sub-category dependent on Building_Category__c")
+    building_risk_rating: Optional[str] = Field(None, description="Overall risk rating, e.g. 'Low', 'Medium', 'High'")
 
     # Quality metadata
     extraction_confidence: str = "medium"  # "high" | "medium" | "low"
@@ -69,9 +76,17 @@ class ACMItemRecord(BaseModel):
     nata_sample_no: Optional[str] = None  # NATA_Endorsed_Sample_no__c
     condition: Optional[str] = None  # Condition__c (picklist)
     disturbance_potential: Optional[str] = None  # Disturbance_Potential_of_Material__c
-    quantity: Optional[float] = None  # Quantity__c
+    quantity: Optional[str] = None  # Quantity__c (kept as str — LLMs return "2m²", "10 lm")
     labelled: Optional[str] = None  # Labelled__c (Yes | No)
     labelled_details: Optional[str] = None  # Labelled_Details__c
+
+    @field_validator("labelled", mode="before")
+    @classmethod
+    def coerce_labelled(cls, v):
+        """Coerce bool→str: LLMs often return true/false instead of 'Yes'/'No'."""
+        if isinstance(v, bool):
+            return "Yes" if v else "No"
+        return v
 
     # Notes
     hygienist_recommendations: Optional[str] = None
@@ -88,5 +103,5 @@ class ACMItemExtractionResult(BaseModel):
     """Phase 2 output wrapper: all Item__c records for one building."""
 
     records: List[ACMItemRecord] = Field(default_factory=list)
-    status: str = "valid"  # "valid" | "no_acm_data" | "invalid"
+    status: str = "valid"  # "valid" | "no_acm_data" | "invalid" | "truncated"
     extraction_notes: Optional[str] = None

@@ -311,7 +311,50 @@ The Ask feature provides sophisticated research assistance:
 - Choose more cost-effective models
 - Be more targeted with questions
 
+## ACM Smart Chat
+
+### Smart Chat Panel (Supervisor)
+
+The Smart Chat panel provides an AI assistant for querying ACM register data and document content. It appears on source detail pages and supports:
+
+- **ACM Data Toggle**: A toggle badge at the bottom of the chat switches ACM data context on/off. When enabled, the AI can query buildings, rooms, products, risk statuses, and statistics.
+- **Domain-Aware Suggestions**: The chat provides contextual suggestions based on whether ACM data is enabled (compliance queries) or disabled (document queries).
+- **Tool Result Rendering**: Search results render as structured tables and cards directly in the chat, not raw JSON.
+- **Supervisor Progress Indicator**: A pulsing dot shows when the AI is searching or thinking.
+
+### CRUD Chat Panel
+
+The CRUD chat panel appears on job detail pages and provides natural language record editing:
+
+- **Create, Update, Delete**: Ask the AI to modify ACM records in plain English.
+- **HITL Approval**: All write operations show a preview dialog before executing. You must explicitly approve or reject each change.
+- **Edit Before Approving**: Click the pencil icon on the preview to modify a value before approving.
+- **Automatic Previews**: The AI always previews changes — it never writes without your approval.
+
+### Keyboard Shortcuts
+
+- **Cmd+Enter** (Mac) / **Ctrl+Enter** (Windows): Send message
+
 ## Model Selection and Configuration
+
+### In-Chat Model Selector
+
+Both chat panels include a compact model selector in the header. Click the model name pill to switch between available language models during a conversation.
+
+- **Visibility**: The selector only appears when 2 or more language models are registered in the system.
+- **Persistence**: Your selection is saved to the browser and restored on page refresh. Each chat panel (Smart Chat, CRUD Chat) remembers its own model separately.
+- **Available Models**: Shows all registered language models from Settings > Models, including Ollama local models and cloud providers (Anthropic, OpenAI, etc.).
+- **Default Behavior**: When no model is selected, the system uses the default chat model configured in Settings > Models.
+
+### Changing the Default Chat Model
+
+To set the system-wide default (used when no in-chat selection is made):
+
+1. Go to **Settings > Models**
+2. Under **Default Models**, set the **Chat** model
+3. Click **Save**
+
+This default applies to all new chat sessions until overridden by the in-chat selector.
 
 ### Choosing the Right Model
 
@@ -320,17 +363,17 @@ The Ask feature provides sophisticated research assistance:
 **Research and Analysis**:
 - Claude Sonnet or GPT-4 for deep analysis
 - Gemini Pro for comprehensive understanding
-- Grok for creative insights
+- Larger Ollama models (llama3.1:70b) for privacy-focused deep analysis
 
 **Quick Questions**:
-- GPT-5-mini for fast, cost-effective responses
+- GPT-4o-mini for fast, cost-effective responses
 - Gemini Flash for quick summaries
-- Ollama models for privacy-focused usage
+- Smaller Ollama models (llama3.1:8b, qwen2.5:7b) for privacy-focused usage
 
-**Specialized Tasks**:
-- Use model strengths for specific capabilities
-- Consider language requirements
-- Balance cost with quality needs
+**ACM Record Editing (CRUD)**:
+- Models that follow JSON instructions reliably work best
+- llama3.1:8b is recommended for Ollama-based CRUD operations
+- Cloud models (Claude, GPT-4) provide the most reliable structured output
 
 ### Customizing Model Behavior
 

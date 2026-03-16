@@ -1,0 +1,4 @@
+-- Down migration 46: Recreate bar_template and field_mapping tables
+-- (schemas from migrations 23 and 26)
+DEFINE TABLE IF NOT EXISTS bar_template SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS field_mapping SCHEMALESS;

@@ -16,6 +16,10 @@ from open_notebook.domain.models import Model
 from open_notebook.domain.transformation import DefaultPrompts, Transformation
 from open_notebook.exceptions import InvalidInputError
 from open_notebook.graphs.transformation import graph as transformation_graph
+from open_notebook.observability.langfuse_config import (
+    langfuse_tracing,
+    merge_langfuse_into_config,
+)
 
 router = APIRouter()
 
@@ -92,14 +96,24 @@ async def execute_transformation(execute_request: TransformationExecuteRequest):
         if not model:
             raise HTTPException(status_code=404, detail="Model not found")
 
-        # Execute the transformation
-        result = await transformation_graph.ainvoke(
-            dict(  # type: ignore[arg-type]
-                input_text=execute_request.input_text,
-                transformation=transformation,
-            ),
-            config=dict(configurable={"model_id": execute_request.model_id}),
-        )
+        # Execute the transformation with optional Langfuse tracing
+        with langfuse_tracing(
+            "transformation",
+            source_id=execute_request.transformation_id,
+            operation_type="transformation",
+        ) as (callbacks, metadata):
+            config = merge_langfuse_into_config(
+                {"configurable": {"model_id": execute_request.model_id}},
+                callbacks,
+                metadata,
+            )
+            result = await transformation_graph.ainvoke(
+                dict(  # type: ignore[arg-type]
+                    input_text=execute_request.input_text,
+                    transformation=transformation,
+                ),
+                config=config,
+            )
 
         return TransformationExecuteResponse(
             output=result["output"],

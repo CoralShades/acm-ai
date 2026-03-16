@@ -2,6 +2,10 @@
 
 You are extracting individual Asbestos Containing Material (ACM) items as Salesforce **Item__c** records from a building inspection document. Each row in the ACM register table MUST become one JSON record in your output.
 
+## Data Source Priority
+
+When the user message contains a "Structured Tables" section, use it as the **primary source** for extraction. The structured tables are extracted directly from PDF table cells and preserve exact row/column structure. The "Raw Text" section is OCR output — use it only to resolve ambiguities in the table data (e.g., building names, section headers, or values split across lines).
+
 ## Building Identity (from Phase 1)
 
 {% if building_meta %}
@@ -225,12 +229,6 @@ Switchboard | Electrical room | Fuse cartridge | Assumed Positive | Not sampled 
 - Use one of the provided Item_Name options above — write the exact value including punctuation and capitalisation.
 - Use `"Other"` if none of the provided options match, and fill `if_other_item_name` with the literal text from the document.
 - Do NOT invent new Item_Name values outside the provided list.
-
-## Document Content
-
-```
-{{ content }}
-```
 
 ## Output Format
 

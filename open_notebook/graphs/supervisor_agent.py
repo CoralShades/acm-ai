@@ -21,6 +21,13 @@ from loguru import logger
 from typing_extensions import TypedDict
 
 from open_notebook.graphs.chat_tools import get_acm_tools, get_search_tools
+
+try:
+    from copilotkit.langgraph import copilotkit_emit_state
+
+    _HAS_COPILOTKIT = True
+except ImportError:
+    _HAS_COPILOTKIT = False
 from open_notebook.graphs.chat_tools.acm_tools import set_tool_context
 from open_notebook.graphs.utils import provision_langchain_model_with_tools
 
@@ -33,6 +40,7 @@ class SupervisorState(TypedDict):
     active_agents: Optional[List[str]]
     acm_results: Optional[dict]
     search_results: Optional[dict]
+    model_id: Optional[str]
 
 
 def _get_supervisor_tools(include_acm: bool = True):
@@ -54,6 +62,17 @@ def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
     notebook_id = state.get("notebook_id")
     include_acm = state.get("include_acm_context", True)
 
+    # Fallback: extract source_id from CopilotKit system messages if not in state
+    if not source_id:
+        import re
+        for msg in state.get("messages", []):
+            content = getattr(msg, "content", "")
+            if isinstance(content, str) and "source:" in content:
+                match = re.search(r"(source:[a-z0-9]+)", content)
+                if match:
+                    source_id = match.group(0)
+                    break
+
     # Set tool context for scoping
     set_tool_context(source_id=source_id, notebook_id=notebook_id)
 
@@ -70,7 +89,7 @@ def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
     payload = [SystemMessage(content=system_prompt)] + state.get("messages", [])
 
     # Provision model with tools
-    model_id = config.get("configurable", {}).get("model_id")
+    model_id = state.get("model_id") or config.get("configurable", {}).get("model_id")
 
     # TODO: Use Model.get(model_id).get_max_output_tokens() for dynamic lookup
     # when the sync-to-async bridge pattern here allows it without deadlocks.
@@ -111,6 +130,27 @@ def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
         )
 
     ai_message = model.invoke(payload)
+
+    # Emit intermediate state for CopilotKit's useCoAgentStateRender
+    if _HAS_COPILOTKIT:
+        try:
+            emit_loop = asyncio.new_event_loop()
+            try:
+                emit_loop.run_until_complete(
+                    copilotkit_emit_state(
+                        config,
+                        {
+                            "active_agents": state.get("active_agents", []),
+                            "include_acm_context": include_acm,
+                            "status": "responding",
+                        },
+                    )
+                )
+            finally:
+                emit_loop.close()
+        except Exception:
+            pass  # Non-fatal — app works without copilotkit
+
     return {"messages": [ai_message]}
 
 

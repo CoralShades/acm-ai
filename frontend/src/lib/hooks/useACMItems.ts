@@ -13,7 +13,7 @@ export function useACMItems(sourceId: string, buildingId: string | null) {
   return useQuery({
     queryKey: ACM_ITEMS_QUERY_KEYS.byBuilding(sourceId, buildingId),
     queryFn: () =>
-      acmApi.list({ source_id: sourceId, building_id: buildingId ?? undefined, limit: 500 }),
+      acmApi.list({ source_id: sourceId, building_record_id: buildingId ?? undefined, limit: 500 }),
     enabled: !!sourceId && !!buildingId,
     staleTime: 30 * 1000,
   })

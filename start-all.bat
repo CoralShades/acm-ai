@@ -22,7 +22,7 @@ echo [1/7] Running preflight checks...
 uv run python scripts/preflight_checks.py
 if %errorlevel% neq 0 (
     echo.
-    echo PREFLIGHT FAILED — fix issues above before starting.
+    echo PREFLIGHT FAILED -- fix issues above before starting.
     echo.
     pause
     exit /b 1
@@ -39,7 +39,7 @@ for /f "tokens=2 delims=," %%a in ('wmic process where "CommandLine like '%%run_
 for /f "tokens=2 delims=," %%a in ('wmic process where "CommandLine like '%%run_worker.py%%'" get ProcessId /format:csv 2^>nul ^| findstr /r "[0-9]"') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=2 delims=," %%a in ('wmic process where "CommandLine like '%%next dev%%'" get ProcessId /format:csv 2^>nul ^| findstr /r "[0-9]"') do taskkill /F /PID %%a >nul 2>&1
 REM Kill orphaned uvicorn multiprocessing workers via Python utility
-REM (only kills children of dead parent PIDs — safe for other multiprocessing uses)
+REM (only kills children of dead parent PIDs -- safe for other multiprocessing uses)
 uv run python -c "from scripts._port_utils import _kill_orphaned_children; _kill_orphaned_children(5055)" >nul 2>&1
 REM Kill any Windows process LISTENING on our ports (local address only)
 for /f "tokens=2,5" %%a in ('netstat -ano 2^>nul ^| findstr "LISTENING"') do (

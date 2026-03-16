@@ -22,7 +22,7 @@ export function SearchResult({ data, searchType }: SearchResultProps) {
   }
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="rounded-lg border overflow-hidden my-2">
       <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-medium">
           <Search className="h-3.5 w-3.5" />
@@ -53,12 +53,12 @@ export function SearchResult({ data, searchType }: SearchResultProps) {
                       {(result.title as string) || 'Untitled'}
                     </span>
                     {score !== undefined && (
-                      <Badge variant="outline" className="text-[10px] flex-shrink-0">
+                      <Badge variant="outline" className="text-xs flex-shrink-0">
                         {(score * 100).toFixed(0)}%
                       </Badge>
                     )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                     {(result.snippet as string) || (result.content as string) || ''}
                   </p>
                 </div>

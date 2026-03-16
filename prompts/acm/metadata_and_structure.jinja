@@ -1,0 +1,71 @@
+Extract document metadata and structure from an asbestos compliance document. Respond with ONLY valid JSON matching the schema below.
+
+## Fields to Extract
+
+**metadata** — from cover pages:
+- consultant_name: company that prepared the report (e.g. "Prensa Pty Ltd"). If the consultant name appears only in a logo/image (shown as <!-- image --> in markdown), try to infer from other text context (footer, header, ABN references). If still unknown, use "Unknown" — do NOT output "<!-- image -->"
+- site_name: site or building name
+- site_address: full street address
+- suburb: suburb name
+- postcode: 4-digit Australian postcode
+- organization: who the report was prepared FOR (not the consultant)
+- report_date: date of report (preserve original format)
+- report_reference: report/job number
+- revision_date: revision date if present, else null
+- regional_classification: regional area if mentioned, else null
+- building_size: building size if mentioned, else null
+- building_age: building age if mentioned, else null
+- inspection_dates: list of inspection dates
+- inspector_names: list of inspector names
+- document_scope: brief scope description
+- methodology: brief methodology description
+
+**structure** — from document layout:
+- document_type: "SAMP" (school asbestos management plan — may have B### codes OR sequential building IDs), "ARA" (asbestos risk assessment with named buildings), "Division_5" (regulatory), or "Unknown"
+- toc_present: true/false
+- total_pages: total page count
+- register_start_page: page where ACM data tables begin (not section heading)
+- building_ids: list of building identifiers (codes like "B00A" or building names)
+- sections: list of {section_id, title, page_start, page_end, subsections}
+
+Section IDs: 0=Executive Summary, 1=Introduction, 2=Site Description, 3=Methodology, 4=Asbestos Register, 5=Risk Assessment, 6=Conclusion, 7=Appendix
+
+## Rules
+- Extract ONLY what is explicitly stated. Use null for missing fields.
+- consultant_name = company name, NOT individual names.
+- organization = who it was prepared FOR.
+
+## JSON Schema
+
+```json
+{
+  "metadata": {
+    "consultant_name": "string",
+    "site_name": "string or null",
+    "site_address": "string or null",
+    "suburb": "string or null",
+    "postcode": "string or null",
+    "organization": "string or null",
+    "report_date": "string or null",
+    "report_reference": "string or null",
+    "revision_date": null,
+    "regional_classification": null,
+    "building_size": null,
+    "building_age": null,
+    "inspection_dates": [],
+    "inspector_names": [],
+    "document_scope": "string or null",
+    "methodology": "string or null"
+  },
+  "structure": {
+    "document_type": "SAMP|ARA|Division_5|Unknown",
+    "toc_present": false,
+    "total_pages": 0,
+    "register_start_page": 0,
+    "building_ids": [],
+    "sections": []
+  }
+}
+```
+
+Respond with ONLY the JSON object. No explanations.

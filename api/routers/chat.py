@@ -12,6 +12,10 @@ from open_notebook.exceptions import (
     NotFoundError,
 )
 from open_notebook.graphs.chat import graph as chat_graph
+from open_notebook.observability.langfuse_config import (
+    langfuse_tracing,
+    merge_langfuse_into_config,
+)
 
 router = APIRouter()
 
@@ -351,16 +355,26 @@ async def execute_chat(request: ExecuteChatRequest):
         user_message = HumanMessage(content=request.message)
         state_values["messages"].append(user_message)
 
-        # Execute chat graph
-        result = chat_graph.invoke(
-            input=state_values,  # type: ignore[arg-type]
-            config=RunnableConfig(
-                configurable={
-                    "thread_id": request.session_id,
-                    "model_id": model_override,
-                }
-            ),
-        )
+        # Execute chat graph with optional Langfuse tracing
+        with langfuse_tracing(
+            "chat",
+            source_id="chat",
+            operation_type="chat",
+        ) as (callbacks, metadata):
+            config = merge_langfuse_into_config(
+                {
+                    "configurable": {
+                        "thread_id": request.session_id,
+                        "model_id": model_override,
+                    },
+                },
+                callbacks,
+                metadata,
+            )
+            result = chat_graph.invoke(
+                input=state_values,  # type: ignore[arg-type]
+                config=RunnableConfig(**config),
+            )
 
         # Update session timestamp
         await session.save()

@@ -39,12 +39,15 @@ logger.add(
 
 from api.auth import PasswordAuthMiddleware
 from api.model_provisioning import run_model_provisioning
+from open_notebook.observability.logfire_config import init_logfire
+
+# Initialize Logfire -> Langfuse OTel bridge (non-fatal, before graph imports)
+init_logfire()
 from api.routers import (
     a2a,
     acm,
     agui_extraction,
     auth,
-    bar_templates,
     chat,
     config,
     context,
@@ -158,9 +161,15 @@ app.add_middleware(
 )
 
 # Add CORS middleware last (so it processes first)
+_cors_env = os.environ.get("CORS_ALLOWED_ORIGINS", "*")
+_cors_origins: list[str] = (
+    [o.strip() for o in _cors_env.split(",") if o.strip()]
+    if _cors_env != "*"
+    else ["*"]
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -192,7 +201,6 @@ app.include_router(acm.router, prefix="/api/acm", tags=["acm"])
 app.include_router(extraction_events.router, prefix="/api", tags=["extraction-events"])
 app.include_router(a2a.router, prefix="/api", tags=["a2a"])
 app.include_router(agui_extraction.router, prefix="/api", tags=["agui-extraction"])
-app.include_router(bar_templates.router, tags=["bar-templates"])
 app.include_router(source_bulk.router, prefix="/api", tags=["source-bulk"])
 app.include_router(v3_streaming.router, prefix="/api", tags=["v3-streaming"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCoAgent } from '@copilotkit/react-core'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { SupervisorAgentState } from '@/lib/types/smart-chat'
 
 interface UseSmartChatOptions {
@@ -17,6 +17,8 @@ export function useSmartChat({
 }: UseSmartChatOptions) {
   const [includeAcmContext, setIncludeAcmContextState] = useState(hasAcmData)
 
+  const [chatModelId, setChatModelIdState] = useState('')
+
   const defaultState = useMemo<SupervisorAgentState>(
     () => ({
       source_id: sourceId ?? null,
@@ -25,6 +27,7 @@ export function useSmartChat({
       active_agents: [],
       acm_results: null,
       search_results: null,
+      model_id: null,
     }),
     [sourceId, notebookId, hasAcmData]
   )
@@ -34,12 +37,32 @@ export function useSmartChat({
     initialState: defaultState,
   })
 
+  // Force state sync to backend on mount — initialState alone doesn't trigger sync
+  useEffect(() => {
+    setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+      ...(prev ?? defaultState),
+      source_id: sourceId ?? null,
+      notebook_id: notebookId ?? null,
+    }))
+  }, [sourceId, notebookId, setState, defaultState])
+
   const setIncludeAcmContext = useCallback(
     (value: boolean) => {
       setIncludeAcmContextState(value)
       setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
         ...(prev ?? defaultState),
         include_acm_context: value,
+      }))
+    },
+    [setState, defaultState]
+  )
+
+  const setChatModelId = useCallback(
+    (modelId: string) => {
+      setChatModelIdState(modelId)
+      setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+        ...(prev ?? defaultState),
+        model_id: modelId || null,
       }))
     },
     [setState, defaultState]
@@ -60,6 +83,8 @@ export function useSmartChat({
     state,
     includeAcmContext,
     setIncludeAcmContext,
+    chatModelId,
+    setChatModelId,
     setScope,
   }
 }

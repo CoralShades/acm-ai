@@ -17,7 +17,7 @@ from loguru import logger
 from surreal_commands import CommandInput, CommandOutput, command
 
 from open_notebook.database.repository import repo_query
-from open_notebook.domain.acm import ACMRecord
+from open_notebook.domain.acm import ACMRecord, BuildingRecord
 from open_notebook.domain.notebook import Source
 from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
@@ -63,6 +63,34 @@ async def _try_claim_command(command_id: str, worker_id: str) -> bool:
             if isinstance(row, dict) and row.get("claimed_by") == worker_id:
                 return True
     return False
+
+
+async def _write_terminal_status(command_id: str, status: str, records: int = 0) -> None:
+    """Write terminal status to extraction_progress table.
+
+    The PipelineLogger inside the graph writes 'running' status but may not
+    write terminal status reliably. This ensures the frontend and polling
+    scripts always see completion.
+
+    Args:
+        command_id: The SurrealDB command record ID (e.g., 'command:abc123').
+        status: Terminal status string — 'completed' or 'failed'.
+        records: Total records extracted (0 for failure paths).
+    """
+    try:
+        import re
+        safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", str(command_id))
+        await repo_query(
+            f"""
+            UPDATE extraction_progress:{safe_id} SET
+                status = $status,
+                records_total = $records,
+                updated_at = time::now();
+            """,
+            {"status": status, "records": records},
+        )
+    except Exception as e:
+        logger.warning(f"Failed to write terminal status for {command_id}: {e}")
 
 
 class ACMExtractionInput(CommandInput):
@@ -203,27 +231,96 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         deleted_count = 0
         if force:
             deleted_count = await ACMRecord.delete_by_source(source_id)
-            if deleted_count > 0:
+            # Also delete building records to avoid unique index collision on re-extraction
+            bldg_deleted = await BuildingRecord.delete_by_source(source_id)
+            if deleted_count > 0 or bldg_deleted > 0:
                 logger.info(
-                    f"Deleted {deleted_count} existing ACM records for source {source_id}"
+                    f"Deleted {deleted_count} ACM records and {bldg_deleted} building records "
+                    f"for source {source_id}"
                 )
+
+            # Check if table sections need re-extraction
+            # (docling_document_json may be NULL or empty {} for sources processed before v3.5)
+            from open_notebook.database.repository import ensure_record_id as _eri
+
+            _sid = _eri(source_id)
+            table_check = await repo_query(
+                "SELECT count() as cnt FROM acm_table_section "
+                "WHERE source_id=$sid AND (docling_document_json IS NULL OR docling_document_json = {}) "
+                "GROUP ALL;",
+                {"sid": _sid},
+            )
+            null_count = (
+                table_check[0]["cnt"]
+                if isinstance(table_check, list) and len(table_check) > 0
+                else 0
+            )
+            if null_count > 0:
+                logger.info(
+                    f"Found {null_count} stale acm_table_section rows "
+                    f"(missing docling_document_json) for {source_id} — re-extracting"
+                )
+                await repo_query(
+                    "DELETE FROM acm_table_section WHERE source_id=$sid;",
+                    {"sid": _sid},
+                )
+                # Re-run table extraction to populate docling_document_json
+                from commands.source_commands import (
+                    _resolve_source_pdf_path,
+                    _run_dual_provider_extraction,
+                    _store_docling_tables,
+                )
+
+                pdf_path = _resolve_source_pdf_path(source)
+                if pdf_path:
+                    merged_tables, _timings = await _run_dual_provider_extraction(
+                        source_id=source_id,
+                        pdf_path=pdf_path,
+                    )
+                    if merged_tables:
+                        await _store_docling_tables(source_id, merged_tables)
+                        logger.info(
+                            f"Re-extracted {len(merged_tables)} tables for {source_id}"
+                        )
 
         # Extract command_id from execution context for progress tracking
         # (command_id already set above during atomic claim)
 
-        # 3. Run AI extraction (deletion already handled above, so pass force=False)
-        result = await extract_acm_from_source(
-            source=source,
-            model_id=model_id,
-            force=False,  # Don't delete again, we already handled it
-            command_id=command_id,
-        )
+        # 3. Run AI extraction with timeout guard (F8: concurrent executions can deadlock)
+        try:
+            result = await asyncio.wait_for(
+                extract_acm_from_source(
+                    source=source,
+                    model_id=model_id,
+                    force=False,  # Don't delete again, we already handled it
+                    command_id=command_id,
+                ),
+                timeout=1800,  # 30 minutes max per extraction
+            )
+        except asyncio.TimeoutError:
+            processing_time = time.time() - start_time
+            logger.error(
+                f"ACM extraction timed out after 1800s for {source_id}"
+            )
+            if command_id:
+                await _write_terminal_status(command_id, "failed", 0)
+            return ACMExtractionOutput(
+                success=False,
+                source_id=source_id,
+                records_created=0,
+                records_deleted=deleted_count,
+                processing_time=processing_time,
+                error_message="Extraction timed out after 30 minutes",
+                extraction_method="ai",
+            )
 
         processing_time = time.time() - start_time
 
         # 4. Return result
         if result.status == "failed":
             logger.error(f"AI ACM extraction failed for {source_id}: {result.error}")
+            if command_id:
+                await _write_terminal_status(command_id, "failed", 0)
             return ACMExtractionOutput(
                 success=False,
                 source_id=source_id,
@@ -237,6 +334,8 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
 
         if result.status == "no_data":
             logger.info(f"No ACM records found in source {source_id}")
+            if command_id:
+                await _write_terminal_status(command_id, "completed", 0)
             return ACMExtractionOutput(
                 success=True,
                 source_id=source_id,
@@ -300,6 +399,9 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         if result.confidence_distribution:
             conf_dist = result.confidence_distribution.model_dump()
 
+        if command_id:
+            await _write_terminal_status(command_id, "completed", result.total_records)
+
         return ACMExtractionOutput(
             success=True,
             source_id=source_id,
@@ -320,6 +422,8 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
     except Exception as e:
         processing_time = time.time() - start_time
         logger.error(f"ACM extraction failed for {source_id}: {e}")
+        if command_id:
+            await _write_terminal_status(command_id, "failed", 0)
         return ACMExtractionOutput(
             success=False,
             source_id=source_id,

@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { AddSourceDialog } from '@/components/sources/AddSourceDialog'
+import { QuickUploadDialog } from '@/components/sources/QuickUploadDialog'
 import { CreateNotebookDialog } from '@/components/notebooks/CreateNotebookDialog'
 import { GeneratePodcastDialog } from '@/components/podcasts/GeneratePodcastDialog'
 
@@ -31,7 +31,7 @@ export function CreateDialogsProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      <AddSourceDialog open={sourceDialogOpen} onOpenChange={setSourceDialogOpen} />
+      <QuickUploadDialog open={sourceDialogOpen} onOpenChange={setSourceDialogOpen} />
       <CreateNotebookDialog open={notebookDialogOpen} onOpenChange={setNotebookDialogOpen} />
       <GeneratePodcastDialog open={podcastDialogOpen} onOpenChange={setPodcastDialogOpen} />
     </CreateDialogsContext.Provider>

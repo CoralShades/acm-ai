@@ -9,6 +9,7 @@ Story: E1-S7 AI-Powered ACM Extraction
 
 import asyncio
 import hashlib
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -21,7 +22,7 @@ from loguru import logger
 from pydantic import ValidationError
 from typing_extensions import TypedDict
 
-from open_notebook.database.repository import save_source_intelligence
+from open_notebook.database.repository import repo_query, save_source_intelligence
 from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
 from open_notebook.domain.models import Model
 from open_notebook.domain.notebook import Source
@@ -54,6 +55,10 @@ from open_notebook.extractors.document_structure import (
     _extract_total_pages,
     extract_document_structure,
 )
+from open_notebook.extractors.metadata_and_structure import (
+    extract_metadata_and_structure,
+    synthesize_page_tags,
+)
 from open_notebook.extractors.metadata_extractor import (
     auto_populate_site_config,
     extract_document_metadata,
@@ -70,7 +75,6 @@ from open_notebook.extractors.orchestrator import (
     _normalize_v3_records,
     _v3_extract_building_meta,
     _v3_extract_items,
-    orchestrate_extraction,
 )
 from open_notebook.extractors.page_tagger import (
     PageTaggingResult,
@@ -94,6 +98,7 @@ from open_notebook.extractors.validators.acm_validator import (
     validate_acm_record,
 )
 from open_notebook.graphs.utils import (
+    _apply_ollama_extraction_settings,
     _is_qwen_model,
     _verify_provider_routing,
     is_auth_error,
@@ -118,314 +123,6 @@ RETRY_DELAYS = [1, 2, 4]  # Exponential backoff in seconds
 # Chunking constants (for when no page markers exist)
 CHARS_PER_TOKEN_ESTIMATE = 4  # Approximate characters per token for chunking
 CHUNK_OVERLAP_CHARS = 500  # Overlap between chunks to preserve context
-
-
-def _extract_acm_register_section(content: str) -> Tuple[str, bool]:
-    """
-    Extract just the ACM Register section from a document.
-
-    SAMP and ARA documents have boilerplate text before the actual ACM Register.
-    This function finds and extracts just the relevant section.
-
-    Returns:
-        Tuple of (extracted_content, was_extracted)
-    """
-    # Look for common markers that indicate start of ACM Register section
-    # Use case-insensitive search to handle "ASBESTOS REGISTER" (ARA) and
-    # "Asbestos Register" (SAMP) formats
-    start_marker_patterns = [
-        re.compile(r"Appendix\s+B[:\s-]+Asbestos\s+Register", re.IGNORECASE),
-        re.compile(r"Asbestos\s+Register", re.IGNORECASE),
-    ]
-
-    # Look for building pattern which indicates start of actual data
-    # Supports both SAMP (B###) and ARA (named buildings via "Building Name:")
-    building_patterns = [
-        re.compile(r"B\d{3}\s*-\s*[A-Za-z]"),
-        re.compile(r"Building\s+Name:\s*\S", re.IGNORECASE),
-    ]
-
-    start_idx = -1
-
-    # Try to find a good starting point using register markers
-    for pattern in start_marker_patterns:
-        match = pattern.search(content)
-        if match:
-            start_idx = match.start()
-            break
-
-    # If no marker found, try to find the first building pattern
-    if start_idx == -1:
-        for pattern in building_patterns:
-            match = pattern.search(content)
-            if match:
-                # Go back a bit to include potential headers
-                start_idx = max(0, match.start() - 200)
-                break
-
-    if (
-        start_idx != -1 and start_idx > 500
-    ):  # Only extract if there's significant boilerplate
-        extracted = content[start_idx:]
-        acm_debug(
-            f"Extracted ACM Register section: {len(content)} -> {len(extracted)} chars (saved {len(content) - len(extracted)} chars)"
-        )
-        return extracted, True
-
-    return content, False
-
-
-def _detect_document_format(content: str) -> str:
-    """Detect whether content is SAMP or ARA format.
-
-    Returns:
-        "samp" for B###-style IDs, "ara" for named buildings,
-        "unknown" otherwise.
-    """
-    # Check for SAMP format indicators
-    samp_building = re.search(r"B\d{3}\s*-\s*R\d{4}", content)
-    if samp_building:
-        return "samp"
-
-    # Check for ARA format indicators
-    ara_indicators = 0
-    if re.search(r"Building Name:\s*\S", content):
-        ara_indicators += 1
-    if re.search(r"(?:Presumed\s+)?(?:Positive|Negative)\b", content, re.IGNORECASE):
-        ara_indicators += 1
-    if re.search(
-        r"\b(?:Dist\.\s*Potential|Risk Rating|Friability)\b", content, re.IGNORECASE
-    ):
-        ara_indicators += 1
-    # ARA section dividers: "BuildingName - Interior/Exterior - Level"
-    if re.search(
-        r".+\s*-\s*(?:Interior|Exterior)\s*-\s*(?:Ground|First|Second|Basement)\s+Level",
-        content,
-        re.IGNORECASE,
-    ):
-        ara_indicators += 1
-
-    if ara_indicators >= 2:
-        return "ara"
-
-    return "unknown"
-
-
-def _preprocess_acm_content(content: str) -> Tuple[str, Dict[str, Any]]:
-    """
-    Pre-process ACM document content to help LLM understand the structure.
-
-    The content from PyMuPDF/content-core often comes in vertical format where
-    table columns are stacked vertically. This function:
-    1. Extracts the ACM Register section (removes boilerplate)
-    2. Detects document format (SAMP vs ARA)
-    3. Identifies room/building headers
-    4. Groups related content together
-    5. Adds structural markers to help LLM parsing
-
-    Returns:
-        Tuple of (processed_content, metadata_dict)
-    """
-    metadata: Dict[str, Any] = {
-        "original_length": len(content),
-        "rooms_found": 0,
-        "acm_indicators_found": 0,
-        "no_asbestos_found": 0,
-        "section_extracted": False,
-        "document_format": "unknown",
-    }
-
-    # First, try to extract just the ACM Register section
-    content, was_extracted = _extract_acm_register_section(content)
-    metadata["section_extracted"] = was_extracted
-    metadata["extracted_length"] = len(content)
-
-    # Detect document format
-    doc_format = _detect_document_format(content)
-    metadata["document_format"] = doc_format
-
-    # Count key patterns for metadata
-    metadata["acm_indicators_found"] = content.count("Asbestos-containing")
-    metadata["no_asbestos_found"] = content.count("No Asbestos")
-
-    # Add section markers to help LLM understand structure
-    processed = content
-
-    if doc_format == "ara":
-        # ARA format: Named buildings, sequential items, section dividers
-        processed, metadata = _preprocess_ara_format(processed, metadata)
-    else:
-        # SAMP format or unknown: B###/R#### IDs
-        processed, metadata = _preprocess_samp_format(processed, metadata)
-
-    metadata["processed_length"] = len(processed)
-
-    return processed, metadata
-
-
-def _preprocess_ara_format(
-    content: str, metadata: Dict[str, Any]
-) -> Tuple[str, Dict[str, Any]]:
-    """Pre-process ARA format content (named buildings, numbered items, section dividers)."""
-    processed = content
-
-    # Find building names from header blocks
-    building_name_pattern = r"Building Name:\s*(.+?)(?:\n|$)"
-    building_names = re.findall(building_name_pattern, content)
-    unique_buildings = list(dict.fromkeys(name.strip() for name in building_names))
-    metadata["ara_buildings_found"] = len(unique_buildings)
-
-    # Find section dividers: "BuildingName - Interior/Exterior - Level"
-    section_pattern = r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(.+?)$"
-    section_dividers = re.findall(section_pattern, content, re.MULTILINE)
-    metadata["ara_section_dividers"] = len(section_dividers)
-
-    # Add section markers for dividers
-    for building, area_type, level in section_dividers:
-        original = f"{building.strip()} - {area_type} - {level.strip()}"
-        marker = f"\n=== SECTION: {original} ===\n"
-        processed = processed.replace(original, marker + original)
-
-    # Count hazard types
-    asbestos_count = len(re.findall(r"^Asbestos$", content, re.MULTILINE))
-    none_count = len(re.findall(r"^None$", content, re.MULTILINE))
-    metadata["acm_indicators_found"] = asbestos_count
-    metadata["ara_none_hazard_count"] = none_count
-
-    # Count positive/negative results
-    positive_patterns = [
-        r"\bPositive\b",
-        r"\bPresumed Positive\b",
-    ]
-    negative_patterns = [
-        r"\bNegative\b",
-        r"\bPresumed Negative\b",
-    ]
-
-    pos_count = sum(len(re.findall(p, content)) for p in positive_patterns)
-    neg_count = sum(len(re.findall(p, content)) for p in negative_patterns)
-    metadata["ara_positive_count"] = pos_count
-    metadata["ara_negative_count"] = neg_count
-
-    if debug_config.DEBUG_ENABLED:
-        acm_debug(
-            f"Pre-process (ARA): {len(unique_buildings)} buildings, "
-            f"{len(section_dividers)} section dividers, "
-            f"{asbestos_count} asbestos items, {none_count} none items"
-        )
-
-    return processed, metadata
-
-
-def _preprocess_samp_format(
-    content: str, metadata: Dict[str, Any]
-) -> Tuple[str, Dict[str, Any]]:
-    """Pre-process SAMP format content (B###/R#### building/room IDs)."""
-    # Room header pattern: B009 - R0005 - General Storeroom - 6.61 m2
-    room_pattern = r"(B\d{3}\s*-\s*R\d{4,5}\s*-\s*[^-\n]+\s*-\s*[\d.]+\s*m2)"
-    rooms = re.findall(room_pattern, content)
-    metadata["rooms_found"] = len(rooms)
-
-    # Building header pattern: B009 - Special Purpose - 1950 - Steel
-    building_pattern = r"(B\d{3}\s*-\s*[A-Za-z][^-\n]+\s*-\s*\d{4}\s*-\s*[A-Za-z]+)"
-    buildings = re.findall(building_pattern, content)
-
-    if debug_config.DEBUG_ENABLED:
-        acm_debug(f"Pre-process (SAMP): {len(rooms)} rooms, {len(buildings)} buildings")
-        acm_debug(
-            f"ACM indicators: {metadata['acm_indicators_found']}, "
-            f"No Asbestos: {metadata['no_asbestos_found']}"
-        )
-
-    processed = content
-
-    # Normalize abbreviated product names to canonical BAR vocabulary
-    # Applied BEFORE marker injection so normalized text feeds into markers
-    PRODUCT_NORMALIZATIONS = {
-        r"\bFuses\b": "Fuse cartridge",
-        r"\bFuse\b(?!\s+cartridge)": "Fuse cartridge",
-        r"\bFlange\s+mastic\b": "Flange joints",
-    }
-    for pattern, replacement in PRODUCT_NORMALIZATIONS.items():
-        processed = re.sub(pattern, replacement, processed, flags=re.IGNORECASE)
-
-    # Mark building headers clearly
-    for building in buildings:
-        marker = f"\n\n=== BUILDING: {building} ===\n"
-        processed = processed.replace(building, marker + building)
-
-    # Mark room headers clearly
-    for room in rooms:
-        marker = f"\n--- ROOM: {room} ---\n"
-        processed = processed.replace(room, marker + room)
-
-    # Mark ACM result patterns (replace newline-split version first)
-    acm_marker = ">>> ACM DETECTED: Asbestos-containing material <<<"
-    processed = processed.replace("Asbestos-containing\nmaterial", acm_marker)
-    processed = processed.replace("Asbestos-containing material", acm_marker)
-
-    # Clean up any accidental double markers
-    while ">>> ACM DETECTED: >>> ACM DETECTED:" in processed:
-        processed = processed.replace(
-            ">>> ACM DETECTED: >>> ACM DETECTED: Asbestos-containing material <<< <<<",
-            acm_marker,
-        )
-
-    # Mark negative result patterns (visual parity with ACM DETECTED markers)
-    no_acm_marker = ">>> NO ASBESTOS: Negative result <<<"
-
-    # Replace newline-split versions first (common in PDF extraction)
-    processed = processed.replace("No Asbestos\nDetected", no_acm_marker)
-    processed = processed.replace("No asbestos\ndetected", no_acm_marker)
-    processed = processed.replace("Not\nDetected", no_acm_marker)
-
-    # Replace single-line versions (longer phrases first to avoid partial matches)
-    for neg_phrase in [
-        "No Asbestos Detected",
-        "No asbestos detected",
-        "Not Detected",
-        "Not detected",
-    ]:
-        processed = processed.replace(neg_phrase, no_acm_marker)
-
-    # Standalone "No Asbestos" — safe because "No Asbestos Detected" already replaced
-    processed = processed.replace("No Asbestos", no_acm_marker)
-
-    # Clean up any accidental double negative markers
-    double_neg = f"{no_acm_marker} {no_acm_marker}"
-    while double_neg in processed:
-        processed = processed.replace(double_neg, no_acm_marker)
-
-    # Mark "No access" / restricted access patterns as valid entries
-    # These phrases come from consultant_wording_rules.json patterns
-    # and common SAMP report wording — order: longer phrases first (longest match wins).
-    # Single-pass combined regex prevents cascade: after a phrase is replaced with the
-    # marker text, the marker itself cannot match again because each position is
-    # visited exactly once.
-    NO_ACCESS_PHRASES = [
-        "No access at the time of the Assessment",
-        "No access due to locked door",
-        "No access due to",
-        "No access at time of",
-        "Height restriction",
-        "Height or access restriction",
-        "Restricted Access",
-        "Live Electrical Hazard",
-        "Presumed ACM",
-        "No access",
-    ]
-    NO_ACCESS_MARKER = ">>> NO ACCESS ENTRY: Sample Result = Assumed Positive — MUST be extracted as a separate ACM record <<<"
-    _no_access_pattern = "|".join(re.escape(p) for p in NO_ACCESS_PHRASES)
-    processed = re.sub(
-        _no_access_pattern,
-        lambda m: NO_ACCESS_MARKER + "\n" + m.group(0),
-        processed,
-        flags=re.IGNORECASE,
-    )
-
-    metadata["processed_length"] = len(processed)
-
-    return processed, metadata
 
 
 class ExtractionState(TypedDict):
@@ -468,6 +165,13 @@ class ExtractionState(TypedDict):
     building_records: List[str]
     # E32-S2: True when extract_items_node produced >= 1 record
     items_extracted: bool
+    # True when per-row extraction ran for all buildings (not fell back to bulk).
+    # Used by recover_no_access_node to decide whether recovery is needed.
+    per_row_actually_ran: bool
+    # Phase 1 building meta cache: building_code -> BuildingExtractionResult
+    # Populated by extract_building_node, consumed by extract_items_node to
+    # avoid duplicate Phase 1 LLM calls.
+    building_meta_cache: Dict[str, Any]
 
 
 def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
@@ -572,186 +276,10 @@ def _extract_page_range_text(content: str, page_start: int, page_end: int) -> st
     return ""
 
 
-def _chunk_content(
-    content: str, context_window: int = DEFAULT_CONTEXT_WINDOW
-) -> List[Dict[str, Any]]:
-    """Split content into chunks if it exceeds threshold.
+async def metadata_and_structure_node(state: dict, config: RunnableConfig) -> dict:
+    """Combined metadata + structure extraction (S4: merged pre-extraction).
 
-    Chunks are split by page markers or logical sections to preserve context.
-    """
-    tokens = token_count(content)
-    threshold = int(context_window * CHUNK_THRESHOLD_RATIO)
-
-    # Page marker pattern - supports multiple formats:
-    # 1. Dashes format: "--- Page 5 ---" or "——— Page 5 ———"
-    # 2. HTML comment format: "<!-- Page 5 -->"
-    # 3. Simple format: "Page 5" at line start
-    # 4. ARA footer format: "PAGE 8 OF 34"
-    page_pattern = r"(?:(?:^|\n)[-—]+\s*Page\s+(\d+)\s*[-—]+|<!--\s*Page\s+(\d+)\s*-->|(?:^|\n)Page\s+(\d+)(?:\s|$)|PAGE\s+(\d+)\s+OF\s+\d+)"
-
-    if tokens <= threshold:
-        # No chunking needed, but still extract first page number if available
-        page_num = 1
-        # Collect ALL page markers for per-record page assignment
-        page_markers = {}
-        for match in re.finditer(page_pattern, content, re.IGNORECASE):
-            pg = int(next(g for g in match.groups() if g is not None))
-            page_markers[match.start()] = pg
-        if page_markers:
-            page_num = page_markers[min(page_markers.keys())]
-        return [
-            {
-                "content": content,
-                "page_number": page_num,
-                "page_markers": page_markers,
-                "chunk_index": 0,
-            }
-        ]
-
-    chunks = []
-
-    # Try to split by page markers first
-    page_matches = list(re.finditer(page_pattern, content, re.IGNORECASE))
-
-    if page_matches:
-        # Split by pages
-        for i, match in enumerate(page_matches):
-            start = match.start()
-            end = (
-                page_matches[i + 1].start()
-                if i + 1 < len(page_matches)
-                else len(content)
-            )
-
-            page_content = content[start:end]
-            # Extract page number from whichever capture group matched
-            page_num = int(next(g for g in match.groups() if g is not None))
-
-            # Check if this chunk is still too large
-            if token_count(page_content) > threshold:
-                # Split this page further by sections (headings)
-                sub_chunks = _split_by_sections(page_content, threshold, page_num)
-                for j, sub in enumerate(sub_chunks):
-                    chunks.append(
-                        {
-                            "content": sub,
-                            "page_number": page_num,
-                            "page_markers": {0: page_num},
-                            "chunk_index": len(chunks),
-                        }
-                    )
-            else:
-                chunks.append(
-                    {
-                        "content": page_content,
-                        "page_number": page_num,
-                        "page_markers": {0: page_num},
-                        "chunk_index": len(chunks),
-                    }
-                )
-    else:
-        # No page markers - split by character count with overlap
-        chunk_size = threshold * CHARS_PER_TOKEN_ESTIMATE
-        overlap = CHUNK_OVERLAP_CHARS
-
-        start = 0
-        page_num = 1
-        while start < len(content):
-            end = min(start + chunk_size, len(content))
-
-            # Try to break at a newline
-            if end < len(content):
-                newline_pos = content.rfind("\n", start + chunk_size - overlap, end)
-                if newline_pos > start:
-                    end = newline_pos + 1
-
-            chunks.append(
-                {
-                    "content": content[start:end],
-                    "page_number": page_num,
-                    "page_markers": {},
-                    "chunk_index": len(chunks),
-                }
-            )
-
-            start = end - overlap if end < len(content) else end
-            page_num += 1
-
-    logger.info(f"Content chunked into {len(chunks)} parts")
-    return chunks
-
-
-def _split_by_sections(content: str, max_tokens: int, base_page: int) -> List[str]:
-    """Split content by section headers if it's too large."""
-    # Split by markdown headers
-    sections = re.split(r"(^#{1,3}\s+.+$)", content, flags=re.MULTILINE)
-
-    chunks = []
-    current_chunk = ""
-
-    for section in sections:
-        if not section.strip():
-            continue
-
-        if token_count(current_chunk + section) > max_tokens:
-            if current_chunk:
-                chunks.append(current_chunk)
-            current_chunk = section
-        else:
-            current_chunk += section
-
-    if current_chunk:
-        chunks.append(current_chunk)
-
-    return chunks if chunks else [content]
-
-
-def _assign_record_page(
-    product: Optional[str],
-    chunk_content: str,
-    page_markers: Dict[int, int],
-    default_page: int,
-    search_after: int = 0,
-) -> Tuple[int, int]:
-    """Assign a page number to a record based on its position in chunk content.
-
-    Searches for the record's product text in the chunk content, then finds the
-    nearest preceding page marker to determine the correct page number.
-
-    Args:
-        product: The record's product name to search for in content
-        chunk_content: The chunk's text content
-        page_markers: Dict mapping character offset -> page number
-        default_page: Fallback page if product not found
-        search_after: Start searching for product after this character offset.
-            Used to handle duplicate product names within the same chunk.
-
-    Returns:
-        Tuple of (assigned_page, found_position). Position is -1 if not found.
-    """
-    if not product or not page_markers:
-        return default_page, -1
-
-    # Find where the product appears in the chunk content
-    pos = chunk_content.lower().find(product.lower(), search_after)
-    if pos < 0:
-        return default_page, -1
-
-    # Find the last page marker before this position
-    assigned_page = default_page
-    for offset in sorted(page_markers.keys()):
-        if offset <= pos:
-            assigned_page = page_markers[offset]
-        else:
-            break
-
-    return assigned_page, pos
-
-
-async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
-    """Extract document metadata as Stage -2 pre-extraction intelligence.
-
-    Story: E1-S19 Document Metadata Extraction Enhancement
+    Replaces separate extract_metadata and structure nodes with a single LLM call.
     """
     source: Source = state["source"]
     content = source.full_text or ""
@@ -760,81 +288,24 @@ async def extract_metadata_node(state: dict, config: RunnableConfig) -> dict:
     agui = _get_agui_emitter(state)
 
     if pl:
-        pl.stage_enter(StageId.STRUCTURE, "Extracting document metadata...")
+        pl.stage_enter(StageId.STRUCTURE, "Extracting metadata and structure...")
     if agui:
-        await agui.emit_step_started("extract_metadata")
+        await agui.emit_step_started("metadata_and_structure")
 
     if not content:
-        logger.warning(f"Source {source.id} has no content for metadata extraction")
+        logger.warning(
+            f"Source {source.id} has no content for metadata+structure extraction"
+        )
         if agui:
-            await agui.emit_step_finished("extract_metadata")
-        return {"document_metadata": None}
+            await agui.emit_step_finished("metadata_and_structure")
+        return {"document_metadata": None, "document_structure": None}
 
     try:
-        metadata = await extract_document_metadata(content, model_id=model_id)
-        if metadata:
-            fields_count = len(metadata.get_extracted_fields())
-            consultant = metadata.consultant_name or "unknown"
-            logger.info(
-                f"Document metadata extracted for source {source.id}: "
-                f"consultant={consultant}, "
-                f"fields={fields_count}"
-            )
-            if pl:
-                pl.stage_progress(
-                    StageId.STRUCTURE,
-                    f"Metadata extracted: consultant={consultant}",
-                    consultant=consultant,
-                    fields=fields_count,
-                )
-            if agui:
-                await agui.emit_state_delta(
-                    [
-                        {
-                            "op": "replace",
-                            "path": "/metadata",
-                            "value": {"consultant": consultant, "fields": fields_count},
-                        }
-                    ]
-                )
-        if agui:
-            await agui.emit_step_finished(
-                "extract_metadata", fields=fields_count if metadata else 0
-            )
-        return {"document_metadata": metadata}
-    except Exception as e:
-        logger.warning(f"Metadata extraction failed for source {source.id}: {e}")
-        if agui:
-            await agui.emit_step_finished("extract_metadata")
-        return {"document_metadata": None}
+        metadata, structure = await extract_metadata_and_structure(
+            content, model_id=model_id
+        )
 
-
-async def extract_structure(state: dict, config: RunnableConfig) -> dict:
-    """Extract document structure as Stage -1 pre-extraction intelligence.
-
-    Story: E1-S16 Document Structure & TOC Extraction
-    """
-    source: Source = state["source"]
-    content = source.full_text or ""
-    model_id = state.get("model_id")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
-
-    if pl:
-        pl.stage_progress(StageId.STRUCTURE, "Extracting document structure...")
-    if agui:
-        await agui.emit_step_started("structure")
-
-    if not content:
-        logger.warning(f"Source {source.id} has no content for structure extraction")
-        if agui:
-            await agui.emit_step_finished("structure")
-        return {"document_structure": None}
-
-    try:
-        structure = await extract_document_structure(content, model_id=model_id)
-
-        # AC1: PyMuPDF page-count fallback when regex finds 0 page markers
+        # PyMuPDF page-count fallback (from existing extract_structure node)
         if structure.total_pages == 0:
             pdf_path = (
                 getattr(source.asset, "file_path", None) if source.asset else None
@@ -846,47 +317,59 @@ async def extract_structure(state: dict, config: RunnableConfig) -> dict:
                     with fitz.open(pdf_path) as pdf_doc:
                         structure.total_pages = len(pdf_doc)
                     logger.info(
-                        f"[AC1] PyMuPDF page-count fallback: {structure.total_pages} pages "
+                        f"[S4] PyMuPDF page-count fallback: {structure.total_pages} pages "
                         f"for source {source.id}"
                     )
                 except Exception as fitz_err:
                     logger.debug(f"PyMuPDF fallback failed: {fitz_err}")
 
-        logger.info(
-            f"Document structure extracted for source {source.id}: "
-            f"type={structure.document_type}, register_start={structure.register_start_page}, "
-            f"buildings={len(structure.building_ids)}"
-        )
-        if pl:
-            pl.stage_progress(
-                StageId.STRUCTURE,
-                f"Structure: type={structure.document_type}, register_start={structure.register_start_page}",
-                document_type=structure.document_type,
-                register_start=structure.register_start_page,
-                buildings=len(structure.building_ids),
+        if metadata:
+            fields_count = len(metadata.get_extracted_fields())
+            consultant = metadata.consultant_name or "unknown"
+            logger.info(
+                f"[S4] Combined extraction for source {source.id}: "
+                f"consultant={consultant}, type={structure.document_type}, "
+                f"register_start={structure.register_start_page}, "
+                f"buildings={len(structure.building_ids)}"
             )
-        if agui:
-            await agui.emit_state_delta(
-                [
-                    {
-                        "op": "replace",
-                        "path": "/toc",
-                        "value": {
-                            "type": structure.document_type,
-                            "buildings": len(structure.building_ids),
+            if pl:
+                pl.stage_progress(
+                    StageId.STRUCTURE,
+                    f"Metadata+Structure: consultant={consultant}, type={structure.document_type}",
+                    consultant=consultant,
+                    document_type=structure.document_type,
+                    register_start=structure.register_start_page,
+                    buildings=len(structure.building_ids),
+                )
+            if agui:
+                await agui.emit_state_delta(
+                    [
+                        {
+                            "op": "replace",
+                            "path": "/metadata",
+                            "value": {"consultant": consultant, "fields": fields_count},
                         },
-                    }
-                ]
-            )
-            await agui.emit_step_finished(
-                "structure", buildings=len(structure.building_ids)
-            )
-        return {"document_structure": structure}
-    except Exception as e:
-        logger.warning(f"Structure extraction failed for source {source.id}: {e}")
+                        {
+                            "op": "replace",
+                            "path": "/toc",
+                            "value": {
+                                "type": structure.document_type,
+                                "buildings": len(structure.building_ids),
+                            },
+                        },
+                    ]
+                )
+
         if agui:
-            await agui.emit_step_finished("structure")
-        return {"document_structure": None}
+            await agui.emit_step_finished("metadata_and_structure")
+        return {"document_metadata": metadata, "document_structure": structure}
+    except Exception as e:
+        logger.warning(
+            f"Combined metadata+structure extraction failed for source {source.id}: {e}"
+        )
+        if agui:
+            await agui.emit_step_finished("metadata_and_structure")
+        return {"document_metadata": None, "document_structure": None}
 
 
 async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
@@ -898,8 +381,22 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
     content = source.full_text or ""
     model_id = state.get("model_id")
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
+    doc_meta = state.get("document_metadata")
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
+
+    # Build metadata context for prompt injection
+    meta_context: Optional[dict] = None
+    if doc_meta:
+        meta_context = {
+            "site_name": getattr(doc_meta, "site_name", None) or "",
+            "consultant_name": getattr(doc_meta, "consultant_name", None) or "",
+            "document_type": (
+                doc_structure.document_type.value
+                if doc_structure and doc_structure.document_type
+                else ""
+            ),
+        }
 
     if pl:
         pl.stage_progress(StageId.STRUCTURE, "Compiling building inventory...")
@@ -917,6 +414,7 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
             content,
             document_structure=doc_structure,
             model_id=model_id,
+            document_metadata=meta_context,
         )
         logger.info(
             f"Building inventory compiled for source {source.id}: "
@@ -947,77 +445,31 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
             await agui.emit_step_finished(
                 "inventory", buildings=inventory.total_buildings
             )
-        return {"building_inventory": inventory}
+
+        # S4: Synthesize page_tags from inventory + structure (replaces tag_pages LLM call)
+        page_tags = None
+        if inventory and doc_structure:
+            page_tags = synthesize_page_tags(inventory, doc_structure)
+            logger.info(
+                f"[S4] Synthesized page tags: {len(page_tags.pages)} pages, "
+                f"register_range={page_tags.register_page_range}"
+            )
+            if pl:
+                pl.stage_complete(
+                    StageId.STRUCTURE,
+                    f"Inventory + page tags synthesized: {inventory.total_buildings} buildings",
+                    pages_tagged=len(page_tags.pages),
+                    register_range=str(page_tags.register_page_range),
+                )
+
+        return {"building_inventory": inventory, "page_tags": page_tags}
     except Exception as e:
         logger.warning(
             f"Building inventory compilation failed for source {source.id}: {e}"
         )
         if agui:
             await agui.emit_step_finished("inventory")
-        return {"building_inventory": None}
-
-
-async def tag_page_sections(state: dict, config: RunnableConfig) -> dict:
-    """Tag each page with section classification as Stage -1.25.
-
-    Story: E1-S18 Page-Level Section Tagging
-    """
-    source: Source = state["source"]
-    content = source.full_text or ""
-    model_id = state.get("model_id")
-    doc_structure: Optional[DocumentStructure] = state.get("document_structure")
-    inventory: Optional[BuildingInventory] = state.get("building_inventory")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
-
-    if pl:
-        pl.stage_progress(StageId.STRUCTURE, "Tagging page sections...")
-    if agui:
-        await agui.emit_step_started("tag_pages")
-
-    if not content:
-        logger.warning(f"Source {source.id} has no content for page tagging")
-        if agui:
-            await agui.emit_step_finished("tag_pages")
-        return {"page_tags": None}
-
-    try:
-        result = await tag_pages(
-            content,
-            document_structure=doc_structure,
-            building_inventory=inventory,
-            model_id=model_id,
-        )
-        logger.info(
-            f"Page tagging complete for source {source.id}: "
-            f"{len(result.pages)} pages tagged, "
-            f"register_range={result.register_page_range}"
-        )
-        if pl:
-            pl.stage_complete(
-                StageId.STRUCTURE,
-                f"{len(result.pages)} pages tagged, register={result.register_page_range}",
-                pages_tagged=len(result.pages),
-                register_range=str(result.register_page_range),
-            )
-        if agui:
-            await agui.emit_state_delta(
-                [{"op": "replace", "path": "/page_tags", "value": len(result.pages)}]
-            )
-            await agui.emit_step_finished("tag_pages", pages_tagged=len(result.pages))
-        return {"page_tags": result}
-    except Exception as e:
-        logger.warning(f"Page tagging failed for source {source.id}: {e}")
-        if pl:
-            pl.stage_complete(
-                StageId.STRUCTURE,
-                "Completed with warnings: page tagging failed (non-fatal)",
-                pages_tagged=0,
-                warnings=1,
-            )
-        if agui:
-            await agui.emit_step_finished("tag_pages")
-        return {"page_tags": None}
+        return {"building_inventory": None, "page_tags": None}
 
 
 async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
@@ -1079,11 +531,15 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
     return {}
 
 
+_MAX_CONCURRENT_BUILDINGS = int(os.getenv("ACM_MAX_CONCURRENT_BUILDINGS", "3"))
+
+
 async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
-    """Phase 1 Building__c extraction: one AI call per building section.
+    """Phase 1 Building__c extraction: concurrent AI calls per building section.
 
     Iterates over state["building_inventory"].buildings and calls
-    _v3_extract_building_meta() for each building, mapping results to
+    _v3_extract_building_meta() for each building concurrently (bounded by
+    ACM_MAX_CONCURRENT_BUILDINGS env var, default 3), mapping results to
     BuildingRecord domain objects and persisting them to the DB.
 
     Story: E32-S1 Building__c AI Extraction Node
@@ -1108,7 +564,7 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
         )
         if agui:
             await agui.emit_step_finished("extract_building", buildings=0)
-        return {"building_records": []}
+        return {"building_records": [], "building_meta_cache": {}}
 
     if pl:
         pl.stage_progress(
@@ -1117,33 +573,48 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
         )
 
     saved_ids: List[str] = []
+    meta_cache: Dict[str, Any] = {}  # building_code -> BuildingExtractionResult
     source_id_str = str(source.id)
+    sem = asyncio.Semaphore(_MAX_CONCURRENT_BUILDINGS)
 
-    for building_meta in inventory.buildings:
-        _bldg_start = time.time()
-        try:
-            # Slice document content to this building's page range
-            page_start = building_meta.page_start
-            page_end = building_meta.page_end or page_start
+    # Pre-assign sequential internal_ids to avoid race condition in asyncio.gather.
+    # NOTE: Cannot use generate_internal_id() here because it counts DB rows,
+    # but no buildings are saved yet — all would get seq=1.
+    # Instead, query the existing count ONCE and assign incrementally.
+    existing_buildings = await BuildingRecord.get_by_source(source_id_str)
+    base_seq = len(existing_buildings)
+    # Use source from state (already loaded) — avoids extra DB call and works in tests
+    _src_label = getattr(source, "title", "") or ""
+    _src_short = _src_label[:8].upper().replace(" ", "_") if _src_label else "UNKNOWN"
+
+    pre_assigned_ids: dict[str, str] = {}
+    for idx, b in enumerate(inventory.buildings):
+        seq = base_seq + idx + 1
+        pre_assigned_ids[b.building_id] = f"BLD#{_src_short}_{seq:03d}"
+
+    async def _extract_one_building(building_meta_entry):
+        """Extract a single building's metadata (semaphore-bounded)."""
+        async with sem:
+            _bldg_start = time.time()
+            page_start = building_meta_entry.page_start
+            page_end = building_meta_entry.page_end or page_start
             building_content = _extract_building_content(content, page_start, page_end)
 
             if not building_content.strip():
                 logger.warning(
-                    f"[E32-S1] Empty content for building {building_meta.building_id} "
+                    f"[E32-S1] Empty content for building {building_meta_entry.building_id} "
                     f"(pages {page_start}-{page_end}) — skipping"
                 )
-                continue
+                return None
 
-            # Construct a minimal BuildingExtractionPlan so _v3_extract_building_meta
-            # can access building_id and page_range for logging/prompt context
             plan = BuildingExtractionPlan(
-                building_id=building_meta.building_id,
-                building_name=building_meta.name,
+                building_id=building_meta_entry.building_id,
+                building_name=building_meta_entry.name,
                 page_range=(page_start, page_end),
                 strategy=ExtractionStrategy.FULL_LLM,
             )
 
-            # Phase 1 LLM call — returns BuildingExtractionResult or None on failure
+            # Phase 1 LLM call
             result = await _v3_extract_building_meta(
                 building_content=building_content,
                 plan=plan,
@@ -1153,19 +624,59 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
 
             if result is None:
                 logger.warning(
-                    f"[E32-S1] Phase 1 returned None for building {building_meta.building_id} — skipping"
+                    f"[E32-S1] Phase 1 returned None for building "
+                    f"{building_meta_entry.building_id} — creating minimal record"
                 )
-                continue
+                # Bug Fix 11 Phase 3: Create minimal BuildingRecord so FK linkage
+                # and frontend display work even when LLM extraction fails.
+                internal_id = pre_assigned_ids[building_meta_entry.building_id]
+                minimal_record = BuildingRecord(
+                    internal_id=internal_id,
+                    source_id=source_id_str,
+                    building_code=building_meta_entry.building_id,
+                    building_name=building_meta_entry.name,
+                )
+                try:
+                    await minimal_record.save()
+                except Exception as save_err:
+                    if "idx_building_internal_id" in str(save_err):
+                        logger.warning(
+                            f"[BF11-P8] Duplicate internal_id {internal_id} — updating existing"
+                        )
+                        existing = await repo_query(
+                            "SELECT * FROM building_record WHERE internal_id = $iid LIMIT 1;",
+                            {"iid": internal_id},
+                        )
+                        if existing:
+                            minimal_record.id = existing[0]["id"]
+                            await minimal_record.save()
+                    else:
+                        raise save_err
+                if not minimal_record.id:
+                    logger.warning(
+                        f"[E32-S1] Minimal BuildingRecord.save() failed for building "
+                        f"{building_meta_entry.building_id} — skipping"
+                    )
+                    return None
+                minimal_record_id = str(minimal_record.id)
+                logger.info(
+                    f"[E32-S1] Saved minimal BuildingRecord {internal_id} for building "
+                    f"{building_meta_entry.building_id} (LLM Phase 1 failed)"
+                )
+                return {
+                    "record_id": minimal_record_id,
+                    "building_id": building_meta_entry.building_id,
+                    "result": None,
+                }
 
-            # Generate server-side internal ID: BLD#{source_short}_{seq:03d}
-            internal_id = await BuildingRecord.generate_internal_id(source_id_str)
+            # Use pre-assigned sequential ID (avoids race condition in asyncio.gather)
+            internal_id = pre_assigned_ids[building_meta_entry.building_id]
 
-            # Map BuildingExtractionResult fields to BuildingRecord domain model
             record = BuildingRecord(
                 internal_id=internal_id,
                 source_id=source_id_str,
-                building_code=building_meta.building_id,
-                building_name=result.building_name,
+                building_code=building_meta_entry.building_id,
+                building_name=building_meta_entry.name or result.building_name,
                 building_type=result.building_type,
                 building_category=result.building_category,
                 building_address=result.building_address,
@@ -1175,24 +686,43 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 building_construction=result.construction_type,
                 date_of_audit_report=result.date_of_audit,
                 frequency_of_use=result.frequency_of_use,
+                state=result.state,
+                number_of_levels=result.number_of_levels,
+                owned_or_leased=result.owned_or_leased,
+                building_sub_category=result.building_sub_category,
+                building_risk_rating=result.building_risk_rating,
             )
 
-            saved_record = await record.save()
-            if not saved_record or not saved_record.id:
+            try:
+                await record.save()
+            except Exception as save_err:
+                if "idx_building_internal_id" in str(save_err):
+                    logger.warning(
+                        f"[BF11-P8] Duplicate internal_id {internal_id} — updating existing"
+                    )
+                    existing = await repo_query(
+                        "SELECT * FROM building_record WHERE internal_id = $iid LIMIT 1;",
+                        {"iid": internal_id},
+                    )
+                    if existing:
+                        record.id = existing[0]["id"]
+                        await record.save()
+                else:
+                    raise save_err
+            if not record.id:
                 logger.warning(
                     f"[E32-S1] BuildingRecord.save() returned no ID for building "
-                    f"{building_meta.building_id} — record may not have persisted"
+                    f"{building_meta_entry.building_id} — record may not have persisted"
                 )
-                continue
-            record_id = str(saved_record.id)
-            saved_ids.append(record_id)
+                return None
+            record_id = str(record.id)
 
             logger.info(
                 f"[E32-S1] Saved BuildingRecord {internal_id} for building "
-                f"{building_meta.building_id} (confidence={result.extraction_confidence})"
+                f"{building_meta_entry.building_id} (confidence={result.extraction_confidence})"
             )
 
-            # E34-S1: Publish ai.building_extracted event for real-time streaming
+            # E34-S1: Publish ai.building_extracted event
             if operation_id:
                 try:
                     _bldg_duration_ms = int((time.time() - _bldg_start) * 1000)
@@ -1201,7 +731,8 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                             operation_id=operation_id,
                             data=AIBuildingExtractedData(
                                 building_id=internal_id,
-                                building_name=result.building_name or building_meta.building_id,
+                                building_name=result.building_name
+                                or building_meta_entry.building_id,
                                 records_extracted=1,
                                 model_used=model_id or "unknown",
                                 duration_ms=_bldg_duration_ms,
@@ -1211,15 +742,32 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 except Exception as _pub_err:
                     logger.debug(
                         f"[E34-S1] Failed to publish ai.building_extracted for "
-                        f"{building_meta.building_id}: {_pub_err}"
+                        f"{building_meta_entry.building_id}: {_pub_err}"
                     )
 
-        except Exception as e:
+            return {
+                "record_id": record_id,
+                "building_id": building_meta_entry.building_id,
+                "result": result,
+            }
+
+    # Run all building extractions concurrently (bounded by semaphore)
+    outcomes = await asyncio.gather(
+        *[_extract_one_building(b) for b in inventory.buildings],
+        return_exceptions=True,
+    )
+
+    for outcome in outcomes:
+        if isinstance(outcome, Exception):
             logger.warning(
-                f"[E32-S1] Failed to extract/save building {building_meta.building_id}: {e} "
+                f"[E32-S1] Building extraction task failed: {outcome} "
                 "(skipping — partial results preserved)"
             )
             continue
+        if outcome is None:
+            continue
+        saved_ids.append(outcome["record_id"])
+        meta_cache[outcome["building_id"]] = outcome["result"]
 
     logger.info(
         f"[E32-S1] Building extraction complete for source {source_id_str}: "
@@ -1240,7 +788,7 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
             total=len(inventory.buildings),
         )
 
-    return {"building_records": saved_ids}
+    return {"building_records": saved_ids, "building_meta_cache": meta_cache}
 
 
 # ---------------------------------------------------------------------------
@@ -1256,6 +804,7 @@ async def _chunk_and_extract_items(
     building_meta: Optional[BuildingExtractionResult],
     state: dict,
     schema_bundle: Optional[Any],
+    docling_tables: Optional[List[Dict[str, Any]]] = None,
 ) -> ACMItemExtractionResult:
     """Split oversized building content and merge item results.
 
@@ -1266,9 +815,45 @@ async def _chunk_and_extract_items(
     Story: E32-S2 Item__c AI Extraction Node
     """
     if len(building_content) <= _ITEM_EXTRACTION_CHUNK_CHARS:
-        return await _v3_extract_items(
-            building_content, plan, building_meta, state, schema_bundle
+        result = await _v3_extract_items(
+            building_content,
+            plan,
+            building_meta,
+            state,
+            schema_bundle,
+            docling_tables=docling_tables,
         )
+        if result.status == "truncated":
+            # Only retry with cloud fallback if cloud API keys are configured;
+            # otherwise retrying re-provisions the same Ollama model → infinite loop
+            cloud_available = bool(
+                os.environ.get("ACM_ANTHROPIC_API_KEY")
+                or os.environ.get("ACM_OPENROUTER_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
+            )
+            if cloud_available:
+                logger.warning(
+                    f"[E32-S2] Truncation detected for building {plan.building_id} "
+                    "— retrying with cloud provider (model_id=None)"
+                )
+                cloud_state = {**state, "model_id": None}
+                result = await _v3_extract_items(
+                    building_content,
+                    plan,
+                    building_meta,
+                    cloud_state,
+                    schema_bundle,
+                    docling_tables=docling_tables,
+                )
+            else:
+                current_num_ctx = os.getenv("OLLAMA_NUM_CTX", "auto")
+                logger.warning(
+                    f"[E32-S2] Truncation detected for building {plan.building_id} "
+                    f"but no cloud API keys configured (OLLAMA_NUM_CTX={current_num_ctx}) "
+                    f"— skipping retry. Increase OLLAMA_NUM_CTX or configure "
+                    f"ACM_ANTHROPIC_API_KEY."
+                )
+        return result
 
     # Split into N equal-sized char chunks
     chunks = [
@@ -1279,8 +864,40 @@ async def _chunk_and_extract_items(
     final_status = "valid"
     for chunk in chunks:
         result = await _v3_extract_items(
-            chunk, plan, building_meta, state, schema_bundle
+            chunk,
+            plan,
+            building_meta,
+            state,
+            schema_bundle,
+            docling_tables=docling_tables,
         )
+        if result.status == "truncated":
+            cloud_available = bool(
+                os.environ.get("ACM_ANTHROPIC_API_KEY")
+                or os.environ.get("ACM_OPENROUTER_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
+            )
+            if cloud_available:
+                logger.warning(
+                    f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
+                    "— retrying chunk with cloud provider (model_id=None)"
+                )
+                cloud_state = {**state, "model_id": None}
+                result = await _v3_extract_items(
+                    chunk,
+                    plan,
+                    building_meta,
+                    cloud_state,
+                    schema_bundle,
+                    docling_tables=docling_tables,
+                )
+            else:
+                current_num_ctx = os.getenv("OLLAMA_NUM_CTX", "auto")
+                logger.warning(
+                    f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
+                    f"but no cloud API keys configured (OLLAMA_NUM_CTX={current_num_ctx}) "
+                    f"— skipping retry. Increase OLLAMA_NUM_CTX."
+                )
         merged_records.extend(result.records)
         if result.status == "invalid":
             final_status = "invalid"
@@ -1312,7 +929,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
         logger.info(
             f"[E32-S2] No building inventory for source {source_id_str} — skipping item extraction"
         )
-        return {"records": [], "items_extracted": False}
+        return {"records": [], "items_extracted": False, "per_row_actually_ran": False}
 
     if agui:
         await agui.emit_step_started("extract_items")
@@ -1339,65 +956,219 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
         code_to_id_map = {}
         code_to_internal_id_map = {}
 
+    # Diagnostic: detect stale acm_table_section rows missing docling_document_json
+    try:
+        from open_notebook.database.repository import ensure_record_id, repo_query
+
+        diag = await repo_query(
+            "SELECT count() as total FROM acm_table_section "
+            "WHERE source_id = $sid AND (docling_document_json IS NONE OR docling_document_json = {}) GROUP ALL",
+            {"sid": ensure_record_id(source_id_str)},
+        )
+        stale_count = diag[0].get("total", 0) if diag else 0
+        if stale_count > 0:
+            logger.warning(
+                f"[E32-S2] {stale_count} acm_table_section rows for {source_id_str} "
+                f"have NULL docling_document_json — per-row extraction will fall back "
+                f"to bulk for all buildings. Re-upload the source or re-extract with "
+                f"force=True to refresh Docling tables."
+            )
+    except Exception:
+        pass  # Non-fatal diagnostic
+
     all_records: List[ACMExtractionRecord] = []
     n_buildings = len(inventory.buildings)
+    meta_cache_state: Dict[str, Any] = state.get("building_meta_cache") or {}
+    sem = asyncio.Semaphore(_MAX_CONCURRENT_BUILDINGS)
 
-    for building_meta in inventory.buildings:
-        try:
-            page_start = building_meta.page_start
-            page_end = building_meta.page_end or page_start
+    # Per-row vs bulk extraction mode (Phase 3 integration)
+    extraction_mode = os.getenv("ACM_ITEM_EXTRACTION_MODE", "per_row")
+    # Track whether per-row extraction actually ran for ALL buildings.
+    # If any building falls back to bulk, recover_no_access_node must run.
+    _all_per_row_ran = True
+
+    async def _extract_items_for_building(building_meta_entry):
+        """Extract items for a single building (semaphore-bounded)."""
+        nonlocal _all_per_row_ran
+        async with sem:
+            page_start = building_meta_entry.page_start
+            page_end = building_meta_entry.page_end or page_start
 
             building_content = _extract_building_content(content, page_start, page_end)
 
+            # S6: Fetch Docling tables for this building's page range
+            docling_tables = await _get_docling_tables(
+                source_id_str, page_start, page_end
+            )
+
             if not building_content.strip():
                 logger.warning(
-                    f"[E32-S2] Empty content for building {building_meta.building_id} "
+                    f"[E32-S2] Empty content for building {building_meta_entry.building_id} "
                     f"(pages {page_start}-{page_end}) — skipping"
                 )
-                continue
+                return None
 
             plan = BuildingExtractionPlan(
-                building_id=building_meta.building_id,
-                building_name=building_meta.name,
+                building_id=building_meta_entry.building_id,
+                building_name=building_meta_entry.name,
                 page_range=(page_start, page_end),
                 strategy=ExtractionStrategy.FULL_LLM,
             )
 
-            # Re-run Phase 1 to get building_meta_result for picklist subsetting.
-            # Phase 1 is cheap (small prompt). This avoids state complexity of
-            # caching Phase 1 results across nodes.
-            # If None, _normalize_v3_records falls back to plan.building_name.
-            building_meta_result = await _v3_extract_building_meta(
-                building_content=building_content,
-                plan=plan,
-                state=state,
-                schema_bundle=schema_bundle,
-            )
+            # Look up cached Phase 1 result from extract_building_node
+            building_meta_result = meta_cache_state.get(building_meta_entry.building_id)
+
+            # ---------------------------------------------------------------
+            # Per-row extraction path (Phase 3)
+            # ---------------------------------------------------------------
+            if extraction_mode == "per_row":
+                from open_notebook.extractors.row_extractor import extract_all_rows
+                from open_notebook.extractors.row_segmenter import (
+                    scan_text_for_synthetics,
+                    segment_multiple_tables,
+                )
+
+                # Get DoclingDocument JSON from stored tables + inject page_number
+                docling_json_tables = []
+                for t in (docling_tables or []):
+                    dj = t.get("docling_document_json")
+                    if dj:
+                        # Inject page_number from outer acm_table_section row
+                        dj["page_number"] = t.get("page_start", 0)
+                        docling_json_tables.append(dj)
+
+                if docling_json_tables:
+                    # Segment tables into individual rows
+                    rows = segment_multiple_tables(
+                        docling_json_tables,
+                        building_id=building_meta_entry.building_id,
+                        source_id=source_id_str,
+                        building_page_range=(page_start, page_end),
+                    )
+
+                    # Scan markdown for synthetic rows (Type D/F)
+                    synthetic_rows = scan_text_for_synthetics(
+                        building_content,
+                        building_meta_entry.building_id,
+                        source_id_str,
+                    )
+                    rows.extend(synthetic_rows)
+
+                    if rows:
+                        # Provision model for per-row extraction (small context)
+                        row_model = await provision_langchain_model(
+                            "",
+                            state.get("model_id"),
+                            "extraction",
+                            temperature=0,
+                            num_ctx=int(
+                                os.getenv("ACM_ROW_EXTRACTION_NUM_CTX", "2048")
+                            ),
+                        )
+
+                        # Get Langfuse handler for tracing (if available)
+                        langfuse_handler = get_langfuse_handler()
+
+                        # Build human-readable building context string
+                        building_context = (
+                            building_meta_entry.name
+                            or building_meta_entry.building_id
+                        )
+
+                        # Extract all rows -> list[ACMExtractionRecord]
+                        records = await extract_all_rows(
+                            rows=rows,
+                            building_context=building_context,
+                            model=row_model,
+                            source_id=source_id_str,
+                            building_id=building_meta_entry.building_id,
+                            langfuse_handler=langfuse_handler,
+                        )
+
+                        # Populate building_record_id FK
+                        building_record_id = code_to_id_map.get(
+                            building_meta_entry.building_id
+                        )
+                        if building_record_id:
+                            for rec in records:
+                                rec.building_record_id = building_record_id
+
+                        logger.info(
+                            f"[per-row] Building {building_meta_entry.building_id}: "
+                            f"{len(records)} items from {len(rows)} rows"
+                        )
+
+                        # Publish ai.items_extracted event (same as bulk path)
+                        if operation_id:
+                            try:
+                                _internal_id = code_to_internal_id_map.get(
+                                    building_meta_entry.building_id,
+                                    building_meta_entry.building_id,
+                                )
+                                await get_event_bus().publish(
+                                    AIItemsExtractedEvent(
+                                        operation_id=operation_id,
+                                        data=AIItemsExtractedData(
+                                            building_id=_internal_id,
+                                            items_count=len(records),
+                                            items_rejected=0,
+                                        ),
+                                    )
+                                )
+                            except Exception as _pub_err:
+                                logger.debug(
+                                    f"[E34-S1] Failed to publish ai.items_extracted for "
+                                    f"{building_meta_entry.building_id}: {_pub_err}"
+                                )
+
+                        return records
+                    else:
+                        _all_per_row_ran = False
+                        logger.warning(
+                            f"No rows segmented for {building_meta_entry.building_id} "
+                            "— falling back to bulk"
+                        )
+                else:
+                    _all_per_row_ran = False
+                    tables_found = len(docling_tables) if docling_tables else 0
+                    logger.warning(
+                        f"[E32-S2] Building {building_meta_entry.building_id}: "
+                        f"{tables_found} table(s) in DB but none have docling_document_json. "
+                        f"Per-row disabled, using bulk. Fix: re-extract with force=True."
+                    )
+
+            # ---------------------------------------------------------------
+            # Bulk extraction path (existing, unchanged)
+            # ---------------------------------------------------------------
 
             # Phase 2: extract items (with chunking if content is large)
             item_result = await _chunk_and_extract_items(
-                building_content, plan, building_meta_result, state, schema_bundle
+                building_content,
+                plan,
+                building_meta_result,
+                state,
+                schema_bundle,
+                docling_tables=docling_tables,
             )
 
             # Normalise V3 SF fields -> ACMExtractionRecord
             records = _normalize_v3_records(building_meta_result, item_result, plan)
 
             # Populate building_record_id FK from lookup map
-            building_record_id = code_to_id_map.get(building_meta.building_id)
+            building_record_id = code_to_id_map.get(building_meta_entry.building_id)
             if building_record_id:
                 for rec in records:
                     rec.building_record_id = building_record_id
 
-            all_records.extend(records)
             logger.info(
-                f"[E32-S2] Building {building_meta.building_id}: {len(records)} items"
+                f"[E32-S2] Building {building_meta_entry.building_id}: {len(records)} items"
             )
 
-            # E34-S1: Publish ai.items_extracted event for real-time streaming
+            # E34-S1: Publish ai.items_extracted event
             if operation_id:
                 try:
                     _internal_id = code_to_internal_id_map.get(
-                        building_meta.building_id, building_meta.building_id
+                        building_meta_entry.building_id, building_meta_entry.building_id
                     )
                     items_rejected = (
                         len(item_result.records) - len(records)
@@ -1417,16 +1188,27 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                 except Exception as _pub_err:
                     logger.debug(
                         f"[E34-S1] Failed to publish ai.items_extracted for "
-                        f"{building_meta.building_id}: {_pub_err}"
+                        f"{building_meta_entry.building_id}: {_pub_err}"
                     )
 
-        except Exception as e:
+            return records
+
+    # Run all item extractions concurrently (bounded by semaphore)
+    outcomes = await asyncio.gather(
+        *[_extract_items_for_building(b) for b in inventory.buildings],
+        return_exceptions=True,
+    )
+
+    for outcome in outcomes:
+        if isinstance(outcome, Exception):
             logger.warning(
-                f"[E32-S2] Failed to extract items for building "
-                f"{building_meta.building_id}: {e} "
+                f"[E32-S2] Item extraction task failed: {outcome} "
                 "(skipping — partial results preserved)"
             )
             continue
+        if outcome is None:
+            continue
+        all_records.extend(outcome)
 
     logger.info(
         f"[E32-S2] Item extraction complete: {len(all_records)} records from "
@@ -1446,688 +1228,39 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
             buildings=n_buildings,
         )
 
-    return {"records": all_records, "items_extracted": len(all_records) > 0}
-
-
-def should_run_orchestrate(state: dict) -> str:
-    """Route to orchestrate (fallback) or validate directly.
-
-    Orchestrate runs when:
-    - building_inventory is None/empty (legacy document, no structure detection)
-    - items_extracted is False (E32-S2 produced zero records — possible extraction failure)
-
-    Otherwise skip directly to validate.
-
-    Story: E32-S2 Item__c AI Extraction Node
-    """
-    inventory: Optional[BuildingInventory] = state.get("building_inventory")
-    items_extracted: bool = state.get("items_extracted", False)
-
-    if not inventory or not inventory.buildings:
-        return "orchestrate"
-    if not items_extracted:
-        return "orchestrate"
-    return "validate"
-
-
-async def orchestrate_with_logging(state: dict, config: RunnableConfig) -> dict:
-    """Wrapper around orchestrate_extraction that adds pipeline logging.
-
-    Story: E1-S21 — instruments the ORCHESTRATOR stage.
-    """
-    pl = _get_pipeline_logger(state)
-    if pl:
-        pl.stage_enter(StageId.ORCHESTRATOR, "Planning extraction strategy...")
-    try:
-        result = await orchestrate_extraction(state, config)
-        if pl:
-            orch_stats = result.get("orchestrator_stats")
-            summary = ""
-            if orch_stats:
-                n_plans = len(orch_stats.plan.plans) if orch_stats.plan else 0
-                n_records = orch_stats.total_records
-                n_extracted = orch_stats.buildings_extracted
-                parts = [f"{n_plans} building plans"]
-                if n_extracted > 0:
-                    parts.append(f"{n_extracted} extracted")
-                if n_records > 0:
-                    parts.append(f"{n_records} records")
-                if orch_stats.buildings_skipped > 0:
-                    parts.append(f"{orch_stats.buildings_skipped} skipped")
-                # Surface strategy distribution for debugging
-                if orch_stats.strategy_distribution:
-                    strats = ", ".join(
-                        f"{k}={v}" for k, v in orch_stats.strategy_distribution.items()
-                    )
-                    parts.append(f"strategies: {strats}")
-                summary = " | ".join(parts)
-
-                # Surface per-building errors/warnings to pipeline log
-                if orch_stats.plan and orch_stats.plan.plans:
-                    for bp in orch_stats.plan.plans:
-                        pl._log(
-                            f"  Building plan: {bp.building_name} | "
-                            f"strategy={bp.strategy.value} | "
-                            f"pages={bp.page_range}"
-                        )
-                # Check building stats from result for errors
-                raw_records = result.get("records", [])
-                if n_plans > 0 and n_records == 0:
-                    pl._log(
-                        f"  WARNING: {n_plans} plans but 0 records — "
-                        f"check LLM response or auth errors",
-                        level="warning",
-                    )
-            pl.stage_complete(StageId.ORCHESTRATOR, summary)
-        return result
-    except Exception as e:
-        if pl:
-            pl.stage_fail(StageId.ORCHESTRATOR, str(e))
-        raise
-
-
-async def prepare_context(state: dict, config: RunnableConfig) -> dict:
-    """Prepare extraction context and chunk content if needed."""
-    source: Source = state["source"]
-    content = normalize_docling_text(source.full_text or "")
-    input_format = "markdown"
-
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
-
-    # Skip ORCHESTRATOR stage when taking the non-orchestrator path (E1-S21)
-    if pl:
-        pl.stage_skip(StageId.ORCHESTRATOR, "Below threshold for orchestration")
-
-    if pl:
-        pl.stage_enter(StageId.PREFLIGHT, "Preparing content and chunking...")
-    if agui:
-        await agui.emit_step_started("prepare")
-
-    if not content:
-        logger.warning(f"Source {source.id} has no content")
-        return {
-            "error": "Source has no content to extract",
-            "chunks": [],
-            "context": BuildingRoomContext(),
-        }
-
-    # Debug: Log content preview and dump to file
-    source_id = str(source.id) if source.id else "unknown"
-    log_extraction_preview(content, source_id)
-    dump_content_to_file(content, source_id, "raw_content")
-
-    # Use register_start_page from document structure to trim content (E1-S16)
-    doc_structure: Optional[DocumentStructure] = state.get("document_structure")
-    if doc_structure and doc_structure.register_start_page:
-        # Find the page marker for register_start_page and trim content
-        page_pattern = re.compile(
-            rf"(?:[-—]+|<!--)\s*Page\s+{doc_structure.register_start_page}\s*(?:[-—]+|-->)|PAGE\s+{doc_structure.register_start_page}\s+OF\s+\d+",
-            re.IGNORECASE,
-        )
-        match = page_pattern.search(content)
-        if match and match.start() > 500:
-            trimmed = content[match.start() :]
-            acm_debug(
-                f"Trimmed content using register_start_page={doc_structure.register_start_page}: "
-                f"{len(content)} -> {len(trimmed)} chars"
-            )
-            content = trimmed
-
-    if input_format == "html":
-        processed_content = content
-        preprocess_meta = {
-            "acm_indicators_found": 0,
-            "no_asbestos_found": 0,
-        }
-    else:
-        # Pre-process content to add structural markers
-        processed_content, preprocess_meta = _preprocess_acm_content(content)
-
-        if debug_config.DEBUG_ENABLED:
-            acm_debug(f"Pre-processing complete: {preprocess_meta}")
-            dump_content_to_file(processed_content, source_id, "processed_content")
-
-    # E26-S4: Inject Docling structured tables into non-orchestrator path
-    # The orchestrator path handles this in _extract_single_building(),
-    # but single-building documents (building_inventory=0) skip the orchestrator.
-    source_id_str = str(source.id) if source.id else None
-    if source_id_str:
-        try:
-            # Use full document page range (1 to total_pages)
-            total_pages = state.get("pipeline_logger")
-            max_page = (
-                total_pages.total_pages
-                if total_pages and hasattr(total_pages, "total_pages")
-                else 999
-            )
-            docling_tables = await _get_docling_tables(source_id_str, 1, max_page)
-            if docling_tables:
-                processed_content = _inject_docling_tables(
-                    processed_content, docling_tables
-                )
-                logger.info(
-                    f"Non-orchestrator path: injected {len(docling_tables)} "
-                    f"Docling tables into LLM context for {source_id_str}"
-                )
-        except Exception as e:
-            logger.warning(f"Docling table injection failed in prepare_context: {e}")
-
-    # Initialize context from source metadata
-    context = BuildingRoomContext()
-    if source.title:
-        context.school_name = source.title
-
-    # Chunk processed content if needed
-    if input_format == "html":
-        chunks = [{"content": processed_content, "page_number": 1}]
-    else:
-        chunks = _chunk_content(processed_content)
-
-    logger.info(f"Prepared {len(chunks)} chunks for extraction from source {source.id}")
-    acm_debug(
-        f"Content stats: {preprocess_meta['acm_indicators_found']} ACM indicators, "
-        f"{preprocess_meta['no_asbestos_found']} No Asbestos entries"
-    )
-
-    if pl:
-        pl.stage_complete(
-            StageId.PREFLIGHT,
-            f"{len(chunks)} chunks prepared",
-            chunks=len(chunks),
-            content_chars=len(processed_content),
-            acm_indicators=preprocess_meta.get("acm_indicators_found", 0),
-        )
-    if agui:
-        await agui.emit_state_delta(
-            [{"op": "replace", "path": "/chunks", "value": len(chunks)}]
-        )
-        await agui.emit_step_finished("prepare", chunks=len(chunks))
-
     return {
-        "content": processed_content,
-        "chunks": chunks,
-        "input_format": input_format,
-        "context": context,
-        "current_chunk_index": 0,
-        "records": [],
-        "start_time": time.time(),
+        "records": all_records,
+        "items_extracted": len(all_records) > 0,
+        "per_row_actually_ran": _all_per_row_ran and extraction_mode == "per_row",
     }
 
 
-async def extract_records(state: dict, config: RunnableConfig) -> dict:
-    """Extract ACM records from the current chunk using LLM."""
-    chunks = state.get("chunks", [])
-    current_index = state.get("current_chunk_index", 0)
-    context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    existing_records: List[ACMExtractionRecord] = state.get("records", [])
-    model_id = state.get("model_id")
-    input_format = state.get("input_format", "markdown")
-    retry_count = state.get("retry_count", 0)
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+async def normalize_to_sf_node(state: dict, config: RunnableConfig) -> dict:
+    """Normalize SF picklist fields before validation.
 
-    # AG-UI tool call ID for this chunk
-    tool_call_id = f"extract_chunk_{current_index}"
-
-    # Log stage entry on first chunk only
-    if pl and current_index == 0 and retry_count == 0:
-        pl.stage_enter(
-            StageId.EXTRACT,
-            f"Processing {len(chunks)} chunks" if chunks else "No chunks",
-        )
-
-    if not chunks or current_index >= len(chunks):
-        return {"error": "No chunks to process"}
-
-    chunk = chunks[current_index]
-    chunk_content = chunk["content"]
-    page_number = chunk.get("page_number", 1)
-
-    # Update context with chunk info
-    context.current_page = page_number
-
-    acm_debug(f"Chunk {current_index + 1}/{len(chunks)}: {len(chunk_content)} chars")
-
-    # Provision model BEFORE prompt rendering so we can detect model family.
-    # model_family initialized here so prompt rendering outside try block never hits NameError.
-    model_family = "default"
-    try:
-        # Dynamic max_tokens: look up model capabilities; fall back to 16384 if unavailable
-        _max_tokens = (
-            16384  # safe fallback (8192 too small for registers with 30+ records)
-        )
-        _early_qwen = False
-        if model_id:
-            try:
-                _domain_model = await Model.get(model_id)
-                _max_tokens = _domain_model.get_max_output_tokens(fallback=16384)
-                _early_qwen = "qwen2.5" in (_domain_model.name or "").lower()
-            except asyncio.CancelledError:
-                raise  # never suppress cooperative cancellation
-            except Exception:
-                logger.warning(
-                    f"Could not fetch Model capabilities for {model_id}; "
-                    "falling back to max_tokens=16384, Qwen2.5 path disabled"
-                )
-        # Qwen2.5: use temperature=0.0 for deterministic extraction
-        _temperature = 0.0 if _early_qwen else (0.1 if retry_count > 0 else 0.3)
-        model = await provision_langchain_model(
-            chunk_content,
-            model_id,
-            "extraction",  # Uses default_extraction_model or falls back to chat
-            temperature=_temperature,
-            max_tokens=_max_tokens,
-        )
-
-        is_qwen = _is_qwen_model(model)
-        model_family = "qwen" if is_qwen else "default"
-        # Track model ID and prompt template for observability (E1-S21, AC #4)
-        if pl:
-            actual_model = (
-                getattr(model, "model_name", None)
-                or getattr(model, "model", None)
-                or model_id
-                or "default_extraction_model"
-            )
-            pl.log_model(str(actual_model), "extraction")
-            logger.info("[PIPELINE] Prompt template: acm/extraction")
-        if is_qwen:
-            logger.info(
-                f"Qwen2.5 model detected — using direct JSON mode (temp={_temperature})"
-            )
-    except Exception as e:
-        logger.error(f"Failed to provision model: {e}")
-        return {"error": f"Model provisioning failed: {e}"}
-
-    # Render the extraction prompt (after provisioning so model_family is known)
-    prompter = Prompter(prompt_template="acm/extraction")
-    system_prompt = prompter.render(
-        data={
-            "school_name": context.school_name,
-            "page_number": page_number,
-            "building_context": context,
-            "chunk_info": {
-                "chunk_index": current_index,
-                "total_chunks": len(chunks),
-            },
-            "content": chunk_content,
-            "input_format": input_format,
-            "model_family": model_family,
-        }
-    )
-
-    # Debug: Log and dump the prompt
-    source: Source = state["source"]
-    source_id = str(source.id) if source.id else "unknown"
-    log_prompt_preview(system_prompt, source_id)
-    dump_prompt_to_file(system_prompt, source_id, current_index)
-
-    # Create messages
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(
-            content="Extract ACM records from the content provided in the system prompt."
-        ),
-    ]
-
-    # Emit AG-UI tool call start
-    if agui:
-        import json as _json
-
-        await agui.emit_tool_call_start(tool_call_id, "extract_records")
-        await agui.emit_tool_call_args(
-            tool_call_id,
-            _json.dumps(
-                {
-                    "chunk_index": current_index,
-                    "total_chunks": len(chunks),
-                    "page": page_number,
-                    "content_length": len(chunk_content),
-                }
-            ),
-        )
-
-    # Direct ainvoke + JSON parse for all models (E27-S1: eliminates dead
-    # with_structured_output() that always fails on OpenRouter/Anthropic grammar limits)
-    try:
-        raw_response = await model.ainvoke(messages)
-
-        # E27-S3: Verify provider routing (non-blocking)
-        try:
-            await _verify_provider_routing(raw_response, "extract_records")
-        except Exception:
-            pass
-
-        response_text = (
-            raw_response.content
-            if hasattr(raw_response, "content")
-            else str(raw_response)
-        )
-        parsed = parse_json_response(response_text)
-        # E27-S4: completionState wrapper eliminated by Anthropic-direct routing (E27-S3)
-        result: ACMExtractionResult = ACMExtractionResult.model_validate(parsed)
-        logger.info(f"Direct JSON extraction: {len(result.records)} records")
-
-        # Debug: Log raw result before processing
-        logger.debug(
-            f"Raw extraction result: status={result.status}, records_count={len(result.records)}"
-        )
-        if result.records:
-            logger.debug(f"First record: {result.records[0].model_dump_json()[:500]}")
-        else:
-            logger.warning(
-                f"No records extracted. Extraction notes: {result.extraction_notes}"
-            )
-
-        # Update stats
-        result.update_stats()
-
-        # Extract new records and update context
-        new_records = result.records
-
-        # Ensure page_number is set on all records from this chunk
-        # Use page_markers for position-based assignment instead of blanket chunk page
-        # Track search positions per product to handle duplicate product names
-        page_markers = chunk.get("page_markers", {})
-        search_positions: Dict[str, int] = {}
-        for record in new_records:
-            if record.page_number is None:
-                product_key = (record.product or "").lower()
-                search_start = search_positions.get(product_key, 0)
-                page, pos = _assign_record_page(
-                    record.product,
-                    chunk_content,
-                    page_markers,
-                    page_number,
-                    search_start,
-                )
-                record.page_number = page
-                if record.product and pos >= 0:
-                    search_positions[product_key] = pos + len(record.product)
-
-        if new_records:
-            # Update context from the last record for continuity
-            last_record = new_records[-1]
-            if last_record.building_id:
-                context.building_id = last_record.building_id
-                context.building_name = last_record.building_name
-            if last_record.room_id:
-                context.room_id = last_record.room_id
-                context.room_name = last_record.room_name
-
-        logger.info(
-            f"Extracted {len(new_records)} records from chunk {current_index + 1}/{len(chunks)}"
-        )
-
-        # Per-chunk progress logging
-        if pl:
-            total_so_far = len(existing_records) + len(new_records)
-            progress = (current_index + 1) / len(chunks) if chunks else 1.0
-            pl.stage_progress(
-                StageId.EXTRACT,
-                f"Chunk {current_index + 1}/{len(chunks)} | pages {page_number}+ | "
-                f"{len(new_records)} records | {total_so_far} total",
-                progress=progress,
-                records_so_far=total_so_far,
-                chunk=f"{current_index + 1}/{len(chunks)}",
-            )
-
-        # AG-UI: emit tool call end and state delta for new records
-        if agui and new_records:
-            # Emit StateDelta for each new record (incremental streaming)
-            for rec in new_records:
-                await agui.emit_state_delta(
-                    [
-                        {
-                            "op": "add",
-                            "path": "/records/-",
-                            "value": {
-                                "building_id": rec.building_id,
-                                "room_name": rec.room_name,
-                                "product": rec.product,
-                                "result": rec.result,
-                                "page_number": rec.page_number,
-                            },
-                        }
-                    ]
-                )
-            await agui.emit_tool_call_end(
-                tool_call_id,
-                f"{len(new_records)} records from chunk {current_index + 1}",
-            )
-        elif agui:
-            await agui.emit_tool_call_end(tool_call_id, "0 records")
-
-        return {
-            "records": existing_records + new_records,
-            "context": context,
-            "current_chunk_index": current_index + 1,
-            "extraction_result": result,
-            "retry_count": 0,  # Reset retry count on success
-        }
-
-    except ValidationError as e:
-        logger.warning(f"Structured output validation failed (schema mismatch): {e}")
-        _exc_info = ("validation", e)
-    except Exception as e:
-        logger.warning(f"Structured output extraction failed: {e}")
-        _exc_info = ("extraction", e)
-
-    # Fallback logic shared between both except clauses.
-    # The success path above always returns, so _exc_info is always set here.
-    _error_type, _exc = _exc_info  # type: ignore[possibly-undefined]
-
-    if is_auth_error(_exc):
-        failed_model_name = (
-            getattr(model, "model_name", None)
-            or getattr(model, "model", None)
-            or str(model_id or "unknown")
-        )
-        fallback_model = await provision_extraction_fallback_model(
-            str(failed_model_name),
-            temperature=0.0 if is_qwen else 0.1,
-            max_tokens=_max_tokens,
-        )
-        if fallback_model is not None:
-            model = fallback_model
-            is_qwen = _is_qwen_model(model)
-            logger.warning(
-                "Authentication failure detected for extraction model "
-                f"'{failed_model_name}', switched to fallback model "
-                f"'{getattr(model, 'model_name', getattr(model, 'model', 'unknown'))}'"
-            )
-
-    # Fallback: try direct model invocation with manual JSON extraction
-    # (handles OpenRouter/provider incompatibility with function calling)
-    if retry_count == 0:
-        logger.info(
-            "Attempting fallback: direct model invocation with manual JSON parsing"
-        )
-        response_text = ""
-        try:
-            raw_response = await model.ainvoke(messages)
-            response_text = (
-                raw_response.content
-                if hasattr(raw_response, "content")
-                else str(raw_response)
-            )
-
-            parsed = parse_json_response(response_text)
-            result = ACMExtractionResult.model_validate(parsed)
-            logger.info(
-                f"Fallback JSON parsing succeeded: {len(result.records)} records"
-            )
-            # Continue with normal processing (jump to success path below)
-            # We need to duplicate the post-processing here
-            result.update_stats()
-            new_records = result.records
-            page_markers = chunk.get("page_markers", {})
-            search_positions_fb: Dict[str, int] = {}
-            for record in new_records:
-                if record.page_number is None:
-                    product_key = (record.product or "").lower()
-                    search_start = search_positions_fb.get(product_key, 0)
-                    page, pos = _assign_record_page(
-                        record.product,
-                        chunk_content,
-                        page_markers,
-                        page_number,
-                        search_start,
-                    )
-                    record.page_number = page
-                    if record.product and pos >= 0:
-                        search_positions_fb[product_key] = pos + len(record.product)
-            if new_records:
-                last_record = new_records[-1]
-                if last_record.building_id:
-                    context.building_id = last_record.building_id
-                    context.building_name = last_record.building_name
-                if last_record.room_id:
-                    context.room_id = last_record.room_id
-                    context.room_name = last_record.room_name
-            logger.info(
-                f"Extracted {len(new_records)} records from chunk "
-                f"{current_index + 1}/{len(chunks)} (fallback parser)"
-            )
-            if pl:
-                total_so_far = len(existing_records) + len(new_records)
-                progress = (current_index + 1) / len(chunks) if chunks else 1.0
-                pl.stage_progress(
-                    StageId.EXTRACT,
-                    f"Chunk {current_index + 1}/{len(chunks)} | pages {page_number}+ | "
-                    f"{len(new_records)} records | {total_so_far} total (fallback)",
-                    progress=progress,
-                    records_so_far=total_so_far,
-                    chunk=f"{current_index + 1}/{len(chunks)}",
-                )
-            return {
-                "records": existing_records + new_records,
-                "context": context,
-                "current_chunk_index": current_index + 1,
-                "extraction_result": result,
-                "retry_count": 0,
-            }
-        except (ValueError, ValidationError) as fallback_err:
-            logger.warning(
-                f"Fallback JSON parsing failed for source={source_id} "
-                f"chunk={current_index + 1}/{len(chunks)}: {fallback_err}. "
-                f"Response preview: {response_text[:300]!r}"
-            )
-
-    if retry_count < MAX_RETRIES:
-        # Apply exponential backoff delay before retry
-        delay = (
-            RETRY_DELAYS[retry_count]
-            if retry_count < len(RETRY_DELAYS)
-            else RETRY_DELAYS[-1]
-        )
-        logger.info(f"Retrying in {delay}s (attempt {retry_count + 1}/{MAX_RETRIES})")
-        await asyncio.sleep(delay)
-        return {
-            "retry_count": retry_count + 1,
-            "error": None,  # Clear error to allow retry
-        }
-    return {
-        "error": f"Extraction {_error_type} failed after {MAX_RETRIES} retries: {_exc}"
-    }
-
-
-async def validate_records(state: dict, config: RunnableConfig) -> dict:
-    """Validate extracted records and apply guardrails."""
-    records: List[ACMExtractionRecord] = state.get("records", [])
-    context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-
+    Runs deterministic SF normalization (case, synonyms, business rules)
+    to eliminate unnecessary LLM correction calls.
+    """
+    records = state.get("records", [])
     if not records:
-        logger.info("No records to validate")
-        return {"records": [], "records_rejected": 0}
-
-    validated_records = []
-    rejected_count = 0
-
-    for record in records:
-        issues = list(record.data_issues) if record.data_issues else []
-
-        # Check required fields
-        if not record.building_id:
-            issues.append("Missing required field: building_id")
-        if not record.product:
-            issues.append("Missing required field: product")
-        if not record.material_description:
-            issues.append("Missing required field: material_description")
-
-        # If missing building_id, try to use context
-        if not record.building_id and context.building_id:
-            record.building_id = context.building_id
-            issues.append("Building ID inferred from context")
-
-        # Normalize result field to BAR vocabulary
-        # Order matters: check negative compound terms before simple "detected"
-        if record.result:
-            result_lower = record.result.lower()
-            if (
-                "assumed positive" in result_lower
-                or "presumed positive" in result_lower
-            ):
-                record.result = "Assumed Positive"
-            elif (
-                "assumed negative" in result_lower
-                or "presumed negative" in result_lower
-            ):
-                record.result = "Assumed Negative"
-            elif any(
-                x in result_lower
-                for x in ["no asbestos", "nad", "not detected", "negative"]
-            ):
-                record.result = "Negative"
-            elif any(
-                x in result_lower
-                for x in ["positive", "detected", "asbestos-containing"]
-            ):
-                record.result = "Positive"
-            elif "presumed" in result_lower:
-                # Use sample_result to disambiguate bare "presumed" results
-                sr = (record.sample_result or "").lower()
-                if "negative" in sr:
-                    record.result = "Assumed Negative"
-                else:
-                    record.result = "Assumed Positive"
-            else:
-                record.result = "Unknown"
-        else:
-            record.result = "Unknown"
-            issues.append("Result field was empty, set to Unknown")
-
-        # Validate confidence value
-        if record.extraction_confidence not in {"high", "medium", "low"}:
-            record.extraction_confidence = "medium"
-            issues.append("Invalid confidence value normalized to medium")
-
-        # Update issues
-        record.data_issues = issues
-
-        # Reject records missing critical fields
-        if (
-            not record.building_id
-            or not record.product
-            or not record.material_description
-        ):
-            rejected_count += 1
-            logger.warning(f"Rejected record due to missing required fields: {issues}")
-            continue
-
-        validated_records.append(record)
-
-    if rejected_count > 0:
-        logger.info(
-            f"Validated {len(validated_records)} records, rejected {rejected_count}"
+        return {"records": []}
+    try:
+        from open_notebook.extractors.normalizers.sf_normalizer import (
+            normalize_extraction_records,
         )
 
-    return {"records": validated_records, "records_rejected": rejected_count}
+        stats = normalize_extraction_records(records)
+        logger.info(
+            f"[NORMALIZE] {stats['records_modified']}/{stats['total_records']} "
+            f"records, {stats['fields_modified']} fields"
+        )
+    except Exception as e:
+        logger.warning(f"SF normalization failed (non-fatal): {e}")
+    return {"records": records}
 
 
 async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
-    """Validate extracted records against BAR enum values and business rules.
+    """Validate extracted records against SF/BAR enum values and business rules.
 
     Uses acm_validator for strict validation. Records with issues are flagged
     for correction by the corrective loop.
@@ -2213,7 +1346,12 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
         if not record.product:
             issues.append("Missing required field: product")
         if not record.material_description:
-            issues.append("Missing required field: material_description")
+            # Auto-fill from product (same pattern as no-access recovery)
+            if record.product:
+                record.material_description = record.product
+                issues.append("material_description auto-filled from product")
+            else:
+                issues.append("Missing required field: material_description")
 
         # Validate confidence value
         if record.extraction_confidence not in {"high", "medium", "low"}:
@@ -2325,10 +1463,9 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     if operation_id and _is_final_validation:
         try:
             _validation_duration_ms = int((time.time() - _validate_start) * 1000)
-            _records_corrected = (
-                correction_stats.get("auto_corrected", 0)
-                + correction_stats.get("llm_corrected", 0)
-            )
+            _records_corrected = correction_stats.get(
+                "auto_corrected", 0
+            ) + correction_stats.get("llm_corrected", 0)
             await get_event_bus().publish(
                 AIValidationCompleteEvent(
                     operation_id=operation_id,
@@ -2602,6 +1739,8 @@ async def _llm_correct_records(
                 temperature=0.0 if _correction_qwen else 0.1,
                 max_tokens=1024,
             )
+            # Bug Fix 11 Phase 4: Apply format="json" for Ollama correction models
+            model = _apply_ollama_extraction_settings(model)
             # Track resolved model for observability (E1-S21, AC #4)
             if pl:
                 actual_model = (
@@ -3250,6 +2389,15 @@ def _recover_not_sampled_records_ara(
 
 async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     """Graph node: recover no-access records missed by LLM extraction."""
+    # Only skip recovery if per-row extraction ACTUALLY ran for all buildings.
+    # When docling_document_json is NULL, per-row falls back to bulk but the env
+    # var still says "per_row" — recovery must run in that case.
+    if state.get("per_row_actually_ran"):
+        logger.info(
+            "Skipping no-access recovery (per-row segmenter handled synthetic rows)"
+        )
+        return state
+
     records: List[ACMExtractionRecord] = state.get("records", [])
     source: Source = state["source"]
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
@@ -3484,43 +2632,16 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     }
 
 
-def should_continue_extraction(state: dict) -> str:
-    """Determine if we should continue extracting more chunks."""
-    error = state.get("error")
-    if error:
-        return "error"
-
-    chunks = state.get("chunks", [])
-    current_index = state.get("current_chunk_index", 0)
-    retry_count = state.get("retry_count", 0)
-
-    # Check if we need to retry current chunk
-    if retry_count > 0 and retry_count <= MAX_RETRIES:
-        return "extract"
-
-    # Check if there are more chunks
-    if current_index < len(chunks):
-        return "extract"
-
-    return "validate"
-
-
-def should_save(state: dict) -> str:
-    """Determine if we should proceed to save."""
-    error = state.get("error")
-    if error:
-        return "error"
-    return "save"
-
-
 # Build the graph
 agent_state = StateGraph(ExtractionState)
 
 # Add nodes
-agent_state.add_node("extract_metadata", extract_metadata_node)  # E1-S19: Stage -2
-agent_state.add_node("structure", extract_structure)  # E1-S16: Stage -1
-agent_state.add_node("inventory", compile_inventory)  # E1-S17: Stage -1.5
-agent_state.add_node("tag_pages", tag_page_sections)  # E1-S18: Stage -1.25
+agent_state.add_node(
+    "metadata_and_structure", metadata_and_structure_node
+)  # S4: combined
+agent_state.add_node(
+    "inventory", compile_inventory
+)  # E1-S17: Stage -1.5 (also synthesizes page_tags)
 agent_state.add_node(
     "save_intelligence", save_intelligence_node
 )  # E30-S9: Persist pre-extraction intelligence
@@ -3530,35 +2651,24 @@ agent_state.add_node(
 agent_state.add_node(
     "extract_items", extract_items_node
 )  # E32-S2: Item__c Phase 2 extraction
-agent_state.add_node(
-    "orchestrate", orchestrate_with_logging
-)  # E1-S20: Agentic orchestrator (wrapped with E1-S21 logging)
-agent_state.add_node("prepare", prepare_context)
-agent_state.add_node("extract", extract_records)
+agent_state.add_node("normalize_to_sf", normalize_to_sf_node)
 agent_state.add_node("validate", validate_records_strict)
 agent_state.add_node("correct", correct_records)
 agent_state.add_node("deduplicate", deduplicate_records)
 agent_state.add_node("recover_no_access", recover_no_access_node)
 agent_state.add_node("save", save_records)
 
-# Add edges: START → extract_metadata → structure → inventory → tag_pages → prepare → ...
-agent_state.add_edge(START, "extract_metadata")
-agent_state.add_edge("extract_metadata", "structure")
-agent_state.add_edge("structure", "inventory")
-agent_state.add_edge("inventory", "tag_pages")
-# E30-S9: Persist pre-extraction intelligence before orchestrator
-agent_state.add_edge("tag_pages", "save_intelligence")
+# S4: Merged pre-extraction flow (4→2 LLM calls)
+# START → metadata_and_structure (1 LLM) → inventory (1 LLM, synthesizes page_tags) → save_intelligence
+agent_state.add_edge(START, "metadata_and_structure")
+agent_state.add_edge("metadata_and_structure", "inventory")
+agent_state.add_edge("inventory", "save_intelligence")
 # E32-S1: Building__c extraction runs between save_intelligence and extract_items
 agent_state.add_edge("save_intelligence", "extract_building")
-# E32-S2: Item__c extraction runs after building extraction, with conditional fallback
+# E32-S2: Item__c extraction runs after building extraction
 agent_state.add_edge("extract_building", "extract_items")
-agent_state.add_conditional_edges(
-    "extract_items",
-    should_run_orchestrate,
-    {"orchestrate": "orchestrate", "validate": "validate"},
-)
-agent_state.add_edge("orchestrate", "validate")
-# Legacy edges removed — prepare/extract nodes kept but unreachable (AC-5)
+agent_state.add_edge("extract_items", "normalize_to_sf")
+agent_state.add_edge("normalize_to_sf", "validate")
 # Corrective RAG loop: validate → should_correct → {correct, deduplicate}
 agent_state.add_conditional_edges(
     "validate", should_correct, {"correct": "correct", "deduplicate": "deduplicate"}
@@ -3606,6 +2716,25 @@ async def extract_acm_from_source(
     # which handles: "--- Page N ---", "<!-- Page N -->", and "PAGE N OF M" formats.
     # Returns the highest page number seen (accurate for display) rather than a marker count.
     total_pages = _extract_total_pages(source.full_text) if source.full_text else 0
+    # F3 fix: if text markers give 0 pages, fall back to max page from acm_table_section
+    if total_pages == 0 and source.id:
+        try:
+            from open_notebook.database.repository import ensure_record_id, repo_query
+
+            _sid = ensure_record_id(str(source.id))
+            page_result = await repo_query(
+                "SELECT math::max(page_end) AS max_page FROM acm_table_section "
+                "WHERE source_id = $sid GROUP ALL;",
+                {"sid": _sid},
+            )
+            if page_result and page_result[0].get("max_page"):
+                total_pages = int(page_result[0]["max_page"])
+                logger.info(
+                    f"[PIPELINE] Page count from acm_table_section: {total_pages} "
+                    f"(text markers returned 0)"
+                )
+        except Exception as e:
+            logger.warning(f"[PIPELINE] Failed to get page count from tables: {e}")
     if source.full_text and total_pages == 0:
         logger.warning(
             f"[PIPELINE] No page markers found in source {source.id} "

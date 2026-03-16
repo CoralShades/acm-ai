@@ -16,12 +16,14 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   Building2,
   CheckCircle2,
   Database,
   Loader2,
   ShieldCheck,
+  Table2,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +39,11 @@ import { useExtractionSSE } from '@/lib/hooks/useExtractionSSE'
 import { useToast } from '@/lib/hooks/use-toast'
 import { PIPELINE_STAGE_ORDER } from '@/lib/types/pipeline'
 import { cn } from '@/lib/utils'
+
+const RawTableViewer = dynamic(
+  () => import('./RawTableViewer').then((m) => ({ default: m.RawTableViewer })),
+  { ssr: false, loading: () => null }
+)
 
 /**
  * BuildingProgress — per-building data shape reserved for future SSE payloads.
@@ -207,6 +214,14 @@ export function ExtractionProgress({ sourceId, buildings }: ExtractionProgressPr
     : 0
   const progressPercent = Math.round((completedStages / PIPELINE_STAGE_ORDER.length) * 100)
 
+  // Show raw tables once DOCLING_EXTRACTION stage has started (running, complete, or any later stage active)
+  const doclingStageStatus = stages?.DOCLING_EXTRACTION?.status
+  const showRawTables =
+    phase === 'completed' ||
+    phase === 'failed' ||
+    doclingStageStatus === 'running' ||
+    doclingStageStatus === 'complete'
+
   return (
     <div className="flex flex-col h-full overflow-y-auto" data-testid="extraction-progress">
       <div className="max-w-4xl mx-auto w-full px-6 py-8 space-y-6">
@@ -284,6 +299,23 @@ export function ExtractionProgress({ sourceId, buildings }: ExtractionProgressPr
           aguiStep={aguiStep}
           aguiConnected={aguiConnected}
         />
+
+        {/* Raw Docling tables — shown once document analysis is underway */}
+        {showRawTables && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Table2 className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Raw Tables Discovered</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Tables found in the document by Docling and MinerU. These feed into the ACM extraction pipeline.
+            </p>
+            <RawTableViewer
+              sourceId={sourceId}
+              refetchInterval={phase === 'extracting' ? 5000 : false}
+            />
+          </div>
+        )}
 
         {/* Buildings prop forwarding (future per-building granularity) */}
         {buildings && buildings.length > 0 && (

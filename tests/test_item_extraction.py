@@ -1,7 +1,7 @@
 """
 Unit tests for E32-S2: Item__c AI Extraction Node.
 
-Tests extract_items_node, _chunk_and_extract_items, and should_run_orchestrate
+Tests extract_items_node and _chunk_and_extract_items
 using mocked LLM calls — no live SurrealDB required.
 
 Story: E32-S2 Item__c AI Extraction Node
@@ -25,7 +25,6 @@ from open_notebook.graphs.acm_extraction import (
     _ITEM_EXTRACTION_CHUNK_CHARS,
     _chunk_and_extract_items,
     extract_items_node,
-    should_run_orchestrate,
 )
 
 # ---------------------------------------------------------------------------
@@ -107,6 +106,10 @@ async def test_extract_items_node_happy_path():
 
     with (
         patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),
         ),
@@ -141,7 +144,7 @@ async def test_extract_items_node_no_inventory():
         result = await extract_items_node(state, config=None)
         mock_extract.assert_not_called()
 
-    assert result == {"records": [], "items_extracted": False}
+    assert result == {"records": [], "items_extracted": False, "per_row_actually_ran": False}
 
 
 @pytest.mark.asyncio
@@ -157,7 +160,7 @@ async def test_extract_items_node_empty_buildings():
         result = await extract_items_node(state, config=None)
         mock_extract.assert_not_called()
 
-    assert result == {"records": [], "items_extracted": False}
+    assert result == {"records": [], "items_extracted": False, "per_row_actually_ran": False}
 
 
 @pytest.mark.asyncio
@@ -178,6 +181,10 @@ async def test_extract_items_node_multiple_buildings():
         return make_two_records(bid)
 
     with (
+        patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
         patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),
@@ -210,7 +217,7 @@ async def test_extract_items_node_building_failure():
     call_count = {"n": 0}
     building_meta_result = BuildingExtractionResult(building_name="Building")
 
-    async def flaky_extract(content, plan, bm, st, sb):
+    async def flaky_extract(content, plan, bm, st, sb, **kwargs):
         call_count["n"] += 1
         if call_count["n"] == 1:
             raise RuntimeError("LLM timeout")
@@ -222,6 +229,10 @@ async def test_extract_items_node_building_failure():
         return records_b02
 
     with (
+        patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
         patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),
@@ -255,6 +266,10 @@ async def test_extract_items_node_zero_records():
     building_meta_result = BuildingExtractionResult(building_name="Building B01")
 
     with (
+        patch(
+            "open_notebook.graphs.acm_extraction._get_docling_tables",
+            new=AsyncMock(return_value=[]),
+        ),
         patch(
             "open_notebook.graphs.acm_extraction._v3_extract_building_meta",
             new=AsyncMock(return_value=building_meta_result),
@@ -327,31 +342,6 @@ async def test_chunk_and_extract_items_large():
     # 3 calls × 2 records each = 6 merged records
     assert len(result.records) == 6
     assert result.status == "valid"
-
-
-# ---------------------------------------------------------------------------
-# Tests: should_run_orchestrate
-# ---------------------------------------------------------------------------
-
-
-def test_should_run_orchestrate_no_inventory():
-    """Returns 'orchestrate' when building_inventory is None."""
-    state = {"building_inventory": None, "items_extracted": False}
-    assert should_run_orchestrate(state) == "orchestrate"
-
-
-def test_should_run_orchestrate_not_extracted():
-    """Returns 'orchestrate' when items_extracted=False with a valid inventory."""
-    inventory = _make_inventory(("B01",))
-    state = {"building_inventory": inventory, "items_extracted": False}
-    assert should_run_orchestrate(state) == "orchestrate"
-
-
-def test_should_run_orchestrate_extracted():
-    """Returns 'validate' when items_extracted=True with a valid inventory."""
-    inventory = _make_inventory(("B01",))
-    state = {"building_inventory": inventory, "items_extracted": True}
-    assert should_run_orchestrate(state) == "validate"
 
 
 # ---------------------------------------------------------------------------

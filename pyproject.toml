@@ -37,7 +37,7 @@ dependencies = [
     "ai-prompter>=0.3",
     "esperanto>=2.8.3",
     "langchain-google-vertexai>=2.0.28",
-    "surrealdb>=1.0.4",
+    "surrealdb>=1.0.8",
     "podcast-creator>=0.7.0",
     "surreal-commands>=1.2.0",
     "openpyxl>=3.1.5",
@@ -50,6 +50,9 @@ dependencies = [
     "typer>=0.20.0",
     "langfuse>=3.14.5",
     "mineru>=2.7.0",
+    "runpod>=1.8.1",
+    "runpod-flash>=1.9.1",
+    "copilotkit>=0.1.78",
 ]
 
 [tool.setuptools]
@@ -74,11 +77,16 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
+    "langgraph-cli[inmem]>=0.1.0",
+    "langgraph-api>=0.7.0",
+    "logfire>=3.0.0",
     "pre-commit>=4.1.0",
     "pytest-asyncio>=1.2.0",
     "rich>=13.0.0",
     "ruff>=0.14.7",
     "types-requests>=2.32.4.20250913",
+    # erdantic>=1.2.0 — install manually: needs pygraphviz + Graphviz C headers
+    # pip install erdantic  (after: winget install graphviz / brew install graphviz)
 ]
 
 [tool.uv]

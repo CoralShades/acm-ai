@@ -1,0 +1,17 @@
+-- Migration 50: Remove orphaned knowledge graph tables (E13-S1)
+--
+-- These tables were defined in M25 for a planned knowledge graph feature
+-- that was never integrated into the V3.5 pipeline. The KnowledgeGraph
+-- frontend component queries acm_record directly via /api/graph/source/{id}.
+-- BuildingRecord (M40) superseded the graph "building" entity table.
+--
+-- Tables removed: school, building, room (entities)
+--                 school_has_building, building_has_room, room_has_acm, extracted_from (relations)
+
+REMOVE TABLE extracted_from;
+REMOVE TABLE room_has_acm;
+REMOVE TABLE building_has_room;
+REMOVE TABLE school_has_building;
+REMOVE TABLE room;
+REMOVE TABLE building;
+REMOVE TABLE school;

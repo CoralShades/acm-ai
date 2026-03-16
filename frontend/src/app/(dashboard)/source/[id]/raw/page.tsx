@@ -30,7 +30,7 @@ export default function RawTableReviewPage({
   return (
     <ErrorBoundary
       fallback={(props) => (
-        <PageErrorFallback {...props} pageName="Raw Table Review" reloadUrl="/sources" />
+        <PageErrorFallback {...props} pageName="Raw Table Review" reloadUrl="/jobs" />
       )}
     >
       <RawTableReviewContent sourceId={decodeURIComponent(sourceId)} />

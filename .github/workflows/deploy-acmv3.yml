@@ -1,0 +1,91 @@
+name: Deploy ACMV3 to RunPod
+
+on:
+  push:
+    branches: [ACMV3]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-acmv3
+  cancel-in-progress: true
+
+jobs:
+  deploy-backend:
+    name: Deploy to RunPod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.RUNPOD_SSH_HOST }}
+          port: ${{ secrets.RUNPOD_SSH_PORT }}
+          key: ${{ secrets.RUNPOD_SSH_KEY }}
+          username: root
+          command_timeout: 5m
+          script: |
+            export PATH="$HOME/.local/bin:$PATH"
+            cd /workspace/acm-ai
+
+            echo "=== Pulling latest ACMV3 ==="
+            git fetch origin ACMV3
+            git checkout ACMV3
+            git reset --hard origin/ACMV3
+
+            echo "=== Syncing Python dependencies ==="
+            uv sync --quiet
+
+            echo "=== Syncing frontend dependencies ==="
+            cd /workspace/acm-ai/frontend && npm install --quiet
+            cd /workspace/acm-ai
+
+            echo "=== Restarting API ==="
+            tmux send-keys -t api C-c
+            sleep 2
+            tmux send-keys -t api "cd /workspace/acm-ai && API_HOST=0.0.0.0 API_RELOAD=false uv run python run_api.py 2>&1 | tee logs/api.log" Enter
+
+            echo "=== Restarting Worker ==="
+            tmux send-keys -t worker C-c
+            sleep 2
+            tmux send-keys -t worker "cd /workspace/acm-ai && uv run python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log" Enter
+
+            echo "=== Restarting Frontend ==="
+            tmux send-keys -t frontend C-c
+            sleep 2
+            tmux send-keys -t frontend "cd /workspace/acm-ai/frontend && PORT=8502 npm run dev -- -p 8502 2>&1 | tee /workspace/acm-ai/logs/frontend.log" Enter
+
+            echo "=== Waiting for API health ==="
+            for i in $(seq 1 20); do
+              if curl -sf http://localhost:5055/health > /dev/null 2>&1; then
+                echo "API is healthy!"
+                exit 0
+              fi
+              sleep 3
+            done
+            echo "WARNING: API health check timed out"
+            exit 1
+
+  verify:
+    name: End-to-End Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy-backend]
+    steps:
+      - name: Wait for services to stabilize
+        run: sleep 15
+
+      - name: Check RunPod frontend via tunnel
+        run: |
+          STATUS=$(curl -sf -o /dev/null -w '%{http_code}' https://acmv3.coralshades.ai/)
+          echo "RunPod frontend: HTTP $STATUS"
+          [ "$STATUS" = "200" ] || exit 1
+
+      - name: Check RunPod API via tunnel
+        run: |
+          RESPONSE=$(curl -sf https://api.acmv3.coralshades.ai/health || echo '{"status":"error"}')
+          echo "RunPod API: $RESPONSE"
+          echo "$RESPONSE" | grep -q '"healthy"' || exit 1
+
+      - name: Check runtime config
+        run: |
+          RESPONSE=$(curl -sf https://acmv3.coralshades.ai/config || echo '{}')
+          echo "Runtime config: $RESPONSE"
+          echo "$RESPONSE" | grep -q 'api.acmv3.coralshades.ai' || exit 1

@@ -1,0 +1,246 @@
+{
+  "num_rows": 3,
+  "num_cols": 8,
+  "table_cells": [
+    {
+      "text": "Room",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "column_header": true
+    },
+    {
+      "text": "Location",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "column_header": true
+    },
+    {
+      "text": "Material",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 2,
+      "end_col_offset_idx": 3,
+      "column_header": true
+    },
+    {
+      "text": "Friable",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 3,
+      "end_col_offset_idx": 4,
+      "column_header": true
+    },
+    {
+      "text": "Condition",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 4,
+      "end_col_offset_idx": 5,
+      "column_header": true
+    },
+    {
+      "text": "Sample #",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 5,
+      "end_col_offset_idx": 6,
+      "column_header": true
+    },
+    {
+      "text": "Result",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 6,
+      "end_col_offset_idx": 7,
+      "column_header": true
+    },
+    {
+      "text": "Quantity",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 0,
+      "end_row_offset_idx": 1,
+      "start_col_offset_idx": 7,
+      "end_col_offset_idx": 8,
+      "column_header": true
+    },
+    {
+      "text": "Room 101",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "column_header": false
+    },
+    {
+      "text": "Various",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "column_header": false
+    },
+    {
+      "text": "Ceiling: Vinyl tiles\nFloor: Cement sheet\nWalls: Fibro",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 2,
+      "end_col_offset_idx": 3,
+      "column_header": false
+    },
+    {
+      "text": "No",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 3,
+      "end_col_offset_idx": 4,
+      "column_header": false
+    },
+    {
+      "text": "Good",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 4,
+      "end_col_offset_idx": 5,
+      "column_header": false
+    },
+    {
+      "text": "34511-039-001",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 5,
+      "end_col_offset_idx": 6,
+      "column_header": false
+    },
+    {
+      "text": "Positive - Chrysotile",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 6,
+      "end_col_offset_idx": 7,
+      "column_header": false
+    },
+    {
+      "text": "50 m\u00b2",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 1,
+      "end_row_offset_idx": 2,
+      "start_col_offset_idx": 7,
+      "end_col_offset_idx": 8,
+      "column_header": false
+    },
+    {
+      "text": "Library",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 0,
+      "end_col_offset_idx": 1,
+      "column_header": false
+    },
+    {
+      "text": "Ceiling",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 1,
+      "end_col_offset_idx": 2,
+      "column_header": false
+    },
+    {
+      "text": "Compressed cement sheet",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 2,
+      "end_col_offset_idx": 3,
+      "column_header": false
+    },
+    {
+      "text": "No",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 3,
+      "end_col_offset_idx": 4,
+      "column_header": false
+    },
+    {
+      "text": "Good",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 4,
+      "end_col_offset_idx": 5,
+      "column_header": false
+    },
+    {
+      "text": "34511-039-002",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 5,
+      "end_col_offset_idx": 6,
+      "column_header": false
+    },
+    {
+      "text": "Negative",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 6,
+      "end_col_offset_idx": 7,
+      "column_header": false
+    },
+    {
+      "text": "40 m\u00b2",
+      "row_span": 1,
+      "col_span": 1,
+      "start_row_offset_idx": 2,
+      "end_row_offset_idx": 3,
+      "start_col_offset_idx": 7,
+      "end_col_offset_idx": 8,
+      "column_header": false
+    }
+  ]
+}

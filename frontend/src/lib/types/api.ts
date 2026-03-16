@@ -42,6 +42,9 @@ export interface SourceListResponse {
   review_status?: string
   // Optional ACM building count for Jobs dashboard cards
   building_count?: number
+  // PDF metadata for job card icons
+  page_count?: number
+  file_size?: number
 }
 
 export interface SourceDetailResponse extends SourceListResponse {

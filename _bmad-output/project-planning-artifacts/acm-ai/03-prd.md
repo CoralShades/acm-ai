@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) - ACM-AI
 
-> **Product:** ACM-AI v3.1
-> **Date:** 2025-12-07 (Updated: 2026-03-05)
-> **Status:** v3.1 - V3 Implementation Complete (36/37 stories done, 95%; E30-S8 deferred to V4)
+> **Product:** ACM-AI v3.5
+> **Date:** 2025-12-07 (Updated: 2026-03-11)
+> **Status:** v3.5 - Per-Row Extraction Pipeline (E37: 8 stories, 18 SP; all offline verification passed)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-03-05 - v3.1: V3 Implementation Audit — verified all FR-1400..FR-1800 series against actual implementation, updated status to 36/37 stories complete (E30-S8 deferred), corrected story counts (E30: 9 stories incl. S9, E31: 8 stories incl. S8, E32: 8 stories incl. S8); 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
+> **Change Log:** 2026-03-11 - v3.5: Per-Row ACM Extraction Pipeline (E37) — redesigned Item__c extraction from bulk-per-building to per-row mode (9 fields, num_ctx=2048), DoclingDocument JSON as primary input, 8 edge case types handled by row segmentation, Ollama truncation fallback with cloud retry, deterministic post-processing (no LLM for classification/normalization), 163 new tests; 2026-03-05 - v3.1: V3 Implementation Audit — verified all FR-1400..FR-1800 series against actual implementation, updated status to 36/37 stories complete (E30-S8 deferred), corrected story counts (E30: 9 stories incl. S9, E31: 8 stories incl. S8, E32: 8 stories incl. S8); 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -17,7 +17,7 @@ This PRD defines the requirements for transforming Open Notebook into ACM-AI, a 
 See [Product Brief](./02-product-brief.md) for business context and [System Analysis](./01-system-analysis.md) for technical foundation.
 
 ### 1.3 Scope
-This document covers MVP requirements (Epics 1-20, 29) and V3 scope expansion (Epics 30-34). V3 adds Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, and AI capability routing. **V3 is 95% complete (36/37 stories)** -- only E30-S8 (Ollama provider priority) is deferred to V4. See [Section 11: V3 Scope](#11-v3-scope-expansion) for detailed delineation of V3 additions.
+This document covers MVP requirements (Epics 1-20, 29), V3 scope expansion (Epics 30-34), and V3.5 per-row extraction pipeline (Epic 37). V3 adds Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, and AI capability routing. **V3.5 adds per-row Item__c extraction** with DoclingDocument JSON input, row segmentation for 8 edge case types, and Ollama truncation fallback. See [Section 11: V3 Scope](#11-v3-scope-expansion) and [Section 12: V3.5 Per-Row Extraction](#12-v35-per-row-extraction-pipeline) for details.
 
 ### 1.4 Document Formats Supported
 | Format | Description | Status |
@@ -944,6 +944,69 @@ Phase 5: Review & Export (E33, E34)
 - AI extraction failure: Anthropic direct → OpenRouter fallback → skip building + preserve partial
 - SF validation failure: WARN during editing (inline badges), REJECT on export
 
+### 5.4.2 V3.5 Per-Row Item Extraction (NEW - 2026-03-11)
+
+> **Added:** V3.5 Per-Row Extraction Pipeline (E37) — replaces Phase 3 Step B (bulk Item__c extraction) with per-row extraction
+
+Item__c extraction now supports two modes controlled by `ACM_ITEM_EXTRACTION_MODE` env var:
+
+| Mode | LLM Calls | Fields | Context | Default |
+|------|-----------|--------|---------|:-------:|
+| `per_row` | One per table row | 9 fields per call | num_ctx=2048 | **YES** |
+| `bulk` | One per building (all items) | All fields at once | num_ctx=32768 | No |
+
+**9 Item__c Fields Extracted Per Row:**
+`room_name`, `floor_level`, `item_location`, `item_name`, `friability`, `acm_classification`, `acm_sub_classification`, `condition`, `disturbance_potential`
+
+**Fields NOT extracted (user fills in Salesforce):** `sample_result`, `quantity`, `recommendations`, `labelled`, `no_access`, `internal_external`
+
+**Per-Row Pipeline Flow:**
+```
+For each building:
+  4a. Get DoclingDocument JSON tables for building's page range
+  4b. Row Segmentation (NO LLM):
+      Parse JSON table_cells → group by start_row_offset_idx
+      Handle: merged cells, multi-page tables, sub-headers, notes
+      Detect: multi-item cells → flag needs_llm_split
+      Text scan for "Not Sampled"/"No Access" → synthetic rows
+  4c. Per-row LLM extraction:
+      Build key-value prompt from RawTableRow cells + building context
+      Call ChatOllama (format="json", temperature=0, num_ctx=2048)
+      If needs_llm_split: split first, then extract each sub-item
+  4d. Deterministic post-processing (NO LLM):
+      is_friable → "Friable"/"Non-friable"
+      item_name → classify_product() → Classification + Sub-Classification
+      condition → normalize_enum_value() → SF picklist
+      Dependency chain validation
+  4e. Map ACMItemRow → ACMExtractionRecord → existing validate/save pipeline
+```
+
+**Edge Case Types Handled by Row Segmentation:**
+
+| Type | Description | Frequency | Strategy |
+|------|-------------|-----------|----------|
+| A | Standard single-page table | ~60% | Direct row grouping by `start_row_offset_idx` |
+| B | Multi-page table (same column count) | ~25% | Merge tables, deduplicate overlap rows |
+| C | Merged cells (room spanning items) | ~40% | Span registry with `row_span`/`col_span` carry-forward |
+| D | Hierarchical text (no table) | ~5% | Markdown regex fallback, synthetic rows |
+| E1 | Multi-item cell | ~5% | Flag `needs_llm_split`, LLM splits before extraction |
+| E2 | Note/comment row | Rare | Skip, store in `extraction_notes` |
+| E3 | Sub-header row (floor/level) | Common | Update `current_level` context for subsequent rows |
+| F | Not Sampled / No Access | ~5-10% | Regex text scan, synthetic rows with `is_synthetic=True` |
+| G | Different column orders | ~30% | Fuzzy header matching via `COLUMN_ALIASES` (Jaro-Winkler) |
+| H | Split/fragmented tables | ~2% | JOIN on shared key column |
+
+**Ollama Truncation Fallback:**
+- `TruncationError` detection when JSON output is incomplete (unterminated string/object)
+- Automatic retry with cloud model (Anthropic/OpenRouter) on truncation
+- 30% output budget reservation in `_ollama_split_by_budget()` to prevent truncation
+- Configurable extraction model via `ACM_EXTRACTION_MODEL` env var (default: `llama3.1:8b`)
+
+**Fallback Strategy:**
+- Per-row mode is default (`ACM_ITEM_EXTRACTION_MODE=per_row`)
+- Falls back to bulk mode when: no DoclingDocument JSON available, no rows segmented, or env var set to `bulk`
+- Bulk path remains unchanged for cloud provider extraction
+
 ### 5.5 Enum Definitions (NEW - 2026-02-05)
 
 > Source: `docs/samplePDF/instructions-sample/register_enums.json`
@@ -1244,6 +1307,7 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 | 2026-02-23 | 1.6 | Added FR-1100 series for cross-site marketing-app navigation, canonical root-domain behavior, and env-configurable URL contract for Vercel multi-project deployment |
 | 2026-03-01 | 1.7 | Epic 29 reconciliation: unified orchestrator path contract, parser resilience requirement, benchmark-gated NFRs, and decision-gate release controls added. |
 | 2026-03-02 | 3.0 | **V3 Scope Expansion:** FR-1400 series (SF alignment, 12 FRs); FR-1500 series (multi-provider extraction, 6 FRs); FR-1600 series (UI/UX flows, 10 FRs); FR-1700 series (streaming, 4 FRs); FR-1800 series (AI strategy, 4 FRs); FR-1409 amended (Anthropic default + OpenRouter fallback); NFR-500 (V3 performance), NFR-600 (data sovereignty); Building Record schema (§5.1.5), Raw Extraction Table (§5.1.6), V3 schema additions (§5.1.7); V3 pipeline architecture (§5.4.1); SF vocabulary mapping (§5.5); SF export format (§5.3.1); V3 UI structure (§4.4); 20 V3 test scenarios; V3 rollout phases 5-9; Section 11 V3 Scope |
+| 2026-03-11 | 3.5 | **V3.5 Per-Row Extraction Pipeline (E37):** FR-1900 series (per-row extraction, 6 FRs); per-row Item__c extraction mode (§5.4.2); 9-field extraction schema; DoclingDocument JSON input; row segmentation for 8 edge case types (A-H); Ollama truncation fallback with cloud retry; deterministic post-processing; 163 new tests; Section 12 V3.5 Scope |
 
 ---
 
@@ -1330,3 +1394,49 @@ source
 | FR-1701, FR-1704 | E31 | Moved from E34 to E31-S7 (SSE timing fix) | NEW |
 | FR-1702, FR-1703 | E34 | v3-party-mode-plan.md § PRD Delta | NEW |
 | FR-1801–FR-1804 | E32 | v3-party-mode-plan.md § PRD Delta | NEW |
+| FR-1901–FR-1906 | E37 | v3.5/task_plan.md, v3.5/findings.md | NEW |
+
+---
+
+## 12. V3.5 Per-Row Extraction Pipeline
+
+> **Added:** 2026-03-11
+> **Source Documents:** [v3.5 Task Plan](../../../v3.5/task_plan.md), [v3.5 Findings](../../../v3.5/findings.md), [v3.5 Progress](../../../v3.5/progress.md)
+
+### 12.1 V3.5 Overview
+
+V3.5 redesigns Item__c extraction from a bulk-per-building approach (one LLM call extracting all items for an entire building) to a per-row approach (one LLM call per table row, 9 fields, num_ctx=2048). This dramatically improves extraction accuracy for Ollama local models by reducing context requirements and enabling deterministic post-processing for classification, normalization, and dependency chain validation.
+
+**Key V3.5 Capabilities:**
+1. **Per-Row Extraction** — One LLM call per table row (9 fields), deterministic post-processing (no LLM for classification/normalization)
+2. **DoclingDocument JSON Input** — Lossless table structure with row_span, col_span, page_no, bbox, and header flags
+3. **Row Segmentation Engine** — Handles 8 edge case types (A-H) without LLM, including merged cells, multi-page tables, and hierarchical text
+4. **Ollama Truncation Fallback** — TruncationError detection with automatic cloud model retry and 30% output budget reservation
+5. **Configurable Models** — `ACM_EXTRACTION_MODEL`, `ACM_ITEM_EXTRACTION_MODE`, `ACM_ROW_EXTRACTION_NUM_CTX` env vars
+
+### 12.2 V3.5 Functional Requirements (FR-1900 Series)
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-1901 | System shall support per-row Item__c extraction with one LLM call per table row | P0 | Each row produces one ACMExtractionRecord with 9 fields |
+| FR-1902 | System shall segment DoclingDocument JSON tables into individual rows handling 8 edge case types (A-H) | P0 | Row segmenter handles merged cells, multi-page tables, sub-headers, notes, multi-item cells, hierarchical text, column order variations, and split tables |
+| FR-1903 | System shall detect and recover from Ollama truncation errors with automatic cloud model fallback | P0 | TruncationError triggers retry with Anthropic/OpenRouter; 30% output budget reserved |
+| FR-1904 | System shall perform deterministic post-processing without LLM for friability classification, product taxonomy, and condition normalization | P0 | classify_product(), normalize_enum_value(), dependency chain validation run without LLM calls |
+| FR-1905 | System shall fall back to bulk extraction mode when per-row prerequisites are not met | P1 | Bulk path used when no DoclingDocument JSON available or no rows segmented |
+| FR-1906 | System shall store DoclingDocument JSON alongside extraction results for provenance | P0 | docling_document_json field on acm_table_section table |
+
+### 12.3 V3.5 Epic Summary
+
+| Epic | Scope | Stories | SP | Dependencies |
+|------|-------|--------:|---:|-------------|
+| E37: Per-Row Extraction Pipeline | Row segmentation, 9-field schema, per-row extractor, pipeline integration, DoclingDocument JSON storage, truncation fallback, building schema gaps, edge case fixtures | 8 | 18 | E30-E34 complete |
+
+### 12.4 V3.5 Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `ACM_ITEM_EXTRACTION_MODE` | `per_row` | Extraction mode: `per_row` or `bulk` |
+| `ACM_ROW_EXTRACTION_NUM_CTX` | `2048` | Ollama context window for per-row extraction |
+| `ACM_EXTRACTION_MODEL` | `llama3.1:8b` | Ollama model for extraction (was hardcoded `qwen2.5:7b`) |
+| `ACM_PRE_EXTRACTION_MODEL` | `qwen2.5:14b-instruct-q4_K_M` | Ollama model for building metadata (large context) |
+| `ACM_PRE_EXTRACTION_NUM_CTX` | `32768` | Ollama context window for pre-extraction |

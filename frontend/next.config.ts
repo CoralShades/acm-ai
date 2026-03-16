@@ -4,6 +4,17 @@ import path from "path";
 const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
+  // pdfjs-dist ESM needs loose externals resolution (react-pdf upgrade guide)
+  experimental: {
+    esmExternals: 'loose',
+  },
+
+  // Turbopack: set root to frontend dir to silence multiple-lockfile warning
+  // (used when running `npm run dev:turbo` on systems where Turbopack works)
+  turbopack: {
+    root: __dirname,
+  },
+
   // Externalize CopilotKit runtime dependencies to avoid webpack bundling issues
   serverExternalPackages: [
     "@copilotkit/runtime",
@@ -31,11 +42,11 @@ const nextConfig: NextConfig = {
     ]
   },
 
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      'pdfjs-dist/build/pdf.mjs$': 'pdfjs-dist/legacy/build/pdf.mjs',
-      'pdfjs-dist/build/pdf.worker.min.mjs$': 'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // pdfjs-dist v5 ESM crashes with eval-* devtool (Next.js dev default).
+      // cheap-module-source-map is the fastest non-eval option.
+      config.devtool = 'cheap-module-source-map'
     }
 
     return config

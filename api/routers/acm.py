@@ -56,7 +56,6 @@ from api.models import (
     ClassifyRequest,
     ClassifyResponse,
     FieldDefResponse,
-    FieldMappingUpdateRequest,
     FieldSchemaConfigResponse,
     FieldSchemaConfigUpdateRequest,
     NormalizeRequest,
@@ -207,6 +206,7 @@ async def list_acm_records(
                     floor_level=r.get("floor_level"),
                     no_access=r.get("no_access"),
                     smf_present=r.get("smf_present"),
+                    table_bbox=r.get("table_bbox"),
                     created=str(r.get("created", "")) if r.get("created") else None,
                     updated=str(r.get("updated", "")) if r.get("updated") else None,
                 )
@@ -274,6 +274,7 @@ async def get_acm_record(record_id: str):
             floor_level=record.floor_level,
             no_access=record.no_access,
             smf_present=record.smf_present,
+            table_bbox=record.table_bbox,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -301,7 +302,7 @@ async def trigger_acm_extraction(request: ACMExtractRequest):
         command_id = await CommandService.submit_command_job(
             "open_notebook",
             "acm_extract",
-            {"source_id": request.source_id, "force": request.force},
+            {"source_id": request.source_id, "force": request.force, "mode": request.mode},
         )
 
         return ACMExtractResponse(
@@ -315,24 +316,12 @@ async def trigger_acm_extraction(request: ACMExtractRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def _get_export_mapping() -> tuple[list[str], list[str | None]]:
-    """Get export headers and field names from active field mapping.
+def _get_export_columns() -> tuple[list[str], list[str | None]]:
+    """Return SF export headers and ACMRecord field names.
 
     Returns (headers, fields) where fields[i] is the ACMRecord attribute
-    for headers[i], or None if unmapped.
+    for headers[i].
     """
-    try:
-        from open_notebook.domain.field_mapping import FieldMapping
-
-        mapping = await FieldMapping.get_active()
-        if mapping.mappings:
-            headers = [m.bar_column for m in mapping.mappings]
-            fields = [m.acm_field for m in mapping.mappings]
-            return headers, fields
-    except Exception as e:
-        logger.debug(f"Failed to load field mapping, using defaults: {e}")
-
-    # Fallback to hardcoded defaults
     headers = [
         "Building Code",
         "Building Name",
@@ -415,7 +404,6 @@ async def export_acm_records(
     Export ACM records as CSV file.
 
     Downloads all records for the specified source as a CSV file.
-    Uses active field mapping for column order when available.
     """
     try:
         # Get all records for source
@@ -430,17 +418,14 @@ async def export_acm_records(
                 status_code=404, detail="No ACM records found for source"
             )
 
-        # Get export mapping
-        headers, fields = await _get_export_mapping()
+        headers, fields = _get_export_columns()
 
         # Create CSV in memory
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Write header — use field mapping
         writer.writerow(headers)
 
-        # Write data rows using field mapping
         for record in records:
             writer.writerow([_get_record_value(record, f) for f in fields])
 
@@ -512,8 +497,7 @@ async def export_acm_excel(
         ws = wb.active
         ws.title = "ACM Register"
 
-        # Get columns from active field mapping
-        export_headers, export_fields = await _get_export_mapping()
+        export_headers, export_fields = _get_export_columns()
         columns = [
             (h, f, max(12, len(h) + 2)) for h, f in zip(export_headers, export_fields)
         ]
@@ -1340,6 +1324,7 @@ async def create_acm_record(request: ACMRecordCreateRequest):
             floor_level=record.floor_level,
             no_access=None,
             smf_present=None,
+            table_bbox=record.table_bbox,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -1413,6 +1398,7 @@ async def update_acm_record(record_id: str, request: ACMRecordUpdateRequest):
             floor_level=record.floor_level,
             no_access=record.no_access,
             smf_present=record.smf_present,
+            table_bbox=record.table_bbox,
             created=str(record.created) if record.created else None,
             updated=str(record.updated) if record.updated else None,
         )
@@ -2365,7 +2351,7 @@ async def _load_db_field_config() -> dict | None:
     """Load field config override from SurrealDB field_schema table."""
     try:
         result = await repo_query(
-            "SELECT * FROM field_schema ORDER BY updated DESC LIMIT 1"
+            "SELECT config_json FROM field_schema:default"
         )
         if result and result[0].get("config_json"):
             import json
@@ -2543,57 +2529,6 @@ async def get_taxonomy(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# --- Field Mapping Endpoints (E5-S4) ---
-
-
-@router.get("/field-mapping")
-async def get_field_mapping():
-    """Get the active export field mapping."""
-    from open_notebook.domain.field_mapping import FieldMapping
-
-    try:
-        mapping = await FieldMapping.get_active()
-        return mapping.model_dump()
-    except Exception as e:
-        logger.error(f"Error fetching field mapping: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.put("/field-mapping")
-async def update_field_mapping(data: FieldMappingUpdateRequest):
-    """Update the active field mapping."""
-    from open_notebook.domain.field_mapping import FieldMapping, FieldMappingEntry
-
-    try:
-        mapping = await FieldMapping.get_active()
-        if data.mappings is not None:
-            mapping.mappings = [
-                FieldMappingEntry.model_validate(m.model_dump()) for m in data.mappings
-            ]
-        if data.name is not None:
-            mapping.name = data.name
-        if data.notes is not None:
-            mapping.notes = data.notes
-        await mapping.update()
-        return mapping.model_dump()
-    except Exception as e:
-        logger.error(f"Error updating field mapping: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/field-mapping/reset")
-async def reset_field_mapping():
-    """Reset field mapping to defaults."""
-    from open_notebook.domain.field_mapping import FieldMapping
-
-    try:
-        mapping = await FieldMapping.reset_to_defaults()
-        return mapping.model_dump()
-    except Exception as e:
-        logger.error(f"Error resetting field mapping: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 # =============================================================================
 # SF Field Schema Endpoint (E30-S1 — V3 Foundation)
 # =============================================================================
@@ -2648,12 +2583,13 @@ async def list_building_records(
         if buildings:
             from open_notebook.database.repository import repo_query
 
+            sid = ensure_record_id(source_id)
             rows = await repo_query(
                 "SELECT building_record_id, count() AS cnt "
                 "FROM acm_record WHERE source_id = $source_id "
                 "AND building_record_id != NONE "
                 "GROUP BY building_record_id",
-                {"source_id": source_id},
+                {"source_id": sid},
             )
             for row in rows:
                 bid = str(row.get("building_record_id", ""))
@@ -2780,7 +2716,7 @@ async def get_validation_summary(
                    count() as error_count
             FROM acm_record
             WHERE source_id = $source_id
-              AND array::len(validation_errors) > 0
+              AND validation_errors IS NOT NONE AND array::len(validation_errors) > 0
             GROUP BY building_id;
         """
         rows = await repo_query(query, {"source_id": sid})
@@ -3055,6 +2991,7 @@ async def get_provenance(record_id: str):
         floor_level=record.floor_level,
         no_access=record.no_access,
         smf_present=record.smf_present,
+        table_bbox=record.table_bbox,
         validation_status=getattr(record, "validation_status", None),
         validation_errors=getattr(record, "validation_errors", []) or [],
         created=str(record.created) if record.created else None,

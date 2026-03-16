@@ -17,6 +17,15 @@ from loguru import logger
 
 from open_notebook.database.repository import ensure_record_id, repo_query
 
+# --- Allowed ACM fields for UPDATE (SQL injection prevention) ---
+ALLOWED_ACM_FIELDS = {
+    'building_id', 'building_name', 'product', 'friable', 'acm_product_group',
+    'acm_product_type', 'material_condition', 'disturbance_potential', 'location',
+    'room_name', 'room_id', 'floor_level', 'quantity', 'sample_result',
+    'risk_status', 'identifying_company', 'material_description', 'extent',
+    'hygienist_recommendations', 'area_type', 'no_access', 'acm_labelled',
+}
+
 # --- Pending write store ---
 # Stores previewed operations keyed by operation_id.
 # Operations are cleared after execution or expiry.
@@ -76,7 +85,7 @@ def query_job_records(query: str) -> str:
     """
     source_id = get_crud_context()
     if not source_id:
-        return "Error: No job context set. Cannot query records."
+        return "Error: No job context set. Cannot query records. The source_id should be provided in the system prompt."
 
     q_lower = query.lower()
 
@@ -197,7 +206,9 @@ def preview_write(
 
     operation_id = str(uuid.uuid4())[:8]
 
-    # Store pending operation
+    import time
+
+    # Store pending operation with timestamp for same-turn guard
     _pending_writes[operation_id] = {
         "operation_id": operation_id,
         "operation": operation,
@@ -207,9 +218,11 @@ def preview_write(
         "new_value": new_value,
         "reason": reason,
         "status": "pending",
+        "_created_at": time.time(),
     }
 
-    # Return as JSON that the frontend WriteConfirmationCard component can parse
+    # Return as JSON — the frontend renders an approval dialog
+    # and sends the user's decision as a chat message
     preview = {
         "type": "preview_write",
         "operation_id": operation_id,
@@ -218,35 +231,52 @@ def preview_write(
         "field": field,
         "new_value": new_value,
         "reason": reason,
-        "instruction": (
-            f"Reply with 'confirm {operation_id}' to execute, "
-            f"or 'cancel {operation_id}' to abort."
-        ),
     }
 
     return json.dumps(preview)
 
 
 @tool
-def confirm_write(operation_id: str) -> str:
-    """Execute a previously previewed write operation after the user has confirmed it.
+def execute_pending_write(
+    operation_id: str,
+    source_id: Optional[str] = None,
+    edits: Optional[dict] = None,
+) -> str:
+    """Execute a previously previewed write operation ONLY after the user explicitly approves.
 
-    Only call this after the user explicitly says to confirm.
+    CRITICAL: Only call this tool when the user's LAST message contains "Approved" or
+    "Execute operation". NEVER call this in the same turn as preview_write.
+    If the user has not approved, DO NOT call this tool.
 
     Args:
-        operation_id: The operation_id from the preview_write response
+        operation_id: The operation_id from the preview_write result
+        source_id: Optional source_id override. Falls back to context.
+        edits: Optional field edits from the user
     """
-    source_id = get_crud_context()
+    source_id = source_id or get_crud_context()
     pending = _pending_writes.get(operation_id)
 
     if not pending:
-        return f"Error: No pending operation found with ID {operation_id}."
+        return f"Error: No pending operation found with ID {operation_id}. The user must approve before execution."
 
     if pending.get("status") == "executed":
         return f"Operation {operation_id} was already executed."
 
+    # Safety: block if previewed less than 2 seconds ago (prevent same-turn self-approval)
+    import time
+    created_at = pending.get("_created_at", 0)
+    if time.time() - created_at < 2.0:
+        return f"Error: Operation {operation_id} was just previewed. Wait for user approval before executing."
+
     if pending.get("source_id") != source_id:
         return "Error: Operation source_id mismatch — security violation."
+
+    # Apply any user edits from the approval dialog
+    if edits:
+        if "new_value" in edits:
+            pending["new_value"] = edits["new_value"]
+        if "field" in edits:
+            pending["field"] = edits["field"]
 
     async def execute():
         sid = ensure_record_id(source_id)
@@ -256,8 +286,9 @@ def confirm_write(operation_id: str) -> str:
         new_value = pending.get("new_value")
 
         if op == "UPDATE" and record_id and field:
+            if field not in ALLOWED_ACM_FIELDS:
+                return f"Error: Field '{field}' is not a valid ACM field."
             rid = ensure_record_id(record_id)
-            # Verify record belongs to this source
             check = await repo_query(
                 "SELECT id FROM acm_record WHERE id = $rid AND source_id = $sid",
                 {"rid": rid, "sid": sid},
@@ -270,7 +301,6 @@ def confirm_write(operation_id: str) -> str:
                 {"rid": rid, "val": new_value},
             )
 
-            # Log to crud_audit
             await repo_query(
                 """INSERT INTO crud_audit {
                     job_id: $sid,
@@ -278,7 +308,7 @@ def confirm_write(operation_id: str) -> str:
                     natural_language: $reason,
                     generated_surql: $surql,
                     operation: $op,
-                    confirmed_by: 'user'
+                    confirmed_by: 'user_hitl'
                 }""",
                 {
                     "sid": sid,
@@ -309,7 +339,7 @@ def confirm_write(operation_id: str) -> str:
                     natural_language: $reason,
                     generated_surql: $surql,
                     operation: $op,
-                    confirmed_by: 'user'
+                    confirmed_by: 'user_hitl'
                 }""",
                 {
                     "sid": sid,
@@ -330,3 +360,5 @@ def confirm_write(operation_id: str) -> str:
     except Exception as e:
         logger.error(f"Error executing write {operation_id}: {e}")
         return f"Error executing write: {str(e)}"
+
+

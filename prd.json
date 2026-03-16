@@ -2,9 +2,9 @@
   "version": "3.0",
   "project": "ACM-AI V3",
   "generatedAt": "2026-03-03T12:00:00.000Z",
-  "totalStories": 45,
-  "totalStoryPoints": 132,
-  "sprints": 8,
+  "totalStories": 72,
+  "totalStoryPoints": 213,
+  "sprints": 10,
   "stories": [
     {
       "id": "E30-S1",
@@ -1541,6 +1541,905 @@
       "implementedDate": "2026-03-05",
       "notes": "Completed",
       "passes": true
+    },
+    {
+      "id": "E36-S1",
+      "title": "Agent Team Creation & Orchestration Setup",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 3,
+      "riskLevel": "LOW",
+      "storyType": "infrastructure",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "AC1: 6 new agent files created in .claude/agents/ with valid YAML frontmatter",
+        "AC2: 3 existing agents updated (acm-e2e-tester, qa-specialist, docs-specialist)",
+        "AC3: docs/sprint-artifacts/e36/ directory with task_plan.md, progress.md, findings.md",
+        "AC4: prd.json contains E36 epic with 8 stories",
+        "AC5: sprint-status.yaml has E36 entries",
+        "AC6: DYNAMIC_ROUTES in route-walker.ts has 12 entries",
+        "AC7: npm run build still passes",
+        "AC8: uv run ruff check . still passes"
+      ],
+      "keyFiles": [
+        ".claude/agents/e36-lead.md",
+        ".claude/agents/e36-browser-tester.md",
+        ".claude/agents/e36-log-sentinel.md",
+        ".claude/agents/e36-devils-advocate.md",
+        ".claude/agents/e36-bmad-scribe.md",
+        ".claude/agents/e36-ux-auditor.md",
+        "docs/sprint-artifacts/e36/task_plan.md",
+        "tests/e2e/framework/route-walker.ts"
+      ],
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
+    },
+    {
+      "id": "E36-S2",
+      "title": "E35 Fix Re-verification",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 5,
+      "riskLevel": "MEDIUM",
+      "storyType": "verification",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "E36-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Each E35 fix (S1-S8) browser-tested with screenshot evidence",
+        "AC2: Sync upload completes without asyncio error",
+        "AC3: Model defaults persist across API restart",
+        "AC4: Ollama extraction completes with format=json",
+        "AC5: Provider priority order verified in logs",
+        "AC6: SSE shows Complete for finished jobs",
+        "AC7: Building backfill returns data for pre-V3 sources",
+        "AC8: SF picklist values used in extracted records",
+        "AC9: Empty state shown for source with 0 buildings"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/evidence/e35-s1/",
+        "docs/sprint-artifacts/e36/progress.md"
+      ],
+      "techSpecFile": "docs/sprint-artifacts/e36-s2-e35-fix-re-verification.md",
+      "implementedDate": "2026-03-05",
+      "notes": "Completed",
+      "passes": true
+    },
+    {
+      "id": "E36-S3",
+      "title": "Route/Coverage Gap Fixes",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 3,
+      "riskLevel": "LOW",
+      "storyType": "testing",
+      "complexity": "simple",
+      "priority": "P1",
+      "dependencies": [
+        "E36-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: DYNAMIC_ROUTES has 12 entries (was 4)",
+        "AC2: smoke-walker spec runs successfully",
+        "AC3: 36/36 routes covered (100%)",
+        "AC4: cheat-sheet.md routes section updated"
+      ],
+      "keyFiles": [
+        "tests/e2e/framework/route-walker.ts",
+        "tests/e2e/specs/smoke-walker.spec.ts",
+        "docs/e2e-testing/cheat-sheet.md"
+      ],
+      "passes": true,
+      "implementedDate": "2026-03-05",
+      "notes": "Completed"
+    },
+    {
+      "id": "E36-S4",
+      "title": "Ollama Multi-Model Benchmark",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 5,
+      "riskLevel": "HIGH",
+      "storyType": "verification",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": [
+        "E36-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: 12 extraction runs completed (6 models x 2 PDFs)",
+        "AC2: Each run compared against ground truth",
+        "AC3: Per-run detail files in benchmark-results/",
+        "AC4: Summary table with accuracy % per model per PDF",
+        "AC5: Log analysis per run in logs/",
+        "AC6: Best-performing model identified"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/benchmark-results/summary.md",
+        "tests/e2e/fixtures/samps/broadmeadows-expected-results.json",
+        "docs/samplePDF/Alexander_GroundTruth.csv"
+      ],
+      "notes": "Completed",
+      "passes": true,
+      "implementedDate": "2026-03-05",
+      "techSpecFile": "docs/sprint-artifacts/e36-s4-ollama-multi-model-benchmark.md"
+    },
+    {
+      "id": "E36-S5",
+      "title": "Functional Verification of Completed Epics",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 5,
+      "riskLevel": "MEDIUM",
+      "storyType": "verification",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": [
+        "E36-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Dashboard stats cards show real counts",
+        "AC2: Upload wizard completes full workflow",
+        "AC3: Extraction visible on frontend",
+        "AC4: Raw table tab shows extracted tables",
+        "AC5: PDF provenance viewer shows bbox overlays",
+        "AC6: Building sidebar + item grid show records",
+        "AC7: ACM register shows global grid",
+        "AC8: No dropped pages or missing records vs ground truth"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/evidence/functional/"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S6",
+      "title": "UI/UX Audit & Evidence Collection",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "verification",
+      "complexity": "moderate",
+      "priority": "P2",
+      "dependencies": [
+        "E36-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: All 36 routes audited at 3 viewports",
+        "AC2: Loading/empty/error states verified",
+        "AC3: data-testid coverage report generated",
+        "AC4: Responsive layout issues documented",
+        "AC5: UX audit report written"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/ux-audit-report.md",
+        "docs/sprint-artifacts/e36/evidence/ux-audit/"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S7",
+      "title": "Devil's Advocate Review & Hardening",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "review",
+      "complexity": "moderate",
+      "priority": "P2",
+      "dependencies": [
+        "E36-S2",
+        "E36-S4"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Adversarial review of all 8 E35 fixes",
+        "AC2: Benchmark results reviewed for data quality",
+        "AC3: Test assertions challenged for completeness",
+        "AC4: Synthesis document with BLOCKER/CONCERN/NITPICK counts",
+        "AC5: Prioritized action items"
+      ],
+      "keyFiles": [
+        "docs/sprint-artifacts/e36/adversarial-reviews/synthesis.md"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E36-S8",
+      "title": "BMAD Documentation Closeout",
+      "epic": "E36",
+      "sprint": "E36",
+      "storyPoints": 1,
+      "riskLevel": "LOW",
+      "storyType": "documentation",
+      "complexity": "simple",
+      "priority": "P2",
+      "dependencies": [
+        "E36-S2",
+        "E36-S3",
+        "E36-S4",
+        "E36-S5",
+        "E36-S6",
+        "E36-S7"
+      ],
+      "acceptanceCriteria": [
+        "AC1: prd.json updated with final E36 story statuses",
+        "AC2: sprint-status.yaml updated",
+        "AC3: CLAUDE.md updated if needed",
+        "AC4: MEMORY.md updated with E36 findings",
+        "AC5: task_plan.md and progress.md finalized"
+      ],
+      "keyFiles": [
+        "prd.json",
+        "docs/sprint-artifacts/sprint-status.yaml",
+        "docs/sprint-artifacts/e36/task_plan.md",
+        "docs/sprint-artifacts/e36/progress.md"
+      ],
+      "notes": "Backlog"
+    },
+    {
+      "id": "E37-S1",
+      "title": "DoclingDocument JSON Storage",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "backend",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "E31-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: DoclingDocument JSON stored via export_to_dict() in NormalizedTable",
+        "AC2: docling_document_json propagated through source_commands pipeline",
+        "AC3: Migration 48 adds docling_document_json column to acm_table_section",
+        "AC4: 12 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/providers/base.py",
+        "open_notebook/extractors/providers/docling_adapter.py",
+        "commands/source_commands.py",
+        "migrations/48.surrealql",
+        "tests/test_docling_json_storage.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S2",
+      "title": "Building Schema + Prompt Gaps",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "LOW",
+      "storyType": "backend",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "E31-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: building_sub_category, building_risk_rating added to BuildingRecord",
+        "AC2: 5 new fields on BuildingExtractionResult schema",
+        "AC3: v3_building_extraction.jinja updated with new fields",
+        "AC4: Migration 47 adds new columns",
+        "AC5: 19 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/domain/acm.py",
+        "open_notebook/extractors/acm_schemas_v3.py",
+        "prompts/acm/v3_building_extraction.jinja",
+        "migrations/47.surrealql",
+        "tests/test_building_schema_gaps.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S3",
+      "title": "Truncation Fallback + Output Budget",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 3,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [
+        "E32-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: TruncationError caught in _v3_extract_items(), returns status=truncated",
+        "AC2: Retry with cloud model on truncation in _chunk_and_extract_items()",
+        "AC3: 30% output budget reserved in _ollama_split_by_budget()",
+        "AC4: ACM_EXTRACTION_MODEL env var for configurable Ollama model",
+        "AC5: 17 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/orchestrator.py",
+        "open_notebook/graphs/utils.py",
+        "open_notebook/graphs/acm_extraction.py",
+        "tests/test_truncation_fallback.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S4",
+      "title": "Row Segmentation Engine",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 3,
+      "riskLevel": "HIGH",
+      "storyType": "backend",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: RawTableRow Pydantic model with cells, column_mapping, edge case metadata",
+        "AC2: 12 COLUMN_ALIASES with Jaro-Winkler fuzzy matching (reused from consensus/matcher.py)",
+        "AC3: segment_docling_table() handles Types A, C, E1-E3",
+        "AC4: segment_multiple_tables() handles Types B, H (multi-page, split tables)",
+        "AC5: scan_text_for_synthetics() handles Types D, F",
+        "AC6: generate_debug_table() produces HTML debug output",
+        "AC7: 32 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/row_segmenter.py",
+        "tests/test_row_segmenter.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S5",
+      "title": "9-Field Item Schema + Mapper",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: ACMItemRow with exactly 9 fields (room_name, floor_level, item_location, item_name, friability, acm_classification, acm_sub_classification, condition, disturbance_potential)",
+        "AC2: map_item_row_to_extraction_record() targets ACMExtractionRecord",
+        "AC3: normalize_friability() and is_friable_bool() deterministic helpers",
+        "AC4: 47 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/domain/acm_row_schemas.py",
+        "open_notebook/domain/acm_row_mappers.py",
+        "tests/test_acm_row_mappers.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S6",
+      "title": "Edge Case Table Fixtures",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 1,
+      "riskLevel": "LOW",
+      "storyType": "testing",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: 11 JSON fixtures for DoclingDocument table format (Types A, B x2, C x2, E1, E2, E3, G x2, H)",
+        "AC2: 2 Markdown fixtures (Types D, F)",
+        "AC3: README documenting each fixture",
+        "AC4: Realistic Australian school ACM data"
+      ],
+      "keyFiles": [
+        "tests/fixtures/edge_case_tables/"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S7",
+      "title": "Per-Row Extraction Orchestrator",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 3,
+      "riskLevel": "HIGH",
+      "storyType": "backend",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S4",
+        "E37-S5"
+      ],
+      "acceptanceCriteria": [
+        "AC1: build_kv_prompt() creates key-value prompt from RawTableRow cells",
+        "AC2: extract_single_row() with retry (max 2) and JSON parsing",
+        "AC3: split_multi_item_row() for Type E1 multi-item cells",
+        "AC4: extract_all_rows() main loop with SSE events and Langfuse spans",
+        "AC5: _build_fallback_record() for graceful extraction failure",
+        "AC6: 27 unit tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/row_extractor.py",
+        "prompts/acm/row_extraction.jinja",
+        "prompts/acm/row_split.jinja",
+        "tests/test_row_extractor.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "E37-S8",
+      "title": "Pipeline Integration + Mode Toggle",
+      "epic": "E37",
+      "sprint": "V3.5",
+      "storyPoints": 2,
+      "riskLevel": "MEDIUM",
+      "storyType": "backend",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S7"
+      ],
+      "acceptanceCriteria": [
+        "AC1: ACM_ITEM_EXTRACTION_MODE env var (per_row | bulk, default: per_row)",
+        "AC2: Per-row path in extract_items_node calls segmenter + extractor",
+        "AC3: Recovery node (no-access) gated in per-row mode",
+        "AC4: Graceful fallback to bulk path when no DoclingDocument JSON",
+        "AC5: Bulk extraction path unchanged",
+        "AC6: 9 integration tests pass"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/acm_extraction.py",
+        ".env.example",
+        "tests/test_pipeline_integration.py"
+      ],
+      "passes": true,
+      "notes": "Completed",
+      "model": "sonnet",
+      "implementedDate": "2026-03-10"
+    },
+    {
+      "id": "BF11-S1",
+      "title": "Pipeline 6-Bug Fix (0→16 Records)",
+      "epic": "BF11",
+      "sprint": "BugFix",
+      "storyPoints": 3,
+      "riskLevel": "HIGH",
+      "storyType": "bugfix",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "E37-S8"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Room key remapping in _coerce_rooms_in_inventory",
+        "AC2: Generic heuristic fallback for all document types",
+        "AC3: SF Schema UPSERT inline record ID",
+        "AC4: Prompt terminology generic and document-agnostic",
+        "AC5: Building ID generation + metadata injection",
+        "AC6: Inject page_number into docling JSON"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/building_inventory.py",
+        "api/sf_schema_provisioning.py",
+        "prompts/acm/building_inventory.jinja",
+        "prompts/acm/metadata_and_structure.jinja",
+        "open_notebook/graphs/acm_extraction.py"
+      ],
+      "passes": true,
+      "notes": "Completed. 0→16 records on Broadmeadows PDF.",
+      "model": "opus",
+      "implementedDate": "2026-03-11"
+    },
+    {
+      "id": "BF11-S2",
+      "title": "Record Gap Recovery — Phase 1 (16→31 Path)",
+      "epic": "BF11",
+      "sprint": "BugFix",
+      "storyPoints": 3,
+      "riskLevel": "HIGH",
+      "storyType": "bugfix",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "BF11-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Fix _merge_provider_tables multi-table-per-page overwrite",
+        "AC2: Fix building page_end for single-building documents",
+        "AC3: Fix page filter silent fallback + page_number=0 handling",
+        "AC4: Add sample_number, sample_result, acm_product to ACMItemRow",
+        "AC5: Update row extraction prompt and mapper for new fields"
+      ],
+      "keyFiles": [
+        "commands/source_commands.py",
+        "open_notebook/extractors/orchestrator.py",
+        "open_notebook/domain/acm_row_schemas.py",
+        "open_notebook/domain/acm_row_mappers.py",
+        "open_notebook/extractors/row_segmenter.py"
+      ],
+      "passes": true,
+      "notes": "Completed. Page range + field completeness fixes.",
+      "model": "opus",
+      "implementedDate": "2026-03-11"
+    },
+    {
+      "id": "BF11-S3",
+      "title": "Building Persistence + Correction Fixes",
+      "epic": "BF11",
+      "sprint": "BugFix",
+      "storyPoints": 3,
+      "riskLevel": "MEDIUM",
+      "storyType": "bugfix",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "BF11-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Minimal BuildingRecord fallback when LLM extraction fails",
+        "AC2: document_metadata flows to heuristic_fallback + site_name used",
+        "AC3: Ollama format=json applied to correction stage model",
+        "AC4: Terminal status writes to extraction_progress table"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/acm_extraction.py",
+        "open_notebook/extractors/building_inventory.py",
+        "commands/acm_commands.py"
+      ],
+      "passes": true,
+      "notes": "Completed. Commit b05c91ab.",
+      "model": "opus",
+      "implementedDate": "2026-03-11"
+    },
+    {
+      "id": "BF11-S4",
+      "title": "ObjectModel.save() Critical Fix — Building Persistence",
+      "epic": "BF11",
+      "sprint": "BugFix",
+      "storyPoints": 2,
+      "riskLevel": "CRITICAL",
+      "storyType": "bugfix",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "BF11-S3"
+      ],
+      "acceptanceCriteria": [
+        "AC1: save() pattern uses await record.save(); if not record.id: instead of checking return value",
+        "AC2: BuildingRecordResponse datetime coercion via model_validator",
+        "AC3: Test mock pattern uses _make_fake_save() with descriptor protocol",
+        "AC4: 3/3 buildings persist correctly in live extraction"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/acm_extraction.py",
+        "api/models.py",
+        "tests/test_building_extraction.py"
+      ],
+      "passes": true,
+      "notes": "CRITICAL fix. save() returns None — code checked return value. Root cause of ALL building persistence failures. Commit a757c141.",
+      "model": "opus",
+      "implementedDate": "2026-03-11"
+    },
+    {
+      "id": "BF11-S5",
+      "title": "Docling JSON NULL Guard + Truncation Retry Fix",
+      "epic": "BF11",
+      "sprint": "BugFix",
+      "storyPoints": 2,
+      "riskLevel": "MEDIUM",
+      "storyType": "bugfix",
+      "complexity": "moderate",
+      "priority": "P0",
+      "dependencies": [
+        "BF11-S4"
+      ],
+      "acceptanceCriteria": [
+        "AC1: force=true re-extracts acm_table_section when docling_document_json IS NULL",
+        "AC2: Truncation retry guarded by cloud API key availability",
+        "AC3: No infinite retry loop in Ollama-only mode",
+        "AC4: 2123 tests pass, lint clean"
+      ],
+      "keyFiles": [
+        "commands/acm_commands.py",
+        "open_notebook/graphs/acm_extraction.py"
+      ],
+      "passes": true,
+      "notes": "Completed. Per-row extraction unblocked for old sources.",
+      "model": "opus",
+      "implementedDate": "2026-03-11"
+    },
+    {
+      "id": "BF11-S6",
+      "title": "Docling export_to_dict Root Cause Fix",
+      "epic": "BF11",
+      "sprint": "BugFix",
+      "storyPoints": 1,
+      "riskLevel": "HIGH",
+      "storyType": "bugfix",
+      "complexity": "simple",
+      "priority": "P0",
+      "dependencies": [
+        "BF11-S5"
+      ],
+      "acceptanceCriteria": [
+        "AC1: table.data.model_dump(mode=python) replaces table.export_to_dict()",
+        "AC2: docling_document_json populated for all tables (not NULL)",
+        "AC3: Per-row extraction activates instead of bulk fallback",
+        "AC4: field_schema query targets field_schema:default directly"
+      ],
+      "keyFiles": [
+        "open_notebook/extractors/providers/docling_adapter.py",
+        "api/routers/acm.py"
+      ],
+      "passes": true,
+      "notes": "ROOT CAUSE: TableItem is a Pydantic model with no export_to_dict(). Bug existed since feature was added — silently caught AttributeError, set docling_json=None.",
+      "model": "opus",
+      "implementedDate": "2026-03-11"
+    },
+    {
+      "id": "CPK-S1",
+      "title": "CopilotKit Audit — Bug Fixes & Hook Migration",
+      "epic": "CPK",
+      "sprint": "CopilotKit",
+      "storyPoints": 5,
+      "riskLevel": "MEDIUM",
+      "storyType": "bugfix",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "AC1: CopilotRuntime instantiated as module-level singleton (not per-request)",
+        "AC2: MemorySaver checkpointer on CRUD graph",
+        "AC3: All 11 tool renderers migrated to useRenderToolCall with error handling",
+        "AC4: CopilotProvider has onError callback and env-conditional showDevConsole",
+        "AC5: useCopilotReadable exposes page context to LLM",
+        "AC6: useCopilotChatSuggestions provides domain-aware suggestions",
+        "AC7: @ag-ui/client added as explicit dependency",
+        "AC8: Frontend build and lint pass"
+      ],
+      "keyFiles": [
+        "frontend/src/app/api/copilotkit/route.ts",
+        "frontend/src/app/copilot-crud/route.ts",
+        "frontend/src/components/chat/ToolResultRenderers.tsx",
+        "frontend/src/components/jobs/CrudToolRenderers.tsx",
+        "frontend/src/components/providers/CopilotProvider.tsx",
+        "frontend/src/components/chat/SmartChatPanel.tsx",
+        "open_notebook/graphs/crud_agent.py"
+      ],
+      "passes": true,
+      "notes": "5 critical bugs fixed, tool renderer pattern corrected, UX hooks added",
+      "model": "opus",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "CPK-S2",
+      "title": "HITL Approval Flow, Generative UI & State Streaming",
+      "epic": "CPK",
+      "sprint": "CopilotKit",
+      "storyPoints": 8,
+      "riskLevel": "MEDIUM",
+      "storyType": "feature",
+      "complexity": "complex",
+      "priority": "P1",
+      "dependencies": [
+        "CPK-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: copilotkit>=0.1.78 Python SDK installed",
+        "AC2: CRUD graph uses LangGraph interrupt() for write approval (check_write_approval node)",
+        "AC3: useLangGraphInterrupt renders HITLApprovalDialog on write_approval interrupt",
+        "AC4: useDefaultTool provides fallback rendering for unregistered tool calls",
+        "AC5: useCoAgentStateRender shows supervisor progress in SmartChatPanel",
+        "AC6: copilotkit_emit_state streams intermediate state from supervisor graph",
+        "AC7: 6 new generative UI components created (HITLApprovalDialog, WriteDiffView, BuildingSummaryCard, ItemDetailCard, ExtractionProgress, DefaultToolFallback)",
+        "AC8: Frontend build and backend lint pass"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/crud_agent.py",
+        "open_notebook/graphs/crud_tools.py",
+        "open_notebook/graphs/supervisor_agent.py",
+        "frontend/src/components/jobs/CrudToolRenderers.tsx",
+        "frontend/src/components/chat/ToolResultRenderers.tsx",
+        "frontend/src/components/chat/SmartChatPanel.tsx",
+        "frontend/src/components/chat/renderers/HITLApprovalDialog.tsx"
+      ],
+      "passes": true,
+      "notes": "HITL replaces toast-based 'type confirm' pattern. Backend handles both dict and JSON string from resolve().",
+      "model": "opus",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "CPK-S3",
+      "title": "P2/P3 UI Polish + Chat Model Selector",
+      "epic": "CPK",
+      "sprint": "CopilotKit",
+      "storyPoints": 5,
+      "riskLevel": "LOW",
+      "storyType": "feature",
+      "complexity": "moderate",
+      "priority": "P2",
+      "dependencies": [
+        "CPK-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: 15 P2/P3 UI/UX fixes applied (HITL double-submit guard, aria roles, dead code removal, standardised margins)",
+        "AC2: TOOL_LABELS extracted to frontend/src/lib/constants/tool-labels.ts (single source of truth)",
+        "AC3: BuildingListResult extracted as standalone component from ACMStatsResult",
+        "AC4: ACMTableResult caps rows at 20 with expandable 'Show all X results' button",
+        "AC5: ChatModelSelector component — compact popover picker, renders when 2+ language models registered",
+        "AC6: ChatModelSelector added to SmartChatPanel and JobCrudChatPanel headers",
+        "AC7: model_id field in SupervisorAgentState and CRUDAgentState TypedDicts",
+        "AC8: Backend supervisor_agent.py and crud_agent.py read state.get('model_id') first, fall back to config.configurable.model_id",
+        "AC9: Selection persists to localStorage per chat context",
+        "AC10: Frontend build and lint pass"
+      ],
+      "keyFiles": [
+        "frontend/src/lib/constants/tool-labels.ts",
+        "frontend/src/components/chat/ChatModelSelector.tsx",
+        "frontend/src/components/chat/renderers/BuildingListResult.tsx",
+        "frontend/src/components/chat/SmartChatPanel.tsx",
+        "frontend/src/components/jobs/JobCrudChatPanel.tsx",
+        "open_notebook/graphs/supervisor_agent.py",
+        "open_notebook/graphs/crud_agent.py"
+      ],
+      "passes": true,
+      "notes": "P2/P3 cosmetic fixes + in-chat model switching. Model selector only visible when 2+ language models registered.",
+      "model": "sonnet",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "PROV-S1",
+      "title": "Enhanced PDF Viewer — Zoom, Search, Record Highlighting",
+      "epic": "E33",
+      "sprint": "Post-V3",
+      "storyPoints": 3,
+      "riskLevel": "LOW",
+      "storyType": "feature",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "E33-S6"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Zoom controls (50-300%) with +/- buttons, reset, keyboard shortcuts (Ctrl+/Ctrl-/Ctrl+0)",
+        "AC2: Page navigation (prev/next) with page counter and go-to-source-page shortcut",
+        "AC3: In-page text search with Ctrl+F toggle, yellow/orange match highlighting, next/prev navigation, match counter",
+        "AC4: Scrollable PDF canvas (maxHeight 65vh) with overflow-auto",
+        "AC5: Bbox overlay auto-scrolls into view after page render (350ms delay)",
+        "AC6: Bbox pulse animation (3-cycle glow) for visual attention",
+        "AC7: Crosshair button in toolbar to re-scroll to highlighted record",
+        "AC8: Status bar shows highlight status and current zoom/page",
+        "AC9: table_bbox field populated in all 5 ACMRecordResponse builders (bug fix — was missing)",
+        "AC10: CSS respects prefers-reduced-motion",
+        "AC11: Frontend build passes clean"
+      ],
+      "keyFiles": [
+        "frontend/src/components/acm/PDFPageViewer.tsx",
+        "frontend/src/app/globals.css",
+        "frontend/src/components/acm/ProvenanceViewer.tsx",
+        "api/routers/acm.py"
+      ],
+      "passes": true,
+      "notes": "Enhanced provenance PDF viewer. Ports zoom/nav patterns from ACMCellViewer, adds search + bbox auto-scroll. Bug fix: table_bbox was defined on ACMRecordResponse model but never populated in any response builder.",
+      "model": "opus",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "UI-S1",
+      "title": "Building Grid + ACM Records Grid Rework",
+      "epic": "UI",
+      "sprint": "Post-V3",
+      "storyPoints": 5,
+      "riskLevel": "LOW",
+      "storyType": "feature",
+      "complexity": "moderate",
+      "priority": "P1",
+      "dependencies": [
+        "E33-S2"
+      ],
+      "acceptanceCriteria": [
+        "AC1: Two-tab layout on /source/[id] page — Buildings tab (BuildingGrid) + ACM Records tab (BuildingTabStrip + ACMGrid)",
+        "AC2: New BuildingGrid component with AG Grid showing 13 default building columns (Asset Name, Address, Suburb, Postcode, State, Asset Type, Category, Construction, Year, Levels, Ownership, Frequency, Records)",
+        "AC3: BuildingGrid View button opens BuildingViewDialog (dialog modal wrapping BuildingDetailForm)",
+        "AC4: BuildingGrid uses autoHeight layout and persists column state to localStorage",
+        "AC5: ACMGrid column defs reordered to 13 required Item__c fields (Building Code, Item Name, Friability, ACM Product Group, ACM Product Type, Condition, Disturbance Potential, Location in Room, Room/Area, Floor Level, Quantity, Sample Result, Assessor)",
+        "AC6: PRESET_COLUMNS.essential updated to match 13 required ACM item fields",
+        "AC7: Per-building export dropdown on ACM Records tab — Export Current Building + Export All (Excel/CSV)",
+        "AC8: BuildingGrid applied to both /source/[id] and /jobs/[id] pages (replaces BuildingReviewGrid on jobs page)",
+        "AC9: DependentPicklistEditor, BuildingDetailForm, and RecordWizard styling improvements",
+        "AC10: Frontend build passes clean"
+      ],
+      "keyFiles": [
+        "frontend/src/components/acm/BuildingGrid.tsx",
+        "frontend/src/components/acm/BuildingViewDialog.tsx",
+        "frontend/src/app/(dashboard)/source/[id]/page.tsx",
+        "frontend/src/app/(dashboard)/jobs/[id]/page.tsx",
+        "frontend/src/components/acm/ACMGrid.tsx",
+        "frontend/src/lib/stores/column-visibility-store.ts",
+        "frontend/src/components/acm/DependentPicklistEditor.tsx",
+        "frontend/src/components/acm/BuildingDetailForm.tsx"
+      ],
+      "passes": true,
+      "notes": "Two-tab layout rework: BuildingGrid (13 cols, AG Grid, autoHeight, localStorage) + ACMGrid (13 required fields reorder). Per-building export. Applied to both source and jobs pages. 3 commits: 2f2eeadf, 1fbf321f, e9dcd67f.",
+      "model": "opus",
+      "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "CRUD-SEC-S1",
+      "title": "CRUD Chat + Grid Security & Audit Fix (23 issues)",
+      "epic": "CPK",
+      "sprint": "Post-V3",
+      "storyPoints": 5,
+      "riskLevel": "HIGH",
+      "storyType": "bugfix",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "CPK-S2"
+      ],
+      "acceptanceCriteria": [
+        "S1: execute_pending_write removed from LLM tool list — graph-level route_entry + execute_write_node enforce approval barrier",
+        "S2: confirm_write dead code deleted from crud_tools.py",
+        "S3: ALLOWED_ACM_FIELDS allowlist added to crud_tools.py — prevents SQL injection in UPDATE queries",
+        "S4: source_id param removed from query_job_records — always read from agent context",
+        "F1: surrealdb>=1.0.8 pinned in pyproject.toml",
+        "F2: Record ID column added to PRESET_COLUMNS.essential — visible by default in ACMGrid",
+        "F3: React.MouseEvent<HTMLElement> type fixed in BuildingGrid click handler",
+        "F4: Click-to-copy on Record ID cell no longer propagates to row dialog",
+        "F5: navigator.clipboard.writeText guarded with try/catch for non-HTTPS contexts",
+        "U1-U8: HITLApprovalDialog timeout removed, escape key wired, duplicate button IDs fixed, dead Zustand import removed, tool call labels cleaned up, JobCrudChatPanel sourceId guard added",
+        "Pre-existing: ACM Records grid fixed (building_id -> building_record_id in useACMItems)",
+        "Pre-existing: SurrealDB docker image pinned to v2.2.1 (v2.6.3 incompatibility)"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/crud_tools.py",
+        "open_notebook/graphs/crud_agent.py",
+        "frontend/src/components/acm/ACMGrid.tsx",
+        "frontend/src/components/acm/BuildingGrid.tsx",
+        "frontend/src/components/chat/renderers/HITLApprovalDialog.tsx",
+        "frontend/src/components/jobs/CrudToolRenderers.tsx",
+        "frontend/src/components/jobs/JobCrudChatPanel.tsx",
+        "frontend/src/lib/stores/column-visibility-store.ts",
+        "frontend/src/lib/hooks/useACMItems.ts",
+        "frontend/src/lib/types/acm.ts",
+        "api/routers/agui_chat.py",
+        "pyproject.toml",
+        "docker-compose.yml"
+      ],
+      "passes": true,
+      "notes": "Security audit of CRUD chat (23 issues: 4 P0 security, 5 P1 functionality, 8 P2 UX, 6 P3 UX). P0 items: structural HITL barrier enforcement, dead code removal, SQL injection allowlist, source_id context binding. Pre-existing bugs also fixed: ACM Records grid empty (building_id param wrong), SurrealDB v2.6.3 incompatibility (docker image pinned to v2.2.1).",
+      "model": "sonnet",
+      "implementedDate": "2026-03-16"
     }
   ],
   "gates": [
@@ -1580,6 +2479,14 @@
       "unlocked": true,
       "blocksEpics": [],
       "description": "All frontend views operational with AG Grid, provenance UI, and dashboards."
+    },
+    {
+      "id": "GATE:PER_ROW_EXTRACTION",
+      "name": "Per-Row Extraction",
+      "triggerStory": "E37-S8",
+      "unlocked": true,
+      "blocksEpics": [],
+      "description": "Per-row extraction pipeline operational with Ollama num_ctx=2048 support."
     }
   ],
   "metadata": {

@@ -13,15 +13,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
 
 from loguru import logger
-
-if TYPE_CHECKING:
-    from open_notebook.extractors.building_inventory import BuildingMeta
-    from open_notebook.extractors.orchestrator import ExtractionStrategy
-    from open_notebook.extractors.page_tagger import PageTaggingResult
-
 
 # ---------------------------------------------------------------------------
 # Fallback Identifiers (telemetry tags)
@@ -211,23 +204,3 @@ def check_retry_budget(attempt: int, contract: RetryContract) -> bool:
         ``True`` if ``attempt < contract.max_retries``, ``False`` otherwise.
     """
     return attempt < contract.max_retries
-
-
-# ---------------------------------------------------------------------------
-# Strategy selection (re-export for centralized access)
-# ---------------------------------------------------------------------------
-
-
-def select_strategy(
-    building: "BuildingMeta",
-    page_tags: Optional["PageTaggingResult"] = None,
-) -> "ExtractionStrategy":
-    """Select extraction strategy for a building.
-
-    Delegates to ``_select_strategy()`` in orchestrator.py for the actual
-    logic. This function provides a centralized access point so callers
-    don't need to import orchestrator internals.
-    """
-    from open_notebook.extractors.orchestrator import _select_strategy
-
-    return _select_strategy(building, page_tags)

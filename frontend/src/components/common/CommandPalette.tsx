@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 import { useTheme } from '@/lib/stores/theme-store'
 import {
   CommandDialog,
@@ -32,6 +31,7 @@ import {
   BookText,
 } from 'lucide-react'
 import { MARKETING_DOCS_URL, MARKETING_URL } from '@/lib/site-urls'
+import { useCreateDialogs } from '@/lib/hooks/use-create-dialogs'
 
 const navigationItems = [
   { name: 'Sources', href: '/sources', icon: FileText, keywords: ['files', 'documents', 'upload'] },
@@ -70,7 +70,6 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const router = useRouter()
-  const { openSourceDialog } = useCreateDialogs()
   const { setTheme } = useTheme()
 
   // Global keyboard listener for ⌘K / Ctrl+K
@@ -132,6 +131,8 @@ export function CommandPalette() {
     handleSelect(() => router.push(`/search?q=${encodeURIComponent(query)}&mode=ask`))
   }, [handleSelect, router, query])
 
+  const { openSourceDialog } = useCreateDialogs()
+
   const handleCreate = useCallback((action: string) => {
     handleSelect(() => {
       if (action === 'source') openSourceDialog()
@@ -144,10 +145,14 @@ export function CommandPalette() {
 
   const handleAction = useCallback((action: string) => {
     handleSelect(() => {
-      const event = new CustomEvent('acm-command', { detail: { action } })
-      window.dispatchEvent(event)
+      if (action === 'upload') {
+        openSourceDialog()
+      } else {
+        const event = new CustomEvent('acm-command', { detail: { action } })
+        window.dispatchEvent(event)
+      }
     })
-  }, [handleSelect])
+  }, [handleSelect, openSourceDialog])
 
   // Check if query matches any command (navigation, create, theme, or notebook)
   const queryLower = query.toLowerCase().trim()

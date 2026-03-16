@@ -1,0 +1,7 @@
+-- Rollback migration 45: Remove default model fields from open_notebook table
+REMOVE FIELD IF EXISTS default_chat_model ON TABLE open_notebook;
+REMOVE FIELD IF EXISTS default_transformation_model ON TABLE open_notebook;
+REMOVE FIELD IF EXISTS large_context_model ON TABLE open_notebook;
+REMOVE FIELD IF EXISTS default_tools_model ON TABLE open_notebook;
+REMOVE FIELD IF EXISTS default_extraction_model ON TABLE open_notebook;
+REMOVE FIELD IF EXISTS default_embedding_model ON TABLE open_notebook;

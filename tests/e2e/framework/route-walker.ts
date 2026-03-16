@@ -46,6 +46,14 @@ export const DYNAMIC_ROUTES: string[] = [
   '/sources/source:test',
   '/source/source:test',
   '/jobs/source:test',
+  '/extraction/source:test',
+  '/jobs/source:test/chat',
+  '/jobs/source:test/extract',
+  '/jobs/source:test/review/buildings',
+  '/jobs/source:test/review/records',
+  '/source/source:test/building/building_record:test',
+  '/source/source:test/provenance/acm_record:test',
+  '/source/source:test/raw',
 ];
 
 export interface RouteWalkResult {

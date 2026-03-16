@@ -264,11 +264,11 @@ export function RawTableGrid({ sourceId }: RawTableGridProps) {
     reprocessMutation.mutate(sourceId)
   }
 
-  const tabLabels: { key: ProviderTab; label: string }[] = [
+  const tabLabels: { key: ProviderTab; label: string; subtitle?: string }[] = [
     { key: 'all', label: 'All Providers' },
-    { key: 'docling', label: 'Docling' },
-    { key: 'mineru', label: 'MinerU' },
-    { key: 'consensus', label: 'Consensus' },
+    { key: 'docling', label: 'Docling', subtitle: 'ML-based table detection' },
+    { key: 'mineru', label: 'MinerU', subtitle: 'PDF structure analysis' },
+    { key: 'consensus', label: 'Consensus', subtitle: 'Merged provider results' },
   ]
 
   return (
@@ -301,14 +301,20 @@ export function RawTableGrid({ sourceId }: RawTableGridProps) {
 
       {/* Provider tabs */}
       <div className="flex gap-1 px-4 py-2 border-b bg-muted/30 shrink-0">
-        {tabLabels.map(({ key, label }) => (
+        {tabLabels.map(({ key, label, subtitle }) => (
           <Button
             key={key}
             variant={activeProvider === key ? 'default' : 'ghost'}
             size="sm"
+            className="h-auto py-1.5"
             onClick={() => setActiveProvider(key)}
           >
-            {label}
+            <span className="flex flex-col items-center leading-tight">
+              <span>{label}</span>
+              {subtitle && (
+                <span className="text-[10px] font-normal opacity-70">{subtitle}</span>
+              )}
+            </span>
           </Button>
         ))}
       </div>

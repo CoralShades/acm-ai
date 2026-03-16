@@ -55,7 +55,7 @@ def generate_unique_filename(original_filename: str, upload_folder: str) -> str:
 
         full_path = file_path / new_filename
         if not full_path.exists():
-            return str(full_path)
+            return str(full_path.resolve())
         counter += 1
 
 
@@ -187,7 +187,8 @@ async def get_sources(
             query = f"""
                 SELECT id, asset, created, title, updated, topics, command, review_status,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
-                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded
+                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded,
+                (SELECT VALUE total_pages FROM source_intelligence WHERE source_id = $parent.id LIMIT 1)[0] OR 0 AS page_count
                 FROM (select value in from reference where out=$notebook_id)
                 {order_clause}
                 LIMIT $limit START $offset
@@ -205,7 +206,8 @@ async def get_sources(
             query = f"""
                 SELECT id, asset, created, title, updated, topics, command, review_status,
                 (SELECT VALUE count() FROM source_insight WHERE source = $parent.id GROUP ALL)[0].count OR 0 AS insights_count,
-                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded
+                ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded,
+                (SELECT VALUE total_pages FROM source_intelligence WHERE source_id = $parent.id LIMIT 1)[0] OR 0 AS page_count
                 FROM source
                 {order_clause}
                 LIMIT $limit START $offset
@@ -325,18 +327,29 @@ async def get_sources(
                 # Command exists but status couldn't be fetched
                 status = "unknown"
 
+                # Derive file_size from asset path if available
+            file_size = None
+            asset_data = row.get("asset")
+            if asset_data and asset_data.get("file_path"):
+                try:
+                    fp = Path(asset_data["file_path"])
+                    if fp.exists():
+                        file_size = fp.stat().st_size
+                except Exception:
+                    pass
+
             response_list.append(
                 SourceListResponse(
                     id=row["id"],
                     title=row.get("title"),
                     topics=row.get("topics") or [],
                     asset=AssetModel(
-                        file_path=row["asset"].get("file_path")
-                        if row.get("asset")
+                        file_path=asset_data.get("file_path")
+                        if asset_data
                         else None,
-                        url=row["asset"].get("url") if row.get("asset") else None,
+                        url=asset_data.get("url") if asset_data else None,
                     )
-                    if row.get("asset")
+                    if asset_data
                     else None,
                     embedded=row.get("embedded", False),
                     embedded_chunks=0,  # Removed from query - not needed in list view
@@ -349,6 +362,9 @@ async def get_sources(
                     processing_info=processing_info,
                     review_status=row.get("review_status"),
                     building_count=building_counts.get(str(row["id"]), 0),
+                    # PDF metadata
+                    page_count=row.get("page_count") or None,
+                    file_size=file_size,
                 )
             )
 
@@ -546,17 +562,9 @@ async def create_source(
 
                 if not result.is_success():
                     logger.error(f"Sync processing failed: {result.error_message}")
-                    # Clean up source record
-                    try:
-                        await source.delete()
-                    except Exception:
-                        pass
-                    # Clean up uploaded file if we created it
-                    if file_path and upload_file:
-                        try:
-                            os.unlink(file_path)
-                        except Exception:
-                            pass
+                    # Do NOT delete source or file — the source record is
+                    # already in the DB and visible in the UI.  Deleting it
+                    # would orphan any partial data the worker produced.
                     raise HTTPException(
                         status_code=500,
                         detail=f"Processing failed: {result.error_message}",
@@ -596,12 +604,10 @@ async def create_source(
 
             except Exception as e:
                 logger.error(f"Sync processing failed: {e}")
-                # Clean up uploaded file if we created it
-                if file_path and upload_file:
-                    try:
-                        os.unlink(file_path)
-                    except Exception:
-                        pass
+                # Do NOT delete the uploaded file here — the worker may still
+                # be processing the command (e.g. timeout just means the API
+                # gave up waiting, not that the worker failed).  The file is
+                # referenced by source.asset.file_path in the DB.
                 raise
 
     except HTTPException:
@@ -1003,20 +1009,126 @@ async def retry_source_processing(source_id: str):
 
 @router.delete("/sources/{source_id}")
 async def delete_source(source_id: str):
-    """Delete a source."""
+    """Delete a source and all related data.
+
+    DB cascade events (migrations 1/10/49) auto-delete: source_embedding,
+    source_insight, acm_record, building_record, acm_table_section,
+    raw_extraction, source_intelligence, extraction_progress, site_config.
+
+    This endpoint additionally cleans up: uploaded file on disk, reference
+    edges, command records, agui_events, chat refers_to edges.
+    """
     try:
         source = await Source.get(source_id)
         if not source:
             raise HTTPException(status_code=404, detail="Source not found")
 
+        sid = ensure_record_id(source_id)
+        deleted_extras: dict[str, int] = {}
+
+        # 1. Capture file path before deleting the source record
+        file_path = source.asset.file_path if source.asset else None
+
+        # 2. Capture command ID for agui_events cleanup
+        command_id = getattr(source, "command", None)
+
+        # 3. Delete relation edges that lack cascade events
+        for table, field in [
+            ("reference", "in"),        # reference edges FROM source TO notebook
+            ("refers_to", "out"),       # chat_session refers_to edges
+        ]:
+            try:
+                result = await repo_query(
+                    f"DELETE {table} WHERE {field} = $sid;",
+                    {"sid": sid},
+                )
+                deleted_extras[table] = len(result) if isinstance(result, list) else 0
+            except Exception as e:
+                logger.warning(f"Failed to delete {table} edges for {source_id}: {e}")
+
+        # 4. Delete command record
+        if command_id:
+            try:
+                cmd_id = str(command_id)
+                # Also delete agui_events linked to this command
+                await repo_query(
+                    "DELETE agui_events WHERE command_id = $cid;",
+                    {"cid": cmd_id},
+                )
+                await repo_query(
+                    f"DELETE {cmd_id};"
+                )
+                deleted_extras["command"] = 1
+            except Exception as e:
+                logger.warning(f"Failed to delete command for {source_id}: {e}")
+
+        # 5. Delete the source record (triggers DB cascade events)
         await source.delete()
 
-        return {"message": "Source deleted successfully"}
+        # 6. Delete uploaded file from disk
+        if file_path:
+            try:
+                file_p = Path(file_path)
+                if file_p.is_file():
+                    file_p.unlink()
+                    deleted_extras["file"] = 1
+                    logger.info(f"Deleted uploaded file: {file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to delete file {file_path}: {e}")
+
+        logger.info(f"Source {source_id} deleted with cascade: {deleted_extras}")
+        return {
+            "message": "Source deleted successfully",
+            "cascade": deleted_extras,
+        }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting source {source_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting source: {str(e)}")
+
+
+@router.post("/sources/cleanup-orphaned-files")
+async def cleanup_orphaned_files():
+    """Delete uploaded files that have no matching source record in the database.
+
+    Compares files in data/uploads/ against source.asset.file_path values
+    in the DB. Files not referenced by any source are deleted.
+    """
+    try:
+        uploads_dir = Path(UPLOADS_FOLDER)
+        if not uploads_dir.is_dir():
+            return {"deleted": 0, "files": [], "message": "Uploads directory not found"}
+
+        # Get all file paths from source records
+        result = await repo_query("SELECT asset.file_path FROM source;")
+        db_paths: set[str] = set()
+        if result and isinstance(result, list):
+            for row in result:
+                fp = row.get("asset", {}).get("file_path") if isinstance(row.get("asset"), dict) else None
+                if not fp:
+                    fp = row.get("file_path")
+                if fp:
+                    db_paths.add(str(Path(fp).resolve()))
+
+        # Find and delete orphaned files
+        deleted_files: list[str] = []
+        for f in uploads_dir.iterdir():
+            if not f.is_file():
+                continue
+            if str(f.resolve()) not in db_paths:
+                f.unlink()
+                deleted_files.append(f.name)
+
+        logger.info(f"Cleaned up {len(deleted_files)} orphaned files from uploads/")
+        return {
+            "deleted": len(deleted_files),
+            "files": deleted_files[:50],  # Cap response size
+            "message": f"Deleted {len(deleted_files)} orphaned files",
+        }
+    except Exception as e:
+        logger.error(f"Error cleaning up orphaned files: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/sources/{source_id}/insights", response_model=List[SourceInsightResponse])
@@ -1062,12 +1174,23 @@ async def create_source_insight(source_id: str, request: CreateSourceInsightRequ
         if not transformation:
             raise HTTPException(status_code=404, detail="Transformation not found")
 
-        # Run transformation graph
+        # Run transformation graph with optional Langfuse tracing
         from open_notebook.graphs.transformation import graph as transform_graph
-
-        await transform_graph.ainvoke(
-            input=dict(source=source, transformation=transformation)  # type: ignore[arg-type]
+        from open_notebook.observability.langfuse_config import (
+            langfuse_tracing,
+            merge_langfuse_into_config,
         )
+
+        with langfuse_tracing(
+            "transformation",
+            source_id=source_id,
+            operation_type="insight",
+        ) as (callbacks, metadata):
+            config = merge_langfuse_into_config({}, callbacks, metadata)
+            await transform_graph.ainvoke(
+                input=dict(source=source, transformation=transformation),  # type: ignore[arg-type]
+                config=config,
+            )
 
         # Get the newly created insight (last one)
         insights = await source.get_insights()

@@ -122,27 +122,20 @@ FALLBACK_MODELS = {
 
 # Full model catalog: (provider, model_name, model_type) for all known models
 MODEL_CATALOG: list[tuple[str, str, str]] = [
-    # Ollama local models
+    # Ollama local models (synced with Docker: 2026-03-12)
     ("ollama", "qwen3:latest", "language"),
-    ("ollama", "qwen3:8b", "language"),
-    ("ollama", "qwen3:14b", "language"),
     ("ollama", "qwen3:32b", "language"),
+    ("ollama", "qwen2.5:7b", "language"),
+    ("ollama", "qwen2.5:14b-instruct-q4_K_M", "language"),
     ("ollama", "qwen2.5:32b", "language"),
-    ("ollama", "qwen2.5-coder:32b", "language"),
     ("ollama", "deepseek-r1:8b", "language"),
-    ("ollama", "deepseek-r1:14b", "language"),
-    ("ollama", "deepseek-r1:32b", "language"),
-    ("ollama", "llama3.3:70b", "language"),
-    ("ollama", "llama3.2:3b", "language"),
     ("ollama", "llama3.1:8b", "language"),
+    ("ollama", "llama3.1:8b-instruct-q8_0", "language"),
     ("ollama", "gemma3:27b", "language"),
-    ("ollama", "gemma3:12b", "language"),
     ("ollama", "phi4:14b", "language"),
-    ("ollama", "mistral-nemo:12b", "language"),
+    ("ollama", "phi4:14b-q4_K_M", "language"),
+    ("ollama", "mistral:7b", "language"),
     ("ollama", "mxbai-embed-large", "embedding"),
-    ("ollama", "nomic-embed-text", "embedding"),
-    ("ollama", "bge-m3", "embedding"),
-    ("ollama", "bge-large", "embedding"),
     # Anthropic
     ("anthropic", "claude-3-5-haiku-20241022", "language"),
     ("anthropic", "claude-3-5-sonnet-20241022", "language"),

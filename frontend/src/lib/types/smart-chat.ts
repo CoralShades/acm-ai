@@ -10,6 +10,7 @@ export interface SupervisorAgentState {
   active_agents: string[]
   acm_results: Record<string, unknown> | null
   search_results: Record<string, unknown> | null
+  model_id: string | null
 }
 
 /** Parsed ACM record summary from tool results */

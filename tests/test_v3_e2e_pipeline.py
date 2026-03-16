@@ -54,43 +54,58 @@ def _make_mock_source(
 def _make_mock_v3_llm() -> AsyncMock:
     """Mock LLM that returns minimal valid JSON for building or item extraction.
 
-    The same response is returned for all graph stages (metadata, structure,
-    inventory, page-tagger, orchestrator).  Stages that do not receive valid
-    JSON for their schema fall back to heuristic logic gracefully.  The
-    orchestrator stage requires a valid ACMExtractionResult: records must have
-    a ``result`` field and ``status`` must be the lowercase enum value.
+    The first call returns MetadataAndStructureLLM-shaped JSON (for the
+    metadata_and_structure node).  All subsequent calls return
+    ACMItemExtractionResult-shaped JSON using V3 SF API field names so that
+    the item records pass validation.
     """
-    # Used by: build_inventory, page_tagger, orchestrator item extraction, etc.
-    # ACMExtractionResult validator requires: records[*].result (required),
-    # status in {"valid", "invalid", "no_acm_data"} (lowercase).
+    # V3 item extraction uses SF API field names (ACMItemRecord schema).
     item_json = json.dumps(
         {
             "records": [
                 {
-                    "building_id": "A1",
-                    "building_name": "Admin Block",
-                    "room_id": "101",
-                    "room_name": "Office",
-                    "product": "Vinyl Floor Tiles",
-                    "material_description": "300mm x 300mm vinyl floor tiles with backing",
-                    "location": "Throughout office area",
-                    "extent": "50 m²",
-                    "friable": "Non-friable",
-                    "material_condition": "Good",
-                    "risk_status": "Low",
-                    "result": "Positive",
-                    "page_number": 1,
+                    "room_or_area": "Office",
+                    "location_in_room": "Throughout office area",
+                    "item_name": "Vinyl Floor Tiles",
+                    "acm_sub_classification": "Vinyl Floor Tiles with Backing",
+                    "friability_of_material": "Non-friable",
+                    "condition": "Good",
+                    "sample_result": "Positive",
                     "extraction_confidence": "high",
+                    "page_number": 1,
                 }
             ],
             "status": "valid",
-            "total_records": 1,
         }
     )
 
+    # MetadataAndStructureLLM-shaped response for the first (metadata) node call.
+    metadata_json = json.dumps(
+        {
+            "metadata": {
+                "consultant_name": "Test Consultant",
+                "document_type": "ACM",
+                "report_date": None,
+                "school_name": "Test School",
+            },
+            "structure": {
+                "register_start_page": 1,
+                "register_end_page": 1,
+                "buildings": [],
+                "sections": [],
+            },
+        }
+    )
+
+    call_count = {"n": 0}
+
     async def _mock_ainvoke(messages, **kwargs):
+        # First LLM call is always the metadata_and_structure node.
+        # Subsequent calls are building/item extraction.
+        call_count["n"] += 1
+        response_content = metadata_json if call_count["n"] == 1 else item_json
         response = MagicMock()
-        response.content = item_json
+        response.content = response_content
         return response
 
     model = AsyncMock()
@@ -108,6 +123,11 @@ async def _run_v3_extraction_mocked(
         dict with keys: result, building_records, acm_records, table_sections
     """
     from open_notebook.domain.acm import ACMRecord, ACMTableSection, BuildingRecord
+    from open_notebook.extractors.building_inventory import (
+        BuildingInventory,
+        BuildingMeta,
+        ProcessingGroup,
+    )
     from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
     if docling_tables is None:
@@ -140,6 +160,30 @@ async def _run_v3_extraction_mocked(
 
     async def mock_generate_internal_id(source_id):
         return f"BLD#E32S5_{len(building_records):03d}"
+
+    # Provide a valid building inventory so the pipeline proceeds past the
+    # inventory stage (heuristic regex won't match generic "A1" building IDs).
+    mock_inventory = BuildingInventory(
+        buildings=[
+            BuildingMeta(
+                building_id="A1",
+                name="Admin Block",
+                page_start=1,
+                page_end=1,
+                rooms=[],
+            )
+        ],
+        processing_groups=[
+            ProcessingGroup(
+                group_id=0,
+                building_ids=["A1"],
+                page_start=1,
+                page_end=1,
+                estimated_pages=1,
+            )
+        ],
+        total_buildings=1,
+    )
 
     mock_llm = _make_mock_v3_llm()
 
@@ -175,6 +219,10 @@ async def _run_v3_extraction_mocked(
         patch(
             "open_notebook.graphs.acm_extraction.BuildingRecord.get_by_source",
             AsyncMock(return_value=building_records),
+        ),
+        patch(
+            "open_notebook.graphs.acm_extraction.compile_building_inventory",
+            AsyncMock(return_value=mock_inventory),
         ),
     ):
         result = await extract_acm_from_source(source=source, force=False)
@@ -337,7 +385,9 @@ class TestRawExtractionStorage:
 
         mock_registry.return_value.get_provider.side_effect = get_provider
 
-        _, _ = await _run_dual_provider_extraction("source:raw_test_001", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction(
+            "source:raw_test_001", "/tmp/test.pdf"
+        )
 
         # Called once per provider (docling + mineru)
         assert mock_store_raw.call_count == 2
@@ -359,7 +409,9 @@ class TestRawExtractionStorage:
         )
         mock_registry.return_value.get_provider.return_value = mock_docling
 
-        _, _ = await _run_dual_provider_extraction("source:raw_test_002", "/tmp/test.pdf")
+        _, _ = await _run_dual_provider_extraction(
+            "source:raw_test_002", "/tmp/test.pdf"
+        )
 
         assert mock_store_raw.call_count == 1
 

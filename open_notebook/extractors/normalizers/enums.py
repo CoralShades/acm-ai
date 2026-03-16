@@ -2,7 +2,7 @@
 Enum Value Normalization
 
 Normalizes ACM field values (SampleResult, Condition, DisturbancePotential)
-to their canonical BAR-compliant forms. Handles case variations, abbreviations,
+to their canonical SF-canonical forms. Handles case variations, abbreviations,
 and consultant-specific synonyms.
 
 References:
@@ -13,7 +13,7 @@ from typing import Optional
 
 from loguru import logger
 
-# Sample Result synonyms → canonical BAR values
+# Sample Result synonyms → canonical SF values
 SAMPLE_RESULT_SYNONYMS: dict[str, str] = {
     "positive": "Positive",
     "pos": "Positive",
@@ -42,8 +42,8 @@ CONDITION_SYNONYMS: dict[str, Optional[str]] = {
     "na": None,
 }
 
-# Disturbance Potential synonyms → canonical BAR values
-# NOTE: BAR uses "Moderate" not "Medium"
+# Disturbance Potential synonyms → canonical SF values
+# NOTE: SF uses "Moderate" not "Medium"
 DISTURBANCE_SYNONYMS: dict[str, Optional[str]] = {
     "low": "Low",
     "medium": "Moderate",
@@ -55,7 +55,7 @@ DISTURBANCE_SYNONYMS: dict[str, Optional[str]] = {
 }
 
 # Risk Status synonyms → canonical extraction values
-# NOTE: risk_status uses "Medium" (not BAR disturbance "Moderate")
+# NOTE: risk_status uses "Medium" (not disturbance "Moderate")
 RISK_STATUS_SYNONYMS: dict[str, Optional[str]] = {
     "high": "High",
     "h": "High",
@@ -83,7 +83,7 @@ _SYNONYM_MAP: dict[str, dict] = {
 
 def normalize_enum_value(raw_value: Optional[str], field_name: str) -> Optional[str]:
     """
-    Normalize an ACM enum field value to its canonical BAR form.
+    Normalize an ACM enum field value to its canonical SF form.
 
     Handles case-insensitive matching, abbreviations, and consultant-specific
     synonyms. Unknown values pass through as-is (stripped).

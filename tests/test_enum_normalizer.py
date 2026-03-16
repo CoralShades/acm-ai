@@ -3,7 +3,7 @@ Tests for enum value normalization module.
 
 Tests the normalize_enum_value() function that standardizes
 ACM field values (SampleResult, Condition, DisturbancePotential)
-to their canonical BAR-compliant forms.
+to their canonical SF-canonical forms.
 """
 
 import pytest
@@ -148,7 +148,7 @@ class TestDisturbancePotentialNormalization:
         assert normalize_enum_value("low", "disturbance_potential") == "Low"
 
     def test_medium_becomes_moderate(self):
-        """BAR uses 'Moderate' not 'Medium'."""
+        """SF uses 'Moderate' not 'Medium'."""
         from open_notebook.extractors.normalizers.enums import normalize_enum_value
 
         assert normalize_enum_value("medium", "disturbance_potential") == "Moderate"

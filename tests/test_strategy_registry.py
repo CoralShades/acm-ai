@@ -15,7 +15,6 @@ from open_notebook.extractors.strategy_registry import (
     RetryContract,
     check_retry_budget,
     emit_fallback_telemetry,
-    select_strategy,
 )
 
 # ---------------------------------------------------------------------------
@@ -294,81 +293,6 @@ class TestTelemetryTagsEmitted:
             "no tables found",
         )
         assert "fallback.no_docling_tables" in tag
-
-
-# ---------------------------------------------------------------------------
-# AC-1: Strategy selection delegation
-# ---------------------------------------------------------------------------
-
-
-class TestSelectStrategyDelegation:
-    """AC-1: select_strategy() delegates to orchestrator._select_strategy()."""
-
-    def test_select_strategy_delegates_to_orchestrator(self):
-        """select_strategy() calls _select_strategy() in orchestrator."""
-        from open_notebook.extractors.building_inventory import (
-            BuildingComplexity,
-            BuildingMeta,
-        )
-        from open_notebook.extractors.orchestrator import ExtractionStrategy
-
-        building = BuildingMeta(
-            building_id="B00A",
-            name="Test Building",
-            page_start=1,
-            page_end=5,
-            complexity=BuildingComplexity.COMPLEX,
-        )
-
-        result = select_strategy(building)
-        assert isinstance(result, ExtractionStrategy)
-        # Complex buildings without page tags → FULL_LLM
-        assert result == ExtractionStrategy.FULL_LLM
-
-    def test_select_strategy_simple_building_with_tags(self):
-        """Simple buildings with register page tags get REGEX_ONLY."""
-        from open_notebook.extractors.building_inventory import (
-            BuildingComplexity,
-            BuildingMeta,
-        )
-        from open_notebook.extractors.orchestrator import ExtractionStrategy
-        from open_notebook.extractors.page_tagger import (
-            PageTag,
-            PageTaggingResult,
-            PageType,
-            SectionTaxonomy,
-        )
-
-        building = BuildingMeta(
-            building_id="B00A",
-            name="Storage Shed",
-            page_start=10,
-            page_end=12,
-            complexity=BuildingComplexity.SIMPLE,
-        )
-
-        page_tags = PageTaggingResult(
-            pages=[
-                PageTag(
-                    page_number=10,
-                    section_id=SectionTaxonomy.ASBESTOS_REGISTER,
-                    section_title="Asbestos Register",
-                    confidence=0.95,
-                    page_type=PageType.CONTENT,
-                ),
-                PageTag(
-                    page_number=11,
-                    section_id=SectionTaxonomy.ASBESTOS_REGISTER,
-                    section_title="Asbestos Register",
-                    confidence=0.95,
-                    page_type=PageType.CONTENT,
-                ),
-            ],
-            total_pages=20,
-        )
-
-        result = select_strategy(building, page_tags)
-        assert result == ExtractionStrategy.REGEX_ONLY
 
 
 # ---------------------------------------------------------------------------

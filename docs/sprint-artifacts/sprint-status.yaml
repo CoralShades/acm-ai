@@ -34,14 +34,14 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-05
+updated: 2026-03-16
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-03-04
+  last_reconciled: 2026-03-11
   reconciled_branches: [main, ACMV3]
   notes: "V3 Sprint Planning 2026-03-03: 5 V3 epics (E30-E34) added, 34 stories, 100 SP. Schema freeze gate after E30-S6. Critical path: E30→E31→E32→E33-S3→E34. Parallel lane: E33-S1,S2 after E30. E32-S6 and E30-S8 independent. E30-S9 added 2026-03-04 (GitHub #85, persist pre-extraction intelligence, 3 SP). Source: Party Mode plan, readiness report Step 08 (CONDITIONAL GO → fixes applied Step 08b), PRD v3.0, Architecture v3.0."
 
@@ -517,6 +517,149 @@ development_status:
   e35-s8-frontend-error-handling: done                   # 2 SP. Empty states, console error cleanup, CopilotKit fix. Completed 2026-03-05.
   epic-35-retrospective: optional
 
+  # ─────────────────────────────────────────────────────
+  # Epic 37: Per-Row ACM Extraction Pipeline (v3.5)
+  # 8 stories, 18 SP
+  # Dependencies: E30-E35 (builds on V3 foundation)
+  # Planning: v3.5/ directory (CLAUDE_CODE_SESSION_PROMPT.md, task_plan.md, progress.md, findings.md, gap_analysis.md)
+  # Goal: Replace bulk-per-building Item__c extraction with per-row LLM calls (9 fields, num_ctx=2048)
+  # New components: row_segmenter.py, row_extractor.py, acm_row_schemas.py, acm_row_mappers.py
+  # 163 new tests, 2154 total suite passing
+  # ─────────────────────────────────────────────────────
+  epic-37: done  # All 8 stories done. Completed 2026-03-10.
+  e37-s1-store-docling-document-json: done              # 2 SP. Phase 0A. Store DoclingDocument JSON on acm_table_section. Migration 48. 12 tests.
+  e37-s2-building-schema-gaps-prompt: done              # 2 SP. Phase 0B. 5 new Building__c fields + prompt update. Migration 47. 19 tests.
+  e37-s3-truncation-fallback-output-budget: done        # 3 SP. Phase 0C. TruncationError catch, cloud retry, 30% output budget reserve. 17 tests.
+  e37-s4-row-segmentation-engine: done                  # 3 SP. Phase 1. RawTableRow model, COLUMN_ALIASES, segment_docling_table(), 8 edge case types (A-H). 32 tests.
+  e37-s5-nine-field-schema-mapper: done                 # 2 SP. Phase 1. ACMItemRow (9 fields), map_item_row_to_extraction_record(). 47 tests.
+  e37-s6-edge-case-fixtures: done                       # 1 SP. Phase 1. 14 fixture files (11 JSON + 2 MD + 1 README) for Types A-H.
+  e37-s7-per-row-extraction-orchestrator: done          # 3 SP. Phase 2. build_kv_prompt(), extract_single_row(), extract_all_rows(), SSE events. 27 tests.
+  e37-s8-pipeline-integration: done                     # 2 SP. Phase 3. ACM_ITEM_EXTRACTION_MODE env var, per-row/bulk toggle, recovery gating. 9 tests.
+  epic-37-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # Epic 36: E2E Verification & Agent Orchestration
+  # 8 stories, 26 SP
+  # Dependencies: E35 (all fixes code-complete, need browser verification)
+  # Agent team: e36-lead, e36-browser-tester, e36-log-sentinel,
+  #   e36-devils-advocate, e36-bmad-scribe, e36-ux-auditor
+  # ─────────────────────────────────────────────────────
+  epic-36: in-progress
+  e36-s1-agent-team-creation: done                        # 3 SP. Agent files, state files, prd.json, sprint-status.
+  e36-s2-e35-fix-reverification: done                     # 5 SP. All 8 E35 fixes verified with code analysis + API tests + 315 unit tests.
+  e36-s3-route-coverage-gaps: done                        # 3 SP. Verified 12 DYNAMIC_ROUTES, 36/36 route coverage confirmed with smoke-walker spec + screenshots.
+  e36-s4-ollama-multi-model-benchmark: backlog            # 5 SP. 12 runs: 6 models x 2 PDFs vs ground truth.
+  e36-s5-functional-verification: backlog                 # 5 SP. Verify all major features E2E with real data.
+  e36-s6-ux-audit: backlog                                # 2 SP. 3 viewports, loading/empty/error states, data-testid.
+  e36-s7-devils-advocate-review: backlog                  # 2 SP. Adversarial review of fixes and benchmark results.
+  e36-s8-bmad-documentation-closeout: backlog             # 1 SP. Final artifact updates.
+  epic-36-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # Bug Fix 11: Per-Row Extraction Quality (2026-03-11)
+  # 6 pipeline bugs fixed: 0→16 records. Gap analysis reveals 6 more bugs for 16→31.
+  # Issues: bug-page-range-table-loss, bug-row-segmenter-subheaders,
+  #         bug-per-row-schema-missing-fields, bug-building-record-not-persisted
+  # ─────────────────────────────────────────────────────
+  bug-fix-11-pipeline-6-bugs: done           # 2026-03-11. 6 bugs: room key remap, generic fallback, UPSERT fix, prompts, metadata injection, page_number injection. 0→16 records.
+  bug-page-range-table-loss: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 1 (commit 7eb73f27). page_end expansion + multi-table-per-page overwrite + silent fallback.
+  bug-per-row-schema-missing-fields: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 1 (commit 7eb73f27). Added sample_no, sample_result, acm_product, internal_external to ACMItemRow.
+  bug-row-segmenter-subheaders: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 1 (commit 7eb73f27). _LEVEL_REGEX + INTERNAL keyword.
+  bug-building-record-not-persisted: done  # 2026-03-11. Fixed in Bug Fix 11 Phase 5 (commits b05c91ab + a757c141). ObjectModel.save() return value fix + minimal fallback.
+  bug-docling-json-null-reextract: done  # 2026-03-11. force=true re-extracts tables when docling_document_json IS NULL + truncation retry cloud-key guard.
+  bug-docling-export-to-dict: done  # 2026-03-11. ROOT CAUSE: TableItem.export_to_dict() never existed — table.data.model_dump(mode="python") is correct. Per-row extraction unblocked.
+  bug-model-record-id-as-name: done  # 2026-03-12. _get_db_extraction_model() returned SurrealDB record ID (model:xxx) instead of model name. ALL LLM calls 404'd. Fixed: resolve via DB lookup.
+  bug-model-dump-mode-python: done  # 2026-03-12. model_dump(mode="python") produces non-serializable enums. Fixed: mode="json".
+  bug-num-ctx-overwrite: done  # 2026-03-12. _apply_ollama_extraction_settings overwrote per-row num_ctx=2048→32768. Fixed: respect caller's value.
+  bug-loguru-max-builtin: done  # 2026-03-12. loguru {max} shadows Python builtin. Fixed: {max_retries}.
+
+  # ─────────────────────────────────────────────────────
+  # Bug Fix 12: Extraction Audit + Per-Run Log Categorization (2026-03-12)
+  # 9 issues found (N1-N9), 3 LangSmith observations (L1-L3)
+  # Infra: pipeline_logger.py per-run dirs, run_worker.py tee sink, scripts/split_logs.py
+  # GitHub: #103
+  # ─────────────────────────────────────────────────────
+  bug-fix-12-extraction-audit: in_progress  # 2026-03-12. Extraction log audit + per-run log categorization. 8 issue docs, per-run log infra complete. Fixes pending.
+
+  # ─────────────────────────────────────────────────────
+  # Bug Fix: Frontend Navigation Performance (2026-03-13)
+  # Branch: ACMV3
+  # Root cause: 27/34 routes missing loading.tsx + ConnectionGuard returned null on cold start
+  # Fix: 17 new loading.tsx skeleton files + ConnectionGuard app-shell skeleton
+  # ─────────────────────────────────────────────────────
+  bug-frontend-nav-performance: done  # 2026-03-13. ConnectionGuard null→skeleton fix. 17 new loading.tsx files across all data-fetching routes. navigation-timing.spec.ts E2E test. npm run build clean.
+
+  # ─────────────────────────────────────────────────────
+  # Frontend Audit & Fix (2026-03-13)
+  # Branch: ACMV3
+  # 8 tasks, 13 files modified. UI label corrections, type alignment,
+  # computed metrics, V3 grid unification, job metadata, provenance fixes.
+  # Artifact: docs/sprint-artifacts/frontend-audit/progress.md
+  # ─────────────────────────────────────────────────────
+  frontend-audit-2026-03-13: done  # 2026-03-13. 8 tasks across 13 files. T1: label renames (Raw→AI Mapped, reloadUrl fix, ConfirmDialog). T2: BuildingReviewGrid canonical 57-field type + V3 API. T3: computed missingFieldsPercent + extractionQualityScore. T4: ACM page V3 ItemGrid+BuildingTabStrip. T5: aggregate building/record stat cards on jobs page. T6: intelligence API wired into JobOverviewTab. T7: provider tab subtitles (Docling/MinerU/Consensus). T8: bbox overlay teal color + page mismatch guard.
+
+  # ─────────────────────────────────────────────────────
+  # CopilotKit Audit & HITL Implementation (2026-03-16)
+  # Branch: ACMV3
+  # Two sessions: (1) Audit — 5 critical bugs fixed, tool renderers refactored
+  #   (2) HITL — interrupt() flow, generative UI, copilotkit SDK
+  # Artifacts: docs/sprint-artifacts/copilotkit-audit/, copilotkit-impl/
+  # ─────────────────────────────────────────────────────
+  copilotkit-audit-2026-03-16: done  # Session 1: 5 bugs fixed (BUG-1..5), useRenderToolCall refactor (11 renderers), useCopilotReadable, useCopilotChatSuggestions, ToolErrorCard, @ag-ui/client explicit dep
+  copilotkit-hitl-impl-2026-03-16: done  # Session 2: copilotkit>=0.1.78 SDK, LangGraph interrupt() HITL for CRUD writes, check_write_approval node, copilotkit_emit_state on supervisor, useLangGraphInterrupt + HITLApprovalDialog, useDefaultTool, useCoAgentStateRender, 6 new generative UI components
+  copilotkit-p2p3-fixes-2026-03-16: done  # Session 3: 15 P2/P3 UI/UX fixes — HITL double-submit guard, aria roles, TOOL_LABELS constant, dead code removal, ACMTableResult row cap (20) with expand, renderer root div standardisation (my-2), showDevConsole=false, BuildingListResult extracted, MAC constant
+  chat-model-selector-2026-03-16: done  # Session 3: ChatModelSelector component — compact popover picker in SmartChatPanel + JobCrudChatPanel headers; model_id in SupervisorAgentState + CRUDAgentState; backend reads state.get("model_id") first; persists to localStorage; renders only when 2+ language models registered
+
+  # ─────────────────────────────────────────────────────
+  # Provenance PDF Viewer Enhancement (2026-03-16)
+  # Branch: ACMV3
+  # Enhanced PDFPageViewer with zoom, scroll, search, record highlighting.
+  # Fixed pre-existing bug: table_bbox missing from all 5 ACMRecordResponse builders.
+  # Files: PDFPageViewer.tsx (rewrite), globals.css (search+bbox CSS),
+  #   ProvenanceViewer.tsx (minor), acm.py (5x table_bbox fix)
+  # ─────────────────────────────────────────────────────
+  provenance-pdf-viewer-enhancement-2026-03-16: done  # Major PDFPageViewer rewrite: zoom (50-300%, Ctrl+/Ctrl-), page nav (prev/next, go-to-source), text search (Ctrl+F, highlight matches, next/prev), scrollable canvas (65vh), bbox pulse animation (3-cycle glow), auto-scroll to bbox, crosshair re-scroll button, status bar. Bug fix: table_bbox added to all 5 ACMRecordResponse builders in api/routers/acm.py (was missing — bbox overlay never rendered). CSS: .pdf-search-highlight (yellow), .pdf-search-highlight-active (orange), @keyframes pdf-bbox-pulse, prefers-reduced-motion support.
+
+  # ─────────────────────────────────────────────────────
+  # Building Grid + ACM Records Grid Rework (2026-03-16)
+  # Branch: ACMV3
+  # Commits: 2f2eeadf, 1fbf321f, e9dcd67f
+  # Two-tab layout on /source/[id]: Buildings tab (BuildingGrid) + ACM Records tab.
+  # New components: BuildingGrid.tsx (AG Grid, 13 cols, localStorage state),
+  #   BuildingViewDialog.tsx (dialog modal for view/edit building).
+  # ACMGrid column defs reordered to 13 required fields. Per-building export.
+  # Applied to both /source/[id] and /jobs/[id] pages.
+  # ─────────────────────────────────────────────────────
+  ui-building-acm-grid-rework-2026-03-16: done  # 3 commits. Two-tab layout (Buildings + ACM Records) on source/[id] and jobs/[id]. New BuildingGrid.tsx (AG Grid, 13 default columns, View button → BuildingViewDialog, autoHeight, localStorage column state). New BuildingViewDialog.tsx (dialog modal wrapping BuildingDetailForm). ACMGrid reordered to 13 required Item__c fields. Per-building export dropdown (current building + all). PRESET_COLUMNS.essential updated. DependentPicklistEditor/BuildingDetailForm/RecordWizard styling fixes.
+
+  # ─────────────────────────────────────────────────────
+  # CRUD Chat + Grid Security & Audit Fix (2026-03-16)
+  # Branch: ACMV3
+  # 23 issues resolved: 4 P0 security, 5 P1 functionality, 14 P2/P3 UX
+  # Files changed: 13 (pyproject.toml, crud_tools.py, crud_agent.py,
+  #   column-visibility-store.ts, ACMGrid.tsx, BuildingGrid.tsx,
+  #   HITLApprovalDialog.tsx, CrudToolRenderers.tsx, JobCrudChatPanel.tsx,
+  #   tool-labels.ts, useACMItems.ts, acm.ts, docker-compose.yml)
+  # Pre-existing bugs also fixed (found during E2E):
+  #   - ACM Records grid empty: building_id -> building_record_id in useACMItems
+  #   - SurrealDB v2.6.3 incompatibility: docker image pinned to v2.2.1
+  # ─────────────────────────────────────────────────────
+  crud-chat-security-audit-2026-03-16: done  # 23 issues. P0: execute_pending_write removed from LLM tools (graph enforces HITL barrier), confirm_write dead code deleted, ALLOWED_ACM_FIELDS SQL injection allowlist, source_id context binding. P1: surrealdb>=1.0.8, Record ID column in essential preset, MouseEvent type fix, click-to-copy propagation guard, clipboard HTTPS guard. P2/P3: HITLApprovalDialog timeout/escape/button fixes, dead code cleanup, tool labels, sourceId guard. Pre-existing: ACMGrid empty fix + SurrealDB docker pin.
+
+  # ─────────────────────────────────────────────────────
+  # Pipeline Debug (2026-03-14)
+  # Branch: ACMV3
+  # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
+  # Root causes traced via Langfuse + LangSmith. 4 phases: trace analysis, synthesis, apply, verify.
+  # 8 code/prompt fixes across 12 files. Result: 0 → 29 records (93.5% Broadmeadows ground truth).
+  # Artifact: docs/sprint-artifacts/pipeline-debug/
+  #   findings.md — RC1-RC8 root causes, applied fixes, verification metrics
+  #   progress.md — All 4 phases complete, known remaining issues documented
+  #   task_plan.md — All tasks checked off
+  # Remaining: RC8 (docling_document_json stored as {}), blocks per-row path. Deferred.
+  # ─────────────────────────────────────────────────────
+  pipeline-debug-2026-03-14: done  # 2026-03-14. Commit 476c285e. Trace-driven debug: RC1 format="json" on metadata+inventory Ollama calls, RC2 prompt rewrite (141→56 lines metadata, 130→58 lines inventory, 3→15 lines row_split), RC6 stale docling_document_json detection ({} not caught), RC7 SurrealDB param binding (ensure_record_id). Plus WebSocket retry in orchestrator.py. Result: 0→29 records (93.5% vs ground truth of 31). Per-row still blocked by RC8 (docling_json empty dict — deferred).
+
   # Bug Fixes & Infrastructure (standalone)
   bug-extraction-status-tracking-gap: done  # Upload dialog didn't track extraction progress
   bug-worker-race-condition: done  # 2026-02-25: Atomic claim pattern (_try_claim_command + _generate_worker_id) in acm_commands.py. Migration 34: claimed_by/claimed_at fields. Prevents duplicate command processing.
@@ -551,29 +694,96 @@ development_status:
 
 # SUMMARY:
 # ========
-# Total Epics: 34  (+6 V3 epics: E30-E35)
-# Total Stories: 221  (176 pre-V3 + 37 V3 + 8 V3-hardening)
-# Stories Done: 203 (92%)  -- 160 pre-V3 + 37 V3 + 8 V3-hardening (E35-S1..S8 all done)
+# Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
+# Total Stories: 257  (256 prior + crud-chat-security-audit-2026-03-16)
+# Stories Done: 234 (91%)  -- 233 prior + crud-chat-security-audit-2026-03-16
 # Stories Review: 0
-# Stories In-Progress: 0
+# Stories In-Progress: 1 (bug-fix-12-extraction-audit)
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 0
+# Stories Backlog: 4 (E36-S4..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-05
-# Reconciliation note: E35 epic added (8 stories, 22 SP) for post-V3 hardening.
-# V3 core complete (37/37). E35 hardening: 8/8 stories done (E35-S1..S8 all complete). ALL V3 stories delivered (45/45, 132 SP).
+# Last Updated: 2026-03-16
+# CRUD Chat + Grid Security Audit Fix (2026-03-16): 23 issues resolved across 13 files.
+# 4 P0 security fixes: HITL barrier enforcement (execute_pending_write removed from LLM tools),
+# dead code cleanup (confirm_write), SQL injection allowlist (ALLOWED_ACM_FIELDS), source_id
+# context binding. 5 P1 functionality: surrealdb>=1.0.8, Record ID in essential preset,
+# MouseEvent type fix, click-to-copy propagation guard, clipboard HTTPS guard.
+# 14 P2/P3 UX: HITLApprovalDialog fixes, tool labels, JobCrudChatPanel sourceId guard.
+# Pre-existing bugs also fixed: ACM Records grid empty (building_id->building_record_id),
+# SurrealDB v2.6.3 incompatibility (docker image pinned to v2.2.1).
+# Building Grid + ACM Records Grid Rework (2026-03-16): Two-tab layout on source/[id] and
+# jobs/[id] pages. New BuildingGrid.tsx (AG Grid, 13 cols, View→BuildingViewDialog, autoHeight,
+# localStorage column state). ACMGrid reordered to 13 required Item__c fields. Per-building
+# export dropdown. 3 commits: 2f2eeadf, 1fbf321f, e9dcd67f.
+# Provenance PDF Viewer Enhancement (2026-03-16): PDFPageViewer rewrite — zoom (50-300%),
+# page nav, text search (Ctrl+F), scrollable canvas (65vh), bbox pulse animation, auto-scroll
+# to highlighted record, crosshair re-scroll. Bug fix: table_bbox missing from all 5
+# ACMRecordResponse builders — bbox overlay was NEVER rendering. 4 files changed.
+# CopilotKit (2026-03-16): 3 sessions — audit (5 bugs), HITL (interrupt+generative UI),
+# P2/P3 fixes (15 items), ChatModelSelector component.
+# Pipeline Debug (2026-03-14): Commit 476c285e. Trace-driven debug session. 8 fixes across 12 files.
+# 0→29 records (93.5% Broadmeadows ground truth). RC1-RC7 fixed. RC8 deferred.
+# Frontend Audit (2026-03-13): 8 tasks across 18 files. V3 grid unification, computed metrics,
+# provenance fixes, loading states, label corrections. Commit: c9ff25d4.
+#
+# KEY CHANGES (2026-03-11 - Docling export_to_dict Fix — Per-Row Extraction Unblocked):
+# ====================================================================================
+# ROOT CAUSE FOUND: DoclingAdapter.export_to_dict() was never a valid method on TableItem.
+# TableItem is a Pydantic model — correct method is table.data.model_dump(mode="python").
+# This caused docling_document_json to be NULL for ALL tables since the feature was added,
+# making per-row extraction impossible (always fell back to bulk).
+# Fix: docling_adapter.py:151 — table.export_to_dict() → table.data.model_dump(mode="python")
+# Also fixed: acm.py:2350 — field_schema query now targets field_schema:default directly
+#   (was SELECT * FROM field_schema which hit sf_v1 record lacking config_json field)
+# Test suite: 2123 passed. Lint clean.
+#
+# KEY CHANGES (2026-03-11 - Bug Fix 11 Complete + Docling JSON NULL Guard):
+# ========================================================================
+# Bug Fix 11 Phases 3-5 completed:
+#   Phase 3+4 (commit b05c91ab): Minimal BuildingRecord fallback, document_metadata propagation,
+#     Ollama format="json" on correction stage, terminal status writes to extraction_progress.
+#   Phase 5 (commit a757c141): CRITICAL ObjectModel.save() return value bug — save() returns None,
+#     code checked return value instead of self.id. All building persistence failures traced here.
+#     Also: BuildingRecordResponse datetime coercion, test mock descriptor pattern.
+#   Result: 3/3 buildings now persist correctly.
+# Docling JSON NULL fix (uncommitted):
+#   acm_commands.py: force=true now checks for NULL docling_document_json and re-extracts tables.
+#   acm_extraction.py: Truncation retry guarded by cloud API key availability (prevents infinite loop).
+# Stories resolved: bug-page-range-table-loss, bug-per-row-schema-missing-fields,
+#   bug-row-segmenter-subheaders, bug-building-record-not-persisted, bug-docling-json-null-reextract.
+# Test suite: 2123 passed, 14 skipped, 2 xfailed.
+#
+# KEY CHANGES (2026-03-11 - Bug Fix 11 + Gap Analysis):
+# ======================================================
+# Phase 1 (Bug Fix 11 - DONE): 6 bugs causing 0 records extracted from Broadmeadows PDF
+#   - Room key remapping (_coerce_rooms_in_inventory): room_code/room_name → room_id/name
+#   - Generic heuristic fallback for all doc types (not just SAMP/ARA)
+#   - SF Schema UPSERT inline record ID (SurrealDB parameterized ID bug)
+#   - Prompt terminology made document-agnostic (removed SAMP/ARA references)
+#   - Building ID generation + metadata injection (sequential B001/B002)
+#   - page_number injection into docling JSON for row segmenter
+#   Result: 0→16 records, 2119 tests pass, ruff clean
+#
+# Phase 2 (Gap Analysis - 4 NEW ISSUES): 16 vs 31 ground truth records
+#   - bug-page-range-table-loss (P0): page_end underestimation + multi-table-per-page overwrite
+#   - bug-per-row-schema-missing-fields (P0): ACMItemRow missing sample_no, sample_result, product
+#   - bug-row-segmenter-subheaders (P1): _LEVEL_REGEX missing INTERNAL, partial span check
+#   - bug-building-record-not-persisted (P1): buildings not saved to DB, frontend shows 0
+# 163 new tests (Phase 0-3), 2154 total suite passing. ACM_ITEM_EXTRACTION_MODE env var (per_row|bulk).
+# V3 core complete (37/37). V3 hardening: 8/8. V3.5 per-row: 8/8. ALL V3+ stories delivered (53/53, 150 SP).
+# E36 verification in progress (3/8 done, 5 backlog).
 #
 # COMPLETED EPICS: E1, E2, E3, E4, E5, E6, E7, E9, E10, E11, E12, E13, E14, E15,
 #                  E16, E17, E18, E19, E20, E21, E22, E23, E24, E25, E26, E27, E28,
-#                  E30, E31, E32, E33, E34
-# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived), E35 (8 stories backlog)
+#                  E30, E31, E32, E33, E34, E35, E37
+# IN-PROGRESS EPICS: E29 (S1-S4 done, S5-S8 archived), E36 (3/8 done, 5 backlog)
 # BACKLOG EPICS: (none)
 # ARCHIVED EPICS: E8 (all 10 stories archived)
 #
-# V3 STATUS: COMPLETE. 37/37 core stories done (100%). E35 hardening sprint in progress (7/8).
+# V3 STATUS: COMPLETE. 37/37 core + 8/8 hardening + 8/8 per-row done (100%). E36 verification in progress (3/8).
 # All 5 core V3 epics done. Schema freeze gate unlocked 2026-03-03. Final core story 2026-03-05.
 #
 # INFRASTRUCTURE: Self-Healing E2E Testing Workflow (2026-03-05):

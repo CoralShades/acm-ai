@@ -77,12 +77,15 @@ class TestSSETerminalEventCompleted:
         from api.routers.extraction_events import _MAX_EMPTY_POLLS, _sse_generator
 
         mock_progress = AsyncMock(return_value=None)
-        with patch(
-            "api.routers.extraction_events._get_progress",
-            mock_progress,
-        ), patch(
-            "api.routers.extraction_events.asyncio.sleep",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "api.routers.extraction_events._get_progress",
+                mock_progress,
+            ),
+            patch(
+                "api.routers.extraction_events.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
         ):
             chunks = []
             async for chunk in _sse_generator("cmd:missing_job"):
@@ -114,12 +117,15 @@ class TestSSETerminalEventCompleted:
                 "updated_at": f"2026-03-05T10:00:0{call_count}Z",
             }
 
-        with patch(
-            "api.routers.extraction_events._get_progress",
-            side_effect=mock_get_progress,
-        ), patch(
-            "api.routers.extraction_events.asyncio.sleep",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "api.routers.extraction_events._get_progress",
+                side_effect=mock_get_progress,
+            ),
+            patch(
+                "api.routers.extraction_events.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
         ):
             chunks = []
             try:

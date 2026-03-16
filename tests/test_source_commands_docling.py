@@ -93,7 +93,8 @@ class TestNonPdfSkipped:
         """Sources without PDF file_path are skipped."""
         source = _make_source(file_path="uploads/doc.docx")
         path = _resolve_source_pdf_path(source)
-        assert path == "uploads/doc.docx"
+        assert path is not None
+        assert path.endswith("doc.docx")
         # The caller checks `.lower().endswith(".pdf")` — docx won't match
         assert not path.lower().endswith(".pdf")
 
@@ -358,17 +359,19 @@ class TestResolvePathNone:
 
 class TestResolvePathPdf:
     def test_pdf_path_returned(self):
-        """Source with PDF file_path returns the path."""
+        """Source with PDF file_path returns the path (resolved to absolute)."""
         source = _make_source(file_path="uploads/source_abc123.pdf")
         path = _resolve_source_pdf_path(source)
-        assert path == "uploads/source_abc123.pdf"
+        assert path is not None
+        assert path.endswith("source_abc123.pdf")
         assert path.lower().endswith(".pdf")
 
     def test_uppercase_pdf_path_returned(self):
         """Source with uppercase .PDF extension is detected."""
         source = _make_source(file_path="uploads/REPORT.PDF")
         path = _resolve_source_pdf_path(source)
-        assert path == "uploads/REPORT.PDF"
+        assert path is not None
+        assert path.endswith("REPORT.PDF")
         assert path.lower().endswith(".pdf")
 
 

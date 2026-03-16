@@ -50,6 +50,7 @@ export interface ACMRecord {
   floor_level?: string | null
   no_access?: boolean | null
   smf_present?: string | null
+  table_bbox?: { x: number; y: number; width: number; height: number; page?: number } | null
   date_of_inspection?: string | null
   building_address?: string | null
   suburb?: string | null
@@ -148,6 +149,7 @@ export interface ACMExtractResponse {
 export interface ACMListParams {
   source_id: string
   building_id?: string
+  building_record_id?: string
   room_id?: string
   risk_status?: string
   page?: number

@@ -248,7 +248,7 @@ class ModelManager:
         if provider_lower == "openrouter" and routed_name.lower().startswith(
             "anthropic/"
         ):
-            if not os.getenv("OPENROUTER_API_KEY") and os.getenv("ANTHROPIC_API_KEY"):
+            if not os.getenv("OPENROUTER_API_KEY") and (os.getenv("ACM_ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")):
                 stripped = routed_name.split("/", 1)[1]
                 normalized = cls._normalize_anthropic_model_name(stripped)
                 logger.info(
@@ -288,6 +288,13 @@ class ModelManager:
         config = dict(kwargs)
         if model.api_key:
             config["api_key"] = model.api_key
+
+        # Fallback: use ACM-namespaced API keys when per-model key is not set.
+        # This prevents Claude Code's ANTHROPIC_API_KEY from being consumed.
+        if "api_key" not in config and routed_provider == "anthropic":
+            acm_key = os.getenv("ACM_ANTHROPIC_API_KEY")
+            if acm_key:
+                config["api_key"] = acm_key
 
         # Create model based on type (Esperanto will cache the instance)
         if model.type == "language":

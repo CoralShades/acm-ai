@@ -10,7 +10,7 @@ cd /d "%~dp0"
 echo Running preflight checks...
 uv run python scripts\preflight_checks.py
 if %errorlevel% neq 0 (
-    echo PREFLIGHT FAILED — fix issues above before starting.
+    echo PREFLIGHT FAILED -- fix issues above before starting.
     pause
     exit /b 1
 )

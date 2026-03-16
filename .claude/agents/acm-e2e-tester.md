@@ -110,6 +110,36 @@ This agent uses the self-healing E2E testing workflow defined in `.claude/skills
 4. Apply fixes (add data-testid, update selectors) and re-run
 5. Collect evidence on persistent failures
 
+## Benchmark Workflow (E36-S4)
+
+For multi-model extraction benchmarks:
+
+### Naming Convention
+Source names follow `{PDF}_{model}` pattern:
+- `Broadmeadows_qwen2.5_7b`
+- `Alexander_llama3.1_8b`
+
+### Ground Truth Files
+- Broadmeadows (31 records): `tests/e2e/fixtures/samps/broadmeadows-expected-results.json`
+- Alexander (43 records): `docs/samplePDF/Alexander_GroundTruth.csv`
+
+### PDFs
+- `tests/e2e/fixtures/samps/broadmeadows-police-station-samp.pdf`
+- `docs/samplePDF/Clucth_Alexander_District_Hospital.pdf`
+
+### Per-Run Workflow
+1. Set extraction model via `PUT /api/models/defaults` or Settings UI
+2. Upload PDF via /upload wizard with source name `{PDF}_{model}`
+3. Monitor extraction on /jobs/{source_id}/extract
+4. Navigate to /source/{source_id} and count AG Grid records
+5. Compare record count and field values against ground truth
+6. Screenshot grid as evidence → `docs/sprint-artifacts/e36/evidence/benchmark/`
+7. Record: model, PDF, record_count, expected_count, accuracy%, duration, errors
+
+### Results
+Write per-run detail to `docs/sprint-artifacts/e36/benchmark-results/{model}_{pdf}.md`
+Summary table in `docs/sprint-artifacts/e36/benchmark-results/summary.md`
+
 ## Playwright Config
 
 - Config: `playwright.config.ts`

@@ -313,7 +313,7 @@ class TestBuildingRecordIDGeneration:
 
         with patch("open_notebook.domain.notebook.Source") as mock_source_cls:
             mock_src = MagicMock()
-            mock_src.name = "School Name Report.pdf"
+            mock_src.title = "School Name Report.pdf"
             mock_source_cls.get = AsyncMock(return_value=mock_src)
 
             with patch.object(
@@ -332,7 +332,7 @@ class TestBuildingRecordIDGeneration:
         """AC3: First building for a source gets seq 001."""
         with patch("open_notebook.domain.notebook.Source") as mock_source_cls:
             mock_src = MagicMock()
-            mock_src.name = "SCHOOLNAME"
+            mock_src.title = "SCHOOLNAME"
             mock_source_cls.get = AsyncMock(return_value=mock_src)
 
             with patch.object(
@@ -346,7 +346,7 @@ class TestBuildingRecordIDGeneration:
         """AC3: Second building for a source gets seq 002."""
         with patch("open_notebook.domain.notebook.Source") as mock_source_cls:
             mock_src = MagicMock()
-            mock_src.name = "SCHOOLNAME"
+            mock_src.title = "SCHOOLNAME"
             mock_source_cls.get = AsyncMock(return_value=mock_src)
 
             # One existing building already
@@ -361,10 +361,10 @@ class TestBuildingRecordIDGeneration:
         assert internal_id.endswith("_002")
 
     async def test_generate_internal_id_source_short_truncation(self):
-        """AC3: Source name is truncated to 8 chars in internal_id."""
+        """AC3: Source title is truncated to 8 chars in internal_id."""
         with patch("open_notebook.domain.notebook.Source") as mock_source_cls:
             mock_src = MagicMock()
-            mock_src.name = "A Very Long School Name Report.pdf"
+            mock_src.title = "A Very Long School Name Report.pdf"
             mock_source_cls.get = AsyncMock(return_value=mock_src)
 
             with patch.object(
@@ -380,10 +380,10 @@ class TestBuildingRecordIDGeneration:
         assert len(source_short) <= 8
 
     async def test_generate_internal_id_unknown_when_no_name(self):
-        """AC3: Source with no name uses 'UNKNOWN' as source_short."""
+        """AC3: Source with no title uses 'UNKNOWN' as source_short."""
         with patch("open_notebook.domain.notebook.Source") as mock_source_cls:
             mock_src = MagicMock()
-            mock_src.name = None
+            mock_src.title = None
             mock_source_cls.get = AsyncMock(return_value=mock_src)
 
             with patch.object(

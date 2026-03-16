@@ -55,9 +55,23 @@ Output a structured report:
 ### Verdict: PASS / FAIL
 ```
 
+## Browser Verification Protocol
+
+For stories with UI changes, verify via browser BEFORE marking complete:
+
+1. Run `npm run build` in frontend — must pass
+2. Navigate to affected page(s) using agent-browser or chrome-devtools
+3. Take snapshot to verify key elements exist in DOM
+4. If page returns 404 or elements missing → story is INCOMPLETE
+5. Take screenshot as evidence
+6. Record in story's Dev Agent Record
+
+See E36 epic (`docs/sprint-artifacts/e36/`) for the full verification framework.
+
 ## Rules
 - **Never mark a story as ready if any AC lacks test coverage**
 - **Never mark a story as ready if any test is failing**
 - Report specific failure details (test name, error message, file:line)
 - If you cannot write a test for an AC (e.g., requires manual verification), document why
 - Always read existing test files before writing new ones to avoid duplication
+- For UI stories, always run browser verification protocol before sign-off

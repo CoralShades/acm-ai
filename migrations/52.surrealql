@@ -1,0 +1,6 @@
+-- Migration 52: Make config_json nullable on field_schema table
+-- field_schema:sf_v1 uses separate columns (building_fields, item_fields, etc.)
+-- and does not set config_json. The original TYPE string is non-nullable, causing
+-- "Found NONE for field config_json" errors on SELECT.
+REMOVE FIELD IF EXISTS config_json ON TABLE field_schema;
+DEFINE FIELD config_json ON TABLE field_schema TYPE option<string>;

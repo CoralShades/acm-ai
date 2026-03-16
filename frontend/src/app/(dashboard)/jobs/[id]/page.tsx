@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useCallback, useEffect } from 'react'
+import { use, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -13,22 +13,38 @@ import { JobDetailHeader } from '@/components/jobs/JobDetailHeader'
 import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
 import { JobContentPanel } from '@/components/jobs/JobContentPanel'
 import { JobCrudChatPanel } from '@/components/jobs/JobCrudChatPanel'
-import { BuildingReviewGrid } from '@/components/acm/BuildingReviewGrid'
+import { BuildingGrid } from '@/components/acm/BuildingGrid'
 import {
   BuildingTabFilter,
   getRecordBuildingTabId,
 } from '@/components/acm/BuildingTabFilter'
-import { ACMReviewGrid } from '@/components/acm/ACMReviewGrid'
+import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
+import { ColumnVisibilityPicker } from '@/components/acm/ColumnVisibilityPicker'
+import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
+import { ACMRecordDetailDialog } from '@/components/acm/ACMRecordDetailDialog'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { RawTableViewer } from '@/components/acm/RawTableViewer'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { useSource } from '@/lib/hooks/use-sources'
-import { useACMStats } from '@/lib/hooks/use-acm'
+import { useBuildings } from '@/lib/hooks/useBuildings'
+import { useFieldSchema } from '@/lib/hooks/useACMItems'
+import { useACMStats, useDeleteACMRecord } from '@/lib/hooks/use-acm'
 import { sourcesApi } from '@/lib/api/sources'
+import { acmApi } from '@/lib/api/acm'
 import type { ACMRecord } from '@/lib/types/acm'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, MessageSquare, LayoutDashboard } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ChevronLeft, ChevronRight, MessageSquare, Download } from 'lucide-react'
+
+const KEY_FIELDS = ['room_name', 'product', 'result', 'friable', 'material_condition', 'sample_no', 'sample_result'] as const
 
 /**
  * JobDetailPageContent — inner content for the job detail page.
@@ -45,11 +61,24 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
-  const [chatExpanded, setChatExpanded] = useState(true)
+  const [chatExpanded, setChatExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
+
+  // ACM Records tab state (ACMGrid + dialogs)
+  const gridRef = useRef<ACMGridRef>(null)
+  const [editingRecord, setEditingRecord] = useState<ACMRecord | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deletingRecord, setDeletingRecord] = useState<ACMRecord | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [detailRecord, setDetailRecord] = useState<ACMRecord | null>(null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const deleteRecordMutation = useDeleteACMRecord()
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
+  const { data: buildingsData, isLoading: isLoadingBuildings } = useBuildings(sourceId)
+  const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
+  const { data: fieldSchema } = useFieldSchema()
   const { data: records = [], refetch: refetchRecords } = useQuery<ACMRecord[]>({
     queryKey: ['acm-records', sourceId],
     queryFn: () =>
@@ -125,9 +154,39 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
           ? 'failed'
           : 'idle'
 
-  const handleRecordsDataChanged = useCallback(() => {
-    void refetchRecords()
-  }, [refetchRecords])
+  // ACM Records tab handlers
+  const handleEditRecord = useCallback((record: ACMRecord) => {
+    setEditingRecord(record)
+    setEditDialogOpen(true)
+  }, [])
+
+  const handleDeleteRecord = useCallback((record: ACMRecord) => {
+    setDeletingRecord(record)
+    setDeleteDialogOpen(true)
+  }, [])
+
+  const confirmDeleteRecord = useCallback(async () => {
+    if (deletingRecord) {
+      await deleteRecordMutation.mutateAsync({
+        recordId: deletingRecord.id,
+        sourceId,
+      })
+      setDeleteDialogOpen(false)
+      setDeletingRecord(null)
+      void refetchRecords()
+    }
+  }, [deletingRecord, deleteRecordMutation, sourceId, refetchRecords])
+
+  const handleRowClick = useCallback((record: ACMRecord) => {
+    setDetailRecord(record)
+    setDetailDialogOpen(true)
+  }, [])
+
+  const handleEditFromDetail = useCallback((record: ACMRecord) => {
+    setDetailDialogOpen(false)
+    setDetailRecord(null)
+    handleEditRecord(record)
+  }, [handleEditRecord])
 
   useEffect(() => {
     setSelectedBuilding(null)
@@ -145,6 +204,48 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
       setSelectedBuilding(null)
     }
   }, [records, selectedBuilding])
+
+  // Filter records by selected building for the ACM Records tab
+  const filteredRecords = useMemo(() => {
+    if (!selectedBuilding) return records
+    return records.filter(
+      (record) => getRecordBuildingTabId(record) === selectedBuilding
+    )
+  }, [records, selectedBuilding])
+
+  // Compute missing fields % and extraction quality score from actual record data
+
+  const missingFieldsPercent = useMemo<number | null>(() => {
+    if (records.length === 0) return null
+    let emptyCount = 0
+    for (const record of records) {
+      for (const field of KEY_FIELDS) {
+        const value = record[field]
+        if (value === null || value === undefined || value === '') {
+          emptyCount++
+        }
+      }
+    }
+    const pct = (emptyCount / (records.length * KEY_FIELDS.length)) * 100
+    return Math.round(pct * 10) / 10
+  }, [records])
+
+  const extractionQualityScore = useMemo<number | null>(() => {
+    if (records.length === 0) return null
+    let score = 100
+    for (const record of records) {
+      if (!record.sample_no) score -= 2
+      if (!record.room_name) score -= 3
+      // Check for "Unknown" in key text fields
+      const textFields = [record.product, record.result, record.friable, record.material_condition, record.room_name] as const
+      for (const val of textFields) {
+        if (typeof val === 'string' && val.toLowerCase() === 'unknown') {
+          score -= 1
+        }
+      }
+    }
+    return Math.max(0, Math.min(100, score))
+  }, [records])
 
   return (
     <AppShell>
@@ -177,15 +278,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                   <TabsTrigger value="buildings">Buildings</TabsTrigger>
                   <TabsTrigger value="records">ACM Records</TabsTrigger>
                   <TabsTrigger value="content">Content</TabsTrigger>
-                  <TabsTrigger value="raw-tables">Raw Tables</TabsTrigger>
-                  <TabsTrigger value="log">Extraction Log</TabsTrigger>
                 </TabsList>
-                <Button variant="outline" size="sm" asChild className="shrink-0">
-                  <Link href={`/source/${sourceId}`}>
-                    <LayoutDashboard className="h-4 w-4 mr-1" />
-                    ACM Register
-                  </Link>
-                </Button>
               </div>
 
               <div className="min-h-0 flex-1 overflow-hidden">
@@ -198,8 +291,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                     recordCount={stats?.total_records ?? 0}
                     buildingCount={stats?.building_count ?? 0}
                     reviewStatus={source?.review_status}
-                    missingFieldsPercent={null}
-                    extractionQualityScore={null}
+                    missingFieldsPercent={missingFieldsPercent}
+                    extractionQualityScore={extractionQualityScore}
                     onReExtract={handleReExtract}
                   />
                 </TabsContent>
@@ -210,7 +303,12 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 >
                   <Card className="rounded-xl shadow-sm">
                     <CardContent className="p-4 sm:p-6">
-                      <BuildingReviewGrid sourceId={sourceId} />
+                      <BuildingGrid
+                        buildings={buildings}
+                        isLoading={isLoadingBuildings}
+                        sourceId={sourceId}
+                        schema={fieldSchema ?? null}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -221,15 +319,68 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 >
                   <Card className="rounded-xl shadow-sm">
                     <CardContent className="space-y-4 p-4 sm:p-6">
-                      <BuildingTabFilter
-                        records={records}
-                        selectedBuilding={selectedBuilding}
-                        onBuildingChange={setSelectedBuilding}
-                      />
-                      <ACMReviewGrid
+                      <div className="flex items-center justify-between">
+                        <BuildingTabFilter
+                          records={records}
+                          selectedBuilding={selectedBuilding}
+                          onBuildingChange={setSelectedBuilding}
+                        />
+                        {/* Column visibility picker */}
+                        <ColumnVisibilityPicker
+                          gridApi={gridRef.current?.getGridApi() ?? null}
+                          onResetColumns={() => gridRef.current?.resetColumns()}
+                        />
+                        {/* Per-building + complete export */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4 mr-1" />
+                              Export
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            {selectedBuilding && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    const buildingRecord = buildings.find(
+                                      (b) => b.id === selectedBuilding || b.internal_id === selectedBuilding
+                                    )
+                                    const label = buildingRecord?.building_name ?? 'building'
+                                    const buildingIds = buildingRecord ? [buildingRecord.id] : [selectedBuilding]
+                                    const blob = await acmApi.exportSfExcel(sourceId, buildingIds)
+                                    const url = URL.createObjectURL(blob)
+                                    const a = document.createElement('a')
+                                    a.href = url
+                                    a.download = `acm-${label.replace(/\s+/g, '-')}.xlsx`
+                                    a.click()
+                                    URL.revokeObjectURL(url)
+                                  }}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Export Current Building
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            <DropdownMenuItem onClick={handleExportExcel}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Export All (Excel)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportCsv}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Export All (CSV)
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <ACMGrid
+                        ref={gridRef}
+                        records={filteredRecords}
+                        onEdit={handleEditRecord}
+                        onDelete={handleDeleteRecord}
+                        onRowClick={handleRowClick}
                         sourceId={sourceId}
-                        buildingId={selectedBuilding}
-                        onDataChanged={handleRecordsDataChanged}
                       />
                     </CardContent>
                   </Card>
@@ -347,6 +498,33 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
             </div>
           </SheetContent>
         </Sheet>
+
+        {/* ACM Records tab dialogs */}
+        <ACMRecordDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          sourceId={sourceId}
+          record={editingRecord}
+          mode="edit"
+        />
+
+        <ACMRecordDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          record={detailRecord}
+          onEdit={handleEditFromDetail}
+        />
+
+        <ConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete ACM Record"
+          description="Are you sure you want to delete this ACM record? This action cannot be undone."
+          confirmText="Delete"
+          confirmVariant="destructive"
+          onConfirm={confirmDeleteRecord}
+          isLoading={deleteRecordMutation.isPending}
+        />
       </div>
     </AppShell>
   )

@@ -17,7 +17,7 @@ from open_notebook.extractors.validators.acm_validator import (
     validate_acm_record,
 )
 from open_notebook.extractors.validators.sf_picklist_validator import (
-    _BAR_TO_SF_VALUE,
+    _VALUE_ALIASES,
     SF_FLAT_ENUM_FIELD_MAP,
     _normalize_to_sf_value,
     normalize_record_to_sf,
@@ -144,9 +144,7 @@ class TestFieldFreezing:
         valid = sf_valid_fields(record)
         assert "material_condition" in valid, "'Stable' is a valid SF Condition value"
         # "Bonded" has no case-insensitive SF match and should be invalid
-        assert "friable" not in valid, (
-            "'Bonded' is not a valid SF Friability value"
-        )
+        assert "friable" not in valid, "'Bonded' is not a valid SF Friability value"
 
     def test_frozen_fields_not_overwritten_by_correction(self):
         """Simulate the frozen-field guard in _llm_correct_records.
@@ -241,11 +239,11 @@ class TestBARToSFMapping:
         normalize_record_to_sf(record)
         assert record["friable"] == "Non-friable"
 
-    def test_bar_to_sf_value_map_completeness(self):
-        """_BAR_TO_SF_VALUE has entries for the three divergent fields."""
-        assert "Friability_of_Material__c" in _BAR_TO_SF_VALUE
-        assert "Condition__c" in _BAR_TO_SF_VALUE
-        assert "Disturbance_Potential_of_Material__c" in _BAR_TO_SF_VALUE
+    def test_value_aliases_map_completeness(self):
+        """_VALUE_ALIASES has entries for the three divergent fields."""
+        assert "Friability_of_Material__c" in _VALUE_ALIASES
+        assert "Condition__c" in _VALUE_ALIASES
+        assert "Disturbance_Potential_of_Material__c" in _VALUE_ALIASES
 
 
 # ---------------------------------------------------------------------------

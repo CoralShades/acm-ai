@@ -106,10 +106,24 @@ class DoclingAdapter:
         pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
         pipeline_options.table_structure_options.do_cell_matching = True
 
+        # accelerator_options belongs on PdfPipelineOptions, NOT DocumentConverter.
+        # AUTO lets Docling use GPU when PyTorch has correct CUDA kernels (e.g.
+        # cu128 on RTX 5090) and falls back to CPU otherwise.
+        try:
+            from docling.datamodel.accelerator_options import (
+                AcceleratorDevice,
+                AcceleratorOptions,
+            )
+            pipeline_options.accelerator_options = AcceleratorOptions(
+                device=AcceleratorDevice.AUTO,
+            )
+        except ImportError:
+            pass  # Older docling version without accelerator_options
+
         converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
-            }
+            },
         )
 
         result = converter.convert(pdf_path)
@@ -146,6 +160,15 @@ class DoclingAdapter:
                 # TODO: Extract bbox from table.prov[0].bbox when needed
                 # (out of scope for E31-S2 — leave as None)
 
+                # Capture lossless cell-level representation for per-row extraction
+                try:
+                    docling_json = table.data.model_dump(mode="json")
+                except Exception as export_err:
+                    logger.warning(
+                        f"DoclingAdapter table {idx}: model_dump() failed: {export_err}"
+                    )
+                    docling_json = None
+
                 normalized = NormalizedTable(
                     table_index=idx,
                     page=page_no,
@@ -156,6 +179,7 @@ class DoclingAdapter:
                     markdown=df.to_markdown(index=False) or "",
                     csv=df.to_csv(index=False),
                     bbox=None,
+                    docling_json=docling_json,
                 )
                 tables.append(normalized)
 

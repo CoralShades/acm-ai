@@ -11,11 +11,9 @@ import pytest
 
 from open_notebook.extractors.orchestrator import (
     BuildingExtractionPlan,
-    BuildingExtractionStats,
     ExtractionStrategy,
     _get_docling_tables,
     _inject_docling_tables,
-    extract_building,
 )
 
 # ---------------------------------------------------------------------------
@@ -108,7 +106,7 @@ class TestGetDoclingTables:
         assert len(result) == 2
         assert result[0]["page_start"] == 5
         assert result[1]["page_start"] == 6
-        mock_query.assert_called_once()
+        assert mock_query.call_count == 2  # main query + exclusion count query
 
     @pytest.mark.asyncio
     async def test_returns_empty_for_no_tables(self):
@@ -209,114 +207,3 @@ class TestInjectDoclingTables:
         # Page 6 has empty raw_text, page 7 has no raw_text — both skipped
         assert "### Table (Page 6)" not in result
         assert "### Table (Page 7)" not in result
-
-
-# ---------------------------------------------------------------------------
-# Test extract_building with Docling injection
-# ---------------------------------------------------------------------------
-
-
-class TestExtractBuildingDoclingIntegration:
-    @pytest.mark.asyncio
-    async def test_with_docling_tables_enriches_context(self):
-        """extract_building injects Docling tables into LLM context when available."""
-        plan = _make_plan()
-        source = _make_source()
-        state = {"source": source, "model_id": "test-model"}
-
-        mock_result = MagicMock()
-        mock_result.records = []
-
-        with (
-            patch(
-                "open_notebook.extractors.orchestrator._get_docling_tables",
-                new_callable=AsyncMock,
-                return_value=SAMPLE_TABLES,
-            ) as mock_get,
-            patch(
-                "open_notebook.extractors.orchestrator._llm_extract_building",
-                new_callable=AsyncMock,
-                return_value=[],
-            ) as mock_llm,
-        ):
-            records, stats = await extract_building(plan, BUILDING_CONTENT, state)
-
-        # Verify _get_docling_tables was called with correct args
-        mock_get.assert_called_once_with("source:abc123", 5, 7)
-
-        # Verify the LLM received enriched content (contains structured header)
-        llm_content_arg = mock_llm.call_args[0][0]
-        assert "## Structured Table Data" in llm_content_arg
-        assert "### Table (Page 5)" in llm_content_arg
-
-    @pytest.mark.asyncio
-    async def test_without_docling_tables_uses_original(self):
-        """extract_building uses original content when no Docling tables exist."""
-        plan = _make_plan()
-        source = _make_source()
-        state = {"source": source, "model_id": "test-model"}
-
-        with (
-            patch(
-                "open_notebook.extractors.orchestrator._get_docling_tables",
-                new_callable=AsyncMock,
-                return_value=[],
-            ),
-            patch(
-                "open_notebook.extractors.orchestrator._llm_extract_building",
-                new_callable=AsyncMock,
-                return_value=[],
-            ) as mock_llm,
-        ):
-            records, stats = await extract_building(plan, BUILDING_CONTENT, state)
-
-        # Verify the LLM received original content (no structured header)
-        llm_content_arg = mock_llm.call_args[0][0]
-        assert "## Structured Table Data" not in llm_content_arg
-
-    @pytest.mark.asyncio
-    async def test_docling_injection_failure_is_nonfatal(self):
-        """extract_building continues with original content if Docling injection fails."""
-        plan = _make_plan()
-        source = _make_source()
-        state = {"source": source, "model_id": "test-model"}
-
-        with (
-            patch(
-                "open_notebook.extractors.orchestrator._get_docling_tables",
-                new_callable=AsyncMock,
-                side_effect=RuntimeError("Unexpected error"),
-            ),
-            patch(
-                "open_notebook.extractors.orchestrator._llm_extract_building",
-                new_callable=AsyncMock,
-                return_value=[],
-            ) as mock_llm,
-        ):
-            records, stats = await extract_building(plan, BUILDING_CONTENT, state)
-
-        # Should still proceed — non-fatal
-        llm_content_arg = mock_llm.call_args[0][0]
-        assert "## Structured Table Data" not in llm_content_arg
-
-    @pytest.mark.asyncio
-    async def test_no_source_in_state_skips_injection(self):
-        """extract_building skips Docling injection when state has no source."""
-        plan = _make_plan()
-        state = {"model_id": "test-model"}
-
-        with (
-            patch(
-                "open_notebook.extractors.orchestrator._get_docling_tables",
-                new_callable=AsyncMock,
-            ) as mock_get,
-            patch(
-                "open_notebook.extractors.orchestrator._llm_extract_building",
-                new_callable=AsyncMock,
-                return_value=[],
-            ),
-        ):
-            records, stats = await extract_building(plan, BUILDING_CONTENT, state)
-
-        # _get_docling_tables should NOT have been called
-        mock_get.assert_not_called()

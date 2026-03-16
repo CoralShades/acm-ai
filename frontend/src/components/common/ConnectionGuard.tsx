@@ -181,9 +181,31 @@ export function ConnectionGuard({ children }: ConnectionGuardProps) {
     return <ConnectionErrorOverlay error={error} onRetry={checkConnection} />
   }
 
-  // Show nothing while checking (prevents flash of content)
+  // Show skeleton while checking connection (prevents blank white screen)
   if (isChecking) {
-    return null
+    return (
+      <div className="min-h-screen flex" aria-busy="true">
+        <span className="sr-only" role="status">Connecting to server</span>
+        <div className="hidden md:flex w-64 flex-col border-r bg-muted/40 p-4 gap-4">
+          <div className="h-8 w-32 rounded bg-muted animate-pulse" />
+          <div className="space-y-2 mt-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-8 w-full rounded bg-muted animate-pulse" />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 p-6 space-y-4">
+          <div className="h-8 w-48 rounded bg-muted animate-pulse" />
+          <div className="h-4 w-96 rounded bg-muted animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-32 rounded-lg bg-muted animate-pulse" />
+            ))}
+          </div>
+          <div className="h-64 rounded-lg bg-muted animate-pulse mt-4" />
+        </div>
+      </div>
+    )
   }
 
   // Render children if connection is good

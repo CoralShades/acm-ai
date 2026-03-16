@@ -2,7 +2,7 @@
 ACM Record Validator.
 
 Validates ACM extraction records against SF picklist values (primary) and
-BAR enum values (audit-only). Used by the corrective RAG loop to identify
+legacy enum values (audit-only). Used by the corrective RAG loop to identify
 fields needing correction.
 
 Story: E1-S15 Corrective RAG Validation Loop
@@ -39,7 +39,7 @@ class ValidationResult(BaseModel):
     ] = []  # WARN-policy SF chain issues (non-blocking)
     bar_warnings: list[
         ValidationIssue
-    ] = []  # BAR enum audit issues (non-blocking, never triggers correction)
+    ] = []  # Legacy enum audit issues (non-blocking, never triggers correction)
 
 
 class CorrectionStats(BaseModel):
@@ -108,7 +108,7 @@ def _append_data_issue(record: dict, message: str) -> None:
 def normalize_to_sf_canonical(record: dict) -> set[str]:
     """Normalize record values to SF-canonical forms.
 
-    Applies BAR-to-SF value mapping and case-insensitive normalization.
+    Applies value alias mapping and case-insensitive normalization.
     Graceful degradation: returns empty set if SF schema is unavailable.
 
     Args:
@@ -179,7 +179,7 @@ def _normalize_enum_for_validation(field_name: str, raw_value: str) -> Optional[
 
 
 def validate_enum_fields(record: dict) -> list[ValidationIssue]:
-    """Validate enum fields against authoritative BAR values.
+    """Validate enum fields against authoritative enum values.
 
     Checks sample_result, material_condition, friable, disturbance_potential
     against register_enums.json canonical values.
@@ -264,13 +264,13 @@ def validate_enum_fields(record: dict) -> list[ValidationIssue]:
 
 
 def validate_business_rules(record: dict) -> list[ValidationIssue]:
-    """Validate BAR business rules.
+    """Validate ACM business rules.
 
     Rules:
-        BAR-001: Negative result → condition should be N/A (negative)
-        BAR-002: Negative result → disturbance_potential should be N/A (negative)
-        BAR-003: Assumed Negative → same as Negative (with assumed negative variant)
-        BAR-004: Positive/Assumed Positive result → friable should be populated
+        BR-001: Negative result → condition should be N/A (negative)
+        BR-002: Negative result → disturbance_potential should be N/A (negative)
+        BR-003: Assumed Negative → same as Negative (with assumed negative variant)
+        BR-004: Positive/Assumed Positive result → friable should be populated
 
     Args:
         record: Dict of ACM record field values.
@@ -284,7 +284,7 @@ def validate_business_rules(record: dict) -> list[ValidationIssue]:
     if not sample_result:
         return issues
 
-    # BAR-001/BAR-002: Negative results require N/A fields
+    # BR-001/BR-002: Negative results require N/A fields
     negative_values = {"Negative", "Assumed Negative"}
     if sample_result in negative_values:
         na_value = (
@@ -320,7 +320,7 @@ def validate_business_rules(record: dict) -> list[ValidationIssue]:
                 )
             )
 
-    # BAR-004: Positive results require friability populated.
+    # BR-004: Positive results require friability populated.
     # Includes SF compound values that are positive-managed.
     # NOTE: "Negative - Treated as Positive" is intentionally excluded from
     # negative_values above — it is positive-managed and friability IS required
@@ -432,19 +432,19 @@ def validate_acm_record(record: dict) -> ValidationResult:
     """Validate a full ACM record with SF-first validation pipeline.
 
     Orchestrates all validators. SF picklist validation is the primary
-    blocking authority. BAR enum validation is demoted to audit-only
+    blocking authority. Legacy enum validation is demoted to audit-only
     (bar_warnings, never triggers correction).
 
     Validation order:
-    0. Normalize to SF-canonical values (BAR→SF mapping, casing)
+    0. Normalize to SF-canonical values (alias mapping, casing)
     1. Required fields — blocking
     2. SF flat enum validation — blocking (primary authority)
     3. SF chain validation (REJECT policy) — blocking
-    4. Business rules — blocking (BAR & SF share N/A values)
-    5. BAR enum validation — audit-only (bar_warnings, non-blocking)
+    4. Business rules — blocking (SF N/A values)
+    5. Legacy enum validation — audit-only (bar_warnings, non-blocking)
 
     Graceful degradation: if SF schema files are unavailable, falls back to
-    BAR enum path as blocking (existing behavior preserved).
+    legacy enum path as blocking (existing behavior preserved).
 
     Args:
         record: Dict of ACM record field values.
@@ -482,16 +482,16 @@ def validate_acm_record(record: dict) -> ValidationResult:
         )
         all_issues.extend(_convert_chain_issues(sf_chain_result.issues))
 
-        # 5. BAR enum validation — demoted to audit-only (non-blocking)
+        # 5. Legacy enum validation — demoted to audit-only (non-blocking)
         bar_warnings.extend(validate_enum_fields(record))
 
     except (ImportError, OSError, SFSchemaLoadError) as e:
-        # Graceful degradation: SF unavailable, fall back to BAR as blocking
-        logger.debug(f"SF validation unavailable, falling back to BAR path: {e}")
+        # Graceful degradation: SF unavailable, fall back to legacy enum as blocking
+        logger.debug(f"SF validation unavailable, falling back to legacy path: {e}")
         all_issues.extend(validate_enum_fields(record))
         chain_warnings = validate_sf_chains(record)
 
-    # 4. Business rules — always blocking (BAR & SF share N/A values)
+    # 4. Business rules — always blocking
     all_issues.extend(validate_business_rules(record))
 
     is_valid = len(all_issues) == 0
@@ -503,7 +503,7 @@ def validate_acm_record(record: dict) -> ValidationResult:
         )
     if bar_warnings:
         logger.debug(
-            f"Record has {len(bar_warnings)} BAR audit warnings (non-blocking): "
+            f"Record has {len(bar_warnings)} legacy audit warnings (non-blocking): "
             f"{[i.field_name for i in bar_warnings]}"
         )
 

@@ -153,24 +153,25 @@ class TestPromptTemplate:
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/building_inventory")
-        result = prompter.render(data={"content": "Sample document content"})
-        assert "Building Inventory Compilation" in result
-        assert "Sample document content" in result
+        result = prompter.render(data={"site_name": "Test School", "consultant_name": "Test Corp"})
+        assert "building inventory" in result.lower()
+        assert "Test School" in result
+        assert "Test Corp" in result
 
     def test_prompt_contains_building_detection_instructions(self):
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/building_inventory")
         result = prompter.render(data={"content": ""})
-        assert "B##A" in result or "B###" in result
-        assert "D##" in result or "Demountable" in result.lower()
+        assert "B00A" in result or "B###" in result
+        assert "D01" in result or "Demountable" in result.lower()
 
     def test_prompt_contains_room_detection_instructions(self):
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/building_inventory")
         result = prompter.render(data={"content": ""})
-        assert "R####" in result or "R0001" in result
+        assert "R0001" in result or "room_id" in result
 
     def test_prompt_contains_complexity_classification(self):
         from ai_prompter import Prompter
@@ -179,7 +180,7 @@ class TestPromptTemplate:
         result = prompter.render(data={"content": ""})
         assert "simple" in result
         assert "complex" in result
-        assert "No Asbestos" in result
+        assert "no acm" in result.lower() or "no asbestos" in result.lower()
 
     def test_prompt_contains_page_range_instructions(self):
         from ai_prompter import Prompter
@@ -626,13 +627,13 @@ class TestLangGraphIntegration:
         assert "inventory" in node_names
 
     def test_graph_structure_to_inventory_edge(self):
-        """Graph wires structure -> inventory edge."""
+        """S4: Graph wires metadata_and_structure -> inventory edge."""
         from open_notebook.graphs.acm_extraction import agent_state
 
         edges = agent_state.edges
-        assert ("structure", "inventory") in edges or any(
-            e == ("structure", "inventory") for e in edges
-        ), "Missing edge: structure -> inventory"
+        assert ("metadata_and_structure", "inventory") in edges or any(
+            e == ("metadata_and_structure", "inventory") for e in edges
+        ), "Missing edge: metadata_and_structure -> inventory (S4)"
 
     @pytest.mark.asyncio
     async def test_compile_inventory_node_with_content(self):

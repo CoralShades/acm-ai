@@ -196,16 +196,22 @@ class TestApplyOllamaExtractionSettings:
         result = _apply_ollama_extraction_settings(model)
         assert getattr(result, "format", None) == "json"
 
-    def test_sets_num_ctx_default(self):
-        """AC2: num_ctx raised to 32768 when lower."""
-        model = _make_ollama_model(num_ctx=8192)
+    def test_sets_num_ctx_when_zero(self):
+        """AC2: num_ctx set to 32768 when caller did not configure (0)."""
+        model = _make_ollama_model(num_ctx=0)
         result = _apply_ollama_extraction_settings(model)
         assert getattr(result, "num_ctx", None) == 32768
 
-    def test_num_ctx_env_override(self, monkeypatch):
-        """AC2: OLLAMA_NUM_CTX env var overrides default 32768."""
-        monkeypatch.setenv("OLLAMA_NUM_CTX", "16384")
+    def test_preserves_caller_num_ctx(self):
+        """AC2: num_ctx preserved when caller explicitly set a non-zero value."""
         model = _make_ollama_model(num_ctx=8192)
+        result = _apply_ollama_extraction_settings(model)
+        assert getattr(result, "num_ctx", None) == 8192
+
+    def test_num_ctx_env_override(self, monkeypatch):
+        """AC2: OLLAMA_NUM_CTX env var overrides default 32768 when num_ctx is 0."""
+        monkeypatch.setenv("OLLAMA_NUM_CTX", "16384")
+        model = _make_ollama_model(num_ctx=0)
         result = _apply_ollama_extraction_settings(model)
         assert getattr(result, "num_ctx", None) == 16384
 

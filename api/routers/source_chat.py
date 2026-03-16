@@ -15,6 +15,10 @@ from open_notebook.exceptions import (
     NotFoundError,
 )
 from open_notebook.graphs.source_chat import source_chat_graph as source_chat_graph
+from open_notebook.observability.langfuse_config import (
+    langfuse_tracing,
+    merge_langfuse_into_config,
+)
 
 router = APIRouter()
 
@@ -436,13 +440,21 @@ async def stream_source_chat_response(
         user_event = {"type": "user_message", "content": message, "timestamp": None}
         yield f"data: {json.dumps(user_event)}\n\n"
 
-        # Execute source chat graph synchronously (like notebook chat does)
-        result = source_chat_graph.invoke(
-            input=state_values,  # type: ignore[arg-type]
-            config=RunnableConfig(
-                configurable={"thread_id": session_id, "model_id": model_override}
-            ),
-        )
+        # Execute source chat graph with optional Langfuse tracing
+        with langfuse_tracing(
+            "source_chat",
+            source_id=source_id,
+            operation_type="source_chat",
+        ) as (callbacks, metadata):
+            config = merge_langfuse_into_config(
+                {"configurable": {"thread_id": session_id, "model_id": model_override}},
+                callbacks,
+                metadata,
+            )
+            result = source_chat_graph.invoke(
+                input=state_values,  # type: ignore[arg-type]
+                config=RunnableConfig(**config),
+            )
 
         # Stream the complete AI response
         if "messages" in result:

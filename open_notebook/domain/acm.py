@@ -80,7 +80,7 @@ class ACMRecord(ObjectModel):
     building_id: str = Field(
         ...,
         validation_alias=AliasChoices("building_id", "Building_Code__c"),
-        description="Building identifier (BAR: building_id / SF: Building_Code__c)",
+        description="Building identifier (Building_Code__c)",
     )
     building_name: Optional[str] = Field(
         default=None,
@@ -136,7 +136,7 @@ class ACMRecord(ObjectModel):
     area_type: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("area_type", "Internal_External__c"),
-        description="Area type: 'Interior', 'Exterior', 'Grounds' (BAR) / 'Internal', 'External' (SF)",
+        description="Area type: 'Interior', 'Exterior', 'Grounds' / 'Internal', 'External' (SF)",
     )
     floor_level: Optional[str] = Field(
         default=None,
@@ -175,7 +175,7 @@ class ACMRecord(ObjectModel):
     friable: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("friable", "Friability_of_Material__c"),
-        description="Friability: 'Friable' or 'Non Friable'",
+        description="Friability: 'Friable' or 'Non-friable'",
     )
     material_condition: Optional[str] = Field(
         default=None,
@@ -313,7 +313,7 @@ class ACMRecord(ObjectModel):
         validation_alias=AliasChoices(
             "assea_risk_level", "ASSEA_Survey_Guide_Risk_Level__c"
         ),
-        description="ASSEA Survey Guide risk level (separate from BAR risk_status)",
+        description="ASSEA Survey Guide risk level (separate from risk_status)",
     )
     date_identified: Optional[str] = Field(
         default=None,
@@ -354,7 +354,7 @@ class ACMRecord(ObjectModel):
         description="Canonical action from recommendation normalization (e.g., 'maintain_in_situ')",
     )
 
-    # Product Classification fields (E1-S9: Victorian BAR taxonomy)
+    # Product Classification fields (E1-S9: ACM taxonomy)
     acm_product_group: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("acm_product_group", "ACM_Classification__c"),
@@ -363,7 +363,7 @@ class ACMRecord(ObjectModel):
     acm_product_type: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("acm_product_type", "ACM_Sub_Classification__c"),
-        description="BAR taxonomy product type (e.g., 'Vinyl Tiles')",
+        description="ACM taxonomy product type (e.g., 'Vinyl Tiles')",
     )
     classification_confidence: Optional[float] = Field(
         default=None, description="Confidence score for the classification (0.0-1.0)"
@@ -679,7 +679,7 @@ class BuildingRecord(ObjectModel):
 
     Represents a physical building extracted from SAMP documents.
     Maps to the Salesforce Building__c object with AliasChoices
-    for dual BAR/SF field name support.
+    for dual internal/SF field name support.
 
     Linked to ACMRecords via acm_record.building_record_id FK.
     """
@@ -903,6 +903,14 @@ class BuildingRecord(ObjectModel):
             "possible_capital_works_project", "Possible_Capital_Works_Project__c"
         ),
     )
+    building_sub_category: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_sub_category", "Building_Sub_Category__c"),
+    )
+    building_risk_rating: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("building_risk_rating", "Building_Risk_Rating__c"),
+    )
 
     # --- Embedding fields (AC8) ---
     embedding: Optional[List[float]] = Field(
@@ -1001,8 +1009,9 @@ class BuildingRecord(ObjectModel):
         if isinstance(source_id, str) and not source_id.startswith("source:"):
             source_id = f"source:{source_id}"
         source = await Source.get(source_id)
+        source_label = source.title or ""
         source_short = (
-            source.name[:8].upper().replace(" ", "_") if source.name else "UNKNOWN"
+            source_label[:8].upper().replace(" ", "_") if source_label else "UNKNOWN"
         )
         existing = await cls.get_by_source(source_id)
         seq = len(existing) + 1

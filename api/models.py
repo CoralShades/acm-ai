@@ -1,3 +1,4 @@
+from datetime import datetime as dt
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -373,6 +374,9 @@ class SourceListResponse(BaseModel):
     review_status: Optional[str] = None
     # Jobs dashboard enrichment
     building_count: Optional[int] = None
+    # PDF metadata for job card icons
+    page_count: Optional[int] = None
+    file_size: Optional[int] = None
 
 
 # Context API models
@@ -484,6 +488,10 @@ class ACMRecordResponse(BaseModel):
     floor_level: Optional[str] = None
     no_access: Optional[bool] = None
     smf_present: Optional[str] = None
+    table_bbox: Optional[dict] = Field(
+        default=None,
+        description="Table bounding box: {x, y, width, height, page}",
+    )
     # Validation fields (E33-S4)
     validation_status: Optional[str] = (
         None  # "valid", "corrected", "failed_correction", "invalid"
@@ -491,6 +499,13 @@ class ACMRecordResponse(BaseModel):
     validation_errors: List[str] = Field(default_factory=list)
     created: Optional[str] = None
     updated: Optional[str] = None
+
+    @field_validator("created", "updated", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
 
 
 class ACMRecordListResponse(BaseModel):
@@ -509,6 +524,10 @@ class ACMExtractRequest(BaseModel):
     source_id: str = Field(..., description="Source ID to extract ACM data from")
     force: bool = Field(
         default=False, description="Delete existing records before re-extraction"
+    )
+    mode: str = Field(
+        default="standard",
+        description="Extraction mode: 'standard' or 'ai_enhanced'",
     )
 
 
@@ -667,6 +686,13 @@ class RawExtractionResponse(BaseModel):
     confidence: Optional[float] = None
     officer_edits: List[Dict[str, Any]] = Field(default_factory=list)
     created_at: Optional[str] = None
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
 
 
 class RawExtractionListResponse(BaseModel):
@@ -908,6 +934,13 @@ class SiteConfigResponse(BaseModel):
     )
     created: Optional[str] = None
     updated: Optional[str] = None
+
+    @field_validator("created", "updated", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
 
 
 class BuildingResponse(BaseModel):
@@ -1202,26 +1235,6 @@ class BackfillParentsResponse(BaseModel):
     message: str = Field(..., description="Status message")
 
 
-class FieldMappingEntryRequest(BaseModel):
-    """Single field mapping entry for update requests."""
-
-    bar_column: str = Field(..., min_length=1, description="BAR export column name")
-    bar_column_index: int = Field(..., ge=0, description="0-based column position")
-    acm_field: Optional[str] = Field(None, description="ACMRecord field name")
-    is_computed: bool = Field(default=False)
-    formula: Optional[str] = Field(None)
-
-
-class FieldMappingUpdateRequest(BaseModel):
-    """Request to update field mapping configuration."""
-
-    name: Optional[str] = Field(None, min_length=1, description="Mapping profile name")
-    mappings: Optional[List[FieldMappingEntryRequest]] = Field(
-        None, description="Column mappings"
-    )
-    notes: Optional[str] = None
-
-
 # =============================================================================
 # SF Field Schema Config Models (E30-S1 — V3 Foundation)
 # =============================================================================
@@ -1462,6 +1475,17 @@ class BuildingRecordResponse(BaseModel):
     created: Optional[str] = None
     updated: Optional[str] = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_datetime_fields(cls, data: Any) -> Any:
+        """SurrealDB returns datetime objects for created/updated; coerce to str."""
+        if isinstance(data, dict):
+            for field in ("created", "updated", "embedded_at"):
+                val = data.get(field)
+                if val is not None and not isinstance(val, str):
+                    data[field] = str(val)
+        return data
+
 
 class BuildingRecordListResponse(BaseModel):
     """Response for building record list endpoint."""
@@ -1534,6 +1558,13 @@ class SourceIntelligenceResponse(BaseModel):
     register_page_range: Optional[Dict[str, Any]] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def coerce_datetime_to_str(cls, v):
+        if isinstance(v, dt):
+            return v.isoformat()
+        return v
 
 
 # =============================================================================

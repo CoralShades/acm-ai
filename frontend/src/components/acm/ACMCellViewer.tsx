@@ -21,11 +21,9 @@ import type { CellSelectionDetails } from './ACMGrid'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
-// Configure PDF.js worker - use bundled worker for reliability (no external CDN dependency)
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString()
+// Use CDN worker — Turbopack can't resolve bare-specifier new URL() patterns.
+// Must match PDFPageViewer's config (both set the same pdfjs singleton).
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 // Zoom constraints as constants
 const MIN_SCALE = 0.5

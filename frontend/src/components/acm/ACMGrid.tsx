@@ -6,13 +6,14 @@ import type { ColDef, GridReadyEvent, CellClickedEvent, CellKeyDownEvent, GridAp
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import { PRESET_COLUMNS, useColumnPresetStore } from '@/lib/stores/column-visibility-store'
 import { Button } from '@/components/ui/button'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Edit2, Eye, Trash2 } from 'lucide-react'
 import type { ACMRecord } from '@/lib/types/acm'
+import { ProvenanceViewer } from './ProvenanceViewer'
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
 
-const COLUMN_STATE_KEY = 'acm-grid-column-state'
+const COLUMN_STATE_KEY = 'acm-grid-column-state-v2'
 
 // Expose grid control methods via ref
 export interface ACMGridRef {
@@ -51,6 +52,8 @@ interface ACMGridProps {
   onRowClick?: (record: ACMRecord) => void
   // ID of the currently selected/highlighted record
   selectedRecordId?: string | null
+  // Source ID for ProvenanceViewer PDF lookup
+  sourceId?: string
 }
 
 // Custom cell renderer for boolean labelled field
@@ -64,13 +67,30 @@ function ActionsRenderer({
   data,
   onEdit,
   onDelete,
+  onShowProvenance,
 }: {
   data: ACMRecord
   onEdit: (record: ACMRecord) => void
   onDelete: (record: ACMRecord) => void
+  onShowProvenance?: (record: ACMRecord) => void
 }) {
   return (
     <div className="flex gap-1">
+      {onShowProvenance && (
+        <button
+          type="button"
+          title="View source provenance"
+          aria-label="View source provenance"
+          onClick={(e) => {
+            e.stopPropagation()
+            onShowProvenance(data)
+          }}
+          className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Eye className="h-3.5 w-3.5 mr-0.5" />
+          Source
+        </button>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -100,11 +120,12 @@ function ActionsRenderer({
 }
 
 export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
-  { records, previewRecords, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId },
+  { records, previewRecords, isLoading, onEdit, onDelete, enableGrouping = false, quickFilterText, onVisibleCountChange, onCellSelect, onRowClick, selectedRecordId, sourceId },
   ref
 ) {
   const gridRef = useRef<AgGridReact<ACMGridRecord>>(null)
   const [gridApi, setGridApi] = useState<GridApi<ACMGridRecord> | null>(null)
+  const [provenanceRecordId, setProvenanceRecordId] = useState<string | null>(null)
 
   // Merge saved records with preview (streaming) records
   const mergedRows = useMemo<ACMGridRecord[]>(() => {
@@ -223,10 +244,53 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
 
   const columnDefs = useMemo<ColDef<ACMRecord>[]>(
     () => [
+      // Record ID — short display, click to copy full ID
+      {
+        field: 'id',
+        headerName: 'Record ID',
+        headerTooltip: 'SurrealDB record ID — click to copy',
+        width: 130,
+        pinned: 'left',
+        sortable: true,
+        filter: true,
+        valueFormatter: (params) => {
+          const id = params.value as string
+          if (!id) return ''
+          // Show short form: acm_record:abc123 → abc123…
+          const parts = id.split(':')
+          const key = parts[parts.length - 1] || id
+          return key.length > 10 ? key.slice(0, 10) + '…' : key
+        },
+        cellRenderer: (params: { value: string }) => {
+          const id = params.value
+          if (!id) return null
+          const parts = id.split(':')
+          const shortKey = parts[parts.length - 1] || id
+          const display = shortKey.length > 10 ? shortKey.slice(0, 10) + '…' : shortKey
+          return (
+            <span
+              title={`${id}\nClick to copy`}
+              className="font-mono text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-all"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(id).catch(() => {})
+                }
+                const el = e.currentTarget
+                el.textContent = 'copied!'
+                setTimeout(() => { el.textContent = display }, 1200)
+              }}
+            >
+              {display}
+            </span>
+          )
+        },
+      },
+      // --- Default visible columns (user's 15 required fields) ---
       {
         field: 'building_id',
         headerName: 'Building Code',
-        headerTooltip: 'Building code identifier',
+        headerTooltip: 'FK to Building__c',
         width: 120,
         sortable: true,
         filter: true,
@@ -240,6 +304,109 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         },
       },
       {
+        field: 'product',
+        headerName: 'Item Name',
+        headerTooltip: 'Item_Name__c — ACM product name',
+        width: 180,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'friable',
+        headerName: 'Friability',
+        headerTooltip: 'Friability_of_Material__c',
+        width: 110,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'acm_product_group',
+        headerName: 'ACM Product Group',
+        headerTooltip: 'ACM_Classification__c — depends on Friability',
+        width: 160,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'acm_product_type',
+        headerName: 'ACM Product Type',
+        headerTooltip: 'ACM_Sub_Classification__c — depends on Classification',
+        flex: 1,
+        minWidth: 200,
+        sortable: true,
+        filter: true,
+        valueGetter: (params) => {
+          return params.data?.acm_product_type || params.data?.material_description || ''
+        },
+      },
+      {
+        field: 'material_condition',
+        headerName: 'Condition',
+        headerTooltip: 'Condition__c',
+        width: 110,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'disturbance_potential',
+        headerName: 'Disturbance Potential',
+        headerTooltip: 'Disturbance_Potential__c',
+        width: 160,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'location',
+        headerName: 'Location in Room',
+        headerTooltip: 'Item_Location__c',
+        width: 150,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'room_name',
+        headerName: 'Room / Area',
+        headerTooltip: 'Room_Name__c',
+        width: 150,
+        sortable: true,
+        filter: true,
+        ...(enableGrouping && { rowGroup: true }),
+        hide: enableGrouping,
+      },
+      {
+        field: 'floor_level',
+        headerName: 'Floor Level',
+        headerTooltip: 'Floor_Level__c',
+        width: 110,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'quantity',
+        headerName: 'Quantity',
+        headerTooltip: 'Quantity__c',
+        width: 100,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'sample_result',
+        headerName: 'Sample Result',
+        headerTooltip: 'Sample_Result__c',
+        width: 130,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'identifying_company',
+        headerName: 'Assessor',
+        headerTooltip: 'Assessor__c',
+        width: 160,
+        sortable: true,
+        filter: true,
+      },
+      // --- Optional columns (hidden by default, togglable via ColumnVisibilityPicker) ---
+      {
         field: 'building_name',
         headerName: 'Building Name',
         width: 180,
@@ -250,7 +417,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       {
         field: 'room_id',
         headerName: 'Room ID',
-        headerTooltip: 'Room identifier and name',
         width: 100,
         sortable: true,
         filter: true,
@@ -263,34 +429,6 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         },
       },
       {
-        field: 'room_name',
-        headerName: 'Room Name',
-        width: 160,
-        sortable: true,
-        filter: true,
-        hide: enableGrouping,
-      },
-      {
-        field: 'product',
-        headerName: 'ACM Name',
-        headerTooltip: 'Asbestos containing material name',
-        width: 160,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'acm_product_type',
-        headerName: 'ACM Product Type',
-        headerTooltip: 'AI-classified product type (falls back to raw description)',
-        flex: 1,
-        minWidth: 250,
-        sortable: true,
-        filter: true,
-        valueGetter: (params) => {
-          return params.data?.acm_product_type || params.data?.material_description || ''
-        },
-      },
-      {
         field: 'result',
         headerName: 'Result',
         width: 130,
@@ -298,16 +436,9 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         filter: true,
       },
       {
-        field: 'friable',
-        headerName: 'Friability',
-        width: 100,
-        sortable: true,
-        filter: true,
-      },
-      {
-        field: 'material_condition',
-        headerName: 'Condition',
-        width: 110,
+        field: 'risk_status',
+        headerName: 'Risk Status',
+        width: 120,
         sortable: true,
         filter: true,
       },
@@ -326,93 +457,64 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         filter: true,
       },
       {
+        field: 'sample_no',
+        headerName: 'Sample No',
+        width: 120,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'acm_labelled',
+        headerName: 'Labelled',
+        width: 90,
+        sortable: true,
+        filter: true,
+        cellRenderer: LabelledRenderer,
+      },
+      {
+        field: 'material_description',
+        headerName: 'Material Description',
+        width: 200,
+        sortable: true,
+        filter: true,
+      },
+      {
+        field: 'extent',
+        headerName: 'Extent',
+        width: 120,
+        sortable: true,
+        filter: true,
+      },
+      {
         field: 'page_number',
         headerName: 'Page',
         width: 70,
         sortable: true,
       },
-      // BAR Compliance Fields
-      {
-        headerName: 'BAR Compliance',
-        children: [
-          {
-            field: 'sample_no',
-            headerName: 'Sample No',
-            headerTooltip: 'Sample identification number',
-            width: 120,
-            sortable: true,
-            filter: true,
-          },
-          {
-            field: 'sample_result',
-            headerName: 'Sample Result',
-            headerTooltip: 'Laboratory sample result',
-            width: 130,
-            sortable: true,
-            filter: true,
-          },
-          {
-            field: 'quantity',
-            headerName: 'Quantity',
-            headerTooltip: 'Quantity of ACM present',
-            width: 100,
-            sortable: true,
-            filter: true,
-          },
-          {
-            field: 'floor_level',
-            headerName: 'Floor Level',
-            headerTooltip: 'Floor or level location',
-            width: 110,
-            sortable: true,
-            filter: true,
-          },
-          {
-            field: 'acm_labelled',
-            headerName: 'Labelled',
-            headerTooltip: 'Whether ACM is labelled',
-            width: 90,
-            sortable: true,
-            filter: true,
-            cellRenderer: LabelledRenderer,
-          },
-          {
-            field: 'identifying_company',
-            headerName: 'Identifying Company',
-            headerTooltip: 'Company that identified the ACM',
-            width: 180,
-            sortable: true,
-            filter: true,
-          },
-          {
-            field: 'acm_product_group',
-            headerName: 'Product Group',
-            headerTooltip: 'ACM product group classification',
-            width: 150,
-            sortable: true,
-            filter: true,
-          },
-        ],
-      },
+      // Actions column
       {
         headerName: 'Actions',
-        width: 90,
+        width: sourceId ? 155 : 90,
         pinned: 'right',
         cellRenderer: (params: { data: ACMRecord }) =>
           params.data ? (
-            <ActionsRenderer data={params.data} onEdit={onEdit} onDelete={onDelete} />
+            <ActionsRenderer
+              data={params.data}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onShowProvenance={sourceId ? (record) => setProvenanceRecordId(record.id) : undefined}
+            />
           ) : null,
         sortable: false,
         filter: false,
       },
     ],
-    [onEdit, onDelete, enableGrouping]
+    [onEdit, onDelete, enableGrouping, sourceId]
   )
 
   const defaultColDef = useMemo<ColDef>(
     () => ({
       resizable: true,
-      suppressMenu: true,
     }),
     []
   )
@@ -428,8 +530,8 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
 
   const onCellClicked = useCallback(
     (event: CellClickedEvent<ACMRecord>) => {
-      // Skip if clicking on Actions column or group row
-      if (event.colDef.headerName === 'Actions' || event.node.group || !event.data) {
+      // Skip if clicking on Record ID, Actions column, or group row
+      if (event.colDef.field === 'id' || event.colDef.headerName === 'Actions' || event.node.group || !event.data) {
         return
       }
 
@@ -609,6 +711,16 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         <span>Space to expand/collapse</span>
         <span>? for all shortcuts</span>
       </div>
+
+      {/* Provenance viewer panel */}
+      {provenanceRecordId && sourceId && (
+        <ProvenanceViewer
+          sourceId={sourceId}
+          recordId={provenanceRecordId}
+          mode="panel"
+          onClose={() => setProvenanceRecordId(null)}
+        />
+      )}
     </div>
   )
 })

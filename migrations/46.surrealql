@@ -1,0 +1,5 @@
+-- Migration 46: Remove deprecated BAR template and field mapping tables
+-- These were part of the BAR template export system (E5-S3/S4), now replaced
+-- by hardcoded SF field column exports.
+REMOVE TABLE IF EXISTS bar_template;
+REMOVE TABLE IF EXISTS field_mapping;

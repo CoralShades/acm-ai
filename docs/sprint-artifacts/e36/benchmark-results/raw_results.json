@@ -1,0 +1,199 @@
+[
+  {
+    "model": "qwen2.5:7b",
+    "pdf": "broadmeadows",
+    "status": "completed",
+    "records_extracted": 20,
+    "ground_truth_count": 31,
+    "matched_records": 4,
+    "record_recall_pct": 12.9,
+    "field_accuracy_pct": 29.2,
+    "elapsed_seconds": 251.58710646629333,
+    "field_scores": {
+      "overall": 29.2,
+      "per_field": {
+        "room_name": 25.0,
+        "product": 50.0,
+        "friable": 100.0,
+        "material_condition": 0.0,
+        "risk_status": 0.0,
+        "sample_no": 0.0
+      }
+    },
+    "error": "",
+    "command_id": "command:5jzgysavfinpt8s55usp"
+  },
+  {
+    "model": "qwen2.5:7b",
+    "pdf": "alexander",
+    "status": "completed",
+    "records_extracted": 37,
+    "ground_truth_count": 43,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 81.70692491531372,
+    "field_scores": {
+      "overall": 0.0,
+      "per_field": {}
+    },
+    "error": "",
+    "command_id": "command:isy6hk85vipw9a7tg7oe"
+  },
+  {
+    "model": "llama3.1:8b",
+    "pdf": "broadmeadows",
+    "status": "completed",
+    "records_extracted": 3,
+    "ground_truth_count": 31,
+    "matched_records": 1,
+    "record_recall_pct": 3.2,
+    "field_accuracy_pct": 33.3,
+    "elapsed_seconds": 402.5440402030945,
+    "field_scores": {
+      "overall": 33.3,
+      "per_field": {
+        "room_name": 100.0,
+        "product": 0.0,
+        "friable": 100.0,
+        "material_condition": 0.0,
+        "risk_status": 0.0,
+        "sample_no": 0.0
+      }
+    },
+    "error": "",
+    "command_id": "command:8a0g6rl162ps9kkj2ds2"
+  },
+  {
+    "model": "llama3.1:8b",
+    "pdf": "alexander",
+    "status": "timeout",
+    "records_extracted": 0,
+    "ground_truth_count": 43,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 612.8412601947784,
+    "field_scores": {},
+    "error": "Extraction ended with status: timeout",
+    "command_id": "command:i3a8gwsy0eagatrtsed2"
+  },
+  {
+    "model": "mistral:7b",
+    "pdf": "broadmeadows",
+    "status": "timeout",
+    "records_extracted": 0,
+    "ground_truth_count": 31,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 612.849442243576,
+    "field_scores": {},
+    "error": "Extraction ended with status: timeout",
+    "command_id": "command:o7v2dg3fdhopoxf23z5x"
+  },
+  {
+    "model": "mistral:7b",
+    "pdf": "alexander",
+    "status": "timeout",
+    "records_extracted": 0,
+    "ground_truth_count": 43,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 616.0396258831024,
+    "field_scores": {},
+    "error": "Extraction ended with status: timeout",
+    "command_id": "command:u88p53lz0qpu4tmv0288"
+  },
+  {
+    "model": "qwen3:32b",
+    "pdf": "broadmeadows",
+    "status": "timeout",
+    "records_extracted": 0,
+    "ground_truth_count": 31,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 615.917268037796,
+    "field_scores": {},
+    "error": "Extraction ended with status: timeout",
+    "command_id": "command:46d4ce8f0vs44k2w4fqh"
+  },
+  {
+    "model": "qwen3:32b",
+    "pdf": "alexander",
+    "status": "timeout",
+    "records_extracted": 0,
+    "ground_truth_count": 43,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 615.826779127121,
+    "field_scores": {},
+    "error": "Extraction ended with status: timeout",
+    "command_id": "command:et5vwkopplvwfw1gud2o"
+  },
+  {
+    "model": "qwen2.5:32b",
+    "pdf": "broadmeadows",
+    "status": "timeout",
+    "records_extracted": 0,
+    "ground_truth_count": 31,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 612.5968234539032,
+    "field_scores": {},
+    "error": "Extraction ended with status: timeout",
+    "command_id": "command:l98cz9wbi6geic2npxuk"
+  },
+  {
+    "model": "qwen2.5:32b",
+    "pdf": "alexander",
+    "status": "completed",
+    "records_extracted": 35,
+    "ground_truth_count": 43,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 237.50720953941345,
+    "field_scores": {
+      "overall": 0.0,
+      "per_field": {}
+    },
+    "error": "",
+    "command_id": "command:53r1aligsw12tntmbzh8"
+  },
+  {
+    "model": "phi4:14b",
+    "pdf": "broadmeadows",
+    "status": "timeout",
+    "records_extracted": 0,
+    "ground_truth_count": 31,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 613.2488994598389,
+    "field_scores": {},
+    "error": "Extraction ended with status: timeout",
+    "command_id": "command:iqx078aiufnsdk1e6w8u"
+  },
+  {
+    "model": "phi4:14b",
+    "pdf": "alexander",
+    "status": "completed",
+    "records_extracted": 35,
+    "ground_truth_count": 43,
+    "matched_records": 0,
+    "record_recall_pct": 0.0,
+    "field_accuracy_pct": 0.0,
+    "elapsed_seconds": 81.69520568847656,
+    "field_scores": {
+      "overall": 0.0,
+      "per_field": {}
+    },
+    "error": "",
+    "command_id": "command:jayijkdcu2slpp7sn4te"
+  }
+]

@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical** : Always use AskUserQuestion Tool when you want to clarify, interview or ask questions from the user.
 
+## User Documetation Location : C:\Users\User\Documents\Obsidian Vault\ACM
+
 ## CRITICAL PATH RULE (WSL/Windows)
 
 - Never `cd` to `/d/...` or `D:\...` in Bash commands.
@@ -57,6 +59,15 @@ cd frontend && npm run dev            # Frontend on port 8502
 ```
 
 **Note:** Use `run_worker.py` instead of `surreal-commands-worker` directly on Windows to avoid Unicode encoding errors (see Issue #1).
+
+### LangGraph Dev Server (Local Graph Debugging)
+```bash
+uv run langgraph dev --no-browser     # Both graphs: acm_extraction, supervisor
+# API: http://127.0.0.1:2024          # Invoke graphs, inspect thread state
+# Docs: http://127.0.0.1:2024/docs    # Swagger UI — fully local, no cloud
+```
+**Important:** Always use `uv run langgraph dev`, not bare `langgraph dev` — the latter uses global Python which lacks project deps.
+**Note:** LangGraph Studio UI now requires LangSmith cloud. Use the local API + Swagger UI at `:2024/docs` for fully-local debugging, combined with Langfuse traces for visualization.
 
 ### Docker-Only Development
 ```bash
@@ -125,6 +136,9 @@ frontend/src/
   components/           # React components
     ui/                 # Base shadcn/ui-style components
     common/             # Shared (CommandPalette, ModelSelector)
+    acm/                # ACM domain (BuildingGrid, ACMGrid, BuildingViewDialog, ProvenanceViewer, etc.)
+    chat/               # Chat components (SmartChatPanel, renderers/)
+    jobs/               # Job-related components
     notebooks/, sources/, notes/  # Feature components
   hooks/                # Custom React hooks
   lib/                  # Utilities and API clients
@@ -255,12 +269,54 @@ OLLAMA_API_BASE=http://localhost:11434
 # Content truncation guard for Ollama — auto-sized from model's num_ctx (3.5 chars/token).
 # Override only if the auto-size is wrong for your specific model/hardware combo.
 OLLAMA_MAX_CONTENT_CHARS=24000  # explicit override (optional; default: num_ctx * 3.5)
+
+# Per-row extraction (v3.5)
+ACM_ITEM_EXTRACTION_MODE=per_row    # per_row (default) or bulk
+ACM_ROW_EXTRACTION_NUM_CTX=2048     # Context window for per-row extraction
+ACM_EXTRACTION_MODEL=llama3.1:8b    # Ollama model for extraction (configurable)
 ```
 
 ## Code Style
 
 - **Python**: Ruff for linting/formatting, 88 char line length, type hints required, Google-style docstrings
 - **Commits**: Conventional commits (feat:, fix:, docs:, refactor:, test:)
+
+## Prompt Generator System
+
+### Quick Start
+Use `/generate-prompt <request>` to auto-generate optimized Claude Code prompts.
+
+Examples:
+- `/generate-prompt "Fix the extraction pipeline timeout error"`
+- `/generate-prompt "Add a new extraction provider" --save --tmux`
+- `/generate-prompt "Update the README" --no-plan`
+
+### How It Works
+The prompt generator is a 4-skill pipeline:
+1. **Discovery** (`/skill-discovery`): Scans `.claude/skills/`, `.agents/skills/`, `commands/`, and `CLAUDE.md` to build `skills-registry.json`
+2. **Classification** (`/request-classifier`): Parses your request → type (feature/bug/research/...), complexity (1-10), plan mode (on/off)
+3. **Routing** (`/prompt-router`): Maps classification → skill bundle, agent strategy (solo/subagent/tmux), Context7 directives
+4. **Generation** (`/prompt-generator`): Assembles a complete prompt with glossary, verification checklist, and files summary
+
+### Plan Mode
+Automatically activated for features, bug fixes, research, and improvements. Creates:
+- `task_plan.md` — Numbered steps with file paths
+- `findings.md` — Research template
+- `progress.md` — Checkbox tracker
+
+Override: add `--no-plan` to skip, or `--with-plan` to force.
+
+### Agent Strategies
+- **Solo**: Simple tasks, 1 skill, direct execution
+- **Subagent Dispatch**: Medium tasks, parallel subtasks via `/dispatching-parallel-agents`
+- **Tmux Agent Team**: Complex tasks, 3+ panes for implementation/testing/research
+
+### Skills Registry
+Auto-updated on session start (via pre-session hook). Manual refresh: `/skill-discovery`.
+Location: `skills-registry.json` at repo root.
+
+### Available Skills
+Run `/skill-discovery` to see the current catalog.
 
 ## Sub-Agent Model Selection
 
@@ -377,12 +433,68 @@ Add to the story's Dev Agent Record:
 - Normalizer enums: `open_notebook/extractors/normalizers/enums.py`
 - ACM domain model uses SF API names as field aliases: `open_notebook/domain/acm.py`
 
-### Two-View Frontend (Building Grid + Item Grid)
+### Two-Tab Frontend (Building Grid + ACM Records Grid)
 - Route: `/source/[id]` at `frontend/src/app/(dashboard)/source/[id]/page.tsx`
-- Components: `BuildingSidebar`, `ItemGrid` in `frontend/src/components/acm/`
+- Layout: Two-tab — "Buildings" tab (`BuildingGrid`) + "ACM Records" tab (`BuildingTabStrip` + `ACMGrid`)
+- `BuildingGrid` in `frontend/src/components/acm/BuildingGrid.tsx` — AG Grid with 13 default building columns, autoHeight, localStorage column state, View button
+- `BuildingViewDialog` in `frontend/src/components/acm/BuildingViewDialog.tsx` — Dialog modal wrapping `BuildingDetailForm`
+- `ACMGrid` column defs: 13 required Item__c fields (Building Code, Item Name, Friability, etc.)
+- Per-building export dropdown: "Export Current Building" + "Export All" (Excel/CSV)
+- Same layout applied to `/jobs/[id]` page
 - Store: `frontend/src/lib/stores/buildingStore.ts` (Zustand)
+- Column visibility presets: `frontend/src/lib/stores/column-visibility-store.ts`
 - Hooks: `useBuildings`, `useACMItems` in `frontend/src/lib/hooks/`
 - AG Grid dynamic columns from `GET /api/acm/field-schema`
+
+### Observability Stack
+Six tools, each with a distinct role:
+
+| Tool | When to Use | Key Feature | Data Location |
+|------|------------|-------------|---------------|
+| **Langfuse** (self-hosted) | Production monitoring, cost tracking, trace archive | Per-provider cost breakdown, unlimited retention | Local Docker (`localhost:3000`) |
+| **LangSmith** (cloud) | Dev prompt iteration, auto-tracing all graphs | Prompt playground (edit + re-run), side-by-side comparison | Cloud (smith.langchain.com) |
+| **LangGraph API** (local) | Debug graph state, invoke/inspect threads | Swagger UI at `:2024/docs`, state inspection via REST | Local (`127.0.0.1:2024`) |
+| **Logfire SDK** (dev) | Pydantic validation traces → Langfuse via OTel | See every `model_validate()`, parse error, coercion as a span | Routes to Langfuse (no cloud) |
+| **erdantic** (dev CLI) | Static ER diagrams of Pydantic model relationships | `pip install erdantic` + Graphviz, then `python scripts/generate_model_diagrams.py` → `docs/diagrams/*.svg` | Local SVG files |
+| **JSON Crack** (Docker) | Interactive JSON tree viewer for graph state debugging | Paste JSON or upload `state_dump.json` at `localhost:8888` | Local Docker (`localhost:8888`) |
+
+**When to use which:**
+- **"Why did this extraction produce wrong data?"** → LangSmith (trace the LLM call, edit prompt in playground)
+- **"How much is this costing across all runs?"** → Langfuse (self-hosted, cost/token dashboards)
+- **"What's the graph state right now for thread X?"** → LangGraph API (`GET /threads/{id}/state`)
+- **"Is the pipeline healthy across many documents?"** → Langfuse (historical traces, score trends)
+- **"What did Pydantic do with the LLM output?"** → Logfire (validation spans in Langfuse)
+- **"How do our 60+ models relate?"** → erdantic (`docs/diagrams/*.svg`)
+- **"Let me explore this nested JSON interactively"** → JSON Crack (`localhost:8888`)
+- **Production** → Langfuse only (self-hosted, data stays local — required for government data)
+
+**Code patterns:**
+- Langfuse config: `open_notebook/observability/langfuse_config.py`
+- Logfire config: `open_notebook/observability/logfire_config.py`
+- Use `langfuse_tracing()` context manager + `merge_langfuse_into_config()` for all new graph invocations in routers
+- Do NOT modify `acm_extraction.py` or `source_commands.py` Langfuse wiring (pre-existing, working)
+- All tracing is non-fatal — app works with Langfuse/Logfire disabled
+- LangSmith auto-traces via `LANGCHAIN_TRACING_V2=true` env var (zero code changes)
+- Logfire auto-instruments Pydantic v2 when `LOGFIRE_ENABLED=true` (requires Langfuse keys)
+- JSON Crack: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d jsoncrack`
+- State dump: `uv run python scripts/dump_state_json.py <thread_id>` → paste into JSON Crack
+
+### Per-Row Extraction Pipeline (v3.5)
+
+Item__c extraction supports two modes controlled by `ACM_ITEM_EXTRACTION_MODE` env var:
+
+**Per-row mode** (default): One LLM call per table row → 13 fields → deterministic post-processing
+- Row segmenter: `open_notebook/extractors/row_segmenter.py` (RawTableRow, 8 edge case types)
+- Row extractor: `open_notebook/extractors/row_extractor.py` (KV prompt, extract_all_rows)
+- Schema: `open_notebook/domain/acm_row_schemas.py` (ACMItemRow, 13 fields)
+- Mapper: `open_notebook/domain/acm_row_mappers.py` (ACMItemRow → ACMExtractionRecord)
+- Prompts: `prompts/acm/row_extraction.jinja`, `prompts/acm/row_split.jinja`
+- Ollama config: `ACM_ROW_EXTRACTION_NUM_CTX=2048`, `ACM_EXTRACTION_MODEL=llama3.1:8b`
+
+**Bulk mode**: Original V3 path — one LLM call per building, all items at once
+- Activated by `ACM_ITEM_EXTRACTION_MODE=bulk` or automatic fallback when no DoclingDocument JSON
+
+**Truncation protection**: TruncationError detection → cloud model retry, 30% output budget reservation
 
 ### SSE Streaming (PipelineEventBus)
 - Backend: `open_notebook/extractors/pipeline_event_bus.py`
@@ -432,6 +544,16 @@ Custom slash commands are available in `.claude/commands/`:
 | `/logs [service]` | View service logs |
 | `/build [target]` | Build frontend or run backend checks |
 | `/test [path]` | Run pytest tests |
+| `/observability-status` | Health check observability services |
+| `/trace-inspect` | Inspect Langfuse traces for a source extraction |
+| `/trace-cleanup` | Delete Langfuse traces by tag/name/date |
+| `/debug-extraction` | Root-cause debug failed extraction |
+| `/provider-costs` | Analyze costs by provider/model |
+| `/graph-inspect` | Inspect LangGraph thread state |
+| `/debug-pydantic` | Debug Pydantic validation failures |
+| `/regenerate-diagrams` | Regenerate erdantic ER diagrams |
+| `/benchmark-compare` | Compare benchmark results across models |
+| `/prompt-test` | Test prompt template changes |
 
 BMAD workflow commands are also available in `.claude/commands/bmad/`.
 
@@ -447,6 +569,7 @@ Domain-specific rules in `.claude/rules/`:
 | `langgraph-ai.md` | `open_notebook/graphs/**/*`, `prompts/**/*` |
 | `surrealdb.md` | `migrations/**/*`, `open_notebook/database/**/*` |
 | `mcp-servers.md` | `.claude/settings*.json` files |
+| `observability-ops.md` | `open_notebook/observability/**/*`, `scripts/observability/**/*` |
 
 ## MCP Configuration
 
@@ -527,3 +650,26 @@ CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 ```
 
 Agent definitions in `.claude/agents/`. The `orchestrator` reads stories from `docs/sprint-artifacts/` and delegates to specialists based on the routing table above.
+
+#### E36 Verification Team
+
+The `e36-lead` agent orchestrates E2E verification, benchmarking, and auditing:
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `e36-lead` | sonnet | Pure orchestrator — delegates all work, manages state files |
+| `e36-browser-tester` | sonnet | UI testing via agent-browser CLI |
+| `e36-log-sentinel` | sonnet | Log monitoring during extraction runs |
+| `e36-devils-advocate` | sonnet | Adversarial code/test review |
+| `e36-bmad-scribe` | haiku | BMAD documentation updates |
+| `e36-ux-auditor` | sonnet | Visual/responsive/a11y audit |
+
+State files: `docs/sprint-artifacts/e36/` (task_plan.md, progress.md, findings.md)
+
+#### Observability Agents
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `acm-observability-debugger` | sonnet | Root-cause extraction failures via trace analysis |
+| `acm-trace-analyst` | sonnet | Bulk cost/performance analysis across runs |
+| `acm-graph-inspector` | sonnet | LangGraph thread state inspection |

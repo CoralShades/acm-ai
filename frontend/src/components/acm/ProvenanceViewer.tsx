@@ -42,8 +42,8 @@ function buildPdfUrl(sourceId: string, filePath: string | null): string | null {
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
     return filePath
   }
-  // Proxy through backend: /api/sources/{sourceId}/file
-  return `/api/sources/${encodeURIComponent(sourceId)}/file`
+  // Proxy through backend: /api/sources/{sourceId}/download
+  return `/api/sources/${encodeURIComponent(sourceId)}/download`
 }
 
 /** Inner content — shared between panel and page modes */
@@ -95,14 +95,26 @@ function ProvenanceContent({
   const { record, table_section, raw_extractions, source_file_path, source_title } = data
   const pdfUrl = buildPdfUrl(sourceId, source_file_path)
 
-  // Extract bbox from record.table_bbox if available (TableBoundingBox from generated types)
-  // The ACMRecord type currently doesn't include table_bbox — access via unknown cast
-  const tableBbox = (record as unknown as Record<string, unknown>)['table_bbox'] as PDFBbox | null | undefined
-  const bbox: PDFBbox | null = tableBbox
-    ? { x: tableBbox.x, y: tableBbox.y, width: tableBbox.width, height: tableBbox.height }
-    : null
-
   const pageNumber = record.page_number ?? 1
+
+  // Extract bbox from record.table_bbox if available.
+  // Only show the overlay when:
+  //   1. table_bbox exists with valid positive dimensions
+  //   2. bbox page matches the displayed page (or bbox has no page field)
+  const rawBbox = record.table_bbox
+  const bboxPageMatches =
+    rawBbox && (rawBbox.page == null || rawBbox.page === pageNumber)
+  const bboxValid =
+    rawBbox &&
+    isFinite(rawBbox.x) &&
+    isFinite(rawBbox.y) &&
+    rawBbox.width > 0 &&
+    rawBbox.height > 0
+
+  const bbox: PDFBbox | null =
+    rawBbox && bboxPageMatches && bboxValid
+      ? { x: rawBbox.x, y: rawBbox.y, width: rawBbox.width, height: rawBbox.height }
+      : null
 
   return (
     <div className="flex flex-col gap-6 p-4 overflow-y-auto">
@@ -140,7 +152,7 @@ function ProvenanceContent({
         )}
       </div>
 
-      {/* PDF page viewer */}
+      {/* PDF page viewer — full-featured with zoom, scroll, search, and bbox highlight */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Source Document</h3>
         <PDFPageViewer

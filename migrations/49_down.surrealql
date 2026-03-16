@@ -1,0 +1,7 @@
+-- Rollback migration 49: Remove cascade delete events
+REMOVE EVENT IF EXISTS building_record_source_delete ON TABLE source;
+REMOVE EVENT IF EXISTS acm_table_section_source_delete ON TABLE source;
+REMOVE EVENT IF EXISTS site_config_source_delete ON TABLE source;
+REMOVE EVENT IF EXISTS source_intelligence_source_delete ON TABLE source;
+REMOVE EVENT IF EXISTS raw_extraction_source_delete ON TABLE source;
+REMOVE EVENT IF EXISTS extraction_progress_source_delete ON TABLE source;

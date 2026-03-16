@@ -274,21 +274,27 @@ def _create_processing_groups(buildings: List[BuildingMeta]) -> List[ProcessingG
 
 
 def _detect_ara_buildings(content: str) -> List[Tuple[str, int]]:
-    """Detect ARA-format buildings from 'Building Name:\\n<name>' header blocks.
+    """Detect ARA-format buildings from 'Building Name:' header blocks.
 
     ARA documents (Greencap, Prensa, etc.) use repeated header blocks with
-    'Building Name:' followed by the building name on the next line.
+    'Building Name:' followed by the building name either on the same line
+    or on the next line. Supports both formats:
+      - Two-line: ``Building Name:\\n  Broadmeadows Police Station``
+      - One-line: ``Building Name: Broadmeadows Police Station``
     Returns list of (building_name, first_occurrence_position) tuples,
     deduplicated by building name.
     """
     ara_building_pattern = re.compile(
-        r"Building Name:\s*\n\s*(.+?)(?:\n|$)", re.IGNORECASE
+        r"Building Name:\s*\n\s*(.+?)(?:\n|$)"  # two-line format
+        r"|"
+        r"Building Name:\s+(.+?)(?:\n|$)",  # one-line format
+        re.IGNORECASE,
     )
     seen_names: set = set()
     results: List[Tuple[str, int]] = []
 
     for match in ara_building_pattern.finditer(content):
-        name = match.group(1).strip()
+        name = (match.group(1) or match.group(2) or "").strip()
         if name and name not in seen_names:
             seen_names.add(name)
             results.append((name, match.start()))
@@ -326,6 +332,7 @@ def _find_ara_building_section_end(
 def _heuristic_fallback(
     content: str,
     document_structure: Optional[DocumentStructure] = None,
+    document_metadata: Optional[dict] = None,
 ) -> BuildingInventory:
     """Heuristic-based building inventory extraction (Task 3.5).
 
@@ -426,6 +433,65 @@ def _heuristic_fallback(
                     )
                 )
 
+    # Generic fallback: use document_structure intelligence when no format matched
+    if not buildings and document_structure:
+        if document_structure.building_ids:
+            # Create buildings from IDs detected by metadata_and_structure
+            logger.info(
+                f"Generic fallback: creating {len(document_structure.building_ids)} "
+                "buildings from document_structure.building_ids"
+            )
+            reg_start = document_structure.register_start_page or 1
+            total = document_structure.total_pages or 999
+            n_ids = len(document_structure.building_ids)
+            site_name = (document_metadata or {}).get("site_name")
+            for idx, bid in enumerate(document_structure.building_ids):
+                # Estimate page ranges by dividing register evenly
+                pages_per_building = max(1, (total - reg_start + 1) // n_ids)
+                b_start = reg_start + idx * pages_per_building
+                b_end = min(
+                    reg_start + (idx + 1) * pages_per_building - 1,
+                    total,
+                )
+                # If we have a site_name and only one building, use it. Otherwise keep bid as name.
+                bldg_name = site_name if (site_name and n_ids == 1) else bid
+                buildings.append(
+                    BuildingMeta(
+                        building_id=bid,
+                        name=bldg_name,
+                        page_start=b_start,
+                        page_end=b_end,
+                        complexity=BuildingComplexity.COMPLEX,
+                    )
+                )
+        elif document_structure.register_start_page:
+            # Last resort: single catch-all building for entire register
+            logger.info(
+                "Generic fallback: creating single catch-all building "
+                f"from register_start={document_structure.register_start_page}"
+            )
+            site_name = (document_metadata or {}).get("site_name") or "Main Building"
+            buildings.append(
+                BuildingMeta(
+                    building_id="BUILDING_1",
+                    name=site_name,
+                    page_start=document_structure.register_start_page,
+                    page_end=document_structure.total_pages or 999,
+                    complexity=BuildingComplexity.COMPLEX,
+                )
+            )
+
+    # Single-building fix: when only 1 building, set page_end = total_pages
+    # so tables on later pages aren't excluded by the orchestrator page query
+    if len(buildings) == 1 and document_structure:
+        total = document_structure.total_pages
+        if total and buildings[0].page_end < total:
+            logger.info(
+                f"Single-building doc: expanding page_end from "
+                f"{buildings[0].page_end} to {total}"
+            )
+            buildings[0].page_end = total
+
     # Extend boundary pages so records on shared pages are captured (E20-S1)
     _apply_boundary_overlap(buildings)
 
@@ -464,6 +530,24 @@ def _coerce_rooms_in_inventory(parsed: dict) -> None:
             if isinstance(room, str):
                 coerced.append({"room_id": room, "name": room})
             elif isinstance(room, dict):
+                # Remap common LLM field name variants to expected schema
+                if "room_id" not in room:
+                    for alt_key in ("room_code", "code", "id"):
+                        if alt_key in room:
+                            room["room_id"] = room.pop(alt_key)
+                            break
+                    if "room_id" not in room:
+                        room["room_id"] = next(
+                            (v for v in room.values() if isinstance(v, str)),
+                            "unknown",
+                        )
+                if "name" not in room:
+                    for alt_key in ("room_name", "room_code", "description", "label"):
+                        if alt_key in room:
+                            room["name"] = room.pop(alt_key)
+                            break
+                    if "name" not in room:
+                        room["name"] = room.get("room_id", "unknown")
                 coerced.append(room)
             # skip non-str/dict entries silently
         building["rooms"] = coerced
@@ -472,12 +556,15 @@ def _coerce_rooms_in_inventory(parsed: dict) -> None:
 async def _llm_compile_inventory(
     content: str,
     model_id: Optional[str] = None,
+    document_metadata: Optional[dict] = None,
 ) -> BuildingInventory:
     """Use LLM with structured output for building inventory compilation (Task 3.3).
 
     Args:
         content: Document content (trimmed to register section).
         model_id: Optional model ID override.
+        document_metadata: Optional dict with site_name, consultant_name, document_type
+            for prompt context injection.
 
     Returns:
         BuildingInventory from LLM analysis.
@@ -485,12 +572,17 @@ async def _llm_compile_inventory(
     from ai_prompter import Prompter
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    from open_notebook.graphs.utils import provision_langchain_model
+    from open_notebook.graphs.utils import (
+        _apply_ollama_extraction_settings,
+        _verify_provider_routing,
+        parse_json_response,
+        provision_langchain_model,
+    )
 
     prompter = Prompter(prompt_template="acm/building_inventory")
-    system_prompt = prompter.render(data={"content": content})
+    template_data = document_metadata or {}
+    system_prompt = prompter.render(data=template_data)
 
-    # TODO: Use model.get_max_output_tokens() when Model domain object is available here
     model = await provision_langchain_model(
         content,
         model_id,
@@ -499,15 +591,13 @@ async def _llm_compile_inventory(
         max_tokens=4096,
     )
 
-    from open_notebook.graphs.utils import (
-        _verify_provider_routing,
-        parse_json_response,
-    )
+    # Force format="json" for Ollama models (prevents conversational text output)
+    _apply_ollama_extraction_settings(model)
 
     messages = [
         SystemMessage(content=system_prompt),
         HumanMessage(
-            content="Compile a building inventory with page ranges, room codes, and complexity classifications."
+            content=f"## Document Content\n\n{content}\n\nCompile a building inventory with page ranges, room identifiers, and complexity classifications."
         ),
     ]
     raw_response = await model.ainvoke(messages)
@@ -549,6 +639,7 @@ async def compile_building_inventory(
     content: Optional[str],
     document_structure: Optional[DocumentStructure] = None,
     model_id: Optional[str] = None,
+    document_metadata: Optional[dict] = None,
 ) -> BuildingInventory:
     """Compile a building inventory from document content (Task 3).
 
@@ -559,6 +650,8 @@ async def compile_building_inventory(
         content: Full document markdown content.
         document_structure: Optional DocumentStructure from E1-S16.
         model_id: Optional model ID override for LLM.
+        document_metadata: Optional dict with site_name, consultant_name, document_type
+            for prompt context injection.
 
     Returns:
         BuildingInventory with buildings, rooms, page ranges, and processing groups.
@@ -575,14 +668,16 @@ async def compile_building_inventory(
     register_content = _trim_to_register(content, document_structure)
 
     try:
-        inventory = await _llm_compile_inventory(register_content, model_id)
+        inventory = await _llm_compile_inventory(
+            register_content, model_id, document_metadata=document_metadata
+        )
         # Ensure processing groups are generated
         if not inventory.processing_groups and inventory.buildings:
             inventory.processing_groups = _create_processing_groups(inventory.buildings)
 
         # Cross-validate: run heuristic on FULL content (not trimmed) to catch
         # buildings whose register data precedes the detected register_start_page
-        heuristic = _heuristic_fallback(content, document_structure)
+        heuristic = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
         if heuristic.buildings:
             llm_ids = {b.building_id.lower() for b in inventory.buildings}
             llm_names = {(b.name or "").lower() for b in inventory.buildings}
@@ -618,5 +713,5 @@ async def compile_building_inventory(
             f"LLM building inventory compilation failed: {e}. Using heuristic fallback."
         )
         # Use FULL content for heuristic to catch buildings before register_start_page
-        fallback = _heuristic_fallback(content, document_structure)
+        fallback = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
         return fallback

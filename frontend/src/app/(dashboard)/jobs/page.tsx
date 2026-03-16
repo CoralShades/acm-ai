@@ -20,7 +20,6 @@ type JobFilter =
   | 'all'
   | 'extracting'
   | 'pending_review'
-  | 'building_review'
   | 'acm_review'
   | 'published'
 
@@ -28,13 +27,13 @@ const FILTER_OPTIONS: Array<{ id: JobFilter; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'extracting', label: 'Extracting' },
   { id: 'pending_review', label: 'Pending' },
-  { id: 'building_review', label: 'Buildings' },
-  { id: 'acm_review', label: 'Records' },
+  { id: 'acm_review', label: 'In Review' },
   { id: 'published', label: 'Published' },
 ]
 
 function JobsPageContent() {
   const router = useRouter()
+  const { openSourceDialog } = useCreateDialogs()
   const [searchText, setSearchText] = useState('')
   const [activeFilter, setActiveFilter] = useState<JobFilter>('all')
   const { sources, loading, fetchMore } = useSourcesPaginated({
@@ -42,8 +41,6 @@ function JobsPageContent() {
     sortBy: 'updated',
     sortOrder: 'desc',
   })
-
-  const { openSourceDialog } = useCreateDialogs()
 
   useEffect(() => {
     sources.slice(0, 6).forEach((source) => {
@@ -61,7 +58,9 @@ function JobsPageContent() {
   const filteredSources = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
     return sources.filter((source) => {
-      const sourceStatus = source.review_status ?? 'published'
+      const rawStatus = source.review_status ?? 'published'
+      // Fold building_review into pending_review for simplified filters
+      const sourceStatus = rawStatus === 'building_review' ? 'pending_review' : rawStatus
       const matchesFilter = activeFilter === 'all' || sourceStatus === activeFilter
       if (!matchesFilter) return false
 

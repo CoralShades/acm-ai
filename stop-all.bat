@@ -27,7 +27,7 @@ taskkill /FI "WINDOWTITLE eq ACM-AI - API*" /F >nul 2>&1
 REM Kill orphaned API processes (Windows)
 for /f "tokens=2 delims=," %%a in ('wmic process where "CommandLine like '%%run_api.py%%'" get ProcessId /format:csv 2^>nul ^| findstr /r "[0-9]"') do taskkill /F /PID %%a >nul 2>&1
 REM Kill orphaned uvicorn multiprocessing workers via Python utility
-REM (only kills children of dead parent PIDs — safe for other multiprocessing uses)
+REM (only kills children of dead parent PIDs -- safe for other multiprocessing uses)
 uv run python -c "from scripts._port_utils import _kill_orphaned_children; _kill_orphaned_children(5055)" >nul 2>&1
 REM Kill any Windows process LISTENING on port 5055 (local address only)
 for /f "tokens=2,5" %%a in ('netstat -ano 2^>nul ^| findstr "LISTENING"') do (
@@ -47,7 +47,7 @@ echo Stopping SurrealDB...
 docker compose down >nul 2>&1
 
 echo.
-REM Verify port 5055 is free (connect test — fails = port is free)
+REM Verify port 5055 is free (connect test -- fails = port is free)
 echo Verifying port 5055 is available...
 set "PORT_FREE=0"
 for /L %%i in (1,1,15) do (
