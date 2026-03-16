@@ -1,6 +1,8 @@
 'use client'
 
-import { useRenderToolCall, useLangGraphInterrupt } from '@copilotkit/react-core'
+import React from 'react'
+import { useRenderToolCall, useDefaultTool, useLangGraphInterrupt } from '@copilotkit/react-core'
+import { AgentActivityIndicator } from '@/components/chat/renderers/AgentActivityIndicator'
 import { HITLApprovalDialog } from '@/components/chat/renderers/HITLApprovalDialog'
 import { ToolErrorCard } from '@/components/chat/renderers/ToolErrorCard'
 import { isErrorResult } from '@/lib/utils/tool-result'
@@ -34,20 +36,36 @@ export function CrudToolRenderers() {
     },
   })
 
+  // Render query_job_records results
+  useRenderToolCall({
+    name: 'query_job_records',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') {
+        return <AgentActivityIndicator tool="query_job_records" status="executing" />
+      }
+      if (isErrorResult(result)) return <ToolErrorCard tool="query_job_records" />
+      if (!result) return <></>
+      return (
+        <div className="border rounded-lg p-3 my-2 text-sm bg-muted/10">
+          <div className="text-xs font-medium text-muted-foreground mb-1">Query Results</div>
+          <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-60">
+            {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      )
+    },
+  })
+
   // Render preview_write tool results as loading indicators
   // (the actual approval UI comes from useLangGraphInterrupt above)
   useRenderToolCall({
-    name: 'preview_acm_write',
+    name: 'preview_write',
     render: ({ status, result }) => {
       if (status === 'inProgress' || status === 'executing') {
-        return (
-          <div role="status" aria-live="polite" className="text-sm text-muted-foreground italic py-2">
-            Preparing write preview...
-          </div>
-        )
+        return <AgentActivityIndicator tool="preview_write" status="executing" />
       }
       if (isErrorResult(result))
-        return <ToolErrorCard tool="preview_acm_write" />
+        return <ToolErrorCard tool="preview_write" />
       // Preview result is handled by the interrupt approval dialog
       return <></>
     },
@@ -58,11 +76,7 @@ export function CrudToolRenderers() {
     name: 'write_acm_record',
     render: ({ status, result }) => {
       if (status === 'inProgress' || status === 'executing') {
-        return (
-          <div role="status" aria-live="polite" className="text-sm text-muted-foreground italic py-2">
-            Applying change...
-          </div>
-        )
+        return <AgentActivityIndicator tool="write_acm_record" status="executing" />
       }
       if (isErrorResult(result))
         return <ToolErrorCard tool="write_acm_record" />
@@ -71,6 +85,25 @@ export function CrudToolRenderers() {
       return (
         <div className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded px-3 py-2 my-1">
           {content}
+        </div>
+      )
+    },
+  })
+
+  // Fallback renderer for any unregistered tools
+  useDefaultTool({
+    render: ({ name, status, result }): React.ReactElement => {
+      if (status === 'inProgress' || status === 'executing') {
+        return <AgentActivityIndicator tool={name} status="executing" />
+      }
+      if (isErrorResult(result)) return <ToolErrorCard tool={name} />
+      if (!result) return <></>
+      return (
+        <div className="border rounded-lg p-3 my-1 text-sm bg-muted/30">
+          <div className="text-xs font-medium text-muted-foreground mb-1">{name}</div>
+          <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-40">
+            {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
+          </pre>
         </div>
       )
     },

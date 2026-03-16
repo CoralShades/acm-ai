@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { CopilotKit } from '@copilotkit/react-core'
 import { CopilotChat } from '@copilotkit/react-ui'
-import { useCoAgent } from '@copilotkit/react-core'
+import { useCoAgent, useCopilotReadable } from '@copilotkit/react-core'
 import { cn } from '@/lib/utils'
 import { CrudToolRenderers } from './CrudToolRenderers'
 import { ChatModelSelector } from '@/components/chat/ChatModelSelector'
@@ -26,6 +26,13 @@ function CrudChatContent({ sourceId }: CrudChatContentProps) {
       source_id: sourceId,
       model_id: null,
     },
+  })
+
+  // Pass source_id as CopilotKit readable context — this ends up in
+  // input.context on every request, independent of useCoAgent state sync.
+  useCopilotReadable({
+    description: 'Current job source ID for scoping all queries and writes',
+    value: JSON.stringify({ source_id: sourceId }),
   })
 
   const setChatModelId = useCallback(

@@ -10,8 +10,10 @@ export const TOOL_LABELS: Record<string, string> = {
   list_acm_buildings: 'building list',
   search_documents_vector: 'vector search',
   search_documents_text: 'text search',
+  preview_write: 'write preview',
   preview_acm_write: 'write preview',
   write_acm_record: 'record write',
+  query_job_records: 'job records query',
 }
 
 export const TOOL_ACTIVITY_LABELS: Record<string, string> = {
@@ -24,4 +26,6 @@ export const TOOL_ACTIVITY_LABELS: Record<string, string> = {
   list_acm_buildings: 'Listing buildings with ACM data...',
   search_documents_vector: 'Searching documents (semantic)...',
   search_documents_text: 'Searching documents (text)...',
+  query_job_records: 'Querying ACM records...',
+  preview_write: 'Preparing write preview...',
 }
