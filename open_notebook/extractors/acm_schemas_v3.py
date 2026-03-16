@@ -76,7 +76,7 @@ class ACMItemRecord(BaseModel):
     nata_sample_no: Optional[str] = None  # NATA_Endorsed_Sample_no__c
     condition: Optional[str] = None  # Condition__c (picklist)
     disturbance_potential: Optional[str] = None  # Disturbance_Potential_of_Material__c
-    quantity: Optional[float] = None  # Quantity__c
+    quantity: Optional[str] = None  # Quantity__c (kept as str — LLMs return "2m²", "10 lm")
     labelled: Optional[str] = None  # Labelled__c (Yes | No)
     labelled_details: Optional[str] = None  # Labelled_Details__c
 

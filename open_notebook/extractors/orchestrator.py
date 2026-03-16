@@ -528,10 +528,8 @@ def _normalize_v3_records(
         if item.if_other_item_name:
             data_issues.append(f"Item name: {item.if_other_item_name}")
 
-        # quantity: float -> str
-        quantity_str: Optional[str] = None
-        if item.quantity is not None:
-            quantity_str = str(item.quantity)
+        # quantity: already str in ACMItemRecord
+        quantity_str = item.quantity
 
         record = ACMExtractionRecord(
             # Building identity — plan.building_id is authoritative

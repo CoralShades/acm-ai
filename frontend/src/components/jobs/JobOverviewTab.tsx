@@ -158,13 +158,13 @@ export function JobOverviewTab({
             </div>
 
             {/* Building Inventory */}
-            {buildingInventory && buildingInventory.buildings.length > 0 && (
+            {(buildingInventory?.buildings?.length ?? 0) > 0 && (
               <div className="mt-4 border-t pt-3">
                 <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Building Inventory ({buildingInventory.total_buildings})
+                  Building Inventory ({buildingInventory?.total_buildings ?? 0})
                 </p>
                 <div className="space-y-1.5">
-                  {buildingInventory.buildings.map((b) => (
+                  {(buildingInventory?.buildings ?? []).map((b) => (
                     <div
                       key={b.building_id}
                       className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-1.5 text-sm"
