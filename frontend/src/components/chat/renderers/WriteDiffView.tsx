@@ -8,7 +8,7 @@ interface WriteDiffViewProps {
 
 export function WriteDiffView({ field, oldValue, newValue }: WriteDiffViewProps) {
   return (
-    <div className="border rounded-lg p-3 my-1 text-sm">
+    <div role="region" aria-label={`Field change: ${field}`} className="border rounded-lg p-3 my-2 text-sm">
       <div className="text-xs font-medium text-muted-foreground mb-2">Field Change</div>
       <div className="font-mono text-xs">
         <span className="font-medium">{field}</span>

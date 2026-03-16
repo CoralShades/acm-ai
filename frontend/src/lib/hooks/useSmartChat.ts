@@ -17,6 +17,8 @@ export function useSmartChat({
 }: UseSmartChatOptions) {
   const [includeAcmContext, setIncludeAcmContextState] = useState(hasAcmData)
 
+  const [chatModelId, setChatModelIdState] = useState('')
+
   const defaultState = useMemo<SupervisorAgentState>(
     () => ({
       source_id: sourceId ?? null,
@@ -25,6 +27,7 @@ export function useSmartChat({
       active_agents: [],
       acm_results: null,
       search_results: null,
+      model_id: null,
     }),
     [sourceId, notebookId, hasAcmData]
   )
@@ -45,6 +48,17 @@ export function useSmartChat({
     [setState, defaultState]
   )
 
+  const setChatModelId = useCallback(
+    (modelId: string) => {
+      setChatModelIdState(modelId)
+      setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+        ...(prev ?? defaultState),
+        model_id: modelId || null,
+      }))
+    },
+    [setState, defaultState]
+  )
+
   const setScope = useCallback(
     (newSourceId?: string, newNotebookId?: string) => {
       setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
@@ -60,6 +74,8 @@ export function useSmartChat({
     state,
     includeAcmContext,
     setIncludeAcmContext,
+    chatModelId,
+    setChatModelId,
     setScope,
   }
 }

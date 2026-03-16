@@ -5,10 +5,6 @@ import { HITLApprovalDialog } from '@/components/chat/renderers/HITLApprovalDial
 import { ToolErrorCard } from '@/components/chat/renderers/ToolErrorCard'
 import { isErrorResult } from '@/lib/utils/tool-result'
 
-interface CrudToolRenderersProps {
-  sourceId: string
-}
-
 /**
  * Registers CopilotKit tool-call renderers for CRUD write previews.
  *
@@ -18,7 +14,7 @@ interface CrudToolRenderersProps {
  *
  * Must be rendered inside a CopilotKit provider configured with /copilot-crud.
  */
-export function CrudToolRenderers({ sourceId }: CrudToolRenderersProps) {
+export function CrudToolRenderers() {
   // HITL: Render approval dialog when the backend graph interrupts for write approval
   useLangGraphInterrupt({
     enabled: ({ eventValue }) => eventValue?.type === 'write_approval',
@@ -79,8 +75,6 @@ export function CrudToolRenderers({ sourceId }: CrudToolRenderersProps) {
       )
     },
   })
-
-  void sourceId
 
   return null
 }

@@ -730,17 +730,7 @@ input[type="radio"]:focus-visible {
   box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--ring) 70%, transparent) !important;
 }
 
-/* ========================================
-   COPILOTKIT DEV INSPECTOR OVERRIDE (E35-S8)
-   Prevent floating dev tools from blocking user interactions.
-   ======================================== */
-[data-copilotkit-dev-console],
-.copilotkit-dev-console,
-[class*="CopilotDevConsole"] {
-  pointer-events: none !important;
-  opacity: 0 !important;
-  z-index: -1 !important;
-}
+/* CopilotKit dev console disabled via showDevConsole={false} in CopilotProvider */
 
 /* ========================================
    ACCESSIBILITY: SKIP TO CONTENT LINK
@@ -772,6 +762,39 @@ input[type="radio"]:focus-visible {
    ACCESSIBILITY: REDUCED MOTION
    ======================================== */
 
+/* ========================================
+   PDF VIEWER: SEARCH HIGHLIGHTS
+   ======================================== */
+
+.pdf-search-highlight {
+  background-color: rgba(250, 204, 21, 0.40) !important;
+  border-radius: 2px;
+  transition: background-color 150ms ease;
+}
+
+.pdf-search-highlight-active {
+  background-color: rgba(249, 115, 22, 0.55) !important;
+  outline: 2px solid rgba(249, 115, 22, 0.85);
+  border-radius: 2px;
+}
+
+/* ========================================
+   PDF VIEWER: BBOX HIGHLIGHT ANIMATION
+   ======================================== */
+
+@keyframes pdf-bbox-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px 2px rgba(20, 184, 166, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 20px 6px rgba(20, 184, 166, 0.50);
+  }
+}
+
+.pdf-bbox-highlight {
+  animation: pdf-bbox-pulse 2s ease-in-out 3;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -789,6 +812,15 @@ input[type="radio"]:focus-visible {
 
   .animate-spin {
     animation: none !important;
+  }
+
+  .pdf-bbox-highlight {
+    animation: none !important;
+  }
+
+  .pdf-search-highlight,
+  .pdf-search-highlight-active {
+    transition: none !important;
   }
 
   html,

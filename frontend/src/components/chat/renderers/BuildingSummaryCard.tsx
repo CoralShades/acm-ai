@@ -18,7 +18,7 @@ export function BuildingSummaryCard({ data }: BuildingSummaryCardProps) {
   const { building_name, building_id, record_count, high_risk_count, address } = data
 
   return (
-    <div className="border rounded-lg p-3 my-1">
+    <div role="article" aria-label={`Building: ${building_name}`} className="border rounded-lg p-3 my-2">
       <div className="flex items-start gap-2">
         <Building2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">

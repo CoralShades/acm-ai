@@ -44,7 +44,7 @@ export function ItemDetailCard({ data }: ItemDetailCardProps) {
   )
 
   return (
-    <div className="border rounded-lg p-3 my-1 text-sm">
+    <div className="border rounded-lg p-3 my-2 text-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate">

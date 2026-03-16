@@ -18,7 +18,7 @@ export function ExtractionProgress({
   const isComplete = status === 'complete'
 
   return (
-    <div className="border rounded-lg p-3 my-1 text-sm">
+    <div className="border rounded-lg p-3 my-2 text-sm">
       <div className="flex items-center gap-2 mb-1">
         {isComplete ? (
           <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />

@@ -40,6 +40,7 @@ class SupervisorState(TypedDict):
     active_agents: Optional[List[str]]
     acm_results: Optional[dict]
     search_results: Optional[dict]
+    model_id: Optional[str]
 
 
 def _get_supervisor_tools(include_acm: bool = True):
@@ -77,7 +78,7 @@ def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
     payload = [SystemMessage(content=system_prompt)] + state.get("messages", [])
 
     # Provision model with tools
-    model_id = config.get("configurable", {}).get("model_id")
+    model_id = state.get("model_id") or config.get("configurable", {}).get("model_id")
 
     # TODO: Use Model.get(model_id).get_max_output_tokens() for dynamic lookup
     # when the sync-to-async bridge pattern here allows it without deadlocks.

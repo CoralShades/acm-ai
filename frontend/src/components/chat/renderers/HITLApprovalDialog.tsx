@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CheckCircle2, XCircle, Pencil } from 'lucide-react'
 
 interface WritePreview {
@@ -26,8 +26,14 @@ export function HITLApprovalDialog({
 }: HITLApprovalDialogProps) {
   const [editing, setEditing] = useState(false)
   const [editedValue, setEditedValue] = useState(preview.new_value || '')
+  const [submitting, setSubmitting] = useState(false)
 
   const { operation_id, operation, record_id, field, new_value, reason } = preview
+
+  // Sync editedValue when preview.new_value changes
+  useEffect(() => {
+    setEditedValue(preview.new_value || '')
+  }, [preview.new_value])
 
   return (
     <div className="border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 rounded-lg p-4 my-2 shadow-sm">
@@ -85,20 +91,26 @@ export function HITLApprovalDialog({
 
       <div className="flex gap-2">
         <button
+          disabled={submitting}
           onClick={() => {
+            setSubmitting(true)
             const edits = editing && editedValue !== new_value
               ? { new_value: editedValue }
               : undefined
             onApprove(edits)
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
-          Approve
+          {submitting ? 'Approving...' : 'Approve'}
         </button>
         <button
-          onClick={onReject}
-          className="flex items-center gap-1.5 px-3 py-1.5 border text-sm rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          disabled={submitting}
+          onClick={() => {
+            setSubmitting(true)
+            onReject()
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 border text-sm rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <XCircle className="h-3.5 w-3.5" />
           Reject

@@ -32,6 +32,7 @@ from open_notebook.graphs.utils import provision_langchain_model_with_tools
 class CRUDAgentState(TypedDict):
     messages: Annotated[list, add_messages]
     source_id: Optional[str]
+    model_id: Optional[str]
 
 
 # Only read + preview tools — writes are executed via interrupt approval
@@ -63,7 +64,7 @@ def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
 
     payload = [SystemMessage(content=SYSTEM_PROMPT)] + state.get("messages", [])
 
-    model_id = config.get("configurable", {}).get("model_id")
+    model_id = state.get("model_id") or config.get("configurable", {}).get("model_id")
 
     def run_in_new_loop():
         new_loop = asyncio.new_event_loop()

@@ -1,20 +1,7 @@
 'use client'
 
 import { AlertCircle } from 'lucide-react'
-
-const TOOL_LABELS: Record<string, string> = {
-  search_acm_by_risk: 'ACM risk search',
-  search_acm_by_building: 'ACM building search',
-  search_acm_by_room: 'ACM room search',
-  search_acm_by_product: 'ACM product search',
-  get_acm_stats: 'ACM statistics',
-  get_acm_record_detail: 'ACM record detail',
-  list_acm_buildings: 'building list',
-  search_documents_vector: 'vector search',
-  search_documents_text: 'text search',
-  preview_acm_write: 'write preview',
-  write_acm_record: 'record write',
-}
+import { TOOL_LABELS } from '@/lib/constants/tool-labels'
 
 interface ToolErrorCardProps {
   tool: string

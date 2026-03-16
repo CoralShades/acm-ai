@@ -7,6 +7,7 @@ import { useSmartChat } from '@/lib/hooks/useSmartChat'
 import { ToolResultRenderers } from './ToolResultRenderers'
 import { ACMAssistantMessage } from './ACMAssistantMessage'
 import { SmartChatInput } from './SmartChatInput'
+import { ChatModelSelector } from './ChatModelSelector'
 import { cn } from '@/lib/utils'
 import { TableProperties } from 'lucide-react'
 
@@ -21,7 +22,7 @@ export function SmartChatPanel({
   notebookId,
   hasAcmData = false,
 }: SmartChatPanelProps) {
-  const { includeAcmContext, setIncludeAcmContext } = useSmartChat({
+  const { includeAcmContext, setIncludeAcmContext, chatModelId, setChatModelId } = useSmartChat({
     sourceId,
     notebookId,
     hasAcmData,
@@ -75,13 +76,14 @@ export function SmartChatPanel({
     >
       <ToolResultRenderers />
       <div className="flex flex-col h-full">
-        {/* ACM context indicator */}
-        {hasAcmData && includeAcmContext && (
-          <div className="px-4 py-2 bg-primary/10 text-primary text-xs flex items-center gap-2 border-b">
-            <TableProperties className="h-3 w-3" />
-            ACM Register data included in context
-          </div>
-        )}
+        {/* Model selector header */}
+        <div className="px-4 py-1.5 border-b flex items-center gap-2">
+          <ChatModelSelector
+            value={chatModelId}
+            onChange={setChatModelId}
+            storageKey="acm-smart-chat-model"
+          />
+        </div>
 
         <div className="flex-1 min-h-0">
           <CopilotChat

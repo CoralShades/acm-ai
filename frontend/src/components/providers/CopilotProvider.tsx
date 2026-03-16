@@ -45,7 +45,7 @@ class CopilotErrorBoundary extends React.Component<
     return (
       <CopilotKit
         runtimeUrl={this.props.runtimeUrl}
-        showDevConsole={process.env.NODE_ENV !== "production"}
+        showDevConsole={false}
         onError={(error) => {
           console.error("[CopilotKit] Runtime error:", error);
         }}
