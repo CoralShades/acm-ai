@@ -274,7 +274,7 @@ export function BuildingGrid({
   return (
     <>
       <div
-        className="ag-theme-alpine h-full w-full"
+        className="ag-theme-alpine w-full"
         role="region"
         aria-label="Buildings Data Grid - Click a row to view building details"
       >
@@ -312,7 +312,7 @@ export function BuildingGrid({
           pagination={true}
           paginationPageSize={50}
           paginationPageSizeSelector={[20, 50, 100]}
-          domLayout="normal"
+          domLayout="autoHeight"
           alwaysShowHorizontalScroll={true}
           tooltipShowDelay={300}
           theme="legacy"
