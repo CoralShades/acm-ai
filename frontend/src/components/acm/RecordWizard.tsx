@@ -205,8 +205,7 @@ function FieldRow({
           onChange={(val) => onChange(fieldKey, val)}
           id={fieldId}
           className={cn(
-            'h-9 rounded-md border border-input px-3 py-1 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-ring',
-            fieldError && 'border-destructive focus:ring-destructive/50'
+            fieldError && 'border-destructive focus-visible:ring-destructive/50'
           )}
         />
       ) : (
@@ -327,13 +326,13 @@ export function RecordWizard({
         </DialogHeader>
 
         {/* Scrollable form body */}
-        <div className="overflow-y-auto flex-1 pr-1">
+        <div className="overflow-y-auto flex-1 pr-1 space-y-6">
           {FIELD_GROUPS.map((group) => (
-            <div key={group.title} className="mb-5">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+            <div key={group.title}>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 pb-1.5 border-b">
                 {group.title}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                 {group.fields.map(({ key, label }) => {
                   const apiName = schema ? findApiNameForKey(key, schema) : null
                   const isDependent = isDependentField(key, schema)

@@ -226,19 +226,16 @@ function FieldInput({
 
   if (fieldKey === DEPENDENT_PICKLIST_FIELD && schema) {
     return (
-      <div className="h-9 border border-input rounded-md overflow-hidden">
-        <DependentPicklistEditor
-          mode="form"
-          fieldApiName={DEPENDENT_PICKLIST_API_NAME}
-          schema={schema}
-          rowData={formValues as Partial<ACMRecord>}
-          value={typeof value === 'string' ? value : ''}
-          onChange={(val) => onChange(fieldKey, val || null)}
-          placeholder="-- Select --"
-          id={inputId}
-          className="px-3 rounded-md"
-        />
-      </div>
+      <DependentPicklistEditor
+        mode="form"
+        fieldApiName={DEPENDENT_PICKLIST_API_NAME}
+        schema={schema}
+        rowData={formValues as Partial<ACMRecord>}
+        value={typeof value === 'string' ? value : ''}
+        onChange={(val) => onChange(fieldKey, val || null)}
+        placeholder="-- Select --"
+        id={inputId}
+      />
     )
   }
 
@@ -256,10 +253,11 @@ function FieldInput({
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => onChange(fieldKey, e.target.value || null)}
           className={cn(
-            'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm',
+            'flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm',
             'shadow-xs transition-[color,box-shadow] outline-none',
             'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-            'disabled:cursor-not-allowed disabled:opacity-50'
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            'appearance-none bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3d%22http%3a%2f%2fwww.w3.org%2f2000%2fsvg%22%20width%3d%2212%22%20height%3d%2212%22%20viewBox%3d%220%200%2012%2012%22%3e%3cpath%20fill%3d%22%236b7280%22%20d%3d%22M2%204l4%204%204-4%22%2f%3e%3c%2fsvg%3e")] bg-[length:12px] bg-[right_12px_center] bg-no-repeat pr-8'
           )}
         >
           <option value="">-- Select --</option>

@@ -9,8 +9,10 @@ import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { BulkOperationsBar } from '@/components/acm/BulkOperationsBar'
 import { ExportDialog } from '@/components/acm/ExportDialog'
+import { BuildingGrid } from '@/components/acm/BuildingGrid'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,7 +24,15 @@ import { useV3BuildingStream } from '@/lib/hooks/useV3BuildingStream'
 import type { ACMRecord } from '@/lib/types/acm'
 import type { BuildingRecord } from '@/lib/types/building'
 import type { BuildingStreamStatus } from '@/lib/stores/buildingStore'
-import { ArrowLeft, Table2, Wrench, Download, Building2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { ArrowLeft, Table2, Wrench, Download, Building2, ExternalLink, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { acmApi } from '@/lib/api/acm'
 import { cn } from '@/lib/utils'
 
 /** Scrollable horizontal building tab strip. */
@@ -151,13 +161,14 @@ function BuildingTabStrip({
 }
 
 /**
- * SourceACMViewContent — ACM register view with building tabs + full-width item grid.
- *
- * Manages local quick-filter text and room-grouping toggle state.
- * Reads selected building from Zustand buildingStore.
+ * SourceACMViewContent -- ACM register view with two-tab layout:
+ *   Tab 1: Buildings grid (all buildings for this source)
+ *   Tab 2: ACM Records (building tab strip + item grid)
  */
 function SourceACMViewContent({ sourceId }: { sourceId: string }) {
+  const [activeTab, setActiveTab] = useState('buildings')
   const [quickFilter, setQuickFilter] = useState('')
+  const [buildingQuickFilter, setBuildingQuickFilter] = useState('')
   const [enableGrouping, setEnableGrouping] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [commandId, setCommandId] = useState<string | null>(null)
@@ -184,7 +195,7 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
   }, [sourceId])
 
   // Load buildings list for progress bar denominator
-  const { data: buildingsData } = useBuildings(sourceId)
+  const { data: buildingsData, isLoading: isLoadingBuildings } = useBuildings(sourceId)
   const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
 
   // Streaming progress
@@ -268,44 +279,43 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
                 Review Raw Tables
               </Link>
             </Button>
-            <Input
-              placeholder="Search records..."
-              value={quickFilter}
-              onChange={(e) => setQuickFilter(e.target.value)}
-              className="w-60"
-            />
-            <Button
-              variant={enableGrouping ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setEnableGrouping((v) => !v)}
-            >
-              Group by Room
-            </Button>
 
-            {/* Fix All button — only visible when there are validation errors */}
-            {totalErrors > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBulkFix}
-                disabled={bulkFix.isPending}
-                title={`Auto-fix ${totalErrors} validation issue${totalErrors !== 1 ? 's' : ''}`}
-              >
-                <Wrench className="h-4 w-4 mr-1" />
-                {bulkFix.isPending ? 'Fixing…' : `Fix All (${totalErrors})`}
-              </Button>
-            )}
-
-            {/* Export button — opens ExportDialog */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setExportOpen(true)}
-              title="Export ACM register"
-            >
-              <Download className="h-4 w-4 mr-1" />
-              Export
-            </Button>
+            {/* Export dropdown -- per-building + complete export */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" title="Export ACM register">
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {selectedBuildingId && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        const building = buildings.find((b) => b.id === selectedBuildingId)
+                        const label = building?.building_name ?? 'building'
+                        const blob = await acmApi.exportSfExcel(sourceId, [selectedBuildingId])
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `acm-${label.replace(/\s+/g, '-')}.xlsx`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Current Building
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => setExportOpen(true)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export All (Options...)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -327,55 +337,165 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
           </div>
         )}
 
-        {/* Bulk operations bar — visible when records are selected (E34-S2) */}
-        {selectedRecords.length > 0 && (
-          <BulkOperationsBar
-            sourceId={sourceId}
-            selectedRecords={selectedRecords}
-            onClearSelection={() => setSelectedRecords([])}
-            schema={fieldSchema ?? null}
-          />
-        )}
+        {/* Two-tab layout: Buildings | ACM Records */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden min-h-0"
+        >
+          <div className="flex items-center gap-3 px-4 py-2 border-b shrink-0">
+            <TabsList>
+              <TabsTrigger value="buildings">
+                <Building2 className="h-4 w-4 mr-1.5" />
+                Buildings
+                {buildings.length > 0 && (
+                  <span className="ml-1.5 text-xs tabular-nums text-muted-foreground">
+                    ({buildings.length})
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="acm-records">
+                <Table2 className="h-4 w-4 mr-1.5" />
+                ACM Records
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Building tabs */}
-        <BuildingTabStrip
-          buildings={buildings}
-          isLoading={!buildingsData}
-          selectedBuildingId={selectedBuildingId}
-          onSelect={setSelectedBuilding}
-          sourceId={sourceId}
-          validationSummary={validationSummary}
-        />
+            {/* Buildings tab toolbar */}
+            {activeTab === 'buildings' && (
+              <div className="ml-auto flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search buildings..."
+                    value={buildingQuickFilter}
+                    onChange={(e) => setBuildingQuickFilter(e.target.value)}
+                    className="w-60 pl-9"
+                  />
+                </div>
+              </div>
+            )}
 
-        {/* Full-width item grid */}
-        <div className="flex-1 overflow-hidden p-4 min-h-0">
-          {selectedBuildingId ? (
-            <ACMGrid
-              ref={gridRef}
-              records={items}
-              isLoading={isLoadingItems}
-              sourceId={sourceId}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              enableGrouping={enableGrouping}
-              quickFilterText={quickFilter}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <Building2 className="h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground font-medium">
-                {buildings.length > 0
-                  ? 'Select a building tab above to view its ACM items'
-                  : 'No buildings extracted yet'}
-              </p>
-              {buildings.length === 0 && (
+            {/* ACM Records tab toolbar */}
+            {activeTab === 'acm-records' && (
+              <div className="ml-auto flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search records..."
+                    value={quickFilter}
+                    onChange={(e) => setQuickFilter(e.target.value)}
+                    className="w-60 pl-9"
+                  />
+                </div>
+                <Button
+                  variant={enableGrouping ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEnableGrouping((v) => !v)}
+                >
+                  Group by Room
+                </Button>
+
+                {/* Fix All button -- only visible when there are validation errors */}
+                {totalErrors > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkFix}
+                    disabled={bulkFix.isPending}
+                    title={`Auto-fix ${totalErrors} validation issue${totalErrors !== 1 ? 's' : ''}`}
+                  >
+                    <Wrench className="h-4 w-4 mr-1" />
+                    {bulkFix.isPending ? 'Fixing...' : `Fix All (${totalErrors})`}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Buildings tab content */}
+          <TabsContent value="buildings" className="flex-1 overflow-hidden min-h-0 p-4">
+            {isLoadingBuildings ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="space-y-3 w-full max-w-lg">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full rounded-md" />
+                  ))}
+                </div>
+              </div>
+            ) : buildings.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3">
+                <Building2 className="h-10 w-10 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground font-medium">
+                  No buildings extracted yet
+                </p>
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/jobs/${sourceId}/extract`}>Go to Extraction</Link>
                 </Button>
+              </div>
+            ) : (
+              <BuildingGrid
+                buildings={buildings}
+                isLoading={isLoadingBuildings}
+                sourceId={sourceId}
+                quickFilterText={buildingQuickFilter}
+                schema={fieldSchema ?? null}
+              />
+            )}
+          </TabsContent>
+
+          {/* ACM Records tab content */}
+          <TabsContent value="acm-records" className="flex-1 flex flex-col overflow-hidden min-h-0">
+            {/* Bulk operations bar -- visible when records are selected (E34-S2) */}
+            {selectedRecords.length > 0 && (
+              <BulkOperationsBar
+                sourceId={sourceId}
+                selectedRecords={selectedRecords}
+                onClearSelection={() => setSelectedRecords([])}
+                schema={fieldSchema ?? null}
+              />
+            )}
+
+            {/* Building tabs */}
+            <BuildingTabStrip
+              buildings={buildings}
+              isLoading={!buildingsData}
+              selectedBuildingId={selectedBuildingId}
+              onSelect={setSelectedBuilding}
+              sourceId={sourceId}
+              validationSummary={validationSummary}
+            />
+
+            {/* Full-width item grid */}
+            <div className="flex-1 overflow-hidden p-4 min-h-0">
+              {selectedBuildingId ? (
+                <ACMGrid
+                  ref={gridRef}
+                  records={items}
+                  isLoading={isLoadingItems}
+                  sourceId={sourceId}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  enableGrouping={enableGrouping}
+                  quickFilterText={quickFilter}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <Building2 className="h-10 w-10 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground font-medium">
+                    {buildings.length > 0
+                      ? 'Select a building tab above to view its ACM items'
+                      : 'No buildings extracted yet'}
+                  </p>
+                  {buildings.length === 0 && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/jobs/${sourceId}/extract`}>Go to Extraction</Link>
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Edit record dialog */}
@@ -414,7 +534,7 @@ function SourceACMViewContent({ sourceId }: { sourceId: string }) {
 }
 
 /**
- * SourceACMPage — Next.js 15 page component with async params.
+ * SourceACMPage -- Next.js 15 page component with async params.
  *
  * URL: /source/[id]
  * Story: E33-S2 Building Grid + Item Grid (Two-View)

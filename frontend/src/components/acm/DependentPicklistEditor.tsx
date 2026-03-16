@@ -89,7 +89,9 @@ export const DependentPicklistEditor = forwardRef<
       disabled={!isGrid && (props as DependentPicklistFormProps).disabled}
       aria-label={fieldApiName}
       className={cn(
-        'w-full h-full border-0 bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring',
+        isGrid
+          ? 'w-full h-full border-0 bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+          : 'flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
         !isGrid && (props as DependentPicklistFormProps).className
       )}
     >
