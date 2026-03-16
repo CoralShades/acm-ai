@@ -57,7 +57,7 @@ def _run_async(coro):
 
 
 @tool
-def query_job_records(query: str) -> str:
+def query_job_records(query: str, source_id: Optional[str] = None) -> str:
     """Execute a read-only query about ACM records for the current job.
 
     Use this to answer questions about buildings, rooms, products, risk levels, etc.
@@ -73,10 +73,15 @@ def query_job_records(query: str) -> str:
 
     Args:
         query: Natural language description of what you want to find
+        source_id: Optional source ID override. If not provided, uses the current job context.
     """
-    source_id = get_crud_context()
     if not source_id:
-        return "Error: No job context set. Cannot query records."
+        source_id = get_crud_context()
+    if source_id and not get_crud_context():
+        # Tool was called with explicit source_id but context wasn't set — set it now
+        set_crud_context(source_id)
+    if not source_id:
+        return "Error: No job context set. Cannot query records. The source_id should be provided in the system prompt."
 
     q_lower = query.lower()
 

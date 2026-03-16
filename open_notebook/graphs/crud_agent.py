@@ -71,17 +71,31 @@ def _extract_source_id_from_messages(messages: list) -> Optional[str]:
 def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
     """CRUD agent node — calls model with CRUD tools bound."""
     source_id = state.get("source_id")
+    logger.debug(f"CRUD agent state keys: {list(state.keys())}, source_id from state: {source_id}")
+
     # Fallback: CopilotKit may not sync useCoAgent state before first message.
     # Extract source_id from CopilotKit's makeSystemMessage if not in state.
     if not source_id:
         source_id = _extract_source_id_from_messages(state.get("messages", []))
+        if source_id:
+            logger.info(f"CRUD agent extracted source_id from messages: {source_id}")
+
+    # Fallback 2: check config.configurable
+    if not source_id:
+        source_id = config.get("configurable", {}).get("source_id")
+        if source_id:
+            logger.info(f"CRUD agent got source_id from config: {source_id}")
+
     if source_id:
         set_crud_context(source_id)
+        logger.info(f"CRUD context set to {source_id}")
+    else:
+        logger.warning("CRUD agent: No source_id found in state, messages, or config!")
 
     # Include source_id in the system prompt so the LLM knows the scope
     system_prompt = SYSTEM_PROMPT
     if source_id:
-        system_prompt += f"\n\nCurrent job source: {source_id}. All queries and writes are scoped to this job."
+        system_prompt += f"\n\nCurrent job source: {source_id}. All queries and writes are scoped to this job. Always pass this source_id context when calling tools."
 
     payload = [SystemMessage(content=system_prompt)] + state.get("messages", [])
 
