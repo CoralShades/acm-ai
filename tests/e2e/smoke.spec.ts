@@ -1,5 +1,5 @@
 /**
- * Smoke Tests for Open Notebook
+ * Smoke Tests for VAEA | ACM AI
  *
  * Quick validation that core functionality works.
  * Run these first before full E2E suite.
@@ -13,21 +13,21 @@ test.describe('Smoke Tests @smoke', () => {
   test('homepage loads successfully', async ({ page }) => {
     await page.goto('/');
 
-    // Verify page loaded (adjust selector based on actual UI)
-    await expect(page).toHaveTitle(/Open Notebook|Notebook/i);
+    // Verify page loaded — app is branded as "VAEA | ACM AI"
+    await expect(page).toHaveTitle(/VAEA|ACM/i);
   });
 
-  test('can navigate to notebooks page', async ({ page }) => {
+  test('can navigate to jobs page', async ({ page }) => {
     // Given: User is on the homepage
     await page.goto('/');
 
-    // When: User clicks the notebooks link
-    const notebooksLink = page.getByRole('link', { name: /notebook/i });
-    await expect(notebooksLink).toBeVisible();
-    await notebooksLink.click();
+    // When: User clicks the Jobs link (primary nav item in ACM mode)
+    const jobsLink = page.getByRole('link', { name: /jobs/i });
+    await expect(jobsLink).toBeVisible();
+    await jobsLink.click();
 
-    // Then: User should be on the notebooks page
-    await expect(page).toHaveURL(/notebooks/);
+    // Then: User should be on the jobs page
+    await expect(page).toHaveURL(/jobs/);
   });
 
   test('API health check passes', async ({ apiClient }) => {
@@ -37,7 +37,7 @@ test.describe('Smoke Tests @smoke', () => {
   });
 
   test('can list notebooks via API', async ({ apiClient }) => {
-    const notebooks = await apiClient.get<unknown[]>('/notebooks/');
+    const notebooks = await apiClient.get<unknown[]>('/notebooks');
     expect(Array.isArray(notebooks)).toBe(true);
   });
 });
