@@ -62,6 +62,17 @@ def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
     notebook_id = state.get("notebook_id")
     include_acm = state.get("include_acm_context", True)
 
+    # Fallback: extract source_id from CopilotKit system messages if not in state
+    if not source_id:
+        import re
+        for msg in state.get("messages", []):
+            content = getattr(msg, "content", "")
+            if isinstance(content, str) and "source:" in content:
+                match = re.search(r"(source:[a-z0-9]+)", content)
+                if match:
+                    source_id = match.group(0)
+                    break
+
     # Set tool context for scoping
     set_tool_context(source_id=source_id, notebook_id=notebook_id)
 

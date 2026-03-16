@@ -56,13 +56,34 @@ You have these tools:
 When a user asks to update something, call preview_write. The system will present an approval dialog to the user and handle execution automatically."""
 
 
+def _extract_source_id_from_messages(messages: list) -> Optional[str]:
+    """Fallback: extract source_id from CopilotKit system messages."""
+    import re
+    for msg in messages:
+        content = getattr(msg, "content", "")
+        if isinstance(content, str) and "source:" in content:
+            match = re.search(r"(source:[a-z0-9]+)", content)
+            if match:
+                return match.group(1)
+    return None
+
+
 def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
     """CRUD agent node — calls model with CRUD tools bound."""
     source_id = state.get("source_id")
+    # Fallback: CopilotKit may not sync useCoAgent state before first message.
+    # Extract source_id from CopilotKit's makeSystemMessage if not in state.
+    if not source_id:
+        source_id = _extract_source_id_from_messages(state.get("messages", []))
     if source_id:
         set_crud_context(source_id)
 
-    payload = [SystemMessage(content=SYSTEM_PROMPT)] + state.get("messages", [])
+    # Include source_id in the system prompt so the LLM knows the scope
+    system_prompt = SYSTEM_PROMPT
+    if source_id:
+        system_prompt += f"\n\nCurrent job source: {source_id}. All queries and writes are scoped to this job."
+
+    payload = [SystemMessage(content=system_prompt)] + state.get("messages", [])
 
     model_id = state.get("model_id") or config.get("configurable", {}).get("model_id")
 

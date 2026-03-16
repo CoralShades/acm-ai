@@ -39,7 +39,15 @@ function CrudChatContent({ sourceId }: CrudChatContentProps) {
     [setState, sourceId],
   )
 
-  // Restore from localStorage on mount
+  // Force source_id sync to backend on mount — initialState alone doesn't trigger sync
+  useEffect(() => {
+    setState((prev: CRUDAgentState | undefined): CRUDAgentState => ({
+      ...(prev ?? { source_id: sourceId, model_id: null }),
+      source_id: sourceId,
+    }))
+  }, [sourceId, setState])
+
+  // Restore model from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('acm-crud-chat-model')
     if (saved) setChatModelId(saved)
@@ -86,7 +94,7 @@ interface JobCrudChatPanelProps {
  */
 export function JobCrudChatPanel({ sourceId, className }: JobCrudChatPanelProps) {
   return (
-    <CopilotKit runtimeUrl="/copilot-crud">
+    <CopilotKit runtimeUrl="/copilot-crud" showDevConsole={false}>
       <div className={cn('flex h-full min-h-0 flex-col overflow-hidden', className)}>
         <CrudChatContent sourceId={sourceId} />
       </div>

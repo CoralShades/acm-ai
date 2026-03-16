@@ -1,7 +1,7 @@
 'use client'
 
 import { useCoAgent } from '@copilotkit/react-core'
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { SupervisorAgentState } from '@/lib/types/smart-chat'
 
 interface UseSmartChatOptions {
@@ -36,6 +36,15 @@ export function useSmartChat({
     name: 'supervisor',
     initialState: defaultState,
   })
+
+  // Force state sync to backend on mount — initialState alone doesn't trigger sync
+  useEffect(() => {
+    setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+      ...(prev ?? defaultState),
+      source_id: sourceId ?? null,
+      notebook_id: notebookId ?? null,
+    }))
+  }, [sourceId, notebookId, setState, defaultState])
 
   const setIncludeAcmContext = useCallback(
     (value: boolean) => {
