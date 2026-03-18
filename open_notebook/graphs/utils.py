@@ -364,17 +364,26 @@ _BUDGET_ROOM_RE = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
 _BUDGET_ARA_RE = re.compile(r"(?:^|\n)(\d+)\.\s", re.MULTILINE)
 
 
-def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
+def _split_content_by_char_budget(
+    content: str,
+    max_chars: int,
+    content_boundary_re: re.Pattern | None = None,
+) -> list[str]:
     """Split content at room/item boundaries to fit within max_chars per chunk.
 
-    Boundary detection:
+    Boundary detection (tried in order, first match wins):
+    - Custom pattern: caller-supplied content_boundary_re (if provided)
     - Standard DET format: B###-R#### room headers
     - ARA format: numbered items like "1. " at start of line
 
     If a single boundary segment exceeds max_chars, that segment is
     hard-truncated with a WARNING (graceful degrade — never silently drops).
     """
-    boundaries = list(_BUDGET_ROOM_RE.finditer(content))
+    boundaries = []
+    if content_boundary_re is not None:
+        boundaries = list(content_boundary_re.finditer(content))
+    if not boundaries:
+        boundaries = list(_BUDGET_ROOM_RE.finditer(content))
     if not boundaries:
         boundaries = list(_BUDGET_ARA_RE.finditer(content))
 
@@ -433,7 +442,11 @@ def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
     return chunks if chunks else [content]
 
 
-def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
+def _ollama_split_by_budget(
+    content: str,
+    lc_model: BaseChatModel,
+    content_boundary_re: re.Pattern | None = None,
+) -> list[str]:
     """Split content into Ollama token-budget chunks (E32-S8).
 
     Returns [content] unchanged for non-Ollama models or content within budget.
@@ -465,7 +478,7 @@ def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
         f"Ollama content ({len(content)} chars) exceeds budget ({max_chars} chars). "
         f"Splitting into budget chunks."
     )
-    return _split_content_by_char_budget(content, max_chars)
+    return _split_content_by_char_budget(content, max_chars, content_boundary_re)
 
 
 async def _verify_provider_routing(

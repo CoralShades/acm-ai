@@ -92,6 +92,7 @@ from open_notebook.extractors.pipeline_event_bus import (
 )
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.extractors.recovery_config import RecoveryConfig
 from open_notebook.extractors.schema_inference import (
     InferredSchema,
     schema_inference_node,
@@ -2027,6 +2028,7 @@ def _recover_no_access_records(
     extracted_records: List[ACMExtractionRecord],
     building_id: str,
     building_name: str,
+    recovery_config: RecoveryConfig | None = None,
 ) -> List[ACMExtractionRecord]:
     """Post-LLM fallback: scan full_text for 'No Access' entries not captured.
 
@@ -2043,15 +2045,28 @@ def _recover_no_access_records(
 
     Returns additional ACMExtractionRecord objects to append.
     """
+    config = recovery_config or RecoveryConfig()
     recovered: List[ACMExtractionRecord] = []
 
-    no_access_re = re.compile(
-        r"No\s+access|Height\s+restriction|Restricted\s+Access",
-        re.IGNORECASE,
-    )
+    # Build no-access regex from config terms.
+    # When using default config, preserve the original regex exactly
+    # (terms use word stems like "restriction" not "Restricted").
+    # When custom config is provided, build from the term lists.
+    if recovery_config is not None:
+        _na_terms = [
+            t.replace(" ", r"\s+")
+            for t in (config.not_sampled_terms + config.restriction_terms)
+            if t
+        ]
+        no_access_re = re.compile("|".join(_na_terms), re.IGNORECASE)
+    else:
+        no_access_re = re.compile(
+            r"No\s+access|Height\s+restriction|Restricted\s+Access",
+            re.IGNORECASE,
+        )
 
     # Level indicators: lines that mark the start of a register row block
-    level_re = re.compile(
+    level_re = config.level_re or re.compile(
         r"^(Ground|First|Second|Third|Level|Roof|Basement)\s*$", re.IGNORECASE
     )
     # Second line of level indicator
@@ -2122,7 +2137,7 @@ def _recover_no_access_records(
         # In the vertical register format, the product (ACM item) is the last
         # meaningful line before the dashes. But multi-word locations can span
         # several lines, so we check if the last line is a known ACM product.
-        KNOWN_PRODUCT_KEYWORDS = {
+        KNOWN_PRODUCT_KEYWORDS = config.product_keywords or {
             "lining",
             "cladding",
             "insulation",
@@ -2230,7 +2245,8 @@ def _recover_no_access_records(
     # "Mortuary Buildings - Interior - Ground Level". This scan finds
     # "Not Sampled" lines and works backward/forward to extract the record.
     ara_recovered = _recover_not_sampled_records_ara(
-        full_text, extracted_records + recovered, building_id, building_name
+        full_text, extracted_records + recovered, building_id, building_name,
+        recovery_config=recovery_config,
     )
     recovered.extend(ara_recovered)
 
@@ -2242,6 +2258,7 @@ def _recover_not_sampled_records_ara(
     existing_records: List[ACMExtractionRecord],
     default_building_id: str,
     default_building_name: str,
+    recovery_config: RecoveryConfig | None = None,
 ) -> List[ACMExtractionRecord]:
     """ARA-format recovery for unsampled items missed by LLM.
 
@@ -2262,6 +2279,7 @@ def _recover_not_sampled_records_ara(
     just above it and "Presumed Positive" just below, then extracts room/product
     from the lines between the item number and "Asbestos".
     """
+    config = recovery_config or RecoveryConfig()
     recovered: List[ACMExtractionRecord] = []
 
     # Build dedup lookup: (room_norm, product_norm) to avoid duplicating
@@ -2277,7 +2295,7 @@ def _recover_not_sampled_records_ara(
         existing_combos.add((room_norm, loc_norm))
 
     # ARA section header pattern: "Building Name - Interior/Exterior - Level"
-    section_header_re = re.compile(
+    section_header_re = config.section_header_re or re.compile(
         r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(.+)$", re.IGNORECASE
     )
 
@@ -2297,16 +2315,17 @@ def _recover_not_sampled_records_ara(
             i += 1
             continue
 
-        # Look for "Not Sampled" lines
-        if stripped != "Not Sampled":
+        # Look for "Not Sampled" lines (check against config terms)
+        _not_sampled_lower = {t.lower() for t in config.not_sampled_terms}
+        if stripped not in config.not_sampled_terms and stripped.lower() not in _not_sampled_lower:
             i += 1
             continue
 
         not_sampled_line = i
 
-        # Verify "Asbestos" appears within 5 lines above
+        # Verify "Asbestos" appears within lookback_lines above
         asbestos_line = None
-        for back in range(1, 6):
+        for back in range(1, config.lookback_lines + 1):
             if not_sampled_line - back < 0:
                 break
             if lines[not_sampled_line - back].strip().lower() == "asbestos":
@@ -2317,20 +2336,26 @@ def _recover_not_sampled_records_ara(
             i += 1
             continue
 
-        # Verify restriction + "Presumed Positive" appear within 3 lines below
+        # Verify restriction + confirmation terms appear within lookahead_lines below
         restriction = None
         presumed_positive = False
-        for fwd in range(1, 4):
+        # Build restriction regex from config terms (replace spaces with \s+)
+        _restriction_terms = [
+            t.replace(" ", r"\s+")
+            for t in config.restriction_terms
+            if t
+        ]
+        _restriction_re = re.compile(
+            "|".join(_restriction_terms), re.IGNORECASE
+        ) if _restriction_terms else None
+        _confirmation_lower = {t.lower() for t in config.confirmation_terms}
+        for fwd in range(1, config.lookahead_lines + 1):
             if not_sampled_line + fwd >= len(lines):
                 break
             fwd_stripped = lines[not_sampled_line + fwd].strip()
-            if re.match(
-                r"Restricted\s+Access|Height\s+Restricted|Live\s+Electrical",
-                fwd_stripped,
-                re.IGNORECASE,
-            ):
+            if _restriction_re and _restriction_re.match(fwd_stripped):
                 restriction = fwd_stripped
-            if fwd_stripped.lower() == "presumed positive":
+            if fwd_stripped.lower() in _confirmation_lower:
                 presumed_positive = True
 
         if not presumed_positive:
