@@ -2,9 +2,9 @@
 
 Covers:
 - FormatRegistry: detector registration, priority ordering, detect_format()
-- ClutchDetector: detect(), extract_buildings(), get_column_mapping(), enrichment
+- PipeTableDetector: detect(), extract_buildings(), get_column_mapping(), enrichment
 - StandardFormatDetector: detect(), extract_buildings(), get_column_mapping()
-- ARADetector: detect(), extract_buildings(), get_column_mapping()
+- TextHeaderDetector: detect(), extract_buildings(), get_column_mapping()
 """
 
 import pytest
@@ -13,7 +13,7 @@ import pytest
 # Sample content fixtures
 # ---------------------------------------------------------------------------
 
-SAMPLE_CLUTCH_CONTENT = """
+SAMPLE_PIPE_TABLE_CONTENT = """
 --- Page 1 ---
 
 | Site Details     | Site Details                                           |
@@ -117,29 +117,29 @@ class TestFormatRegistry:
         priorities = [d.priority for d in registry.detectors]
         assert priorities == sorted(priorities)
 
-    def test_clutch_has_highest_priority(self):
+    def test_pipe_table_has_highest_priority(self):
         from open_notebook.extractors.format_detectors import get_registry
 
         registry = get_registry()
-        assert registry.detectors[0].name == "clutch"
+        assert registry.detectors[0].name == "pipe_table"
         assert registry.detectors[0].priority == 5
 
     def test_get_detector_by_name(self):
         from open_notebook.extractors.format_detectors import get_registry
 
         registry = get_registry()
-        assert registry.get_detector("clutch") is not None
+        assert registry.get_detector("pipe_table") is not None
         assert registry.get_detector("standard") is not None
-        assert registry.get_detector("ara") is not None
+        assert registry.get_detector("text_header") is not None
         assert registry.get_detector("nonexistent") is None
 
-    def test_detect_format_clutch(self):
+    def test_detect_format_pipe_table(self):
         from open_notebook.extractors.format_detectors import get_registry
 
         registry = get_registry()
-        detector = registry.detect_format(SAMPLE_CLUTCH_CONTENT)
+        detector = registry.detect_format(SAMPLE_PIPE_TABLE_CONTENT)
         assert detector is not None
-        assert detector.name == "clutch"
+        assert detector.name == "pipe_table"
 
     def test_detect_format_standard(self):
         from open_notebook.extractors.format_detectors import get_registry
@@ -153,10 +153,10 @@ class TestFormatRegistry:
         from open_notebook.extractors.format_detectors import get_registry
 
         registry = get_registry()
-        result = registry.extract_buildings(SAMPLE_CLUTCH_CONTENT)
+        result = registry.extract_buildings(SAMPLE_PIPE_TABLE_CONTENT)
         assert result is not None
         format_name, buildings = result
-        assert format_name == "clutch"
+        assert format_name == "pipe_table"
         assert len(buildings) == 3
 
     def test_extract_buildings_returns_none_for_unknown_format(self):
@@ -170,30 +170,30 @@ class TestFormatRegistry:
 
 
 # ---------------------------------------------------------------------------
-# ClutchDetector tests
+# PipeTableDetector tests
 # ---------------------------------------------------------------------------
 
 
-class TestClutchDetector:
-    """Test ClutchDetector detection, extraction, and enrichment."""
+class TestPipeTableDetector:
+    """Test PipeTableDetector detection, extraction, and enrichment."""
 
-    def test_detect_clutch(self):
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+    def test_detect_pipe_table(self):
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
-        assert detector.detect(SAMPLE_CLUTCH_CONTENT) is True
+        detector = PipeTableDetector()
+        assert detector.detect(SAMPLE_PIPE_TABLE_CONTENT) is True
         assert detector.detect(SAMPLE_SAMP_CONTENT) is False
         assert detector.detect(SAMPLE_ARA_CONTENT) is False
 
     def test_extract_buildings_count(self):
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
-        buildings = detector.extract_buildings(SAMPLE_CLUTCH_CONTENT)
+        detector = PipeTableDetector()
+        buildings = detector.extract_buildings(SAMPLE_PIPE_TABLE_CONTENT)
         assert len(buildings) == 3
         names = [b.name for b in buildings]
         assert "Myrtle Street Clinic" in names
@@ -201,12 +201,12 @@ class TestClutchDetector:
         assert "Main Hospital Building" in names
 
     def test_enrichment_levels(self):
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
-        buildings = detector.extract_buildings(SAMPLE_CLUTCH_CONTENT)
+        detector = PipeTableDetector()
+        buildings = detector.extract_buildings(SAMPLE_PIPE_TABLE_CONTENT)
         by_name = {b.name: b for b in buildings}
 
         myrtle = by_name["Myrtle Street Clinic"]
@@ -218,27 +218,29 @@ class TestClutchDetector:
         mortuary = by_name["Mortuary Buildings"]
         assert mortuary.levels == 1
 
-    def test_enrichment_survey_date(self):
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+    def test_parse_building_enrichment(self):
+        """Verify _parse_building_enrichment extracts survey date and levels from context."""
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
-        buildings = detector.extract_buildings(SAMPLE_CLUTCH_CONTENT)
-        by_name = {b.name: b for b in buildings}
-
-        myrtle = by_name["Myrtle Street Clinic"]
-        assert myrtle.survey_date == "07-09-2020"
-
-        mortuary = by_name["Mortuary Buildings"]
-        assert mortuary.survey_date == "15-03-2021"
+        detector = PipeTableDetector()
+        # _parse_building_enrichment returns (levels, survey_date) tuple
+        # Note: survey_date is parsed but BuildingMeta doesn't have a survey_date field,
+        # so it's currently unused. This test verifies the parsing logic works.
+        levels, survey_date = detector._parse_building_enrichment(
+            SAMPLE_PIPE_TABLE_CONTENT,
+            SAMPLE_PIPE_TABLE_CONTENT.index("Myrtle Street Clinic"),
+        )
+        assert levels == 2
+        assert survey_date == "07-09-2020"
 
     def test_column_mapping(self):
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
+        detector = PipeTableDetector()
         mapping = detector.get_column_mapping()
         assert mapping is not None
         assert "Location - Item Description" in mapping
@@ -247,24 +249,24 @@ class TestClutchDetector:
         assert "Result" in mapping
 
     def test_synthetic_building_ids(self):
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
-        buildings = detector.extract_buildings(SAMPLE_CLUTCH_CONTENT)
+        detector = PipeTableDetector()
+        buildings = detector.extract_buildings(SAMPLE_PIPE_TABLE_CONTENT)
         ids = [b.building_id for b in buildings]
         assert ids[0] == "B001"
         assert ids[1] == "B002"
         assert ids[2] == "B003"
 
     def test_page_ranges(self):
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
-        buildings = detector.extract_buildings(SAMPLE_CLUTCH_CONTENT)
+        detector = PipeTableDetector()
+        buildings = detector.extract_buildings(SAMPLE_PIPE_TABLE_CONTENT)
         by_name = {b.name: b for b in buildings}
 
         myrtle = by_name["Myrtle Street Clinic"]
@@ -273,30 +275,30 @@ class TestClutchDetector:
         main = by_name["Main Hospital Building"]
         assert main.page_start == 10
 
-    def test_expanded_clutch_detect_window(self):
-        """Clutch detection should work with up to 15000 chars before Site Details."""
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+    def test_expanded_pipe_table_detect_window(self):
+        """Pipe-table detection should work with up to 15000 chars before Site Details."""
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
+        detector = PipeTableDetector()
         # Pad with 10000 chars of filler before the content
-        padded = ("x" * 10000) + SAMPLE_CLUTCH_CONTENT
+        padded = ("x" * 10000) + SAMPLE_PIPE_TABLE_CONTENT
         # Should still detect — Site Details is within 15000 chars
         assert detector.detect(padded) is True
 
     def test_greencap_variant_detection(self):
-        """Greencap variant without Site Details should still be detected as Clutch.
+        """Greencap variant without Site Details should still be detected as PipeTable.
 
         When a document has ``| Building Name: | ... | Number of Levels: |``
-        pipe-table rows (unique to Clutch/Greencap), it should match even
+        pipe-table rows (unique to PipeTable/Greencap), it should match even
         without the ``| Site Details |`` header.
         """
-        from open_notebook.extractors.format_detectors.clutch_detector import (
-            ClutchDetector,
+        from open_notebook.extractors.format_detectors.pipe_table_detector import (
+            PipeTableDetector,
         )
 
-        detector = ClutchDetector()
+        detector = PipeTableDetector()
         # Greencap content WITHOUT Site Details but WITH Building Name + Levels rows
         greencap_content = """
 --- Page 1 ---
@@ -316,8 +318,8 @@ ALEXANDER DISTRICT HOSPITAL
 """
         assert detector.detect(greencap_content) is True
 
-    def test_greencap_not_detected_as_ara(self):
-        """Greencap pipe-table format should NOT be detected as ARA."""
+    def test_greencap_not_detected_as_text_header(self):
+        """Greencap pipe-table format should NOT be detected as text_header."""
         from open_notebook.extractors.format_detectors import get_registry
 
         registry = get_registry()
@@ -330,8 +332,8 @@ ALEXANDER DISTRICT HOSPITAL
 """
         detector = registry.detect_format(greencap_content)
         assert detector is not None
-        # Should match Clutch (priority 5), NOT ARA (priority 20)
-        assert detector.name == "clutch"
+        # Should match pipe_table (priority 5), NOT text_header (priority 20)
+        assert detector.name == "pipe_table"
 
 
 # ---------------------------------------------------------------------------
@@ -349,7 +351,7 @@ class TestStandardFormatDetector:
 
         detector = StandardFormatDetector()
         assert detector.detect(SAMPLE_SAMP_CONTENT) is True
-        assert detector.detect(SAMPLE_CLUTCH_CONTENT) is False
+        assert detector.detect(SAMPLE_PIPE_TABLE_CONTENT) is False
 
     def test_extract_buildings(self):
         from open_notebook.extractors.format_detectors.standard_detector import (
@@ -387,39 +389,106 @@ class TestStandardFormatDetector:
         detector = StandardFormatDetector()
         assert detector.get_column_mapping() is None
 
+    def test_detect_standard_format(self):
+        from open_notebook.extractors.format_detectors.standard_detector import (
+            StandardFormatDetector,
+        )
+        detector = StandardFormatDetector()
+        content = "## B00A - Admin Building - 1924 - Brick\nSome content"
+        assert detector.detect(content) is True
+
+    def test_no_detect_text_header(self):
+        from open_notebook.extractors.format_detectors.standard_detector import (
+            StandardFormatDetector,
+        )
+        detector = StandardFormatDetector()
+        content = "Building Name:\n  Test Building\n"
+        assert detector.detect(content) is False
+
+    def test_standard_no_column_mapping(self):
+        from open_notebook.extractors.format_detectors.standard_detector import (
+            StandardFormatDetector,
+        )
+        detector = StandardFormatDetector()
+        assert detector.get_column_mapping() is None
+
 
 # ---------------------------------------------------------------------------
-# ARADetector tests
+# TextHeaderDetector tests
 # ---------------------------------------------------------------------------
 
 
-class TestARADetector:
-    """Test ARADetector detection and extraction."""
+class TestTextHeaderDetector:
+    """Test TextHeaderDetector detection and extraction."""
 
-    def test_detect_ara(self):
-        from open_notebook.extractors.format_detectors.ara_detector import (
-            ARADetector,
+    def test_detect_text_header(self):
+        from open_notebook.extractors.format_detectors.text_header_detector import (
+            TextHeaderDetector,
+        )
+        detector = TextHeaderDetector()
+        content = "Building Name:\n  Test Building\n\nSome content here"
+        assert detector.detect(content) is True
+
+    def test_pipe_table_detected_first_by_priority(self):
+        """In the registry, pipe-table format is detected before text-header (priority 5 vs 20).
+
+        Even if the text-header regex matches pipe-delimited content (due to the
+        lookbehind only checking the immediately preceding character), the pipe-table
+        detector runs first and claims the document.
+        """
+        from open_notebook.extractors.format_detectors import get_registry
+
+        registry = get_registry()
+        pipe_content = SAMPLE_PIPE_TABLE_CONTENT
+        detector = registry.detect_format(pipe_content)
+        assert detector is not None
+        assert detector.name == "pipe_table"  # Not "text_header"
+
+    def test_extract_text_header_buildings(self):
+        from open_notebook.extractors.format_detectors.text_header_detector import (
+            TextHeaderDetector,
+        )
+        detector = TextHeaderDetector()
+        content = "Building Name:\n  Alpha Building\n\nSome ACM data\n\nBuilding Name:\n  Beta Building\n"
+        buildings = detector.extract_buildings(content)
+        assert len(buildings) == 2
+        names = [b.name for b in buildings]
+        assert "Alpha Building" in names
+        assert "Beta Building" in names
+
+    def test_text_header_column_mapping(self):
+        from open_notebook.extractors.format_detectors.text_header_detector import (
+            TextHeaderDetector,
+        )
+        detector = TextHeaderDetector()
+        mapping = detector.get_column_mapping()
+        assert mapping is not None
+        assert "Building Element" in mapping
+
+    def test_detect_ara_content(self):
+        from open_notebook.extractors.format_detectors.text_header_detector import (
+            TextHeaderDetector,
         )
 
-        detector = ARADetector()
+        detector = TextHeaderDetector()
         assert detector.detect(SAMPLE_ARA_CONTENT) is True
 
     def test_extract_buildings(self):
-        from open_notebook.extractors.format_detectors.ara_detector import (
-            ARADetector,
+        from open_notebook.extractors.format_detectors.text_header_detector import (
+            TextHeaderDetector,
         )
 
-        detector = ARADetector()
+        detector = TextHeaderDetector()
         buildings = detector.extract_buildings(SAMPLE_ARA_CONTENT)
         assert len(buildings) >= 1
         assert buildings[0].name == "Broadmeadows Police Station"
 
     def test_column_mapping(self):
-        from open_notebook.extractors.format_detectors.ara_detector import (
-            ARADetector,
+        from open_notebook.extractors.format_detectors.text_header_detector import (
+            TextHeaderDetector,
         )
 
-        detector = ARADetector()
+        detector = TextHeaderDetector()
         mapping = detector.get_column_mapping()
         assert mapping is not None
         assert "Building Element" in mapping

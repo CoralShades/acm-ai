@@ -1,6 +1,6 @@
-"""Clutch/Greencap format detector.
+"""Pipe-table format detector.
 
-Identifies Clutch Asbestos Register format by pipe-delimited table
+Identifies pipe-delimited table format by pipe-delimited table
 headers (| Site Details |, | Building Name: |) and extracts buildings
 with enriched metadata (levels, survey date).
 """
@@ -11,40 +11,47 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from open_notebook.extractors.building_inventory import (
-    _CLUTCH_BUILDING_NAME_PATTERN,
-    _CLUTCH_LEVEL_SUFFIX,
     BuildingMeta,
     _apply_boundary_overlap,
     _find_page_at_position,
 )
 from open_notebook.extractors.document_structure import DocumentStructure
 
-# Clutch-specific metadata patterns (parsed from building header rows)
-_CLUTCH_LEVELS_PATTERN = re.compile(
+# Pipe-table building name pattern: captures value from | Building Name: | <value> |
+_PIPE_TABLE_BUILDING_NAME_PATTERN = re.compile(
+    r"\|\s*Building\s+Name:\s*\|\s*([^|]+)", re.IGNORECASE
+)
+# Level suffix to strip from building names (e.g., " - Level 1", " - 2 Levels")
+_PIPE_TABLE_LEVEL_SUFFIX = re.compile(
+    r"\s*[-–]\s*(?:\d+\s*Levels?|Level\s*\d+)\s*$", re.IGNORECASE
+)
+
+# Pipe-table-specific metadata patterns (parsed from building header rows)
+_PIPE_TABLE_LEVELS_PATTERN = re.compile(
     r"\|\s*Number\s+of\s+Levels:\s*\|\s*(\d+)", re.IGNORECASE
 )
-_CLUTCH_SURVEY_DATE_PATTERN = re.compile(
+_PIPE_TABLE_SURVEY_DATE_PATTERN = re.compile(
     r"\|\s*Survey\s+Date:\s*\|\s*([^|]+)", re.IGNORECASE
 )
 
 
-class ClutchDetector:
-    """Detect and extract from Clutch/Greencap Asbestos Register format."""
+class PipeTableDetector:
+    """Detect and extract from pipe-table format Asbestos Register."""
 
-    name: str = "clutch"
+    name: str = "pipe_table"
     priority: int = 5  # Highest priority — most specific format
 
     def detect(self, content: str) -> bool:
-        """Detect Clutch/Greencap format via pipe-table heuristics.
+        """Detect pipe-table format via pipe-table heuristics.
 
-        Primary path (original Clutch):
+        Primary path (original pipe-table):
         - ``| Site Details |`` in first 15000 chars
         - At least one of ``| Full Address: |`` or ``| Client Name: |``
         - ``| Building Name: |`` somewhere in first 20000 chars
 
-        Secondary path (Greencap variant):
+        Secondary path (variant):
         - ``| Building Name: |`` followed by ``| Number of Levels: |`` on same row
-        - This pattern is unique to Clutch/Greencap pipe-table format
+        - This pattern is unique to pipe-table format
         """
         head = content[:15000]
         has_site_details = bool(
@@ -60,7 +67,7 @@ class ClutchDetector:
             re.search(r"\|\s*Building\s+Name:\s*\|", content[:20000], re.IGNORECASE)
         )
 
-        # Primary: classic Clutch with Site Details header
+        # Primary: classic pipe-table with Site Details header
         if (
             has_site_details
             and (has_full_address or has_client_name)
@@ -68,16 +75,16 @@ class ClutchDetector:
         ):
             return True
 
-        # Secondary: Greencap variant — Building Name + Number of Levels on same pipe row
-        # This pattern is unique to Clutch/Greencap and distinguishes from ARA format
-        has_clutch_building_row = bool(
+        # Secondary: variant — Building Name + Number of Levels on same pipe row
+        # This pattern is unique to pipe-table format and distinguishes from text-header format
+        has_pipe_table_building_row = bool(
             re.search(
                 r"\|\s*Building\s+Name:\s*\|[^|]+\|\s*Number\s+of\s+Levels:\s*\|",
                 content,
                 re.IGNORECASE,
             )
         )
-        if has_clutch_building_row:
+        if has_pipe_table_building_row:
             return True
 
         return False
@@ -87,7 +94,7 @@ class ClutchDetector:
         content: str,
         doc_structure: Optional[DocumentStructure] = None,
     ) -> List[BuildingMeta]:
-        """Extract buildings from Clutch format with enriched metadata.
+        """Extract buildings from pipe-table format with enriched metadata.
 
         Parses ``| Building Name: |`` headers, deduplicates by building name,
         and enriches with ``Number of Levels`` and ``Survey Date`` from the
@@ -95,9 +102,9 @@ class ClutchDetector:
         """
         # Collect all occurrences of "Building Name:" table cells
         building_occurrences: dict[str, List[int]] = {}
-        for match in _CLUTCH_BUILDING_NAME_PATTERN.finditer(content):
+        for match in _PIPE_TABLE_BUILDING_NAME_PATTERN.finditer(content):
             raw_name = match.group(1).strip()
-            name = _CLUTCH_LEVEL_SUFFIX.sub("", raw_name).strip()
+            name = _PIPE_TABLE_LEVEL_SUFFIX.sub("", raw_name).strip()
             if not name:
                 continue
             if name not in building_occurrences:
@@ -108,7 +115,7 @@ class ClutchDetector:
             return []
 
         logger.info(
-            f"Clutch format: found {len(building_occurrences)} unique buildings "
+            f"Pipe-table format: found {len(building_occurrences)} unique buildings "
             f"from 'Building Name:' headers"
         )
 
@@ -140,9 +147,9 @@ class ClutchDetector:
         return buildings
 
     def get_column_mapping(self) -> Optional[Dict[str, str]]:
-        """Clutch column names mapped to canonical extraction fields.
+        """Pipe-table column names mapped to canonical extraction fields.
 
-        Clutch registers use different column headers than standard DET format.
+        Pipe-table registers use different column headers than standard DET format.
         This mapping tells the LLM what each column represents.
         """
         return {
@@ -172,14 +179,14 @@ class ClutchDetector:
         levels: Optional[int] = None
         survey_date: Optional[str] = None
 
-        levels_match = _CLUTCH_LEVELS_PATTERN.search(window)
+        levels_match = _PIPE_TABLE_LEVELS_PATTERN.search(window)
         if levels_match:
             try:
                 levels = int(levels_match.group(1))
             except ValueError:
                 pass
 
-        date_match = _CLUTCH_SURVEY_DATE_PATTERN.search(window)
+        date_match = _PIPE_TABLE_SURVEY_DATE_PATTERN.search(window)
         if date_match:
             survey_date = date_match.group(1).strip()
             # Clean up trailing whitespace/pipe artifacts

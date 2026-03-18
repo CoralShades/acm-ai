@@ -53,8 +53,8 @@ async def detect_format_with_llm(
             "Analyze the document sample and identify the consultant format.\n\n"
             "Known formats:\n"
             "- 'standard': Standard DET format (uses ## B00A - Building headers)\n"
-            "- 'clutch': Clutch/Greencap registers (pipe-delimited tables with | Building Name: |)\n"
-            "- 'ara': Greencap/Prensa ARA format (Building Name: text headers)\n"
+            "- 'pipe_table': Pipe-delimited table format (| Building Name: | with | Number of Levels: |)\n"
+            "- 'text_header': Text-header format (Building Name: followed by value on next line)\n"
             "- 'unknown': Format not recognized\n\n"
             'Return JSON: {"format_name": "...", "detection_patterns": ["pattern1", ...], '
             '"column_mapping_hint": {"DocumentColumn": "canonical_field", ...}}'

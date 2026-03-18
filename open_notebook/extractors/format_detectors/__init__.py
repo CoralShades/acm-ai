@@ -1,7 +1,7 @@
 """Format Detector Registry.
 
 Provides a protocol-based format detection system that identifies
-consultant-specific ACM document formats and supplies format-aware
+structure-based ACM document formats and supplies format-aware
 configuration (column mappings, building extraction logic).
 
 Each detector implements the FormatDetector protocol and registers
@@ -109,15 +109,19 @@ def get_registry() -> FormatRegistry:
 # Auto-register detectors on import
 def _auto_register() -> None:
     """Import all detector modules to trigger registration."""
-    from open_notebook.extractors.format_detectors.ara_detector import ARADetector
-    from open_notebook.extractors.format_detectors.clutch_detector import ClutchDetector
+    from open_notebook.extractors.format_detectors.pipe_table_detector import (
+        PipeTableDetector,
+    )
     from open_notebook.extractors.format_detectors.standard_detector import (
         StandardFormatDetector,
     )
+    from open_notebook.extractors.format_detectors.text_header_detector import (
+        TextHeaderDetector,
+    )
 
-    _registry.register(ClutchDetector())
+    _registry.register(PipeTableDetector())
     _registry.register(StandardFormatDetector())
-    _registry.register(ARADetector())
+    _registry.register(TextHeaderDetector())
 
 
 _auto_register()
