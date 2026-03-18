@@ -109,6 +109,19 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   })
 
   const handleReExtract = useCallback(async () => {
+    // Duplicate guard — check if extraction is already running
+    try {
+      const checkRes = await fetch(`/api/jobs/${encodeURIComponent(sourceId)}/can-extract`)
+      if (checkRes.ok) {
+        const check = await checkRes.json()
+        if (!check.can_extract) {
+          return // silently skip — JobControls handles the UX
+        }
+      }
+    } catch {
+      // If guard endpoint fails, proceed anyway
+    }
+
     await fetch('/api/acm/extract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

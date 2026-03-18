@@ -34,9 +34,26 @@
 - **DocumentType.SAMP enum:** Keep value as-is (stored in DB), expand description in prompts
 - **Execution order updated:** Pack 6 → Pack 3 → Pack 4 (packs 3+4 now have Pack 6 as prerequisite)
 
+## Session: Pack 4 — Frontend/Backend Sync (2026-03-18)
+
+### Completed (5 agents dispatched, all phases done)
+1. **Phase 1: SSE + Progress Fix** — `useV3SSE` wired into extract page for real-time state transitions. UploadWizard has multi-stage processing animation.
+2. **Phase 2a: Backend Job Lifecycle API** — `job_lifecycle.py` with cancel, restart, status, can-extract endpoints. 13 tests.
+3. **Phase 2b: Frontend Job Controls** — `JobControls.tsx` with cancel/restart buttons. Integrated into `JobDetailHeader`. Duplicate guard on `handleReExtract`.
+4. **Phase 3: ExtractionLiveView** — ChatGPT-style real-time event feed with dual SSE subscriptions.
+5. **Phase 4: BUG-4 Fix** — AG-UI adapter crash fixed by sanitizing `StateSnapshotEvent`.
+
+### Verification: ALL PASS
+- Frontend build: 0 errors
+- Frontend lint: 0 new warnings
+- Backend lint (ruff): 0 errors
+- Backend tests: 13/13 passing
+
+### Files: 6 modified, 4 created
+
 ## 5-Question Reboot Check
-1. **Last completed milestone:** Audit findings documented, skills identified
-2. **Current active task:** Generate prompt packs
-3. **Blockers:** None — this is a planning session
-4. **Files last modified:** task_plan.md, findings.md, progress.md (this directory)
-5. **Next planned action:** Run /generate-prompt for each of the 4 prompt packs
+1. **Last completed milestone:** Pack 4 (Frontend/Backend Sync) fully implemented and verified
+2. **Current active task:** None — Pack 4 complete
+3. **Blockers:** None
+4. **Files last modified:** job_lifecycle.py, agui_chat.py, extract/page.tsx, UploadWizard.tsx, JobDetailHeader.tsx, JobControls.tsx, ExtractionLiveView.tsx
+5. **Next planned action:** Manual E2E testing with real PDF, then commit

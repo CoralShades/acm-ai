@@ -57,6 +57,7 @@ from api.routers import (
     extraction_events,
     graph,
     insights,
+    job_lifecycle,
     models,
     notebooks,
     notes,
@@ -204,6 +205,7 @@ app.include_router(agui_extraction.router, prefix="/api", tags=["agui-extraction
 app.include_router(source_bulk.router, prefix="/api", tags=["source-bulk"])
 app.include_router(v3_streaming.router, prefix="/api", tags=["v3-streaming"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
+app.include_router(job_lifecycle.router, prefix="/api", tags=["job-lifecycle"])
 
 # Mount static files for A2A agent card (.well-known)
 from pathlib import Path as _Path

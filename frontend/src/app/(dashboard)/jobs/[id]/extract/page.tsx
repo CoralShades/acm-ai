@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useParams, useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
@@ -8,6 +8,7 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
+import { ExtractionLiveView } from '@/components/jobs/ExtractionLiveView'
 import { RawExtractionTable } from '@/components/acm/RawExtractionTable'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -17,8 +18,11 @@ import { useSource } from '@/lib/hooks/use-sources'
 import { useExtractionProgress } from '@/lib/hooks/use-extraction-progress'
 import { useExtractionStatus } from '@/lib/hooks/use-extraction-status'
 import { useAGUIStream } from '@/lib/hooks/use-agui-stream'
+import { useV3SSE } from '@/lib/hooks/useV3SSE'
+import { ACM_QUERY_KEYS } from '@/lib/hooks/use-acm'
 import { acmApi } from '@/lib/api/acm'
 import { ArrowRight, FileWarning } from 'lucide-react'
+import type { V3EventEnvelope } from '@/lib/types/v3-streaming'
 
 /**
  * Extract page — shows the ExtractionProgressPanel (stage pills + log) alongside
@@ -51,6 +55,46 @@ function ExtractPageContent() {
         : source?.command_id || null
       : null
   const aguiStream = useAGUIStream(aguiCommandId)
+
+  // Derive commandId for V3 SSE subscription (same source as aguiCommandId but
+  // resolved once so the hook receives a stable value on mount)
+  const v3CommandId = aguiCommandId
+
+  // On terminal V3 SSE event, immediately invalidate queries so the records
+  // table refreshes without waiting for the next polling cycle.
+  const handleV3Event = useCallback(
+    (event: V3EventEnvelope) => {
+      const TERMINAL_TYPES = new Set([
+        'extraction.consensus_complete',
+        'ai.validation_complete',
+        'bulk.complete',
+      ])
+      if (TERMINAL_TYPES.has(event.type)) {
+        queryClient.invalidateQueries({ queryKey: ['raw-extraction-records', sourceId] })
+        queryClient.invalidateQueries({ queryKey: ['acm', 'records', sourceId] })
+        queryClient.invalidateQueries({ queryKey: ACM_QUERY_KEYS.stats(sourceId) })
+      }
+    },
+    [queryClient, sourceId]
+  )
+
+  // Subscribe to V3 SSE extraction events. The hook is gracefully disabled when
+  // there is no commandId or extraction is not running. Polling via
+  // useExtractionProgress / useExtractionStatus remains the authoritative source
+  // of phase transitions — SSE is an additive enhancement for faster query
+  // invalidation on completion.
+  useV3SSE({
+    operationId: v3CommandId ?? '',
+    category: 'extraction',
+    enabled: !!v3CommandId && extractionProgress.phase === 'extracting',
+    onEvent: handleV3Event,
+    invalidateQueryKeys: [
+      ['raw-extraction-records', sourceId],
+      ['acm', 'records', sourceId],
+      // Spread readonly tuple to mutable array for type compatibility
+      [...ACM_QUERY_KEYS.stats(sourceId)],
+    ],
+  })
 
   // Restore in-progress extraction from sessionStorage on mount
   useEffect(() => {
@@ -240,6 +284,14 @@ function ExtractPageContent() {
             aguiStep={aguiStream.currentStep}
             aguiConnected={aguiStream.connected}
           />
+
+          {/* Live SSE event feed — visible while extraction is running */}
+          {v3CommandId && (
+            <ExtractionLiveView
+              operationId={v3CommandId}
+              enabled={extractionProgress.phase === 'extracting'}
+            />
+          )}
 
           {isExtractionFailed && (
             <Alert variant="destructive" className="border-destructive/50">

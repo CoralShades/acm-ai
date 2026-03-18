@@ -9,9 +9,9 @@
  * Story: E33-S1 Upload Wizard + Extraction Progress
  */
 
-import { useRef, useState, useCallback, DragEvent, ChangeEvent } from 'react'
+import { useRef, useState, useCallback, useEffect, DragEvent, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -48,6 +48,7 @@ export function UploadWizard() {
   const [file, setFile] = useState<File | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [processingStage, setProcessingStage] = useState<'uploading' | 'starting' | null>(null)
   const [fatalError, setFatalError] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -111,6 +112,7 @@ export function UploadWizard() {
   const handleExtract = useCallback(async () => {
     if (!file || isSubmitting) return
     setIsSubmitting(true)
+    setProcessingStage('uploading')
     setFatalError(null)
 
     let sourceId: string
@@ -126,8 +128,11 @@ export function UploadWizard() {
         err instanceof Error ? err.message : 'Could not upload file. Please try again.'
       setFatalError(message)
       setIsSubmitting(false)
+      setProcessingStage(null)
       return
     }
+
+    setProcessingStage('starting')
 
     try {
       const extractResponse = await acmApi.extract(sourceId)
@@ -158,7 +163,78 @@ export function UploadWizard() {
     router.push(`/extraction/${encodeURIComponent(sourceId)}`)
   }, [file, isSubmitting, router, toastError])
 
+  // ─── Processing animation state cycling ───────────────────────────────────
+  // When submitting, we cycle dots for the current stage label to give a
+  // visual indication that work is happening even on slow connections.
+  const [dotCount, setDotCount] = useState(0)
+  useEffect(() => {
+    if (!isSubmitting) {
+      setDotCount(0)
+      return
+    }
+    const interval = window.setInterval(() => {
+      setDotCount((n) => (n + 1) % 4)
+    }, 400)
+    return () => window.clearInterval(interval)
+  }, [isSubmitting])
+
   // ─── Render helpers ───────────────────────────────────────────────────────
+
+  const renderProcessing = () => {
+    const stages: Array<{ key: 'uploading' | 'starting'; label: string }> = [
+      { key: 'uploading', label: 'Uploading document' },
+      { key: 'starting', label: 'Starting extraction' },
+    ]
+    const dots = '.'.repeat(dotCount)
+
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-8 py-12"
+        data-testid="upload-processing"
+        role="status"
+        aria-live="polite"
+        aria-label="Processing your document"
+      >
+        <Loader2 className="h-12 w-12 animate-spin text-primary" aria-hidden />
+
+        <div className="space-y-3 w-full max-w-xs">
+          {stages.map(({ key, label }) => {
+            const isActive = processingStage === key
+            const isDone =
+              (key === 'uploading' && processingStage === 'starting') ||
+              (key === 'uploading' && processingStage === null && !isSubmitting)
+
+            return (
+              <div
+                key={key}
+                className={cn(
+                  'flex items-center gap-3 rounded-md border px-4 py-3 transition-colors',
+                  isActive && 'border-primary/60 bg-primary/5',
+                  isDone && 'border-emerald-500/50 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300',
+                  !isActive && !isDone && 'border-border/40 bg-muted/30 text-muted-foreground'
+                )}
+              >
+                {isDone ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                ) : isActive ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
+                ) : (
+                  <span className="h-4 w-4 shrink-0 rounded-full border border-border/60" aria-hidden />
+                )}
+                <span className="text-sm font-medium">
+                  {isActive ? `${label}${dots}` : label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center max-w-xs">
+          Please wait — you will be redirected to the extraction progress page automatically.
+        </p>
+      </div>
+    )
+  }
 
   const renderStep1 = () => (
     <div className="space-y-6" data-testid="upload-step-1">
@@ -224,47 +300,54 @@ export function UploadWizard() {
     </div>
   )
 
-  const renderStep2 = () => (
-    <div className="space-y-6" data-testid="upload-step-2">
-      <div>
-        <h2 className="text-xl font-semibold mb-1">Confirm &amp; Start Extraction</h2>
-        <p className="text-sm text-muted-foreground">
-          Review your document before starting the AI extraction pipeline.
-        </p>
-      </div>
+  const renderStep2 = () => {
+    // While submitting, replace step content with the animated processing overlay
+    if (isSubmitting) {
+      return renderProcessing()
+    }
 
-      {/* Summary card */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex items-start gap-3">
-            <FileText className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">File</p>
-              <p className="truncate font-medium" data-testid="confirm-file-name">
-                {file?.name}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {file ? formatFileSize(file.size) : ''}
-              </p>
+    return (
+      <div className="space-y-6" data-testid="upload-step-2">
+        <div>
+          <h2 className="text-xl font-semibold mb-1">Confirm &amp; Start Extraction</h2>
+          <p className="text-sm text-muted-foreground">
+            Review your document before starting the AI extraction pipeline.
+          </p>
+        </div>
+
+        {/* Summary card */}
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <FileText className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">File</p>
+                <p className="truncate font-medium" data-testid="confirm-file-name">
+                  {file?.name}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {file ? formatFileSize(file.size) : ''}
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Extract button */}
-      <div className="flex justify-end">
-        <Button
-          size="lg"
-          onClick={handleExtract}
-          disabled={isSubmitting}
-          data-testid="extract-button"
-          className="min-w-32"
-        >
-          {isSubmitting ? 'Uploading...' : 'Extract'}
-        </Button>
+        {/* Extract button */}
+        <div className="flex justify-end">
+          <Button
+            size="lg"
+            onClick={handleExtract}
+            disabled={isSubmitting}
+            data-testid="extract-button"
+            className="min-w-32"
+          >
+            Extract
+          </Button>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="flex flex-col h-full" data-testid="upload-wizard">

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, RefreshCw, FileSpreadsheet, Download, Pencil, Check, X } from 'lucide-react'
+import { ChevronRight, FileSpreadsheet, Download, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { JobStatusPill } from './JobStatusPill'
+import { JobControls } from './JobControls'
 
 function formatRelativeDate(dateStr: string | null): string {
   if (!dateStr) return 'Unknown'
@@ -42,6 +43,7 @@ interface JobDetailHeaderProps {
 }
 
 export function JobDetailHeader({
+  sourceId,
   title,
   reviewStatus,
   createdAt,
@@ -102,10 +104,11 @@ export function JobDetailHeader({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Button variant="outline" size="sm" onClick={onReExtract}>
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Re-Extract
-          </Button>
+          <JobControls
+            sourceId={sourceId}
+            reviewStatus={reviewStatus}
+            onStatusChange={onReExtract}
+          />
           <Button variant="outline" size="sm" onClick={onExportCsv}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Export CSV
