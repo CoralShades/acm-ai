@@ -55,7 +55,9 @@ class FormatRegistry:
         """Register a detector and re-sort by priority."""
         self._detectors.append(detector)
         self._detectors.sort(key=lambda d: d.priority)
-        logger.debug(f"Registered format detector: {detector.name} (priority={detector.priority})")
+        logger.debug(
+            f"Registered format detector: {detector.name} (priority={detector.priority})"
+        )
 
     def detect_format(self, content: str) -> Optional[FormatDetector]:
         """Run detectors in priority order, return first match or None."""

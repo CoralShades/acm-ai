@@ -302,7 +302,11 @@ async def trigger_acm_extraction(request: ACMExtractRequest):
         command_id = await CommandService.submit_command_job(
             "open_notebook",
             "acm_extract",
-            {"source_id": request.source_id, "force": request.force, "mode": request.mode},
+            {
+                "source_id": request.source_id,
+                "force": request.force,
+                "mode": request.mode,
+            },
         )
 
         return ACMExtractResponse(
@@ -2373,9 +2377,7 @@ async def normalize_recommendation_text(request: NormalizeRequest):
 async def _load_db_field_config() -> dict | None:
     """Load field config override from SurrealDB field_schema table."""
     try:
-        result = await repo_query(
-            "SELECT config_json FROM field_schema:default"
-        )
+        result = await repo_query("SELECT config_json FROM field_schema:default")
         if result and result[0].get("config_json"):
             import json
 

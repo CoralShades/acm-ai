@@ -248,7 +248,9 @@ class ModelManager:
         if provider_lower == "openrouter" and routed_name.lower().startswith(
             "anthropic/"
         ):
-            if not os.getenv("OPENROUTER_API_KEY") and (os.getenv("ACM_ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")):
+            if not os.getenv("OPENROUTER_API_KEY") and (
+                os.getenv("ACM_ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+            ):
                 stripped = routed_name.split("/", 1)[1]
                 normalized = cls._normalize_anthropic_model_name(stripped)
                 logger.info(

@@ -449,7 +449,12 @@ class ACMExtractionResult(BaseModel):
         default=0, description="Total number of records extracted"
     )
     records_rejected: int = Field(
-        default=0, description="Number of records rejected during validation"
+        default=0,
+        description="Number of records rejected during validation (missing required fields)",
+    )
+    records_filtered: int = Field(
+        default=0,
+        description="Number of records intentionally excluded (e.g. Negative results)",
     )
     confidence_distribution: ConfidenceDistribution = Field(
         default_factory=ConfidenceDistribution,
@@ -518,9 +523,9 @@ class ACMExtractionOutput(BaseModel):
     source_id: str = Field(description="ID of the source document")
     status: str = Field(description="Extraction status: 'success', 'failed', 'no_data'")
     total_records: int = Field(default=0, description="Number of records extracted")
-    records_failed: int = Field(
+    records_filtered: int = Field(
         default=0,
-        description="Number of records that failed validation and were rejected",
+        description="Number of records excluded during validation (missing fields or intentional filter)",
     )
     confidence_distribution: ConfidenceDistribution = Field(
         default_factory=ConfidenceDistribution,

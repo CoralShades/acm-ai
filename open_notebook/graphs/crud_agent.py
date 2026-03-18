@@ -57,8 +57,21 @@ class CRUDAgentState(TypedDict):
 
 # Tool sets by intent
 _read_tools = [surreal_query, get_schema_info, ask_user_choice]
-_write_tools = [surreal_query, preview_write, preview_bulk_write, ask_user_choice, undo_last_write]
-_all_tools = [surreal_query, preview_write, preview_bulk_write, get_schema_info, ask_user_choice, undo_last_write]
+_write_tools = [
+    surreal_query,
+    preview_write,
+    preview_bulk_write,
+    ask_user_choice,
+    undo_last_write,
+]
+_all_tools = [
+    surreal_query,
+    preview_write,
+    preview_bulk_write,
+    get_schema_info,
+    ask_user_choice,
+    undo_last_write,
+]
 
 
 def _extract_source_id_from_messages(messages: list) -> Optional[str]:

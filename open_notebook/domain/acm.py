@@ -905,11 +905,15 @@ class BuildingRecord(ObjectModel):
     )
     building_sub_category: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("building_sub_category", "Building_Sub_Category__c"),
+        validation_alias=AliasChoices(
+            "building_sub_category", "Building_Sub_Category__c"
+        ),
     )
     building_risk_rating: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("building_risk_rating", "Building_Risk_Rating__c"),
+        validation_alias=AliasChoices(
+            "building_risk_rating", "Building_Risk_Rating__c"
+        ),
     )
 
     # --- Embedding fields (AC8) ---

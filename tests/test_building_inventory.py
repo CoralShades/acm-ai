@@ -153,7 +153,9 @@ class TestPromptTemplate:
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/building_inventory")
-        result = prompter.render(data={"site_name": "Test School", "consultant_name": "Test Corp"})
+        result = prompter.render(
+            data={"site_name": "Test School", "consultant_name": "Test Corp"}
+        )
         assert "building inventory" in result.lower()
         assert "Test School" in result
         assert "Test Corp" in result

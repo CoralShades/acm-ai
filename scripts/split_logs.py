@@ -27,12 +27,8 @@ _EXTRACTION_TS_RE = re.compile(r"^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]")
 _LOGURU_TS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})")
 
 # Run boundary markers in extraction.log
-_START_RE = re.compile(
-    r"\[PIPELINE\] Starting extraction for (source:\S+)"
-)
-_END_RE = re.compile(
-    r"\[PIPELINE\] EXTRACTION (COMPLETE|FAILED)"
-)
+_START_RE = re.compile(r"\[PIPELINE\] Starting extraction for (source:\S+)")
+_END_RE = re.compile(r"\[PIPELINE\] EXTRACTION (COMPLETE|FAILED)")
 
 
 def _parse_extraction_ts(line: str) -> datetime | None:
@@ -58,7 +54,9 @@ def _find_runs(extraction_log: Path) -> list[dict]:
     runs: list[dict] = []
     current: dict | None = None
 
-    for line in extraction_log.read_text(encoding="utf-8", errors="replace").splitlines():
+    for line in extraction_log.read_text(
+        encoding="utf-8", errors="replace"
+    ).splitlines():
         ts = _parse_extraction_ts(line)
         if not ts:
             continue
@@ -125,21 +123,23 @@ def _slice_loguru_file(
 def _generate_summary(run: dict, worker_lines: int, api_lines: int) -> str:
     """Generate summary.txt content for a historical run."""
     duration = (run["end_ts"] - run["start_ts"]).total_seconds()
-    return "\n".join([
-        f"Source ID:    {run['source_id']}",
-        f"Run ID:      (historical — unknown)",
-        f"Started:     {run['start_ts'].isoformat()}",
-        f"Ended:       {run['end_ts'].isoformat()}",
-        f"Duration:    {duration:.1f}s",
-        f"Status:      {run['status']}",
-        f"Records:     {run.get('record_count', 'unknown')}",
-        f"",
-        f"Log lines:",
-        f"  extraction.log: {len(run['lines'])}",
-        f"  worker.log:     {worker_lines}",
-        f"  api.log:        {api_lines}",
-        "",
-    ])
+    return "\n".join(
+        [
+            f"Source ID:    {run['source_id']}",
+            f"Run ID:      (historical — unknown)",
+            f"Started:     {run['start_ts'].isoformat()}",
+            f"Ended:       {run['end_ts'].isoformat()}",
+            f"Duration:    {duration:.1f}s",
+            f"Status:      {run['status']}",
+            f"Records:     {run.get('record_count', 'unknown')}",
+            f"",
+            f"Log lines:",
+            f"  extraction.log: {len(run['lines'])}",
+            f"  worker.log:     {worker_lines}",
+            f"  api.log:        {api_lines}",
+            "",
+        ]
+    )
 
 
 # Source IDs that are test fixtures — skip by default
@@ -156,11 +156,19 @@ def _is_test_source(source_id: str) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Split monolithic logs into per-run directories")
-    parser.add_argument("--log-dir", default="logs", help="Log directory (default: logs)")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would be created")
+    parser = argparse.ArgumentParser(
+        description="Split monolithic logs into per-run directories"
+    )
+    parser.add_argument(
+        "--log-dir", default="logs", help="Log directory (default: logs)"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be created"
+    )
     parser.add_argument("--source-id", help="Filter to a specific source ID")
-    parser.add_argument("--include-tests", action="store_true", help="Include test fixture runs")
+    parser.add_argument(
+        "--include-tests", action="store_true", help="Include test fixture runs"
+    )
     args = parser.parse_args()
 
     log_dir = Path(args.log_dir)
@@ -178,7 +186,9 @@ def main():
         runs = [r for r in runs if not _is_test_source(r["source_id"])]
         skipped_tests = before - len(runs)
         if skipped_tests:
-            print(f"Skipped {skipped_tests} test fixture run(s) (use --include-tests to include)")
+            print(
+                f"Skipped {skipped_tests} test fixture run(s) (use --include-tests to include)"
+            )
 
     print(f"Found {len(runs)} extraction run(s) in {extraction_log}")
 
@@ -207,8 +217,10 @@ def main():
 
         if args.dry_run:
             print(f"  [DRY RUN] Would create: {run_dir}/")
-            print(f"            Source: {run['source_id']}, Status: {run['status']}, "
-                  f"Records: {run.get('record_count', '?')}")
+            print(
+                f"            Source: {run['source_id']}, Status: {run['status']}, "
+                f"Records: {run.get('record_count', '?')}"
+            )
             created += 1
             continue
 
@@ -219,7 +231,8 @@ def main():
             f"# Historical extraction run (split from monolithic log)\n"
             f"# Source: {run['source_id']}\n"
             f"# Period: {run['start_ts'].isoformat()} to {run['end_ts'].isoformat()}\n\n"
-            + "\n".join(run["lines"]) + "\n",
+            + "\n".join(run["lines"])
+            + "\n",
             encoding="utf-8",
         )
 
@@ -248,7 +261,9 @@ def main():
         )
 
         created += 1
-        print(f"  Created: {run_dir.name} ({run['status']}, {run.get('record_count', '?')} records)")
+        print(
+            f"  Created: {run_dir.name} ({run['status']}, {run.get('record_count', '?')} records)"
+        )
 
     print(f"\nDone: {created} created, {skipped} skipped (already exist)")
 

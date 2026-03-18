@@ -56,8 +56,8 @@ async def detect_format_with_llm(
             "- 'clutch': Clutch/Greencap registers (pipe-delimited tables with | Building Name: |)\n"
             "- 'ara': Greencap/Prensa ARA format (Building Name: text headers)\n"
             "- 'unknown': Format not recognized\n\n"
-            "Return JSON: {\"format_name\": \"...\", \"detection_patterns\": [\"pattern1\", ...], "
-            "\"column_mapping_hint\": {\"DocumentColumn\": \"canonical_field\", ...}}"
+            'Return JSON: {"format_name": "...", "detection_patterns": ["pattern1", ...], '
+            '"column_mapping_hint": {"DocumentColumn": "canonical_field", ...}}'
         )
 
         model = await provision_langchain_model(
@@ -72,7 +72,9 @@ async def detect_format_with_llm(
 
         raw_response = await model.ainvoke(messages)
         response_text = (
-            raw_response.content if hasattr(raw_response, "content") else str(raw_response)
+            raw_response.content
+            if hasattr(raw_response, "content")
+            else str(raw_response)
         )
         parsed = parse_json_response(response_text)
 

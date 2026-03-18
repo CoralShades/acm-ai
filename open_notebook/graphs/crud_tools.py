@@ -118,9 +118,7 @@ def _generate_surrealql(user_question: str, source_id: str) -> str:
                 model = executor.submit(_provision).result()
         except RuntimeError:
             model = asyncio.run(
-                provision_langchain_model(
-                    prompt_text, None, "chat", max_tokens=512
-                )
+                provision_langchain_model(prompt_text, None, "chat", max_tokens=512)
             )
 
         from langchain_core.messages import HumanMessage
@@ -145,7 +143,9 @@ def _fallback_query(user_question: str) -> str:
     q = user_question.lower()
 
     if "count" in q or "how many" in q:
-        return "SELECT count() as total FROM acm_record WHERE source_id = $sid GROUP ALL;"
+        return (
+            "SELECT count() as total FROM acm_record WHERE source_id = $sid GROUP ALL;"
+        )
 
     if ("list" in q and "building" in q) or "buildings" in q:
         return "SELECT DISTINCT building_id, building_name FROM acm_record WHERE source_id = $sid;"
@@ -168,7 +168,9 @@ def _fallback_query(user_question: str) -> str:
             "WHERE source_id = $sid AND risk_status = 'High' LIMIT 50;"
         )
 
-    if "risk" in q and ("breakdown" in q or "summary" in q or "count" in q or "by" in q):
+    if "risk" in q and (
+        "breakdown" in q or "summary" in q or "count" in q or "by" in q
+    ):
         return (
             "SELECT risk_status, count() as total FROM acm_record "
             "WHERE source_id = $sid GROUP BY risk_status;"
@@ -195,11 +197,13 @@ def surreal_query(question: str) -> str:
     """
     source_id = get_crud_context()
     if not source_id:
-        return json.dumps({
-            "type": "surreal_query",
-            "error": "No job context set. Cannot query records.",
-            "results": [],
-        })
+        return json.dumps(
+            {
+                "type": "surreal_query",
+                "error": "No job context set. Cannot query records.",
+                "results": [],
+            }
+        )
 
     # Generate SurrealQL from natural language
     generated_sql = _generate_surrealql(question, source_id)
@@ -209,12 +213,14 @@ def surreal_query(question: str) -> str:
     check = validate_read_query(generated_sql)
     if not check.allowed:
         logger.warning(f"Guardrail blocked query: {check.reason}")
-        return json.dumps({
-            "type": "surreal_query",
-            "error": f"Query blocked: {check.reason}",
-            "generated_sql": generated_sql,
-            "results": [],
-        })
+        return json.dumps(
+            {
+                "type": "surreal_query",
+                "error": f"Query blocked: {check.reason}",
+                "generated_sql": generated_sql,
+                "results": [],
+            }
+        )
 
     # Execute the validated query
     async def run():
@@ -230,31 +236,40 @@ def surreal_query(question: str) -> str:
         result = await repo_query(check.sanitized_query, query_vars)
 
         # Flatten nested list results from SurrealDB
-        if result and isinstance(result, list) and len(result) == 1 and isinstance(result[0], list):
+        if (
+            result
+            and isinstance(result, list)
+            and len(result) == 1
+            and isinstance(result[0], list)
+        ):
             result = result[0]
 
         # Apply output guardrails
         capped = cap_results(result) if result else []
 
-        return json.dumps({
-            "type": "surreal_query",
-            "question": question,
-            "generated_sql": check.sanitized_query,
-            "total_results": len(result) if result else 0,
-            "results": capped,
-            "warnings": check.warnings,
-        })
+        return json.dumps(
+            {
+                "type": "surreal_query",
+                "question": question,
+                "generated_sql": check.sanitized_query,
+                "total_results": len(result) if result else 0,
+                "results": capped,
+                "warnings": check.warnings,
+            }
+        )
 
     try:
         return _run_async(run())
     except Exception as e:
         logger.error(f"Error in surreal_query: {e}")
-        return json.dumps({
-            "type": "surreal_query",
-            "error": f"Query execution error: {str(e)}",
-            "generated_sql": generated_sql,
-            "results": [],
-        })
+        return json.dumps(
+            {
+                "type": "surreal_query",
+                "error": f"Query execution error: {str(e)}",
+                "generated_sql": generated_sql,
+                "results": [],
+            }
+        )
 
 
 def _extract_search_value(question: str) -> str:
@@ -273,7 +288,9 @@ def _extract_search_value(question: str) -> str:
         return bld.group(0)
 
     # Check for "in <something>" pattern
-    in_match = re.search(r"\bin\s+(.+?)(?:\s+with|\s+that|\s*$)", question, re.IGNORECASE)
+    in_match = re.search(
+        r"\bin\s+(.+?)(?:\s+with|\s+that|\s*$)", question, re.IGNORECASE
+    )
     if in_match:
         return in_match.group(1).strip()
 
@@ -314,10 +331,12 @@ def preview_write(
     # Validate through guardrails
     check = validate_write_operation(table, operation, field)
     if not check.allowed:
-        return json.dumps({
-            "type": "preview_write",
-            "error": f"Write blocked: {check.reason}",
-        })
+        return json.dumps(
+            {
+                "type": "preview_write",
+                "error": f"Write blocked: {check.reason}",
+            }
+        )
 
     operation_id = str(uuid.uuid4())[:8]
 
@@ -369,7 +388,9 @@ def preview_bulk_write(
     """
     source_id = get_crud_context()
     if not source_id:
-        return json.dumps({"type": "preview_bulk_write", "error": "No job context set."})
+        return json.dumps(
+            {"type": "preview_bulk_write", "error": "No job context set."}
+        )
 
     # Determine target table
     table = "acm_record"
@@ -378,12 +399,16 @@ def preview_bulk_write(
             table = "building_record"
 
     # Validate through guardrails
-    check = validate_write_operation(table, operation, field if operation.upper() == "UPDATE" else None)
+    check = validate_write_operation(
+        table, operation, field if operation.upper() == "UPDATE" else None
+    )
     if not check.allowed:
-        return json.dumps({
-            "type": "preview_bulk_write",
-            "error": f"Write blocked: {check.reason}",
-        })
+        return json.dumps(
+            {
+                "type": "preview_bulk_write",
+                "error": f"Write blocked: {check.reason}",
+            }
+        )
 
     # Resolve record IDs
     resolved_ids: list = []
@@ -394,10 +419,16 @@ def preview_bulk_write(
         generated_sql = _generate_surrealql(filter_description, source_id)
         check_read = validate_read_query(generated_sql)
         if check_read.allowed:
+
             async def _fetch_ids():
                 sid = ensure_record_id(source_id)
                 result = await repo_query(check_read.sanitized_query, {"sid": sid})
-                if result and isinstance(result, list) and len(result) == 1 and isinstance(result[0], list):
+                if (
+                    result
+                    and isinstance(result, list)
+                    and len(result) == 1
+                    and isinstance(result[0], list)
+                ):
                     result = result[0]
                 ids = []
                 if result:
@@ -428,16 +459,18 @@ def preview_bulk_write(
         "_created_at": time.time(),
     }
 
-    return json.dumps({
-        "type": "preview_bulk_write",
-        "operation_id": operation_id,
-        "operation": operation,
-        "affected_count": len(resolved_ids),
-        "field": field,
-        "new_value": new_value,
-        "reason": reason,
-        "record_ids": resolved_ids,
-    })
+    return json.dumps(
+        {
+            "type": "preview_bulk_write",
+            "operation_id": operation_id,
+            "operation": operation,
+            "affected_count": len(resolved_ids),
+            "field": field,
+            "new_value": new_value,
+            "reason": reason,
+            "record_ids": resolved_ids,
+        }
+    )
 
 
 def _fetch_old_value(rows, field: Optional[str] = None):
@@ -508,10 +541,15 @@ def execute_pending_write(
                 rid = ensure_record_id(rid_str)
                 try:
                     if op == "UPDATE" and field:
-                        old_rows = await repo_query(f"SELECT {field} FROM $rid", {"rid": rid})
+                        old_rows = await repo_query(
+                            f"SELECT {field} FROM $rid", {"rid": rid}
+                        )
                         old_value = _fetch_old_value(old_rows, field)
 
-                        await repo_query(f"UPDATE $rid SET {field} = $val", {"rid": rid, "val": new_value})
+                        await repo_query(
+                            f"UPDATE $rid SET {field} = $val",
+                            {"rid": rid, "val": new_value},
+                        )
 
                         await repo_query(
                             """INSERT INTO crud_audit {
@@ -522,11 +560,18 @@ def execute_pending_write(
                                 old_value: $old_value, new_value: $new_value
                             }""",
                             {
-                                "sid": sid, "reason": pending.get("reason", ""),
+                                "sid": sid,
+                                "reason": pending.get("reason", ""),
                                 "surql": f"UPDATE {rid_str} SET {field} = '{new_value}'",
-                                "op": op, "record_id": rid_str, "field_name": field,
-                                "old_value": str(old_value) if old_value is not None else None,
-                                "new_value": str(new_value) if new_value is not None else None,
+                                "op": op,
+                                "record_id": rid_str,
+                                "field_name": field,
+                                "old_value": str(old_value)
+                                if old_value is not None
+                                else None,
+                                "new_value": str(new_value)
+                                if new_value is not None
+                                else None,
                             },
                         )
                         updated_count += 1
@@ -545,10 +590,14 @@ def execute_pending_write(
                                 record_id: $record_id, old_value: $old_value
                             }""",
                             {
-                                "sid": sid, "reason": pending.get("reason", ""),
-                                "surql": f"DELETE {rid_str}", "op": op,
+                                "sid": sid,
+                                "reason": pending.get("reason", ""),
+                                "surql": f"DELETE {rid_str}",
+                                "op": op,
                                 "record_id": rid_str,
-                                "old_value": json.dumps(old_value) if old_value is not None else None,
+                                "old_value": json.dumps(old_value)
+                                if old_value is not None
+                                else None,
                             },
                         )
                         updated_count += 1
@@ -557,11 +606,14 @@ def execute_pending_write(
 
             pending["status"] = "executed"
             label = field if op == "UPDATE" else "records"
-            return json.dumps({
-                "type": "write_result", "success": True,
-                "message": f"Updated {label} on {updated_count} records.",
-                "operation_id": operation_id,
-            })
+            return json.dumps(
+                {
+                    "type": "write_result",
+                    "success": True,
+                    "message": f"Updated {label} on {updated_count} records.",
+                    "operation_id": operation_id,
+                }
+            )
 
         # --- Single-record UPDATE branch ---
         if op == "UPDATE" and record_id and field:
@@ -582,7 +634,9 @@ def execute_pending_write(
             old_rows = await repo_query(f"SELECT {field} FROM $rid", {"rid": rid})
             old_value = _fetch_old_value(old_rows, field)
 
-            await repo_query(f"UPDATE $rid SET {field} = $val", {"rid": rid, "val": new_value})
+            await repo_query(
+                f"UPDATE $rid SET {field} = $val", {"rid": rid, "val": new_value}
+            )
 
             await repo_query(
                 """INSERT INTO crud_audit {
@@ -593,20 +647,26 @@ def execute_pending_write(
                     old_value: $old_value, new_value: $new_value
                 }""",
                 {
-                    "sid": sid, "reason": pending.get("reason", ""),
+                    "sid": sid,
+                    "reason": pending.get("reason", ""),
                     "surql": f"UPDATE {record_id} SET {field} = '{new_value}'",
-                    "op": op, "record_id": record_id, "field_name": field,
+                    "op": op,
+                    "record_id": record_id,
+                    "field_name": field,
                     "old_value": str(old_value) if old_value is not None else None,
                     "new_value": str(new_value) if new_value is not None else None,
                 },
             )
 
             pending["status"] = "executed"
-            return json.dumps({
-                "type": "write_result", "success": True,
-                "message": f"Updated {field} on record {record_id} to '{new_value}'.",
-                "operation_id": operation_id,
-            })
+            return json.dumps(
+                {
+                    "type": "write_result",
+                    "success": True,
+                    "message": f"Updated {field} on record {record_id} to '{new_value}'.",
+                    "operation_id": operation_id,
+                }
+            )
 
         # --- Single-record DELETE branch ---
         elif op == "DELETE" and record_id:
@@ -632,19 +692,26 @@ def execute_pending_write(
                     record_id: $record_id, old_value: $old_value
                 }""",
                 {
-                    "sid": sid, "reason": pending.get("reason", ""),
-                    "surql": f"DELETE {record_id}", "op": op,
+                    "sid": sid,
+                    "reason": pending.get("reason", ""),
+                    "surql": f"DELETE {record_id}",
+                    "op": op,
                     "record_id": record_id,
-                    "old_value": json.dumps(old_value) if old_value is not None else None,
+                    "old_value": json.dumps(old_value)
+                    if old_value is not None
+                    else None,
                 },
             )
 
             pending["status"] = "executed"
-            return json.dumps({
-                "type": "write_result", "success": True,
-                "message": f"Deleted record {record_id}.",
-                "operation_id": operation_id,
-            })
+            return json.dumps(
+                {
+                    "type": "write_result",
+                    "success": True,
+                    "message": f"Deleted record {record_id}.",
+                    "operation_id": operation_id,
+                }
+            )
 
         else:
             return f"Error: Unsupported operation {op} or missing parameters."
@@ -682,7 +749,12 @@ def undo_last_write(record_id: Optional[str] = None) -> str:
                 "ORDER BY timestamp DESC LIMIT 1",
                 {"sid": sid},
             )
-        if rows and isinstance(rows, list) and len(rows) == 1 and isinstance(rows[0], list):
+        if (
+            rows
+            and isinstance(rows, list)
+            and len(rows) == 1
+            and isinstance(rows[0], list)
+        ):
             rows = rows[0]
         return rows
 
@@ -690,14 +762,18 @@ def undo_last_write(record_id: Optional[str] = None) -> str:
         audit_rows = _run_async(_fetch_audit())
     except Exception as e:
         logger.error(f"undo_last_write: failed to query audit log: {e}")
-        return json.dumps({"type": "undo_error", "error": f"Failed to query audit log: {str(e)}"})
+        return json.dumps(
+            {"type": "undo_error", "error": f"Failed to query audit log: {str(e)}"}
+        )
 
     if not audit_rows:
-        return json.dumps({
-            "type": "undo_error",
-            "error": "No audit records found for this job."
-            + (f" Record: {record_id}" if record_id else ""),
-        })
+        return json.dumps(
+            {
+                "type": "undo_error",
+                "error": "No audit records found for this job."
+                + (f" Record: {record_id}" if record_id else ""),
+            }
+        )
 
     audit = audit_rows[0] if isinstance(audit_rows, list) else audit_rows
 
@@ -708,29 +784,37 @@ def undo_last_write(record_id: Optional[str] = None) -> str:
 
     if op == "UPDATE":
         if not audited_record_id or old_value is None or not field_name:
-            return json.dumps({
-                "type": "undo_error",
-                "error": "Audit row is missing record_id, field_name, or old_value — cannot undo.",
-            })
-        return preview_write.invoke({
-            "operation": "UPDATE",
-            "record_id": audited_record_id,
-            "field": field_name,
-            "new_value": str(old_value),
-            "reason": f"Undo: restoring {field_name} to previous value '{old_value}'",
-        })
+            return json.dumps(
+                {
+                    "type": "undo_error",
+                    "error": "Audit row is missing record_id, field_name, or old_value — cannot undo.",
+                }
+            )
+        return preview_write.invoke(
+            {
+                "operation": "UPDATE",
+                "record_id": audited_record_id,
+                "field": field_name,
+                "new_value": str(old_value),
+                "reason": f"Undo: restoring {field_name} to previous value '{old_value}'",
+            }
+        )
 
     elif op == "DELETE":
-        return json.dumps({
-            "type": "undo_error",
-            "error": "Undo of DELETE is not supported — the record has been permanently removed.",
-        })
+        return json.dumps(
+            {
+                "type": "undo_error",
+                "error": "Undo of DELETE is not supported — the record has been permanently removed.",
+            }
+        )
 
     else:
-        return json.dumps({
-            "type": "undo_error",
-            "error": f"Cannot undo operation type '{op}'.",
-        })
+        return json.dumps(
+            {
+                "type": "undo_error",
+                "error": f"Cannot undo operation type '{op}'.",
+            }
+        )
 
 
 @tool
@@ -750,7 +834,9 @@ def get_schema_info(table: Optional[str] = None) -> str:
 
     acm_schema = {
         "updatable_fields": sorted(ALLOWED_ACM_FIELDS),
-        "enum_values": {k: v for k, v in _enum_values.items() if k in ALLOWED_ACM_FIELDS},
+        "enum_values": {
+            k: v for k, v in _enum_values.items() if k in ALLOWED_ACM_FIELDS
+        },
     }
 
     building_schema = {
@@ -765,11 +851,13 @@ def get_schema_info(table: Optional[str] = None) -> str:
     elif table.lower() == "building_record":
         tables = {"building_record": building_schema}
     else:
-        return json.dumps({
-            "type": "schema_info",
-            "error": f"Unknown table '{table}'. Use 'acm_record' or 'building_record'.",
-            "tables": {},
-        })
+        return json.dumps(
+            {
+                "type": "schema_info",
+                "error": f"Unknown table '{table}'. Use 'acm_record' or 'building_record'.",
+                "tables": {},
+            }
+        )
 
     return json.dumps({"type": "schema_info", "tables": tables})
 
@@ -793,17 +881,24 @@ def ask_user_choice(
     if options_query:
         check = validate_read_query(options_query)
         if not check.allowed:
-            return json.dumps({
-                "type": "ask_user_choice",
-                "error": f"Options query blocked: {check.reason}",
-            })
+            return json.dumps(
+                {
+                    "type": "ask_user_choice",
+                    "error": f"Options query blocked: {check.reason}",
+                }
+            )
 
         async def _fetch_options():
             query_vars: dict = {}
             if source_id:
                 query_vars["sid"] = ensure_record_id(source_id)
             result = await repo_query(check.sanitized_query, query_vars)
-            if result and isinstance(result, list) and len(result) == 1 and isinstance(result[0], list):
+            if (
+                result
+                and isinstance(result, list)
+                and len(result) == 1
+                and isinstance(result[0], list)
+            ):
                 result = result[0]
             return result or []
 
@@ -811,14 +906,18 @@ def ask_user_choice(
             rows = _run_async(_fetch_options())
         except Exception as e:
             logger.error(f"ask_user_choice: failed to execute options_query: {e}")
-            return json.dumps({
-                "type": "ask_user_choice",
-                "error": f"Options query failed: {str(e)}",
-            })
+            return json.dumps(
+                {
+                    "type": "ask_user_choice",
+                    "error": f"Options query failed: {str(e)}",
+                }
+            )
 
         for row in rows[:20]:
             if isinstance(row, dict):
-                first_val = next((str(v) for v in row.values() if v is not None), str(row))
+                first_val = next(
+                    (str(v) for v in row.values() if v is not None), str(row)
+                )
                 options.append({"label": first_val, "value": first_val})
             else:
                 options.append({"label": str(row), "value": str(row)})
@@ -828,9 +927,11 @@ def ask_user_choice(
 
     choice_id = str(uuid.uuid4())[:8]
 
-    return json.dumps({
-        "type": "ask_user_choice",
-        "question": question,
-        "options": options,
-        "choice_id": choice_id,
-    })
+    return json.dumps(
+        {
+            "type": "ask_user_choice",
+            "question": question,
+            "options": options,
+            "choice_id": choice_id,
+        }
+    )

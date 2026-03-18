@@ -254,11 +254,19 @@ def validate_write_operation(
     return GuardrailResult(allowed=True)
 
 
-def cap_results(results: list[dict[str, Any]], max_rows: int = MAX_RESULT_ROWS) -> list[dict[str, Any]]:
+def cap_results(
+    results: list[dict[str, Any]], max_rows: int = MAX_RESULT_ROWS
+) -> list[dict[str, Any]]:
     """Limit result set size and strip internal fields."""
     capped = results[:max_rows]
     # Strip embedding vectors and internal fields from results
-    strip_fields = {"embedding", "embedding_text", "embedding_model", "embedded_at", "enriched_text"}
+    strip_fields = {
+        "embedding",
+        "embedding_text",
+        "embedding_model",
+        "embedded_at",
+        "enriched_text",
+    }
     cleaned = []
     for row in capped:
         cleaned.append({k: v for k, v in row.items() if k not in strip_fields})
@@ -274,10 +282,20 @@ def classify_intent(message: str) -> str:
 
     # Write intent signals
     write_signals = [
-        "update", "change", "set", "modify", "edit",
-        "delete", "remove", "drop",
-        "add", "create", "insert",
-        "mark as", "flag as", "relabel",
+        "update",
+        "change",
+        "set",
+        "modify",
+        "edit",
+        "delete",
+        "remove",
+        "drop",
+        "add",
+        "create",
+        "insert",
+        "mark as",
+        "flag as",
+        "relabel",
     ]
     for sig in write_signals:
         if sig in m:
@@ -285,10 +303,20 @@ def classify_intent(message: str) -> str:
 
     # Analytics intent signals
     analytics_signals = [
-        "count", "how many", "total", "average", "sum",
-        "statistics", "stats", "breakdown", "summary",
-        "distribution", "percentage", "compare",
-        "group by", "aggregate",
+        "count",
+        "how many",
+        "total",
+        "average",
+        "sum",
+        "statistics",
+        "stats",
+        "breakdown",
+        "summary",
+        "distribution",
+        "percentage",
+        "compare",
+        "group by",
+        "aggregate",
     ]
     for sig in analytics_signals:
         if sig in m:
@@ -296,10 +324,20 @@ def classify_intent(message: str) -> str:
 
     # Read intent signals
     read_signals = [
-        "show", "list", "find", "search", "get",
-        "what", "which", "where", "look up",
-        "display", "fetch", "retrieve",
-        "tell me about", "describe",
+        "show",
+        "list",
+        "find",
+        "search",
+        "get",
+        "what",
+        "which",
+        "where",
+        "look up",
+        "display",
+        "fetch",
+        "retrieve",
+        "tell me about",
+        "describe",
     ]
     for sig in read_signals:
         if sig in m:
@@ -334,7 +372,9 @@ async def classify_intent_with_llm_fallback(message: str, timeout: float = 2.0) 
         try:
             import anthropic  # lazy import — optional dependency
         except ImportError:
-            logger.warning("guardrails: anthropic package not installed; skipping LLM fallback")
+            logger.warning(
+                "guardrails: anthropic package not installed; skipping LLM fallback"
+            )
             return "general"
 
         client = anthropic.AsyncAnthropic(api_key=api_key)
@@ -351,14 +391,20 @@ async def classify_intent_with_llm_fallback(message: str, timeout: float = 2.0) 
         raw = response.content[0].text.strip().lower()
         if raw in ("read", "write", "analytics", "general"):
             return raw
-        logger.warning(f"guardrails: LLM returned unexpected classification '{raw}'; using 'general'")
+        logger.warning(
+            f"guardrails: LLM returned unexpected classification '{raw}'; using 'general'"
+        )
         return "general"
 
     try:
         return await asyncio.wait_for(_llm_classify(), timeout=timeout)
     except asyncio.TimeoutError:
-        logger.warning(f"guardrails: LLM intent classification timed out after {timeout}s; using 'general'")
+        logger.warning(
+            f"guardrails: LLM intent classification timed out after {timeout}s; using 'general'"
+        )
         return "general"
     except Exception as exc:  # noqa: BLE001
-        logger.warning(f"guardrails: LLM intent classification failed: {exc}; using 'general'")
+        logger.warning(
+            f"guardrails: LLM intent classification failed: {exc}; using 'general'"
+        )
         return "general"

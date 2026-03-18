@@ -599,6 +599,7 @@ class PipelineLogger:
         self,
         total_records: int = 0,
         records_rejected: int = 0,
+        records_filtered: int = 0,
         records_unidentified: int = 0,
         confidence_distribution: Optional[dict] = None,
         total_chunks: int = 0,
@@ -614,6 +615,7 @@ class PipelineLogger:
         self._state.total_duration_ms = total_duration_ms
         self._state.total_records = total_records
         self._state.records_rejected = records_rejected
+        self._state.records_filtered = records_filtered
         self._state.records_unidentified = records_unidentified
         self._state.total_chunks = total_chunks
         self._state.total_buildings = total_buildings
@@ -634,7 +636,8 @@ class PipelineLogger:
         )
         self._log(
             f"[PIPELINE]   Records: {total_records} created, "
-            f"{records_rejected} rejected, {records_unidentified} unidentified"
+            f"{records_rejected} rejected, {records_filtered} filtered, "
+            f"{records_unidentified} unidentified"
         )
         if confidence_distribution:
             dist_str = ", ".join(f"{k}={v}" for k, v in confidence_distribution.items())
@@ -654,6 +657,7 @@ class PipelineLogger:
                 "total_duration_ms": total_duration_ms,
                 "total_records": total_records,
                 "records_rejected": records_rejected,
+                "records_filtered": records_filtered,
                 "records_unidentified": records_unidentified,
                 "total_chunks": total_chunks,
                 "total_buildings": total_buildings,

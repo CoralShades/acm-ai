@@ -54,12 +54,8 @@ class ARADetector:
 
         buildings: List[BuildingMeta] = []
         for i, (name, pos) in enumerate(ara_buildings):
-            next_pos = (
-                ara_buildings[i + 1][1] if i + 1 < len(ara_buildings) else None
-            )
-            section_end = _find_ara_building_section_end(
-                content, name, pos, next_pos
-            )
+            next_pos = ara_buildings[i + 1][1] if i + 1 < len(ara_buildings) else None
+            section_end = _find_ara_building_section_end(content, name, pos, next_pos)
             section_text = content[pos:section_end]
 
             page_start = _find_page_at_position(content, pos)

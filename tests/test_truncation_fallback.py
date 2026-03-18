@@ -209,10 +209,13 @@ class TestChunkAndExtractItemsRetry:
                 return truncated_result
             return cloud_result
 
-        with patch(
-            "open_notebook.graphs.acm_extraction._v3_extract_items",
-            side_effect=fake_v3_extract_items,
-        ), patch.dict(os.environ, {"ACM_ANTHROPIC_API_KEY": "sk-ant-test-key"}):
+        with (
+            patch(
+                "open_notebook.graphs.acm_extraction._v3_extract_items",
+                side_effect=fake_v3_extract_items,
+            ),
+            patch.dict(os.environ, {"ACM_ANTHROPIC_API_KEY": "sk-ant-test-key"}),
+        ):
             result = await _chunk_and_extract_items(
                 building_content="Short content",
                 plan=plan,
@@ -368,13 +371,16 @@ class TestACMExtractionModelEnvVar:
             captured_calls.append({"model_name": model_name, "provider": provider})
             raise RuntimeError("Ollama not running in test")
 
-        with patch(
-            "open_notebook.graphs.utils.AIFactory.create_language",
-            side_effect=fake_create,
-        ), patch(
-            "open_notebook.graphs.utils._get_db_extraction_model",
-            new_callable=AsyncMock,
-            return_value=None,
+        with (
+            patch(
+                "open_notebook.graphs.utils.AIFactory.create_language",
+                side_effect=fake_create,
+            ),
+            patch(
+                "open_notebook.graphs.utils._get_db_extraction_model",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
         ):
             from open_notebook.graphs.utils import (
                 _provision_extraction_primary_model,

@@ -803,7 +803,9 @@ async def compile_building_inventory(
 
         # Cross-validate: run heuristic on FULL content (not trimmed) to catch
         # buildings whose register data precedes the detected register_start_page
-        heuristic = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
+        heuristic = _heuristic_fallback(
+            content, document_structure, document_metadata=document_metadata
+        )
         if heuristic.buildings:
             llm_ids = {b.building_id.lower() for b in inventory.buildings}
             llm_names = {(b.name or "").lower() for b in inventory.buildings}
@@ -839,5 +841,7 @@ async def compile_building_inventory(
             f"LLM building inventory compilation failed: {e}. Using heuristic fallback."
         )
         # Use FULL content for heuristic to catch buildings before register_start_page
-        fallback = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
+        fallback = _heuristic_fallback(
+            content, document_structure, document_metadata=document_metadata
+        )
         return fallback

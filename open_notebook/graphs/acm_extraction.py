@@ -134,7 +134,10 @@ class ExtractionState(TypedDict):
     current_chunk_index: int
     context: BuildingRoomContext
     records: List[ACMExtractionRecord]
-    records_rejected: int  # Count of records rejected during validation
+    records_rejected: (
+        int  # Count of records rejected during validation (missing fields)
+    )
+    records_filtered: int  # Count of records intentionally excluded (N3)
     extraction_result: ACMExtractionResult
     error: Optional[str]
     model_id: Optional[str]
@@ -301,8 +304,18 @@ async def metadata_and_structure_node(state: dict, config: RunnableConfig) -> di
         return {"document_metadata": None, "document_structure": None}
 
     try:
+        # Truncate to ~15,000 chars (first ~5 pages) to avoid overloading small
+        # local models like llama3.1:8b; title page and TOC are always near the front
+        _METADATA_MAX_CHARS = 15_000
+        metadata_content = content
+        if len(content) > _METADATA_MAX_CHARS:
+            metadata_content = content[:_METADATA_MAX_CHARS]
+            logger.info(
+                f"[S4] Truncated content from {len(content)} to {_METADATA_MAX_CHARS} chars "
+                f"for metadata extraction (source {source.id})"
+            )
         metadata, structure = await extract_metadata_and_structure(
-            content, model_id=model_id
+            metadata_content, model_id=model_id
         )
 
         # PyMuPDF page-count fallback (from existing extract_structure node)
@@ -757,21 +770,53 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
         return_exceptions=True,
     )
 
-    for outcome in outcomes:
+    for building_entry, outcome in zip(inventory.buildings, outcomes):
         if isinstance(outcome, Exception):
             # Log with full traceback so silent exception swallowing is visible
             # in worker logs (Bug A5: return_exceptions=True was already set but
             # the exception detail was lost after the warning message).
             logger.warning(
-                f"[E32-S1] Building extraction task failed: {outcome} "
-                "(skipping — partial results preserved)"
+                f"[E32-S1] [N1] Building {building_entry.building_id!r} extraction "
+                f"task raised exception: {outcome} (skipping — partial results preserved)"
             )
-            logger.opt(exception=outcome).debug("[E32-S1] Building task exception detail")
+            logger.opt(exception=outcome).debug(
+                "[E32-S1] Building task exception detail"
+            )
             continue
         if outcome is None:
+            # N1 fix: log which building yielded no record so multi-building
+            # aborts are visible in logs rather than silently dropped.
+            logger.warning(
+                f"[E32-S1] [N1] Building {building_entry.building_id!r} extraction "
+                f"returned None — skipping"
+            )
             continue
         saved_ids.append(outcome["record_id"])
         meta_cache[outcome["building_id"]] = outcome["result"]
+
+    # Disambiguate duplicate building names (N9): when the inventory assigns the
+    # site name to all buildings they end up identical; append building_code to each.
+    if len(saved_ids) > 1:
+        try:
+            saved_buildings = await BuildingRecord.get_by_source(source_id_str)
+            name_groups: Dict[str, List[BuildingRecord]] = {}
+            for br in saved_buildings:
+                key = (br.building_name or "").strip()
+                name_groups.setdefault(key, []).append(br)
+            for dup_name, group in name_groups.items():
+                if len(group) > 1 and dup_name:
+                    logger.info(
+                        f"[E32-S1] Disambiguating {len(group)} buildings with "
+                        f"identical name '{dup_name}'"
+                    )
+                    for br in group:
+                        code = br.building_code or br.internal_id
+                        br.building_name = f"{dup_name} ({code})"
+                        await br.save()
+        except Exception as dedup_err:
+            logger.warning(
+                f"[E32-S1] Building name dedup failed (non-fatal): {dedup_err}"
+            )
 
     logger.info(
         f"[E32-S1] Building extraction complete for source {source_id_str}: "
@@ -1034,7 +1079,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
                 # Get DoclingDocument JSON from stored tables + inject page_number
                 docling_json_tables = []
-                for t in (docling_tables or []):
+                for t in docling_tables or []:
                     dj = t.get("docling_document_json")
                     if dj:
                         # Inject page_number from outer acm_table_section row
@@ -1075,8 +1120,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
                         # Build human-readable building context string
                         building_context = (
-                            building_meta_entry.name
-                            or building_meta_entry.building_id
+                            building_meta_entry.name or building_meta_entry.building_id
                         )
 
                         # Extract all rows -> list[ACMExtractionRecord]
@@ -1203,18 +1247,24 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
         return_exceptions=True,
     )
 
-    for outcome in outcomes:
+    for building_entry, outcome in zip(inventory.buildings, outcomes):
         if isinstance(outcome, Exception):
             # Log with full traceback so silent exception swallowing is visible
             # in worker logs (Bug A5: return_exceptions=True was already set but
             # the exception detail was lost after the warning message).
             logger.warning(
-                f"[E32-S2] Item extraction task failed: {outcome} "
-                "(skipping — partial results preserved)"
+                f"[E32-S2] [N1] Building {building_entry.building_id!r} item extraction "
+                f"task raised exception: {outcome} (skipping — partial results preserved)"
             )
             logger.opt(exception=outcome).debug("[E32-S2] Item task exception detail")
             continue
         if outcome is None:
+            # N1 fix: log which building yielded no items so multi-building
+            # aborts are visible in logs rather than silently dropped.
+            logger.warning(
+                f"[E32-S2] [N1] Building {building_entry.building_id!r} item extraction "
+                f"returned None — skipping"
+            )
             continue
         all_records.extend(outcome)
 
@@ -1338,6 +1388,7 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
 
     validated_records = []
     rejected_count = 0
+    filtered_count = 0  # N3: intentionally excluded records (e.g., Negative results)
     records_with_issues: List[Dict[str, Any]] = []
 
     for record in records:
@@ -1375,7 +1426,9 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             or not record.material_description
         ):
             rejected_count += 1
+            record.validation_status = "rejected"
             logger.warning(f"Rejected record due to missing required fields: {issues}")
+            validated_records.append(record)  # Keep for corrective loop (N2)
             continue
 
         # Run strict enum + business rule validation
@@ -1439,10 +1492,11 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
 
         pl.stage_complete(
             StageId.VALIDATE,
-            f"{len(validated_records)} accepted, {rejected_count} rejected",
+            f"{len(validated_records)} accepted, {rejected_count} rejected, {filtered_count} filtered",
             accepted=len(validated_records),
             rejected=rejected_count,
-            with_issues=len(records_with_issues),
+            filtered=filtered_count,
+            validation_failed=len(records_with_issues),
         )
 
     if agui:
@@ -1493,6 +1547,7 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     return {
         "records": validated_records,
         "records_rejected": rejected_count,
+        "records_filtered": filtered_count,
         "correction_stats": correction_stats,
     }
 
@@ -1787,7 +1842,28 @@ async def _llm_correct_records(
                     text = text.rstrip()[:-3].rstrip()
 
             # Parse JSON response
-            corrected = json.loads(text)
+            try:
+                corrected = json.loads(text)
+            except json.JSONDecodeError as jde:
+                # N6 fix: llama3.1:8b sometimes returns empty/invalid JSON for
+                # correction prompts. Log and skip rather than crash.
+                logger.warning(
+                    f"[N6] Correction JSON parse failed for record {idx}: {jde} "
+                    f"(raw: {text[:120]!r}) — skipping correction"
+                )
+                correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+                record.correction_attempts = record.correction_attempts + 1
+                record.validation_status = "failed_correction"
+                continue
+            if not corrected:
+                # N6 fix: empty {} returned by model — nothing to apply
+                logger.warning(
+                    f"[N6] Correction response was empty {{}} for record {idx} — skipping"
+                )
+                correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+                record.correction_attempts = record.correction_attempts + 1
+                record.validation_status = "failed_correction"
+                continue
             if isinstance(corrected, dict):
                 for field, value in corrected.items():
                     # Reject corrections to frozen fields (AC2 — E35-S7)
@@ -2492,6 +2568,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
     start_time = state.get("start_time", time.time())
     records_rejected = state.get("records_rejected", 0)
+    records_filtered = state.get("records_filtered", 0)
     pl = _get_pipeline_logger(state)
     agui = _get_agui_emitter(state)
 
@@ -2509,6 +2586,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 status=ExtractionStatus.NO_ACM_DATA,
                 total_records=0,
                 records_rejected=records_rejected,
+                records_filtered=records_filtered,
             ),
             "error": None,
         }
@@ -2550,6 +2628,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 f"Created {len(section_map)} parent table sections for source {source.id}"
             )
 
+    save_start = time.monotonic()
     saved_count = 0
     errors = []
 
@@ -2614,7 +2693,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             logger.error(f"Failed to save record: {e}")
             errors.append(str(e))
 
-    extraction_time = int((time.time() - start_time) * 1000)
+    extraction_time = int((time.monotonic() - save_start) * 1000)
 
     # Build final result
     result = ACMExtractionResult(
@@ -2624,6 +2703,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
         else ExtractionStatus.NO_ACM_DATA,
         total_records=saved_count,
         records_rejected=records_rejected,
+        records_filtered=records_filtered,
     )
     result.update_stats()
 
@@ -2824,6 +2904,7 @@ async def extract_acm_from_source(
         "context": BuildingRoomContext(),
         "records": [],
         "records_rejected": 0,
+        "records_filtered": 0,
         "extraction_result": ACMExtractionResult(),
         "error": None,
         "model_id": model_id,
@@ -2896,7 +2977,7 @@ async def extract_acm_from_source(
                 source_id=source_id_str,
                 status="failed",
                 total_records=0,
-                records_failed=extraction_result.records_rejected,
+                records_filtered=extraction_result.records_rejected,
                 error=error,
                 extraction_time_ms=extraction_time,
                 correction_stats=correction_stats if has_corrections else None,
@@ -2928,6 +3009,7 @@ async def extract_acm_from_source(
         pipeline_run = pl.complete(
             total_records=extraction_result.total_records,
             records_rejected=extraction_result.records_rejected,
+            records_filtered=extraction_result.records_filtered,
             confidence_distribution=conf_dict,
             total_chunks=total_chunks,
             total_buildings=total_buildings,
@@ -2954,7 +3036,7 @@ async def extract_acm_from_source(
             source_id=source_id_str,
             status=status,
             total_records=extraction_result.total_records,
-            records_failed=extraction_result.records_rejected,
+            records_filtered=extraction_result.records_rejected,
             confidence_distribution=extraction_result.confidence_distribution,
             extraction_time_ms=extraction_time,
             correction_stats=correction_stats if has_corrections else None,
@@ -2974,7 +3056,7 @@ async def extract_acm_from_source(
             source_id=source_id_str,
             status="failed",
             total_records=0,
-            records_failed=0,
+            records_filtered=0,
             error=str(e),
             extraction_time_ms=extraction_time,
             pipeline_run=pipeline_run.model_dump(mode="json"),

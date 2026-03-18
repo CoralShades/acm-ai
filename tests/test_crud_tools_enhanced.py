@@ -74,10 +74,14 @@ class TestAskUserChoice:
         set_crud_context("source:test123")
 
     def test_static_options(self):
-        result = json.loads(ask_user_choice.invoke({
-            "question": "Which risk level?",
-            "static_options": ["High", "Medium", "Low"],
-        }))
+        result = json.loads(
+            ask_user_choice.invoke(
+                {
+                    "question": "Which risk level?",
+                    "static_options": ["High", "Medium", "Low"],
+                }
+            )
+        )
         assert result["type"] == "ask_user_choice"
         assert result["question"] == "Which risk level?"
         assert len(result["options"]) == 3
@@ -86,9 +90,13 @@ class TestAskUserChoice:
         assert "choice_id" in result
 
     def test_no_options_provided(self):
-        result = json.loads(ask_user_choice.invoke({
-            "question": "Pick one?",
-        }))
+        result = json.loads(
+            ask_user_choice.invoke(
+                {
+                    "question": "Pick one?",
+                }
+            )
+        )
         assert result["type"] == "ask_user_choice"
         # Should still return but with empty options
         assert "options" in result
@@ -102,14 +110,18 @@ class TestPreviewBulkWrite:
         _pending_writes.clear()
 
     def test_with_explicit_record_ids(self):
-        result = json.loads(preview_bulk_write.invoke({
-            "operation": "UPDATE",
-            "filter_description": "all friable items",
-            "field": "risk_status",
-            "new_value": "High",
-            "reason": "Bulk risk update",
-            "record_ids": ["acm_record:a1", "acm_record:a2", "acm_record:a3"],
-        }))
+        result = json.loads(
+            preview_bulk_write.invoke(
+                {
+                    "operation": "UPDATE",
+                    "filter_description": "all friable items",
+                    "field": "risk_status",
+                    "new_value": "High",
+                    "reason": "Bulk risk update",
+                    "record_ids": ["acm_record:a1", "acm_record:a2", "acm_record:a3"],
+                }
+            )
+        )
         assert result["type"] == "preview_bulk_write"
         assert result["affected_count"] == 3
         assert result["field"] == "risk_status"
@@ -121,27 +133,36 @@ class TestPreviewBulkWrite:
         assert _pending_writes[op_id]["type"] == "bulk"
 
     def test_blocked_field(self):
-        result = json.loads(preview_bulk_write.invoke({
-            "operation": "UPDATE",
-            "filter_description": "all items",
-            "field": "id",
-            "new_value": "hacked",
-            "reason": "bad",
-            "record_ids": ["acm_record:a1"],
-        }))
+        result = json.loads(
+            preview_bulk_write.invoke(
+                {
+                    "operation": "UPDATE",
+                    "filter_description": "all items",
+                    "field": "id",
+                    "new_value": "hacked",
+                    "reason": "bad",
+                    "record_ids": ["acm_record:a1"],
+                }
+            )
+        )
         assert "error" in result
 
     def test_no_context(self):
         from open_notebook.graphs.crud_tools import _crud_context
+
         _crud_context.clear()
-        result = json.loads(preview_bulk_write.invoke({
-            "operation": "UPDATE",
-            "filter_description": "all items",
-            "field": "risk_status",
-            "new_value": "High",
-            "reason": "test",
-            "record_ids": ["acm_record:a1"],
-        }))
+        result = json.loads(
+            preview_bulk_write.invoke(
+                {
+                    "operation": "UPDATE",
+                    "filter_description": "all items",
+                    "field": "risk_status",
+                    "new_value": "High",
+                    "reason": "test",
+                    "record_ids": ["acm_record:a1"],
+                }
+            )
+        )
         assert "error" in result
 
 
@@ -157,17 +178,30 @@ class TestUndoLastWrite:
         """When no audit records exist, return error."""
         mock_run_async.return_value = []
         result = json.loads(undo_last_write.invoke({"record_id": None}))
-        assert "error" in result or "no" in result.get("message", "").lower() or "error" in str(result).lower()
+        assert (
+            "error" in result
+            or "no" in result.get("message", "").lower()
+            or "error" in str(result).lower()
+        )
 
     @patch("open_notebook.graphs.crud_tools._run_async")
     def test_audit_without_old_value(self, mock_run_async):
         """When audit exists but has no old_value, return error."""
         mock_run_async.return_value = [
-            {"record_id": "acm_record:x", "field_name": "risk_status", "old_value": None, "new_value": "High"}
+            {
+                "record_id": "acm_record:x",
+                "field_name": "risk_status",
+                "old_value": None,
+                "new_value": "High",
+            }
         ]
         result = json.loads(undo_last_write.invoke({"record_id": None}))
         # Should indicate can't undo
-        assert "error" in result or "cannot" in str(result).lower() or "no" in str(result).lower()
+        assert (
+            "error" in result
+            or "cannot" in str(result).lower()
+            or "no" in str(result).lower()
+        )
 
 
 class TestClassifyIntentWithLLMFallback:
@@ -193,6 +227,7 @@ class TestClassifyIntentWithLLMFallback:
         with patch.dict("os.environ", {}, clear=False):
             # Remove ACM_ANTHROPIC_API_KEY if present
             import os
+
             os.environ.pop("ACM_ANTHROPIC_API_KEY", None)
             result = await classify_intent_with_llm_fallback("hello there")
             assert result == "general"

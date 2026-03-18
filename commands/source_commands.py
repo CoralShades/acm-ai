@@ -120,6 +120,7 @@ async def _extract_tables_with_docling(
             AcceleratorDevice,
             AcceleratorOptions,
         )
+
         pipeline_options.accelerator_options = AcceleratorOptions(
             device=AcceleratorDevice.AUTO,
         )

@@ -96,13 +96,15 @@ class TestPreviewWrite:
         _pending_writes.clear()
 
     def test_valid_update_preview(self):
-        result_str = preview_write.invoke({
-            "operation": "UPDATE",
-            "record_id": "acm_record:abc",
-            "field": "risk_status",
-            "new_value": "High",
-            "reason": "Manual correction",
-        })
+        result_str = preview_write.invoke(
+            {
+                "operation": "UPDATE",
+                "record_id": "acm_record:abc",
+                "field": "risk_status",
+                "new_value": "High",
+                "reason": "Manual correction",
+            }
+        )
         result = json.loads(result_str)
         assert result["type"] == "preview_write"
         assert result["operation"] == "UPDATE"
@@ -110,25 +112,29 @@ class TestPreviewWrite:
         assert result["operation_id"] in _pending_writes
 
     def test_blocked_field(self):
-        result_str = preview_write.invoke({
-            "operation": "UPDATE",
-            "record_id": "acm_record:abc",
-            "field": "id",
-            "new_value": "hacked",
-            "reason": "Trying to modify ID",
-        })
+        result_str = preview_write.invoke(
+            {
+                "operation": "UPDATE",
+                "record_id": "acm_record:abc",
+                "field": "id",
+                "new_value": "hacked",
+                "reason": "Trying to modify ID",
+            }
+        )
         result = json.loads(result_str)
         assert "error" in result
         assert "Write blocked" in result["error"]
 
     def test_blocked_table(self):
-        result_str = preview_write.invoke({
-            "operation": "UPDATE",
-            "record_id": "source:abc",
-            "field": "title",
-            "new_value": "hacked",
-            "reason": "Trying to modify source",
-        })
+        result_str = preview_write.invoke(
+            {
+                "operation": "UPDATE",
+                "record_id": "source:abc",
+                "field": "title",
+                "new_value": "hacked",
+                "reason": "Trying to modify source",
+            }
+        )
         # source: prefix doesn't start with building_record: so defaults to acm_record
         # The field "title" is not in ALLOWED_ACM_FIELDS
         result = json.loads(result_str)
@@ -138,37 +144,43 @@ class TestPreviewWrite:
         from open_notebook.graphs.crud_tools import _crud_context
 
         _crud_context.clear()
-        result_str = preview_write.invoke({
-            "operation": "UPDATE",
-            "record_id": "acm_record:abc",
-            "field": "risk_status",
-            "new_value": "High",
-            "reason": "test",
-        })
+        result_str = preview_write.invoke(
+            {
+                "operation": "UPDATE",
+                "record_id": "acm_record:abc",
+                "field": "risk_status",
+                "new_value": "High",
+                "reason": "test",
+            }
+        )
         result = json.loads(result_str)
         assert "error" in result
 
     def test_delete_preview(self):
         set_crud_context("source:test123")
-        result_str = preview_write.invoke({
-            "operation": "DELETE",
-            "record_id": "acm_record:abc",
-            "field": None,
-            "new_value": None,
-            "reason": "Remove duplicate",
-        })
+        result_str = preview_write.invoke(
+            {
+                "operation": "DELETE",
+                "record_id": "acm_record:abc",
+                "field": None,
+                "new_value": None,
+                "reason": "Remove duplicate",
+            }
+        )
         result = json.loads(result_str)
         assert result["type"] == "preview_write"
         assert result["operation"] == "DELETE"
 
     def test_blocked_operation(self):
-        result_str = preview_write.invoke({
-            "operation": "DROP",
-            "record_id": "acm_record:abc",
-            "field": None,
-            "new_value": None,
-            "reason": "bad intent",
-        })
+        result_str = preview_write.invoke(
+            {
+                "operation": "DROP",
+                "record_id": "acm_record:abc",
+                "field": None,
+                "new_value": None,
+                "reason": "bad intent",
+            }
+        )
         result = json.loads(result_str)
         assert "error" in result
 

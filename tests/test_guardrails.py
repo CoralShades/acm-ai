@@ -143,7 +143,14 @@ class TestCapResults:
         assert len(capped) == 50
 
     def test_strips_embedding_fields(self):
-        rows = [{"id": "1", "name": "test", "embedding": [0.1, 0.2], "embedding_text": "foo"}]
+        rows = [
+            {
+                "id": "1",
+                "name": "test",
+                "embedding": [0.1, 0.2],
+                "embedding_text": "foo",
+            }
+        ]
         capped = cap_results(rows)
         assert len(capped) == 1
         assert "embedding" not in capped[0]

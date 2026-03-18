@@ -114,6 +114,7 @@ class DoclingAdapter:
                 AcceleratorDevice,
                 AcceleratorOptions,
             )
+
             pipeline_options.accelerator_options = AcceleratorOptions(
                 device=AcceleratorDevice.AUTO,
             )

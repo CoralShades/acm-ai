@@ -122,13 +122,19 @@ def register_crud_agui_endpoint(app) -> None:
                 state = dict(input_data.state) if input_data.state else {}
                 state["source_id"] = source_id
                 thread_id = f"crud_{source_id.replace(':', '_')}"
-                input_data = input_data.model_copy(update={
-                    "state": state,
-                    "thread_id": thread_id,
-                })
-                logger.info(f"CRUD endpoint injected source_id={source_id}, thread_id={thread_id}")
+                input_data = input_data.model_copy(
+                    update={
+                        "state": state,
+                        "thread_id": thread_id,
+                    }
+                )
+                logger.info(
+                    f"CRUD endpoint injected source_id={source_id}, thread_id={thread_id}"
+                )
             else:
-                logger.warning("CRUD endpoint: no source_id found in state, context, or messages")
+                logger.warning(
+                    "CRUD endpoint: no source_id found in state, context, or messages"
+                )
 
             accept_header = request.headers.get("accept")
             encoder = EventEncoder(accept=accept_header)
@@ -142,6 +148,8 @@ def register_crud_agui_endpoint(app) -> None:
                 media_type=encoder.get_content_type(),
             )
 
-        logger.info("AG-UI CRUD chat endpoint registered at /api/agui/crud-chat (custom)")
+        logger.info(
+            "AG-UI CRUD chat endpoint registered at /api/agui/crud-chat (custom)"
+        )
     except Exception as e:
         logger.error(f"Failed to register CRUD AG-UI endpoint: {e}")

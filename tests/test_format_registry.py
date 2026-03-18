@@ -163,7 +163,9 @@ class TestFormatRegistry:
         from open_notebook.extractors.format_detectors import get_registry
 
         registry = get_registry()
-        result = registry.extract_buildings("This is plain text with no format indicators.")
+        result = registry.extract_buildings(
+            "This is plain text with no format indicators."
+        )
         assert result is None
 
 

@@ -882,7 +882,7 @@ async def _get_db_extraction_model() -> Optional[str]:
                 # Use direct record reference — SurrealDB param binding
                 # doesn't auto-cast strings to record IDs.
                 # Sanitize: record ID part should be alphanumeric only
-                record_part = model_val[len("model:"):]
+                record_part = model_val[len("model:") :]
                 if not record_part.isalnum():
                     logger.warning(f"Invalid model record ID format: {model_val}")
                     return None

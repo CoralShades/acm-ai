@@ -61,7 +61,11 @@ class ClutchDetector:
         )
 
         # Primary: classic Clutch with Site Details header
-        if has_site_details and (has_full_address or has_client_name) and has_building_name:
+        if (
+            has_site_details
+            and (has_full_address or has_client_name)
+            and has_building_name
+        ):
             return True
 
         # Secondary: Greencap variant — Building Name + Number of Levels on same pipe row

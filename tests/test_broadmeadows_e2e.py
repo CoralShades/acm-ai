@@ -313,8 +313,10 @@ async def test_broadmeadows_all_records_extracted():
         patch.object(ACMTableSection, "save", noop_section_save),
         patch.object(BuildingRecord, "save", noop_building_save),
         patch.object(
-            BuildingRecord, "get_by_source",
-            new_callable=AsyncMock, return_value=[],
+            BuildingRecord,
+            "get_by_source",
+            new_callable=AsyncMock,
+            return_value=[],
         ),
         patch(
             "open_notebook.graphs.acm_extraction.auto_populate_site_config",
@@ -342,7 +344,7 @@ async def test_broadmeadows_all_records_extracted():
     # 5. Report results
     print(f"\nExtraction status: {result.status}")
     print(f"Records extracted: {result.total_records}")
-    print(f"Records failed: {result.records_failed}")
+    print(f"Records filtered: {result.records_filtered}")
     print(f"Records captured by mock: {len(extracted_records)}")
 
     if result.error:

@@ -209,7 +209,10 @@ def map_item_row_to_extraction_record(
 
     # (g) Ensure material_description is never None — ACMRecord requires it
     safe_material_description = (
-        final_sub_classification or row.acm_sub_classification or row.item_name or "Unknown"
+        final_sub_classification
+        or row.acm_sub_classification
+        or row.item_name
+        or "Unknown"
     )
 
     # Build the full ACMExtractionRecord

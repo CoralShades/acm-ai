@@ -138,6 +138,7 @@ class PipelineRunState(BaseModel):
     total_buildings: int = 0
     total_records: int = 0
     records_rejected: int = 0
+    records_filtered: int = 0
     records_unidentified: int = 0
     confidence_distribution: Dict[str, int] = Field(default_factory=dict)
     models_used: List[str] = Field(default_factory=list)
