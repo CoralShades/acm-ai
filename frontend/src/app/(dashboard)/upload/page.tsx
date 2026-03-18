@@ -6,7 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { UploadWizard } from '@/components/acm/UploadWizard'
 
 /**
- * UploadPage — dedicated route for uploading a SAMP PDF and triggering extraction.
+ * UploadPage — dedicated route for uploading an ARA PDF and triggering extraction.
  *
  * URL: /upload
  * Story: E33-S1 Upload Wizard + Extraction Progress

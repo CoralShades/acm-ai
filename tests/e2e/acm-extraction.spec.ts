@@ -1,11 +1,11 @@
 /**
  * ACM Extraction Pipeline E2E Tests
  *
- * Tests core ACM extraction functionality from SAMP PDFs.
+ * Tests core ACM extraction functionality from ARA PDFs.
  * Validates extraction accuracy, negative detection, merged cells,
  * multi-page tables, field completeness, and export functionality.
  *
- * Target: 95%+ extraction accuracy (30/31 records from Broadmeadows SAMP)
+ * Target: 95%+ extraction accuracy (30/31 records from Broadmeadows ARA)
  * Baseline: 87% accuracy (27/31 records as of Sprint 1)
  *
  * Tag: @acm-extraction
@@ -14,7 +14,7 @@
 import { test, expect } from '../support/fixtures';
 import { TestDataFactory } from '../support/helpers/test-data-factory';
 import {
-  uploadSAMP,
+  uploadARA,
   waitForExtraction,
   navigateToACMRegister,
   getACMRecordCount,
@@ -32,15 +32,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 // Test data paths
-const SAMP_FIXTURES_DIR = path.join(__dirname, 'fixtures/samps');
-const BROADMEADOWS_SAMP = path.join(
-  SAMP_FIXTURES_DIR,
+const ARA_FIXTURES_DIR = path.join(__dirname, 'fixtures/ara-documents');
+const BROADMEADOWS_ARA = path.join(
+  ARA_FIXTURES_DIR,
   'broadmeadows-police-station-samp.pdf'
 );
-const SAMP_1124 = path.join(SAMP_FIXTURES_DIR, '1124-asbestos-register.pdf');
-const SAMP_3980 = path.join(SAMP_FIXTURES_DIR, '3980-asbestos-register.pdf');
+const ARA_1124 = path.join(ARA_FIXTURES_DIR, '1124-asbestos-register.pdf');
+const ARA_3980 = path.join(ARA_FIXTURES_DIR, '3980-asbestos-register.pdf');
 const EXPECTED_RESULTS_FILE = path.join(
-  SAMP_FIXTURES_DIR,
+  ARA_FIXTURES_DIR,
   'broadmeadows-expected-results.json'
 );
 
@@ -63,7 +63,7 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     await factory.cleanup();
   });
 
-  test('extracts all records from Broadmeadows SAMP with 95%+ accuracy', async ({
+  test('extracts all records from Broadmeadows ARA with 95%+ accuracy', async ({
     page,
   }) => {
     // Given: User has created a notebook
@@ -75,8 +75,8 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     // Capture initial state
     await captureEvidence(page, 'notebook-initial-state');
 
-    // When: User uploads Broadmeadows SAMP
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    // When: User uploads Broadmeadows ARA
+    await uploadARA(page, BROADMEADOWS_ARA);
 
     // Capture upload workflow
     await captureWorkflow(page, 'broadmeadows-upload', [
@@ -128,13 +128,13 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
 
-    // When: User uploads Broadmeadows SAMP (contains 20 negative results)
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    // When: User uploads Broadmeadows ARA (contains 20 negative results)
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
     await navigateToACMRegister(page);
 
     // Then: Verify negative results are extracted
-    // Expected: 20 negative results from Broadmeadows SAMP
+    // Expected: 20 negative results from Broadmeadows ARA
     const negativeRecordFound = await searchACMGrid(page, 'Main Foyer');
     expect(negativeRecordFound).toBeTruthy();
 
@@ -151,19 +151,19 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     expect(totalRecords).toBeGreaterThan(8); // Baseline only extracted positives/assumed
   });
 
-  test('handles merged cells in SAMP tables correctly', async ({ page }) => {
+  test('handles merged cells in ARA tables correctly', async ({ page }) => {
     // Given: User has created a notebook
     const notebook = await factory.createNotebook({
       name: 'ACM Merged Cells Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
 
-    // When: User uploads SAMP with merged cells (1124)
-    await uploadSAMP(page, SAMP_1124);
+    // When: User uploads ARA with merged cells (1124)
+    await uploadARA(page, ARA_1124);
     await waitForExtraction(page, 180000);
 
     // Capture extraction workflow
-    await captureWorkflow(page, 'samp-1124-merged-cells', [
+    await captureWorkflow(page, 'ara-1124-merged-cells', [
       'upload-complete',
       'extraction-processing',
       'extraction-complete',
@@ -195,12 +195,12 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
 
-    // When: User uploads SAMP with multi-page table (3980)
-    await uploadSAMP(page, SAMP_3980);
+    // When: User uploads ARA with multi-page table (3980)
+    await uploadARA(page, ARA_3980);
     await waitForExtraction(page, 180000);
 
     // Capture workflow
-    await captureWorkflow(page, 'samp-3980-multipage', [
+    await captureWorkflow(page, 'ara-3980-multipage', [
       'upload-started',
       'extraction-processing',
       'page-stitching',
@@ -231,8 +231,8 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
 
-    // When: User uploads Broadmeadows SAMP
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    // When: User uploads Broadmeadows ARA
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
     await navigateToACMRegister(page);
 
@@ -267,15 +267,15 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     }
   });
 
-  test('extracts BAR compliance fields from SAMP documents', async ({ page }) => {
+  test('extracts BAR compliance fields from ARA documents', async ({ page }) => {
     // Given: User has created a notebook
     const notebook = await factory.createNotebook({
       name: 'BAR Compliance Fields Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
 
-    // When: User uploads Broadmeadows SAMP (contains BAR fields)
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    // When: User uploads Broadmeadows ARA (contains BAR fields)
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
     await navigateToACMRegister(page);
 
@@ -315,7 +315,7 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     await captureEvidence(page, 'bar-fields-record-detail');
 
     // Verify at least some BAR fields have non-null values
-    // (Not all SAMPs have all BAR fields, but Broadmeadows should have some)
+    // (Not all ARAs have all BAR fields, but Broadmeadows should have some)
     const hasAnyBARValue = barFields.some(field => {
       const value = firstRecord[field];
       return value && value !== '' && value !== 'null' && value !== 'undefined';
@@ -325,12 +325,12 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
   });
 
   test('exports ACM records as CSV successfully', async ({ page }) => {
-    // Given: User has uploaded SAMP and extracted ACM records
+    // Given: User has uploaded ARA and extracted ACM records
     const notebook = await factory.createNotebook({
       name: 'ACM CSV Export Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // Capture pre-export state
@@ -348,12 +348,12 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
   });
 
   test('exports ACM records as Excel successfully', async ({ page }) => {
-    // Given: User has uploaded SAMP and extracted ACM records
+    // Given: User has uploaded ARA and extracted ACM records
     const notebook = await factory.createNotebook({
       name: 'ACM Excel Export Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // Capture pre-export state
@@ -387,7 +387,7 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
         return;
       }
 
-      await uploadSAMP(page, invalidFile);
+      await uploadARA(page, invalidFile);
 
       // Then: Error message should be displayed
       const errorMessage = page.locator('text=/error|failed|invalid/i');
@@ -403,18 +403,18 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
   });
 
   /**
-   * Baseline Test: Alexander District Hospital SAMP
+   * Baseline Test: Alexander District Hospital ARA
    *
    * TODO: Establish accuracy baseline for Alexander District Hospital
    *
    * This test is a placeholder for establishing extraction accuracy
-   * baseline on a second SAMP document. Currently skipped until the
-   * PDF file is added to fixtures/samps/ directory.
+   * baseline on a second ARA document. Currently skipped until the
+   * PDF file is added to fixtures/ara-documents/ directory.
    *
    * Steps to enable:
-   * 1. Add alexander-district-hospital-samp.pdf to tests/e2e/fixtures/samps/
+   * 1. Add alexander-district-hospital-ara.pdf to tests/e2e/fixtures/ara-documents/
    * 2. Create alexander-expected-results.json with ground truth data
-   * 3. Update ALEXANDER_SAMP and ALEXANDER_EXPECTED_RESULTS paths below
+   * 3. Update ALEXANDER_ARA and ALEXANDER_EXPECTED_RESULTS paths below
    * 4. Remove test.skip() to enable the test
    *
    * Expected outcome:
@@ -422,21 +422,21 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
    * - Record count > 0 (actual baseline TBD)
    * - Accuracy measurement for comparison with Broadmeadows
    */
-  test.skip('establishes extraction baseline for Alexander District Hospital SAMP', async ({
+  test.skip('establishes extraction baseline for Alexander District Hospital ARA', async ({
     page,
   }) => {
     // Test fixture paths (to be added)
-    const ALEXANDER_SAMP = path.join(
-      SAMP_FIXTURES_DIR,
-      'alexander-district-hospital-samp.pdf'
+    const ALEXANDER_ARA = path.join(
+      ARA_FIXTURES_DIR,
+      'alexander-district-hospital-ara.pdf'
     );
     const ALEXANDER_EXPECTED_RESULTS = path.join(
-      SAMP_FIXTURES_DIR,
+      ARA_FIXTURES_DIR,
       'alexander-expected-results.json'
     );
 
     // Skip if fixture files don't exist yet
-    if (!fs.existsSync(ALEXANDER_SAMP)) {
+    if (!fs.existsSync(ALEXANDER_ARA)) {
       console.log('⏭️  Skipping Alexander District Hospital baseline - fixture not found');
       return;
     }
@@ -447,8 +447,8 @@ test.describe('ACM Extraction Pipeline @acm-extraction', () => {
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
 
-    // When: User uploads Alexander District Hospital SAMP
-    await uploadSAMP(page, ALEXANDER_SAMP);
+    // When: User uploads Alexander District Hospital ARA
+    await uploadARA(page, ALEXANDER_ARA);
 
     // Capture upload workflow
     await captureWorkflow(page, 'alexander-upload', [

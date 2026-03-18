@@ -33,6 +33,7 @@ function confidenceBadge(confidence: number) {
 
 function documentTypeBadge(docType?: string | null) {
   if (!docType) return null
+  // Note: SAMP color mapping kept — maps to backend enum value (requires DB migration to remove)
   const colorMap: Record<string, string> = {
     SAMP: 'bg-blue-600',
     ARA: 'bg-purple-600',

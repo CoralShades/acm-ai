@@ -108,11 +108,11 @@ For each of 12 runs (6 models x 2 PDFs):
 **Naming convention**: `{PDF}_{model}` (e.g., `Broadmeadows_qwen2.5_7b`)
 
 **Ground truth files**:
-- Broadmeadows (31 records): `tests/e2e/fixtures/samps/broadmeadows-expected-results.json`
+- Broadmeadows (31 records): `tests/e2e/fixtures/ara-documents/broadmeadows-expected-results.json`
 - Alexander (43 records): `docs/samplePDF/Alexander_GroundTruth.csv`
 
 **PDFs**:
-- `tests/e2e/fixtures/samps/broadmeadows-police-station-samp.pdf`
+- `tests/e2e/fixtures/ara-documents/broadmeadows-police-station-samp.pdf`
 - `docs/samplePDF/Clucth_Alexander_District_Hospital.pdf`
 
 ## Evidence Collection

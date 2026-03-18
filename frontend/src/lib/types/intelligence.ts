@@ -48,6 +48,7 @@ export interface Section {
   subsections: SubSection[]
 }
 
+// Note: 'SAMP' kept for backward compatibility — matches backend enum value which requires DB migration to change
 export type DocumentType = 'SAMP' | 'ARA' | 'Division_5' | 'Unknown'
 
 export interface DocumentStructure {

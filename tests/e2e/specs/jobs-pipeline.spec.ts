@@ -13,9 +13,9 @@ import { test, expect } from '../../support/fixtures';
 const MOCK_JOBS = [
   {
     id: 'source:job001',
-    title: 'Test SAMP Document.pdf',
+    title: 'Test ARA Document.pdf',
     status: 'completed',
-    asset: { type: 'pdf', name: 'test-samp.pdf' },
+    asset: { type: 'pdf', name: 'test-ara.pdf' },
     created: '2026-01-15T10:00:00Z',
     updated: '2026-01-15T10:05:00Z',
   },

@@ -1,6 +1,6 @@
-"""SAMP (School Asbestos Management Plan) format detector.
+"""Standard DET format detector.
 
-Identifies SAMP format by ``## B00A - Admin Building`` style headers
+Identifies standard DET format by ``## B00A - Admin Building`` style headers
 and extracts buildings using the existing _BUILDING_HEADER regex.
 """
 
@@ -22,14 +22,14 @@ from open_notebook.extractors.building_inventory import (
 from open_notebook.extractors.document_structure import DocumentStructure
 
 
-class SAMPDetector:
-    """Detect and extract from NSW DoE SAMP format."""
+class StandardFormatDetector:
+    """Detect and extract from standard DET format (B###/D## building headers)."""
 
-    name: str = "samp"
+    name: str = "standard"
     priority: int = 10
 
     def detect(self, content: str) -> bool:
-        """Detect SAMP format by looking for B###/D## building headers."""
+        """Detect standard format by looking for B###/D## building headers."""
         return bool(_BUILDING_HEADER.search(content))
 
     def extract_buildings(
@@ -37,7 +37,7 @@ class SAMPDetector:
         content: str,
         doc_structure: Optional[DocumentStructure] = None,
     ) -> List[BuildingMeta]:
-        """Extract buildings from SAMP format using B###/D## headers."""
+        """Extract buildings from standard format using B###/D## headers."""
         building_matches: List[Tuple[int, re.Match]] = []
         seen_ids: set = set()
         for match in _BUILDING_HEADER.finditer(content):
@@ -83,5 +83,5 @@ class SAMPDetector:
         return buildings
 
     def get_column_mapping(self) -> Optional[Dict[str, str]]:
-        """SAMP uses standard column names — no special mapping needed."""
+        """Standard format uses standard column names — no special mapping needed."""
         return None

@@ -453,7 +453,7 @@ def _heuristic_fallback(
 
     Uses custom regex patterns (_BUILDING_HEADER, _ROOM_HEADER) to detect
     buildings, rooms, page ranges, and complexity without LLM.
-    Falls back to ARA building detection if no SAMP headers found.
+    Falls back to ARA building detection if no standard DET headers found.
     """
     if not content:
         return BuildingInventory(
@@ -462,7 +462,7 @@ def _heuristic_fallback(
             total_buildings=0,
         )
 
-    # Find all building headers (B-series and D-series) — SAMP format
+    # Find all building headers (B-series and D-series) — standard DET format
     building_matches: List[Tuple[int, re.Match]] = []
     seen_ids: set = set()
     for match in _BUILDING_HEADER.finditer(content):
@@ -474,7 +474,7 @@ def _heuristic_fallback(
     buildings: List[BuildingMeta] = []
 
     if building_matches:
-        # SAMP format: B###/D## style building IDs
+        # Standard DET format: B###/D## style building IDs
         for i, (pos, match) in enumerate(building_matches):
             building_id = match.group(1)
             name = match.group(2).strip() if match.group(2) else None
@@ -513,7 +513,7 @@ def _heuristic_fallback(
                 )
             )
     else:
-        # No SAMP headers found — try ARA format detection
+        # No standard DET headers found — try ARA format detection
         ara_buildings = _detect_ara_buildings(content)
         if ara_buildings:
             logger.info(

@@ -254,7 +254,7 @@ def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
     - format="json": forces Ollama to emit pure JSON, preventing qwen2.5/phi4
       from returning conversational tutorial text instead of extraction data.
     - num_ctx: sets the context window to 32768 (or OLLAMA_NUM_CTX env var),
-      replacing the Ollama default of 8192 which truncates large SAMP docs.
+      replacing the Ollama default of 8192 which truncates large ARA docs.
 
     No-op for non-Ollama models.
     """
@@ -273,7 +273,7 @@ def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
     object.__setattr__(lc_model, "format", "json")
 
     # Set num_ctx for extraction models. Ollama defaults to 8192 tokens which
-    # is far too small for 50k+ char SAMP documents. Use env var OLLAMA_NUM_CTX
+    # is far too small for 50k+ char ARA documents. Use env var OLLAMA_NUM_CTX
     # if set, otherwise default to 32768 (adequate for qwen2.5:7b/32b and
     # phi4:14b without OOM risk on 16GB VRAM).
     num_ctx_env = os.getenv("OLLAMA_NUM_CTX")
@@ -311,7 +311,7 @@ def _inject_response_format(
 
     For Ollama, delegates to _apply_ollama_extraction_settings() which sets
     format="json" (first-class ChatOllama field, not model_kwargs) and
-    num_ctx=32768 to handle large SAMP documents.
+    num_ctx=32768 to handle large ARA documents.
 
     Args:
         lc_model: LangChain model (already provisioned with OpenRouter prefs)
@@ -368,7 +368,7 @@ def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
     """Split content at room/item boundaries to fit within max_chars per chunk.
 
     Boundary detection:
-    - SAMP format: B###-R#### room headers
+    - Standard DET format: B###-R#### room headers
     - ARA format: numbered items like "1. " at start of line
 
     If a single boundary segment exceeds max_chars, that segment is

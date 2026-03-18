@@ -89,7 +89,7 @@ def is_friable_bool(friability_str: Optional[str]) -> bool:
 def normalize_sample_result(raw: Optional[str]) -> Optional[str]:
     """Normalize compound sample_result values to a canonical single token.
 
-    SAMP documents sometimes record compound results like:
+    ARA documents sometimes record compound results like:
       - "Positive (Chrysotile)/Negative"   → "Positive"
       - "Positive (Chrysotile)"             → "Positive"
       - "Negative; Trace"                   → "Negative"

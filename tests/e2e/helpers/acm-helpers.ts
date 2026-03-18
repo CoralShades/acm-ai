@@ -8,14 +8,14 @@
  * - Record comparison
  *
  * Usage:
- *   import { uploadSAMP, waitForExtraction, validateACMGrid } from './acm-helpers';
+ *   import { uploadARA, waitForExtraction, validateACMGrid } from './acm-helpers';
  */
 
 import type { Page, Locator } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 /**
- * Upload a SAMP PDF file through the UI
+ * Upload an ARA (Asbestos Register Assessment) PDF file through the UI
  *
  * Navigates through the 4-step upload wizard:
  * 1. File selection
@@ -24,10 +24,10 @@ import { expect } from '@playwright/test';
  * 4. Processing options (ACM enabled)
  *
  * @param page - Playwright page object
- * @param filepath - Path to SAMP PDF file
+ * @param filepath - Path to ARA PDF file
  * @returns Promise<void>
  */
-export async function uploadSAMP(page: Page, filepath: string): Promise<void> {
+export async function uploadARA(page: Page, filepath: string): Promise<void> {
   // Navigate to documents library
   await page.goto('/');
   const addSourceButton = page.getByRole('button', { name: /add source|upload/i });

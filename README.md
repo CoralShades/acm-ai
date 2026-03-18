@@ -36,7 +36,7 @@
 ![ACM-AI Platform](docs/assets/asset_list.png)
 
 **ACM-AI transforms Asbestos Containing Material (ACM) compliance management:**
-- 🏛️ **SAMP Document Processing** - Automated extraction from School Asbestos Management Plans
+- 🏛️ **ARA Document Processing** - Automated extraction from Asbestos Register Assessments
 - 📊 **Intelligent Data Extraction** - Parse hierarchical structures (School → Building → Room → ACM Item)
 - 🔍 **AI-Powered Search** - Query ACM registers with natural language
 - 📄 **Citation Tracking** - Every data point linked to source PDF page numbers
@@ -253,7 +253,7 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 ## ✨ Key Features
 
 ### ACM-Specific Capabilities
-- **📄 SAMP Document Processing**: Automated extraction from School Asbestos Management Plans
+- **📄 ARA Document Processing**: Automated extraction from Asbestos Register Assessments
 - **🏗️ Hierarchical Data Structure**: School → Building → Room → ACM Item relationships
 - **🎯 Smart Pattern Recognition**: Detects building IDs, room codes, area types automatically
 - **📊 Structured Database**: Transform PDFs into queryable ACMRecord objects
@@ -296,7 +296,7 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 ### User Guide
 - **[📱 Interface Overview](docs/user-guide/interface-overview.md)** - Understanding the layout
 - **[📚 Notebooks](docs/user-guide/notebooks.md)** - Organizing your ACM data
-- **[📄 Sources](docs/user-guide/sources.md)** - Managing SAMP documents
+- **[📄 Sources](docs/user-guide/sources.md)** - Managing ARA documents
 - **[📝 Notes](docs/user-guide/notes.md)** - Creating and managing notes
 - **[💬 Chat](docs/user-guide/chat.md)** - AI conversations
 - **[🔍 Search](docs/user-guide/search.md)** - Finding ACM records
@@ -366,7 +366,7 @@ See the [open issues](https://github.com/CoralShades/acm-ai/issues) for proposed
 We welcome contributions! We're especially looking for help with:
 - **ACM Extraction Improvements**: Enhance parsing accuracy and handle edge cases
 - **Frontend Development**: Build ACM-specific UI components and dashboards
-- **Real-world Testing**: Test with actual SAMP PDFs and report issues
+- **Real-world Testing**: Test with actual ARA PDFs and report issues
 - **Export & Reporting**: Add CSV/Excel export and compliance reporting features
 - **Documentation**: Improve guides for ACM compliance workflows
 - **Testing**: Expand test coverage with more ACM register variations

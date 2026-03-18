@@ -142,7 +142,7 @@ class ClutchDetector:
     def get_column_mapping(self) -> Optional[Dict[str, str]]:
         """Clutch column names mapped to canonical extraction fields.
 
-        Clutch registers use different column headers than SAMP format.
+        Clutch registers use different column headers than standard DET format.
         This mapping tells the LLM what each column represents.
         """
         return {

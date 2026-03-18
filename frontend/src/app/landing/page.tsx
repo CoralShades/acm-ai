@@ -25,7 +25,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          Upload your SAMP documents and instantly extract, analyze, and manage
+          Upload your ARA documents and instantly extract, analyze, and manage
           Asbestos Containing Material data with AI assistance.
         </p>
 
@@ -82,7 +82,7 @@ export default function LandingPage() {
           <ol className="space-y-4">
             <QuickStartStep
               number={1}
-              title="Upload your SAMP document"
+              title="Upload your ARA document"
               description="Drag and drop your PDF or click to browse"
             />
             <QuickStartStep

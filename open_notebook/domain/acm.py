@@ -61,8 +61,8 @@ class ACMRecord(ObjectModel):
     """
     Domain model for ACM (Asbestos Containing Material) records.
 
-    Represents a single ACM item extracted from a SAMP (Site Asbestos
-    Management Plan) or ACM Register document.
+    Represents a single ACM item extracted from an ARA (Asbestos Register
+    Assessment) or ACM Register document.
     """
 
     table_name: ClassVar[str] = "acm_record"
@@ -677,7 +677,7 @@ class BuildingRecord(ObjectModel):
     """
     Domain model for Building records.
 
-    Represents a physical building extracted from SAMP documents.
+    Represents a physical building extracted from ARA documents.
     Maps to the Salesforce Building__c object with AliasChoices
     for dual internal/SF field name support.
 

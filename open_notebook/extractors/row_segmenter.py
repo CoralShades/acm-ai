@@ -30,7 +30,7 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "area",
         "location",
         "room no",
-        "location description",  # NSW DoE SAMP
+        "location description",  # NSW DoE standard format
     ],
     "item_description": [
         "material",
@@ -47,7 +47,7 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "f/nf",
         "friability",
         "type",
-        "assumed/confirmed",  # NSW DoE SAMP
+        "assumed/confirmed",  # NSW DoE standard format
     ],
     "condition": ["condition", "material condition", "state", "assessment"],
     "sample_number": [
@@ -56,7 +56,7 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "sample no",
         "nata no",
         "item no",
-        "item no.",  # Greencap ARA / NSW DoE
+        "item no.",  # Greencap ARA / NSW DoE standard
     ],
     "sample_result": [
         "result",

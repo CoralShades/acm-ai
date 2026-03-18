@@ -2220,7 +2220,7 @@ def _recover_no_access_records(
     # ── ARA Format Scan (E28-S2) ──────────────────────────────────────────
     # ARA (Asbestos Risk Assessment) format uses a different text layout:
     #   {item_no}\n{room}\n{desc}\nAsbestos\nNot Sampled\n{restriction}\nPresumed Positive
-    # The SAMP-specific level_re above won't match ARA section headers like
+    # The standard-format level_re above won't match ARA section headers like
     # "Mortuary Buildings - Interior - Ground Level". This scan finds
     # "Not Sampled" lines and works backward/forward to extract the record.
     ara_recovered = _recover_not_sampled_records_ara(
@@ -2240,7 +2240,7 @@ def _recover_not_sampled_records_ara(
     """ARA-format recovery for unsampled items missed by LLM.
 
     Runs on orchestrator path (multi-building documents like Alexander).
-    Complements the SAMP-path scan in ``_recover_no_access_records()``.
+    Complements the standard-format scan in ``_recover_no_access_records()``.
 
     ARA "Not Sampled" entries follow a consistent vertical text pattern::
 

@@ -1,4 +1,4 @@
-# SAMP Test Fixtures
+# ARA Test Fixtures
 
 Test data for ACM extraction end-to-end testing.
 
@@ -8,7 +8,7 @@ Test data for ACM extraction end-to-end testing.
 
 | Filename | Source | Records | Purpose |
 |----------|--------|---------|---------|
-| `broadmeadows-police-station-samp.pdf` | Clutch Broadmeadows Police Station SAMP | 31 | Baseline test document with known ground truth |
+| `broadmeadows-police-station-samp.pdf` | Clutch Broadmeadows Police Station ARA | 31 | Baseline test document with known ground truth |
 | `1124-asbestos-register.pdf` | Asbestos Register 1124 | TBD | Format variation test |
 | `3980-asbestos-register.pdf` | Asbestos Register 3980 | TBD | Format variation test |
 
@@ -18,7 +18,7 @@ Test data for ACM extraction end-to-end testing.
 |----------|----------------|-------------|
 | `broadmeadows-expected-results.json` | broadmeadows-police-station-samp.pdf | Ground truth data with 31 records, baseline accuracy 26% |
 
-## Broadmeadows Police Station SAMP
+## Broadmeadows Police Station ARA
 
 **Test File**: `broadmeadows-police-station-samp.pdf`
 **Expected Results**: `broadmeadows-expected-results.json`
@@ -48,9 +48,9 @@ Test data for ACM extraction end-to-end testing.
 
 2. **Extraction Issues**:
    - Negative results completely skipped (0% extraction)
-   - Result type conflation (Assumed Positive → Detected)
+   - Result type conflation (Assumed Positive -> Detected)
    - `floor_level` not properly extracted
-   - `area_type` vocabulary mismatch (Internal → Interior)
+   - `area_type` vocabulary mismatch (Internal -> Interior)
 
 3. **Compliance Fields**:
    - `identifying_company` not extracted (0%)
@@ -66,11 +66,11 @@ Test data for ACM extraction end-to-end testing.
 
 ```typescript
 import { test, expect } from '../../support/fixtures';
-import expectedResults from '../fixtures/samps/broadmeadows-expected-results.json';
+import expectedResults from '../fixtures/ara-documents/broadmeadows-expected-results.json';
 
 test('ACM extraction accuracy', async ({ page, apiClient }) => {
-  // Upload SAMP
-  await uploadSAMP(page, 'tests/e2e/fixtures/samps/broadmeadows-police-station-samp.pdf');
+  // Upload ARA document
+  await uploadARA(page, 'tests/e2e/fixtures/ara-documents/broadmeadows-police-station-samp.pdf');
 
   // Wait for extraction
   await waitForExtraction(page);
@@ -85,14 +85,14 @@ test('ACM extraction accuracy', async ({ page, apiClient }) => {
 
 ## Adding New Test Documents
 
-1. Copy PDF to `tests/e2e/fixtures/samps/`
+1. Copy PDF to `tests/e2e/fixtures/ara-documents/`
 2. Create corresponding `*-expected-results.json` file
 3. Update this README with document details
 4. Add test case in test suite
 
 ## Format Variations
 
-The additional SAMP documents (1124, 3980) test different format variations:
+The additional ARA documents (1124, 3980) test different format variations:
 - Different consultant firms
 - Different table layouts
 - Different section structures

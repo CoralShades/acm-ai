@@ -52,7 +52,7 @@ async def detect_format_with_llm(
             "You are a document format classifier for ACM (Asbestos Containing Material) registers. "
             "Analyze the document sample and identify the consultant format.\n\n"
             "Known formats:\n"
-            "- 'samp': NSW DoE School Asbestos Management Plan (uses ## B00A - Building headers)\n"
+            "- 'standard': Standard DET format (uses ## B00A - Building headers)\n"
             "- 'clutch': Clutch/Greencap registers (pipe-delimited tables with | Building Name: |)\n"
             "- 'ara': Greencap/Prensa ARA format (Building Name: text headers)\n"
             "- 'unknown': Format not recognized\n\n"

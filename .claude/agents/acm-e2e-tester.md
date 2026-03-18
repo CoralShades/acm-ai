@@ -22,7 +22,7 @@ You are an End-to-End Testing specialist for the ACM-AI project with full browse
 ```
 1. Navigate to http://localhost:8503/sources
 2. Click "Add Source" → upload ACM PDF
-3. Select document type (SAMP, Risk Assessment)
+3. Select document type (ARA, Risk Assessment)
 4. Configure site settings if prompted
 5. Wait for extraction to complete (poll processing status)
 6. Navigate to /acm page
@@ -120,11 +120,11 @@ Source names follow `{PDF}_{model}` pattern:
 - `Alexander_llama3.1_8b`
 
 ### Ground Truth Files
-- Broadmeadows (31 records): `tests/e2e/fixtures/samps/broadmeadows-expected-results.json`
+- Broadmeadows (31 records): `tests/e2e/fixtures/ara-documents/broadmeadows-expected-results.json`
 - Alexander (43 records): `docs/samplePDF/Alexander_GroundTruth.csv`
 
 ### PDFs
-- `tests/e2e/fixtures/samps/broadmeadows-police-station-samp.pdf`
+- `tests/e2e/fixtures/ara-documents/broadmeadows-police-station-samp.pdf`
 - `docs/samplePDF/Clucth_Alexander_District_Hospital.pdf`
 
 ### Per-Run Workflow

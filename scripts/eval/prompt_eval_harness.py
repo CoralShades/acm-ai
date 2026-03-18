@@ -60,11 +60,23 @@ PRODUCT_SYNONYMS: dict[str, list[str]] = {
     "ductwork": ["ductwork - mastic", "air handling unit ductwork"],
     "insulation": ["safe - insulation", "insulation - safe"],
     "floor covering": [
-        "vinyl floor tiles", "floor tiles", "vinyl tiles",
-        "floor covering adhesive", "vinyl sheet", "vinyl sheet (cream)",
+        "vinyl floor tiles",
+        "floor tiles",
+        "vinyl tiles",
+        "floor covering adhesive",
+        "vinyl sheet",
+        "vinyl sheet (cream)",
     ],
-    "skirting": ["skirting board", "skirting vinyl sheet", "skirting vinyl sheet (brown)"],
-    "vinyl sheet": ["vinyl sheet ", "hessian backed vinyl sheet", "hessian back sheet vinyl"],
+    "skirting": [
+        "skirting board",
+        "skirting vinyl sheet",
+        "skirting vinyl sheet (brown)",
+    ],
+    "vinyl sheet": [
+        "vinyl sheet ",
+        "hessian backed vinyl sheet",
+        "hessian back sheet vinyl",
+    ],
     "gasket": ["boiler pipework", "gasket (orange)", "gasket (black)"],
     "infill panels": ["fibre cement sheet infill panel", "infill panel"],
     "wall(s)": ["wall", "wall covering"],
@@ -426,7 +438,7 @@ def match_records(
             room_sim = _fuzzy_match(gt_room, ext_room)
             loc_sim = _fuzzy_match(gt_loc, ext_loc)
             prod_sim = _fuzzy_match(gt_prod, ext_prod)
-            score = (room_sim * 0.3 + loc_sim * 0.3 + prod_sim * 0.4)
+            score = room_sim * 0.3 + loc_sim * 0.3 + prod_sim * 0.4
 
             if score > best_score:
                 best_score = score
@@ -576,9 +588,9 @@ def evaluate(
 
 def print_report(result: EvalResult) -> None:
     """Print a human-readable evaluation report."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  EVALUATION REPORT: {result.benchmark_name}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"  Ground Truth: {result.gt_count} records")
     print(f"  Extracted:    {result.extracted_count} records")
     print(f"  Matched:      {result.matched_count} records")
@@ -587,7 +599,7 @@ def print_report(result: EvalResult) -> None:
     print(f"  Overall Acc:  {result.overall_accuracy:.1%}")
 
     print(f"\n  {'Field':<25} {'Exact':>7} {'Fuzzy':>7} {'Cover':>7} {'Miss':>5}")
-    print(f"  {'-'*25} {'-'*7} {'-'*7} {'-'*7} {'-'*5}")
+    print(f"  {'-' * 25} {'-' * 7} {'-' * 7} {'-' * 7} {'-' * 5}")
     for name, fs in result.field_scores.items():
         evaluated = fs.total - fs.gt_empty
         if evaluated == 0:
@@ -632,15 +644,19 @@ def print_report(result: EvalResult) -> None:
             sno = ext.get("sample_no", "?")
             print(f"    {room} / {prod} / {sno}")
 
-    print(f"\n{'='*70}\n")
+    print(f"\n{'=' * 70}\n")
 
 
 def main():
     parser = argparse.ArgumentParser(description="ACM Prompt Evaluation Harness")
-    parser.add_argument("--gt", help="Ground truth benchmark name (broadmeadows, alexander)")
+    parser.add_argument(
+        "--gt", help="Ground truth benchmark name (broadmeadows, alexander)"
+    )
     parser.add_argument("--json", help="Path to extracted records JSON file")
     parser.add_argument("--source-id", help="SurrealDB source ID to fetch records from")
-    parser.add_argument("--all", action="store_true", help="Run all benchmarks from cached JSON")
+    parser.add_argument(
+        "--all", action="store_true", help="Run all benchmarks from cached JSON"
+    )
     parser.add_argument("--save", help="Save results to JSON file")
     args = parser.parse_args()
 
@@ -682,7 +698,9 @@ def main():
                 ext = load_extracted_from_json(str(cached))
                 print(f"Using cached extraction: {cached}")
             else:
-                parser.error("Provide --json or --source-id (or cache extraction first)")
+                parser.error(
+                    "Provide --json or --source-id (or cache extraction first)"
+                )
 
         result = evaluate(args.gt, gt, ext)
         print_report(result)

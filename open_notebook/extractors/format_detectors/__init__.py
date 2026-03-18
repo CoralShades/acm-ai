@@ -111,10 +111,12 @@ def _auto_register() -> None:
     """Import all detector modules to trigger registration."""
     from open_notebook.extractors.format_detectors.ara_detector import ARADetector
     from open_notebook.extractors.format_detectors.clutch_detector import ClutchDetector
-    from open_notebook.extractors.format_detectors.samp_detector import SAMPDetector
+    from open_notebook.extractors.format_detectors.standard_detector import (
+        StandardFormatDetector,
+    )
 
     _registry.register(ClutchDetector())
-    _registry.register(SAMPDetector())
+    _registry.register(StandardFormatDetector())
     _registry.register(ARADetector())
 
 

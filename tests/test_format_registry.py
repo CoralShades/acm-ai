@@ -3,7 +3,7 @@
 Covers:
 - FormatRegistry: detector registration, priority ordering, detect_format()
 - ClutchDetector: detect(), extract_buildings(), get_column_mapping(), enrichment
-- SAMPDetector: detect(), extract_buildings(), get_column_mapping()
+- StandardFormatDetector: detect(), extract_buildings(), get_column_mapping()
 - ARADetector: detect(), extract_buildings(), get_column_mapping()
 """
 
@@ -129,7 +129,7 @@ class TestFormatRegistry:
 
         registry = get_registry()
         assert registry.get_detector("clutch") is not None
-        assert registry.get_detector("samp") is not None
+        assert registry.get_detector("standard") is not None
         assert registry.get_detector("ara") is not None
         assert registry.get_detector("nonexistent") is None
 
@@ -141,13 +141,13 @@ class TestFormatRegistry:
         assert detector is not None
         assert detector.name == "clutch"
 
-    def test_detect_format_samp(self):
+    def test_detect_format_standard(self):
         from open_notebook.extractors.format_detectors import get_registry
 
         registry = get_registry()
         detector = registry.detect_format(SAMPLE_SAMP_CONTENT)
         assert detector is not None
-        assert detector.name == "samp"
+        assert detector.name == "standard"
 
     def test_extract_buildings_via_registry(self):
         from open_notebook.extractors.format_detectors import get_registry
@@ -335,28 +335,28 @@ ALEXANDER DISTRICT HOSPITAL
 
 
 # ---------------------------------------------------------------------------
-# SAMPDetector tests
+# StandardFormatDetector tests
 # ---------------------------------------------------------------------------
 
 
-class TestSAMPDetector:
-    """Test SAMPDetector detection and extraction."""
+class TestStandardFormatDetector:
+    """Test StandardFormatDetector detection and extraction."""
 
-    def test_detect_samp(self):
-        from open_notebook.extractors.format_detectors.samp_detector import (
-            SAMPDetector,
+    def test_detect_standard(self):
+        from open_notebook.extractors.format_detectors.standard_detector import (
+            StandardFormatDetector,
         )
 
-        detector = SAMPDetector()
+        detector = StandardFormatDetector()
         assert detector.detect(SAMPLE_SAMP_CONTENT) is True
         assert detector.detect(SAMPLE_CLUTCH_CONTENT) is False
 
     def test_extract_buildings(self):
-        from open_notebook.extractors.format_detectors.samp_detector import (
-            SAMPDetector,
+        from open_notebook.extractors.format_detectors.standard_detector import (
+            StandardFormatDetector,
         )
 
-        detector = SAMPDetector()
+        detector = StandardFormatDetector()
         buildings = detector.extract_buildings(SAMPLE_SAMP_CONTENT)
         assert len(buildings) == 2
         ids = [b.building_id for b in buildings]
@@ -364,11 +364,11 @@ class TestSAMPDetector:
         assert "B00B" in ids
 
     def test_building_names_and_years(self):
-        from open_notebook.extractors.format_detectors.samp_detector import (
-            SAMPDetector,
+        from open_notebook.extractors.format_detectors.standard_detector import (
+            StandardFormatDetector,
         )
 
-        detector = SAMPDetector()
+        detector = StandardFormatDetector()
         buildings = detector.extract_buildings(SAMPLE_SAMP_CONTENT)
         by_id = {b.building_id: b for b in buildings}
 
@@ -380,11 +380,11 @@ class TestSAMPDetector:
         assert by_id["B00B"].year == 1972
 
     def test_no_column_mapping(self):
-        from open_notebook.extractors.format_detectors.samp_detector import (
-            SAMPDetector,
+        from open_notebook.extractors.format_detectors.standard_detector import (
+            StandardFormatDetector,
         )
 
-        detector = SAMPDetector()
+        detector = StandardFormatDetector()
         assert detector.get_column_mapping() is None
 
 

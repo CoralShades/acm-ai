@@ -21,7 +21,7 @@ Examples:
 
 ## Project Overview
 
-ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms SAMP (School Asbestos Management Plan) documents into structured, queryable data. It's a monorepo with two parts:
+ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms ARA (Asbestos Register Assessment) documents into structured, queryable data. It's a monorepo with two parts:
 - **Backend**: Python 3.11+ with FastAPI, LangChain/LangGraph, SurrealDB
 - **Frontend**: Next.js 15 with React 19, Radix UI, Tailwind CSS 4, Zustand, React Query
 

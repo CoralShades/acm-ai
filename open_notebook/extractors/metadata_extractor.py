@@ -2,7 +2,7 @@
 Document Metadata Extraction.
 
 Extracts comprehensive document metadata from cover pages, headers, and body
-content of SAMP/BAR PDF documents. Runs as Stage -2 (before document structure
+content of ARA/BAR PDF documents. Runs as Stage -2 (before document structure
 extraction) in the LangGraph extraction pipeline.
 
 Story: E1-S19 Document Metadata Extraction Enhancement

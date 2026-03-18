@@ -49,7 +49,7 @@ export function ProcessingStep({
       {/* ACM Extraction Section */}
       <FormSection
         title="ACM Register Extraction"
-        description="Extract asbestos containing material data from SAMP documents."
+        description="Extract asbestos containing material data from ARA documents."
       >
         <Controller
           control={control}
@@ -67,7 +67,7 @@ export function ProcessingStep({
                   <span className="text-sm font-medium">Enable ACM extraction</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Automatically extract ACM register data from your SAMP/asbestos documents.
+                  Automatically extract ACM register data from your ARA/asbestos documents.
                   Extracted data will appear in the ACM Register view.
                 </p>
               </div>

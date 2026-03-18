@@ -111,7 +111,13 @@ class TestRecordMatching:
 
     def test_sample_no_match(self):
         gt = [{"sample_no": "34511-039-001", "room_name": "Foyer", "product": "Floor"}]
-        ext = [{"sample_no": "34511-039-001", "room_name": "Main Foyer", "product": "Floor covering"}]
+        ext = [
+            {
+                "sample_no": "34511-039-001",
+                "room_name": "Main Foyer",
+                "product": "Floor covering",
+            }
+        ]
         matches, unmatched_gt, unmatched_ext = match_records(gt, ext)
         assert len(matches) == 1
         assert matches[0].match_method == "sample_no"
@@ -119,14 +125,36 @@ class TestRecordMatching:
         assert not unmatched_ext
 
     def test_as_per_match(self):
-        gt = [{"sample_no": "As Per 34511-039-001", "room_name": "Kitchen", "product": "Floor"}]
-        ext = [{"sample_no": "34511-039-001", "room_name": "Kitchen", "product": "Floor"}]
+        gt = [
+            {
+                "sample_no": "As Per 34511-039-001",
+                "room_name": "Kitchen",
+                "product": "Floor",
+            }
+        ]
+        ext = [
+            {"sample_no": "34511-039-001", "room_name": "Kitchen", "product": "Floor"}
+        ]
         matches, _, _ = match_records(gt, ext)
         assert len(matches) == 1
 
     def test_fuzzy_match(self):
-        gt = [{"sample_no": "Not Sampled", "room_name": "Kitchen", "location": "Floor", "product": "Floor covering"}]
-        ext = [{"sample_no": "", "room_name": "Kitchen", "location": "Floor", "product": "Floor covering"}]
+        gt = [
+            {
+                "sample_no": "Not Sampled",
+                "room_name": "Kitchen",
+                "location": "Floor",
+                "product": "Floor covering",
+            }
+        ]
+        ext = [
+            {
+                "sample_no": "",
+                "room_name": "Kitchen",
+                "location": "Floor",
+                "product": "Floor covering",
+            }
+        ]
         matches, _, _ = match_records(gt, ext)
         assert len(matches) == 1
         assert matches[0].match_method == "room_location_product"
@@ -144,9 +172,15 @@ class TestFieldEvaluation:
     """Test per-field accuracy scoring."""
 
     def test_exact_match_scores(self):
-        gt = [{"room_name": "Kitchen", "product": "Floor covering", "sample_no": "X-001"}]
-        ext = [{"room_name": "Kitchen", "product": "Floor covering", "sample_no": "X-001"}]
-        matches = [RecordMatch(gt_index=0, ext_index=0, match_method="test", match_score=1.0)]
+        gt = [
+            {"room_name": "Kitchen", "product": "Floor covering", "sample_no": "X-001"}
+        ]
+        ext = [
+            {"room_name": "Kitchen", "product": "Floor covering", "sample_no": "X-001"}
+        ]
+        matches = [
+            RecordMatch(gt_index=0, ext_index=0, match_method="test", match_score=1.0)
+        ]
         scores = evaluate_fields(matches, gt, ext)
         assert scores["room_name"].exact_matches == 1
         assert scores["room_name"].accuracy == 1.0
@@ -154,7 +188,9 @@ class TestFieldEvaluation:
     def test_empty_gt_skipped(self):
         gt = [{"room_name": "Kitchen", "floor_level": ""}]
         ext = [{"room_name": "Kitchen", "floor_level": "Ground"}]
-        matches = [RecordMatch(gt_index=0, ext_index=0, match_method="test", match_score=1.0)]
+        matches = [
+            RecordMatch(gt_index=0, ext_index=0, match_method="test", match_score=1.0)
+        ]
         scores = evaluate_fields(matches, gt, ext)
         assert scores["floor_level"].gt_empty == 1
         assert scores["floor_level"].accuracy == 1.0  # N/A -> treated as perfect
@@ -162,7 +198,9 @@ class TestFieldEvaluation:
     def test_missing_extraction_counted(self):
         gt = [{"room_name": "Kitchen", "friable": "Non-friable"}]
         ext = [{"room_name": "Kitchen", "friable": None}]
-        matches = [RecordMatch(gt_index=0, ext_index=0, match_method="test", match_score=1.0)]
+        matches = [
+            RecordMatch(gt_index=0, ext_index=0, match_method="test", match_score=1.0)
+        ]
         scores = evaluate_fields(matches, gt, ext)
         assert scores["friable"].ext_empty == 1
         assert scores["friable"].accuracy == 0.0
@@ -196,10 +234,19 @@ class TestFullEvaluation:
 
     def test_perfect_extraction(self):
         gt = [
-            {"room_name": "Kitchen", "product": "Floor covering", "sample_no": "X-001",
-             "sample_result": "Negative", "friable": "Non-friable", "location": "Floor",
-             "floor_level": "Ground", "material_description": "Vinyl", "area_type": "Internal",
-             "material_condition": "Good", "disturbance_potential": "Low"},
+            {
+                "room_name": "Kitchen",
+                "product": "Floor covering",
+                "sample_no": "X-001",
+                "sample_result": "Negative",
+                "friable": "Non-friable",
+                "location": "Floor",
+                "floor_level": "Ground",
+                "material_description": "Vinyl",
+                "area_type": "Internal",
+                "material_condition": "Good",
+                "disturbance_potential": "Low",
+            },
         ]
         result = evaluate("test", gt, gt)
         assert result.recall == 1.0

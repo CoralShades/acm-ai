@@ -53,7 +53,7 @@ GT_BROADMEADOWS = (
     / "tests"
     / "e2e"
     / "fixtures"
-    / "samps"
+    / "ara-documents"
     / "broadmeadows-expected-results.json"
 )
 GT_ALEXANDER = PROJECT_ROOT / "docs" / "samplePDF" / "Alexander_GroundTruth.csv"

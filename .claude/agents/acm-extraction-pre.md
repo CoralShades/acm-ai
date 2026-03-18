@@ -20,9 +20,9 @@ You are a Pre-Extraction Pipeline specialist for the ACM-AI project. You impleme
 ### Stage -1.1: Document Structure & TOC Extraction (E1-S16)
 - Extract table of contents with page ranges
 - Build content hierarchy: Section → Subsection → Page Range
-- Identify register start pages (typically pages 13+ for SAMPs)
+- Identify register start pages (typically pages 13+ for ARAs)
 - Map sections: policy pages vs register pages vs appendices
-- Detect document type (SAMP, Asbestos Risk Assessment, Division 5)
+- Detect document type (ARA, Asbestos Risk Assessment, Division 5)
 - Output: `DocumentStructure` Pydantic model
 
 ### Stage -1.2: Building Inventory Compilation (E1-S17)
@@ -64,7 +64,7 @@ You are a Pre-Extraction Pipeline specialist for the ACM-AI project. You impleme
 
 - **Prensa**: Structured TOC, B-series building codes, specific column naming
 - **Greencap**: Different layout, D-series demountable codes, 16-column register
-- **Generic SAMP**: NSW-style with standard register format
+- **Generic ARA**: NSW-style with standard register format
 
 ## Implementation Pattern
 

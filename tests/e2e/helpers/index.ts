@@ -4,12 +4,12 @@
  * Re-exports all helper functions for easy importing.
  *
  * Usage:
- *   import { uploadSAMP, captureEvidence, sendChatMessage } from '../helpers';
+ *   import { uploadARA, captureEvidence, sendChatMessage } from '../helpers';
  */
 
 // ACM Helpers
 export {
-  uploadSAMP,
+  uploadARA,
   waitForExtraction,
   navigateToACMRegister,
   getACMGridRows,
