@@ -204,6 +204,10 @@ def _normalize_extraction_json(parsed: dict) -> dict:
         sr = record.get("sample_result")
         if sr:
             record["sample_result"] = _split_compound_sample_result(sr)
+        # Coerce quantity int/float→str (GPT-4o-mini returns numeric values)
+        qty = record.get("quantity")
+        if isinstance(qty, (int, float)):
+            record["quantity"] = str(qty)
     return parsed
 
 
@@ -580,8 +584,12 @@ def _normalize_v3_records(
             floor_level=item.level,
             location=item.location_in_room,
             area_type=area_type,
-            # ACM classification
-            product=item.item_name or "",
+            # ACM classification — prefer if_other_item_name when item_name is "Other"
+            product=(
+                item.if_other_item_name
+                if item.item_name == "Other" and item.if_other_item_name
+                else (item.item_name or "")
+            ),
             material_description=item.acm_sub_classification,
             friable=item.friability_of_material,
             # Sample and assessment

@@ -98,6 +98,14 @@ class ACMItemRecord(BaseModel):
             return "Yes" if v else "No"
         return v
 
+    @field_validator("quantity", mode="before")
+    @classmethod
+    def coerce_quantity(cls, v):
+        """Coerce int/float→str: LLMs may return numeric quantities without units."""
+        if isinstance(v, (int, float)):
+            return str(v)
+        return v
+
     # Notes
     hygienist_recommendations: Optional[str] = None
     additional_comments: Optional[str] = None

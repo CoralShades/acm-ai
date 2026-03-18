@@ -932,12 +932,18 @@ async def _provision_extraction_primary_model(
     """
     candidates: list[tuple[str, str, Optional[str]]] = []
 
-    # 1) Ollama first — free, local
-    if os.getenv("OLLAMA_API_BASE"):
-        # Check SurrealDB for user-configured model, then env var, then hardcoded default
-        db_model = await _get_db_extraction_model()
-        model_name = db_model or os.getenv("ACM_EXTRACTION_MODEL", "llama3.1:8b")
-        candidates.append(("ollama", model_name, None))
+    # 1) Ollama first — free, local (only if reachable)
+    ollama_base = os.getenv("OLLAMA_API_BASE")
+    if ollama_base:
+        try:
+            import urllib.request
+
+            urllib.request.urlopen(f"{ollama_base}/api/tags", timeout=2)
+            db_model = await _get_db_extraction_model()
+            model_name = db_model or os.getenv("ACM_EXTRACTION_MODEL", "llama3.1:8b")
+            candidates.append(("ollama", model_name, None))
+        except Exception:
+            logger.info("Ollama not reachable at %s — skipping", ollama_base)
 
     # 2) Anthropic Direct — ACM-namespaced key ONLY
     acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")
@@ -951,11 +957,19 @@ async def _provision_extraction_primary_model(
             ("openrouter", "anthropic/claude-sonnet-4", acm_openrouter_key)
         )
 
+    # 4) OpenAI — fallback if no ACM-specific keys are set
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        candidates.append(("openai", "gpt-4o-mini", openai_key))
+
     for provider, model_name, api_key in candidates:
         try:
             config: dict = {**kwargs}
             if api_key:
                 config["api_key"] = api_key
+            # Cap max_tokens for models with lower limits
+            if provider == "openai" and config.get("max_tokens", 0) > 16384:
+                config["max_tokens"] = 16384
             model = AIFactory.create_language(
                 model_name=model_name,
                 provider=provider,

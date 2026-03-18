@@ -1,0 +1,32 @@
+room_name,floor_level,location,product,material_description,friable,sample_no,sample_result,area_type,material_condition,disturbance_potential
+Main Foyer,Ground,Floor,Floor covering,Vinyl sheet,Non-friable,34511-039-001,Negative,Internal,N/A (negative),N/A (negative)
+Front Desk Area,Ground,Floor,Floor covering,Vinyl sheet,Non-friable,34511-039-002,Negative,Internal,N/A (negative),N/A (negative)
+Front Desk Area,Ground,Filing Cabinet,Filing Cabinet,Internal Lining,Non-friable,Not Sampled,Assumed Positive,Internal,Good,Low
+Soft Interview Room No.2,Ground,Skirting Board,Skirting,Vinyl sheet,Non-friable,34511-039-003,Negative,Internal,N/A (negative),N/A (negative)
+Kitchenette,Ground,Floor,Floor covering,Hessian backed Vinyl sheet,Non-friable,34511-039-004,Negative,Internal,N/A (negative),N/A (negative)
+Corridor Adjacent Cells and Custody Counter,Ground,Floor,Floor covering,Vinyl sheet,Non-friable,As Per 34511-039-001,Negative,Internal,N/A (negative),N/A (negative)
+Lift Foyer,Ground,Floor,Floor covering,Vinyl sheet,Non-friable,As Per 34511-039-001,Negative,Internal,N/A (negative),N/A (negative)
+Switch Room,Level 1,Switchboard,Fuse cartridge,Electrical Components,Non-friable,Not Sampled,Assumed Positive,Internal,Good,Low
+Switch Room,Level 1,Automatic Battery Charger,Fuse cartridge,Electrical Components,Non-friable,Not Sampled,Assumed Positive,Internal,Good,Low
+Comms Area,Level 1,Floor,Floor covering,Vinyl Tiles,Non-friable,34511-039-006,Negative,Internal,N/A (negative),N/A (negative)
+Fan Room,Level 1,Air Handling Unit Ductwork,Flange joints,Mastic,Non-friable,34511-039-007,Positive,Internal,Good,Low
+Fan Room,Level 1,Wall Opposite AHU Inlet,Infill panels,Flat Sheeting,Non-friable,34511-039-008,Positive,Internal,Good,Low
+Male Locker Room,Level 1,Floor,Floor covering,Vinyl sheet,Non-friable,34511-039-009,Negative,Internal,N/A (negative),N/A (negative)
+Male Locker Room,Level 1,Wall Adjacent Entrance To Office,Wall lining,Vinyl sheet,Non-friable,34511-039-010,Negative,Internal,N/A (negative),N/A (negative)
+Throughout,Level 1,Male Locker Room,Skirting,Vinyl sheet,Non-friable,As Per 34511-039-003,Negative,Internal,N/A (negative),N/A (negative)
+Kitchen,Level 1,Floor,Floor covering,Vinyl sheet,Non-friable,As Per 34511-039-009,Negative,Internal,N/A (negative),N/A (negative)
+Kitchen,Level 1,Wall,Skirting,Vinyl sheet,Non-friable,As Per 34511-039-003,Negative,Internal,N/A (negative),N/A (negative)
+Fan Room 2.24,Level 1,Air Handling Unit Ductwork,Flange joints,Mastic,Non-friable,As Per 34511-039-007,Positive,Internal,Good,Low
+Fan Room,Level 1,Brick Wall,Expansion joint,Mastic,Non-friable,34511-039-011,Negative,Internal,N/A (negative),N/A (negative)
+Fan Room,Ground,Air Handling Unit Ductwork,Flange joints,Mastic,Non-friable,As Per 34511-039-007,Positive,External,Good,Low
+Boiler Room,Ground,Switchboard,Fuse cartridge,Electrical Components,Non-friable,Not Sampled,Assumed Positive,External,Good,Low
+Boiler Room,Ground,Boiler,Pipework,Gasket(s),Non-friable,34511-039-012,Negative,External,N/A (negative),N/A (negative)
+Boiler Room,Ground,Boiler,Pipework,Gasket(s),Non-friable,34511-039-013,Negative,External,N/A (negative),N/A (negative)
+Boiler Room,Ground,Walls,Expansion joint,Mastic,Non-friable,34511-039-014,Negative,External,N/A (negative),N/A (negative)
+East Roof Fan Room,Ground,Walls,Wall(s),Flat Sheeting,Non-friable,34511-039-016,Negative,External,N/A (negative),N/A (negative)
+Roof,Ground,East Ductwork,Flange joints,Mastic,Non-friable,34511-039-015,Positive,External,Good,Low
+East Roof Fan Room,Ground,Ceiling,Ceiling,Flat Sheeting,Non-friable,As Per 34511-039-016,Negative,External,N/A (negative),N/A (negative)
+Exterior,Ground,Brown Walls,Expansion joint,Mastic,Non-friable,As Per 34511-039-014,Negative,External,N/A (negative),N/A (negative)
+Property Storage,Ground,Floor,Floor covering,Vinyl sheet,Non-friable,34511-039-017,Negative,Internal,N/A (negative),N/A (negative)
+Lift Foyer,Ground,Lift,Internal lining,Unknown,Non-friable,Not Sampled,Assumed Positive,Internal,Unknown,Unknown
+Main Foyer,Ground,Room Adjacent Disabled Toilet,Unknown,Unknown,Non-friable,Not Sampled,Assumed Positive,Internal,Unknown,Unknown

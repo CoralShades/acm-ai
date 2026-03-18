@@ -1,0 +1,397 @@
+[
+  {
+    "benchmark": "broadmeadows",
+    "gt_count": 31,
+    "extracted_count": 29,
+    "matched_count": 27,
+    "recall": 0.871,
+    "precision": 0.931,
+    "overall_accuracy": 0.7481,
+    "field_scores": {
+      "room_name": {
+        "accuracy": 0.7407,
+        "fuzzy_accuracy": 0.7407,
+        "coverage": 1.0,
+        "exact_matches": 20,
+        "fuzzy_matches": 0,
+        "mismatches": 7,
+        "gt_empty": 0,
+        "ext_empty": 0,
+        "mismatch_examples": [
+          {
+            "gt": "Main Foyer",
+            "ext": "Corridor adjacent cells and custody counter",
+            "gt_record": "GT#0"
+          },
+          {
+            "gt": "Soft Interview Room No.2",
+            "ext": "Male locker room",
+            "gt_record": "GT#3"
+          },
+          {
+            "gt": "Corridor Adjacent Cells and Custody Counter",
+            "ext": "Main foyer",
+            "gt_record": "GT#5"
+          },
+          {
+            "gt": "Fan Room",
+            "ext": "Fan Room 2.24",
+            "gt_record": "GT#10"
+          },
+          {
+            "gt": "Throughout",
+            "ext": "Soft interview room No.2",
+            "gt_record": "GT#14"
+          }
+        ]
+      },
+      "floor_level": {
+        "accuracy": 0.5926,
+        "fuzzy_accuracy": 0.5926,
+        "coverage": 1.0,
+        "exact_matches": 16,
+        "fuzzy_matches": 0,
+        "mismatches": 11,
+        "gt_empty": 0,
+        "ext_empty": 0,
+        "mismatch_examples": [
+          {
+            "gt": "Ground",
+            "ext": "First floor",
+            "gt_record": "GT#3"
+          },
+          {
+            "gt": "Level 1",
+            "ext": "Ground floor",
+            "gt_record": "GT#14"
+          },
+          {
+            "gt": "Level 1",
+            "ext": "External",
+            "gt_record": "GT#17"
+          },
+          {
+            "gt": "Ground",
+            "ext": "First floor",
+            "gt_record": "GT#19"
+          },
+          {
+            "gt": "Ground",
+            "ext": "External",
+            "gt_record": "GT#21"
+          }
+        ]
+      },
+      "location": {
+        "accuracy": 0.6296,
+        "fuzzy_accuracy": 0.6667,
+        "coverage": 1.0,
+        "exact_matches": 17,
+        "fuzzy_matches": 1,
+        "mismatches": 9,
+        "gt_empty": 0,
+        "ext_empty": 0,
+        "mismatch_examples": [
+          {
+            "gt": "Skirting Board",
+            "ext": "Throughout",
+            "gt_record": "GT#3"
+          },
+          {
+            "gt": "Male Locker Room",
+            "ext": "Skirting board",
+            "gt_record": "GT#14"
+          },
+          {
+            "gt": "Boiler",
+            "ext": "Boiler pipework",
+            "gt_record": "GT#21"
+          },
+          {
+            "gt": "Boiler",
+            "ext": "Boiler pipework",
+            "gt_record": "GT#22"
+          },
+          {
+            "gt": "Walls",
+            "ext": "Ceiling",
+            "gt_record": "GT#24"
+          }
+        ]
+      },
+      "product": {
+        "accuracy": 0.5926,
+        "fuzzy_accuracy": 0.5926,
+        "coverage": 1.0,
+        "exact_matches": 16,
+        "fuzzy_matches": 0,
+        "mismatches": 11,
+        "gt_empty": 0,
+        "ext_empty": 0,
+        "mismatch_examples": [
+          {
+            "gt": "Flange joints",
+            "ext": "Air handling unit ductwork",
+            "gt_record": "GT#10"
+          },
+          {
+            "gt": "Wall lining",
+            "ext": "Wall covering",
+            "gt_record": "GT#13"
+          },
+          {
+            "gt": "Flange joints",
+            "ext": "Air handling unit ductwork",
+            "gt_record": "GT#17"
+          },
+          {
+            "gt": "Flange joints",
+            "ext": "Air handling unit ductwork",
+            "gt_record": "GT#19"
+          },
+          {
+            "gt": "Pipework",
+            "ext": "Boiler pipework",
+            "gt_record": "GT#21"
+          }
+        ]
+      },
+      "material_description": {
+        "accuracy": 0.3333,
+        "fuzzy_accuracy": 0.3333,
+        "coverage": 1.0,
+        "exact_matches": 9,
+        "fuzzy_matches": 0,
+        "mismatches": 18,
+        "gt_empty": 0,
+        "ext_empty": 0,
+        "mismatch_examples": [
+          {
+            "gt": "Vinyl sheet",
+            "ext": "Skirting vinyl sheet",
+            "gt_record": "GT#3"
+          },
+          {
+            "gt": "Hessian backed Vinyl sheet",
+            "ext": "Hessian back sheet vinyl",
+            "gt_record": "GT#4"
+          },
+          {
+            "gt": "Vinyl Tiles",
+            "ext": "Vinyl floor tile",
+            "gt_record": "GT#9"
+          },
+          {
+            "gt": "Mastic",
+            "ext": "Flange mastic",
+            "gt_record": "GT#10"
+          },
+          {
+            "gt": "Flat Sheeting",
+            "ext": "Fibre cement sheet infill panel",
+            "gt_record": "GT#11"
+          }
+        ]
+      },
+      "friable": {
+        "accuracy": 0.9259,
+        "fuzzy_accuracy": 0.9259,
+        "coverage": 0.9259,
+        "exact_matches": 25,
+        "fuzzy_matches": 0,
+        "mismatches": 2,
+        "gt_empty": 0,
+        "ext_empty": 2,
+        "mismatch_examples": [
+          {
+            "gt": "Non-friable",
+            "ext": "(empty)",
+            "gt_record": "GT#29"
+          },
+          {
+            "gt": "Non-friable",
+            "ext": "(empty)",
+            "gt_record": "GT#30"
+          }
+        ]
+      },
+      "sample_no": {
+        "accuracy": 0.8519,
+        "fuzzy_accuracy": 0.8519,
+        "coverage": 0.8519,
+        "exact_matches": 23,
+        "fuzzy_matches": 0,
+        "mismatches": 4,
+        "gt_empty": 0,
+        "ext_empty": 4,
+        "mismatch_examples": [
+          {
+            "gt": "Not Sampled",
+            "ext": "(empty)",
+            "gt_record": "GT#2"
+          },
+          {
+            "gt": "Not Sampled",
+            "ext": "(empty)",
+            "gt_record": "GT#7"
+          },
+          {
+            "gt": "Not Sampled",
+            "ext": "(empty)",
+            "gt_record": "GT#8"
+          },
+          {
+            "gt": "Not Sampled",
+            "ext": "(empty)",
+            "gt_record": "GT#20"
+          }
+        ]
+      },
+      "sample_result": {
+        "accuracy": 1.0,
+        "fuzzy_accuracy": 1.0,
+        "coverage": 1.0,
+        "exact_matches": 27,
+        "fuzzy_matches": 0,
+        "mismatches": 0,
+        "gt_empty": 0,
+        "ext_empty": 0,
+        "mismatch_examples": []
+      },
+      "area_type": {
+        "accuracy": 0.9259,
+        "fuzzy_accuracy": 0.9259,
+        "coverage": 1.0,
+        "exact_matches": 25,
+        "fuzzy_matches": 0,
+        "mismatches": 2,
+        "gt_empty": 0,
+        "ext_empty": 0,
+        "mismatch_examples": [
+          {
+            "gt": "Internal",
+            "ext": "Exterior",
+            "gt_record": "GT#17"
+          },
+          {
+            "gt": "External",
+            "ext": "Interior",
+            "gt_record": "GT#19"
+          }
+        ]
+      },
+      "material_condition": {
+        "accuracy": 0.8182,
+        "fuzzy_accuracy": 0.8182,
+        "coverage": 0.8182,
+        "exact_matches": 9,
+        "fuzzy_matches": 0,
+        "mismatches": 2,
+        "gt_empty": 16,
+        "ext_empty": 2,
+        "mismatch_examples": [
+          {
+            "gt": "Unknown",
+            "ext": "(empty)",
+            "gt_record": "GT#29"
+          },
+          {
+            "gt": "Unknown",
+            "ext": "(empty)",
+            "gt_record": "GT#30"
+          }
+        ]
+      },
+      "disturbance_potential": {
+        "accuracy": 0.8182,
+        "fuzzy_accuracy": 0.8182,
+        "coverage": 0.8182,
+        "exact_matches": 9,
+        "fuzzy_matches": 0,
+        "mismatches": 2,
+        "gt_empty": 16,
+        "ext_empty": 2,
+        "mismatch_examples": [
+          {
+            "gt": "Unknown",
+            "ext": "(empty)",
+            "gt_record": "GT#29"
+          },
+          {
+            "gt": "Unknown",
+            "ext": "(empty)",
+            "gt_record": "GT#30"
+          }
+        ]
+      }
+    },
+    "unmatched_gt": [
+      {
+        "room_name": "Lift Foyer",
+        "floor_level": "Ground",
+        "location": "Floor",
+        "product": "Floor covering",
+        "material_description": "Vinyl sheet",
+        "friable": "Non-friable",
+        "sample_no": "As Per 34511-039-001",
+        "sample_result": "Negative",
+        "area_type": "Internal",
+        "material_condition": "N/A (negative)",
+        "disturbance_potential": "N/A (negative)"
+      },
+      {
+        "room_name": "Fan Room",
+        "floor_level": "Level 1",
+        "location": "Brick Wall",
+        "product": "Expansion joint",
+        "material_description": "Mastic",
+        "friable": "Non-friable",
+        "sample_no": "34511-039-011",
+        "sample_result": "Negative",
+        "area_type": "Internal",
+        "material_condition": "N/A (negative)",
+        "disturbance_potential": "N/A (negative)"
+      },
+      {
+        "room_name": "Exterior",
+        "floor_level": "Ground",
+        "location": "Brown Walls",
+        "product": "Expansion joint",
+        "material_description": "Mastic",
+        "friable": "Non-friable",
+        "sample_no": "As Per 34511-039-014",
+        "sample_result": "Negative",
+        "area_type": "External",
+        "material_condition": "N/A (negative)",
+        "disturbance_potential": "N/A (negative)"
+      },
+      {
+        "room_name": "Property Storage",
+        "floor_level": "Ground",
+        "location": "Floor",
+        "product": "Floor covering",
+        "material_description": "Vinyl sheet",
+        "friable": "Non-friable",
+        "sample_no": "34511-039-017",
+        "sample_result": "Negative",
+        "area_type": "Internal",
+        "material_condition": "N/A (negative)",
+        "disturbance_potential": "N/A (negative)"
+      }
+    ],
+    "unmatched_ext": [
+      {
+        "room_name": "Ceiling Space",
+        "product": "Unknown",
+        "sample_no": "Not Sampled",
+        "location": "throughout Ductwork Flange mastic (brown) Asbestos Positive 34511-039- 005 Non-friable No None under normal occupation and use Low Good Low Throughout P4"
+      },
+      {
+        "room_name": "Ceiling space throughout",
+        "product": "Ductwork",
+        "sample_no": "34511-039-005",
+        "location": "Ductwork"
+      }
+    ]
+  }
+]
