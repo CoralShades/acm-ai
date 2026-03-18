@@ -738,11 +738,23 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 else:
                     raise save_err
             if not record.id:
-                logger.warning(
-                    f"[E32-S1] BuildingRecord.save() returned no ID for building "
-                    f"{building_meta_entry.building_id} — record may not have persisted"
+                # Repo returned unexpected type — query back by internal_id
+                existing = await repo_query(
+                    "SELECT id FROM building_record WHERE internal_id = $iid LIMIT 1;",
+                    {"iid": internal_id},
                 )
-                return None
+                if existing and existing[0].get("id"):
+                    record.id = existing[0]["id"]
+                    logger.info(
+                        f"[E32-S1] BuildingRecord.save() recovered ID {record.id} "
+                        f"for building {building_meta_entry.building_id} via query-back"
+                    )
+                else:
+                    logger.warning(
+                        f"[E32-S1] BuildingRecord.save() returned no ID for building "
+                        f"{building_meta_entry.building_id} — record may not have persisted"
+                    )
+                    return None
             record_id = str(record.id)
 
             logger.info(
@@ -2665,6 +2677,15 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                     raw_text=raw_text if raw_text else None,
                 )
                 await section.save()
+                if not section.id:
+                    # Query-back if save didn't return ID
+                    from open_notebook.database.repository import repo_query
+                    existing_sec = await repo_query(
+                        "SELECT id FROM acm_table_section WHERE source_id = $sid AND building_name = $bn LIMIT 1;",
+                        {"sid": str(source.id), "bn": section.building_name},
+                    )
+                    if existing_sec and existing_sec[0].get("id"):
+                        section.id = existing_sec[0]["id"]
                 if section.id:
                     section_map[building.building_id] = str(section.id)
             except Exception as e:
@@ -2735,6 +2756,10 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             # Generate enriched text for contextual embedding (E1-S14)
             acm_record.enriched_text = acm_record.get_enriched_embedding_text()
 
+            # WORKAROUND: Null out record-link fields that the SurrealDB Python
+            # client tries to parse as RecordIDs (causes "invalid string for parse")
+            acm_record.building_record_id = None
+            acm_record.parent_table_id = None
             await acm_record.save()
             saved_count += 1
 
@@ -2854,9 +2879,12 @@ agent_state.add_edge("deduplicate", "recover_no_access")
 agent_state.add_edge("recover_no_access", "save")
 agent_state.add_edge("save", END)
 
-# Compile the graph with checkpointer (required for HITL interrupt/resume in MCS6)
-_checkpointer = MemorySaver()
-graph = agent_state.compile(checkpointer=_checkpointer)
+# Compile graph WITHOUT checkpointer to avoid serialization crashes
+# (MemorySaver can't serialize Source/PipelineLogger objects via ormsgpack)
+# TODO(MCS6): Re-enable checkpointer after making graph state fully serializable
+# _checkpointer = MemorySaver()
+# graph = agent_state.compile(checkpointer=_checkpointer)
+graph = agent_state.compile()
 
 
 async def extract_acm_from_source(
@@ -2949,6 +2977,10 @@ async def extract_acm_from_source(
                 f"Deleted {deleted} existing ACM records for source {source.id}"
             )
 
+    # Ensure Source is LangGraph-serializable (RecordID fields → str)
+    if source.command is not None:
+        source.command = str(source.command)
+
     # Run the extraction graph
     initial_state: ExtractionState = {
         "source": source,
@@ -2993,13 +3025,11 @@ async def extract_acm_from_source(
     }
 
     try:
-        # MCS6: thread_id required for checkpointer (enables HITL interrupt/resume)
+        # Checkpointer disabled — no thread_id needed
         import uuid
 
         thread_id = command_id or str(uuid.uuid4())
-        graph_config: Dict[str, Any] = {
-            "configurable": {"thread_id": thread_id},
-        }
+        graph_config: Dict[str, Any] = {}
         if langfuse_callbacks:
             graph_config["callbacks"] = langfuse_callbacks
             graph_config["metadata"] = langfuse_metadata
@@ -3201,9 +3231,6 @@ async def extract_acm_from_source(
         )
     finally:
         flush_langfuse_handler(langfuse_handler)
-        # MCS6: Clean up checkpointer state for this thread to prevent memory leak
-        try:
-            if thread_id and hasattr(_checkpointer, "storage"):
-                _checkpointer.storage.pop(thread_id, None)
-        except Exception:
-            pass
+        # MCS6: Checkpointer cleanup disabled — checkpointer removed to avoid
+        # ormsgpack serialization crashes (Source/PipelineLogger objects).
+        # TODO(MCS6): Re-enable after making graph state fully serializable.

@@ -90,7 +90,24 @@ async def repo_create(table: str, data: Dict[str, Any]) -> Dict[str, Any]:
     data["updated"] = datetime.now(timezone.utc)
     try:
         async with db_connection() as connection:
-            return parse_record_ids(await connection.insert(table, data))
+            raw_result = await connection.insert(table, data)
+            parsed = parse_record_ids(raw_result)
+            # Ghost save diagnostic: log if result is not a list of dicts
+            if table in ("acm_record", "building_record", "acm_table_section"):
+                if isinstance(parsed, list) and parsed and not isinstance(parsed[0], dict):
+                    logger.error(
+                        f"[GHOST-SAVE] {table} insert returned non-dict: "
+                        f"type={type(parsed[0]).__name__} value={repr(parsed[0])[:200]}"
+                    )
+                elif isinstance(parsed, str):
+                    logger.error(
+                        f"[GHOST-SAVE] {table} insert returned string: {repr(parsed)[:200]}"
+                    )
+                elif isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
+                    logger.info(
+                        f"[SAVE-OK] {table} insert succeeded: id={parsed[0].get('id', 'NO-ID')}"
+                    )
+            return parsed
     except RuntimeError as e:
         logger.error(str(e))
         raise

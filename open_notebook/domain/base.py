@@ -150,7 +150,14 @@ class ObjectModel(BaseModel):
             result_list: List[Dict[str, Any]] = (
                 repo_result if isinstance(repo_result, list) else [repo_result]
             )
-            for key, value in result_list[0].items():
+            first_result = result_list[0] if result_list else {}
+            if not isinstance(first_result, dict):
+                logger.warning(
+                    f"Unexpected repo result type {type(first_result).__name__} "
+                    f"for {self.__class__.table_name}, skipping instance update"
+                )
+                return
+            for key, value in first_result.items():
                 if hasattr(self, key):
                     if isinstance(getattr(self, key), BaseModel):
                         setattr(self, key, type(getattr(self, key))(**value))

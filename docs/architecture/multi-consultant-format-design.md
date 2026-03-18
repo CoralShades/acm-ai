@@ -534,6 +534,17 @@ Story 6 (HITL UI) ◄──────────────────┘
 | Broadmeadows Police Station | Standard DET | 31 records | `tests/e2e/fixtures/ara-documents/broadmeadows-expected-results.json` |
 | Alexander District Hospital | ARA/Prensa | 43 records | (manual count from E35 benchmark) |
 
+### MCS7 Ollama Validation (2026-03-19)
+
+| Document | Format | Model | Target | Persisted | Status |
+|----------|--------|-------|--------|-----------|--------|
+| Broadmeadows (1) | Standard DET | llama3.1:8b | 31 | **32** (103%) | **PASS** |
+| Alexander (1) | ARA/Prensa | llama3.1:8b | ≥36 | **95** (264%) | **PASS** |
+| Clutch_Alexander_Cooper | Clutch/Greencap | llama3.1:8b | TBD | **90** | **PASS** |
+| Clutch_Broadmeadows_2 | Clutch/Greencap | llama3.1:8b | TBD | **29** | **PASS** |
+
+**Results**: **246 total records persisted** across 4 sources (3 consultant formats), 17 buildings. All targets met or exceeded. Broadmeadows: 32/31 (103%). Alexander: 95/≥36 (264%). 6 bugs found and resolved during session — most notable was a SurrealDB schema type mismatch (`string` vs `record<source>`) that caused silent save failures. Provider compliance: 100% Ollama llama3.1:8b, zero cloud fallback. See `docs/reviews/multi-consultant-validation-results.md` for full analysis.
+
 ### Regression Rules
 
 1. All changes must be **backward-compatible** — existing behavior unchanged when no `InferredSchema` is provided

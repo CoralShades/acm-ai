@@ -29,6 +29,14 @@ class AGUIEventEmitter:
 
         return core_schema.any_schema()
 
+    def model_dump(self) -> dict:
+        """Make AGUIEventEmitter serializable for LangGraph checkpointer (ormsgpack)."""
+        return {
+            "command_id": self.command_id,
+            "source_id": self.source_id,
+            "run_id": self.run_id,
+        }
+
     def __init__(self, command_id: str, source_id: str) -> None:
         self.command_id = command_id
         self.source_id = source_id

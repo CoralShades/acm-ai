@@ -154,6 +154,15 @@ class PipelineLogger:
 
         return core_schema.any_schema()
 
+    def model_dump(self) -> dict:
+        """Make PipelineLogger serializable for LangGraph checkpointer (ormsgpack)."""
+        return {
+            "run_id": self.run_id,
+            "source_id": self.source_id,
+            "total_pages": self.total_pages,
+            "command_id": self.command_id,
+        }
+
     def __init__(
         self,
         source_id: str,
