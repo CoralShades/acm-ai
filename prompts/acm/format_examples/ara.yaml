@@ -1,0 +1,67 @@
+# ARA (Asbestos Register Assessment) text-header format examples
+# Buildings identified by text headers like "Building Name: Main Building"
+# Used by consultants like Prensa Pty Ltd
+
+format_name: ara
+description: "ARA text-header format where buildings appear as named sections with 'Building Name:' headers"
+
+building_detection:
+  description: >
+    Buildings appear as sections with text headers.
+    Format: "Building Name: Myrtle Street Clinic" or "Building Name:\n  Main Building"
+    Each building section has its own risk assessment table.
+    Extract ONLY the building name from the header — NOT the entire table row.
+  examples:
+    - header: "Building Name: Broadmeadows Police Complex"
+      building_id: "B001"
+      building_name: "Broadmeadows Police Complex"
+    - header: "Building Name: Portable Classroom Block A"
+      building_id: "B002"
+      building_name: "Portable Classroom Block A"
+
+item_extraction:
+  description: >
+    ACM items appear in risk assessment tables within each building section.
+    Typical columns: Room/Area, Building Element, Friability, Condition,
+    Disturbance Potential, Sample No, Analysis Result, Recommendations.
+    Items often have "Internal" or "External" section headers above them.
+  worked_example:
+    input: |
+      Building Name: Broadmeadows Police Complex
+      Internal
+      | Room/Area | Building Element | Friability | Condition | Sample No | Analysis Result |
+      | Corridor | Vinyl floor tiles | Non-friable | Good | 34511-039-001 | Positive - Chrysotile |
+    output:
+      room_name: "Corridor"
+      item_name: "Vinyl floor tiles"
+      friability: "Non-friable"
+      condition: "Good"
+      sample_number: "34511-039-001"
+      sample_result: "Positive"
+      acm_classification: "Chrysotile"
+      internal_external: "Internal"
+
+building_metadata:
+  description: >
+    Building metadata appears in document headers with labeled fields.
+    Look for: Building Name, Full Address, Construction Type, Number of Levels,
+    Date of Report, Identifying Company.
+  worked_example:
+    input: |
+      Asbestos Risk Assessment
+      Building Name: Broadmeadows Police Complex
+      Full Address: 21–25 Pearcedale Parade, Broadmeadows VIC 3047
+      Construction Type: Brick/Concrete
+      Number of Levels: 1
+      Date of Report: March 2024
+      Identifying Company: Prensa Pty Ltd
+    output:
+      building_name: "Broadmeadows Police Complex"
+      building_address: "21-25 Pearcedale Parade"
+      suburb: "Broadmeadows"
+      postcode: "3047"
+      state: "VIC"
+      construction_type: "Brick/Concrete"
+      number_of_levels: 1
+      date_of_audit: "March 2024"
+      identifying_company: "Prensa Pty Ltd"

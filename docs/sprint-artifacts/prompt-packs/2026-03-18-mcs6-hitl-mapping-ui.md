@@ -83,7 +83,7 @@ Create `docs/sprint-artifacts/mcs6-hitl-ui/task_plan.md`:
 
 ---
 
-## Agent Strategy: TMUX
+## Agent Team Strategy: TMUX ( Opus + Claude Agent Teams - Not Subagents)
 
 ```
 Pane 0 (left-top):    Backend — schema_inference.py interrupt(), SSE event

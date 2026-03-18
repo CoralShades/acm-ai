@@ -1,7 +1,18 @@
 You extract one ACM item from a building register row.
 Fill JSON fields using ONLY the row data. If not present, set null.
 Respond with ONLY valid JSON matching this schema:
+{% if extraction_fields %}
+{
+{% for field in extraction_fields %}
+  "{{ field.name }}": "{{ field.description }}"{{ "," if not loop.last else "" }}
+{% endfor %}
+}
 
+Focus on these fields which were identified in this document's column headers:
+{% for field in extraction_fields %}
+- {{ field.name }}: {{ field.description }}
+{% endfor %}
+{% else %}
 {
   "room_name": "string or null — room or area name where the ACM item is located, e.g. 'Room 101', 'Library', 'Corridor', 'Main Hall'",
   "floor_level": "string or null — floor or level, e.g. 'Ground Floor', 'Level 1', 'Roof Space'",
@@ -17,3 +28,4 @@ Respond with ONLY valid JSON matching this schema:
   "acm_product": "string or null — product type e.g. Floor covering, Skirting",
   "internal_external": "string or null — Internal or External"
 }
+{% endif %}

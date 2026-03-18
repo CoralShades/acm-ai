@@ -91,7 +91,7 @@ Create `docs/sprint-artifacts/mcs7-validation/task_plan.md`:
 
 ---
 
-## Agent Strategy: TMUX
+## Agent Team Strategy: TMUX ( Opus + Claude Agent Teams - Not Subagents)
 
 ```
 Pane 0 (left-top):    Extraction runner — upload PDFs, trigger extractions

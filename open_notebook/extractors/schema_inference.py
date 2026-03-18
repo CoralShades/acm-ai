@@ -49,6 +49,7 @@ class InferredSchema:
     unmapped_headers: list[str] = field(
         default_factory=list
     )  # headers that couldn't be mapped
+    detected_format: Optional[str] = None  # e.g. "standard", "ara", "pipe_table"
 
 
 def compute_header_signature(headers: list[str]) -> str:
@@ -213,8 +214,86 @@ SF_TO_CANONICAL: dict[str, str] = {
     "Building_Code__c": "building_code",
 }
 
+# SF API name → ACMItemRow field name (the 13 fields the LLM outputs)
+SF_TO_ITEM_ROW_FIELD: dict[str, str] = {
+    "Room_or_Area__c": "room_name",
+    "Item_Name__c": "item_name",
+    "Friability_of_Material__c": "friability",
+    "Condition__c": "condition",
+    "NATA_Endorsed_Sample_no__c": "sample_number",
+    "Sample_Analysis_Result_Material_Status__c": "sample_result",
+    "Disturbance_Potential__c": "disturbance_potential",
+    "Specific_Location__c": "item_location",
+    "Asbestos_Type__c": "acm_classification",
+}
 
-def _build_schema_from_profile(profile: dict, header_sig: str) -> InferredSchema:
+# Default ACMItemRow field descriptions (matches the 13 hardcoded fields)
+_DEFAULT_FIELD_DESCRIPTIONS: dict[str, str] = {
+    "room_name": "room or area name, e.g. 'Room 101', 'Library', 'Corridor'",
+    "floor_level": "floor or level, e.g. 'Ground Floor', 'Level 1', 'Roof Space'",
+    "item_location": "position within the room, e.g. 'Ceiling', 'Walls', 'Floor'",
+    "item_name": "string (required) — material/product name",
+    "friability": "Friable or Non-friable",
+    "acm_classification": "ACM classification, e.g. 'Chrysotile', 'Amosite'",
+    "acm_sub_classification": "product sub-type, e.g. 'Vinyl sheet', 'Cement flat sheet'",
+    "condition": "material condition, e.g. 'Good', 'Fair', 'Poor'",
+    "disturbance_potential": "disturbance likelihood, e.g. 'Low', 'Medium', 'High'",
+    "sample_number": "lab/sample ID, e.g. '34511-039-001'",
+    "sample_result": "Positive, Negative, Assumed Positive, or Not Sampled",
+    "acm_product": "product type, e.g. 'Floor covering', 'Skirting'",
+    "internal_external": "Internal or External",
+}
+
+
+def build_extraction_fields(schema: "InferredSchema") -> list[dict[str, str]]:
+    """Build extraction_fields list from InferredSchema for Jinja template.
+
+    Returns a list of dicts with 'name' and 'description' keys, one per
+    ACMItemRow field that has a corresponding SF mapping in the schema.
+    Falls back to full default list if no useful mappings exist.
+    """
+    fields: list[dict[str, str]] = []
+    seen_names: set[str] = set()
+
+    # Map SF fields from schema to ACMItemRow field names
+    for pdf_header, sf_field in schema.column_mapping.items():
+        item_field = SF_TO_ITEM_ROW_FIELD.get(sf_field)
+        if item_field and item_field not in seen_names:
+            desc = _DEFAULT_FIELD_DESCRIPTIONS.get(
+                item_field,
+                SF_FIELD_CATALOG.get(sf_field, {}).get("description", ""),
+            )
+            # Include original PDF header in description for LLM context
+            fields.append({
+                "name": item_field,
+                "description": f"{desc} (PDF column: '{pdf_header}')",
+            })
+            seen_names.add(item_field)
+
+    # Always include core required fields if not already present
+    for core_field in ("item_name", "room_name", "sample_result"):
+        if core_field not in seen_names:
+            fields.append({
+                "name": core_field,
+                "description": _DEFAULT_FIELD_DESCRIPTIONS[core_field],
+            })
+            seen_names.add(core_field)
+
+    # If we got very few mapped fields, return None to trigger default behavior
+    if len(fields) < 4:
+        return []
+
+    # Add remaining default fields not covered by the mapping
+    for name, desc in _DEFAULT_FIELD_DESCRIPTIONS.items():
+        if name not in seen_names:
+            fields.append({"name": name, "description": desc})
+
+    return fields
+
+
+def _build_schema_from_profile(
+    profile: dict, header_sig: str, detected_format: Optional[str] = None
+) -> InferredSchema:
     """Build an InferredSchema from a cached format profile dict."""
     column_mapping = profile.get("column_mapping", {})
     canonical_mapping = profile.get("canonical_mapping", {})
@@ -253,6 +332,7 @@ def _build_schema_from_profile(profile: dict, header_sig: str) -> InferredSchema
         consultant_name=profile.get("consultant_name"),
         profile_id=profile.get("id"),
         header_signature=header_sig,
+        detected_format=detected_format,
     )
 
 
@@ -373,7 +453,15 @@ async def schema_inference_node(state: dict) -> dict:
                 f"consultant={cached_profile.get('consultant_name')}, "
                 f"sample_count={cached_profile.get('sample_count', 1)}"
             )
-            inferred_schema = _build_schema_from_profile(cached_profile, header_sig)
+            # Resolve detected_format from document_metadata
+            cached_format = (
+                state.get("document_metadata", {}).get("format_name")
+                if state.get("document_metadata")
+                else None
+            )
+            inferred_schema = _build_schema_from_profile(
+                cached_profile, header_sig, detected_format=cached_format
+            )
             await increment_sample_count(cached_profile["id"])
             return {"inferred_schema": inferred_schema}
 
@@ -478,6 +566,13 @@ async def schema_inference_node(state: dict) -> dict:
                 f"schema_inference_node: failed to save format profile: {save_err}"
             )
 
+        # Resolve detected_format from document_metadata or LLM response
+        detected_format = (
+            state.get("document_metadata", {}).get("format_name")
+            if state.get("document_metadata")
+            else None
+        ) or result.get("detected_format")
+
         inferred_schema = InferredSchema(
             column_mapping=column_mapping,
             canonical_mapping=canonical_mapping,
@@ -489,6 +584,7 @@ async def schema_inference_node(state: dict) -> dict:
             profile_id=profile_id,
             mappings=detailed_mappings,
             unmapped_headers=unmapped,
+            detected_format=detected_format,
         )
 
         logger.info(

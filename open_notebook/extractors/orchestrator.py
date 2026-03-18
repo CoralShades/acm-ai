@@ -366,11 +366,20 @@ async def _v3_extract_building_meta(
             model, _get_v3_building_schema(), "BuildingExtractionResult"
         )
 
+        # MCS5: Inject detected_format for format-conditional examples
+        inferred = state.get("inferred_schema")
+        detected_format = (
+            inferred.detected_format
+            if inferred and hasattr(inferred, "detected_format")
+            else None
+        )
+
         prompter = Prompter(prompt_template="acm/v3_building_extraction")
         system_prompt = prompter.render(
             data={
                 "building_context": prompt_ctx,
                 "picklists": picklists,
+                "detected_format": detected_format,
             }
         )
 

@@ -1,0 +1,63 @@
+# Pipe-table format examples (Greencap, Clutch, and similar consultants)
+# Buildings identified via pipe-delimited key-value rows
+# Format: | Building Name: | <value> | Number of Levels: | <value> |
+
+format_name: pipe_table
+description: "Pipe-delimited table format where building metadata and ACM items appear in pipe-separated rows"
+
+building_detection:
+  description: >
+    Buildings appear as sections with pipe-delimited metadata rows.
+    Format: "| Building Name: | Myrtle Street Clinic | Number of Levels: | 2 |"
+    Each building section has its own risk assessment table.
+    Extract the VALUE cells, not the label cells.
+  examples:
+    - header: "| Building Name: | Main Office Block | Number of Levels: | 3 |"
+      building_id: "B001"
+      building_name: "Main Office Block"
+      levels: 3
+    - header: "| Site Details | Building: Storage Shed | Type: Timber Frame |"
+      building_id: "B002"
+      building_name: "Storage Shed"
+      construction: "Timber Frame"
+
+item_extraction:
+  description: >
+    ACM items appear in pipe-delimited tables.
+    Columns are separated by | characters.
+    Headers may include: Location, Material, Condition, Friability,
+    Sample Number, Result, Recommendation.
+    Some consultants use abbreviated column names.
+  worked_example:
+    input: |
+      | Location | Material | Condition | F/NF | Sample # | Result | Action |
+      | Kitchen ceiling | Fibrous cement sheet | Fair | NF | GC-2024-001 | Positive | Monitor |
+    output:
+      room_name: "Kitchen"
+      item_location: "ceiling"
+      item_name: "Fibrous cement sheet"
+      condition: "Fair"
+      friability: "Non-friable"
+      sample_number: "GC-2024-001"
+      sample_result: "Positive"
+
+building_metadata:
+  description: >
+    Building metadata is embedded in pipe-delimited header rows.
+    Look for key-value pairs in format: | Label: | Value |
+    Common labels: Site Details, Building Name, Building, Address, Date, Consultant.
+  worked_example:
+    input: |
+      | Site Details | |
+      | Building Name: | Eastern Community Centre |
+      | Address: | 45 Smith Road, Oakleigh VIC 3166 |
+      | Date of Survey: | 15 January 2024 |
+      | Consultant: | Greencap Pty Ltd |
+    output:
+      building_name: "Eastern Community Centre"
+      building_address: "45 Smith Road"
+      suburb: "Oakleigh"
+      postcode: "3166"
+      state: "VIC"
+      date_of_audit: "15 January 2024"
+      identifying_company: "Greencap Pty Ltd"

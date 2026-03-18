@@ -417,6 +417,12 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
                 else ""
             ),
         }
+    # MCS5: Inject detected_format from InferredSchema for format-conditional prompts
+    inferred = state.get("inferred_schema")
+    if inferred and hasattr(inferred, "detected_format") and inferred.detected_format:
+        if meta_context is None:
+            meta_context = {}
+        meta_context["detected_format"] = inferred.detected_format
 
     if pl:
         pl.stage_progress(StageId.STRUCTURE, "Compiling building inventory...")
@@ -1130,6 +1136,15 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                             building_meta_entry.name or building_meta_entry.building_id
                         )
 
+                        # MCS5: Build dynamic extraction_fields from InferredSchema
+                        _extraction_fields = None
+                        _inferred = state.get("inferred_schema")
+                        if _inferred and hasattr(_inferred, "column_mapping") and _inferred.column_mapping:
+                            from open_notebook.extractors.schema_inference import (
+                                build_extraction_fields,
+                            )
+                            _extraction_fields = build_extraction_fields(_inferred) or None
+
                         # Extract all rows -> list[ACMExtractionRecord]
                         records = await extract_all_rows(
                             rows=rows,
@@ -1138,6 +1153,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                             source_id=source_id_str,
                             building_id=building_meta_entry.building_id,
                             langfuse_handler=langfuse_handler,
+                            extraction_fields=_extraction_fields,
                         )
 
                         # Populate building_record_id FK

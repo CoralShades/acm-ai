@@ -138,12 +138,12 @@ PDF → Docling tables → Extract column headers → LLM schema inference →
 
 ---
 
-## Agent Strategy
+## Agent Team Strategy: TMUX ( Opus + Claude Agent Teams - Not Subagents)
 
-Strategy: SUBAGENT-DISPATCH
+Strategy: Spawn Agent Team and Dispatch
 Use the Task tool to dispatch independent research tasks in parallel.
 
-Subagents:
+Agent Team Roles:
 - codebase-scanner: Grep for all SAMP/ARA/consultant-specific patterns across the codebase. Return: list of files, line numbers, pattern descriptions
 - docling-analyzer: Read Docling adapter + table structure to understand column header extraction capabilities. Return: how column headers flow through the system
 - sf-schema-mapper: Read SF field summaries to understand target schema. Return: all required fields, picklist values, dependent relationships

@@ -63,7 +63,10 @@ Extract ONLY the following Salesforce Building__c fields. Leave fields `null` if
 9. **building_sub_category**: Extract the sub-category value if present in the document; it must be consistent with `building_category`. Leave null if not stated.
 10. **building_risk_rating**: Must be exactly "Low", "Medium", or "High" if present. Leave null if not stated.
 
-## Worked Example 1 — Prensa ARA Format
+## Worked Example
+{% set _format = detected_format or "" %}
+{% if _format == "ara" %}
+### ARA Text-Header Format
 
 **INPUT (document header):**
 ```
@@ -99,8 +102,44 @@ Identifying Company: Prensa Pty Ltd
   "extraction_notes": null
 }
 ```
+{% elif _format == "pipe_table" %}
+### Pipe-Table Format (Greencap / Clutch)
 
-## Worked Example 2 — Standard DET Format
+**INPUT (document header):**
+```
+| Site Details | |
+| Building Name: | Eastern Community Centre |
+| Address: | 45 Smith Road, Oakleigh VIC 3166 |
+| Date of Survey: | 15 January 2024 |
+| Consultant: | Greencap Pty Ltd |
+| Number of Levels: | 2 |
+```
+
+**OUTPUT:**
+```json
+{
+  "building_name": "Eastern Community Centre",
+  "building_type": null,
+  "building_category": null,
+  "building_address": "45 Smith Road",
+  "suburb": "Oakleigh",
+  "postcode": "3166",
+  "estimated_year_built": null,
+  "construction_type": null,
+  "date_of_audit": "15 January 2024",
+  "frequency_of_use": null,
+  "identifying_company": "Greencap Pty Ltd",
+  "state": "VIC",
+  "number_of_levels": 2,
+  "owned_or_leased": null,
+  "building_sub_category": null,
+  "building_risk_rating": null,
+  "extraction_confidence": "high",
+  "extraction_notes": null
+}
+```
+{% else %}
+### Standard DET Format
 
 **INPUT (document header):**
 ```
@@ -136,6 +175,7 @@ Frequency of Use: Daily
   "extraction_notes": null
 }
 ```
+{% endif %}
 
 ## Output Format
 
