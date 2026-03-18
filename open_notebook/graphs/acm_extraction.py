@@ -92,6 +92,10 @@ from open_notebook.extractors.pipeline_event_bus import (
 )
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.extractors.schema_inference import (
+    InferredSchema,
+    schema_inference_node,
+)
 from open_notebook.extractors.token_limit_validator import TokenLimitValidator
 from open_notebook.extractors.validators.acm_validator import (
     CorrectionStats,
@@ -175,6 +179,8 @@ class ExtractionState(TypedDict):
     # Populated by extract_building_node, consumed by extract_items_node to
     # avoid duplicate Phase 1 LLM calls.
     building_meta_cache: Dict[str, Any]
+    # MCS2: Schema inference result for multi-consultant format adaptability
+    inferred_schema: Optional[InferredSchema]
 
 
 def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
@@ -2768,6 +2774,9 @@ agent_state.add_node(
     "save_intelligence", save_intelligence_node
 )  # E30-S9: Persist pre-extraction intelligence
 agent_state.add_node(
+    "schema_inference", schema_inference_node
+)  # MCS2: Schema inference
+agent_state.add_node(
     "extract_building", extract_building_node
 )  # E32-S1: Building__c Phase 1 extraction
 agent_state.add_node(
@@ -2785,8 +2794,9 @@ agent_state.add_node("save", save_records)
 agent_state.add_edge(START, "metadata_and_structure")
 agent_state.add_edge("metadata_and_structure", "inventory")
 agent_state.add_edge("inventory", "save_intelligence")
-# E32-S1: Building__c extraction runs between save_intelligence and extract_items
-agent_state.add_edge("save_intelligence", "extract_building")
+# MCS2: Schema inference runs between save_intelligence and extract_building
+agent_state.add_edge("save_intelligence", "schema_inference")
+agent_state.add_edge("schema_inference", "extract_building")
 # E32-S2: Item__c extraction runs after building extraction
 agent_state.add_edge("extract_building", "extract_items")
 agent_state.add_edge("extract_items", "normalize_to_sf")
