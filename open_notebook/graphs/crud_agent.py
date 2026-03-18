@@ -1,17 +1,23 @@
-"""CRUD Agent — conversational CRUD chat for job-scoped ACM data (E19-S8).
+"""CRUD Agent — conversational CRUD chat for job-scoped ACM data.
 
 Provides read + write operations on ACM records, scoped to a specific job
 (source_id). All writes use the preview_write → user approval → graph-routed
 execution protocol with a structural HITL barrier.
+
+Graph topology:
+  START → route_entry → (HITL approval?) → execute_write → END
+                      → (normal?) → agent → (tool_calls?) → tools → agent → ... → END
 """
 
 import asyncio
 import concurrent.futures
 import json
+import os
 import re
 from typing import Annotated, Optional
 
-from langchain_core.messages import AIMessage, SystemMessage
+from jinja2 import Environment, FileSystemLoader
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -21,43 +27,38 @@ from loguru import logger
 from typing_extensions import TypedDict
 
 from open_notebook.graphs.crud_tools import (
+    ask_user_choice,
     execute_pending_write,
     get_crud_context,
+    get_schema_info,
+    preview_bulk_write,
     preview_write,
-    query_job_records,
     set_crud_context,
+    surreal_query,
+    undo_last_write,
 )
+from open_notebook.graphs.guardrails import classify_intent
 from open_notebook.graphs.utils import provision_langchain_model_with_tools
+
+# --- Jinja2 prompt environment ---
+_prompts_dir = os.path.join(os.path.dirname(__file__), "..", "..", "prompts")
+_jinja_env = Environment(
+    loader=FileSystemLoader(os.path.abspath(_prompts_dir)),
+    autoescape=False,
+)
 
 
 class CRUDAgentState(TypedDict):
     messages: Annotated[list, add_messages]
     source_id: Optional[str]
     model_id: Optional[str]
+    intent: Optional[str]
 
 
-# Read + preview tools only — the LLM cannot call execute_pending_write directly.
-# Write execution is handled structurally by the graph's execute_write node
-# after the user approves via the frontend HITL dialog.
-crud_tools = [query_job_records, preview_write]
-
-SYSTEM_PROMPT = """You are an ACM (Asbestos Containing Material) data assistant with the ability to read and write records for the current job.
-
-IMPORTANT RULES:
-1. You are scoped to ONE JOB ONLY. Never modify records from other jobs.
-2. ALWAYS call preview_write before any UPDATE, DELETE, or INSERT operation.
-3. After preview_write, the UI shows an approval dialog. The system handles execution automatically when the user clicks Approve.
-4. When the user says "Rejected" or "Cancel", acknowledge and do NOT attempt further writes for that operation.
-5. NEVER call execute_pending_write. The system handles execution automatically when the user clicks Approve.
-6. All field values must match the ACM register schema (e.g., friable must be "Friable" or "Non-friable").
-7. For sample_result, valid values are: "Positive", "Negative", "Not Sampled", "No Access".
-8. Be helpful — explain what you're doing in plain English.
-
-You have these tools:
-- query_job_records: Read records, count, filter
-- preview_write: Preview an update/delete before executing (shows approval dialog)
-
-WORKFLOW: preview_write → user approves via UI → system executes automatically → confirm success."""
+# Tool sets by intent
+_read_tools = [surreal_query, get_schema_info, ask_user_choice]
+_write_tools = [surreal_query, preview_write, preview_bulk_write, ask_user_choice, undo_last_write]
+_all_tools = [surreal_query, preview_write, preview_bulk_write, get_schema_info, ask_user_choice, undo_last_write]
 
 
 def _extract_source_id_from_messages(messages: list) -> Optional[str]:
@@ -71,19 +72,15 @@ def _extract_source_id_from_messages(messages: list) -> Optional[str]:
     return None
 
 
-def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
-    """CRUD agent node — calls model with CRUD tools bound."""
+def _resolve_source_id(state: CRUDAgentState, config: RunnableConfig) -> Optional[str]:
+    """Resolve source_id from state, messages, or config."""
     source_id = state.get("source_id")
-    logger.debug(f"CRUD agent state keys: {list(state.keys())}, source_id from state: {source_id}")
 
-    # Fallback: CopilotKit may not sync useCoAgent state before first message.
-    # Extract source_id from CopilotKit's makeSystemMessage if not in state.
     if not source_id:
         source_id = _extract_source_id_from_messages(state.get("messages", []))
         if source_id:
             logger.info(f"CRUD agent extracted source_id from messages: {source_id}")
 
-    # Fallback 2: check config.configurable
     if not source_id:
         source_id = config.get("configurable", {}).get("source_id")
         if source_id:
@@ -91,16 +88,80 @@ def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
 
     if source_id:
         set_crud_context(source_id)
-        logger.info(f"CRUD context set to {source_id}")
     else:
         logger.warning("CRUD agent: No source_id found in state, messages, or config!")
 
-    # Include source_id in the system prompt so the LLM knows the scope
-    system_prompt = SYSTEM_PROMPT
-    if source_id:
-        system_prompt += f"\n\nCurrent job source: {source_id}. All queries and writes are scoped to this job. Always pass this source_id context when calling tools."
+    return source_id
 
-    payload = [SystemMessage(content=system_prompt)] + state.get("messages", [])
+
+def _build_system_prompt(source_id: Optional[str]) -> str:
+    """Build the system prompt using the Jinja2 template."""
+    try:
+        template = _jinja_env.get_template("crud/crud_system.jinja")
+        return template.render(source_id=source_id or "unknown")
+    except Exception:
+        # Fallback if template is missing
+        prompt = (
+            "You are an ACM data assistant. Use surreal_query for reads "
+            "and preview_write for writes. Always preview before writing."
+        )
+        if source_id:
+            prompt += f"\n\nCurrent job source: {source_id}."
+        return prompt
+
+
+def route_entry(state: CRUDAgentState) -> str:
+    """Route at graph entry: intercept user approval messages for pending writes.
+
+    This is the structural HITL barrier — approval messages are handled by the
+    execute_write node directly, never reaching the LLM.
+
+    For normal messages, classify intent and route appropriately.
+    """
+    messages = state.get("messages", [])
+    if not messages:
+        return "agent"
+
+    last_msg = messages[-1]
+    content = getattr(last_msg, "content", "")
+
+    # Check for HITL approval pattern (single and bulk operations)
+    if isinstance(content, str) and re.search(
+        r"Approved\.\s*Execute operation #\w+", content
+    ):
+        return "execute_write"
+
+    return "agent"
+
+
+def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
+    """CRUD agent node — classifies intent, selects tools, calls model."""
+    source_id = _resolve_source_id(state, config)
+
+    # Classify intent from last user message
+    messages = state.get("messages", [])
+    last_user_msg = ""
+    for msg in reversed(messages):
+        if hasattr(msg, "type") and msg.type == "human":
+            last_user_msg = getattr(msg, "content", "")
+            break
+        elif isinstance(msg, HumanMessage):
+            last_user_msg = msg.content
+            break
+
+    intent = classify_intent(last_user_msg) if last_user_msg else "general"
+    logger.info(f"CRUD agent classified intent: {intent} for: {last_user_msg[:80]}")
+
+    # Select tools based on intent
+    if intent == "write":
+        tools = _write_tools
+    elif intent in ("read", "analytics"):
+        tools = _read_tools
+    else:
+        tools = _all_tools
+
+    system_prompt = _build_system_prompt(source_id)
+    payload = [SystemMessage(content=system_prompt)] + messages
 
     model_id = state.get("model_id") or config.get("configurable", {}).get("model_id")
 
@@ -113,7 +174,7 @@ def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
                     str(payload),
                     model_id,
                     "chat",
-                    tools=crud_tools,
+                    tools=tools,
                     max_tokens=4096,
                 )
             )
@@ -131,14 +192,14 @@ def call_crud_agent(state: CRUDAgentState, config: RunnableConfig) -> dict:
                 str(payload),
                 model_id,
                 "chat",
-                tools=crud_tools,
+                tools=tools,
                 max_tokens=4096,
             )
         )
 
     response = model.invoke(payload)
-    logger.debug(f"CRUD agent response: {response}")
-    return {"messages": [response]}
+    logger.debug(f"CRUD agent response type: {type(response).__name__}")
+    return {"messages": [response], "intent": intent}
 
 
 def should_continue(state: CRUDAgentState) -> str:
@@ -150,24 +211,6 @@ def should_continue(state: CRUDAgentState) -> str:
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"
     return END
-
-
-def route_entry(state: CRUDAgentState) -> str:
-    """Route at graph entry: intercept user approval messages for pending writes.
-
-    This is the structural HITL barrier — approval messages are handled by the
-    execute_write node directly, never reaching the LLM.
-    """
-    messages = state.get("messages", [])
-    if not messages:
-        return "agent"
-    last_msg = messages[-1]
-    content = getattr(last_msg, "content", "")
-    if isinstance(content, str) and re.search(
-        r"Approved\.\s*Execute operation #\w+", content
-    ):
-        return "execute_write"
-    return "agent"
 
 
 def execute_write_node(state: CRUDAgentState) -> dict:
@@ -223,12 +266,8 @@ def execute_write_node(state: CRUDAgentState) -> dict:
     return {"messages": [AIMessage(content=result)]}
 
 
-# Build the graph — structural HITL barrier:
-# START → route_entry → agent (normal) or execute_write (user approval)
-# agent → should_continue → tools/END
-# tools → agent
-# execute_write → END
-_tool_node = ToolNode(crud_tools)
+# Build the graph
+_tool_node = ToolNode(_all_tools)
 
 _builder = StateGraph(CRUDAgentState)
 _builder.add_node("agent", call_crud_agent)

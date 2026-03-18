@@ -9,6 +9,7 @@ import json
 import re
 
 from ag_ui.core import RunAgentInput
+from ag_ui.encoder import EventEncoder
 from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
 from fastapi import APIRouter, Request
 from loguru import logger
@@ -116,17 +117,29 @@ def register_crud_agui_endpoint(app) -> None:
                             break
 
             # Inject source_id into state so LangGraph receives it
+            # Also set thread_id for session persistence (per-source conversation)
             if source_id:
                 state = dict(input_data.state) if input_data.state else {}
                 state["source_id"] = source_id
-                input_data = input_data.model_copy(update={"state": state})
-                logger.info(f"CRUD endpoint injected source_id={source_id}")
+                thread_id = f"crud_{source_id.replace(':', '_')}"
+                input_data = input_data.model_copy(update={
+                    "state": state,
+                    "thread_id": thread_id,
+                })
+                logger.info(f"CRUD endpoint injected source_id={source_id}, thread_id={thread_id}")
             else:
                 logger.warning("CRUD endpoint: no source_id found in state, context, or messages")
 
+            accept_header = request.headers.get("accept")
+            encoder = EventEncoder(accept=accept_header)
+
+            async def event_generator():
+                async for event in crud_agent.run(input_data):
+                    yield encoder.encode(event)
+
             return StreamingResponse(
-                crud_agent.run(input_data),
-                media_type="text/event-stream",
+                event_generator(),
+                media_type=encoder.get_content_type(),
             )
 
         logger.info("AG-UI CRUD chat endpoint registered at /api/agui/crud-chat (custom)")

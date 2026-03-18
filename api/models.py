@@ -526,8 +526,8 @@ class ACMExtractRequest(BaseModel):
         default=False, description="Delete existing records before re-extraction"
     )
     mode: str = Field(
-        default="standard",
-        description="Extraction mode: 'standard' or 'ai_enhanced'",
+        default="ai_enhanced",
+        description="Extraction mode: always 'ai_enhanced' (standard mode removed)",
     )
 
 

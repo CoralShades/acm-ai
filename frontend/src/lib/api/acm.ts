@@ -82,7 +82,7 @@ export const acmApi = {
     const response = await apiClient.post<ACMExtractResponse>('/acm/extract', {
       source_id: sourceId,
       force: opts?.force ?? false,
-      mode: opts?.mode ?? 'standard',
+      mode: opts?.mode ?? 'ai_enhanced',
     })
     return response.data
   },

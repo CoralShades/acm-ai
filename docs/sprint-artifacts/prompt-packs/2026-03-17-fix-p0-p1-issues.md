@@ -24,7 +24,7 @@ Use /dispatching-parallel-agents to run 3 tracks concurrently:
 
 #### Track A: Backend/Worker (6 bugs)
 
-Agent: backend-specialist | Model: sonnet
+Agent: backend-specialist | Model: opus
 
 **A1. BUG-CORRECT-BYPASS** — `should_correct` node in `acm_extraction.py`
 - The routing condition only checks `with_issues > 0` but ignores `rejected > 0`
@@ -60,7 +60,7 @@ Agent: backend-specialist | Model: sonnet
 
 #### Track B: API (2 bugs)
 
-Agent: backend-specialist | Model: sonnet
+Agent: backend-specialist | Model: opus
 
 **B1. BUG-BACKFILL-500** — `api/routers/acm.py`
 - `source.name` → `source.title` (AttributeError)
@@ -75,7 +75,7 @@ Agent: backend-specialist | Model: sonnet
 
 #### Track C: Frontend (3 bugs)
 
-Agent: frontend-specialist | Model: sonnet
+Agent: frontend-specialist | Model: opus
 
 **C1. BUG-HITL-INFINITE** — `frontend/src/components/jobs/CrudToolRenderers.tsx`
 - useEffect dependency loop causes infinite re-render

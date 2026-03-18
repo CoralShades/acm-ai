@@ -118,7 +118,7 @@ function JobsPageContent() {
           <div>
             <h1 className="text-2xl font-bold">Jobs</h1>
             <p className="text-muted-foreground">
-              Track extraction and review progress for your SAMP documents
+              Track extraction and review progress for your documents
             </p>
           </div>
           <Button onClick={openSourceDialog} className="flex-shrink-0">
@@ -131,7 +131,7 @@ function JobsPageContent() {
           <EmptyState
             icon={ClipboardList}
             title="No jobs yet"
-            description="Upload your first SAMP document to start extracting ACM register data."
+            description="Upload your first document to start extracting ACM register data."
             action={
               <Button onClick={openSourceDialog}>
                 <Plus className="mr-2 h-4 w-4" />

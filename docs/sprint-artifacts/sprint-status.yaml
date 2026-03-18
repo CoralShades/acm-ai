@@ -660,6 +660,25 @@ development_status:
   dogfood-fix-cascade-delete-orphaned-2026-03-17: done  # Commit 0785f1b8. Source delete now cascade-cleans: uploaded PDF file, reference edges, command+agui_events, chat refers_to. New POST /api/sources/cleanup-orphaned-files endpoint. First run deleted 92 orphaned files (149MB→0MB).
 
   # ─────────────────────────────────────────────────────
+  # CRUD Chat Pipeline Enhancement (2026-03-17)
+  # Branch: ACMV3
+  # Implementation: DONE (7 tools, migration 53, 70/70 unit tests, frontend build clean)
+  # E2E Testing: IN PROGRESS — 5/11 browser tests PASS, 1 PARTIAL (T10 write flow)
+  # Tools: surreal_query (upgraded), preview_write (upgraded+old_value), preview_bulk_write (NEW),
+  #   get_schema_info (NEW), ask_user_choice (NEW), undo_last_write (NEW),
+  #   execute_pending_write (upgraded with bulk branch)
+  # Migration 53: crud_audit table with old_value + new_value fields for undo support
+  # 3 bugs fixed during E2E: SurrealDB TYPE any (schema), MemorySaver (session), EventEncoder (SSE)
+  # Known bug: BUG-4 AG-UI adapter crashes on execute_write_node AIMessage (HITL flow blocked)
+  # Files: 13 changed (api/models.py, api/routers/agui_chat.py, crud_tools.py, crud_agent.py,
+  #   guardrails.py, UploadWizard.tsx, CrudToolRenderers.tsx, QuickUploadDialog.tsx,
+  #   acm.ts, tool-labels.ts, migrations/53.surrealql, migrations/53_down.surrealql,
+  #   async_migrate.py)
+  # Artifacts: docs/sprint-artifacts/e2e-chat-test/e2e-crud-chat-test-report.md
+  # ─────────────────────────────────────────────────────
+  crud-chat-pipeline-enhancement-2026-03-17: in_progress  # Implementation DONE, E2E IN PROGRESS. 7 tools upgraded/added. Migration 53 (crud_audit old_value). HITL barrier enforced via graph routing. 70/70 unit tests pass. Frontend build clean. E2E: T01 PASS (page load), T03 PASS (count query), T04 PASS (buildings query), T10 PARTIAL (backend interrupt PASS, frontend HITL dialog blocked by BUG-4 AIMessage crash in AG-UI adapter), T15-T16 PASS (SSE streaming). BUG-4 pending fix.
+
+  # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
   # Branch: ACMV3
   # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
