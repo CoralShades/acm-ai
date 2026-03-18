@@ -96,6 +96,39 @@ class BulkCompleteData(BaseModel):
     duration_ms: int
 
 
+class SchemaMappingReviewMappingItem(BaseModel):
+    """Single column mapping for HITL review."""
+
+    pdf_header: str
+    sf_field: str
+    confidence: float
+
+
+class SchemaMappingReviewData(BaseModel):
+    """Payload for hitl.schema_mapping_review.
+
+    Sent when schema inference confidence < 0.8 and user confirmation
+    is required before extraction continues.
+    """
+
+    source_id: str
+    mappings: List[SchemaMappingReviewMappingItem]
+    unmapped_headers: List[str] = []
+    overall_confidence: float
+    detected_consultant: Optional[str] = None
+    header_signature: str = ""
+
+
+class SchemaMappingResumedData(BaseModel):
+    """Payload for hitl.schema_mapping_resumed.
+
+    Emitted after the user responds and extraction resumes.
+    """
+
+    action: str  # "approve", "modify", "reject"
+    mappings_confirmed: int = 0
+
+
 # ---------------------------------------------------------------------------
 # V3 event envelope and typed subclasses
 # ---------------------------------------------------------------------------
@@ -171,6 +204,20 @@ class BulkCompleteEvent(V3PipelineEvent):
     data: BulkCompleteData  # type: ignore[assignment]
 
 
+class SchemaMappingReviewEvent(V3PipelineEvent):
+    """Emitted when schema inference confidence < 0.8 — HITL pause."""
+
+    type: Literal["hitl.schema_mapping_review"] = "hitl.schema_mapping_review"
+    data: SchemaMappingReviewData  # type: ignore[assignment]
+
+
+class SchemaMappingResumedEvent(V3PipelineEvent):
+    """Emitted when the user responds and extraction resumes."""
+
+    type: Literal["hitl.schema_mapping_resumed"] = "hitl.schema_mapping_resumed"
+    data: SchemaMappingResumedData  # type: ignore[assignment]
+
+
 # Convenience export for typed-subclass consumers
 V3_EVENT_TYPES = (
     ExtractionStartedEvent,
@@ -181,6 +228,8 @@ V3_EVENT_TYPES = (
     AIValidationCompleteEvent,
     BulkProgressEvent,
     BulkCompleteEvent,
+    SchemaMappingReviewEvent,
+    SchemaMappingResumedEvent,
 )
 
 

@@ -17,7 +17,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from ai_prompter import Prompter
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command
 from loguru import logger
 from pydantic import ValidationError
 from typing_extensions import TypedDict
@@ -2852,8 +2854,9 @@ agent_state.add_edge("deduplicate", "recover_no_access")
 agent_state.add_edge("recover_no_access", "save")
 agent_state.add_edge("save", END)
 
-# Compile the graph
-graph = agent_state.compile()
+# Compile the graph with checkpointer (required for HITL interrupt/resume in MCS6)
+_checkpointer = MemorySaver()
+graph = agent_state.compile(checkpointer=_checkpointer)
 
 
 async def extract_acm_from_source(
@@ -2990,16 +2993,100 @@ async def extract_acm_from_source(
     }
 
     try:
+        # MCS6: thread_id required for checkpointer (enables HITL interrupt/resume)
+        import uuid
+
+        thread_id = command_id or str(uuid.uuid4())
+        graph_config: Dict[str, Any] = {
+            "configurable": {"thread_id": thread_id},
+        }
         if langfuse_callbacks:
-            result = await graph.ainvoke(
-                initial_state,
-                config={
-                    "callbacks": langfuse_callbacks,
-                    "metadata": langfuse_metadata,
-                },
+            graph_config["callbacks"] = langfuse_callbacks
+            graph_config["metadata"] = langfuse_metadata
+
+        result = await graph.ainvoke(initial_state, config=graph_config)
+
+        # MCS6: Handle HITL interrupt from schema_inference_node
+        if "__interrupt__" in result and result["__interrupt__"]:
+            from open_notebook.extractors.hitl_registry import get_hitl_registry
+            from open_notebook.extractors.pipeline_event_bus import (
+                SchemaMappingResumedData,
+                SchemaMappingResumedEvent,
+                SchemaMappingReviewData,
+                SchemaMappingReviewEvent,
+                SchemaMappingReviewMappingItem,
             )
-        else:
-            result = await graph.ainvoke(initial_state)
+
+            interrupt_list = result["__interrupt__"]
+            interrupt_value = (
+                interrupt_list[0].value
+                if hasattr(interrupt_list[0], "value")
+                else interrupt_list[0]
+            )
+            operation_id = command_id or thread_id
+
+            logger.info(
+                f"[HITL] Schema mapping review interrupt for operation "
+                f"{operation_id}, confidence={interrupt_value.get('overall_confidence')}"
+            )
+
+            # Emit SSE event for HITL review
+            bus = get_event_bus()
+            await bus.publish(
+                SchemaMappingReviewEvent(
+                    operation_id=operation_id,
+                    data=SchemaMappingReviewData(
+                        source_id=interrupt_value.get("source_id", source_id_str),
+                        mappings=[
+                            SchemaMappingReviewMappingItem(**m)
+                            for m in interrupt_value.get("mappings", [])
+                        ],
+                        unmapped_headers=interrupt_value.get("unmapped_headers", []),
+                        overall_confidence=interrupt_value.get(
+                            "overall_confidence", 0.0
+                        ),
+                        detected_consultant=interrupt_value.get("detected_consultant"),
+                        header_signature=interrupt_value.get("header_signature", ""),
+                    ),
+                )
+            )
+
+            # Register and wait for user response via HITL registry
+            registry = get_hitl_registry()
+            registry.register(operation_id, interrupt_value)
+
+            try:
+                user_response = await registry.wait_for_response(
+                    operation_id, timeout=600.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"[HITL] Timeout waiting for user response on {operation_id}, "
+                    "resuming with auto-approve"
+                )
+                user_response = {"action": "approve"}
+
+            # Resume the graph with the user's response
+            logger.info(
+                f"[HITL] Resuming extraction for {operation_id} with "
+                f"action={user_response.get('action')}"
+            )
+            result = await graph.ainvoke(
+                Command(resume=user_response), config=graph_config
+            )
+
+            # Emit SSE event for HITL resumed
+            await bus.publish(
+                SchemaMappingResumedEvent(
+                    operation_id=operation_id,
+                    data=SchemaMappingResumedData(
+                        action=user_response.get("action", "approve"),
+                        mappings_confirmed=len(
+                            user_response.get("mappings", [])
+                        ),
+                    ),
+                )
+            )
 
         extraction_result: ACMExtractionResult = result.get(
             "extraction_result", ACMExtractionResult()
@@ -3114,3 +3201,9 @@ async def extract_acm_from_source(
         )
     finally:
         flush_langfuse_handler(langfuse_handler)
+        # MCS6: Clean up checkpointer state for this thread to prevent memory leak
+        try:
+            if thread_id and hasattr(_checkpointer, "storage"):
+                _checkpointer.storage.pop(thread_id, None)
+        except Exception:
+            pass

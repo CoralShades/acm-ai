@@ -4,9 +4,10 @@ CRUD endpoints for consultant format profiles — cached column header
 to Salesforce field mappings keyed by header signature.
 
 Story: Multi-Consultant Story 3 — Format Profile Registry
+Story: Multi-Consultant Story 6 — HITL Mapping Confirmation UI
 """
 
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from loguru import logger
@@ -18,6 +19,7 @@ from open_notebook.extractors.format_profile_repository import (
     list_profiles,
     save_profile,
 )
+from open_notebook.extractors.hitl_registry import get_hitl_registry
 from open_notebook.extractors.schema_inference import compute_header_signature
 
 router = APIRouter()
@@ -129,6 +131,113 @@ async def delete_format_profile(profile_id: str):
     except Exception as e:
         logger.error(f"Failed to delete format profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# MCS6: HITL Mapping Confirmation
+# ---------------------------------------------------------------------------
+
+
+class HITLMappingItem(BaseModel):
+    """A single column mapping in a HITL response."""
+
+    pdf_header: str
+    sf_field: str
+    confidence: float = 1.0
+
+
+class HITLResumeRequest(BaseModel):
+    """Request body for resuming extraction after HITL review."""
+
+    operation_id: str = Field(..., description="Operation ID of the paused extraction")
+    action: str = Field(
+        ...,
+        description="User action: 'approve', 'modify', or 'reject'",
+        pattern="^(approve|modify|reject)$",
+    )
+    mappings: Optional[List[HITLMappingItem]] = Field(
+        None,
+        description="Modified mappings (required when action='modify')",
+    )
+
+
+class HITLResumeResponse(BaseModel):
+    """Response body after submitting HITL decision."""
+
+    operation_id: str
+    action: str
+    resumed: bool
+
+
+class HITLPendingResponse(BaseModel):
+    """Response body for a pending HITL request."""
+
+    operation_id: str
+    interrupt_data: dict[str, Any]
+
+
+@router.post("/hitl/resume", response_model=HITLResumeResponse)
+async def resume_hitl_mapping(request: HITLResumeRequest):
+    """Resume a paused extraction after HITL schema mapping review.
+
+    The extraction pipeline pauses when schema inference confidence < 0.8.
+    This endpoint delivers the user's mapping decision (approve/modify/reject)
+    back to the waiting pipeline, which then resumes extraction.
+    """
+    registry = get_hitl_registry()
+
+    if not registry.is_pending(request.operation_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"No pending HITL request for operation {request.operation_id}",
+        )
+
+    if request.action == "modify" and not request.mappings:
+        raise HTTPException(
+            status_code=422,
+            detail="Mappings are required when action is 'modify'",
+        )
+
+    response_data: dict[str, Any] = {"action": request.action}
+    if request.mappings:
+        response_data["mappings"] = [m.model_dump() for m in request.mappings]
+
+    submitted = registry.submit_response(request.operation_id, response_data)
+
+    if not submitted:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Failed to submit response for operation {request.operation_id}",
+        )
+
+    logger.info(
+        f"HITL resume submitted for operation {request.operation_id}: "
+        f"action={request.action}"
+    )
+
+    return HITLResumeResponse(
+        operation_id=request.operation_id,
+        action=request.action,
+        resumed=True,
+    )
+
+
+@router.get("/hitl/pending", response_model=list[HITLPendingResponse])
+async def list_pending_hitl():
+    """List all operations with pending HITL mapping review requests."""
+    registry = get_hitl_registry()
+    pending_ids = registry.list_pending()
+    results = []
+    for op_id in pending_ids:
+        interrupt_data = registry.get_interrupt_data(op_id)
+        if interrupt_data:
+            results.append(
+                HITLPendingResponse(
+                    operation_id=op_id,
+                    interrupt_data=interrupt_data,
+                )
+            )
+    return results
 
 
 def _normalize_profile(profile: dict[str, Any]) -> dict[str, Any]:

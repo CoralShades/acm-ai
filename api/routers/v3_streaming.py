@@ -43,6 +43,7 @@ _TERMINAL_EVENT_TYPES: frozenset[str] = frozenset(
         "extraction.consensus_complete",
         "ai.validation_complete",
         "bulk.complete",
+        "hitl.schema_mapping_resumed",
     }
 )
 
@@ -241,6 +242,31 @@ async def stream_ai(
     logger.info(f"[V3Stream] /ai SSE opened for operation {operation_id}")
     return StreamingResponse(
         _sse_generator(operation_id, "ai."),
+        media_type="text/event-stream",
+        headers=_SSE_HEADERS,
+    )
+
+
+@router.get("/hitl/{operation_id}")
+async def stream_hitl(
+    operation_id: str,
+    operation_id_query: Optional[str] = Query(
+        None,
+        alias="operation_id",
+        description="Optional assertion that must match the path parameter.",
+    ),
+) -> StreamingResponse:
+    """SSE stream for hitl.* pipeline events.
+
+    Forwards ``hitl.schema_mapping_review`` and ``hitl.schema_mapping_resumed``
+    events for the given operation.
+
+    The stream terminates automatically on ``hitl.schema_mapping_resumed``.
+    """
+    _validate_operation_id(operation_id, operation_id_query)
+    logger.info(f"[V3Stream] /hitl SSE opened for operation {operation_id}")
+    return StreamingResponse(
+        _sse_generator(operation_id, "hitl."),
         media_type="text/event-stream",
         headers=_SSE_HEADERS,
     )

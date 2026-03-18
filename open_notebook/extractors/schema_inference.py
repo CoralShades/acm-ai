@@ -4,6 +4,7 @@ Auto-detects table structure and maps column headers to Salesforce fields
 from unknown PDF formats. Computes header signatures for caching.
 
 Story: Multi-Consultant Story 2 — Schema Inference Node
+Story: Multi-Consultant Story 6 — HITL Mapping Confirmation UI
 """
 
 import hashlib
@@ -11,9 +12,13 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from langgraph.types import interrupt
 from loguru import logger
 
 from open_notebook.extractors.recovery_config import RecoveryConfig
+
+# Confidence threshold below which HITL confirmation is triggered
+HITL_CONFIDENCE_THRESHOLD = 0.8
 
 
 @dataclass
@@ -537,35 +542,6 @@ async def schema_inference_node(state: dict) -> dict:
         overall_confidence = float(result.get("overall_confidence", 0.0))
         consultant_name = result.get("detected_consultant")
 
-        # ------------------------------------------------------------------
-        # 7. Auto-save format profile on successful inference
-        # ------------------------------------------------------------------
-        profile_id = None
-        try:
-            saved = await save_profile(
-                {
-                    "header_signature": header_sig,
-                    "consultant_name": consultant_name,
-                    "column_mapping": column_mapping,
-                    "canonical_mapping": canonical_mapping,
-                    "level_regex": level_regex_str,
-                    "recovery_config": None,
-                    "confidence": overall_confidence,
-                    "verified_by_user": False,
-                    "sample_count": 1,
-                }
-            )
-            if saved and isinstance(saved, list) and len(saved) > 0:
-                profile_id = saved[0].get("id")
-                logger.info(f"schema_inference_node: saved format profile {profile_id}")
-            elif saved and isinstance(saved, dict):
-                profile_id = saved.get("id")
-                logger.info(f"schema_inference_node: saved format profile {profile_id}")
-        except Exception as save_err:
-            logger.warning(
-                f"schema_inference_node: failed to save format profile: {save_err}"
-            )
-
         # Resolve detected_format from document_metadata or LLM response
         detected_format = (
             state.get("document_metadata", {}).get("format_name")
@@ -573,6 +549,104 @@ async def schema_inference_node(state: dict) -> dict:
             else None
         ) or result.get("detected_format")
 
+        # ------------------------------------------------------------------
+        # 7. HITL check: if confidence < threshold, interrupt for user review
+        # ------------------------------------------------------------------
+        if overall_confidence < HITL_CONFIDENCE_THRESHOLD:
+            logger.info(
+                f"schema_inference_node: confidence {overall_confidence:.2f} "
+                f"< {HITL_CONFIDENCE_THRESHOLD}, triggering HITL review"
+            )
+
+            # Build the interrupt payload for user review.
+            # interrupt() pauses graph execution — the value surfaces to the caller.
+            # On resume, interrupt() returns the user's response.
+            hitl_payload = {
+                "type": "schema_mapping_review",
+                "source_id": str(source.id),
+                "mappings": [
+                    {
+                        "pdf_header": m.pdf_header,
+                        "sf_field": m.sf_field,
+                        "confidence": m.confidence,
+                    }
+                    for m in detailed_mappings
+                ],
+                "unmapped_headers": unmapped,
+                "overall_confidence": overall_confidence,
+                "detected_consultant": consultant_name,
+                "header_signature": header_sig,
+            }
+            user_response = interrupt(hitl_payload)
+
+            # --- Resumed from interrupt ---
+            # user_response is the value passed via Command(resume=...)
+            action = user_response.get("action", "approve")
+            logger.info(
+                f"schema_inference_node: HITL resumed with action={action}"
+            )
+
+            if action == "reject":
+                # User rejected the mapping — fall back to COLUMN_ALIASES
+                logger.info("schema_inference_node: user rejected mapping, skipping")
+                return {}
+
+            if action == "modify" and user_response.get("mappings"):
+                # User modified the mappings — rebuild from their corrections
+                column_mapping = {}
+                canonical_mapping = {}
+                detailed_mappings = []
+                for m in user_response["mappings"]:
+                    pdf_hdr = m.get("pdf_header", "")
+                    sf_fld = m.get("sf_field", "")
+                    conf = float(m.get("confidence", 1.0))
+                    if pdf_hdr and sf_fld:
+                        column_mapping[pdf_hdr] = sf_fld
+                        detailed_mappings.append(
+                            ColumnMapping(
+                                pdf_header=pdf_hdr, sf_field=sf_fld, confidence=conf
+                            )
+                        )
+                        canonical = SF_TO_CANONICAL.get(sf_fld)
+                        if canonical and canonical in COLUMN_ALIASES:
+                            canonical_mapping[pdf_hdr] = canonical
+                # User-confirmed mappings are high confidence
+                overall_confidence = 1.0
+
+            # For "approve" action, keep the original LLM mappings as-is
+            # but boost confidence to indicate user verification
+            if action == "approve":
+                overall_confidence = max(overall_confidence, 0.9)
+
+            # Save as user-verified profile (after HITL confirmation)
+            profile_id = await _save_format_profile(
+                save_profile=save_profile,
+                header_sig=header_sig,
+                consultant_name=consultant_name,
+                column_mapping=column_mapping,
+                canonical_mapping=canonical_mapping,
+                level_regex_str=level_regex_str,
+                confidence=overall_confidence,
+                verified_by_user=True,
+            )
+        else:
+            # ------------------------------------------------------------------
+            # 7b. High confidence — auto-save format profile (no HITL)
+            # ------------------------------------------------------------------
+            profile_id = await _save_format_profile(
+                save_profile=save_profile,
+                header_sig=header_sig,
+                consultant_name=consultant_name,
+                column_mapping=column_mapping,
+                canonical_mapping=canonical_mapping,
+                level_regex_str=level_regex_str,
+                confidence=overall_confidence,
+                verified_by_user=False,
+            )
+
+        # ------------------------------------------------------------------
+        # 8. Build final InferredSchema
+        # ------------------------------------------------------------------
         inferred_schema = InferredSchema(
             column_mapping=column_mapping,
             canonical_mapping=canonical_mapping,
@@ -602,3 +676,44 @@ async def schema_inference_node(state: dict) -> dict:
             "continuing with inferred_schema=None"
         )
         return {}
+
+
+async def _save_format_profile(
+    *,
+    save_profile,
+    header_sig: str,
+    consultant_name: Optional[str],
+    column_mapping: dict[str, str],
+    canonical_mapping: dict[str, str],
+    level_regex_str: Optional[str],
+    confidence: float,
+    verified_by_user: bool,
+) -> Optional[str]:
+    """Save a format profile, returning the profile ID or None on failure."""
+    try:
+        saved = await save_profile(
+            {
+                "header_signature": header_sig,
+                "consultant_name": consultant_name,
+                "column_mapping": column_mapping,
+                "canonical_mapping": canonical_mapping,
+                "level_regex": level_regex_str,
+                "recovery_config": None,
+                "confidence": confidence,
+                "verified_by_user": verified_by_user,
+                "sample_count": 1,
+            }
+        )
+        if saved and isinstance(saved, list) and len(saved) > 0:
+            profile_id = saved[0].get("id")
+            logger.info(f"schema_inference_node: saved format profile {profile_id}")
+            return profile_id
+        elif saved and isinstance(saved, dict):
+            profile_id = saved.get("id")
+            logger.info(f"schema_inference_node: saved format profile {profile_id}")
+            return profile_id
+    except Exception as save_err:
+        logger.warning(
+            f"schema_inference_node: failed to save format profile: {save_err}"
+        )
+    return None
