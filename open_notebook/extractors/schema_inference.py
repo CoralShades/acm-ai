@@ -214,11 +214,54 @@ SF_TO_CANONICAL: dict[str, str] = {
 }
 
 
+def _build_schema_from_profile(profile: dict, header_sig: str) -> InferredSchema:
+    """Build an InferredSchema from a cached format profile dict."""
+    column_mapping = profile.get("column_mapping", {})
+    canonical_mapping = profile.get("canonical_mapping", {})
+
+    # Rebuild level regex from stored string
+    level_regex = None
+    level_regex_str = profile.get("level_regex")
+    if level_regex_str:
+        try:
+            level_regex = re.compile(level_regex_str, re.IGNORECASE)
+        except re.error:
+            pass
+
+    # Rebuild RecoveryConfig
+    recovery = RecoveryConfig()
+    if level_regex:
+        recovery.level_re = level_regex
+    stored_recovery = profile.get("recovery_config")
+    if stored_recovery and isinstance(stored_recovery, dict):
+        for attr in (
+            "not_sampled_terms",
+            "confirmation_terms",
+            "restriction_terms",
+            "lookback_lines",
+            "lookahead_lines",
+        ):
+            if attr in stored_recovery:
+                setattr(recovery, attr, stored_recovery[attr])
+
+    return InferredSchema(
+        column_mapping=column_mapping,
+        canonical_mapping=canonical_mapping,
+        level_regex=level_regex,
+        recovery_config=recovery,
+        confidence=float(profile.get("confidence", 0.0)),
+        consultant_name=profile.get("consultant_name"),
+        profile_id=profile.get("id"),
+        header_signature=header_sig,
+    )
+
+
 async def schema_inference_node(state: dict) -> dict:
     """LangGraph node: infer schema from PDF table headers.
 
     Collects unique column headers from acm_table_section records,
-    invokes LLM to map them to SF fields, and returns InferredSchema.
+    checks the format profile cache, and falls back to LLM inference
+    on cache miss. Saves new profiles automatically.
 
     Graceful degradation: if no docling tables or LLM fails, returns
     state unchanged (inferred_schema=None).
@@ -228,6 +271,11 @@ async def schema_inference_node(state: dict) -> dict:
         from langchain_core.messages import SystemMessage
 
         from open_notebook.database.repository import ensure_record_id, repo_query
+        from open_notebook.extractors.format_profile_repository import (
+            get_profile_by_signature,
+            increment_sample_count,
+            save_profile,
+        )
         from open_notebook.extractors.row_segmenter import COLUMN_ALIASES
         from open_notebook.graphs.utils import (
             parse_json_response,
@@ -316,7 +364,23 @@ async def schema_inference_node(state: dict) -> dict:
         header_sig = compute_header_signature(unique_headers)
 
         # ------------------------------------------------------------------
-        # 4. Invoke LLM for schema mapping
+        # 4. Check format profile cache
+        # ------------------------------------------------------------------
+        cached_profile = await get_profile_by_signature(header_sig)
+        if cached_profile and cached_profile.get("confidence", 0) >= 0.8:
+            logger.info(
+                f"schema_inference_node: CACHE HIT for signature {header_sig}, "
+                f"consultant={cached_profile.get('consultant_name')}, "
+                f"sample_count={cached_profile.get('sample_count', 1)}"
+            )
+            inferred_schema = _build_schema_from_profile(cached_profile, header_sig)
+            await increment_sample_count(cached_profile["id"])
+            return {"inferred_schema": inferred_schema}
+
+        logger.info(f"schema_inference_node: CACHE MISS for signature {header_sig}, invoking LLM")
+
+        # ------------------------------------------------------------------
+        # 5. Invoke LLM for schema mapping (cache miss path)
         # ------------------------------------------------------------------
         prompter = Prompter(prompt_template="acm/schema_inference")
         prompt_text = prompter.render(
@@ -345,7 +409,7 @@ async def schema_inference_node(state: dict) -> dict:
             return {}
 
         # ------------------------------------------------------------------
-        # 5. Parse LLM response into InferredSchema
+        # 6. Parse LLM response into InferredSchema
         # ------------------------------------------------------------------
         column_mapping: dict[str, str] = {}
         canonical_mapping: dict[str, str] = {}
@@ -382,14 +446,47 @@ async def schema_inference_node(state: dict) -> dict:
         if level_regex:
             recovery.level_re = level_regex
 
+        overall_confidence = float(result.get("overall_confidence", 0.0))
+        consultant_name = result.get("detected_consultant")
+
+        # ------------------------------------------------------------------
+        # 7. Auto-save format profile on successful inference
+        # ------------------------------------------------------------------
+        profile_id = None
+        try:
+            saved = await save_profile(
+                {
+                    "header_signature": header_sig,
+                    "consultant_name": consultant_name,
+                    "column_mapping": column_mapping,
+                    "canonical_mapping": canonical_mapping,
+                    "level_regex": level_regex_str,
+                    "recovery_config": None,
+                    "confidence": overall_confidence,
+                    "verified_by_user": False,
+                    "sample_count": 1,
+                }
+            )
+            if saved and isinstance(saved, list) and len(saved) > 0:
+                profile_id = saved[0].get("id")
+                logger.info(f"schema_inference_node: saved format profile {profile_id}")
+            elif saved and isinstance(saved, dict):
+                profile_id = saved.get("id")
+                logger.info(f"schema_inference_node: saved format profile {profile_id}")
+        except Exception as save_err:
+            logger.warning(
+                f"schema_inference_node: failed to save format profile: {save_err}"
+            )
+
         inferred_schema = InferredSchema(
             column_mapping=column_mapping,
             canonical_mapping=canonical_mapping,
             level_regex=level_regex,
             recovery_config=recovery,
-            confidence=float(result.get("overall_confidence", 0.0)),
-            consultant_name=result.get("detected_consultant"),
+            confidence=overall_confidence,
+            consultant_name=consultant_name,
             header_signature=header_sig,
+            profile_id=profile_id,
             mappings=detailed_mappings,
             unmapped_headers=unmapped,
         )

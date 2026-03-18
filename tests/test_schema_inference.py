@@ -394,6 +394,16 @@ async def test_schema_inference_node_with_mock_llm():
             new_callable=AsyncMock,
         ) as mock_query,
         patch(
+            "open_notebook.extractors.format_profile_repository.repo_query",
+            new_callable=AsyncMock,
+            return_value=[],  # Cache miss — no existing profile
+        ),
+        patch(
+            "open_notebook.extractors.format_profile_repository.repo_create",
+            new_callable=AsyncMock,
+            return_value=[{"id": "consultant_format_profile:test"}],
+        ),
+        patch(
             "open_notebook.database.repository.ensure_record_id",
             side_effect=lambda x: x,
         ),
@@ -444,6 +454,11 @@ async def test_schema_inference_node_llm_error():
             "open_notebook.database.repository.repo_query",
             new_callable=AsyncMock,
         ) as mock_query,
+        patch(
+            "open_notebook.extractors.format_profile_repository.repo_query",
+            new_callable=AsyncMock,
+            return_value=[],  # Cache miss
+        ),
         patch(
             "open_notebook.database.repository.ensure_record_id",
             side_effect=lambda x: x,
