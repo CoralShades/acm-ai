@@ -79,3 +79,21 @@
 13. `dispatching-parallel-agents` — parallel subagent work
 14. `subagent-driven-development` — implementation with review gates
 15. `code-review` — review audit findings
+
+## F6: SAMP→ARA Terminology Contamination (Cross-Cutting)
+**Date discovered:** 2026-03-18 (during prompt pack execution in WSL)
+**Evidence:** 200+ references to "SAMP" (School Asbestos Management Plan) across the ENTIRE codebase. All documents processed by the pipeline are ARA (Asbestos Register Assessment) documents. The "SAMP vs ARA" distinction in the code is actually about consultant table formats (Clutha vs Alexander), not document types.
+
+**Impact assessment:**
+- **LLM Prompts (CRITICAL):** ~10 references telling models to look for "SAMP" patterns. This actively misleads extraction — models may look for school-specific terminology that doesn't exist in all ARA documents.
+- **Pipeline Logic (HIGH):** `_SAMP_BUILDING_ID` regex gates extraction strategy (REGEX_ONLY vs FULL_LLM). Variable name implies SAMP-specific when it's actually a general building ID pattern.
+- **Frontend UI (HIGH):** 11 user-visible strings say "SAMP document" — confuses users.
+- **E2E Tests (MEDIUM):** 80+ references, `uploadSAMP()` function, `fixtures/samps/` directory.
+- **Agent Definitions (MEDIUM):** Claude Code agents instructed to look for "SAMP" — propagates to all future sessions.
+- **CLAUDE.md (MEDIUM):** Project overview loaded into every session contains "SAMP documents".
+
+**Root cause:** Early development used "SAMP" loosely. It propagated because it was baked into CLAUDE.md, which is loaded into every AI session, which then generated more SAMP references.
+
+**Fix:** Dedicated prompt pack created: `2026-03-18-samp-to-ara-terminology-fix.md`
+**Dependencies:** Must run BEFORE Pack 3 (Multi-Consultant) and Pack 4 (Frontend UX).
+**Recommendation:** This is the highest-priority fix because it affects prompt quality, pipeline logic, AND user experience simultaneously.

@@ -18,11 +18,21 @@
 - [x] Skill recommendations (15 skills)
 - [x] Planning files created
 
-## Next Steps (prompt packs to generate)
-1. **Prompt Pack 1:** Pipeline Execution Audit & Fix (Areas 1 + F5)
-2. **Prompt Pack 2:** Prompt Quality Evaluation Framework (Area 2)
-3. **Prompt Pack 3:** Multi-Consultant Format Adaptability Design (Area 3)
-4. **Prompt Pack 4:** Frontend Live Extraction UX (Area 4)
+## Prompt Packs Generated
+1. **Pack 1:** Pipeline Execution Audit & Fix — DONE (run in WSL)
+2. **Pack 2:** Prompt Quality Evaluation Framework — DONE (run in WSL)
+3. **Pack 3:** Multi-Consultant Format Adaptability — DONE (updated with Pack 6 prereq)
+4. **Pack 4:** Frontend Live Extraction UX — DONE (updated with Pack 6 prereq)
+5. **Pack 5:** WSL Environment Setup — DONE (run in WSL)
+6. **Pack 6:** SAMP→ARA Terminology Fix — DONE (NEW, cross-cutting)
+
+## F6 Discovery: SAMP→ARA Terminology Bug
+- 4 audit agents dispatched (backend, frontend, prompts/DB, config/memory)
+- **Total blast radius:** 200+ references across entire codebase
+- **Most critical:** `structure_extraction.jinja` line 16 — heuristic only matches "School Asbestos Management Plan", misclassifies non-school sites as Unknown
+- **Format detector:** Entire `samp_detector.py` module + `llm_detector.py` prompt outputs `"samp"` label
+- **DocumentType.SAMP enum:** Keep value as-is (stored in DB), expand description in prompts
+- **Execution order updated:** Pack 6 → Pack 3 → Pack 4 (packs 3+4 now have Pack 6 as prerequisite)
 
 ## 5-Question Reboot Check
 1. **Last completed milestone:** Audit findings documented, skills identified

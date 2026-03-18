@@ -22,6 +22,7 @@ Before starting this session, verify:
 - Worker running: check for `run_worker.py` process
 - Frontend running: `curl http://localhost:8503`
 - Branch: `git checkout ACMV3`
+- **PREREQUISITE:** Run Pack 6 (SAMP→ARA terminology fix) FIRST — UI labels should already say "ARA document" not "SAMP document"
 - Test PDF available for triggering extractions
 - Browser DevTools or agent-browser available for UI verification
 - Read audit findings: `docs/sprint-artifacts/pipeline-audit-2026-03-18/findings.md` (F4: Frontend/Backend Desync)

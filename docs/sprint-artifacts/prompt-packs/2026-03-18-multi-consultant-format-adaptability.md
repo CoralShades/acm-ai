@@ -16,10 +16,14 @@
 Before starting this session, verify:
 
 - Branch: `git checkout ACMV3`
+- **PREREQUISITE:** Run Pack 6 (SAMP→ARA terminology fix) FIRST — this session assumes "SAMP" references have been renamed
 - Read audit findings: `docs/sprint-artifacts/pipeline-audit-2026-03-18/findings.md` (F3: Consultant Format Lock-in)
 - Have 3+ different consultant PDF samples available for testing (different table layouts, column orders, header styles)
-- Existing Broadmeadows (SAMP format) and Alexander (ARA format) PDFs for regression testing
+- Existing Broadmeadows (Clutha consultant format) and Alexander (Alexander consultant format) PDFs for regression testing
 - Consider installing: `npx skills add aj-geddes/useful-ai-prompts@gap-analysis -g -y`
+
+### Critical Terminology Note
+All documents are **ARA (Asbestos Register Assessment)** reports. The pipeline should think in terms of **consultant table formats** (Clutha, Alexander, Greencap, etc.), NOT document types (SAMP vs ARA). See Pack 6 for the full terminology fix.
 
 ---
 
