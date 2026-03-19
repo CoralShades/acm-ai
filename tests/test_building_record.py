@@ -429,6 +429,19 @@ class TestACMRecordBuildingFK:
         data = record._prepare_save_data()
         assert "building_record_id" in data
 
+    def test_prepare_save_data_converts_fks_to_record_id(self):
+        """MCS11: _prepare_save_data converts FK strings to RecordID objects for SurrealDB."""
+        from surrealdb import RecordID
+
+        record = self._make_acm_record(
+            building_record_id="building_record:xyz",
+            parent_table_id="acm_table_section:sec001",
+        )
+        data = record._prepare_save_data()
+        assert isinstance(data["building_record_id"], RecordID)
+        assert isinstance(data["parent_table_id"], RecordID)
+        assert isinstance(data["source_id"], RecordID)
+
     def test_acm_record_without_building_record_id_saves_ok(self):
         """AC4: ACMRecord without building_record_id has None (no save error at model level)."""
         record = self._make_acm_record()
