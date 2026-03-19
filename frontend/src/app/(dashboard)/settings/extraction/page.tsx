@@ -23,7 +23,7 @@ export default function ExtractionSettingsPage() {
                   <div>
                     <CardTitle>ACM Extraction Configuration</CardTitle>
                     <CardDescription>
-                      Configure how ACM registers are extracted from SAMP documents
+                      Configure how ACM registers are extracted from ARA documents
                     </CardDescription>
                   </div>
                 </div>

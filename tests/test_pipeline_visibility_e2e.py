@@ -128,7 +128,7 @@ class TestCommandIdFlow:
         mock_result = MagicMock()
         mock_result.status = "completed"
         mock_result.total_records = 5
-        mock_result.records_failed = 0
+        mock_result.records_filtered = 0
         mock_result.confidence_distribution = MagicMock()
         mock_result.confidence_distribution.model_dump = MagicMock(
             return_value={"high": 3, "medium": 2}

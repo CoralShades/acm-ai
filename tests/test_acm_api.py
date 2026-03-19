@@ -161,6 +161,9 @@ class TestGetACMRecord:
         mock_record.floor_level = None
         mock_record.no_access = None
         mock_record.smf_present = None
+        mock_record.building_record_id = None
+        mock_record.parent_table_id = None
+        mock_record.table_bbox = None
         mock_record.created = "2024-01-01T00:00:00Z"
         mock_record.updated = "2024-01-01T00:00:00Z"
 
@@ -654,6 +657,9 @@ class TestACMRecordResponseClassificationFields:
         mock_record.floor_level = None
         mock_record.no_access = None
         mock_record.smf_present = None
+        mock_record.building_record_id = None
+        mock_record.parent_table_id = None
+        mock_record.table_bbox = None
         mock_record.created = "2024-01-01T00:00:00Z"
         mock_record.updated = "2024-01-01T00:00:00Z"
 

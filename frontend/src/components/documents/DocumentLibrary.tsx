@@ -246,7 +246,7 @@ export function DocumentLibrary() {
       <EmptyState
         icon={FileText}
         title="No Documents Yet"
-        description="Upload your first SAMP document to start extracting ACM register data."
+        description="Upload your first ARA document to start extracting ACM register data."
         action={
           <Button asChild>
             <Link href="/documents?action=upload">
@@ -264,7 +264,7 @@ export function DocumentLibrary() {
       {/* Onboarding Hint */}
       <OnboardingHint
         id="documents"
-        message="Drag and drop a PDF or use the Upload button to add a SAMP document."
+        message="Drag and drop a PDF or use the Upload button to add an ARA document."
       />
 
       {/* Toolbar */}

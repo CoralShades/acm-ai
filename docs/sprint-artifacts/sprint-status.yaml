@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-16
+updated: 2026-03-19
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -548,7 +548,7 @@ development_status:
   e36-s1-agent-team-creation: done                        # 3 SP. Agent files, state files, prd.json, sprint-status.
   e36-s2-e35-fix-reverification: done                     # 5 SP. All 8 E35 fixes verified with code analysis + API tests + 315 unit tests.
   e36-s3-route-coverage-gaps: done                        # 3 SP. Verified 12 DYNAMIC_ROUTES, 36/36 route coverage confirmed with smoke-walker spec + screenshots.
-  e36-s4-ollama-multi-model-benchmark: backlog            # 5 SP. 12 runs: 6 models x 2 PDFs vs ground truth.
+  e36-s4-ollama-multi-model-benchmark: done                # 5 SP. 12 runs: 6 models x 2 PDFs vs ground truth. Completed 2026-03-05.
   e36-s5-functional-verification: backlog                 # 5 SP. Verify all major features E2E with real data.
   e36-s6-ux-audit: backlog                                # 2 SP. 3 viewports, loading/empty/error states, data-testid.
   e36-s7-devils-advocate-review: backlog                  # 2 SP. Adversarial review of fixes and benchmark results.
@@ -579,7 +579,7 @@ development_status:
   # Infra: pipeline_logger.py per-run dirs, run_worker.py tee sink, scripts/split_logs.py
   # GitHub: #103
   # ─────────────────────────────────────────────────────
-  bug-fix-12-extraction-audit: in_progress  # 2026-03-12. Extraction log audit + per-run log categorization. 8 issue docs, per-run log infra complete. Fixes pending.
+  bug-fix-12-extraction-audit: done  # 2026-03-12. Extraction log audit + per-run log categorization. 8 issue docs, per-run log infra complete. Fixes applied in subsequent MCS stories.
 
   # ─────────────────────────────────────────────────────
   # Bug Fix: Frontend Navigation Performance (2026-03-13)
@@ -647,6 +647,85 @@ development_status:
   crud-chat-security-audit-2026-03-16: done  # 23 issues. P0: execute_pending_write removed from LLM tools (graph enforces HITL barrier), confirm_write dead code deleted, ALLOWED_ACM_FIELDS SQL injection allowlist, source_id context binding. P1: surrealdb>=1.0.8, Record ID column in essential preset, MouseEvent type fix, click-to-copy propagation guard, clipboard HTTPS guard. P2/P3: HITLApprovalDialog timeout/escape/button fixes, dead code cleanup, tool labels, sourceId guard. Pre-existing: ACMGrid empty fix + SurrealDB docker pin.
 
   # ─────────────────────────────────────────────────────
+  # Dogfood Session: Live Extraction + Validation (2026-03-17)
+  # Branch: ACMV3
+  # Commits: 6fd92aaf, c0832fa8, 0785f1b8
+  # Live extraction run on Broadmeadows Police Station PDF (18 pages, 31 ground truth records).
+  # Found and fixed 4 bugs blocking extraction + 1 UX crash + 1 data hygiene gap.
+  # Result: 0→28 records (90% ground truth match).
+  # Full report: dogfood-output/extraction-run-report.md
+  # ─────────────────────────────────────────────────────
+  dogfood-fix-provider-model-mismatch-2026-03-17: done  # Commit 6fd92aaf. _get_db_extraction_model() returned non-Ollama model names (openrouter/anthropic/claude-sonnet-4) to Ollama candidate → 404 → 0 records. Fixed: check provider field, reject non-Ollama. Also: validate_records_strict() auto-fills material_description from product.
+  dogfood-fix-quantity-parse-job-crash-2026-03-17: done  # Commit c0832fa8. ACMItemRecord.quantity Optional[float]→Optional[str] — LLMs return "2m 2", "10 lm". Pydantic rejected entire building records. Also: JobOverviewTab.tsx optional chaining on buildingInventory?.buildings?.length (crash fix).
+  dogfood-fix-cascade-delete-orphaned-2026-03-17: done  # Commit 0785f1b8. Source delete now cascade-cleans: uploaded PDF file, reference edges, command+agui_events, chat refers_to. New POST /api/sources/cleanup-orphaned-files endpoint. First run deleted 92 orphaned files (149MB→0MB).
+
+  # ─────────────────────────────────────────────────────
+  # CRUD Chat Pipeline Enhancement (2026-03-17)
+  # Branch: ACMV3
+  # Implementation: DONE (7 tools, migration 53, 70/70 unit tests, frontend build clean)
+  # E2E Testing: IN PROGRESS — 5/11 browser tests PASS, 1 PARTIAL (T10 write flow)
+  # Tools: surreal_query (upgraded), preview_write (upgraded+old_value), preview_bulk_write (NEW),
+  #   get_schema_info (NEW), ask_user_choice (NEW), undo_last_write (NEW),
+  #   execute_pending_write (upgraded with bulk branch)
+  # Migration 53: crud_audit table with old_value + new_value fields for undo support
+  # 3 bugs fixed during E2E: SurrealDB TYPE any (schema), MemorySaver (session), EventEncoder (SSE)
+  # Known bug: BUG-4 AG-UI adapter crashes on execute_write_node AIMessage (HITL flow blocked)
+  # Files: 13 changed (api/models.py, api/routers/agui_chat.py, crud_tools.py, crud_agent.py,
+  #   guardrails.py, UploadWizard.tsx, CrudToolRenderers.tsx, QuickUploadDialog.tsx,
+  #   acm.ts, tool-labels.ts, migrations/53.surrealql, migrations/53_down.surrealql,
+  #   async_migrate.py)
+  # Artifacts: docs/sprint-artifacts/e2e-chat-test/e2e-crud-chat-test-report.md
+  # ─────────────────────────────────────────────────────
+  crud-chat-pipeline-enhancement-2026-03-17: in_progress  # Implementation DONE, E2E IN PROGRESS. 7 tools upgraded/added. Migration 53 (crud_audit old_value). HITL barrier enforced via graph routing. 70/70 unit tests pass. Frontend build clean. E2E: T01 PASS (page load), T03 PASS (count query), T04 PASS (buildings query), T10 PARTIAL (backend interrupt PASS, frontend HITL dialog blocked by BUG-4 AIMessage crash in AG-UI adapter), T15-T16 PASS (SSE streaming). BUG-4 pending fix.
+
+  # ─────────────────────────────────────────────────────
+  # Multi-Consultant Format Adaptability Sprint (MCS1-MCS7 + Live UX)
+  # Branch: ACMV3
+  # Dates: 2026-03-18
+  # Goal: Support multiple consultant PDF formats (pipe-table, text-header, standard)
+  # Result: 246 records extracted across 4 PDFs / 3 consultant formats (100% Ollama llama3.1:8b)
+  # Architecture doc: docs/architecture/multi-consultant-format-design.md
+  # ─────────────────────────────────────────────────────
+  mcs-samp-to-ara-rename-2026-03-18: done  # refactor: complete SAMP→ARA terminology rename across codebase. Commits: 0febe5f9, 513790dd
+  mcs1-detector-rename-fix-2026-03-18: done  # refactor(detectors): rename detectors by structure not consultant, fix broken pipe-table import. Commit 35abe382. PipeTableDetector, TextHeaderDetector, StandardFormatDetector. Removed ClutchDetector broken import. Regression tests added. SP:3
+  mcs2-schema-inference-node-2026-03-18: done  # feat: add schema inference node for multi-consultant format adaptability. Commit 167f0c43. InferredSchema + RecoveryConfig dataclasses. LangGraph node between PREFLIGHT and ORCHESTRATOR. Graceful degradation. SP:8
+  mcs3-format-profile-registry-2026-03-18: done  # feat(extraction): add consultant format profile registry — cache column mappings in SurrealDB. Commit 881f04f1. consultant_format_profile table, cache hit/miss logic. SP:5
+  mcs4-adaptive-row-segmenter-2026-03-18: done  # refactor(extraction): make row segmenter and recovery functions format-adaptive. Commit 6ab5abb3. Dynamic column mapping from InferredSchema. SP:3
+  mcs5-format-agnostic-prompts-2026-03-18: done  # feat(prompts): make extraction prompts format-agnostic with dynamic field lists. Commit cd5f919b. prompts/acm/*.jinja updated. SP:3
+  mcs6-hitl-mapping-ui-2026-03-18: done  # feat(ux): add HITL column mapping confirmation UI for low-confidence schema inference. Commit 80267917. SP:3
+  mcs7-validation-3-formats-2026-03-18: done  # test(extraction): validate multi-consultant format support with 3+ PDF formats. Commit fa1ff9a4. 4 PDFs validated: Broadmeadows (32/31 PASS), Alexander ARA (95/≥36 PASS), Clutch_Alexander (90), Clutch_BM_2 (29). SP:3
+  mcs-live-extraction-ux-2026-03-18: done  # feat(ux): Live extraction UX with SSE streaming, job lifecycle, and real-time display. Commit 5d560d06. useV3BuildingStream hook, job controls, per-building progress. SP:5
+  # Post-validation prompt-packs docs added: 14d188dc (6 post-validation fix prompts)
+
+  # ─────────────────────────────────────────────────────
+  # MCS Post-Validation Fixes (MCS8-MCS13) — Pipeline Persistence Timing Audit
+  # Branch: ACMV3
+  # Dates: 2026-03-19
+  # Audit revealed 6 gaps preventing frontend real-time extraction progress display.
+  # MCS11 and MCS13 emerged from E2E testing of the Jobs/Source unification work.
+  # MCS13 was a new story (not in original plan) — 3 sub-fixes for FK linkage bugs.
+  # Index: docs/sprint-artifacts/prompt-packs/2026-03-19-mcs-post-validation-index.md
+  # ─────────────────────────────────────────────────────
+  mcs8-ghost-save-fix-2026-03-19: done  # fix(persistence): Resolve ghost save bug in base.py and re-enable LangGraph checkpointer. Commit 31ede390. Root cause: SurrealDB Python client auto-parses record-link strings as RecordIDs. Fixed repo_create, removed 5 MCS7 workarounds, re-enabled MemorySaver checkpointer. SP:5. NOTE: MCS13 later disabled MemorySaver again due to RecordID msgpack serialization crash.
+  mcs9-sse-save-events-2026-03-19: in_progress  # feat(streaming): add SSE events to save node and fix terminal event race condition. Prompt pack created 2026-03-19. ai.save_started, ai.save_progress, ai.save_complete events. Move terminal event from ai.validation_complete to ai.save_complete. SP:5
+  mcs10-building-query-invalidation-2026-03-19: done  # fix(ux): correct building and items query invalidation timing. Prompt pack created + MCS10 complete per progress.md. Buildings query invalidated on ai.building_extracted, items query deferred to ai.save_complete. 'saving' status added to BuildingStreamStatus. SP:3. Commits: 545d6c41 (invalidation timing), b06c5788 (partial — also carries MCS11 changes)
+  mcs11-jobs-source-unification-2026-03-19: in_progress  # feat(ux): unify /jobs/[id] as canonical page with full feature parity. SP:13. task_plan.md at repo root. Phases 1-3 DONE (SSE streaming, bulk ops, search/filter). Phase 4 DEFERRED (job card status). Phase 5: Task 5.1 DONE (useValidationSummary wired), 5.2-5.3 REMAINING. Phase 6: Task 6.1 DONE (E2E smoke), 6.2-6.6 REMAINING. Gap4 (FK exposure): DONE (commits f2941789 + 658d21bb). Commits: b06c5788 (Phases 1-3 + FK events), c254974f (JobStatusPill SSE override), 545d6c41 (query invalidation), f2941789 (API FK fields), 658d21bb (FK test)
+  mcs11-fk-exposure-fix-2026-03-19: done  # fix(api): expose building_record_id and parent_table_id in ACMRecordResponse. 2 fields added to models.py + acm.py router builders. Commit f2941789. Test added: test(extraction) RecordID conversion test for FK fields. Commit 658d21bb.
+  mcs12-extraction-events-dead-endpoint-2026-03-19: backlog  # feat(streaming): wire extraction.* SSE events to main pipeline. Dead /v3/stream/extraction/{op_id} endpoint. Depends on MCS9. SP:3. Not started.
+  mcs13-internal-id-collision-fix-2026-03-19: done  # fix(extraction): prevent building_record UNIQUE index collision across sources. Root cause: internal_id derived from title[:8] only (e.g. BLD#CLUTCH_B_001) — same prefix across sources hijacks existing record's source_id. Fix: append source_suffix to internal_id (BLD#{title_short}_{source_suffix}_{seq:03d}). Commit 5819d5e4.
+  mcs13-schema-type-mismatch-fix-2026-03-19: done  # fix(extraction): fix building_record_id FK schema type (option<string> → record<building_record>) via Migration 55. SurrealDB Migration 40 IF NOT EXISTS was silently skipped. Forced correct type. Commit 45372518. Migration files: migrations/55.surrealql, migrations/55_down.surrealql.
+  mcs13-checkpointer-crash-fix-2026-03-19: done  # fix(extraction): disable LangGraph MemorySaver checkpointer — RecordID objects in graph state cause "Type is not msgpack serializable: RecordID" crash. Disabled until custom serializer implemented. Commit 45372518 (same as schema fix). E2E verified: 101 records saved, 90% FK population rate, 14 buildings across 2 uploads, 0 UNIQUE index collisions.
+
+  # ─────────────────────────────────────────────────────
+  # MCS Jobs/Source Page Unification (jobs/source parity)
+  # Branch: ACMV3
+  # Date: 2026-03-19
+  # Audit: 15-category feature matrix, 7 P0/P1 gaps on /jobs/[id] vs /source/[id]
+  # Artifact: progress.md (repo root)
+  # ─────────────────────────────────────────────────────
+  mcs-jobs-buildings-bug-fix-2026-03-19: done  # fix(ux): /jobs/[id] Buildings tab "No Rows To Show" bug. V3 building_record empty for old extractions. Added acmApi.listJobBuildings() V3-first + legacy fallback. JobBuildingResponse interface. useJobBuildings.ts hook. Browser verified: "1 to 2 of 2" buildings shown. Frontend build passes. (Part of MCS11 Phase 1 pre-work)
+
+  # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
   # Branch: ACMV3
   # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
@@ -695,17 +774,58 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 257  (256 prior + crud-chat-security-audit-2026-03-16)
-# Stories Done: 234 (91%)  -- 233 prior + crud-chat-security-audit-2026-03-16
+# Total Stories: 290  (280 prior + MCS11 FK fix + MCS13 collision fix + MCS13 schema fix + MCS13 checkpointer fix + MCS11 in-progress split + MCS12 backlog)
+# Stories Done: 259 (89%)  -- 252 prior + mcs11-fk-exposure + mcs13-internal-id-collision + mcs13-schema-type-mismatch + mcs13-checkpointer-crash + MCS10 commit updates
 # Stories Review: 0
-# Stories In-Progress: 1 (bug-fix-12-extraction-audit)
+# Stories In-Progress: 2 (mcs9-sse-save-events, mcs11-jobs-source-unification)
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 4 (E36-S4..S7)
+# Stories Backlog: 4 (E36-S5..S7, mcs12-extraction-events)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-16
+# Last Updated: 2026-03-19
+#
+# MCS Post-Validation Fixes (2026-03-19):
+# MCS8 DONE: Ghost save bug in base.py fixed. SurrealDB RecordID auto-parse root cause resolved.
+#   5 MCS7 workarounds removed. LangGraph MemorySaver checkpointer re-enabled. Commit 31ede390.
+#   NOTE: MCS8 re-enabled MemorySaver which was later disabled again by MCS13 due to RecordID serialization crash.
+# MCS9 IN PROGRESS: SSE save events added to pipeline (ai.save_started, ai.save_progress, ai.save_complete).
+#   Terminal event race condition fixed — stream now closes on ai.save_complete, not ai.validation_complete.
+# MCS10 DONE: Buildings query invalidated on ai.building_extracted (not ai.validation_complete).
+#   Items query deferred to ai.save_complete. 'saving' status added to BuildingStreamStatus.
+#   Commits: 545d6c41 (query invalidation timing), b06c5788 (carries MCS10+MCS11 combined).
+# MCS11 IN PROGRESS (phases 1-3 done, phases 4 deferred, phases 5-6 partial):
+#   Gap4 (FK exposure) DONE: building_record_id + parent_table_id exposed in ACMRecordResponse. Commits: f2941789, 658d21bb.
+#   Phases 1-3 DONE: SSE streaming on /jobs/[id], bulk ops bar, quick text search, Group by Room, Fix All button. Commit b06c5788.
+#   Phase 4 DEFERRED: job card status on /jobs list (status detection, mini-progress, auto-refresh).
+#   Phase 5: Task 5.1 done (useValidationSummary wired), tasks 5.2-5.3 remaining (error row highlighting, overview card).
+#   Phase 6: Task 6.1 done (E2E smoke — all tabs render), tasks 6.2-6.6 remaining (SSE test, bulk ops test, cross-page, mobile, screenshots).
+# MCS12 NOT STARTED: Wire extraction.* SSE events to main pipeline. Dead /v3/stream/extraction/{op_id} endpoint. Depends on MCS9.
+# MCS13 DONE (3 sub-fixes, all verified E2E with 2 PDF uploads):
+#   1. UNIQUE index collision fix — internal_id now includes source_suffix (BLD#{title}_{src}_{seq}). Commit 5819d5e4.
+#   2. FK schema type fix — Migration 55 forces building_record_id as record<building_record>. Commit 45372518.
+#   3. MemorySaver checkpointer disabled — RecordID objects not msgpack-serializable. Commit 45372518.
+#   E2E result: 101 records saved, 90% FK population rate, 14 buildings across 2 uploads, 0 collisions.
+#
+# Multi-Consultant Format Adaptability Sprint (2026-03-18):
+# MCS1: Detector rename (ClutchDetector→PipeTableDetector, ARADetector→TextHeaderDetector). Fixed broken import. Commit 35abe382.
+# MCS2: Schema inference node added to LangGraph pipeline between PREFLIGHT and ORCHESTRATOR. Commit 167f0c43.
+# MCS3: Consultant format profile registry — SurrealDB cache for column mappings. Commit 881f04f1.
+# MCS4: Row segmenter and recovery functions made format-adaptive via InferredSchema. Commit 6ab5abb3.
+# MCS5: Extraction prompts made format-agnostic with dynamic field lists. Commit cd5f919b.
+# MCS6: HITL column mapping confirmation UI for low-confidence schema inference. Commit 80267917.
+# MCS7: Validation — 4 PDFs, 3 consultant formats, 246 records extracted (100% Ollama). Commit fa1ff9a4.
+# Live Extraction UX: SSE streaming, job lifecycle, real-time per-building display. Commit 5d560d06.
+#
+# Dogfood Session (2026-03-17): Live extraction on Broadmeadows PDF, 4 bugs found + fixed:
+# 1) _get_db_extraction_model() non-Ollama model rejection (0→28 records)
+# 2) validate_records_strict() material_description auto-fill from product
+# 3) ACMItemRecord.quantity float→str (Pydantic crash discarding entire buildings)
+# 4) JobOverviewTab.tsx optional chaining crash fix
+# 5) Source cascade delete (file+edges+commands) + orphaned file cleanup (92 files/149MB)
+# E36-S4 status corrected: backlog→done (was completed 2026-03-05 per e36/progress.md)
+#
 # CRUD Chat + Grid Security Audit Fix (2026-03-16): 23 issues resolved across 13 files.
 # 4 P0 security fixes: HITL barrier enforcement (execute_pending_write removed from LLM tools),
 # dead code cleanup (confirm_write), SQL injection allowlist (ALLOWED_ACM_FIELDS), source_id

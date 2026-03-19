@@ -89,3 +89,21 @@
   - Worst: llama3.1:8b (9.7% Broadmeadows, timeout Alexander)
   - Average extraction time (completed): 167s (qwen2.5:7b) to 403s (llama3.1:8b)
 - **Next**: E36-S5 (Functional Verification)
+
+## 2026-03-17 — Dogfood Session: Live Extraction + Bug Fixes
+
+- **Status**: DONE
+- **What completed**:
+  - Live extraction run on Broadmeadows Police Station PDF (18 pages, 31 ground truth records)
+  - Fresh SurrealDB volume, model provisioning, full UX dogfood via browser automation
+  - **Commit 6fd92aaf**: `_get_db_extraction_model()` rejects non-Ollama models; `validate_records_strict()` auto-fills material_description from product. Result: 0→28/31 records
+  - **Commit c0832fa8**: `ACMItemRecord.quantity` `Optional[float]`→`Optional[str]` (prevents entire building discard); `JobOverviewTab.tsx` optional chaining crash fix
+  - **Commit 0785f1b8**: Source delete cascade (file on disk, reference edges, command+agui_events, chat edges); `POST /api/sources/cleanup-orphaned-files` endpoint (deleted 92 orphaned files, 149MB)
+  - Audit findings: building inventory cross-validation merge produces phantom buildings (deferred)
+  - Full report: `dogfood-output/extraction-run-report.md`
+- **Key metrics**:
+  - Records: 28/31 (90% ground truth match)
+  - Extraction time: 232.8s (bulk mode, ollama/qwen2.5:7b)
+  - Confidence: 25 high, 0 medium, 3 low (no-access recovery)
+  - Orphaned files cleaned: 92 files, 149MB→0MB
+- **Next**: E36-S5 (Functional Verification)

@@ -8,6 +8,7 @@ that was removed from the LLM prompt. This is the "hard work" layer:
   - LLM hints used as fallback when deterministic classification is low confidence
 """
 
+import re
 from typing import Optional
 
 from loguru import logger
@@ -83,6 +84,47 @@ def is_friable_bool(friability_str: Optional[str]) -> bool:
         True if friability_str is "Friable", False otherwise (including None).
     """
     return friability_str == "Friable"
+
+
+def normalize_sample_result(raw: Optional[str]) -> Optional[str]:
+    """Normalize compound sample_result values to a canonical single token.
+
+    ARA documents sometimes record compound results like:
+      - "Positive (Chrysotile)/Negative"   → "Positive"
+      - "Positive (Chrysotile)"             → "Positive"
+      - "Negative; Trace"                   → "Negative"
+      - "Not Analysed | Positive"           → "Not Analysed"
+
+    Strategy:
+      1. Strip parenthetical qualifiers (e.g. "(Chrysotile)").
+      2. Split on "/" ";" or "|" and take the FIRST token.
+      3. Strip surrounding whitespace.
+
+    Args:
+        raw: Raw sample_result string from LLM extraction.
+
+    Returns:
+        Normalised string or None if input is None/empty.
+
+    Examples:
+        >>> normalize_sample_result("Positive (Chrysotile)/Negative")
+        'Positive'
+        >>> normalize_sample_result("Positive (Chrysotile)")
+        'Positive'
+        >>> normalize_sample_result("Negative")
+        'Negative'
+        >>> normalize_sample_result(None)
+    """
+    if not raw:
+        return None
+    # Step 1: strip parenthetical qualifiers
+    text = re.sub(r"\s*\([^)]*\)", "", raw).strip()
+    # Step 2: split on compound delimiters and take the first part
+    for delimiter in ["/", ";", "|"]:
+        if delimiter in text:
+            text = text.split(delimiter)[0].strip()
+            break
+    return text or None
 
 
 def map_item_row_to_extraction_record(
@@ -167,7 +209,10 @@ def map_item_row_to_extraction_record(
 
     # (g) Ensure material_description is never None — ACMRecord requires it
     safe_material_description = (
-        final_sub_classification or row.acm_sub_classification or row.item_name or "Unknown"
+        final_sub_classification
+        or row.acm_sub_classification
+        or row.item_name
+        or "Unknown"
     )
 
     # Build the full ACMExtractionRecord
@@ -185,11 +230,12 @@ def map_item_row_to_extraction_record(
         material_description=safe_material_description,
         # Friability
         friable=normalized_friability,
-        # Result — use extracted sample_result, fallback to "Unknown"
-        result=row.sample_result or "Unknown",
+        # Result — normalize compound values then fallback to "Unknown"
+        # e.g. "Positive (Chrysotile)/Negative" -> "Positive"
+        result=normalize_sample_result(row.sample_result) or "Unknown",
         # Sample number
         sample_no=row.sample_number,
-        sample_result=row.sample_result,
+        sample_result=normalize_sample_result(row.sample_result),
         # Condition & disturbance
         material_condition=normalized_condition,
         disturbance_potential=normalized_disturbance,

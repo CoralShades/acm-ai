@@ -55,8 +55,10 @@ from api.routers import (
     embedding_rebuild,
     episode_profiles,
     extraction_events,
+    format_profiles,
     graph,
     insights,
+    job_lifecycle,
     models,
     notebooks,
     notes,
@@ -198,12 +200,14 @@ app.include_router(speaker_profiles.router, prefix="/api", tags=["speaker-profil
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(source_chat.router, prefix="/api", tags=["source-chat"])
 app.include_router(acm.router, prefix="/api/acm", tags=["acm"])
+app.include_router(format_profiles.router, prefix="/api/acm", tags=["format-profiles"])
 app.include_router(extraction_events.router, prefix="/api", tags=["extraction-events"])
 app.include_router(a2a.router, prefix="/api", tags=["a2a"])
 app.include_router(agui_extraction.router, prefix="/api", tags=["agui-extraction"])
 app.include_router(source_bulk.router, prefix="/api", tags=["source-bulk"])
 app.include_router(v3_streaming.router, prefix="/api", tags=["v3-streaming"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
+app.include_router(job_lifecycle.router, prefix="/api", tags=["job-lifecycle"])
 
 # Mount static files for A2A agent card (.well-known)
 from pathlib import Path as _Path

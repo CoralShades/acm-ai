@@ -21,13 +21,40 @@ Examples:
 
 ## Project Overview
 
-ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms SAMP (School Asbestos Management Plan) documents into structured, queryable data. It's a monorepo with two parts:
+ACM-AI is an intelligent Asbestos Containing Material (ACM) compliance management system powered by AI. It transforms ARA (Asbestos Register Assessment) documents into structured, queryable data. It's a monorepo with two parts:
 - **Backend**: Python 3.11+ with FastAPI, LangChain/LangGraph, SurrealDB
 - **Frontend**: Next.js 15 with React 19, Radix UI, Tailwind CSS 4, Zustand, React Query
+
+## Primary User Routes (CRITICAL)
+
+The user's primary workflow is:
+1. `/jobs` — Job list (main dashboard after login)
+2. `/jobs/{source_id}` — Job detail page (tabs: Overview, Buildings, ACM Records, Content, Raw Tables, Log + Chat sidebar)
+
+**ALL frontend features MUST be built on `/jobs/[id]` first.** This is the canonical page users interact with.
+
+### Route Hierarchy
+
+| Route | Role | Priority |
+|-------|------|----------|
+| `/jobs` | Primary landing — job cards with status | **P0** |
+| `/jobs/[id]` (`/jobs/source:ID`) | Primary detail view — all tabs, SSE streaming, bulk ops, chat | **P0** |
+| `/jobs/[id]/extract` | Extraction monitoring (navigated to during extraction) | P1 |
+| `/source/[id]` | Secondary ACM Register view — linked from jobs page, NOT primary | P2 |
+| `/dashboard` | Notebooks overview (legacy) | P3 |
+
+### Rules for Frontend Changes
+
+- When asked to add a feature to "the source page" or "the document view", implement it on `/jobs/[id]` page at
+`frontend/src/app/(dashboard)/jobs/[id]/page.tsx`
+- `/source/[id]` is a lightweight secondary view — do NOT add new features there unless explicitly asked
+- SSE streaming, bulk operations, validation, search — all belong on `/jobs/[id]`
+- The jobs page component is at: `frontend/src/app/(dashboard)/jobs/[id]/page.tsx`
 
 ## Essential Commands
 
 ### Development Setup (Windows)
+
 ```batch
 # Ensure Docker Desktop is running first!
 

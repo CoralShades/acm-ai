@@ -17,7 +17,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from ai_prompter import Prompter
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command
 from loguru import logger
 from pydantic import ValidationError
 from typing_extensions import TypedDict
@@ -84,14 +86,27 @@ from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.extractors.pipeline_event_bus import (
     AIBuildingExtractedData,
     AIBuildingExtractedEvent,
+    AIDedupCompleteData,
+    AIDedupCompleteEvent,
     AIItemsExtractedData,
     AIItemsExtractedEvent,
+    AISaveCompleteData,
+    AISaveCompleteEvent,
+    AISaveProgressData,
+    AISaveProgressEvent,
+    AISaveStartedData,
+    AISaveStartedEvent,
     AIValidationCompleteData,
     AIValidationCompleteEvent,
     get_event_bus,
 )
 from open_notebook.extractors.pipeline_events import StageId
 from open_notebook.extractors.pipeline_logger import PipelineLogger
+from open_notebook.extractors.recovery_config import RecoveryConfig
+from open_notebook.extractors.schema_inference import (
+    InferredSchema,
+    schema_inference_node,
+)
 from open_notebook.extractors.token_limit_validator import TokenLimitValidator
 from open_notebook.extractors.validators.acm_validator import (
     CorrectionStats,
@@ -134,7 +149,10 @@ class ExtractionState(TypedDict):
     current_chunk_index: int
     context: BuildingRoomContext
     records: List[ACMExtractionRecord]
-    records_rejected: int  # Count of records rejected during validation
+    records_rejected: (
+        int  # Count of records rejected during validation (missing fields)
+    )
+    records_filtered: int  # Count of records intentionally excluded (N3)
     extraction_result: ACMExtractionResult
     error: Optional[str]
     model_id: Optional[str]
@@ -155,10 +173,6 @@ class ExtractionState(TypedDict):
     document_metadata: Optional[DocumentMeta]
     # Orchestrator stats (E1-S20)
     orchestrator_stats: Optional[OrchestratorStats]
-    # Pipeline observability (E1-S21)
-    pipeline_logger: Optional[PipelineLogger]
-    # AG-UI event emitter (E17-S1)
-    agui_emitter: Optional[AGUIEventEmitter]
     # E34-S1: operation_id for PipelineEventBus streaming events
     operation_id: Optional[str]
     # E32-S1: Building__c extraction results (record IDs of persisted BuildingRecords)
@@ -172,15 +186,41 @@ class ExtractionState(TypedDict):
     # Populated by extract_building_node, consumed by extract_items_node to
     # avoid duplicate Phase 1 LLM calls.
     building_meta_cache: Dict[str, Any]
+    # MCS2: Schema inference result for multi-consultant format adaptability
+    inferred_schema: Optional[InferredSchema]
 
 
-def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
-    """Safely get PipelineLogger from state (may be None for backward compat)."""
+def _get_pipeline_logger(
+    state: dict, config: Optional[RunnableConfig] = None
+) -> Optional[PipelineLogger]:
+    """Get PipelineLogger from config (preferred) or state (backward compat).
+
+    Moved from state to config["configurable"] for LangGraph checkpointer
+    serialization — PipelineLogger is not ormsgpack-serializable.
+    """
+    if config and isinstance(config, dict):
+        configurable = config.get("configurable")
+        if isinstance(configurable, dict):
+            pl = configurable.get("pipeline_logger")
+            if isinstance(pl, PipelineLogger):
+                return pl
     return state.get("pipeline_logger")
 
 
-def _get_agui_emitter(state: dict) -> Optional[AGUIEventEmitter]:
-    """Safely get AGUIEventEmitter from state (may be None for backward compat)."""
+def _get_agui_emitter(
+    state: dict, config: Optional[RunnableConfig] = None
+) -> Optional[AGUIEventEmitter]:
+    """Get AGUIEventEmitter from config (preferred) or state (backward compat).
+
+    Moved from state to config["configurable"] for LangGraph checkpointer
+    serialization — AGUIEventEmitter is not ormsgpack-serializable.
+    """
+    if config and isinstance(config, dict):
+        configurable = config.get("configurable")
+        if isinstance(configurable, dict):
+            agui = configurable.get("agui_emitter")
+            if isinstance(agui, AGUIEventEmitter):
+                return agui
     return state.get("agui_emitter")
 
 
@@ -284,8 +324,8 @@ async def metadata_and_structure_node(state: dict, config: RunnableConfig) -> di
     source: Source = state["source"]
     content = source.full_text or ""
     model_id = state.get("model_id")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if pl:
         pl.stage_enter(StageId.STRUCTURE, "Extracting metadata and structure...")
@@ -301,8 +341,18 @@ async def metadata_and_structure_node(state: dict, config: RunnableConfig) -> di
         return {"document_metadata": None, "document_structure": None}
 
     try:
+        # Truncate to ~15,000 chars (first ~5 pages) to avoid overloading small
+        # local models like llama3.1:8b; title page and TOC are always near the front
+        _METADATA_MAX_CHARS = 15_000
+        metadata_content = content
+        if len(content) > _METADATA_MAX_CHARS:
+            metadata_content = content[:_METADATA_MAX_CHARS]
+            logger.info(
+                f"[S4] Truncated content from {len(content)} to {_METADATA_MAX_CHARS} chars "
+                f"for metadata extraction (source {source.id})"
+            )
         metadata, structure = await extract_metadata_and_structure(
-            content, model_id=model_id
+            metadata_content, model_id=model_id
         )
 
         # PyMuPDF page-count fallback (from existing extract_structure node)
@@ -382,8 +432,8 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
     model_id = state.get("model_id")
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
     doc_meta = state.get("document_metadata")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     # Build metadata context for prompt injection
     meta_context: Optional[dict] = None
@@ -397,6 +447,12 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
                 else ""
             ),
         }
+    # MCS5: Inject detected_format from InferredSchema for format-conditional prompts
+    inferred = state.get("inferred_schema")
+    if inferred and hasattr(inferred, "detected_format") and inferred.detected_format:
+        if meta_context is None:
+            meta_context = {}
+        meta_context["detected_format"] = inferred.detected_format
 
     if pl:
         pl.stage_progress(StageId.STRUCTURE, "Compiling building inventory...")
@@ -479,7 +535,7 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
     so the pipeline continues even if persistence fails.
     """
     source: Source = state["source"]
-    agui = _get_agui_emitter(state)
+    agui = _get_agui_emitter(state, config)
 
     if agui:
         await agui.emit_step_started("save_intelligence")
@@ -531,6 +587,23 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
     return {}
 
 
+def _assign_room_ids(records: list) -> None:
+    """Assign sequential room IDs (R001, R002, ...) per building based on room_name.
+
+    MCS11: room_id is scoped per-building (resets for each building).
+    Records with room_name=None get room_id=None.
+    Order is by first appearance of each distinct room_name.
+    """
+    room_name_to_code: dict[str, str] = {}
+    for rec in records:
+        rn = getattr(rec, "room_name", None)
+        if not rn:
+            continue
+        if rn not in room_name_to_code:
+            room_name_to_code[rn] = f"R{len(room_name_to_code) + 1:03d}"
+        rec.room_id = room_name_to_code[rn]
+
+
 _MAX_CONCURRENT_BUILDINGS = int(os.getenv("ACM_MAX_CONCURRENT_BUILDINGS", "3"))
 
 
@@ -550,8 +623,8 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     schema_bundle = state.get(
         "schema_bundle"
     )  # may be None — _v3_extract_building_meta handles None
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
     operation_id: Optional[str] = state.get("operation_id")
     model_id: Optional[str] = state.get("model_id")
 
@@ -586,11 +659,15 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     # Use source from state (already loaded) — avoids extra DB call and works in tests
     _src_label = getattr(source, "title", "") or ""
     _src_short = _src_label[:8].upper().replace(" ", "_") if _src_label else "UNKNOWN"
+    # Include source ID suffix to prevent UNIQUE index collisions when
+    # two sources share the same title prefix (e.g. both "Clutch_Broadmeadows.pdf").
+    _src_id_raw = str(source.id) if source.id else ""
+    _src_suffix = _src_id_raw.split(":")[-1][:6] if ":" in _src_id_raw else _src_id_raw[:6]
 
     pre_assigned_ids: dict[str, str] = {}
     for idx, b in enumerate(inventory.buildings):
         seq = base_seq + idx + 1
-        pre_assigned_ids[b.building_id] = f"BLD#{_src_short}_{seq:03d}"
+        pre_assigned_ids[b.building_id] = f"BLD#{_src_short}_{_src_suffix}_{seq:03d}"
 
     async def _extract_one_building(building_meta_entry):
         """Extract a single building's metadata (semaphore-bounded)."""
@@ -709,12 +786,6 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                         await record.save()
                 else:
                     raise save_err
-            if not record.id:
-                logger.warning(
-                    f"[E32-S1] BuildingRecord.save() returned no ID for building "
-                    f"{building_meta_entry.building_id} — record may not have persisted"
-                )
-                return None
             record_id = str(record.id)
 
             logger.info(
@@ -757,17 +828,53 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
         return_exceptions=True,
     )
 
-    for outcome in outcomes:
+    for building_entry, outcome in zip(inventory.buildings, outcomes):
         if isinstance(outcome, Exception):
+            # Log with full traceback so silent exception swallowing is visible
+            # in worker logs (Bug A5: return_exceptions=True was already set but
+            # the exception detail was lost after the warning message).
             logger.warning(
-                f"[E32-S1] Building extraction task failed: {outcome} "
-                "(skipping — partial results preserved)"
+                f"[E32-S1] [N1] Building {building_entry.building_id!r} extraction "
+                f"task raised exception: {outcome} (skipping — partial results preserved)"
+            )
+            logger.opt(exception=outcome).debug(
+                "[E32-S1] Building task exception detail"
             )
             continue
         if outcome is None:
+            # N1 fix: log which building yielded no record so multi-building
+            # aborts are visible in logs rather than silently dropped.
+            logger.warning(
+                f"[E32-S1] [N1] Building {building_entry.building_id!r} extraction "
+                f"returned None — skipping"
+            )
             continue
         saved_ids.append(outcome["record_id"])
         meta_cache[outcome["building_id"]] = outcome["result"]
+
+    # Disambiguate duplicate building names (N9): when the inventory assigns the
+    # site name to all buildings they end up identical; append building_code to each.
+    if len(saved_ids) > 1:
+        try:
+            saved_buildings = await BuildingRecord.get_by_source(source_id_str)
+            name_groups: Dict[str, List[BuildingRecord]] = {}
+            for br in saved_buildings:
+                key = (br.building_name or "").strip()
+                name_groups.setdefault(key, []).append(br)
+            for dup_name, group in name_groups.items():
+                if len(group) > 1 and dup_name:
+                    logger.info(
+                        f"[E32-S1] Disambiguating {len(group)} buildings with "
+                        f"identical name '{dup_name}'"
+                    )
+                    for br in group:
+                        code = br.building_code or br.internal_id
+                        br.building_name = f"{dup_name} ({code})"
+                        await br.save()
+        except Exception as dedup_err:
+            logger.warning(
+                f"[E32-S1] Building name dedup failed (non-fatal): {dedup_err}"
+            )
 
     logger.info(
         f"[E32-S1] Building extraction complete for source {source_id_str}: "
@@ -920,8 +1027,8 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
     content: str = source.full_text or ""
     inventory: Optional[BuildingInventory] = state.get("building_inventory")
     schema_bundle = state.get("schema_bundle")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
     source_id_str = str(source.id)
     operation_id: Optional[str] = state.get("operation_id")
 
@@ -948,6 +1055,13 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
             for br in (saved_buildings or [])
             if br.building_code
         }
+        # MCS11: Warn if any building_code looks like a full name (defensive guard)
+        for code in code_to_id_map:
+            if len(code) > 10 and not re.match(r"^[A-Z]\d+[A-Z]?$", code, re.IGNORECASE):
+                logger.warning(
+                    f"[MCS11] building_code '{code}' looks like a name, not a code — "
+                    f"FK lookups may fail. Was building_inventory ARA fix applied?"
+                )
     except Exception as e:
         logger.warning(
             f"[E32-S2] Could not load BuildingRecords for source {source_id_str}: {e} "
@@ -1030,7 +1144,7 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
                 # Get DoclingDocument JSON from stored tables + inject page_number
                 docling_json_tables = []
-                for t in (docling_tables or []):
+                for t in docling_tables or []:
                     dj = t.get("docling_document_json")
                     if dj:
                         # Inject page_number from outer acm_table_section row
@@ -1071,9 +1185,17 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
                         # Build human-readable building context string
                         building_context = (
-                            building_meta_entry.name
-                            or building_meta_entry.building_id
+                            building_meta_entry.name or building_meta_entry.building_id
                         )
+
+                        # MCS5: Build dynamic extraction_fields from InferredSchema
+                        _extraction_fields = None
+                        _inferred = state.get("inferred_schema")
+                        if _inferred and hasattr(_inferred, "column_mapping") and _inferred.column_mapping:
+                            from open_notebook.extractors.schema_inference import (
+                                build_extraction_fields,
+                            )
+                            _extraction_fields = build_extraction_fields(_inferred) or None
 
                         # Extract all rows -> list[ACMExtractionRecord]
                         records = await extract_all_rows(
@@ -1083,7 +1205,11 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                             source_id=source_id_str,
                             building_id=building_meta_entry.building_id,
                             langfuse_handler=langfuse_handler,
+                            extraction_fields=_extraction_fields,
                         )
+
+                        # MCS11: Assign room IDs per building
+                        _assign_room_ids(records)
 
                         # Populate building_record_id FK
                         building_record_id = code_to_id_map.get(
@@ -1154,6 +1280,9 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
             # Normalise V3 SF fields -> ACMExtractionRecord
             records = _normalize_v3_records(building_meta_result, item_result, plan)
 
+            # MCS11: Assign room IDs per building
+            _assign_room_ids(records)
+
             # Populate building_record_id FK from lookup map
             building_record_id = code_to_id_map.get(building_meta_entry.building_id)
             if building_record_id:
@@ -1199,14 +1328,24 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
         return_exceptions=True,
     )
 
-    for outcome in outcomes:
+    for building_entry, outcome in zip(inventory.buildings, outcomes):
         if isinstance(outcome, Exception):
+            # Log with full traceback so silent exception swallowing is visible
+            # in worker logs (Bug A5: return_exceptions=True was already set but
+            # the exception detail was lost after the warning message).
             logger.warning(
-                f"[E32-S2] Item extraction task failed: {outcome} "
-                "(skipping — partial results preserved)"
+                f"[E32-S2] [N1] Building {building_entry.building_id!r} item extraction "
+                f"task raised exception: {outcome} (skipping — partial results preserved)"
             )
+            logger.opt(exception=outcome).debug("[E32-S2] Item task exception detail")
             continue
         if outcome is None:
+            # N1 fix: log which building yielded no items so multi-building
+            # aborts are visible in logs rather than silently dropped.
+            logger.warning(
+                f"[E32-S2] [N1] Building {building_entry.building_id!r} item extraction "
+                f"returned None — skipping"
+            )
             continue
         all_records.extend(outcome)
 
@@ -1269,8 +1408,8 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
     operation_id: Optional[str] = state.get("operation_id")
     _validate_start = time.time()
 
@@ -1330,6 +1469,7 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
 
     validated_records = []
     rejected_count = 0
+    filtered_count = 0  # N3: intentionally excluded records (e.g., Negative results)
     records_with_issues: List[Dict[str, Any]] = []
 
     for record in records:
@@ -1367,7 +1507,9 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
             or not record.material_description
         ):
             rejected_count += 1
+            record.validation_status = "rejected"
             logger.warning(f"Rejected record due to missing required fields: {issues}")
+            validated_records.append(record)  # Keep for corrective loop (N2)
             continue
 
         # Run strict enum + business rule validation
@@ -1431,10 +1573,11 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
 
         pl.stage_complete(
             StageId.VALIDATE,
-            f"{len(validated_records)} accepted, {rejected_count} rejected",
+            f"{len(validated_records)} accepted, {rejected_count} rejected, {filtered_count} filtered",
             accepted=len(validated_records),
             rejected=rejected_count,
-            with_issues=len(records_with_issues),
+            filtered=filtered_count,
+            validation_failed=len(records_with_issues),
         )
 
     if agui:
@@ -1485,6 +1628,7 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     return {
         "records": validated_records,
         "records_rejected": rejected_count,
+        "records_filtered": filtered_count,
         "correction_stats": correction_stats,
     }
 
@@ -1500,8 +1644,8 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     correction_attempt = state.get("correction_attempt", 0)
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if pl:
         pl.stage_enter(
@@ -1779,7 +1923,28 @@ async def _llm_correct_records(
                     text = text.rstrip()[:-3].rstrip()
 
             # Parse JSON response
-            corrected = json.loads(text)
+            try:
+                corrected = json.loads(text)
+            except json.JSONDecodeError as jde:
+                # N6 fix: llama3.1:8b sometimes returns empty/invalid JSON for
+                # correction prompts. Log and skip rather than crash.
+                logger.warning(
+                    f"[N6] Correction JSON parse failed for record {idx}: {jde} "
+                    f"(raw: {text[:120]!r}) — skipping correction"
+                )
+                correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+                record.correction_attempts = record.correction_attempts + 1
+                record.validation_status = "failed_correction"
+                continue
+            if not corrected:
+                # N6 fix: empty {} returned by model — nothing to apply
+                logger.warning(
+                    f"[N6] Correction response was empty {{}} for record {idx} — skipping"
+                )
+                correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+                record.correction_attempts = record.correction_attempts + 1
+                record.validation_status = "failed_correction"
+                continue
             if isinstance(corrected, dict):
                 for field, value in corrected.items():
                     # Reject corrections to frozen fields (AC2 — E35-S7)
@@ -1825,6 +1990,19 @@ def should_correct(state: dict) -> str:
     if attempt >= max_attempts:
         return "deduplicate"
 
+    # Check if any records were explicitly rejected by the validate node.
+    # The validate node may set validation_status="rejected" for reasons (e.g.
+    # missing required fields) that the per-record re-validation below does not
+    # catch, because that loop only looks for enum/business-rule issues.
+    # Routing to "correct" here gives those records another correction attempt.
+    for record in records:
+        if getattr(record, "validation_status", None) == "rejected":
+            logger.debug(
+                f"[should_correct] Found rejected record — routing to correct "
+                f"(attempt {attempt}/{max_attempts})"
+            )
+            return "correct"
+
     # Check if any records have validation issues
     enum_fields = [
         "sample_result",
@@ -1868,8 +2046,8 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
     """Deduplicate records using composite key."""
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if agui:
         await agui.emit_step_started("deduplicate")
@@ -1916,6 +2094,25 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
             "deduplicate", unique=len(deduplicated), merged=duplicates_merged
         )
 
+    # MCS9: Publish ai.dedup_complete event
+    operation_id: Optional[str] = state.get("operation_id")
+    if operation_id:
+        try:
+            await get_event_bus().publish(
+                AIDedupCompleteEvent(
+                    operation_id=operation_id,
+                    data=AIDedupCompleteData(
+                        duplicates_merged=duplicates_merged,
+                        unique_count=len(deduplicated),
+                        total_before=len(records),
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(
+                f"[MCS9] Failed to publish ai.dedup_complete: {_pub_err}"
+            )
+
     return {"records": deduplicated}
 
 
@@ -1924,6 +2121,7 @@ def _recover_no_access_records(
     extracted_records: List[ACMExtractionRecord],
     building_id: str,
     building_name: str,
+    recovery_config: RecoveryConfig | None = None,
 ) -> List[ACMExtractionRecord]:
     """Post-LLM fallback: scan full_text for 'No Access' entries not captured.
 
@@ -1940,15 +2138,28 @@ def _recover_no_access_records(
 
     Returns additional ACMExtractionRecord objects to append.
     """
+    config = recovery_config or RecoveryConfig()
     recovered: List[ACMExtractionRecord] = []
 
-    no_access_re = re.compile(
-        r"No\s+access|Height\s+restriction|Restricted\s+Access",
-        re.IGNORECASE,
-    )
+    # Build no-access regex from config terms.
+    # When using default config, preserve the original regex exactly
+    # (terms use word stems like "restriction" not "Restricted").
+    # When custom config is provided, build from the term lists.
+    if recovery_config is not None:
+        _na_terms = [
+            t.replace(" ", r"\s+")
+            for t in (config.not_sampled_terms + config.restriction_terms)
+            if t
+        ]
+        no_access_re = re.compile("|".join(_na_terms), re.IGNORECASE)
+    else:
+        no_access_re = re.compile(
+            r"No\s+access|Height\s+restriction|Restricted\s+Access",
+            re.IGNORECASE,
+        )
 
     # Level indicators: lines that mark the start of a register row block
-    level_re = re.compile(
+    level_re = config.level_re or re.compile(
         r"^(Ground|First|Second|Third|Level|Roof|Basement)\s*$", re.IGNORECASE
     )
     # Second line of level indicator
@@ -2019,7 +2230,7 @@ def _recover_no_access_records(
         # In the vertical register format, the product (ACM item) is the last
         # meaningful line before the dashes. But multi-word locations can span
         # several lines, so we check if the last line is a known ACM product.
-        KNOWN_PRODUCT_KEYWORDS = {
+        KNOWN_PRODUCT_KEYWORDS = config.product_keywords or {
             "lining",
             "cladding",
             "insulation",
@@ -2123,11 +2334,12 @@ def _recover_no_access_records(
     # ── ARA Format Scan (E28-S2) ──────────────────────────────────────────
     # ARA (Asbestos Risk Assessment) format uses a different text layout:
     #   {item_no}\n{room}\n{desc}\nAsbestos\nNot Sampled\n{restriction}\nPresumed Positive
-    # The SAMP-specific level_re above won't match ARA section headers like
+    # The standard-format level_re above won't match ARA section headers like
     # "Mortuary Buildings - Interior - Ground Level". This scan finds
     # "Not Sampled" lines and works backward/forward to extract the record.
     ara_recovered = _recover_not_sampled_records_ara(
-        full_text, extracted_records + recovered, building_id, building_name
+        full_text, extracted_records + recovered, building_id, building_name,
+        recovery_config=recovery_config,
     )
     recovered.extend(ara_recovered)
 
@@ -2139,11 +2351,12 @@ def _recover_not_sampled_records_ara(
     existing_records: List[ACMExtractionRecord],
     default_building_id: str,
     default_building_name: str,
+    recovery_config: RecoveryConfig | None = None,
 ) -> List[ACMExtractionRecord]:
     """ARA-format recovery for unsampled items missed by LLM.
 
     Runs on orchestrator path (multi-building documents like Alexander).
-    Complements the SAMP-path scan in ``_recover_no_access_records()``.
+    Complements the standard-format scan in ``_recover_no_access_records()``.
 
     ARA "Not Sampled" entries follow a consistent vertical text pattern::
 
@@ -2159,6 +2372,7 @@ def _recover_not_sampled_records_ara(
     just above it and "Presumed Positive" just below, then extracts room/product
     from the lines between the item number and "Asbestos".
     """
+    config = recovery_config or RecoveryConfig()
     recovered: List[ACMExtractionRecord] = []
 
     # Build dedup lookup: (room_norm, product_norm) to avoid duplicating
@@ -2174,7 +2388,7 @@ def _recover_not_sampled_records_ara(
         existing_combos.add((room_norm, loc_norm))
 
     # ARA section header pattern: "Building Name - Interior/Exterior - Level"
-    section_header_re = re.compile(
+    section_header_re = config.section_header_re or re.compile(
         r"^(.+?)\s*-\s*(Interior|Exterior)\s*-\s*(.+)$", re.IGNORECASE
     )
 
@@ -2194,16 +2408,17 @@ def _recover_not_sampled_records_ara(
             i += 1
             continue
 
-        # Look for "Not Sampled" lines
-        if stripped != "Not Sampled":
+        # Look for "Not Sampled" lines (check against config terms)
+        _not_sampled_lower = {t.lower() for t in config.not_sampled_terms}
+        if stripped not in config.not_sampled_terms and stripped.lower() not in _not_sampled_lower:
             i += 1
             continue
 
         not_sampled_line = i
 
-        # Verify "Asbestos" appears within 5 lines above
+        # Verify "Asbestos" appears within lookback_lines above
         asbestos_line = None
-        for back in range(1, 6):
+        for back in range(1, config.lookback_lines + 1):
             if not_sampled_line - back < 0:
                 break
             if lines[not_sampled_line - back].strip().lower() == "asbestos":
@@ -2214,20 +2429,26 @@ def _recover_not_sampled_records_ara(
             i += 1
             continue
 
-        # Verify restriction + "Presumed Positive" appear within 3 lines below
+        # Verify restriction + confirmation terms appear within lookahead_lines below
         restriction = None
         presumed_positive = False
-        for fwd in range(1, 4):
+        # Build restriction regex from config terms (replace spaces with \s+)
+        _restriction_terms = [
+            t.replace(" ", r"\s+")
+            for t in config.restriction_terms
+            if t
+        ]
+        _restriction_re = re.compile(
+            "|".join(_restriction_terms), re.IGNORECASE
+        ) if _restriction_terms else None
+        _confirmation_lower = {t.lower() for t in config.confirmation_terms}
+        for fwd in range(1, config.lookahead_lines + 1):
             if not_sampled_line + fwd >= len(lines):
                 break
             fwd_stripped = lines[not_sampled_line + fwd].strip()
-            if re.match(
-                r"Restricted\s+Access|Height\s+Restricted|Live\s+Electrical",
-                fwd_stripped,
-                re.IGNORECASE,
-            ):
+            if _restriction_re and _restriction_re.match(fwd_stripped):
                 restriction = fwd_stripped
-            if fwd_stripped.lower() == "presumed positive":
+            if fwd_stripped.lower() in _confirmation_lower:
                 presumed_positive = True
 
         if not presumed_positive:
@@ -2388,7 +2609,28 @@ def _recover_not_sampled_records_ara(
 
 
 async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
-    """Graph node: recover no-access records missed by LLM extraction."""
+    """Graph node: recover no-access records missed by LLM extraction.
+
+    TODO (Bug A3 — BUG-NO-ACCESS-DEAD): Per-row extraction handles synthetic
+    rows (Type D/F — "No Access" / "Previously Removed") via
+    ``scan_text_for_synthetics()`` inside ``_extract_items_for_building``, and
+    ``per_row_actually_ran`` is set True when ALL buildings used that path.
+
+    However, ``_recover_no_access_records()`` below uses ``context.building_id``
+    and ``context.building_name`` which come from the OLD single-building
+    ``BuildingRoomContext`` — it does not iterate over all buildings in the
+    multi-building inventory.  If per-row extraction ran but missed a "No
+    Access" entry in a building whose ``building_id`` differs from
+    ``context.building_id``, recovery is silently skipped for that building.
+
+    Correct fix: replace the single-building ``_recover_no_access_records``
+    call with a loop over all buildings in ``state["inventory"].buildings``,
+    calling it once per building with that building's id/name, then merging
+    recovered records back into state["records"].  This requires surfacing
+    ``BuildingInventory`` from state (it is already stored there as
+    ``"inventory"``).  Deferred because the per-row segmenter covers the
+    common case and this is a rare edge-case; track as BUG-NO-ACCESS-DEAD.
+    """
     # Only skip recovery if per-row extraction ACTUALLY ran for all buildings.
     # When docling_document_json is NULL, per-row falls back to bulk but the env
     # var still says "per_row" — recovery must run in that case.
@@ -2401,8 +2643,8 @@ async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     records: List[ACMExtractionRecord] = state.get("records", [])
     source: Source = state["source"]
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if agui:
         await agui.emit_step_started("recover_no_access")
@@ -2450,8 +2692,10 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
     start_time = state.get("start_time", time.time())
     records_rejected = state.get("records_rejected", 0)
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    records_filtered = state.get("records_filtered", 0)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
+    operation_id: Optional[str] = state.get("operation_id")
 
     if agui:
         await agui.emit_step_started("save")
@@ -2467,6 +2711,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 status=ExtractionStatus.NO_ACM_DATA,
                 total_records=0,
                 records_rejected=records_rejected,
+                records_filtered=records_filtered,
             ),
             "error": None,
         }
@@ -2508,6 +2753,24 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                 f"Created {len(section_map)} parent table sections for source {source.id}"
             )
 
+    # MCS9: Publish ai.save_started event
+    if operation_id:
+        try:
+            await get_event_bus().publish(
+                AISaveStartedEvent(
+                    operation_id=operation_id,
+                    data=AISaveStartedData(
+                        total_records=len(records),
+                        total_sections=len(section_map),
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(
+                f"[MCS9] Failed to publish ai.save_started: {_pub_err}"
+            )
+
+    save_start = time.monotonic()
     saved_count = 0
     errors = []
 
@@ -2568,11 +2831,29 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             await acm_record.save()
             saved_count += 1
 
+            # MCS9: Publish ai.save_progress every 10 records
+            if operation_id and saved_count % 10 == 0:
+                try:
+                    await get_event_bus().publish(
+                        AISaveProgressEvent(
+                            operation_id=operation_id,
+                            data=AISaveProgressData(
+                                saved=saved_count,
+                                total=len(records),
+                                current_building=record.building_id or "unknown",
+                            ),
+                        )
+                    )
+                except Exception as _pub_err:
+                    logger.debug(
+                        f"[MCS9] Failed to publish ai.save_progress: {_pub_err}"
+                    )
+
         except Exception as e:
             logger.error(f"Failed to save record: {e}")
             errors.append(str(e))
 
-    extraction_time = int((time.time() - start_time) * 1000)
+    extraction_time = int((time.monotonic() - save_start) * 1000)
 
     # Build final result
     result = ACMExtractionResult(
@@ -2582,6 +2863,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
         else ExtractionStatus.NO_ACM_DATA,
         total_records=saved_count,
         records_rejected=records_rejected,
+        records_filtered=records_filtered,
     )
     result.update_stats()
 
@@ -2620,6 +2902,25 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             errors=len(errors),
         )
 
+    # MCS9: Publish ai.save_complete (new terminal event for ai category)
+    if operation_id:
+        try:
+            _save_duration_ms = int((time.monotonic() - save_start) * 1000)
+            await get_event_bus().publish(
+                AISaveCompleteEvent(
+                    operation_id=operation_id,
+                    data=AISaveCompleteData(
+                        records_saved=saved_count,
+                        sections_saved=len(section_map),
+                        duration_ms=_save_duration_ms,
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(
+                f"[MCS9] Failed to publish ai.save_complete: {_pub_err}"
+            )
+
     if errors:
         return {
             "extraction_result": result,
@@ -2646,6 +2947,9 @@ agent_state.add_node(
     "save_intelligence", save_intelligence_node
 )  # E30-S9: Persist pre-extraction intelligence
 agent_state.add_node(
+    "schema_inference", schema_inference_node
+)  # MCS2: Schema inference
+agent_state.add_node(
     "extract_building", extract_building_node
 )  # E32-S1: Building__c Phase 1 extraction
 agent_state.add_node(
@@ -2663,8 +2967,9 @@ agent_state.add_node("save", save_records)
 agent_state.add_edge(START, "metadata_and_structure")
 agent_state.add_edge("metadata_and_structure", "inventory")
 agent_state.add_edge("inventory", "save_intelligence")
-# E32-S1: Building__c extraction runs between save_intelligence and extract_items
-agent_state.add_edge("save_intelligence", "extract_building")
+# MCS2: Schema inference runs between save_intelligence and extract_building
+agent_state.add_edge("save_intelligence", "schema_inference")
+agent_state.add_edge("schema_inference", "extract_building")
 # E32-S2: Item__c extraction runs after building extraction
 agent_state.add_edge("extract_building", "extract_items")
 agent_state.add_edge("extract_items", "normalize_to_sf")
@@ -2679,8 +2984,9 @@ agent_state.add_edge("deduplicate", "recover_no_access")
 agent_state.add_edge("recover_no_access", "save")
 agent_state.add_edge("save", END)
 
-# Compile the graph
 graph = agent_state.compile()
+# Checkpointed version for HITL support — compiled lazily in extract_acm_from_source
+_checkpointed_graph = None
 
 
 async def extract_acm_from_source(
@@ -2773,6 +3079,10 @@ async def extract_acm_from_source(
                 f"Deleted {deleted} existing ACM records for source {source.id}"
             )
 
+    # Ensure Source is LangGraph-serializable (RecordID fields → str)
+    if source.command is not None:
+        source.command = str(source.command)
+
     # Run the extraction graph
     initial_state: ExtractionState = {
         "source": source,
@@ -2782,6 +3092,7 @@ async def extract_acm_from_source(
         "context": BuildingRoomContext(),
         "records": [],
         "records_rejected": 0,
+        "records_filtered": 0,
         "extraction_result": ACMExtractionResult(),
         "error": None,
         "model_id": model_id,
@@ -2807,25 +3118,118 @@ async def extract_acm_from_source(
         "document_metadata": None,
         # Orchestrator stats (E1-S20)
         "orchestrator_stats": None,
-        # Pipeline observability (E1-S21)
-        "pipeline_logger": pl,
-        # AG-UI event emitter (E17-S1)
-        "agui_emitter": agui,
         # E34-S1: operation_id for PipelineEventBus streaming events
         "operation_id": command_id,
     }
 
     try:
+        import uuid
+
+        thread_id = command_id or str(uuid.uuid4())
+        graph_config: Dict[str, Any] = {
+            "configurable": {
+                "thread_id": thread_id,
+                # Non-serializable objects stored in config (not checkpointed)
+                "pipeline_logger": pl,
+                "agui_emitter": agui,
+            },
+        }
         if langfuse_callbacks:
-            result = await graph.ainvoke(
-                initial_state,
-                config={
-                    "callbacks": langfuse_callbacks,
-                    "metadata": langfuse_metadata,
-                },
+            graph_config["callbacks"] = langfuse_callbacks
+            graph_config["metadata"] = langfuse_metadata
+
+        # MCS13: Disable MemorySaver checkpointer — it crashes with
+        # "Type is not msgpack serializable: RecordID" when SurrealDB
+        # RecordID objects leak into the graph state via domain models.
+        # HITL (schema inference confirmation) will need a custom
+        # serializer or explicit str() conversion before re-enabling.
+        active_graph = graph
+
+        result = await active_graph.ainvoke(
+            initial_state, config=graph_config
+        )
+
+        # MCS6: Handle HITL interrupt from schema_inference_node
+        if "__interrupt__" in result and result["__interrupt__"]:
+            from open_notebook.extractors.hitl_registry import get_hitl_registry
+            from open_notebook.extractors.pipeline_event_bus import (
+                SchemaMappingResumedData,
+                SchemaMappingResumedEvent,
+                SchemaMappingReviewData,
+                SchemaMappingReviewEvent,
+                SchemaMappingReviewMappingItem,
             )
-        else:
-            result = await graph.ainvoke(initial_state)
+
+            interrupt_list = result["__interrupt__"]
+            interrupt_value = (
+                interrupt_list[0].value
+                if hasattr(interrupt_list[0], "value")
+                else interrupt_list[0]
+            )
+            operation_id = command_id or thread_id
+
+            logger.info(
+                f"[HITL] Schema mapping review interrupt for operation "
+                f"{operation_id}, confidence={interrupt_value.get('overall_confidence')}"
+            )
+
+            # Emit SSE event for HITL review
+            bus = get_event_bus()
+            await bus.publish(
+                SchemaMappingReviewEvent(
+                    operation_id=operation_id,
+                    data=SchemaMappingReviewData(
+                        source_id=interrupt_value.get("source_id", source_id_str),
+                        mappings=[
+                            SchemaMappingReviewMappingItem(**m)
+                            for m in interrupt_value.get("mappings", [])
+                        ],
+                        unmapped_headers=interrupt_value.get("unmapped_headers", []),
+                        overall_confidence=interrupt_value.get(
+                            "overall_confidence", 0.0
+                        ),
+                        detected_consultant=interrupt_value.get("detected_consultant"),
+                        header_signature=interrupt_value.get("header_signature", ""),
+                    ),
+                )
+            )
+
+            # Register and wait for user response via HITL registry
+            registry = get_hitl_registry()
+            registry.register(operation_id, interrupt_value)
+
+            try:
+                user_response = await registry.wait_for_response(
+                    operation_id, timeout=600.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"[HITL] Timeout waiting for user response on {operation_id}, "
+                    "resuming with auto-approve"
+                )
+                user_response = {"action": "approve"}
+
+            # Resume the graph with the user's response
+            logger.info(
+                f"[HITL] Resuming extraction for {operation_id} with "
+                f"action={user_response.get('action')}"
+            )
+            result = await active_graph.ainvoke(
+                Command(resume=user_response), config=graph_config
+            )
+
+            # Emit SSE event for HITL resumed
+            await bus.publish(
+                SchemaMappingResumedEvent(
+                    operation_id=operation_id,
+                    data=SchemaMappingResumedData(
+                        action=user_response.get("action", "approve"),
+                        mappings_confirmed=len(
+                            user_response.get("mappings", [])
+                        ),
+                    ),
+                )
+            )
 
         extraction_result: ACMExtractionResult = result.get(
             "extraction_result", ACMExtractionResult()
@@ -2854,7 +3258,7 @@ async def extract_acm_from_source(
                 source_id=source_id_str,
                 status="failed",
                 total_records=0,
-                records_failed=extraction_result.records_rejected,
+                records_filtered=extraction_result.records_rejected,
                 error=error,
                 extraction_time_ms=extraction_time,
                 correction_stats=correction_stats if has_corrections else None,
@@ -2886,6 +3290,7 @@ async def extract_acm_from_source(
         pipeline_run = pl.complete(
             total_records=extraction_result.total_records,
             records_rejected=extraction_result.records_rejected,
+            records_filtered=extraction_result.records_filtered,
             confidence_distribution=conf_dict,
             total_chunks=total_chunks,
             total_buildings=total_buildings,
@@ -2912,7 +3317,7 @@ async def extract_acm_from_source(
             source_id=source_id_str,
             status=status,
             total_records=extraction_result.total_records,
-            records_failed=extraction_result.records_rejected,
+            records_filtered=extraction_result.records_rejected,
             confidence_distribution=extraction_result.confidence_distribution,
             extraction_time_ms=extraction_time,
             correction_stats=correction_stats if has_corrections else None,
@@ -2932,10 +3337,12 @@ async def extract_acm_from_source(
             source_id=source_id_str,
             status="failed",
             total_records=0,
-            records_failed=0,
+            records_filtered=0,
             error=str(e),
             extraction_time_ms=extraction_time,
             pipeline_run=pipeline_run.model_dump(mode="json"),
         )
     finally:
         flush_langfuse_handler(langfuse_handler)
+        # MCS8: Checkpointer re-enabled — PipelineLogger/AGUIEventEmitter
+        # moved from state to config["configurable"] (not checkpointed).

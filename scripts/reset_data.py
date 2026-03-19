@@ -4,6 +4,7 @@ Usage:
     uv run python scripts/reset_data.py          # ACM data only (keep sources/notebooks)
     uv run python scripts/reset_data.py --full    # Delete EVERYTHING except model/field_schema config
 """
+
 import argparse
 import asyncio
 

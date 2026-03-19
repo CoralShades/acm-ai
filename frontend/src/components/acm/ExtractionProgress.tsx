@@ -231,7 +231,7 @@ export function ExtractionProgress({ sourceId, buildings }: ExtractionProgressPr
           <h1 className="text-2xl font-bold">Extraction Progress</h1>
           {phase === 'extracting' && (
             <p className="text-muted-foreground text-sm">
-              {progressPercent}% complete — processing your SAMP document
+              {progressPercent}% complete — processing your ARA document
             </p>
           )}
           {phase === 'completed' && (

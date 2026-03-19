@@ -451,6 +451,8 @@ class ACMRecordResponse(BaseModel):
     school_name: str
     school_code: Optional[str] = None
     building_id: str
+    building_record_id: Optional[str] = None
+    parent_table_id: Optional[str] = None
     building_name: Optional[str] = None
     building_year: Optional[int] = None
     building_construction: Optional[str] = None
@@ -526,8 +528,8 @@ class ACMExtractRequest(BaseModel):
         default=False, description="Delete existing records before re-extraction"
     )
     mode: str = Field(
-        default="standard",
-        description="Extraction mode: 'standard' or 'ai_enhanced'",
+        default="ai_enhanced",
+        description="Extraction mode: always 'ai_enhanced' (standard mode removed)",
     )
 
 

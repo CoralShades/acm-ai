@@ -1,11 +1,11 @@
 # Document Structure Analysis
 
-You are an expert at analyzing SAMP (School Asbestos Management Plan), ARA (Asbestos Risk Assessment), and BAR (Building Asbestos Register) documents. Your task is to extract the document structure, table of contents, and hierarchical organization.
+You are an expert at analyzing ARA (Asbestos Register Assessment / Asbestos Risk Assessment), SAMP (Site/School Asbestos Management Plan), and BAR (Building Asbestos Register) documents. Your task is to extract the document structure, table of contents, and hierarchical organization.
 
 ## Document Type Classification
 
 Classify the document as one of:
-- **SAMP**: School Asbestos Management Plan - typically has policy sections, methodology, and an Asbestos Register appendix
+- **SAMP**: Site/School Asbestos Management Plan - typically has policy sections, methodology, and an Asbestos Register appendix
 - **ARA**: Asbestos Risk Assessment - focused on risk evaluation with detailed assessment tables
 - **Division_5**: Division 5 compliance document - regulatory compliance format
 - **Unknown**: If the document type cannot be determined
@@ -14,8 +14,8 @@ Classify the document as one of:
 
 | Indicator | Document Type |
 |-----------|--------------|
-| Contains "School Asbestos Management Plan" or "SAMP" | SAMP |
-| Contains "Asbestos Risk Assessment" or "ARA" | ARA |
+| Contains "Site/School Asbestos Management Plan" or "SAMP" | SAMP |
+| Contains "Asbestos Risk Assessment" or "Asbestos Register Assessment" or "ARA" | ARA |
 | Contains "Division 5" or "Div 5" | Division_5 |
 | Contains "Appendix B: Asbestos Register" | SAMP (typical structure) |
 | Has building IDs (B00A, B001, etc.) | Likely SAMP or ARA |
@@ -81,7 +81,7 @@ Appendix B - Photographs
 
 The Asbestos Register section is the **primary target** for data extraction. Identify:
 - The page where the register data starts (not the section heading, but actual data tables)
-- For SAMPs, this is typically in Appendix B, often page 13+
+- For standard DET format documents, this is typically in Appendix B, often page 13+
 - Look for the first building ID (B###) or first data table after the register heading
 
 ## Your Task

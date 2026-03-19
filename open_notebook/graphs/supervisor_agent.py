@@ -65,6 +65,7 @@ def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
     # Fallback: extract source_id from CopilotKit system messages if not in state
     if not source_id:
         import re
+
         for msg in state.get("messages", []):
             content = getattr(msg, "content", "")
             if isinstance(content, str) and "source:" in content:

@@ -1,114 +1,204 @@
-# E29-R2: Match-Gap Remediation — Task Plan
+# MCS11: Unify `/jobs/[id]` as Canonical Page with Full Feature Parity
 
-## Story Context
+**Status**: Phases 1-3 DONE | Phase 4 DEFERRED | Phase 5 partial (5.1 done, 5.2-5.3 remaining) | Phase 6 partial (6.1 done, 6.2-6.6 remaining) | Gap4 FK exposure DONE
+**SP**: 13 | **Priority**: P0
+**Date**: 2026-03-19
+**Audit ref**: MCS10 gap analysis + visual audit of /jobs/[id] vs /source/[id]
 
-> As a pipeline developer, I want the LLM inventory compilation to return proper
-> `RoomMeta` objects and extraction output to use normalized room/material names,
-> so that Gate 2 thresholds are met.
+## Problem Statement
 
-R2 scope only. S3/S4 architecture unchanged. No scope creep into S5/S6.
+Two parallel pages exist for viewing the same source data:
+- **`/jobs/[id]`** — The primary user workflow page (6 tabs: Overview, Buildings, ACM Records, Content, Raw Tables, Log + Chat)
+- **`/source/[id]`** — The secondary "ACM Register" page (2 tabs: Buildings, ACM Records)
 
----
+Over ~20 commits, critical features were built on `/source/[id]` but never ported to `/jobs/[id]`:
+- SSE live streaming (real-time extraction progress)
+- Per-building status badges (Extracting → Validating → Saving → Complete)
+- Bulk edit/validate operations
+- Validation error display and "Fix All" button
+- Quick text search in grid
+- "Group by Room" toggle
+- Building selection persistence (Zustand vs useState)
 
-## Tasks
+Users navigate via `/jobs` → job card → `/jobs/source:ID`. They never see the features on `/source/[id]`.
 
-### T1: Fix RoomMeta Typing in LLM Inventory Compilation
-- [x] Add `_coerce_rooms_in_inventory(parsed: dict)` to `building_inventory.py`
-  - Convert string rooms → `{"room_id": name, "name": name}`
-  - Handle dict rooms (pass through)
-  - Handle None/missing rooms (default to empty list)
-- [x] Call `_coerce_rooms_in_inventory(parsed)` before `BuildingInventory.model_validate(parsed)` at line 503
-- [x] Write `test_coerces_string_rooms_to_roommeta` — strings → RoomMeta objects
-- [x] Write `test_preserves_dict_rooms` — dicts pass through
-- [x] Write `test_handles_mixed_rooms` — mix of strings and dicts
-- [x] Write `test_handles_none_rooms` — None → empty list
-- [x] Write `test_handles_missing_rooms_key` — missing key → empty list
-- [x] Write `test_coerced_rooms_validate_as_building_inventory` — full Pydantic validation
+## Architecture Decision
 
-**AC**: R2-AC1
-**Files**: `building_inventory.py`, `tests/test_orchestrator.py`
-**Result**: 6/6 tests pass
+**Strategy: Feature-port from `/source/[id]` → `/jobs/[id]`**
+- Keep `/jobs/[id]` as the canonical page (it has more tabs, chat, export)
+- Port SSE streaming, bulk ops, validation, and search features into the jobs page
+- Keep `/source/[id]` as a lightweight ACM-focused view (linked from "ACM Register" button)
+- Do NOT merge/redirect — both serve different purposes
 
-### T2: Add Building Name Normalization to Benchmark Matching
-- [x] Add `BUILDING_SYNONYMS` map to `e29_benchmark_harness.py`
-  - `"old alexandra hospital"` → `["main hospital building", "alexandra hospital", "old alexander hospital"]`
-- [x] Add `_normalize_building(building: str) -> str` function
-- [x] Apply `_normalize_building()` in tier 2 composite key construction (both GT and extracted)
-- [x] Apply `_normalize_building()` in field accuracy calculator
+## Completed Pre-work
 
-**AC**: R2-AC3, R2-AC5
-**Files**: `e29_benchmark_harness.py`
-**Result**: 44/44 existing tests pass
-
-### T3: Expand Product Synonyms
-- [x] Add missing product synonyms to `PRODUCT_SYNONYMS`:
-  - `"heater flue"` → `["heater"]`
-  - `"ceiling"` → `["porch ceiling"]` (added to existing)
-  - `"floor covering"` → `["floor covering (beneath carpet)"]` (added to existing)
-  - `"electrical board"` → `["electrical distribution board"]`
-- [x] Add parenthetical stripping to `_normalize_product()`: `"Floor covering (beneath carpet)"` → `"floor covering"`
-
-**AC**: R2-AC3
-**Files**: `e29_benchmark_harness.py`
-
-### T4: Normalize Room Names in Matching
-- [x] Add `ROOM_SYNONYMS` map:
-  - `"exterior"` → `["external"]`
-- [x] Add `_normalize_room(room: str) -> str` function
-  - Resolve room synonyms
-  - Strip leading/trailing dashes with surrounding spaces
-  - Collapse multiple whitespace to single space (via _normalize)
-- [x] Apply `_normalize_room()` in tier 2, tier 3, and field accuracy
-- [x] `_normalize_room` applied in GT and extracted sides
-
-**AC**: R2-AC2
-**Files**: `e29_benchmark_harness.py`
-
-### T5: Run Verification Suite (Pre-Benchmark)
-- [x] `uv run ruff check .` — zero errors
-- [x] `uv run pytest tests/test_orchestrator.py -x` — 67/67 pass (6 new)
-- [x] `uv run pytest tests/test_strategy_registry.py -x` — 33/33 pass
-- [x] `uv run pytest tests/integration/test_benchmark_harness.py -x` — 44/44 pass
-
-**AC**: R2-AC7, R2-AC8
-
-### T6: Run Gate 2 Benchmark Rerun
-- [ ] `uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows --output-tag gate2_rerun`
-- [ ] `uv run python scripts/research/e29_benchmark_harness.py --doc alexander --output-tag gate2_rerun`
-- [ ] Verify: Broadmeadows >= 31/31 matched (R2-AC4)
-- [ ] Verify: Alexander >= 36/43 matched (R2-AC5)
-- [ ] Verify: All 6 Alexander buildings producing records (R2-AC5)
-- [ ] Verify: Docling injection firing, no F2 fallback (R2-AC6)
-- [ ] Document per-building Alexander counts
-
-**AC**: R2-AC4, R2-AC5, R2-AC6
-
-### T7: Update Recovery Spec + Worklog + Sprint Status
-- [ ] Update R2 section in `e29-gate2-recovery-spec.md` with Dev Agent Record
-- [ ] Append R2 session to `e29-worklog.md`
-- [ ] Set `e29-r2` status to `review` in `sprint-status.yaml`
+- [x] **MCS10-Bug**: Buildings tab showing "No Rows To Show" — fixed with `useJobBuildings` fallback hook
+- [x] **MCS10-Gap2**: Buildings query invalidation timing (moved to `ai.building_extracted`)
+- [x] **MCS10-Gap3**: Items query invalidation deferred to `ai.save_complete`
+- [x] **MCS10**: Per-building "Saving..." status badge added
 
 ---
 
-## File Changes Summary
+## Phase 1: SSE Streaming on Jobs Page (SP 3)
 
-| File | Action | Task |
-|------|--------|------|
-| `open_notebook/extractors/building_inventory.py` | Modified | T1 |
-| `scripts/research/e29_benchmark_harness.py` | Modified | T2, T3, T4 |
-| `tests/test_orchestrator.py` | Modified | T1 |
-| `benchmarks/results/gate2_rerun_results.json` | Created (by harness) | T6 |
-| `docs/reviews/e29-gate2_rerun-benchmark-report.md` | Created (by harness) | T6 |
-| `docs/sprint-artifacts/e29-gate2-recovery-spec.md` | Modified | T7 |
-| `docs/sprint-artifacts/e29-worklog.md` | Modified | T7 |
-| `docs/sprint-artifacts/sprint-status.yaml` | Modified | T7 |
+**Goal**: Real-time extraction progress on `/jobs/[id]` — progress bar, building status, ETA
 
-## Verification Commands
+### Tasks
+- [x] 1.1 Wire `useV3BuildingStream` into `/jobs/[id]` page
+  - Read `operationId` from `sessionStorage` key `acm-extraction-progress-{sourceId}` (same as /source/[id])
+  - Also fall back to `source.command_id` for extraction-in-progress detection
+  - Pass `totalBuildings` from buildings count
+- [x] 1.2 Add streaming progress bar to jobs page header
+  - Show `{completedCount}/{totalBuildings} buildings · ~{eta}s remaining` below tab strip
+  - Use same pattern as `/source/[id]` `SourceACMViewContent`
+  - Conditional on `isStreaming` from `useV3BuildingStream`
+- [x] 1.3 Add save progress indicator
+  - Show "Saving records... {savedCount}/{totalToSave}" during save phase
+  - Wire `isSaving`, `savedCount`, `totalToSave` from `useV3BuildingStream`
+- [x] 1.4 Update `JobStatusPill` to show "Extracting" with animated indicator when SSE stream is active
+  - Currently shows `review_status` from source data (may say "Review" during extraction)
+  - Override with SSE-derived status when `isStreaming`
+- [x] 1.5 Invalidate records query on `ai.save_complete` in the jobs page context
+  - Currently the jobs page polls for records; SSE should trigger refetch
 
-```bash
-uv run ruff check .
-uv run pytest tests/test_orchestrator.py -x
-uv run pytest tests/test_strategy_registry.py -x
-uv run python scripts/research/e29_benchmark_harness.py --doc broadmeadows --output-tag gate2_rerun
-uv run python scripts/research/e29_benchmark_harness.py --doc alexander --output-tag gate2_rerun
-```
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` — add hook, progress UI
+- `frontend/src/lib/hooks/useV3BuildingStream.ts` — already exists
+- `frontend/src/components/jobs/JobDetailHeader.tsx` — update status pill
+- `frontend/src/components/jobs/JobStatusPill.tsx` — SSE override
+
+---
+
+## Phase 2: Bulk Operations on Jobs Page (SP 3)
+
+**Goal**: Multi-row selection, bulk edit, bulk validate, SSE progress on ACM Records tab
+
+### Tasks
+- [x] 2.1 Add multi-row selection to ACM Records tab
+  - ACMGrid already supports `selectedRecords` prop
+  - Add `selectedRecords` state + selection tracking in jobs page
+- [x] 2.2 Wire `BulkOperationsBar` component
+  - Import from `frontend/src/components/acm/BulkOperationsBar.tsx`
+  - Pass `selectedRecords`, `sourceId`, `onClearSelection`
+  - Show above/below grid when selection > 0
+- [x] 2.3 Wire bulk SSE progress
+  - `BulkOperationsBar` already uses `useV3SSE` for `bulk` category
+  - Ensure `operationId` propagation works
+- [x] 2.4 Add "Fix All" button for validation errors
+  - Use `useValidationSummary(sourceId)` to get error counts
+  - Show "Fix All" button when `totalErrors > 0`
+  - Wire `useBulkFix` mutation
+
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` — add selection state, BulkOperationsBar
+- `frontend/src/components/acm/BulkOperationsBar.tsx` — already exists
+- `frontend/src/lib/hooks/useACMItems.ts` — validation summary, bulk fix hooks
+
+---
+
+## Phase 3: Search, Filter & Grid Enhancements (SP 2)
+
+**Goal**: Quick text search, Group by Room toggle, building-filtered per-building loading
+
+### Tasks
+- [x] 3.1 Add quick text search to ACM Records tab
+  - Add search `Input` above grid
+  - Wire `quickFilterText` prop on ACMGrid
+- [x] 3.2 Add "Group by Room" toggle
+  - Wire `enableGrouping` prop on ACMGrid
+  - Add toggle button in toolbar
+- [ ] 3.3 Switch ACM Records data source from "all records" to per-building
+  - Currently: `fetch('/api/acm/records?source_id=...&limit=500')` loads ALL records
+  - Target: Use `useACMItems(sourceId, selectedBuildingId)` for per-building loading
+  - Much more efficient for large sources
+- [ ] 3.4 Upgrade building filter from dropdown to tab strip
+  - Replace `BuildingTabFilter` with `BuildingTabStrip` pattern (scrollable horizontal tabs)
+  - Show per-building record count and error badges
+  - Use Zustand `useBuildingStore` for persistent selection
+
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` — search state, grouping, filter upgrade
+- `frontend/src/components/acm/BuildingTabFilter.tsx` — may deprecate
+- `frontend/src/lib/stores/buildingStore.ts` — building selection persistence
+
+---
+
+## Phase 4: Job Card Status on /jobs List (SP 2)
+
+**Goal**: Job cards show real-time extraction status with mini progress
+
+### Tasks
+- [ ] 4.1 Add extraction status detection to job cards
+  - Check `source.review_status` for "extracting" state
+  - Show "Extracting..." badge instead of "Review" when in progress
+- [ ] 4.2 Add mini progress indicator on extracting job cards
+  - Show `{buildingCount} buildings · {recordCount} records` when in progress
+  - Optional: SSE connection per active extraction (cost: one EventSource per card)
+  - Alternative: Use polling from `command_id` (cheaper)
+- [ ] 4.3 Auto-refresh job list when extraction completes
+  - Invalidate jobs query when navigating back from completed extraction
+
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/page.tsx` — job list page
+- Job card component (need to identify exact file)
+- `frontend/src/lib/hooks/use-sources.ts` — source data with review_status
+
+---
+
+## Phase 5: Validation Error Display (SP 2)
+
+**Goal**: Per-building validation error counts and visual indicators on jobs page
+
+### Tasks
+- [x] 5.1 Wire `useValidationSummary` into jobs page
+  - Show per-building error counts in building filter tabs
+- [ ] 5.2 Add error row highlighting in ACMGrid
+  - Highlight rows with validation errors (already supported via `rowClassRules`)
+- [ ] 5.3 Add validation summary card to Overview tab
+  - Show total errors, auto-fixable count, "Fix All" button
+  - Link to ACM Records tab filtered to error rows
+
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx`
+- `frontend/src/components/jobs/JobOverviewTab.tsx`
+- `frontend/src/lib/hooks/useACMItems.ts` — useValidationSummary
+
+---
+
+## Phase 6: Verification & Polish (SP 1)
+
+### Tasks
+- [x] 6.1 E2E smoke test — all 6 tabs render without errors
+- [ ] 6.2 SSE streaming test — extraction progress appears in real time
+- [ ] 6.3 Bulk operations test — select, edit, validate flows
+- [ ] 6.4 Cross-page consistency — verify /source/[id] still works
+- [ ] 6.5 Mobile responsive check — chat panel, building tabs
+- [ ] 6.6 Screenshot evidence at each verification point
+
+---
+
+## Agent Strategy
+
+| Phase | Agents | Model | Parallelizable |
+|-------|--------|-------|----------------|
+| 1 | `frontend-specialist` | opus | Yes (independent of 2-5) |
+| 2 | `frontend-specialist` | opus | After Phase 1 (depends on grid wiring) |
+| 3 | `frontend-specialist` | opus | After Phase 2 |
+| 4 | `frontend-specialist` | sonnet | Independent |
+| 5 | `frontend-specialist` | sonnet | After Phase 2 |
+| 6 | `e2e-tester` | sonnet | After all phases |
+
+**Parallel batch 1**: Phase 1 + Phase 4 (independent)
+**Sequential**: Phase 2 → Phase 3 → Phase 5 → Phase 6
+
+---
+
+## Risk Assessment
+
+| Risk | Mitigation |
+|------|-----------|
+| BuildingGrid expects V3 `BuildingRecord` type | `useJobBuildings` adapter already built (MCS10 fix) |
+| Dual SSE connections (jobs + source page open simultaneously) | EventBus supports multiple subscribers per operation_id |
+| Chat panel + bulk ops bar competing for space | Collapse chat when bulk bar active |
+| `review_status` field not updating during extraction | Override with SSE-derived status client-side |
+| Old pipeline extractions have no `building_record` entities | `useJobBuildings` fallback already handles this |

@@ -38,7 +38,7 @@ If these markers are absent, the document may use the ARA format (see Format B b
 
 ---
 
-### FORMAT A: SAMP Format (School Asbestos Management Plans)
+### FORMAT A: Standard DET Format (Site/School Asbestos Management Plans)
 
 Used by DET consultants. Building/room IDs follow coded format.
 
@@ -101,7 +101,7 @@ Throughout
 - risk_status: null
 - result: "Negative"
 
-**Key SAMP patterns:**
+**Key standard format patterns:**
 1. **Room Headers**: `B009 - R0005 - General Storeroom - 1.45 m2`
 2. **Building Headers**: `B009 - Special Purpose - 1950 - Steel`
 3. **ACM-Positive Markers** - These indicate asbestos was found:
@@ -215,7 +215,7 @@ Negative
 
 ### How to Determine the Format
 
-- **B### - R#### room headers** (e.g., "B009 - R0005") → FORMAT A
+- **B### - R#### room headers** (e.g., "B009 - R0005") → FORMAT A (Standard DET)
 - **Numbered items**, **"Building Name:" in headers**, **Hazard Type "Asbestos"/"None"** → FORMAT B
 - When in doubt, extract ALL items regardless of format
 
@@ -227,7 +227,7 @@ Negative
 
 A complete BAR (Building Asbestos Register) requires BOTH positive AND negative results. Missing negatives = non-compliant register. You MUST extract every entry you find.
 
-1. **SCAN** the content for ALL entries — room entries (B### - R#### pattern) for SAMP, or numbered items for ARA — do NOT skip any
+1. **SCAN** the content for ALL entries — room entries (B### - R#### pattern) for standard DET format, or numbered items for ARA — do NOT skip any
 2. **EXTRACT** every item where Hazard Type is "Asbestos" (or equivalent ACM markers). **SKIP** items with Hazard Type "None"
 3. **CLASSIFY** each record's result using BAR vocabulary:
    - `>>> ACM DETECTED:` or `Asbestos-containing material` or `Positive` → result: "Positive"
@@ -272,8 +272,8 @@ The following fields MUST use values from the Victorian BAR controlled vocabular
 - **material_description**: The specific material composition (e.g., "Flat Cement Sheeting", "Vinyl Tiles", "Fibre Cement", "Chrysotile rope gasket")
 - **location**: Where in the room the ACM is found — the equipment or fixture it is associated with (e.g., "Switchboard", "Auto Battery Charger", "Lift", "Throughout", "Under sink", "Above ceiling")
 - For ARA format: split "Eaves - Flat Cement Sheeting - Painted White" into product="Eaves", material_description="Flat Cement Sheeting - Painted White"
-- Building IDs follow format: B### (e.g., B009, B010) for SAMP, or building name for ARA
-- Room IDs follow format: R#### (e.g., R0005, R0007) for SAMP, or null for ARA
+- Building IDs follow format: B### (e.g., B009, B010) for standard DET format, or building name for ARA
+- Room IDs follow format: R#### (e.g., R0005, R0007) for standard DET format, or null for ARA
 - Room area is typically at the end of the room header line (e.g., "1.45 m2")
 
 #### CRITICAL: ACM Item vs Equipment/Location Distinction
@@ -340,7 +340,7 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 
 ### Required Fields for Each Record
 
-- `building_id`: Building identifier (e.g., "B009" for SAMP, or building name for ARA)
+- `building_id`: Building identifier (e.g., "B009" for standard DET format, or building name for ARA)
 - `product`: Product/element type (e.g., "Floor Coverings", "Eaves", "Wall")
 - `material_description`: Material description (e.g., "Vinyl Tiles", "Flat Cement Sheeting")
 - `result`: Test result using BAR vocabulary: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
@@ -350,7 +350,7 @@ Return your extraction as a JSON object matching the ACMExtractionResult schema 
 
 - `sample_result`: "Positive", "Assumed Positive", "Negative", or "Assumed Negative"
 - `sample_no`: Sample identification number
-- `room_id`: Room identifier (e.g., "R0005" for SAMP, or null for ARA)
+- `room_id`: Room identifier (e.g., "R0005" for standard DET format, or null for ARA)
 - `room_name`: Room name (e.g., "General Storeroom", "Boiler Room", "External")
 - `room_area`: Room area (e.g., "1.45 m2")
 - `extent`: Extent of material (e.g., "2m2", "20m2")

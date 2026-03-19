@@ -4,7 +4,7 @@ import { create } from 'zustand'
 
 export interface StreamState {
   operationId: string
-  category: 'extraction' | 'ai' | 'bulk'
+  category: 'extraction' | 'ai' | 'bulk' | 'hitl'
   status: 'connecting' | 'connected' | 'reconnecting' | 'done' | 'error'
   lastEventType: string | null
   lastEventTimestamp: string | null

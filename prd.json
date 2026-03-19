@@ -2440,6 +2440,60 @@
       "notes": "Security audit of CRUD chat (23 issues: 4 P0 security, 5 P1 functionality, 8 P2 UX, 6 P3 UX). P0 items: structural HITL barrier enforcement, dead code removal, SQL injection allowlist, source_id context binding. Pre-existing bugs also fixed: ACM Records grid empty (building_id param wrong), SurrealDB v2.6.3 incompatibility (docker image pinned to v2.2.1).",
       "model": "sonnet",
       "implementedDate": "2026-03-16"
+    },
+    {
+      "id": "CRUD-PIPELINE-S1",
+      "title": "CRUD Chat Pipeline Enhancement — 7 Tools + Migration 53",
+      "epic": "CPK",
+      "sprint": "Post-V3",
+      "storyPoints": 8,
+      "riskLevel": "HIGH",
+      "storyType": "both",
+      "complexity": "complex",
+      "priority": "P0",
+      "dependencies": [
+        "CRUD-SEC-S1"
+      ],
+      "acceptanceCriteria": [
+        "AC1: surreal_query upgraded with intent-based tool selection (read_tools / write_tools / all_tools)",
+        "AC2: preview_write upgraded — captures old_value before update for undo support",
+        "AC3: preview_bulk_write (NEW) — bulk UPDATE/DELETE with per-record previews and single approval",
+        "AC4: get_schema_info (NEW) — returns SurrealDB table schema info for current ACM tables",
+        "AC5: ask_user_choice (NEW) — structured question card rendered in frontend for disambiguation",
+        "AC6: undo_last_write (NEW) — restores previous field value from crud_audit old_value",
+        "AC7: execute_pending_write upgraded — handles both single and bulk pending writes",
+        "AC8: Migration 53 applied — crud_audit table extended with old_value + new_value fields (TYPE any)",
+        "AC9: CRUD Agent graph: START -> route_entry -> agent/execute_write -> tools -> END",
+        "AC10: Structural HITL barrier — approval messages routed to execute_write node, never to LLM",
+        "AC11: AG-UI endpoint /api/agui/crud-chat — source_id injection + thread_id persistence via MemorySaver",
+        "AC12: CopilotKit frontend — useRenderToolCall hooks for all 7 tool types",
+        "AC13: 70/70 unit tests pass; frontend build clean",
+        "AC14: E2E: page load PASS, count query PASS, buildings query PASS, SSE streaming PASS"
+      ],
+      "keyFiles": [
+        "open_notebook/graphs/crud_tools.py",
+        "open_notebook/graphs/crud_agent.py",
+        "open_notebook/graphs/guardrails.py",
+        "api/routers/agui_chat.py",
+        "api/models.py",
+        "migrations/53.surrealql",
+        "migrations/53_down.surrealql",
+        "open_notebook/database/async_migrate.py",
+        "frontend/src/components/jobs/CrudToolRenderers.tsx",
+        "frontend/src/components/jobs/ChatChoiceCard.tsx",
+        "frontend/src/components/jobs/ChatMiniGrid.tsx",
+        "frontend/src/components/jobs/FailedBuildingsTab.tsx",
+        "frontend/src/lib/api/acm.ts",
+        "frontend/src/lib/constants/tool-labels.ts",
+        "frontend/src/components/acm/UploadWizard.tsx",
+        "frontend/src/components/sources/QuickUploadDialog.tsx"
+      ],
+      "passes": false,
+      "notes": "Implementation DONE (7 tools, migration 53, 70/70 unit tests, frontend build clean). E2E testing IN PROGRESS. 3 bugs fixed during E2E: SurrealDB TYPE any (migration 53 schema), MemorySaver (session persistence in agui_chat.py), EventEncoder (SSE serialization in agui_chat.py). Known BUG-4: AG-UI adapter crashes on AIMessage from execute_write_node — blocks HITL frontend dialog. E2E results: T01/T03/T04/T15/T16 PASS, T10 PARTIAL (backend interrupt OK, frontend dialog blocked by BUG-4).",
+      "model": "sonnet",
+      "implementedDate": "2026-03-17",
+      "e2eStatus": "in-progress",
+      "e2eReport": "docs/sprint-artifacts/e2e-chat-test/e2e-crud-chat-test-report.md"
     }
   ],
   "gates": [

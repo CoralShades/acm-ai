@@ -24,7 +24,7 @@ export const BRANDING = {
   description: 'Victorian government platform for managing Asbestos Containing Material registers with AI assistance',
 
   /** SEO keywords */
-  keywords: ['VAEA', 'ACM', 'asbestos', 'SAMP', 'compliance', 'AI', 'register', 'management', 'Victorian government'],
+  keywords: ['VAEA', 'ACM', 'asbestos', 'ARA', 'compliance', 'AI', 'register', 'management', 'Victorian government'],
 
   /** API information */
   api: {

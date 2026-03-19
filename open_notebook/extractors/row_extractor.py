@@ -68,16 +68,22 @@ def build_kv_prompt(row: RawTableRow, building_context: str) -> str:
     return "\n".join(lines)
 
 
-def _render_system_prompt(template_name: str) -> str:
+def _render_system_prompt(
+    template_name: str,
+    template_data: dict | None = None,
+) -> str:
     """Render a Jinja system prompt from the ``prompts/acm/`` directory.
 
     Args:
         template_name: Template name without extension, e.g. ``"row_extraction"``.
+        template_data: Optional dict of variables to pass to the Jinja template.
 
     Returns:
         Rendered prompt string.
     """
-    return Prompter(prompt_template=f"acm/{template_name}").render(data={})
+    return Prompter(prompt_template=f"acm/{template_name}").render(
+        data=template_data or {}
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +96,7 @@ async def extract_single_row(
     building_context: str,
     model: BaseChatModel,
     langfuse_handler: Any = None,
+    extraction_fields: list[dict[str, str]] | None = None,
 ) -> ACMItemRow:
     """Extract a single ACM item from one table row via LLM.
 
@@ -110,7 +117,10 @@ async def extract_single_row(
     Raises:
         ValueError: If both attempts fail to produce a valid ACMItemRow.
     """
-    system_prompt = _render_system_prompt("row_extraction")
+    template_data: dict[str, Any] = {}
+    if extraction_fields:
+        template_data["extraction_fields"] = extraction_fields
+    system_prompt = _render_system_prompt("row_extraction", template_data)
     human_msg = build_kv_prompt(row, building_context)
 
     config: dict[str, Any] = {}
@@ -314,6 +324,7 @@ async def extract_all_rows(
     building_id: str,
     event_bus: Optional[PipelineEventBus] = None,
     langfuse_handler: Any = None,
+    extraction_fields: list[dict[str, str]] | None = None,
 ) -> list[ACMExtractionRecord]:
     """Extract ACM records from a list of segmented table rows.
 
@@ -379,6 +390,7 @@ async def extract_all_rows(
                 building_context=building_context,
                 model=model,
                 langfuse_handler=langfuse_handler,
+                extraction_fields=extraction_fields,
             )
             record = map_item_row_to_extraction_record(
                 row=item_row,

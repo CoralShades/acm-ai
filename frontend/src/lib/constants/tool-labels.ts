@@ -14,7 +14,12 @@ export const TOOL_LABELS: Record<string, string> = {
   preview_acm_write: 'write preview',
   write_acm_record: 'record write',
   query_job_records: 'job records query',
+  surreal_query: 'database query',
   execute_pending_write: 'write execution',
+  preview_bulk_write: 'bulk write preview',
+  get_schema_info: 'schema info',
+  ask_user_choice: 'user choice',
+  undo_last_write: 'undo write',
 }
 
 export const TOOL_ACTIVITY_LABELS: Record<string, string> = {
@@ -28,6 +33,11 @@ export const TOOL_ACTIVITY_LABELS: Record<string, string> = {
   search_documents_vector: 'Searching documents (semantic)...',
   search_documents_text: 'Searching documents (text)...',
   query_job_records: 'Querying ACM records...',
+  surreal_query: 'Querying database...',
   preview_write: 'Preparing write preview...',
   execute_pending_write: 'Executing approved write...',
+  preview_bulk_write: 'Preparing bulk write preview...',
+  get_schema_info: 'Loading schema information...',
+  ask_user_choice: 'Waiting for your choice...',
+  undo_last_write: 'Preparing undo operation...',
 }

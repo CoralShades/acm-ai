@@ -67,7 +67,7 @@ export function ProcessingOptionsStep() {
                     ACM Data Extraction
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Extract structured data from ACM/SAMP registers
+                    Extract structured data from ACM/ARA registers
                   </p>
                 </div>
                 <Switch

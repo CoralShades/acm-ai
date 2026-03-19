@@ -25,8 +25,12 @@ from open_notebook.extractors.normalizers.content import normalize_docling_text
 
 COLUMN_ALIASES: dict[str, list[str]] = {
     "room_location": [
-        "room", "room/area", "area", "location", "room no",
-        "location description",  # NSW DoE SAMP
+        "room",
+        "room/area",
+        "area",
+        "location",
+        "room no",
+        "location description",  # NSW DoE standard format
     ],
     "item_description": [
         "material",
@@ -39,16 +43,25 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "material type",  # Greencap ARA
     ],
     "friability": [
-        "friable", "f/nf", "friability", "type",
-        "assumed/confirmed",  # NSW DoE SAMP
+        "friable",
+        "f/nf",
+        "friability",
+        "type",
+        "assumed/confirmed",  # NSW DoE standard format
     ],
     "condition": ["condition", "material condition", "state", "assessment"],
     "sample_number": [
-        "sample", "sample#", "sample no", "nata no",
-        "item no", "item no.",  # Greencap ARA / NSW DoE
+        "sample",
+        "sample#",
+        "sample no",
+        "nata no",
+        "item no",
+        "item no.",  # Greencap ARA / NSW DoE standard
     ],
     "sample_result": [
-        "result", "lab result", "analysis",
+        "result",
+        "lab result",
+        "analysis",
         "acm status",  # Greencap ARA
     ],
     "quantity": ["quantity", "qty", "area", "extent", "m²"],
@@ -56,7 +69,9 @@ COLUMN_ALIASES: dict[str, list[str]] = {
     "accessibility": ["access", "accessible"],
     "asbestos_type": ["asbestos type", "fibre type", "fibre"],
     "disturbance_potential": [
-        "disturbance", "dp", "risk",
+        "disturbance",
+        "dp",
+        "risk",
         "risk rating",  # Greencap ARA
         "priority",  # Greencap ARA
     ],
@@ -160,11 +175,22 @@ class RawTableRow(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def detect_column_mapping(header_cells: list[dict]) -> dict[str, str]:
+def detect_column_mapping(
+    header_cells: list[dict],
+    extra_mappings: dict[str, str] | None = None,
+) -> dict[str, str]:
     """Detect canonical column names from Docling header cells via fuzzy matching.
+
+    Priority order:
+    1. ``extra_mappings`` (from InferredSchema / format profile) — exact match
+    2. ``COLUMN_ALIASES`` (built-in fuzzy matching via Jaro-Winkler)
+    3. Pass-through (original header text used as both key and value)
 
     Args:
         header_cells: List of Docling header cell dicts (must contain ``text`` field).
+        extra_mappings: Optional explicit mapping from raw header text to canonical
+            name, typically provided by schema inference or a cached format profile.
+            When provided, these take priority over fuzzy matching.
 
     Returns:
         Dict mapping canonical column name -> original header text.
@@ -180,6 +206,15 @@ def detect_column_mapping(header_cells: list[dict]) -> dict[str, str]:
         if not header_text:
             continue
 
+        # Priority 1: explicit mapping from schema inference
+        if extra_mappings and header_text in extra_mappings:
+            canonical = extra_mappings[header_text]
+            if canonical not in claimed:
+                mapping[canonical] = header_text
+                claimed.add(canonical)
+                continue
+
+        # Priority 2: fuzzy match against COLUMN_ALIASES
         header_lower = header_text.lower()
         best_canonical: Optional[str] = None
         best_score = 0.0
@@ -197,7 +232,7 @@ def detect_column_mapping(header_cells: list[dict]) -> dict[str, str]:
             mapping[best_canonical] = header_text
             claimed.add(best_canonical)
         else:
-            # Keep original header text as-is
+            # Priority 3: pass-through
             mapping[header_text] = header_text
 
     return mapping
@@ -265,6 +300,8 @@ def segment_docling_table(
     page_number: int,
     table_index: int = 0,
     initial_level: Optional[str] = None,
+    level_regex: Optional[re.Pattern] = None,
+    extra_mappings: dict[str, str] | None = None,
 ) -> list[RawTableRow]:
     """Segment a single Docling table JSON into individual rows.
 
@@ -276,6 +313,10 @@ def segment_docling_table(
         page_number: PDF page number from Docling provenance.
         table_index: 0-indexed table position within the building.
         initial_level: Optional initial floor/level context.
+        level_regex: Optional compiled regex for sub-header level detection.
+            Overrides the default ``_LEVEL_REGEX`` when provided.
+        extra_mappings: Optional explicit column header mappings passed through
+            to ``detect_column_mapping()`` (from InferredSchema).
 
     Returns:
         List of ``RawTableRow`` objects, one per data row.
@@ -306,7 +347,7 @@ def segment_docling_table(
         return []
 
     # 2. Detect column mapping from headers
-    column_mapping = detect_column_mapping(header_cells)
+    column_mapping = detect_column_mapping(header_cells, extra_mappings=extra_mappings)
 
     # Build reverse mapping: col_index -> canonical name
     # Header cells are sorted by start_col_offset_idx
@@ -350,6 +391,7 @@ def segment_docling_table(
         row_cells = rows_by_idx[row_idx]
 
         # Check for single-cell spanning entire row (E2 / E3)
+        effective_level_re = level_regex or _LEVEL_REGEX
         if len(row_cells) == 1:
             cell = row_cells[0]
             col_span = cell.get("col_span", 1)
@@ -359,7 +401,7 @@ def segment_docling_table(
                     continue
 
                 # Type E3: sub-header (level indicator)
-                if _LEVEL_REGEX.match(text):
+                if effective_level_re.match(text):
                     current_level = text
                     continue
 
@@ -486,6 +528,8 @@ def segment_multiple_tables(
     building_id: str,
     source_id: str,
     building_page_range: tuple[int, int] | None = None,
+    level_regex: Optional[re.Pattern] = None,
+    extra_mappings: dict[str, str] | None = None,
 ) -> list[RawTableRow]:
     """Segment multiple Docling tables for a single building.
 
@@ -497,6 +541,10 @@ def segment_multiple_tables(
         source_id: Source document identifier.
         building_page_range: Optional ``(start_page, end_page)`` to filter
             tables by page number.
+        level_regex: Optional compiled regex for sub-header level detection,
+            passed through to ``segment_docling_table()``.
+        extra_mappings: Optional explicit column header mappings, passed through
+            to ``segment_docling_table()`` / ``detect_column_mapping()``.
 
     Returns:
         Flat list of ``RawTableRow`` objects.
@@ -530,6 +578,8 @@ def segment_multiple_tables(
             building_id=building_id,
             source_id=source_id,
             page_number=page,
+            level_regex=level_regex,
+            extra_mappings=extra_mappings,
         )
 
     # Group by num_cols
@@ -556,6 +606,8 @@ def segment_multiple_tables(
                 page_number=page,
                 table_index=idx,
                 initial_level=current_level,
+                level_regex=level_regex,
+                extra_mappings=extra_mappings,
             )
             if not table_rows:
                 continue
@@ -599,6 +651,8 @@ def segment_multiple_tables(
                     source_id=source_id,
                     page_number=page,
                     table_index=table_idx_offset,
+                    level_regex=level_regex,
+                    extra_mappings=extra_mappings,
                 )
                 group_rows.extend(rows)
                 table_idx_offset += 1

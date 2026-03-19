@@ -254,7 +254,7 @@ def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
     - format="json": forces Ollama to emit pure JSON, preventing qwen2.5/phi4
       from returning conversational tutorial text instead of extraction data.
     - num_ctx: sets the context window to 32768 (or OLLAMA_NUM_CTX env var),
-      replacing the Ollama default of 8192 which truncates large SAMP docs.
+      replacing the Ollama default of 8192 which truncates large ARA docs.
 
     No-op for non-Ollama models.
     """
@@ -273,7 +273,7 @@ def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
     object.__setattr__(lc_model, "format", "json")
 
     # Set num_ctx for extraction models. Ollama defaults to 8192 tokens which
-    # is far too small for 50k+ char SAMP documents. Use env var OLLAMA_NUM_CTX
+    # is far too small for 50k+ char ARA documents. Use env var OLLAMA_NUM_CTX
     # if set, otherwise default to 32768 (adequate for qwen2.5:7b/32b and
     # phi4:14b without OOM risk on 16GB VRAM).
     num_ctx_env = os.getenv("OLLAMA_NUM_CTX")
@@ -311,7 +311,7 @@ def _inject_response_format(
 
     For Ollama, delegates to _apply_ollama_extraction_settings() which sets
     format="json" (first-class ChatOllama field, not model_kwargs) and
-    num_ctx=32768 to handle large SAMP documents.
+    num_ctx=32768 to handle large ARA documents.
 
     Args:
         lc_model: LangChain model (already provisioned with OpenRouter prefs)
@@ -364,17 +364,26 @@ _BUDGET_ROOM_RE = re.compile(r"B\d{3}\s*-\s*R\d{4,5}")
 _BUDGET_ARA_RE = re.compile(r"(?:^|\n)(\d+)\.\s", re.MULTILINE)
 
 
-def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
+def _split_content_by_char_budget(
+    content: str,
+    max_chars: int,
+    content_boundary_re: re.Pattern | None = None,
+) -> list[str]:
     """Split content at room/item boundaries to fit within max_chars per chunk.
 
-    Boundary detection:
-    - SAMP format: B###-R#### room headers
+    Boundary detection (tried in order, first match wins):
+    - Custom pattern: caller-supplied content_boundary_re (if provided)
+    - Standard DET format: B###-R#### room headers
     - ARA format: numbered items like "1. " at start of line
 
     If a single boundary segment exceeds max_chars, that segment is
     hard-truncated with a WARNING (graceful degrade — never silently drops).
     """
-    boundaries = list(_BUDGET_ROOM_RE.finditer(content))
+    boundaries = []
+    if content_boundary_re is not None:
+        boundaries = list(content_boundary_re.finditer(content))
+    if not boundaries:
+        boundaries = list(_BUDGET_ROOM_RE.finditer(content))
     if not boundaries:
         boundaries = list(_BUDGET_ARA_RE.finditer(content))
 
@@ -433,7 +442,11 @@ def _split_content_by_char_budget(content: str, max_chars: int) -> list[str]:
     return chunks if chunks else [content]
 
 
-def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
+def _ollama_split_by_budget(
+    content: str,
+    lc_model: BaseChatModel,
+    content_boundary_re: re.Pattern | None = None,
+) -> list[str]:
     """Split content into Ollama token-budget chunks (E32-S8).
 
     Returns [content] unchanged for non-Ollama models or content within budget.
@@ -465,7 +478,7 @@ def _ollama_split_by_budget(content: str, lc_model: BaseChatModel) -> list[str]:
         f"Ollama content ({len(content)} chars) exceeds budget ({max_chars} chars). "
         f"Splitting into budget chunks."
     )
-    return _split_content_by_char_budget(content, max_chars)
+    return _split_content_by_char_budget(content, max_chars, content_boundary_re)
 
 
 async def _verify_provider_routing(
@@ -882,7 +895,7 @@ async def _get_db_extraction_model() -> Optional[str]:
                 # Use direct record reference — SurrealDB param binding
                 # doesn't auto-cast strings to record IDs.
                 # Sanitize: record ID part should be alphanumeric only
-                record_part = model_val[len("model:"):]
+                record_part = model_val[len("model:") :]
                 if not record_part.isalnum():
                     logger.warning(f"Invalid model record ID format: {model_val}")
                     return None
@@ -932,12 +945,18 @@ async def _provision_extraction_primary_model(
     """
     candidates: list[tuple[str, str, Optional[str]]] = []
 
-    # 1) Ollama first — free, local
-    if os.getenv("OLLAMA_API_BASE"):
-        # Check SurrealDB for user-configured model, then env var, then hardcoded default
-        db_model = await _get_db_extraction_model()
-        model_name = db_model or os.getenv("ACM_EXTRACTION_MODEL", "llama3.1:8b")
-        candidates.append(("ollama", model_name, None))
+    # 1) Ollama first — free, local (only if reachable)
+    ollama_base = os.getenv("OLLAMA_API_BASE")
+    if ollama_base:
+        try:
+            import urllib.request
+
+            urllib.request.urlopen(f"{ollama_base}/api/tags", timeout=2)
+            db_model = await _get_db_extraction_model()
+            model_name = db_model or os.getenv("ACM_EXTRACTION_MODEL", "llama3.1:8b")
+            candidates.append(("ollama", model_name, None))
+        except Exception:
+            logger.info("Ollama not reachable at %s — skipping", ollama_base)
 
     # 2) Anthropic Direct — ACM-namespaced key ONLY
     acm_anthropic_key = os.getenv("ACM_ANTHROPIC_API_KEY")
@@ -951,11 +970,19 @@ async def _provision_extraction_primary_model(
             ("openrouter", "anthropic/claude-sonnet-4", acm_openrouter_key)
         )
 
+    # 4) OpenAI — fallback if no ACM-specific keys are set
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        candidates.append(("openai", "gpt-4o-mini", openai_key))
+
     for provider, model_name, api_key in candidates:
         try:
             config: dict = {**kwargs}
             if api_key:
                 config["api_key"] = api_key
+            # Cap max_tokens for models with lower limits
+            if provider == "openai" and config.get("max_tokens", 0) > 16384:
+                config["max_tokens"] = 16384
             model = AIFactory.create_language(
                 model_name=model_name,
                 provider=provider,

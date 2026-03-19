@@ -14,21 +14,39 @@ Find all buildings. They appear as:
 Interior/Exterior sections within a building are NOT separate buildings.
 
 ## Format-Specific Building Detection
-
-### Greencap ARA Format
-- Buildings appear as sections with headers like "Building Name: Myrtle Street Clinic"
+{% set _format = detected_format or format_name or "" %}
+{% if _format == "pipe_table" %}
+### Pipe-Table Format (Greencap / Clutch)
+- Buildings appear as sections with pipe-delimited metadata rows
+- Look for: | Building Name: | <value> | Number of Levels: | <value> |
 - Each building section has its own risk assessment table
-- Extract ONLY the building name from the header — NOT the entire table row
+- Extract ONLY the building name VALUE — NOT the label cell or the entire pipe row
 - If the header contains "| Building Name: | X |", extract "X" as the name
 - Page ranges span from the building header to the next building header
-
-### NSW DoE SAMP Format
-- Buildings appear in a summary grid/table (e.g., pages 3-15)
-- Grid columns include: Building ID, Name, Year, Construction
-- Each row = one building (B001, B002, etc.)
-- Buildings may share the same page range when in a grid
+{% elif _format == "standard" %}
+### Standard DET Format
+- Buildings appear as section headers with coded IDs
+- Look for: ## B001 - Building Name - Year - Construction
+- Room codes follow pattern B###-R#### (e.g., B009-R0001)
+- Buildings may appear in a summary grid/table (e.g., pages 3-15)
+- Each grid row = one building (B001, B002, etc.)
 - "No Asbestos" buildings should still be listed with complexity="simple"
-- ACM data appears on later pages, referenced by building ID (e.g., B009-R0001)
+- ACM data appears on later pages, referenced by building ID
+{% elif _format == "ara" %}
+### ARA Text-Header Format
+- Buildings appear as sections with text headers
+- Look for: "Building Name: Main Building" or "Building Name:\n  Main Building"
+- Each building section has its own risk assessment table
+- Extract ONLY the building name from the header — NOT the entire table row
+- Page ranges span from the building header to the next building header
+{% else %}
+### Unknown Format — Check All Patterns
+- Look for coded building IDs (B001, D01, B00A) in section headers
+- Look for "Building Name:" text headers followed by a building name
+- Look for pipe-delimited metadata rows: | Building Name: | <value> |
+- Look for summary grids/tables listing buildings with IDs and metadata
+- If no coded IDs exist, generate sequential IDs (B001, B002...)
+{% endif %}
 
 ### General Rules
 - Do NOT return raw markdown table rows as building names or IDs

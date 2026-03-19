@@ -15,7 +15,7 @@
 import { test, expect } from '../support/fixtures';
 import { TestDataFactory } from '../support/helpers/test-data-factory';
 import {
-  uploadSAMP,
+  uploadARA,
   waitForExtraction,
 } from './helpers/acm-helpers';
 import {
@@ -37,9 +37,9 @@ import {
 } from './helpers/screenshot-helpers';
 import * as path from 'path';
 
-const BROADMEADOWS_SAMP = path.join(
+const BROADMEADOWS_ARA = path.join(
   __dirname,
-  'fixtures/samps/broadmeadows-police-station-samp.pdf'
+  'fixtures/ara-documents/broadmeadows-police-station-samp.pdf'
 );
 
 test.describe('Smart Chat Interactions @smart-chat', () => {
@@ -59,7 +59,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'Smart Chat Basic Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // Capture initial chat state
@@ -89,7 +89,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'Smart Chat Tool Calls Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // When: User asks for ACM statistics
@@ -164,7 +164,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'Chat Streaming Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // When: User sends a message requiring long response
@@ -196,7 +196,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'ACM Stats Query Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // Capture workflow
@@ -220,7 +220,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'ACM Search Query Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // Capture workflow
@@ -244,7 +244,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'Context Switch Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // Capture workflow
@@ -296,7 +296,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'Chat Context Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // When: User has multi-turn conversation
@@ -325,7 +325,7 @@ test.describe('Smart Chat Interactions @smart-chat', () => {
       name: 'Concurrent Tool Calls Test',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // When: User asks question requiring multiple tool calls

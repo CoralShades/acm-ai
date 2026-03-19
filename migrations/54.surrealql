@@ -1,0 +1,17 @@
+-- Migration 54: Create consultant_format_profile table
+-- Caches column header → SF field mappings keyed by header signature hash.
+-- Enables cache-hit/miss logic in schema inference to skip LLM calls for known formats.
+-- Multi-Consultant Story 3: Format Profile Registry
+DEFINE TABLE consultant_format_profile SCHEMAFULL;
+DEFINE FIELD header_signature   ON consultant_format_profile TYPE string;
+DEFINE FIELD consultant_name    ON consultant_format_profile TYPE option<string>;
+DEFINE FIELD column_mapping     ON consultant_format_profile TYPE object;
+DEFINE FIELD canonical_mapping  ON consultant_format_profile TYPE object;
+DEFINE FIELD level_regex        ON consultant_format_profile TYPE option<string>;
+DEFINE FIELD recovery_config    ON consultant_format_profile TYPE option<object>;
+DEFINE FIELD confidence         ON consultant_format_profile TYPE float;
+DEFINE FIELD verified_by_user   ON consultant_format_profile TYPE bool DEFAULT false;
+DEFINE FIELD sample_count       ON consultant_format_profile TYPE int DEFAULT 1;
+DEFINE FIELD created            ON consultant_format_profile TYPE option<datetime> DEFAULT time::now();
+DEFINE FIELD updated            ON consultant_format_profile TYPE option<datetime> DEFAULT time::now();
+DEFINE INDEX idx_header_sig ON consultant_format_profile FIELDS header_signature UNIQUE;

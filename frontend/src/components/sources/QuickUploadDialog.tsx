@@ -126,7 +126,11 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
 
       setResultSourceId(sourceId)
       setPhase('done')
-      toastSuccess('Extraction started! Track progress from the notification below.')
+      toastSuccess('Extraction started!')
+
+      // Navigate to extraction progress page with live SSE streaming
+      onOpenChange(false)
+      router.push(`/extraction/${encodeURIComponent(sourceId)}`)
     } catch (err: unknown) {
       setPhase('error')
       setErrorMsg(err instanceof Error ? err.message : 'Extraction could not be started.')
@@ -149,7 +153,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
         <DialogHeader>
           <DialogTitle>Quick Upload</DialogTitle>
           <DialogDescription>
-            Drop a SAMP PDF to start extraction immediately.
+            Drop a PDF document to start extraction immediately.
           </DialogDescription>
         </DialogHeader>
 
@@ -252,7 +256,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
                 className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
               >
                 <ExternalLink className="h-3 w-3" />
-                Full wizard (mode selection)
+                Full wizard
               </Link>
               <Button
                 onClick={handleUploadAndExtract}

@@ -171,6 +171,8 @@ async def list_acm_records(
                     school_name=r.get("school_name", ""),
                     school_code=r.get("school_code"),
                     building_id=r.get("building_id", ""),
+                    building_record_id=str(r["building_record_id"]) if r.get("building_record_id") else None,
+                    parent_table_id=str(r["parent_table_id"]) if r.get("parent_table_id") else None,
                     building_name=r.get("building_name"),
                     building_year=r.get("building_year"),
                     building_construction=r.get("building_construction"),
@@ -239,6 +241,8 @@ async def get_acm_record(record_id: str):
             school_name=record.school_name,
             school_code=record.school_code,
             building_id=record.building_id,
+            building_record_id=str(record.building_record_id) if record.building_record_id else None,
+            parent_table_id=str(record.parent_table_id) if record.parent_table_id else None,
             building_name=record.building_name,
             building_year=record.building_year,
             building_construction=record.building_construction,
@@ -302,7 +306,11 @@ async def trigger_acm_extraction(request: ACMExtractRequest):
         command_id = await CommandService.submit_command_job(
             "open_notebook",
             "acm_extract",
-            {"source_id": request.source_id, "force": request.force, "mode": request.mode},
+            {
+                "source_id": request.source_id,
+                "force": request.force,
+                "mode": request.mode,
+            },
         )
 
         return ACMExtractResponse(
@@ -1081,6 +1089,8 @@ async def semantic_search_acm(
                     source_id=str(r.get("source_id", "")),
                     school_name=r.get("school_name", ""),
                     building_id=r.get("building_id", ""),
+                    building_record_id=str(r["building_record_id"]) if r.get("building_record_id") else None,
+                    parent_table_id=str(r["parent_table_id"]) if r.get("parent_table_id") else None,
                     building_name=r.get("building_name"),
                     room_id=r.get("room_id"),
                     room_name=r.get("room_name"),
@@ -1226,9 +1236,30 @@ async def backfill_building_records(
     for each unique building, and sets building_record_id FK on the acm_records.
     Idempotent: skips buildings that already exist and never overwrites
     non-NULL FK values.
+
+    Returns 422 if the building_record table does not yet exist (migrations
+    not run).  Returns 500 for all other internal errors.
     """
     try:
-        from scripts.v3_building_backfill import backfill_all, backfill_source
+        from scripts.v3_building_backfill import (
+            backfill_all,
+            backfill_source,
+            verify_schema,
+        )
+
+        # Guard: ensure building_record table exists before proceeding.
+        # Without this check the DB query inside backfill_source/backfill_all
+        # raises an opaque error that surfaces as a 500 with no guidance.
+        schema_ok = await verify_schema()
+        if not schema_ok:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "building_record table does not exist. "
+                    "Run pending database migrations first "
+                    "(start the API to auto-apply migrations)."
+                ),
+            )
 
         if request.source_id:
             result = await backfill_source(request.source_id)
@@ -1248,6 +1279,8 @@ async def backfill_building_records(
             ),
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error backfilling building records: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1294,6 +1327,8 @@ async def create_acm_record(request: ACMRecordCreateRequest):
             school_name=record.school_name,
             school_code=record.school_code,
             building_id=record.building_id,
+            building_record_id=str(record.building_record_id) if record.building_record_id else None,
+            parent_table_id=str(record.parent_table_id) if record.parent_table_id else None,
             building_name=record.building_name,
             building_year=record.building_year,
             building_construction=record.building_construction,
@@ -1363,6 +1398,8 @@ async def update_acm_record(record_id: str, request: ACMRecordUpdateRequest):
             school_name=record.school_name,
             school_code=record.school_code,
             building_id=record.building_id,
+            building_record_id=str(record.building_record_id) if record.building_record_id else None,
+            parent_table_id=str(record.parent_table_id) if record.parent_table_id else None,
             building_name=record.building_name,
             building_year=record.building_year,
             building_construction=record.building_construction,
@@ -2350,9 +2387,7 @@ async def normalize_recommendation_text(request: NormalizeRequest):
 async def _load_db_field_config() -> dict | None:
     """Load field config override from SurrealDB field_schema table."""
     try:
-        result = await repo_query(
-            "SELECT config_json FROM field_schema:default"
-        )
+        result = await repo_query("SELECT config_json FROM field_schema:default")
         if result and result[0].get("config_json"):
             import json
 

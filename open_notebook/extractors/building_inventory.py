@@ -37,6 +37,14 @@ _ROOM_HEADER = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
+# Pattern for coded building IDs: single letter + digits (B00A, D01, B009, BUILDING_1)
+_CODED_BUILDING_ID = re.compile(r"^[A-Z]\d+[A-Z]?$|^D\d{2,3}$|^BUILDING_\d+$", re.IGNORECASE)
+
+
+def _is_coded_building_id(bid: str) -> bool:
+    """Return True if bid looks like a short code (B001, D02, BUILDING_1), not a full name."""
+    return bool(_CODED_BUILDING_ID.match(bid))
+
 
 class BuildingComplexity(str, Enum):
     """Building complexity classification (Task 1.1)."""
@@ -96,6 +104,121 @@ _NO_ASBESTOS_MARKERS = [
     "no asbestos",
     "no acm",
 ]
+
+
+def _deduplicate_overlapping_buildings(
+    buildings: List["BuildingMeta"],
+) -> List["BuildingMeta"]:
+    """Merge buildings whose page ranges overlap by ≥80%.
+
+    Small LLMs sometimes output multiple entries for the same physical
+    building (e.g. "Main Building" pages 5-18 and "Broadmeadows Police
+    Station" pages 5-19). When two buildings overlap heavily, keep the
+    one with the more specific name (longer name wins, then lower index).
+    """
+    if len(buildings) <= 1:
+        return buildings
+
+    merged: List["BuildingMeta"] = []
+    used = set()
+
+    for i, a in enumerate(buildings):
+        if i in used:
+            continue
+        best = a
+        for j, b in enumerate(buildings):
+            if j <= i or j in used:
+                continue
+            # Compute page overlap
+            a_start, a_end = a.page_start, a.page_end or a.page_start
+            b_start, b_end = b.page_start, b.page_end or b.page_start
+            overlap_start = max(a_start, b_start)
+            overlap_end = min(a_end, b_end)
+            if overlap_end < overlap_start:
+                continue  # no overlap
+            overlap_pages = overlap_end - overlap_start + 1
+            a_pages = a_end - a_start + 1
+            b_pages = b_end - b_start + 1
+            min_pages = min(a_pages, b_pages)
+            if min_pages <= 0:
+                continue
+            overlap_ratio = overlap_pages / min_pages
+            if overlap_ratio >= 0.8:
+                # Merge: prefer longer/more specific name
+                used.add(j)
+                if len(b.name or "") > len(best.name or ""):
+                    best = BuildingMeta(
+                        building_id=best.building_id,
+                        name=b.name,
+                        year=best.year or b.year,
+                        construction=best.construction or b.construction,
+                        page_start=min(a_start, b_start),
+                        page_end=max(a_end, b_end),
+                        complexity=best.complexity,
+                        rooms=best.rooms or b.rooms,
+                        acm_item_count_estimate=(
+                            best.acm_item_count_estimate or b.acm_item_count_estimate
+                        ),
+                    )
+                else:
+                    best = BuildingMeta(
+                        building_id=best.building_id,
+                        name=best.name,
+                        year=best.year or b.year,
+                        construction=best.construction or b.construction,
+                        page_start=min(a_start, b_start),
+                        page_end=max(a_end, b_end),
+                        complexity=best.complexity,
+                        rooms=best.rooms or b.rooms,
+                        acm_item_count_estimate=(
+                            best.acm_item_count_estimate or b.acm_item_count_estimate
+                        ),
+                    )
+                logger.info(
+                    f"Merged overlapping building '{b.name}' into '{best.name}' "
+                    f"(overlap={overlap_ratio:.0%})"
+                )
+        merged.append(best)
+
+    if len(merged) < len(buildings):
+        logger.info(
+            f"Deduplicated {len(buildings)} buildings → {len(merged)} after overlap merge"
+        )
+    return merged
+
+
+def _extract_site_name_from_cover(content: str) -> Optional[str]:
+    """Extract the site/building name from the first page of the document.
+
+    Works for Prensa/GRE-style cover pages where the site name appears
+    prominently (e.g. 'Broadmeadows Police Station') before the address.
+    Also matches common patterns like 'Assessment of <Site Name>'.
+    """
+    # Get page 1 text
+    page1_end = content.find("--- Page 2 ---")
+    if page1_end < 0:
+        page1_end = min(1500, len(content))
+    page1 = content[:page1_end]
+
+    # Pattern 1: Line ending with common building suffixes
+    # e.g. "Broadmeadows Police Station", "Alexander District Hospital"
+    suffixes = (
+        r"(?:Police Station|Hospital|School|Centre|Center|Building|"
+        r"College|Academy|Office|Depot|Clinic|Station|Hall|Library|"
+        r"Complex|Facility|Campus|House|Lodge|Court)"
+    )
+    m = re.search(
+        rf"^\s*(.{{3,60}}\b{suffixes})\s*$",
+        page1,
+        re.MULTILINE | re.IGNORECASE,
+    )
+    if m:
+        name = m.group(1).strip()
+        # Avoid matching generic headers like "Division 5 Assessment"
+        if len(name) > 5 and "assessment" not in name.lower():
+            return name
+
+    return None
 
 
 def _find_page_at_position(content: str, position: int) -> int:
@@ -338,7 +461,7 @@ def _heuristic_fallback(
 
     Uses custom regex patterns (_BUILDING_HEADER, _ROOM_HEADER) to detect
     buildings, rooms, page ranges, and complexity without LLM.
-    Falls back to ARA building detection if no SAMP headers found.
+    Falls back to ARA building detection if no standard DET headers found.
     """
     if not content:
         return BuildingInventory(
@@ -347,7 +470,7 @@ def _heuristic_fallback(
             total_buildings=0,
         )
 
-    # Find all building headers (B-series and D-series) — SAMP format
+    # Find all building headers (B-series and D-series) — standard DET format
     building_matches: List[Tuple[int, re.Match]] = []
     seen_ids: set = set()
     for match in _BUILDING_HEADER.finditer(content):
@@ -359,7 +482,7 @@ def _heuristic_fallback(
     buildings: List[BuildingMeta] = []
 
     if building_matches:
-        # SAMP format: B###/D## style building IDs
+        # Standard DET format: B###/D## style building IDs
         for i, (pos, match) in enumerate(building_matches):
             building_id = match.group(1)
             name = match.group(2).strip() if match.group(2) else None
@@ -398,7 +521,7 @@ def _heuristic_fallback(
                 )
             )
     else:
-        # No SAMP headers found — try ARA format detection
+        # No standard DET headers found — try ARA format detection
         ara_buildings = _detect_ara_buildings(content)
         if ara_buildings:
             logger.info(
@@ -406,7 +529,8 @@ def _heuristic_fallback(
                 "'Building Name:' headers"
             )
             for i, (name, pos) in enumerate(ara_buildings):
-                # Use building name as ID (ARA doesn't use coded IDs)
+                # Generate sequential building code (ARA doesn't use coded IDs)
+                building_code = f"B{i + 1:03d}"
                 next_pos = (
                     ara_buildings[i + 1][1] if i + 1 < len(ara_buildings) else None
                 )
@@ -424,7 +548,7 @@ def _heuristic_fallback(
 
                 buildings.append(
                     BuildingMeta(
-                        building_id=name,
+                        building_id=building_code,
                         name=name,
                         page_start=page_start,
                         page_end=page_end,
@@ -435,6 +559,11 @@ def _heuristic_fallback(
 
     # Generic fallback: use document_structure intelligence when no format matched
     if not buildings and document_structure:
+        # Try to derive site_name from metadata or cover page heuristic
+        site_name = (document_metadata or {}).get("site_name")
+        if not site_name:
+            site_name = _extract_site_name_from_cover(content)
+
         if document_structure.building_ids:
             # Create buildings from IDs detected by metadata_and_structure
             logger.info(
@@ -444,7 +573,6 @@ def _heuristic_fallback(
             reg_start = document_structure.register_start_page or 1
             total = document_structure.total_pages or 999
             n_ids = len(document_structure.building_ids)
-            site_name = (document_metadata or {}).get("site_name")
             for idx, bid in enumerate(document_structure.building_ids):
                 # Estimate page ranges by dividing register evenly
                 pages_per_building = max(1, (total - reg_start + 1) // n_ids)
@@ -455,9 +583,15 @@ def _heuristic_fallback(
                 )
                 # If we have a site_name and only one building, use it. Otherwise keep bid as name.
                 bldg_name = site_name if (site_name and n_ids == 1) else bid
+                # Generate sequential code if bid looks like a name, not a code
+                building_id = bid if _is_coded_building_id(bid) else f"B{idx + 1:03d}"
+                if building_id != bid:
+                    logger.info(
+                        f"Generic fallback: replaced name-as-id '{bid}' with code '{building_id}'"
+                    )
                 buildings.append(
                     BuildingMeta(
-                        building_id=bid,
+                        building_id=building_id,
                         name=bldg_name,
                         page_start=b_start,
                         page_end=b_end,
@@ -470,7 +604,7 @@ def _heuristic_fallback(
                 "Generic fallback: creating single catch-all building "
                 f"from register_start={document_structure.register_start_page}"
             )
-            site_name = (document_metadata or {}).get("site_name") or "Main Building"
+            site_name = site_name or "Main Building"
             buildings.append(
                 BuildingMeta(
                     building_id="BUILDING_1",
@@ -675,9 +809,18 @@ async def compile_building_inventory(
         if not inventory.processing_groups and inventory.buildings:
             inventory.processing_groups = _create_processing_groups(inventory.buildings)
 
+        # Deduplicate buildings with heavily overlapping page ranges.
+        # Small LLMs (phi4, llama3.1:8b) sometimes split one building into
+        # multiple entries with near-identical page ranges (e.g. "Main Building"
+        # pages 5-18 and "Broadmeadows Police Station" pages 5-19).
+        inventory.buildings = _deduplicate_overlapping_buildings(inventory.buildings)
+        inventory.total_buildings = len(inventory.buildings)
+
         # Cross-validate: run heuristic on FULL content (not trimmed) to catch
         # buildings whose register data precedes the detected register_start_page
-        heuristic = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
+        heuristic = _heuristic_fallback(
+            content, document_structure, document_metadata=document_metadata
+        )
         if heuristic.buildings:
             llm_ids = {b.building_id.lower() for b in inventory.buildings}
             llm_names = {(b.name or "").lower() for b in inventory.buildings}
@@ -713,5 +856,7 @@ async def compile_building_inventory(
             f"LLM building inventory compilation failed: {e}. Using heuristic fallback."
         )
         # Use FULL content for heuristic to catch buildings before register_start_page
-        fallback = _heuristic_fallback(content, document_structure, document_metadata=document_metadata)
+        fallback = _heuristic_fallback(
+            content, document_structure, document_metadata=document_metadata
+        )
         return fallback

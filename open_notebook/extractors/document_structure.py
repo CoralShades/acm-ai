@@ -2,7 +2,7 @@
 Document Structure & TOC Extraction.
 
 Extracts document structure, table of contents, and hierarchical page mapping
-from SAMP/BAR PDF documents. Runs as Stage -1 (pre-extraction intelligence)
+from ARA/BAR PDF documents. Runs as Stage -1 (pre-extraction intelligence)
 in the LangGraph extraction pipeline.
 
 Story: E1-S16 Document Structure & TOC Extraction

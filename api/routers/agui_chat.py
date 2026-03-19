@@ -8,15 +8,63 @@ CopilotKit frontend.
 import json
 import re
 
-from ag_ui.core import RunAgentInput
+from ag_ui.core import EventType, RunAgentInput, StateSnapshotEvent
+from ag_ui.encoder import EventEncoder
 from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
+from ag_ui_langgraph.utils import langchain_messages_to_agui, make_json_safe
 from fastapi import APIRouter, Request
+from langchain_core.messages import BaseMessage
 from loguru import logger
 from starlette.responses import StreamingResponse
 
 from open_notebook.graphs.supervisor_agent import supervisor_graph
 
 router = APIRouter()
+
+
+def _sanitize_state_snapshot(event: StateSnapshotEvent) -> StateSnapshotEvent:
+    """Convert any LangChain BaseMessage objects in a StateSnapshotEvent snapshot
+    to AG-UI message dicts so pydantic can serialize them.
+
+    execute_write_node (and other non-LLM graph nodes) return AIMessage objects
+    directly into the state. The AG-UI EventEncoder calls model_dump_json() on
+    the StateSnapshotEvent, which fails when the snapshot dict contains raw
+    langchain BaseMessage instances.  This wrapper converts them first.
+    """
+    snapshot = event.snapshot
+    if not isinstance(snapshot, dict):
+        return event
+
+    messages = snapshot.get("messages")
+    if not messages:
+        return event
+
+    langchain_msgs = [m for m in messages if isinstance(m, BaseMessage)]
+    if not langchain_msgs:
+        return event
+
+    try:
+        agui_msgs = langchain_messages_to_agui(langchain_msgs)
+        # Rebuild snapshot with serializable message dicts
+        safe_msgs = [
+            m.model_dump(by_alias=True, exclude_none=True) for m in agui_msgs
+        ]
+        non_lc_msgs = [m for m in messages if not isinstance(m, BaseMessage)]
+        sanitized_snapshot = {
+            **make_json_safe({k: v for k, v in snapshot.items() if k != "messages"}),
+            "messages": non_lc_msgs + safe_msgs,
+        }
+        return event.model_copy(update={"snapshot": sanitized_snapshot})
+    except Exception as exc:  # pragma: no cover
+        logger.warning(
+            f"agui_chat: could not sanitize StateSnapshotEvent messages: {exc}"
+        )
+        # Fallback: drop messages from snapshot rather than crash the stream
+        fallback_snapshot = make_json_safe(
+            {k: v for k, v in snapshot.items() if k != "messages"}
+        )
+        return event.model_copy(update={"snapshot": fallback_snapshot})
+
 
 # Add the AG-UI endpoint to this router's underlying FastAPI app
 # This will be done in main.py after the app is created, since
@@ -116,19 +164,49 @@ def register_crud_agui_endpoint(app) -> None:
                             break
 
             # Inject source_id into state so LangGraph receives it
+            # Also set thread_id for session persistence (per-source conversation)
             if source_id:
                 state = dict(input_data.state) if input_data.state else {}
                 state["source_id"] = source_id
-                input_data = input_data.model_copy(update={"state": state})
-                logger.info(f"CRUD endpoint injected source_id={source_id}")
+                thread_id = f"crud_{source_id.replace(':', '_')}"
+                input_data = input_data.model_copy(
+                    update={
+                        "state": state,
+                        "thread_id": thread_id,
+                    }
+                )
+                logger.info(
+                    f"CRUD endpoint injected source_id={source_id}, thread_id={thread_id}"
+                )
             else:
-                logger.warning("CRUD endpoint: no source_id found in state, context, or messages")
+                logger.warning(
+                    "CRUD endpoint: no source_id found in state, context, or messages"
+                )
+
+            accept_header = request.headers.get("accept")
+            encoder = EventEncoder(accept=accept_header)
+
+            async def event_generator():
+                async for event in crud_agent.run(input_data):
+                    # Sanitize StateSnapshotEvents: execute_write_node emits
+                    # AIMessage objects into state.  The encoder calls
+                    # model_dump_json() on the snapshot, which crashes on raw
+                    # langchain BaseMessage objects.  Convert them first.
+                    if (
+                        hasattr(event, "type")
+                        and event.type == EventType.STATE_SNAPSHOT
+                        and isinstance(event, StateSnapshotEvent)
+                    ):
+                        event = _sanitize_state_snapshot(event)
+                    yield encoder.encode(event)
 
             return StreamingResponse(
-                crud_agent.run(input_data),
-                media_type="text/event-stream",
+                event_generator(),
+                media_type=encoder.get_content_type(),
             )
 
-        logger.info("AG-UI CRUD chat endpoint registered at /api/agui/crud-chat (custom)")
+        logger.info(
+            "AG-UI CRUD chat endpoint registered at /api/agui/crud-chat (custom)"
+        )
     except Exception as e:
         logger.error(f"Failed to register CRUD AG-UI endpoint: {e}")

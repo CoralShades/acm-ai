@@ -61,8 +61,8 @@ class ACMRecord(ObjectModel):
     """
     Domain model for ACM (Asbestos Containing Material) records.
 
-    Represents a single ACM item extracted from a SAMP (Site Asbestos
-    Management Plan) or ACM Register document.
+    Represents a single ACM item extracted from an ARA (Asbestos Register
+    Assessment) or ACM Register document.
     """
 
     table_name: ClassVar[str] = "acm_record"
@@ -677,7 +677,7 @@ class BuildingRecord(ObjectModel):
     """
     Domain model for Building records.
 
-    Represents a physical building extracted from SAMP documents.
+    Represents a physical building extracted from ARA documents.
     Maps to the Salesforce Building__c object with AliasChoices
     for dual internal/SF field name support.
 
@@ -905,11 +905,15 @@ class BuildingRecord(ObjectModel):
     )
     building_sub_category: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("building_sub_category", "Building_Sub_Category__c"),
+        validation_alias=AliasChoices(
+            "building_sub_category", "Building_Sub_Category__c"
+        ),
     )
     building_risk_rating: Optional[str] = Field(
         default=None,
-        validation_alias=AliasChoices("building_risk_rating", "Building_Risk_Rating__c"),
+        validation_alias=AliasChoices(
+            "building_risk_rating", "Building_Risk_Rating__c"
+        ),
     )
 
     # --- Embedding fields (AC8) ---
@@ -999,9 +1003,11 @@ class BuildingRecord(ObjectModel):
 
     @classmethod
     async def generate_internal_id(cls, source_id: str) -> str:
-        """Generate BLD#{source_short}_{seq:03d} for a new building.
+        """Generate BLD#{source_short}_{source_suffix}_{seq:03d} for a new building.
 
         source_short = first 8 chars of source name (uppercase, spaces to underscore).
+        source_suffix = first 6 chars of source record ID (prevents collisions
+        when two sources share the same title prefix).
         seq = count of existing BuildingRecords for this source + 1.
         """
         from open_notebook.domain.notebook import Source
@@ -1013,9 +1019,11 @@ class BuildingRecord(ObjectModel):
         source_short = (
             source_label[:8].upper().replace(" ", "_") if source_label else "UNKNOWN"
         )
+        src_id_raw = str(source_id)
+        src_suffix = src_id_raw.split(":")[-1][:6] if ":" in src_id_raw else src_id_raw[:6]
         existing = await cls.get_by_source(source_id)
         seq = len(existing) + 1
-        return f"BLD#{source_short}_{seq:03d}"
+        return f"BLD#{source_short}_{src_suffix}_{seq:03d}"
 
     def _prepare_save_data(self) -> dict:
         """Override to ensure source_id is proper record format."""

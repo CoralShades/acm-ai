@@ -177,8 +177,8 @@ AREA_TYPE_PATTERN = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
-SCHOOL_PATTERN = re.compile(
-    r"^#\s*([^-–\n]+?)(?:\s*[-–]\s*(?:Asbestos|ACM|SAMP).*)?$",
+SITE_NAME_PATTERN = re.compile(
+    r"^#\s*([^-–\n]+?)(?:\s*[-–]\s*(?:Asbestos|ACM|SAMP|ARA).*)?$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -249,11 +249,11 @@ def _extract_from_markdown(
     context = ParseContext()
     extracted_rows: List[ExtractedACMRow] = []
 
-    # Try to extract school name from title
-    school_match = SCHOOL_PATTERN.search(markdown_content)
+    # Try to extract site/school name from title
+    school_match = SITE_NAME_PATTERN.search(markdown_content)
     if school_match:
         context.school_name = school_match.group(1).strip()
-        logger.debug(f"Found school: {context.school_name}")
+        logger.debug(f"Found site: {context.school_name}")
 
     # Split by lines for processing
     lines = markdown_content.split("\n")

@@ -9,8 +9,9 @@ export interface DetectionResult {
   reason: string;
 }
 
-// Filename patterns that indicate ACM/SAMP documents
-// Note: Patterns are ordered by specificity - more specific patterns first
+// Filename patterns that indicate ACM/ARA documents
+// Note: 'samp' kept as secondary pattern for backward compatibility (old files may still be named with "SAMP")
+// Patterns are ordered by specificity - more specific patterns first
 const ACM_PATTERNS = [
   /asbestos/i,
   /\bacm\b/i, // Word boundary to avoid matching "acme", etc.
@@ -37,7 +38,7 @@ export function detectDocumentType(file: UploadFile): DetectionResult {
     };
   }
 
-  // Check for ACM/SAMP patterns in filename
+  // Check for ACM/ARA patterns in filename (includes 'samp' for backward compatibility)
   for (const pattern of ACM_PATTERNS) {
     if (pattern.test(nameLower)) {
       // Clean up pattern for display (remove regex escapes and word boundaries)
@@ -111,7 +112,7 @@ export const DOCUMENT_TYPE_CONFIG: Record<DocumentType, {
   bgColor: string;
 }> = {
   acm: {
-    label: 'ACM/SAMP Document',
+    label: 'ACM/ARA Document',
     description: 'Asbestos register or management plan',
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',

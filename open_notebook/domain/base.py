@@ -131,7 +131,7 @@ class ObjectModel(BaseModel):
                         else []
                     )
 
-            repo_result: Union[List[Dict[str, Any]], Dict[str, Any]]
+            repo_result: List[Dict[str, Any]]
             if self.id is None:
                 data["created"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 repo_result = await repo_create(self.__class__.table_name, data)
@@ -146,11 +146,12 @@ class ObjectModel(BaseModel):
                     self.__class__.table_name, self.id, data
                 )
             # Update the current instance with the result
-            # repo_result is a list of dictionaries
+            # repo_create/repo_update always return List[Dict[str, Any]]
             result_list: List[Dict[str, Any]] = (
                 repo_result if isinstance(repo_result, list) else [repo_result]
             )
-            for key, value in result_list[0].items():
+            first_result = result_list[0] if result_list else {}
+            for key, value in first_result.items():
                 if hasattr(self, key):
                     if isinstance(getattr(self, key), BaseModel):
                         setattr(self, key, type(getattr(self, key))(**value))

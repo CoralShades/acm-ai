@@ -31,9 +31,9 @@ export type ACMExtractionOutput = {
      */
     pipeline_run?: { [key: string]: any } | null;
     /**
-     * Number of records that failed validation and were rejected
+     * Number of records excluded during validation (missing fields or intentional filter)
      */
-    records_failed?: number;
+    records_filtered?: number;
     /**
      * ID of the source document
      */

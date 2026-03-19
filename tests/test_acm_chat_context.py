@@ -226,7 +226,7 @@ class TestACMPromptTemplate:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP Document"},
+            "source": {"id": "source:123", "title": "Test ARA Document"},
             "insights": [],
             "context": "Test source content",
             "context_indicators": {
@@ -292,7 +292,7 @@ class TestACMPromptTemplate:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP Document"},
+            "source": {"id": "source:123", "title": "Test ARA Document"},
             "insights": [],
             "context": "Test source content",
             "context_indicators": {
@@ -313,7 +313,7 @@ class TestACMPromptTemplate:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP Document"},
+            "source": {"id": "source:123", "title": "Test ARA Document"},
             "insights": [],
             "context": "Test source content",
             "context_indicators": {
@@ -335,7 +335,7 @@ class TestACMPromptTemplate:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP Document"},
+            "source": {"id": "source:123", "title": "Test ARA Document"},
             "insights": [],
             "context": "Test source content",
             "context_indicators": {
@@ -357,7 +357,7 @@ class TestACMPromptTemplate:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP Document"},
+            "source": {"id": "source:123", "title": "Test ARA Document"},
             "insights": [],
             "context": "Test source content",
             "context_indicators": {
@@ -379,7 +379,7 @@ class TestACMPromptTemplate:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP Document"},
+            "source": {"id": "source:123", "title": "Test ARA Document"},
             "insights": [],
             "context": "Test source content",
             "context_indicators": {
@@ -428,8 +428,7 @@ class TestQuestionPatternDetection:
         assert detect_question_type("What does ACM mean?") == "terminology_query"
         assert detect_question_type("Define non-friable") == "terminology_query"
         assert (
-            detect_question_type("Explain the SAMP documentation")
-            == "terminology_query"
+            detect_question_type("Explain the ARA documentation") == "terminology_query"
         )
         assert detect_question_type("What are ACMs?") == "terminology_query"
 
@@ -615,7 +614,7 @@ class TestACMQuestionExamples:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP Document"},
+            "source": {"id": "source:123", "title": "Test ARA Document"},
             "insights": [],
             "context": "Test source content",
             "context_indicators": {
@@ -640,7 +639,7 @@ class TestACMQuestionExamples:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP"},
+            "source": {"id": "source:123", "title": "Test ARA"},
             "insights": [],
             "context": "Test content",
             "context_indicators": {
@@ -662,7 +661,7 @@ class TestACMQuestionExamples:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP"},
+            "source": {"id": "source:123", "title": "Test ARA"},
             "insights": [],
             "context": "Test content",
             "context_indicators": {
@@ -685,7 +684,7 @@ class TestACMQuestionExamples:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP"},
+            "source": {"id": "source:123", "title": "Test ARA"},
             "insights": [],
             "context": "Test content",
             "context_indicators": {
@@ -707,7 +706,7 @@ class TestACMQuestionExamples:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP"},
+            "source": {"id": "source:123", "title": "Test ARA"},
             "insights": [],
             "context": "Test content",
             "context_indicators": {
@@ -729,7 +728,7 @@ class TestACMQuestionExamples:
         from ai_prompter import Prompter
 
         prompt_data = {
-            "source": {"id": "source:123", "title": "Test SAMP"},
+            "source": {"id": "source:123", "title": "Test ARA"},
             "insights": [],
             "context": "Test content",
             "context_indicators": {

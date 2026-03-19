@@ -143,12 +143,46 @@ def _inject_docling_tables(
 # ---------------------------------------------------------------------------
 
 
+# N4 fix: ordered list of known sample_result enum values (longest first so
+# "Assumed Positive" is matched before "Positive").
+_SAMPLE_RESULT_ENUMS = [
+    "Assumed Positive",
+    "Not Sampled",
+    "No Access",
+    "Positive",
+    "Negative",
+]
+
+
+def _split_compound_sample_result(value: str) -> str:
+    """Return the first valid sample_result enum found in a compound string.
+
+    LLMs sometimes concatenate adjacent table columns, producing values like
+    "Positive Assumed Positive" or "Negative No Access".  We scan for the
+    first recognised enum token and return it, discarding the rest.
+
+    N4 fix.
+    """
+    if not isinstance(value, str):
+        return value
+    stripped = value.strip()
+    # Fast path: already a valid single value
+    if stripped in _SAMPLE_RESULT_ENUMS:
+        return stripped
+    # Scan for the first known enum token
+    for enum_val in _SAMPLE_RESULT_ENUMS:
+        if enum_val in stripped:
+            return enum_val
+    return stripped  # unchanged — validator will handle it
+
+
 def _normalize_extraction_json(parsed: dict) -> dict:
     """Normalize LLM-generated JSON to match extraction schema.
 
     Handles common LLM type mismatches:
       - ``data_issues`` as null or plain string → ``List[str]``
       - ``labelled`` as bool (true/false) → ``"Yes"``/``"No"`` string
+      - ``sample_result`` compound values (N4) → first valid enum token
 
     This function mutates *parsed* in-place and returns it.
     """
@@ -166,6 +200,14 @@ def _normalize_extraction_json(parsed: dict) -> dict:
         labelled = record.get("labelled")
         if isinstance(labelled, bool):
             record["labelled"] = "Yes" if labelled else "No"
+        # N4 fix: split compound sample_result values
+        sr = record.get("sample_result")
+        if sr:
+            record["sample_result"] = _split_compound_sample_result(sr)
+        # Coerce quantity int/float→str (GPT-4o-mini returns numeric values)
+        qty = record.get("quantity")
+        if isinstance(qty, (int, float)):
+            record["quantity"] = str(qty)
     return parsed
 
 
@@ -324,11 +366,20 @@ async def _v3_extract_building_meta(
             model, _get_v3_building_schema(), "BuildingExtractionResult"
         )
 
+        # MCS5: Inject detected_format for format-conditional examples
+        inferred = state.get("inferred_schema")
+        detected_format = (
+            inferred.detected_format
+            if inferred and hasattr(inferred, "detected_format")
+            else None
+        )
+
         prompter = Prompter(prompt_template="acm/v3_building_extraction")
         system_prompt = prompter.render(
             data={
                 "building_context": prompt_ctx,
                 "picklists": picklists,
+                "detected_format": detected_format,
             }
         )
 
@@ -455,7 +506,9 @@ async def _v3_extract_items(
             else str(raw_response)
         )
         parsed = parse_json_response(response_text)
-        _normalize_extraction_json(parsed)  # coerce data_issues null→[], labelled bool→str
+        _normalize_extraction_json(
+            parsed
+        )  # coerce data_issues null→[], labelled bool→str
         result: ACMItemExtractionResult = ACMItemExtractionResult.model_validate(parsed)
         logger.info(
             f"V3 Phase 2 [{plan.building_id}]: {len(result.records)} records, "
@@ -540,8 +593,12 @@ def _normalize_v3_records(
             floor_level=item.level,
             location=item.location_in_room,
             area_type=area_type,
-            # ACM classification
-            product=item.item_name or "",
+            # ACM classification — prefer if_other_item_name when item_name is "Other"
+            product=(
+                item.if_other_item_name
+                if item.item_name == "Other" and item.if_other_item_name
+                else (item.item_name or "")
+            ),
             material_description=item.acm_sub_classification,
             friable=item.friability_of_material,
             # Sample and assessment

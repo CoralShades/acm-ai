@@ -344,9 +344,7 @@ async def get_sources(
                     title=row.get("title"),
                     topics=row.get("topics") or [],
                     asset=AssetModel(
-                        file_path=asset_data.get("file_path")
-                        if asset_data
-                        else None,
+                        file_path=asset_data.get("file_path") if asset_data else None,
                         url=asset_data.get("url") if asset_data else None,
                     )
                     if asset_data
@@ -1034,8 +1032,8 @@ async def delete_source(source_id: str):
 
         # 3. Delete relation edges that lack cascade events
         for table, field in [
-            ("reference", "in"),        # reference edges FROM source TO notebook
-            ("refers_to", "out"),       # chat_session refers_to edges
+            ("reference", "in"),  # reference edges FROM source TO notebook
+            ("refers_to", "out"),  # chat_session refers_to edges
         ]:
             try:
                 result = await repo_query(
@@ -1055,9 +1053,7 @@ async def delete_source(source_id: str):
                     "DELETE agui_events WHERE command_id = $cid;",
                     {"cid": cmd_id},
                 )
-                await repo_query(
-                    f"DELETE {cmd_id};"
-                )
+                await repo_query(f"DELETE {cmd_id};")
                 deleted_extras["command"] = 1
             except Exception as e:
                 logger.warning(f"Failed to delete command for {source_id}: {e}")
@@ -1105,7 +1101,11 @@ async def cleanup_orphaned_files():
         db_paths: set[str] = set()
         if result and isinstance(result, list):
             for row in result:
-                fp = row.get("asset", {}).get("file_path") if isinstance(row.get("asset"), dict) else None
+                fp = (
+                    row.get("asset", {}).get("file_path")
+                    if isinstance(row.get("asset"), dict)
+                    else None
+                )
                 if not fp:
                     fp = row.get("file_path")
                 if fp:

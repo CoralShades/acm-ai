@@ -1,0 +1,9 @@
+-- Migration 53: Extend crud_audit for undo support
+-- Adds record_id, field_name, old_value, new_value fields to enable
+-- reverting write operations via the undo_last_write tool.
+-- Note: old_value/new_value use TYPE any (not option<any>) as SurrealDB
+-- TYPE any already permits NONE values.
+DEFINE FIELD record_id  ON crud_audit TYPE option<string>;
+DEFINE FIELD field_name ON crud_audit TYPE option<string>;
+DEFINE FIELD old_value  ON crud_audit TYPE any;
+DEFINE FIELD new_value  ON crud_audit TYPE any;

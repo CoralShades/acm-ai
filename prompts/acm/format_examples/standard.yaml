@@ -1,0 +1,59 @@
+# Standard DET (Department of Education & Training) format examples
+# Buildings identified by coded IDs like B001, B00A, D01
+# Used in NSW DoE SAMP (Site Asbestos Management Plan) documents
+
+format_name: standard
+description: "Standard DET format with coded building IDs (B001, D01) and structured room codes (B001-R0001)"
+
+building_detection:
+  description: >
+    Buildings appear as section headers with coded IDs.
+    Format: "## B001 - Admin Building - 1924 - Brick" or "B00A - Main Block"
+    Room codes follow pattern B###-R#### (e.g., B009-R0001).
+  examples:
+    - header: "## B001 - Administration Building - 1965 - Brick Veneer"
+      building_id: "B001"
+      building_name: "Administration Building"
+      year: 1965
+      construction: "Brick Veneer"
+    - header: "## D01 - Demountable"
+      building_id: "D01"
+      building_name: "Demountable"
+      year: null
+      construction: null
+
+item_extraction:
+  description: >
+    ACM items appear in structured tables with consistent columns.
+    Typical columns: Room/Area, Item, Material, Condition, Sample No, Result.
+  worked_example:
+    input: |
+      | Room/Area | Item | Condition | Sample No | Result |
+      | Library | Vinyl floor tiles | Good | 34511-039-001 | Positive - Chrysotile |
+    output:
+      room_name: "Library"
+      item_name: "Vinyl floor tiles"
+      condition: "Good"
+      sample_number: "34511-039-001"
+      sample_result: "Positive"
+      acm_classification: "Chrysotile"
+
+building_metadata:
+  description: >
+    Building metadata appears in structured headers.
+    Look for: Site/School, Building, Construction, Date of Inspection, Hygienist.
+  worked_example:
+    input: |
+      Site/School Asbestos Management Plan
+      Site: Reservoir Primary School
+      Building: B01 — Main Classroom Block
+      Construction: Brick veneer, 1965
+      Date of Inspection: 14 February 2023
+      Hygienist: Safety Environmental Consulting Pty Ltd
+    output:
+      building_name: "Main Classroom Block"
+      building_type: "Classroom"
+      construction_type: "Brick veneer"
+      estimated_year_built: "1965"
+      date_of_audit: "14 February 2023"
+      identifying_company: "Safety Environmental Consulting Pty Ltd"

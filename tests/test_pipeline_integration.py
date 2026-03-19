@@ -117,7 +117,13 @@ class TestPerRowPath:
                 "open_notebook.graphs.acm_extraction._get_docling_tables",
                 new_callable=AsyncMock,
                 return_value=[
-                    {"docling_document_json": {"table_cells": [], "num_rows": 3, "num_cols": 5}}
+                    {
+                        "docling_document_json": {
+                            "table_cells": [],
+                            "num_rows": 3,
+                            "num_cols": 5,
+                        }
+                    }
                 ],
             ),
             patch(
@@ -182,7 +188,13 @@ class TestPerRowPath:
                 "open_notebook.graphs.acm_extraction._get_docling_tables",
                 new_callable=AsyncMock,
                 return_value=[
-                    {"docling_document_json": {"table_cells": [], "num_rows": 1, "num_cols": 1}}
+                    {
+                        "docling_document_json": {
+                            "table_cells": [],
+                            "num_rows": 1,
+                            "num_cols": 1,
+                        }
+                    }
                 ],
             ),
             patch(
@@ -343,7 +355,13 @@ class TestPerRowFallback:
                 "open_notebook.graphs.acm_extraction._get_docling_tables",
                 new_callable=AsyncMock,
                 return_value=[
-                    {"docling_document_json": {"table_cells": [], "num_rows": 0, "num_cols": 0}}
+                    {
+                        "docling_document_json": {
+                            "table_cells": [],
+                            "num_rows": 0,
+                            "num_cols": 0,
+                        }
+                    }
                 ],
             ),
             patch(
@@ -504,7 +522,13 @@ class TestEnvVarDefaults:
                 "open_notebook.graphs.acm_extraction._get_docling_tables",
                 new_callable=AsyncMock,
                 return_value=[
-                    {"docling_document_json": {"table_cells": [], "num_rows": 1, "num_cols": 1}}
+                    {
+                        "docling_document_json": {
+                            "table_cells": [],
+                            "num_rows": 1,
+                            "num_cols": 1,
+                        }
+                    }
                 ],
             ),
             patch(

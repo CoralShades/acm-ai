@@ -4,11 +4,11 @@
  * Extends TestDataFactory with ACM-specific methods for:
  * - Source creation with file upload
  * - ACM extraction monitoring
- * - Test SAMP document management
+ * - Test ARA document management
  *
  * Usage:
  *   const factory = new ACMTestDataFactory();
- *   const source = await factory.createSourceFromSAMP('broadmeadows-police-station-samp.pdf');
+ *   const source = await factory.createSourceFromARA('broadmeadows-police-station-samp.pdf');
  *   await factory.waitForExtraction(source.id);
  *   await factory.cleanup();
  */
@@ -58,32 +58,32 @@ export class ACMTestDataFactory extends TestDataFactory {
   private createdACMRecords: string[] = [];
 
   /**
-   * Create a source from a SAMP PDF file
+   * Create a source from an ARA (Asbestos Register Assessment) PDF file
    *
-   * @param sampFilename - Filename in tests/e2e/fixtures/samps/
+   * @param araFilename - Filename in tests/e2e/fixtures/ara-documents/
    * @param notebook - Optional notebook (creates one if not provided)
    * @returns Source object
    */
-  async createSourceFromSAMP(
-    sampFilename: string,
+  async createSourceFromARA(
+    araFilename: string,
     notebook?: Notebook
   ): Promise<Source> {
     const nb = notebook || (await this.createNotebook({ name: 'E2E ACM Test' }));
-    const sampPath = path.join(
+    const araPath = path.join(
       __dirname,
-      '../../e2e/fixtures/samps',
-      sampFilename
+      '../../e2e/fixtures/ara-documents',
+      araFilename
     );
 
-    if (!fs.existsSync(sampPath)) {
-      throw new Error(`SAMP file not found: ${sampPath}`);
+    if (!fs.existsSync(araPath)) {
+      throw new Error(`ARA file not found: ${araPath}`);
     }
 
     // Create FormData for file upload
     const formData = new FormData();
-    const fileBuffer = fs.readFileSync(sampPath);
+    const fileBuffer = fs.readFileSync(araPath);
     const blob = new Blob([fileBuffer], { type: 'application/pdf' });
-    formData.append('file', blob, sampFilename);
+    formData.append('file', blob, araFilename);
     formData.append('notebook_id', nb.id);
     formData.append('enable_acm_extraction', 'true');
 
@@ -93,7 +93,7 @@ export class ACMTestDataFactory extends TestDataFactory {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to upload SAMP: ${response.status}`);
+      throw new Error(`Failed to upload ARA: ${response.status}`);
     }
 
     const source = await response.json();

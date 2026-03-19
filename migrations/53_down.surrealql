@@ -1,0 +1,5 @@
+-- Migration 53 down: Remove undo support fields from crud_audit
+REMOVE FIELD IF EXISTS record_id  ON TABLE crud_audit;
+REMOVE FIELD IF EXISTS field_name ON TABLE crud_audit;
+REMOVE FIELD IF EXISTS old_value  ON TABLE crud_audit;
+REMOVE FIELD IF EXISTS new_value  ON TABLE crud_audit;

@@ -65,7 +65,9 @@ async def _try_claim_command(command_id: str, worker_id: str) -> bool:
     return False
 
 
-async def _write_terminal_status(command_id: str, status: str, records: int = 0) -> None:
+async def _write_terminal_status(
+    command_id: str, status: str, records: int = 0
+) -> None:
     """Write terminal status to extraction_progress table.
 
     The PipelineLogger inside the graph writes 'running' status but may not
@@ -79,15 +81,20 @@ async def _write_terminal_status(command_id: str, status: str, records: int = 0)
     """
     try:
         import re
+
         safe_id = re.sub(r"[^a-zA-Z0-9_]", "_", str(command_id))
+        # Use UPSERT so the record is created when the PipelineLogger never
+        # successfully persisted an initial "running" row (e.g. event-loop
+        # shutdown before the fire-and-forget persist task executed).
         await repo_query(
             f"""
-            UPDATE extraction_progress:{safe_id} SET
+            UPSERT extraction_progress:{safe_id} SET
+                command_id = $command_id,
                 status = $status,
                 records_total = $records,
                 updated_at = time::now();
             """,
-            {"status": status, "records": records},
+            {"command_id": str(command_id), "status": status, "records": records},
         )
     except Exception as e:
         logger.warning(f"Failed to write terminal status for {command_id}: {e}")
@@ -109,7 +116,7 @@ class ACMExtractionOutput(CommandOutput):
     source_id: str
     records_created: int = 0
     records_deleted: int = 0
-    records_failed: int = 0
+    records_filtered: int = 0
     records_embedded: int = 0  # E1-S6: Count of records with embeddings
     processing_time: float = 0.0
     error_message: Optional[str] = None
@@ -299,9 +306,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
             )
         except asyncio.TimeoutError:
             processing_time = time.time() - start_time
-            logger.error(
-                f"ACM extraction timed out after 1800s for {source_id}"
-            )
+            logger.error(f"ACM extraction timed out after 1800s for {source_id}")
             if command_id:
                 await _write_terminal_status(command_id, "failed", 0)
             return ACMExtractionOutput(
@@ -326,7 +331,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 source_id=source_id,
                 records_created=0,
                 records_deleted=deleted_count,
-                records_failed=result.records_failed,
+                records_filtered=result.records_filtered,
                 processing_time=processing_time,
                 error_message=result.error,
                 extraction_method="ai",
@@ -341,7 +346,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 source_id=source_id,
                 records_created=0,
                 records_deleted=deleted_count,
-                records_failed=result.records_failed,
+                records_filtered=result.records_filtered,
                 processing_time=processing_time,
                 extraction_method="ai",
             )
@@ -407,7 +412,7 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
             source_id=source_id,
             records_created=result.total_records,
             records_deleted=deleted_count,
-            records_failed=result.records_failed,
+            records_filtered=result.records_filtered,
             records_embedded=embedded_count,
             processing_time=processing_time,
             confidence_distribution=conf_dist,

@@ -190,7 +190,7 @@ class TestSamplePDF3980:
 class TestSamplePDF4601:
     """Tests based on expected output from 4601_AsbestosRegister.pdf."""
 
-    SAMPLE_MARKDOWN = """# Oakwood College - SAMP Register
+    SAMPLE_MARKDOWN = """# Oakwood College - ARA Register
 
 --- Page 1 ---
 

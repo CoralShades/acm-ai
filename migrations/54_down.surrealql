@@ -1,0 +1,2 @@
+-- Rollback migration 54: Drop consultant_format_profile table
+REMOVE TABLE IF EXISTS consultant_format_profile;

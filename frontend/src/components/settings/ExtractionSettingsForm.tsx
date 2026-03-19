@@ -108,7 +108,7 @@ export function ExtractionSettingsForm() {
       <div className="space-y-3">
         <Label className="text-base font-medium">Extraction Method</Label>
         <p className="text-sm text-muted-foreground">
-          Choose how ACM records are extracted from SAMP documents.
+          Choose how ACM records are extracted from ARA documents.
         </p>
         <RadioGroup
           value={settings.extraction_method}

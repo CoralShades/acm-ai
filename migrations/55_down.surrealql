@@ -1,0 +1,6 @@
+-- Rollback MCS13: Revert FK fields to string type
+REMOVE FIELD IF EXISTS building_record_id ON TABLE acm_record;
+REMOVE FIELD IF EXISTS parent_table_id ON TABLE acm_record;
+
+DEFINE FIELD building_record_id ON TABLE acm_record TYPE option<string>;
+DEFINE FIELD parent_table_id ON TABLE acm_record TYPE option<string>;

@@ -1,8 +1,8 @@
 /**
  * Domain model for ACM (Asbestos Containing Material) records.
  *
- * Represents a single ACM item extracted from a SAMP (Site Asbestos
- * Management Plan) or ACM Register document.
+ * Represents a single ACM item extracted from an ARA (Asbestos Register
+ * Assessment) or ACM Register document.
  */
 export type ACMRecord = {
     /**

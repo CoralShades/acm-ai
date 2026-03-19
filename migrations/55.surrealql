@@ -1,0 +1,12 @@
+-- MCS13: Fix acm_record FK field types from option<string> to option<record<...>>
+-- Migration 40 used IF NOT EXISTS which silently skipped if a prior schema
+-- (or SurrealDB inference) had already created these fields as option<string>.
+-- REMOVE + DEFINE forces the correct record-link types.
+
+REMOVE FIELD IF EXISTS building_record_id ON TABLE acm_record;
+REMOVE FIELD IF EXISTS parent_table_id ON TABLE acm_record;
+
+DEFINE FIELD building_record_id ON TABLE acm_record TYPE option<record<building_record>>;
+DEFINE FIELD parent_table_id ON TABLE acm_record TYPE option<record<acm_table_section>>;
+
+DEFINE INDEX IF NOT EXISTS idx_acm_building_record ON TABLE acm_record COLUMNS building_record_id;

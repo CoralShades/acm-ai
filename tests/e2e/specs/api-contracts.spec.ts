@@ -17,8 +17,8 @@ test.describe('API Contract Validation @smoke @api-contracts', () => {
     expect(typeof response === 'object').toBe(true);
   });
 
-  test('GET /api/notebooks/ returns array with expected fields', async ({ apiClient }) => {
-    const response = await apiClient.get<unknown[]>('/notebooks/');
+  test('GET /api/notebooks returns array with expected fields', async ({ apiClient }) => {
+    const response = await apiClient.get<unknown[]>('/notebooks');
     expect(Array.isArray(response)).toBe(true);
     // If there are notebooks, verify shape
     if (response.length > 0) {
@@ -28,8 +28,8 @@ test.describe('API Contract Validation @smoke @api-contracts', () => {
     }
   });
 
-  test('GET /api/sources/ returns array with expected fields', async ({ apiClient }) => {
-    const response = await apiClient.get<unknown[]>('/sources/');
+  test('GET /api/sources returns array with expected fields', async ({ apiClient }) => {
+    const response = await apiClient.get<unknown[]>('/sources');
     expect(Array.isArray(response)).toBe(true);
     if (response.length > 0) {
       const first = response[0] as Record<string, unknown>;
@@ -37,8 +37,8 @@ test.describe('API Contract Validation @smoke @api-contracts', () => {
     }
   });
 
-  test('GET /api/models/ returns array with expected fields', async ({ apiClient }) => {
-    const response = await apiClient.get<unknown[]>('/models/');
+  test('GET /api/models returns array with expected fields', async ({ apiClient }) => {
+    const response = await apiClient.get<unknown[]>('/models');
     expect(Array.isArray(response)).toBe(true);
     if (response.length > 0) {
       const first = response[0] as Record<string, unknown>;

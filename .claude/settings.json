@@ -63,12 +63,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/ralph-stop-gate.sh\"",
-            "timeout": 10,
-            "statusMessage": "Checking Ralph task completion..."
-          },
-          {
-            "type": "command",
             "command": "echo '[auto-commit] DISABLED — use /commit or git commit manually'",
             "timeout": 5
           }
@@ -95,12 +89,6 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-gate.sh\"",
             "timeout": 120,
             "statusMessage": "Pre-commit verification..."
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/ralph-gate-guard.sh\"",
-            "timeout": 10,
-            "statusMessage": "Ralph gate check..."
           }
         ]
       }
@@ -113,12 +101,6 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/story-done-check.sh\"",
             "timeout": 60
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/ralph-progress.sh\"",
-            "timeout": 10,
-            "statusMessage": "Ralph progress..."
           }
         ]
       }

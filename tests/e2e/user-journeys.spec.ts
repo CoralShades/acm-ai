@@ -2,8 +2,8 @@
  * End-to-End User Journeys
  *
  * Tests critical user workflows from start to finish:
- * 1. New User Journey - Create notebook, upload SAMP, view grid, chat, export
- * 2. Power User Journey - Multiple SAMPs, filtering, comparison, export
+ * 1. New User Journey - Create notebook, upload ARA, view grid, chat, export
+ * 2. Power User Journey - Multiple ARAs, filtering, comparison, export
  * 3. QA Analyst Journey - Validate extraction, check negatives, verify compliance
  *
  * These tests validate complete workflows and integration between features.
@@ -14,7 +14,7 @@
 import { test, expect } from '../support/fixtures';
 import { TestDataFactory } from '../support/helpers/test-data-factory';
 import {
-  uploadSAMP,
+  uploadARA,
   waitForExtraction,
   navigateToACMRegister,
   getACMRecordCount,
@@ -35,13 +35,13 @@ import {
 } from './helpers/screenshot-helpers';
 import * as path from 'path';
 
-const SAMP_FIXTURES_DIR = path.join(__dirname, 'fixtures/samps');
-const BROADMEADOWS_SAMP = path.join(
-  SAMP_FIXTURES_DIR,
+const ARA_FIXTURES_DIR = path.join(__dirname, 'fixtures/ara-documents');
+const BROADMEADOWS_ARA = path.join(
+  ARA_FIXTURES_DIR,
   'broadmeadows-police-station-samp.pdf'
 );
-const SAMP_1124 = path.join(SAMP_FIXTURES_DIR, '1124-asbestos-register.pdf');
-const SAMP_3980 = path.join(SAMP_FIXTURES_DIR, '3980-asbestos-register.pdf');
+const ARA_1124 = path.join(ARA_FIXTURES_DIR, '1124-asbestos-register.pdf');
+const ARA_3980 = path.join(ARA_FIXTURES_DIR, '3980-asbestos-register.pdf');
 
 test.describe('End-to-End User Journeys @user-journeys', () => {
   let factory: TestDataFactory;
@@ -54,7 +54,7 @@ test.describe('End-to-End User Journeys @user-journeys', () => {
     await factory.cleanup();
   });
 
-  test('Journey 1: New user creates notebook, uploads SAMP, views data, asks questions, and exports', async ({
+  test('Journey 1: New user creates notebook, uploads ARA, views data, asks questions, and exports', async ({
     page,
   }) => {
     // Capture workflow steps
@@ -83,9 +83,9 @@ test.describe('End-to-End User Journeys @user-journeys', () => {
     // Verify notebook page loads
     await expect(page.getByText(/My First ACM Analysis/i)).toBeVisible();
 
-    // Step 2: User uploads SAMP document via wizard
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
-    workflowSteps.push('samp-uploaded');
+    // Step 2: User uploads ARA document via wizard
+    await uploadARA(page, BROADMEADOWS_ARA);
+    workflowSteps.push('ara-uploaded');
 
     // Step 3: User waits for extraction to complete
     await waitForExtraction(page, 180000);
@@ -124,7 +124,7 @@ test.describe('End-to-End User Journeys @user-journeys', () => {
     expect(chatResponse).toBeTruthy();
   });
 
-  test('Journey 2: Power user compares multiple SAMPs, filters data, and exports consolidated report', async ({
+  test('Journey 2: Power user compares multiple ARAs, filters data, and exports consolidated report', async ({
     page,
   }) => {
     // Capture workflow steps
@@ -137,29 +137,29 @@ test.describe('End-to-End User Journeys @user-journeys', () => {
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
     workflowSteps.push('notebook-ready');
 
-    // Step 2: Upload first SAMP
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    // Step 2: Upload first ARA
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
-    workflowSteps.push('samp1-extracted');
+    workflowSteps.push('ara1-extracted');
 
     // Capture first upload
-    await captureEvidence(page, 'journey2-samp1-complete');
+    await captureEvidence(page, 'journey2-ara1-complete');
 
-    // Step 3: Upload second SAMP
-    await uploadSAMP(page, SAMP_1124);
+    // Step 3: Upload second ARA
+    await uploadARA(page, ARA_1124);
     await waitForExtraction(page, 180000);
-    workflowSteps.push('samp2-extracted');
+    workflowSteps.push('ara2-extracted');
 
     // Capture second upload
-    await captureEvidence(page, 'journey2-samp2-complete');
+    await captureEvidence(page, 'journey2-ara2-complete');
 
-    // Step 4: Upload third SAMP
-    await uploadSAMP(page, SAMP_3980);
+    // Step 4: Upload third ARA
+    await uploadARA(page, ARA_3980);
     await waitForExtraction(page, 180000);
-    workflowSteps.push('samp3-extracted');
+    workflowSteps.push('ara3-extracted');
 
     // Capture third upload
-    await captureEvidence(page, 'journey2-samp3-complete');
+    await captureEvidence(page, 'journey2-ara3-complete');
 
     // Step 5: View extractions in grid
     await navigateToACMRegister(page);
@@ -201,14 +201,14 @@ test.describe('End-to-End User Journeys @user-journeys', () => {
     // Capture workflow steps
     const workflowSteps: string[] = [];
 
-    // Step 1: Upload SAMP for validation
+    // Step 1: Upload ARA for validation
     const notebook = await factory.createNotebook({
       name: 'QA Validation - Broadmeadows',
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
     workflowSteps.push('notebook-ready');
 
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
     workflowSteps.push('extraction-complete');
 
@@ -298,8 +298,8 @@ test.describe('End-to-End User Journeys @user-journeys', () => {
     });
     await page.goto(`/notebooks/${notebook.id.replace('notebook:', '')}`);
 
-    // Step 2: First user uploads SAMP
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    // Step 2: First user uploads ARA
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     await captureEvidence(page, 'journey4-initial-upload');
@@ -345,7 +345,7 @@ test.describe('End-to-End User Journeys @user-journeys', () => {
 
     // Note: Upload wizard may not work well on mobile
     // For now, create data via API
-    await uploadSAMP(page, BROADMEADOWS_SAMP);
+    await uploadARA(page, BROADMEADOWS_ARA);
     await waitForExtraction(page, 180000);
 
     // Step 2: Navigate to ACM grid (mobile view)
