@@ -1003,9 +1003,11 @@ class BuildingRecord(ObjectModel):
 
     @classmethod
     async def generate_internal_id(cls, source_id: str) -> str:
-        """Generate BLD#{source_short}_{seq:03d} for a new building.
+        """Generate BLD#{source_short}_{source_suffix}_{seq:03d} for a new building.
 
         source_short = first 8 chars of source name (uppercase, spaces to underscore).
+        source_suffix = first 6 chars of source record ID (prevents collisions
+        when two sources share the same title prefix).
         seq = count of existing BuildingRecords for this source + 1.
         """
         from open_notebook.domain.notebook import Source
@@ -1017,9 +1019,11 @@ class BuildingRecord(ObjectModel):
         source_short = (
             source_label[:8].upper().replace(" ", "_") if source_label else "UNKNOWN"
         )
+        src_id_raw = str(source_id)
+        src_suffix = src_id_raw.split(":")[-1][:6] if ":" in src_id_raw else src_id_raw[:6]
         existing = await cls.get_by_source(source_id)
         seq = len(existing) + 1
-        return f"BLD#{source_short}_{seq:03d}"
+        return f"BLD#{source_short}_{src_suffix}_{seq:03d}"
 
     def _prepare_save_data(self) -> dict:
         """Override to ensure source_id is proper record format."""

@@ -642,11 +642,15 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     # Use source from state (already loaded) — avoids extra DB call and works in tests
     _src_label = getattr(source, "title", "") or ""
     _src_short = _src_label[:8].upper().replace(" ", "_") if _src_label else "UNKNOWN"
+    # Include source ID suffix to prevent UNIQUE index collisions when
+    # two sources share the same title prefix (e.g. both "Clutch_Broadmeadows.pdf").
+    _src_id_raw = str(source.id) if source.id else ""
+    _src_suffix = _src_id_raw.split(":")[-1][:6] if ":" in _src_id_raw else _src_id_raw[:6]
 
     pre_assigned_ids: dict[str, str] = {}
     for idx, b in enumerate(inventory.buildings):
         seq = base_seq + idx + 1
-        pre_assigned_ids[b.building_id] = f"BLD#{_src_short}_{seq:03d}"
+        pre_assigned_ids[b.building_id] = f"BLD#{_src_short}_{_src_suffix}_{seq:03d}"
 
     async def _extract_one_building(building_meta_entry):
         """Extract a single building's metadata (semaphore-bounded)."""

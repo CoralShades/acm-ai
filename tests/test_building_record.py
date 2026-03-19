@@ -372,12 +372,16 @@ class TestBuildingRecordIDGeneration:
             ):
                 internal_id = await BuildingRecord.generate_internal_id("source:test")
 
-        # Strip BLD# prefix, split by last underscore to get source_short
+        # Format: BLD#{source_short}_{source_suffix}_{seq:03d}
         after_prefix = internal_id[4:]  # Remove "BLD#"
-        # Split on "_" — last element is seq, rest is source_short
-        parts = after_prefix.rsplit("_", 1)
-        source_short = parts[0]
+        parts = after_prefix.split("_")
+        # Last part is seq (3 digits), second-to-last is source_suffix (6 chars)
+        source_short = "_".join(parts[:-2])  # rejoin in case title has underscores
+        source_suffix = parts[-2]
+        seq = parts[-1]
         assert len(source_short) <= 8
+        assert len(source_suffix) <= 6
+        assert len(seq) == 3
 
     async def test_generate_internal_id_unknown_when_no_name(self):
         """AC3: Source with no title uses 'UNKNOWN' as source_short."""
