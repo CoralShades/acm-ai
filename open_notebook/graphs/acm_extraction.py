@@ -3108,18 +3108,12 @@ async def extract_acm_from_source(
             graph_config["callbacks"] = langfuse_callbacks
             graph_config["metadata"] = langfuse_metadata
 
-        # Use checkpointed graph for HITL support when invoked from UI
-        # (command_id present). Without command_id, skip checkpointer to
-        # avoid serialization issues with test mocks and to save overhead.
-        if command_id:
-            global _checkpointed_graph
-            if _checkpointed_graph is None:
-                _checkpointed_graph = agent_state.compile(
-                    checkpointer=MemorySaver()
-                )
-            active_graph = _checkpointed_graph
-        else:
-            active_graph = graph
+        # MCS13: Disable MemorySaver checkpointer — it crashes with
+        # "Type is not msgpack serializable: RecordID" when SurrealDB
+        # RecordID objects leak into the graph state via domain models.
+        # HITL (schema inference confirmation) will need a custom
+        # serializer or explicit str() conversion before re-enabling.
+        active_graph = graph
 
         result = await active_graph.ainvoke(
             initial_state, config=graph_config
