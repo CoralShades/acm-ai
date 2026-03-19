@@ -211,7 +211,7 @@ Pipeline ran continuously with high throughput, processing remaining source docu
 - **Cache Hit/Miss**: N/A
 - **LLM Corrections**: friable None→Friable, material_condition None→Good, sample_result cleanup
 - **Provider**: ollama/llama3.1:8b ✅
-- **Errors**: Building save failure, schema inference `'DocumentMeta' has no attribute 'get'`
+- **Errors**: Building save failure, ~~schema inference `'DocumentMeta' has no attribute 'get'`~~ **FIXED in MCS13 (2026-03-20)**
 
 ### Run 2: Alexander Hospital (source:b6eswuntqoxyozgvv995)
 - **Status**: FAILED (serialization error)
@@ -223,7 +223,7 @@ Pipeline ran continuously with high throughput, processing remaining source docu
 - **Buildings Saved**: 0/6 — `'str' object has no attribute 'items'` in `base.py:save:167`
 - **Row Extraction**: Myrtle Street Clinic 3/3 ✅, Mortuary Buildings 9 rows, Pathology Dept 8 rows (1 failed: item_name=None)
 - **Records Created**: 0 (save bug + serialization failure)
-- **Schema Inference**: Failed — `'DocumentMeta' object has no attribute 'get'`
+- **Schema Inference**: ~~Failed — `'DocumentMeta' object has no attribute 'get'`~~ **FIXED in MCS13 (2026-03-20)** — replaced .get() with getattr()
 - **Cache Hit/Miss**: N/A
 - **LLM Corrections**: sample_result 'Negative, Organic fibres detected'→'Negative', disturbance_potential corrections
 - **Provider**: ollama/llama3.1:8b ✅
@@ -253,7 +253,7 @@ Pipeline ran continuously with high throughput, processing remaining source docu
 - **Building Save**: ✅ SUCCESS — `building_record:006felislx8823dqfqai` (BLD#BORADMEA_001, confidence=high)
   - `base.py:save()` guard triggered ("Unexpected repo result type str") — non-fatal
   - Query-back fix recovered ID successfully
-- **Schema Inference**: ❌ FAILED — `'DocumentMeta' object has no attribute 'get'` (known bug, non-blocking)
+- **Schema Inference**: ~~❌ FAILED — `'DocumentMeta' object has no attribute 'get'`~~ **FIXED in MCS13 (2026-03-20)** — was non-blocking, now functional
 - **Per-Row Extraction**: ✅ 86 rows extracted (86 after splits), ~8s/row via ollama/llama3.1:8b
   - Validation warnings: friability='-' (→None), area_type='Internal'/'External' (pass-through)
   - Result values: 'Negative, Positive', 'Organic fibres detected', 'Negative, Assumed Positive' (pass-through)
@@ -322,7 +322,7 @@ Pipeline ran continuously with high throughput, processing remaining source docu
 |-----------|-----------|---------|---------|
 | `42d2ca37492481e6` | 0.9 | F/NF→Friability, Result→Sample_Analysis_Result, Room/Area→Room_or_Area | 2026-03-18 |
 
-No new format profiles created — schema inference node is broken (`'DocumentMeta' has no attribute 'get'`).
+No new format profiles created — schema inference node was broken (`'DocumentMeta' has no attribute 'get'`). **FIXED in MCS13 (2026-03-20)** — new extractions will now create format profiles.
 
 ---
 
@@ -330,7 +330,7 @@ No new format profiles created — schema inference node is broken (`'DocumentMe
 - `source` count: **5**
 - `acm_record` count: **246** (32 Broadmeadows + 95 Alexander + 90 + 29 Clutch)
 - `building_record` count: **17** (stale from previous runs; new inserts blocked by unique index)
-- `consultant_format_profile` count: **1** (unchanged — schema inference still broken)
+- `consultant_format_profile` count: **1** (unchanged at time of validation — schema inference was broken, **FIXED in MCS13 2026-03-20**)
 - `command` count: **56 completed**, 0 running
 
 ---
@@ -355,7 +355,7 @@ No new format profiles created — schema inference node is broken (`'DocumentMe
 |-----|----------|--------|--------|
 | Building save failure | `base.py:save:167` | String repo result | **FIXED** (guard + query-back) |
 | Ghost saves (unique index) | `repository.py:repo_create:103` | INSERT blocked by stale data | **IDENTIFIED** — UPSERT needed |
-| Schema inference failure | `schema_inference_node` | No format profiles | OPEN — non-blocking |
+| Schema inference failure | `schema_inference_node` | No format profiles | **FIXED** (MCS13 — .get()→getattr()) |
 | ormsgpack: Source | `jsonplus.py:648` | Checkpoint crash | **FIXED** (embed_records:false) |
 | ormsgpack: PipelineLogger | `jsonplus.py:648` | Checkpoint crash | **FIXED** (removed from graph state) |
 | Record-link FK fields | SurrealDB Python client | RecordID auto-parsing | **FIXED** (nulled before save) |
@@ -368,7 +368,7 @@ No new format profiles created — schema inference node is broken (`'DocumentMe
 5. Ghost saves from unique index violations — **IDENTIFIED**, root cause: `idx_building_internal_id` blocks re-inserts of stale building_records. acm_records saved successfully after stale data cleared.
 
 **Still open:**
-- `'DocumentMeta' object has no attribute 'get'` — schema inference expects dict, gets Pydantic model (non-blocking)
+- ~~`'DocumentMeta' object has no attribute 'get'` — schema inference expects dict, gets Pydantic model~~ **FIXED in MCS13 (2026-03-20)** — replaced .get() with getattr()
 - Building record UPSERT needed to handle re-extractions without manual stale data cleanup
 
 ### Stability Issues (Resolved)
@@ -380,7 +380,7 @@ No new format profiles created — schema inference node is broken (`'DocumentMe
 1. ~~Fix `base.py:save()` to handle string fields~~ — **DONE** (guard + query-back)
 2. ~~Fix PipelineLogger serialization~~ — **DONE** (removed from graph state)
 3. ~~Fix record-link FK fields~~ — **DONE** (nulled before save)
-4. Fix schema inference to handle `DocumentMeta` Pydantic model (use `.model_dump()` or `.dict()`)
+4. ~~Fix schema inference to handle `DocumentMeta` Pydantic model~~ **DONE** (MCS13 2026-03-20 — replaced .get() with getattr())
 5. Implement UPSERT for building_records to handle re-extractions without stale data cleanup
 6. Audit remaining graph state fields for non-serializable objects (preventive)
 7. Fix `docling_document_json` NULL issue for Broadmeadows — currently forces bulk mode instead of per-row

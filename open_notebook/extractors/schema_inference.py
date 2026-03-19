@@ -459,11 +459,10 @@ async def schema_inference_node(state: dict) -> dict:
                 f"sample_count={cached_profile.get('sample_count', 1)}"
             )
             # Resolve detected_format from document_metadata
-            cached_format = (
-                state.get("document_metadata", {}).get("format_name")
-                if state.get("document_metadata")
-                else None
-            )
+            # document_metadata is a Pydantic DocumentMeta model (not a dict),
+            # so use getattr() instead of .get()
+            doc_meta = state.get("document_metadata")
+            cached_format = getattr(doc_meta, "format_name", None) if doc_meta else None
             inferred_schema = _build_schema_from_profile(
                 cached_profile, header_sig, detected_format=cached_format
             )
@@ -484,7 +483,7 @@ async def schema_inference_node(state: dict) -> dict:
                     {"api_name": k, **v} for k, v in SF_FIELD_CATALOG.items()
                 ],
                 "detected_format": (
-                    state.get("document_metadata", {}).get("format_name")
+                    getattr(state.get("document_metadata"), "format_name", None)
                     if state.get("document_metadata")
                     else None
                 ),
@@ -543,8 +542,9 @@ async def schema_inference_node(state: dict) -> dict:
         consultant_name = result.get("detected_consultant")
 
         # Resolve detected_format from document_metadata or LLM response
+        # document_metadata is a Pydantic DocumentMeta model — use getattr()
         detected_format = (
-            state.get("document_metadata", {}).get("format_name")
+            getattr(state.get("document_metadata"), "format_name", None)
             if state.get("document_metadata")
             else None
         ) or result.get("detected_format")

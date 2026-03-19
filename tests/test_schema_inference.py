@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.extractors.recovery_config import RecoveryConfig
 from open_notebook.extractors.schema_inference import (
     SF_FIELD_CATALOG,
@@ -475,3 +476,194 @@ async def test_schema_inference_node_llm_error():
         result = await schema_inference_node(state)
 
     assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Category 6: DocumentMeta Pydantic model in state (MCS13 regression)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_schema_inference_node_with_pydantic_document_meta():
+    """Node handles DocumentMeta Pydantic model in state without AttributeError.
+
+    Regression test for MCS13: schema_inference_node previously called .get()
+    on the Pydantic DocumentMeta model, which caused AttributeError since
+    Pydantic BaseModel doesn't have a .get() method.
+    """
+    mock_source = MagicMock()
+    mock_source.id = "source:test123"
+
+    # Real Pydantic DocumentMeta model — the crash case
+    doc_meta = DocumentMeta(
+        consultant_name="Alexander Symonds",
+        site_name="Broadmeadows Town Hall",
+        report_date="2024-01-15",
+    )
+
+    mock_docling_json = {
+        "table_cells": [
+            {"text": "Room/Area", "column_header": True, "start_col_offset_idx": 0},
+            {"text": "F/NF", "column_header": True, "start_col_offset_idx": 1},
+            {"text": "Result", "column_header": True, "start_col_offset_idx": 2},
+            {
+                "text": "Kitchen",
+                "column_header": False,
+                "start_col_offset_idx": 0,
+                "start_row_offset_idx": 1,
+            },
+        ]
+    }
+
+    mock_llm_response = MagicMock()
+    mock_llm_response.content = "json response"
+
+    # State with a REAL Pydantic DocumentMeta (not None, not a dict)
+    state = {
+        "source": mock_source,
+        "model_id": "test-model",
+        "document_metadata": doc_meta,
+    }
+
+    parsed_llm = {
+        "mappings": [
+            {"pdf_header": "Room/Area", "sf_field": "Room_or_Area__c", "confidence": 0.95},
+            {"pdf_header": "F/NF", "sf_field": "Friability_of_Material__c", "confidence": 0.90},
+            {
+                "pdf_header": "Result",
+                "sf_field": "Sample_Analysis_Result_Material_Status__c",
+                "confidence": 0.85,
+            },
+        ],
+        "unmapped_headers": [],
+        "overall_confidence": 0.90,
+        "detected_consultant": "Alexander Symonds",
+        "level_regex_suggestion": None,
+        "detected_format": "standard",
+    }
+
+    with (
+        patch(
+            "open_notebook.database.repository.repo_query",
+            new_callable=AsyncMock,
+        ) as mock_query,
+        patch(
+            "open_notebook.extractors.format_profile_repository.repo_query",
+            new_callable=AsyncMock,
+            return_value=[],  # Cache miss
+        ),
+        patch(
+            "open_notebook.extractors.format_profile_repository.repo_create",
+            new_callable=AsyncMock,
+            return_value=[{"id": "consultant_format_profile:test"}],
+        ),
+        patch(
+            "open_notebook.database.repository.ensure_record_id",
+            side_effect=lambda x: x,
+        ),
+        patch(
+            "open_notebook.graphs.utils.provision_langchain_model",
+            new_callable=AsyncMock,
+        ) as mock_provision,
+        patch(
+            "open_notebook.graphs.utils.parse_json_response",
+        ) as mock_parse,
+        patch("ai_prompter.Prompter"),
+    ):
+        mock_query.return_value = [{"docling_document_json": mock_docling_json}]
+        mock_model = AsyncMock()
+        mock_model.ainvoke.return_value = mock_llm_response
+        mock_provision.return_value = mock_model
+        mock_parse.return_value = parsed_llm
+
+        # This previously raised: AttributeError: 'DocumentMeta' object has no attribute 'get'
+        result = await schema_inference_node(state)
+
+    schema = result["inferred_schema"]
+    assert isinstance(schema, InferredSchema)
+    assert schema.confidence == 0.90
+    assert schema.detected_format == "standard"  # Falls through to LLM response
+    assert schema.column_mapping["Room/Area"] == "Room_or_Area__c"
+
+
+@pytest.mark.asyncio
+async def test_schema_inference_node_cache_hit_with_pydantic_meta():
+    """Cache hit path handles DocumentMeta Pydantic model without crashing.
+
+    Tests the cache hit code path (lines 462-471) which also accessed
+    document_metadata with .get() before the MCS13 fix.
+    """
+    mock_source = MagicMock()
+    mock_source.id = "source:test123"
+
+    doc_meta = DocumentMeta(
+        consultant_name="Prensa Pty Ltd",
+        site_name="Test Site",
+    )
+
+    mock_docling_json = {
+        "table_cells": [
+            {"text": "Room/Area", "column_header": True, "start_col_offset_idx": 0},
+            {"text": "F/NF", "column_header": True, "start_col_offset_idx": 1},
+        ]
+    }
+
+    # Cached profile (cache hit)
+    cached_profile = {
+        "id": "consultant_format_profile:cached1",
+        "confidence": 0.95,
+        "consultant_name": "Prensa Pty Ltd",
+        "sample_count": 3,
+        "column_mapping": {
+            "Room/Area": "Room_or_Area__c",
+            "F/NF": "Friability_of_Material__c",
+        },
+        "canonical_mapping": {
+            "Room/Area": "room_location",
+            "F/NF": "friability",
+        },
+        "detailed_mappings": [
+            {"pdf_header": "Room/Area", "sf_field": "Room_or_Area__c", "confidence": 0.95},
+            {"pdf_header": "F/NF", "sf_field": "Friability_of_Material__c", "confidence": 0.90},
+        ],
+        "unmapped_headers": [],
+        "level_regex_str": None,
+        "detected_format": "standard",
+    }
+
+    state = {
+        "source": mock_source,
+        "model_id": "test-model",
+        "document_metadata": doc_meta,
+    }
+
+    with (
+        patch(
+            "open_notebook.database.repository.repo_query",
+            new_callable=AsyncMock,
+        ) as mock_query,
+        patch(
+            "open_notebook.extractors.format_profile_repository.repo_query",
+            new_callable=AsyncMock,
+            return_value=[cached_profile],  # Cache hit!
+        ),
+        patch(
+            "open_notebook.extractors.format_profile_repository.repo_query",
+            new_callable=AsyncMock,
+            return_value=[cached_profile],
+        ),
+        patch(
+            "open_notebook.database.repository.ensure_record_id",
+            side_effect=lambda x: x,
+        ),
+    ):
+        mock_query.return_value = [{"docling_document_json": mock_docling_json}]
+
+        # This previously raised: AttributeError: 'DocumentMeta' object has no attribute 'get'
+        result = await schema_inference_node(state)
+
+    schema = result["inferred_schema"]
+    assert isinstance(schema, InferredSchema)
+    assert schema.confidence == 0.95
+    assert schema.consultant_name == "Prensa Pty Ltd"
+    assert schema.profile_id == "consultant_format_profile:cached1"

@@ -715,6 +715,7 @@ development_status:
   mcs13-internal-id-collision-fix-2026-03-19: done  # fix(extraction): prevent building_record UNIQUE index collision across sources. Root cause: internal_id derived from title[:8] only (e.g. BLD#CLUTCH_B_001) — same prefix across sources hijacks existing record's source_id. Fix: append source_suffix to internal_id (BLD#{title_short}_{source_suffix}_{seq:03d}). Commit 5819d5e4.
   mcs13-schema-type-mismatch-fix-2026-03-19: done  # fix(extraction): fix building_record_id FK schema type (option<string> → record<building_record>) via Migration 55. SurrealDB Migration 40 IF NOT EXISTS was silently skipped. Forced correct type. Commit 45372518. Migration files: migrations/55.surrealql, migrations/55_down.surrealql.
   mcs13-checkpointer-crash-fix-2026-03-19: done  # fix(extraction): disable LangGraph MemorySaver checkpointer — RecordID objects in graph state cause "Type is not msgpack serializable: RecordID" crash. Disabled until custom serializer implemented. Commit 45372518 (same as schema fix). E2E verified: 101 records saved, 90% FK population rate, 14 buildings across 2 uploads, 0 UNIQUE index collisions.
+  mcs13-schema-inference-documentmeta-fix-2026-03-20: done  # fix(extraction): fix schema inference DocumentMeta .get() AttributeError. Root cause: schema_inference_node called .get() on Pydantic DocumentMeta model (lines 463, 487, 547) — silently caught, making schema inference never run. Fix: replaced 3 .get() calls with getattr(). 2 regression tests added. 26/26 tests pass. SP:3. Dependencies: MCS8. Audit ref: MCS7 validation trace-analysis.md. Files: open_notebook/extractors/schema_inference.py, tests/test_schema_inference.py. Impact: schema inference now actually runs — new format profiles created and cached, cache hits for previously seen formats, column mapping inference for multi-consultant support.
 
   # ─────────────────────────────────────────────────────
   # MCS Jobs/Source Page Unification (jobs/source parity)
@@ -774,8 +775,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 290  (280 prior + MCS11 FK fix + MCS13 collision fix + MCS13 schema fix + MCS13 checkpointer fix + MCS11 in-progress split + MCS12 done)
-# Stories Done: 260 (90%)  -- 259 prior + mcs12-extraction-events
+# Total Stories: 291  (280 prior + MCS11 FK fix + MCS13 collision fix + MCS13 schema fix + MCS13 checkpointer fix + MCS13 DocumentMeta fix + MCS11 in-progress split + MCS12 done)
+# Stories Done: 261 (90%)  -- 260 prior + mcs13-schema-inference-documentmeta-fix
 # Stories Review: 0
 # Stories In-Progress: 2 (mcs9-sse-save-events, mcs11-jobs-source-unification)
 # Stories Blocked: 0
@@ -808,11 +809,12 @@ development_status:
 #   Both added to _TERMINAL_EVENT_TYPES in v3_streaming.py so SSE stream closes properly.
 #   Frontend: useExtractionStream hook + ExtractionStatusBanner component integrated on /jobs/[id].
 #   /v3/stream/extraction/{op_id} endpoint now delivers real events (was dead before).
-# MCS13 DONE (3 sub-fixes, all verified E2E with 2 PDF uploads):
+# MCS13 DONE (4 sub-fixes, all verified):
 #   1. UNIQUE index collision fix — internal_id now includes source_suffix (BLD#{title}_{src}_{seq}). Commit 5819d5e4.
 #   2. FK schema type fix — Migration 55 forces building_record_id as record<building_record>. Commit 45372518.
 #   3. MemorySaver checkpointer disabled — RecordID objects not msgpack-serializable. Commit 45372518.
-#   E2E result: 101 records saved, 90% FK population rate, 14 buildings across 2 uploads, 0 collisions.
+#   4. Schema inference DocumentMeta .get() fix — 3 occurrences of .get() on Pydantic model replaced with getattr(). Schema inference was silently failing for all extractions. 2 regression tests. 26/26 pass.
+#   E2E result (sub-fixes 1-3): 101 records saved, 90% FK population rate, 14 buildings across 2 uploads, 0 collisions.
 #
 # Multi-Consultant Format Adaptability Sprint (2026-03-18):
 # MCS1: Detector rename (ClutchDetector→PipeTableDetector, ARADetector→TextHeaderDetector). Fixed broken import. Commit 35abe382.
