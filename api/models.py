@@ -451,6 +451,8 @@ class ACMRecordResponse(BaseModel):
     school_name: str
     school_code: Optional[str] = None
     building_id: str
+    building_record_id: Optional[str] = None
+    parent_table_id: Optional[str] = None
     building_name: Optional[str] = None
     building_year: Optional[int] = None
     building_construction: Optional[str] = None
