@@ -41,6 +41,8 @@ _HEARTBEAT_INTERVAL_S: float = 15.0
 _TERMINAL_EVENT_TYPES: frozenset[str] = frozenset(
     {
         "extraction.consensus_complete",
+        "extraction.complete",
+        "extraction.failed",
         "ai.save_complete",
         "bulk.complete",
         "hitl.schema_mapping_resumed",

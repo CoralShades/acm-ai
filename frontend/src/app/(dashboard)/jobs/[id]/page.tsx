@@ -21,6 +21,7 @@ import { ACMRecordDetailDialog } from '@/components/acm/ACMRecordDetailDialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { RawTableViewer } from '@/components/acm/RawTableViewer'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
+import { ExtractionStatusBanner } from '@/components/jobs/ExtractionStatusBanner'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { useSource } from '@/lib/hooks/use-sources'
@@ -316,6 +317,18 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
             onExportCsv={handleExportCsv}
             onExportExcel={handleExportExcel}
           />
+          {source?.command_id && (
+            <ExtractionStatusBanner
+              operationId={source.command_id}
+              enabled={
+                source?.review_status === 'processing' ||
+                source?.review_status === 'extracting' ||
+                panelPhase === 'extracting' ||
+                isStreaming
+              }
+              className="mt-3"
+            />
+          )}
         </div>
 
         <div className="flex min-h-0 flex-1 px-6 pb-6">

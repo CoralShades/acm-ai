@@ -19,6 +19,13 @@ from surreal_commands import CommandInput, CommandOutput, command
 from open_notebook.database.repository import repo_query
 from open_notebook.domain.acm import ACMRecord, BuildingRecord
 from open_notebook.domain.notebook import Source
+from open_notebook.extractors.pipeline_event_bus import (
+    ExtractionFailedData,
+    ExtractionFailedEvent,
+    ExtractionStartedData,
+    ExtractionStartedEvent,
+    get_event_bus,
+)
 from open_notebook.graphs.acm_extraction import extract_acm_from_source
 
 
@@ -202,6 +209,24 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 logger.warning(f"Failed to update source command for {source_id}: {e}")
         # --- End command update ---
 
+        # MCS12: Emit extraction.started as early as possible for SSE
+        if command_id:
+            try:
+                await get_event_bus().publish(
+                    ExtractionStartedEvent(
+                        operation_id=command_id,
+                        data=ExtractionStartedData(
+                            source_id=source_id,
+                            provider_sequence=["langgraph"],
+                            total_pages=0,  # Not known yet at command level
+                        ),
+                    )
+                )
+            except Exception as _pub_err:
+                logger.debug(
+                    f"[MCS12] Failed to publish extraction.started from command: {_pub_err}"
+                )
+
         # Validate source_id format
         if not source_id or not isinstance(source_id, str):
             raise ValueError("source_id must be a non-empty string")
@@ -309,6 +334,22 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
             logger.error(f"ACM extraction timed out after 1800s for {source_id}")
             if command_id:
                 await _write_terminal_status(command_id, "failed", 0)
+                # MCS12: Emit extraction.failed on timeout
+                try:
+                    await get_event_bus().publish(
+                        ExtractionFailedEvent(
+                            operation_id=command_id,
+                            data=ExtractionFailedData(
+                                source_id=source_id,
+                                error="Extraction timed out after 30 minutes",
+                                stage="timeout",
+                            ),
+                        )
+                    )
+                except Exception as _pub_err:
+                    logger.debug(
+                        f"[MCS12] Failed to publish extraction.failed (timeout): {_pub_err}"
+                    )
             return ACMExtractionOutput(
                 success=False,
                 source_id=source_id,
@@ -326,6 +367,22 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
             logger.error(f"AI ACM extraction failed for {source_id}: {result.error}")
             if command_id:
                 await _write_terminal_status(command_id, "failed", 0)
+                # MCS12: Emit extraction.failed on pipeline failure
+                try:
+                    await get_event_bus().publish(
+                        ExtractionFailedEvent(
+                            operation_id=command_id,
+                            data=ExtractionFailedData(
+                                source_id=source_id,
+                                error=result.error or "Pipeline reported failure",
+                                stage="pipeline",
+                            ),
+                        )
+                    )
+                except Exception as _pub_err:
+                    logger.debug(
+                        f"[MCS12] Failed to publish extraction.failed (pipeline): {_pub_err}"
+                    )
             return ACMExtractionOutput(
                 success=False,
                 source_id=source_id,
@@ -429,6 +486,22 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
         logger.error(f"ACM extraction failed for {source_id}: {e}")
         if command_id:
             await _write_terminal_status(command_id, "failed", 0)
+            # MCS12: Emit extraction.failed on unhandled exception
+            try:
+                await get_event_bus().publish(
+                    ExtractionFailedEvent(
+                        operation_id=command_id,
+                        data=ExtractionFailedData(
+                            source_id=source_id,
+                            error=str(e),
+                            stage="exception",
+                        ),
+                    )
+                )
+            except Exception as _pub_err:
+                logger.debug(
+                    f"[MCS12] Failed to publish extraction.failed (exception): {_pub_err}"
+                )
         return ACMExtractionOutput(
             success=False,
             source_id=source_id,
