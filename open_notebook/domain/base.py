@@ -131,7 +131,7 @@ class ObjectModel(BaseModel):
                         else []
                     )
 
-            repo_result: Union[List[Dict[str, Any]], Dict[str, Any]]
+            repo_result: List[Dict[str, Any]]
             if self.id is None:
                 data["created"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 repo_result = await repo_create(self.__class__.table_name, data)
@@ -146,17 +146,11 @@ class ObjectModel(BaseModel):
                     self.__class__.table_name, self.id, data
                 )
             # Update the current instance with the result
-            # repo_result is a list of dictionaries
+            # repo_create/repo_update always return List[Dict[str, Any]]
             result_list: List[Dict[str, Any]] = (
                 repo_result if isinstance(repo_result, list) else [repo_result]
             )
             first_result = result_list[0] if result_list else {}
-            if not isinstance(first_result, dict):
-                logger.warning(
-                    f"Unexpected repo result type {type(first_result).__name__} "
-                    f"for {self.__class__.table_name}, skipping instance update"
-                )
-                return
             for key, value in first_result.items():
                 if hasattr(self, key):
                     if isinstance(getattr(self, key), BaseModel):

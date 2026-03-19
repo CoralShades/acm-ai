@@ -165,10 +165,6 @@ class ExtractionState(TypedDict):
     document_metadata: Optional[DocumentMeta]
     # Orchestrator stats (E1-S20)
     orchestrator_stats: Optional[OrchestratorStats]
-    # Pipeline observability (E1-S21)
-    pipeline_logger: Optional[PipelineLogger]
-    # AG-UI event emitter (E17-S1)
-    agui_emitter: Optional[AGUIEventEmitter]
     # E34-S1: operation_id for PipelineEventBus streaming events
     operation_id: Optional[str]
     # E32-S1: Building__c extraction results (record IDs of persisted BuildingRecords)
@@ -186,13 +182,37 @@ class ExtractionState(TypedDict):
     inferred_schema: Optional[InferredSchema]
 
 
-def _get_pipeline_logger(state: dict) -> Optional[PipelineLogger]:
-    """Safely get PipelineLogger from state (may be None for backward compat)."""
+def _get_pipeline_logger(
+    state: dict, config: Optional[RunnableConfig] = None
+) -> Optional[PipelineLogger]:
+    """Get PipelineLogger from config (preferred) or state (backward compat).
+
+    Moved from state to config["configurable"] for LangGraph checkpointer
+    serialization — PipelineLogger is not ormsgpack-serializable.
+    """
+    if config and isinstance(config, dict):
+        configurable = config.get("configurable")
+        if isinstance(configurable, dict):
+            pl = configurable.get("pipeline_logger")
+            if isinstance(pl, PipelineLogger):
+                return pl
     return state.get("pipeline_logger")
 
 
-def _get_agui_emitter(state: dict) -> Optional[AGUIEventEmitter]:
-    """Safely get AGUIEventEmitter from state (may be None for backward compat)."""
+def _get_agui_emitter(
+    state: dict, config: Optional[RunnableConfig] = None
+) -> Optional[AGUIEventEmitter]:
+    """Get AGUIEventEmitter from config (preferred) or state (backward compat).
+
+    Moved from state to config["configurable"] for LangGraph checkpointer
+    serialization — AGUIEventEmitter is not ormsgpack-serializable.
+    """
+    if config and isinstance(config, dict):
+        configurable = config.get("configurable")
+        if isinstance(configurable, dict):
+            agui = configurable.get("agui_emitter")
+            if isinstance(agui, AGUIEventEmitter):
+                return agui
     return state.get("agui_emitter")
 
 
@@ -296,8 +316,8 @@ async def metadata_and_structure_node(state: dict, config: RunnableConfig) -> di
     source: Source = state["source"]
     content = source.full_text or ""
     model_id = state.get("model_id")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if pl:
         pl.stage_enter(StageId.STRUCTURE, "Extracting metadata and structure...")
@@ -404,8 +424,8 @@ async def compile_inventory(state: dict, config: RunnableConfig) -> dict:
     model_id = state.get("model_id")
     doc_structure: Optional[DocumentStructure] = state.get("document_structure")
     doc_meta = state.get("document_metadata")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     # Build metadata context for prompt injection
     meta_context: Optional[dict] = None
@@ -507,7 +527,7 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
     so the pipeline continues even if persistence fails.
     """
     source: Source = state["source"]
-    agui = _get_agui_emitter(state)
+    agui = _get_agui_emitter(state, config)
 
     if agui:
         await agui.emit_step_started("save_intelligence")
@@ -578,8 +598,8 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     schema_bundle = state.get(
         "schema_bundle"
     )  # may be None — _v3_extract_building_meta handles None
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
     operation_id: Optional[str] = state.get("operation_id")
     model_id: Optional[str] = state.get("model_id")
 
@@ -737,24 +757,6 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                         await record.save()
                 else:
                     raise save_err
-            if not record.id:
-                # Repo returned unexpected type — query back by internal_id
-                existing = await repo_query(
-                    "SELECT id FROM building_record WHERE internal_id = $iid LIMIT 1;",
-                    {"iid": internal_id},
-                )
-                if existing and existing[0].get("id"):
-                    record.id = existing[0]["id"]
-                    logger.info(
-                        f"[E32-S1] BuildingRecord.save() recovered ID {record.id} "
-                        f"for building {building_meta_entry.building_id} via query-back"
-                    )
-                else:
-                    logger.warning(
-                        f"[E32-S1] BuildingRecord.save() returned no ID for building "
-                        f"{building_meta_entry.building_id} — record may not have persisted"
-                    )
-                    return None
             record_id = str(record.id)
 
             logger.info(
@@ -996,8 +998,8 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
     content: str = source.full_text or ""
     inventory: Optional[BuildingInventory] = state.get("building_inventory")
     schema_bundle = state.get("schema_bundle")
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
     source_id_str = str(source.id)
     operation_id: Optional[str] = state.get("operation_id")
 
@@ -1364,8 +1366,8 @@ async def validate_records_strict(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
     operation_id: Optional[str] = state.get("operation_id")
     _validate_start = time.time()
 
@@ -1600,8 +1602,8 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
     """
     records: List[ACMExtractionRecord] = state.get("records", [])
     correction_attempt = state.get("correction_attempt", 0)
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if pl:
         pl.stage_enter(
@@ -2002,8 +2004,8 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
     """Deduplicate records using composite key."""
     records: List[ACMExtractionRecord] = state.get("records", [])
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if agui:
         await agui.emit_step_started("deduplicate")
@@ -2580,8 +2582,8 @@ async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     records: List[ACMExtractionRecord] = state.get("records", [])
     source: Source = state["source"]
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if agui:
         await agui.emit_step_started("recover_no_access")
@@ -2630,8 +2632,8 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     start_time = state.get("start_time", time.time())
     records_rejected = state.get("records_rejected", 0)
     records_filtered = state.get("records_filtered", 0)
-    pl = _get_pipeline_logger(state)
-    agui = _get_agui_emitter(state)
+    pl = _get_pipeline_logger(state, config)
+    agui = _get_agui_emitter(state, config)
 
     if agui:
         await agui.emit_step_started("save")
@@ -2677,15 +2679,6 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
                     raw_text=raw_text if raw_text else None,
                 )
                 await section.save()
-                if not section.id:
-                    # Query-back if save didn't return ID
-                    from open_notebook.database.repository import repo_query
-                    existing_sec = await repo_query(
-                        "SELECT id FROM acm_table_section WHERE source_id = $sid AND building_name = $bn LIMIT 1;",
-                        {"sid": str(source.id), "bn": section.building_name},
-                    )
-                    if existing_sec and existing_sec[0].get("id"):
-                        section.id = existing_sec[0]["id"]
                 if section.id:
                     section_map[building.building_id] = str(section.id)
             except Exception as e:
@@ -2756,10 +2749,6 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             # Generate enriched text for contextual embedding (E1-S14)
             acm_record.enriched_text = acm_record.get_enriched_embedding_text()
 
-            # WORKAROUND: Null out record-link fields that the SurrealDB Python
-            # client tries to parse as RecordIDs (causes "invalid string for parse")
-            acm_record.building_record_id = None
-            acm_record.parent_table_id = None
             await acm_record.save()
             saved_count += 1
 
@@ -2879,12 +2868,9 @@ agent_state.add_edge("deduplicate", "recover_no_access")
 agent_state.add_edge("recover_no_access", "save")
 agent_state.add_edge("save", END)
 
-# Compile graph WITHOUT checkpointer to avoid serialization crashes
-# (MemorySaver can't serialize Source/PipelineLogger objects via ormsgpack)
-# TODO(MCS6): Re-enable checkpointer after making graph state fully serializable
-# _checkpointer = MemorySaver()
-# graph = agent_state.compile(checkpointer=_checkpointer)
 graph = agent_state.compile()
+# Checkpointed version for HITL support — compiled lazily in extract_acm_from_source
+_checkpointed_graph = None
 
 
 async def extract_acm_from_source(
@@ -3016,25 +3002,42 @@ async def extract_acm_from_source(
         "document_metadata": None,
         # Orchestrator stats (E1-S20)
         "orchestrator_stats": None,
-        # Pipeline observability (E1-S21)
-        "pipeline_logger": pl,
-        # AG-UI event emitter (E17-S1)
-        "agui_emitter": agui,
         # E34-S1: operation_id for PipelineEventBus streaming events
         "operation_id": command_id,
     }
 
     try:
-        # Checkpointer disabled — no thread_id needed
         import uuid
 
         thread_id = command_id or str(uuid.uuid4())
-        graph_config: Dict[str, Any] = {}
+        graph_config: Dict[str, Any] = {
+            "configurable": {
+                "thread_id": thread_id,
+                # Non-serializable objects stored in config (not checkpointed)
+                "pipeline_logger": pl,
+                "agui_emitter": agui,
+            },
+        }
         if langfuse_callbacks:
             graph_config["callbacks"] = langfuse_callbacks
             graph_config["metadata"] = langfuse_metadata
 
-        result = await graph.ainvoke(initial_state, config=graph_config)
+        # Use checkpointed graph for HITL support when invoked from UI
+        # (command_id present). Without command_id, skip checkpointer to
+        # avoid serialization issues with test mocks and to save overhead.
+        if command_id:
+            global _checkpointed_graph
+            if _checkpointed_graph is None:
+                _checkpointed_graph = agent_state.compile(
+                    checkpointer=MemorySaver()
+                )
+            active_graph = _checkpointed_graph
+        else:
+            active_graph = graph
+
+        result = await active_graph.ainvoke(
+            initial_state, config=graph_config
+        )
 
         # MCS6: Handle HITL interrupt from schema_inference_node
         if "__interrupt__" in result and result["__interrupt__"]:
@@ -3101,7 +3104,7 @@ async def extract_acm_from_source(
                 f"[HITL] Resuming extraction for {operation_id} with "
                 f"action={user_response.get('action')}"
             )
-            result = await graph.ainvoke(
+            result = await active_graph.ainvoke(
                 Command(resume=user_response), config=graph_config
             )
 
@@ -3231,6 +3234,5 @@ async def extract_acm_from_source(
         )
     finally:
         flush_langfuse_handler(langfuse_handler)
-        # MCS6: Checkpointer cleanup disabled — checkpointer removed to avoid
-        # ormsgpack serialization crashes (Source/PipelineLogger objects).
-        # TODO(MCS6): Re-enable after making graph state fully serializable.
+        # MCS8: Checkpointer re-enabled — PipelineLogger/AGUIEventEmitter
+        # moved from state to config["configurable"] (not checkpointed).

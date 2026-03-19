@@ -82,8 +82,12 @@ async def repo_query(
             raise
 
 
-async def repo_create(table: str, data: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a new record in the specified table"""
+async def repo_create(table: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Create a new record in the specified table.
+
+    Always returns a list of dicts. Raises RuntimeError if the insert fails
+    or returns an unexpected type (e.g. an error string from SurrealDB).
+    """
     # Remove 'id' attribute if it exists in data
     data.pop("id", None)
     data["created"] = datetime.now(timezone.utc)
@@ -92,22 +96,30 @@ async def repo_create(table: str, data: Dict[str, Any]) -> Dict[str, Any]:
         async with db_connection() as connection:
             raw_result = await connection.insert(table, data)
             parsed = parse_record_ids(raw_result)
-            # Ghost save diagnostic: log if result is not a list of dicts
-            if table in ("acm_record", "building_record", "acm_table_section"):
-                if isinstance(parsed, list) and parsed and not isinstance(parsed[0], dict):
-                    logger.error(
-                        f"[GHOST-SAVE] {table} insert returned non-dict: "
+
+            # Validate result type — SurrealDB may return error strings
+            # instead of dicts when record-link fields fail validation
+            if isinstance(parsed, str):
+                raise RuntimeError(
+                    f"Insert into {table} failed — SurrealDB returned error: {parsed[:300]}"
+                )
+            if isinstance(parsed, list):
+                if not parsed:
+                    raise RuntimeError(
+                        f"Insert into {table} returned empty list — record was not created"
+                    )
+                if not isinstance(parsed[0], dict):
+                    raise RuntimeError(
+                        f"Insert into {table} returned non-dict element: "
                         f"type={type(parsed[0]).__name__} value={repr(parsed[0])[:200]}"
                     )
-                elif isinstance(parsed, str):
-                    logger.error(
-                        f"[GHOST-SAVE] {table} insert returned string: {repr(parsed)[:200]}"
-                    )
-                elif isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
-                    logger.info(
-                        f"[SAVE-OK] {table} insert succeeded: id={parsed[0].get('id', 'NO-ID')}"
-                    )
-            return parsed
+                return parsed
+            # Single dict result — normalize to list
+            if isinstance(parsed, dict):
+                return [parsed]
+            raise RuntimeError(
+                f"Insert into {table} returned unexpected type: {type(parsed).__name__}"
+            )
     except RuntimeError as e:
         logger.error(str(e))
         raise
