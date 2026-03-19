@@ -237,6 +237,12 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
       if (params.data?.id && params.data.id === selectedRecordId) {
         classes.push('acm-row-selected')
       }
+      const vs = params.data?.validation_status
+      if (vs === 'invalid' || vs === 'failed_correction') {
+        classes.push('acm-row-error')
+      } else if (vs === 'corrected') {
+        classes.push('acm-row-corrected')
+      }
       return classes.length > 0 ? classes.join(' ') : undefined
     },
     [selectedRecordId]
@@ -671,6 +677,22 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
           0%, 100% { border-left-color: hsl(var(--primary) / 0.3); }
           50% { border-left-color: hsl(var(--primary)); }
         }
+        /* Validation error row highlighting */
+        .ag-theme-alpine .acm-row-error {
+          background-color: hsl(0 84% 60% / 0.08) !important;
+          border-left: 3px solid hsl(0 84% 60% / 0.5) !important;
+        }
+        .dark .ag-theme-alpine .acm-row-error {
+          background-color: hsl(0 84% 60% / 0.12) !important;
+        }
+        /* Auto-corrected row highlighting */
+        .ag-theme-alpine .acm-row-corrected {
+          background-color: hsl(45 93% 47% / 0.08) !important;
+          border-left: 3px solid hsl(45 93% 47% / 0.5) !important;
+        }
+        .dark .ag-theme-alpine .acm-row-corrected {
+          background-color: hsl(45 93% 47% / 0.12) !important;
+        }
       `}</style>
       <AgGridReact<ACMGridRecord>
         ref={gridRef}
@@ -710,6 +732,16 @@ export const ACMGrid = forwardRef<ACMGridRef, ACMGridProps>(function ACMGrid(
         <span>E to edit</span>
         <span>Space to expand/collapse</span>
         <span>? for all shortcuts</span>
+      </div>
+      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-4">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-sm border-l-2 border-red-500 bg-red-500/10" />
+          Validation errors
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-sm border-l-2 border-amber-500 bg-amber-500/10" />
+          Auto-corrected
+        </span>
       </div>
 
       {/* Provenance viewer panel */}

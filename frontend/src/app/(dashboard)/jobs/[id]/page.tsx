@@ -13,10 +13,7 @@ import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
 import { JobContentPanel } from '@/components/jobs/JobContentPanel'
 import { JobCrudChatPanel } from '@/components/jobs/JobCrudChatPanel'
 import { BuildingGrid } from '@/components/acm/BuildingGrid'
-import {
-  BuildingTabFilter,
-  getRecordBuildingTabId,
-} from '@/components/acm/BuildingTabFilter'
+import { BuildingTabStrip } from '@/components/acm/BuildingTabStrip'
 import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
 import { ColumnVisibilityPicker } from '@/components/acm/ColumnVisibilityPicker'
 import { ACMRecordDialog } from '@/components/acm/ACMRecordDialog'
@@ -30,7 +27,8 @@ import { useSource } from '@/lib/hooks/use-sources'
 import { useBuildings } from '@/lib/hooks/useBuildings'
 import { useJobBuildings } from '@/lib/hooks/useJobBuildings'
 import { useV3BuildingStream } from '@/lib/hooks/useV3BuildingStream'
-import { useFieldSchema, useValidationSummary, useBulkFix } from '@/lib/hooks/useACMItems'
+import { useACMItems, useFieldSchema, useValidationSummary, useBulkFix } from '@/lib/hooks/useACMItems'
+import { useBuildingStore } from '@/lib/stores/buildingStore'
 import { useACMStats, useDeleteACMRecord } from '@/lib/hooks/use-acm'
 import { BulkOperationsBar } from '@/components/acm/BulkOperationsBar'
 import { Input } from '@/components/ui/input'
@@ -63,7 +61,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
-  const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
+  const { selectedBuildingId: selectedBuilding, setSelectedBuilding } = useBuildingStore()
   const [chatExpanded, setChatExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
 
@@ -159,10 +157,19 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
     : jobBuildingsData
   const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
 
+  // MCS11 Phase 3.3: Per-building ACM items query (server-side filtered)
+  const { data: buildingRecordsData, refetch: refetchBuildingRecords } = useACMItems(
+    sourceId, selectedBuilding, { isExtracting: isStreaming || panelPhase === 'extracting' }
+  )
+  const displayRecords = selectedBuilding
+    ? (buildingRecordsData?.records ?? [])
+    : records
+
   // MCS11: Refetch records when SSE stream signals save complete
   useEffect(() => {
     if (!isStreaming && sseOperationId && panelPhase !== 'extracting') {
       void refetchRecords()
+      void refetchBuildingRecords()
       void queryClient.invalidateQueries({ queryKey: ['job-buildings', sourceId] })
       void queryClient.invalidateQueries({ queryKey: ['buildings', 'v3', sourceId] })
       void queryClient.invalidateQueries({ queryKey: ['acm-stats', sourceId] })
@@ -240,8 +247,9 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
       setDeleteDialogOpen(false)
       setDeletingRecord(null)
       void refetchRecords()
+      void refetchBuildingRecords()
     }
-  }, [deletingRecord, deleteRecordMutation, sourceId, refetchRecords])
+  }, [deletingRecord, deleteRecordMutation, sourceId, refetchRecords, refetchBuildingRecords])
 
   const handleRowClick = useCallback((record: ACMRecord) => {
     setDetailRecord(record)
@@ -256,28 +264,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
   useEffect(() => {
     setSelectedBuilding(null)
-  }, [sourceId])
-
-  useEffect(() => {
-    if (!selectedBuilding) {
-      return
-    }
-
-    const buildingExists = records.some(
-      (record) => getRecordBuildingTabId(record) === selectedBuilding
-    )
-    if (!buildingExists) {
-      setSelectedBuilding(null)
-    }
-  }, [records, selectedBuilding])
-
-  // Filter records by selected building for the ACM Records tab
-  const filteredRecords = useMemo(() => {
-    if (!selectedBuilding) return records
-    return records.filter(
-      (record) => getRecordBuildingTabId(record) === selectedBuilding
-    )
-  }, [records, selectedBuilding])
+  }, [sourceId, setSelectedBuilding])
 
   // Compute missing fields % and extraction quality score from actual record data
 
@@ -396,6 +383,10 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                     missingFieldsPercent={missingFieldsPercent}
                     extractionQualityScore={extractionQualityScore}
                     onReExtract={handleReExtract}
+                    validationSummary={validationSummary}
+                    onBulkFix={() => bulkFixMutation.mutate({ sourceId })}
+                    isBulkFixing={bulkFixMutation.isPending}
+                    onNavigateToRecords={() => setActiveTab('records')}
                   />
                 </TabsContent>
 
@@ -420,16 +411,16 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                   className="m-0 h-full overflow-auto p-4 sm:p-6"
                 >
                   <Card className="rounded-xl shadow-sm">
+                    <BuildingTabStrip
+                      buildings={buildings}
+                      isLoading={isLoadingBuildings}
+                      selectedBuildingId={selectedBuilding}
+                      onSelect={setSelectedBuilding}
+                      validationSummary={validationSummary}
+                    />
                     <CardContent className="space-y-4 p-4 sm:p-6">
-                      {/* Building filter + toolbar row */}
+                      {/* Toolbar row */}
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex-1 min-w-0">
-                          <BuildingTabFilter
-                            records={records}
-                            selectedBuilding={selectedBuilding}
-                            onBuildingChange={setSelectedBuilding}
-                          />
-                        </div>
                         {/* MCS11 Phase 3: Quick text search */}
                         <Input
                           placeholder="Search records..."
@@ -511,12 +502,12 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                           sourceId={sourceId}
                           selectedRecords={selectedRecords}
                           onClearSelection={() => setSelectedRecords([])}
-                          onValidationRefresh={() => void refetchRecords()}
+                          onValidationRefresh={() => { void refetchRecords(); void refetchBuildingRecords() }}
                           schema={fieldSchema ?? null}
                         />
                       )}
 
-                      {(isStreaming || panelPhase === 'extracting') && filteredRecords.length === 0 ? (
+                      {(isStreaming || panelPhase === 'extracting') && displayRecords.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-center">
                           <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse mb-4" />
                           <p className="text-sm font-medium text-muted-foreground">
@@ -529,7 +520,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                       ) : (
                         <ACMGrid
                           ref={gridRef}
-                          records={filteredRecords}
+                          records={displayRecords}
                           onEdit={handleEditRecord}
                           onDelete={handleDeleteRecord}
                           onRowClick={handleRowClick}

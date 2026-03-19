@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ClipboardList, Building2, Percent, Gauge, ArrowRight, RefreshCw, FileText, MapPin, Calendar, User } from 'lucide-react'
+import { ClipboardList, Building2, Percent, Gauge, ArrowRight, RefreshCw, FileText, MapPin, Calendar, User, AlertTriangle, CheckCircle2, Wrench } from 'lucide-react'
 import { acmApi } from '@/lib/api/acm'
 import type { SourceIntelligence } from '@/lib/types/intelligence'
 
@@ -24,6 +24,10 @@ interface JobOverviewTabProps {
   missingFieldsPercent?: number | null
   extractionQualityScore?: number | null
   onReExtract?: () => void
+  validationSummary?: { buildings: { building_id: string; error_count: number }[] } | null
+  onBulkFix?: () => void
+  isBulkFixing?: boolean
+  onNavigateToRecords?: () => void
 }
 
 export function JobOverviewTab({
@@ -34,8 +38,14 @@ export function JobOverviewTab({
   missingFieldsPercent,
   extractionQualityScore,
   onReExtract,
+  validationSummary,
+  onBulkFix,
+  isBulkFixing,
+  onNavigateToRecords,
 }: JobOverviewTabProps) {
   const statusLabel = reviewStatus ? (STATUS_LABELS[reviewStatus] ?? reviewStatus) : 'Published'
+  const totalErrors = validationSummary?.buildings?.reduce((sum, b) => sum + b.error_count, 0) ?? 0
+  const errorBuildingCount = validationSummary?.buildings?.filter(b => b.error_count > 0).length ?? 0
 
   const { data: intelligence } = useQuery<SourceIntelligence | null>({
     queryKey: ['source-intelligence', sourceId],
@@ -108,6 +118,54 @@ export function JobOverviewTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* Validation Summary */}
+      {totalErrors > 0 && (
+        <Card className="rounded-xl shadow-sm border-red-200 dark:border-red-900/50">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              Validation Issues
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="flex items-center gap-6">
+              <div>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{totalErrors}</p>
+                <p className="text-xs text-muted-foreground">total errors across {errorBuildingCount} buildings</p>
+              </div>
+              <div className="flex gap-2 ml-auto">
+                {onBulkFix && (
+                  <Button size="sm" variant="outline" onClick={onBulkFix} disabled={isBulkFixing}>
+                    <Wrench className="h-3.5 w-3.5 mr-1.5" />
+                    Fix All
+                  </Button>
+                )}
+                {onNavigateToRecords && (
+                  <Button size="sm" variant="outline" onClick={onNavigateToRecords}>
+                    View Errors
+                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {totalErrors === 0 && recordCount > 0 && (
+        <Card className="rounded-xl shadow-sm border-green-200 dark:border-green-900/50">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              Validation Passed
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <p className="text-sm text-muted-foreground">All {recordCount} records pass validation.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Document Metadata (from intelligence API) */}
       {docMeta && (
