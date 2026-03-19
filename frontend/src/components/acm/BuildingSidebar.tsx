@@ -32,6 +32,7 @@ const validationBadgeLabel: Record<BuildingValidationStatus, string> = {
 }
 
 const streamingBadgeClasses: Record<BuildingStreamStatus, string> = {
+  detected: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
   extracting: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   validating: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   saving: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
@@ -40,6 +41,7 @@ const streamingBadgeClasses: Record<BuildingStreamStatus, string> = {
 }
 
 const streamingBadgeLabel: Record<BuildingStreamStatus, string> = {
+  detected: 'Detected',
   extracting: 'Extracting...',
   validating: 'Validating...',
   saving: 'Saving...',

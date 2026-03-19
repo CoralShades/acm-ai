@@ -89,6 +89,8 @@ export function useV3BuildingStream(options: UseV3BuildingStreamOptions): UseV3B
         // MCS10: Show per-building "Saving..." status
         if (currentBuilding) {
           setBuildingStatus(currentBuilding, 'saving')
+          // MCS10: Per-building items invalidation — items for this building are now being saved
+          queryClient.invalidateQueries({ queryKey: ['acm', 'items', sourceId, currentBuilding] })
         }
       } else if (event.type === 'ai.save_complete') {
         // MCS9+MCS10: All records saved — NOW safe to invalidate items queries

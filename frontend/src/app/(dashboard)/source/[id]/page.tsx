@@ -77,6 +77,7 @@ function BuildingTabStrip({
   const streamBadge = (status: BuildingStreamStatus | undefined) => {
     if (!status) return null
     const classes: Record<BuildingStreamStatus, string> = {
+      detected: 'bg-blue-400',
       extracting: 'bg-blue-500',
       validating: 'bg-yellow-500',
       saving: 'bg-purple-500',

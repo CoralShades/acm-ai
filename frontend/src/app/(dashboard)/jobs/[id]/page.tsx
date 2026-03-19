@@ -83,15 +83,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
-  // Try V3 building_record table first, fall back to legacy jobs endpoint
-  // which derives buildings from acm_record data (works for all extraction modes)
-  const { data: v3BuildingsData, isLoading: isLoadingV3 } = useBuildings(sourceId)
+
   const { data: jobBuildingsData, isLoading: isLoadingJob } = useJobBuildings(sourceId)
-  const isLoadingBuildings = isLoadingV3 && isLoadingJob
-  const buildingsData = (v3BuildingsData?.buildings?.length ?? 0) > 0
-    ? v3BuildingsData
-    : jobBuildingsData
-  const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
   const { data: fieldSchema } = useFieldSchema()
   // MCS11 Phase 5: Validation error display
   const { data: validationSummary } = useValidationSummary(sourceId)
@@ -154,8 +147,17 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   } = useV3BuildingStream({
     sourceId,
     operationId: panelPhase === 'extracting' ? sseOperationId : null,
-    totalBuildings: buildings.length || stats?.building_count || 0,
+    totalBuildings: stats?.building_count || 0,
   })
+
+  // Try V3 building_record table first, fall back to legacy jobs endpoint
+  // which derives buildings from acm_record data (works for all extraction modes)
+  const { data: v3BuildingsData, isLoading: isLoadingV3 } = useBuildings(sourceId, { isExtracting: isStreaming || panelPhase === 'extracting' })
+  const isLoadingBuildings = isLoadingV3 && isLoadingJob
+  const buildingsData = (v3BuildingsData?.buildings?.length ?? 0) > 0
+    ? v3BuildingsData
+    : jobBuildingsData
+  const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
 
   // MCS11: Refetch records when SSE stream signals save complete
   useEffect(() => {
@@ -514,16 +516,28 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                         />
                       )}
 
-                      <ACMGrid
-                        ref={gridRef}
-                        records={filteredRecords}
-                        onEdit={handleEditRecord}
-                        onDelete={handleDeleteRecord}
-                        onRowClick={handleRowClick}
-                        sourceId={sourceId}
-                        quickFilterText={quickFilterText}
-                        enableGrouping={enableGrouping}
-                      />
+                      {(isStreaming || panelPhase === 'extracting') && filteredRecords.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse mb-4" />
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Extraction in progress
+                          </p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">
+                            Records will appear here after buildings are processed and saved
+                          </p>
+                        </div>
+                      ) : (
+                        <ACMGrid
+                          ref={gridRef}
+                          records={filteredRecords}
+                          onEdit={handleEditRecord}
+                          onDelete={handleDeleteRecord}
+                          onRowClick={handleRowClick}
+                          sourceId={sourceId}
+                          quickFilterText={quickFilterText}
+                          enableGrouping={enableGrouping}
+                        />
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

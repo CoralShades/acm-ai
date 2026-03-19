@@ -9,13 +9,14 @@ export const ACM_ITEMS_QUERY_KEYS = {
   validationSummary: (sourceId: string) => ['acm', 'validation-summary', sourceId] as const,
 }
 
-export function useACMItems(sourceId: string, buildingId: string | null) {
+export function useACMItems(sourceId: string, buildingId: string | null, opts?: { isExtracting?: boolean }) {
   return useQuery({
     queryKey: ACM_ITEMS_QUERY_KEYS.byBuilding(sourceId, buildingId),
     queryFn: () =>
       acmApi.list({ source_id: sourceId, building_record_id: buildingId ?? undefined, limit: 500 }),
     enabled: !!sourceId && !!buildingId,
-    staleTime: 30 * 1000,
+    // MCS10: During extraction, reduce staleTime so items appear faster after save_complete
+    staleTime: opts?.isExtracting ? 5 * 1000 : 30 * 1000,
   })
 }
 

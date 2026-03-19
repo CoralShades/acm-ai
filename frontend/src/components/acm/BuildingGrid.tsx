@@ -15,8 +15,10 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Eye, Columns3, Check } from 'lucide-react'
 import { BuildingViewDialog } from '@/components/acm/BuildingViewDialog'
+import { BuildingStatusBadge } from '@/components/acm/BuildingStatusBadge'
 import type { BuildingRecord } from '@/lib/types/building'
 import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
+import { useBuildingStore } from '@/lib/stores/buildingStore'
 
 // Register AG Grid modules
 ModuleRegistry.registerModules([AllCommunityModule])
@@ -106,6 +108,8 @@ export function BuildingGrid({
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingRecord | null>(null)
   const [colPickerOpen, setColPickerOpen] = useState(false)
   const [colPickerKey, setColPickerKey] = useState(0)
+
+  const { buildingStatus } = useBuildingStore()
 
   const handleViewBuilding = useCallback((building: BuildingRecord) => {
     setSelectedBuilding(building)
@@ -222,6 +226,22 @@ export function BuildingGrid({
       },
     }
 
+    // Per-building extraction status column — only visible during active extraction
+    const statusCol: ColDef<BuildingRecord> | null = buildingStatus.size > 0 ? {
+      colId: 'extraction_status',
+      headerName: 'Status',
+      width: 100,
+      pinned: 'left',
+      sortable: false,
+      filter: false,
+      cellRenderer: (params: { data: BuildingRecord }) => {
+        if (!params.data?.id) return null
+        const status = buildingStatus.get(params.data.id)
+        if (!status) return null
+        return <BuildingStatusBadge status={status} />
+      },
+    } : null
+
     const cols: ColDef<BuildingRecord>[] = fieldKeys.map((key) => {
       const isDefault = DEFAULT_VISIBLE_FIELDS.has(key)
       const headerName = HEADER_NAME_MAP[key] ?? humanize(key)
@@ -272,8 +292,8 @@ export function BuildingGrid({
       filter: false,
     })
 
-    return [idCol, ...cols]
-  }, [buildings, handleViewBuilding])
+    return [idCol, ...(statusCol ? [statusCol] : []), ...cols]
+  }, [buildings, handleViewBuilding, buildingStatus])
 
   const defaultColDef = useMemo<ColDef>(
     () => ({
