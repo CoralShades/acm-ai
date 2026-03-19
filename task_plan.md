@@ -1,41 +1,204 @@
-# Task Plan: Pipeline Fix Integrity Audit (2026-03-17)
+# MCS11: Unify `/jobs/[id]` as Canonical Page with Full Feature Parity
 
-## Objective
+**Status**: Phase 1-3, 5 Complete | Phase 4 Deferred | Phase 6 In Progress
+**SP**: 13 | **Priority**: P0
+**Date**: 2026-03-19
+**Audit ref**: MCS10 gap analysis + visual audit of /jobs/[id] vs /source/[id]
 
-Verify that all fixes from 3 prior debug sessions (pipeline-debug, pdf-format-audit, docling-json-fix) survived ~25 subsequent commits. If any fix was overwritten or regressed, restore it.
+## Problem Statement
+
+Two parallel pages exist for viewing the same source data:
+- **`/jobs/[id]`** — The primary user workflow page (6 tabs: Overview, Buildings, ACM Records, Content, Raw Tables, Log + Chat)
+- **`/source/[id]`** — The secondary "ACM Register" page (2 tabs: Buildings, ACM Records)
+
+Over ~20 commits, critical features were built on `/source/[id]` but never ported to `/jobs/[id]`:
+- SSE live streaming (real-time extraction progress)
+- Per-building status badges (Extracting → Validating → Saving → Complete)
+- Bulk edit/validate operations
+- Validation error display and "Fix All" button
+- Quick text search in grid
+- "Group by Room" toggle
+- Building selection persistence (Zustand vs useState)
+
+Users navigate via `/jobs` → job card → `/jobs/source:ID`. They never see the features on `/source/[id]`.
+
+## Architecture Decision
+
+**Strategy: Feature-port from `/source/[id]` → `/jobs/[id]`**
+- Keep `/jobs/[id]` as the canonical page (it has more tabs, chat, export)
+- Port SSE streaming, bulk ops, validation, and search features into the jobs page
+- Keep `/source/[id]` as a lightweight ACM-focused view (linked from "ACM Register" button)
+- Do NOT merge/redirect — both serve different purposes
+
+## Completed Pre-work
+
+- [x] **MCS10-Bug**: Buildings tab showing "No Rows To Show" — fixed with `useJobBuildings` fallback hook
+- [x] **MCS10-Gap2**: Buildings query invalidation timing (moved to `ai.building_extracted`)
+- [x] **MCS10-Gap3**: Items query invalidation deferred to `ai.save_complete`
+- [x] **MCS10**: Per-building "Saving..." status badge added
 
 ---
 
-## Phase 1 — Fix Inventory & Spot Check
+## Phase 1: SSE Streaming on Jobs Page (SP 3)
 
-- [x] **1.1** Build complete fix inventory from prior sessions (RC1-RC8, C1-C3, H1, M2, Migration 51)
-- [x] **1.2** Grep each fix signature in current HEAD — present/absent/modified → **16/16 PRESENT**
-- [x] **1.3** Check migration 51 applied in running SurrealDB → **NOT APPLIED (version=49)**
-- [x] **1.4** Check per-row extraction path still reachable (acm_extraction.py ~line 1024) → **Code exists but data empty**
-- [x] **1.5** Check `_get_docling_tables()` page overlap logic intact (orchestrator.py) → **PRESENT lines 58-59**
-- [x] **1.6** Check `ensure_record_id()` calls in acm_commands.py stale detection → **PRESENT lines 185, 244, 246**
+**Goal**: Real-time extraction progress on `/jobs/[id]` — progress bar, building status, ETA
 
-## Phase 2 — Data Flow Trace (Docling → DB → Graph)
+### Tasks
+- [x] 1.1 Wire `useV3BuildingStream` into `/jobs/[id]` page
+  - Read `operationId` from `sessionStorage` key `acm-extraction-progress-{sourceId}` (same as /source/[id])
+  - Also fall back to `source.command_id` for extraction-in-progress detection
+  - Pass `totalBuildings` from buildings count
+- [x] 1.2 Add streaming progress bar to jobs page header
+  - Show `{completedCount}/{totalBuildings} buildings · ~{eta}s remaining` below tab strip
+  - Use same pattern as `/source/[id]` `SourceACMViewContent`
+  - Conditional on `isStreaming` from `useV3BuildingStream`
+- [x] 1.3 Add save progress indicator
+  - Show "Saving records... {savedCount}/{totalToSave}" during save phase
+  - Wire `isSaving`, `savedCount`, `totalToSave` from `useV3BuildingStream`
+- [ ] 1.4 Update `JobStatusPill` to show "Extracting" with animated indicator when SSE stream is active
+  - Currently shows `review_status` from source data (may say "Review" during extraction)
+  - Override with SSE-derived status when `isStreaming`
+- [x] 1.5 Invalidate records query on `ai.save_complete` in the jobs page context
+  - Currently the jobs page polls for records; SSE should trigger refetch
 
-- [x] **2.1** Query `acm_table_section` — is `docling_document_json` populated? → **NO, all 28 rows = {}**
-- [x] **2.2** Query `building_record` — are buildings stored with clean names? → **1/11 clean, 10 corrupted**
-- [x] **2.3** Query `acm_record` — count records vs ground truth → **142 total (but stale data)**
-- [x] **2.4** Check `_store_docling_tables()` maps `docling_json` → `docling_document_json` → **CORRECT (line 220)**
-- [x] **2.5** Check `_merge_provider_tables()` preserves `docling_json` → **CORRECT (lines 343-490)**
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` — add hook, progress UI
+- `frontend/src/lib/hooks/useV3BuildingStream.ts` — already exists
+- `frontend/src/components/jobs/JobDetailHeader.tsx` — update status pill
+- `frontend/src/components/jobs/JobStatusPill.tsx` — SSE override
 
-## Phase 3 — Regression Fix
+---
 
-- [x] **3.1** Add migrations 50-52 to AsyncMigrationManager in async_migrate.py
-- [x] **3.2** Apply migrations 50, 51, 52 to running SurrealDB → **DB now at version 52**
-- [x] **3.3** Verify FLEXIBLE keyword in schema → **CONFIRMED via INFO FOR TABLE**
+## Phase 2: Bulk Operations on Jobs Page (SP 3)
 
-## Phase 4 — Test & Lint
+**Goal**: Multi-row selection, bulk edit, bulk validate, SSE progress on ACM Records tab
 
-- [x] **4.1** Run `uv run pytest tests/ -x` → **2018 passed, 1 pre-existing failure**
-- [x] **4.2** Run `uv run ruff check .` → **All checks passed**
+### Tasks
+- [x] 2.1 Add multi-row selection to ACM Records tab
+  - ACMGrid already supports `selectedRecords` prop
+  - Add `selectedRecords` state + selection tracking in jobs page
+- [x] 2.2 Wire `BulkOperationsBar` component
+  - Import from `frontend/src/components/acm/BulkOperationsBar.tsx`
+  - Pass `selectedRecords`, `sourceId`, `onClearSelection`
+  - Show above/below grid when selection > 0
+- [x] 2.3 Wire bulk SSE progress
+  - `BulkOperationsBar` already uses `useV3SSE` for `bulk` category
+  - Ensure `operationId` propagation works
+- [x] 2.4 Add "Fix All" button for validation errors
+  - Use `useValidationSummary(sourceId)` to get error counts
+  - Show "Fix All" button when `totalErrors > 0`
+  - Wire `useBulkFix` mutation
 
-## Phase 5 — Documentation
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` — add selection state, BulkOperationsBar
+- `frontend/src/components/acm/BulkOperationsBar.tsx` — already exists
+- `frontend/src/lib/hooks/useACMItems.ts` — validation summary, bulk fix hooks
 
-- [x] **5.1** Update findings.md with complete audit results
-- [x] **5.2** Update progress.md with session summary
-- [x] **5.3** Update task_plan.md checkboxes
+---
+
+## Phase 3: Search, Filter & Grid Enhancements (SP 2)
+
+**Goal**: Quick text search, Group by Room toggle, building-filtered per-building loading
+
+### Tasks
+- [x] 3.1 Add quick text search to ACM Records tab
+  - Add search `Input` above grid
+  - Wire `quickFilterText` prop on ACMGrid
+- [x] 3.2 Add "Group by Room" toggle
+  - Wire `enableGrouping` prop on ACMGrid
+  - Add toggle button in toolbar
+- [ ] 3.3 Switch ACM Records data source from "all records" to per-building
+  - Currently: `fetch('/api/acm/records?source_id=...&limit=500')` loads ALL records
+  - Target: Use `useACMItems(sourceId, selectedBuildingId)` for per-building loading
+  - Much more efficient for large sources
+- [ ] 3.4 Upgrade building filter from dropdown to tab strip
+  - Replace `BuildingTabFilter` with `BuildingTabStrip` pattern (scrollable horizontal tabs)
+  - Show per-building record count and error badges
+  - Use Zustand `useBuildingStore` for persistent selection
+
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` — search state, grouping, filter upgrade
+- `frontend/src/components/acm/BuildingTabFilter.tsx` — may deprecate
+- `frontend/src/lib/stores/buildingStore.ts` — building selection persistence
+
+---
+
+## Phase 4: Job Card Status on /jobs List (SP 2)
+
+**Goal**: Job cards show real-time extraction status with mini progress
+
+### Tasks
+- [ ] 4.1 Add extraction status detection to job cards
+  - Check `source.review_status` for "extracting" state
+  - Show "Extracting..." badge instead of "Review" when in progress
+- [ ] 4.2 Add mini progress indicator on extracting job cards
+  - Show `{buildingCount} buildings · {recordCount} records` when in progress
+  - Optional: SSE connection per active extraction (cost: one EventSource per card)
+  - Alternative: Use polling from `command_id` (cheaper)
+- [ ] 4.3 Auto-refresh job list when extraction completes
+  - Invalidate jobs query when navigating back from completed extraction
+
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/page.tsx` — job list page
+- Job card component (need to identify exact file)
+- `frontend/src/lib/hooks/use-sources.ts` — source data with review_status
+
+---
+
+## Phase 5: Validation Error Display (SP 2)
+
+**Goal**: Per-building validation error counts and visual indicators on jobs page
+
+### Tasks
+- [x] 5.1 Wire `useValidationSummary` into jobs page
+  - Show per-building error counts in building filter tabs
+- [ ] 5.2 Add error row highlighting in ACMGrid
+  - Highlight rows with validation errors (already supported via `rowClassRules`)
+- [ ] 5.3 Add validation summary card to Overview tab
+  - Show total errors, auto-fixable count, "Fix All" button
+  - Link to ACM Records tab filtered to error rows
+
+### Key Files
+- `frontend/src/app/(dashboard)/jobs/[id]/page.tsx`
+- `frontend/src/components/jobs/JobOverviewTab.tsx`
+- `frontend/src/lib/hooks/useACMItems.ts` — useValidationSummary
+
+---
+
+## Phase 6: Verification & Polish (SP 1)
+
+### Tasks
+- [x] 6.1 E2E smoke test — all 6 tabs render without errors
+- [ ] 6.2 SSE streaming test — extraction progress appears in real time
+- [ ] 6.3 Bulk operations test — select, edit, validate flows
+- [ ] 6.4 Cross-page consistency — verify /source/[id] still works
+- [ ] 6.5 Mobile responsive check — chat panel, building tabs
+- [ ] 6.6 Screenshot evidence at each verification point
+
+---
+
+## Agent Strategy
+
+| Phase | Agents | Model | Parallelizable |
+|-------|--------|-------|----------------|
+| 1 | `frontend-specialist` | opus | Yes (independent of 2-5) |
+| 2 | `frontend-specialist` | opus | After Phase 1 (depends on grid wiring) |
+| 3 | `frontend-specialist` | opus | After Phase 2 |
+| 4 | `frontend-specialist` | sonnet | Independent |
+| 5 | `frontend-specialist` | sonnet | After Phase 2 |
+| 6 | `e2e-tester` | sonnet | After all phases |
+
+**Parallel batch 1**: Phase 1 + Phase 4 (independent)
+**Sequential**: Phase 2 → Phase 3 → Phase 5 → Phase 6
+
+---
+
+## Risk Assessment
+
+| Risk | Mitigation |
+|------|-----------|
+| BuildingGrid expects V3 `BuildingRecord` type | `useJobBuildings` adapter already built (MCS10 fix) |
+| Dual SSE connections (jobs + source page open simultaneously) | EventBus supports multiple subscribers per operation_id |
+| Chat panel + bulk ops bar competing for space | Collapse chat when bulk bar active |
+| `review_status` field not updating during extraction | Override with SSE-derived status client-side |
+| Old pipeline extractions have no `building_record` entities | `useJobBuildings` fallback already handles this |

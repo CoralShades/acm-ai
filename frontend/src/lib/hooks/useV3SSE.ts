@@ -15,7 +15,7 @@ interface UseV3SSEOptions {
 
 const TERMINAL_EVENT_TYPES = new Set([
   'extraction.consensus_complete',
-  'ai.validation_complete',
+  'ai.save_complete',
   'bulk.complete',
   'hitl.schema_mapping_resumed',
 ])

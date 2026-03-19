@@ -25,6 +25,34 @@ import type { SourceIntelligence } from '@/lib/types/intelligence'
 import type { BuildingListResponse, BuildingRecord, BuildingRecordUpdateRequest } from '@/lib/types/building'
 import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
 
+/** Response shape from GET /api/acm/jobs/{sourceId}/buildings (legacy endpoint). */
+interface JobBuildingResponse {
+  building_id: string
+  building_name?: string | null
+  building_address?: string | null
+  building_year?: number | null
+  building_size_m2?: number | null
+  number_of_levels?: number | null
+  building_construction?: string | null
+  roof_type?: string | null
+  date_of_inspection?: string | null
+  record_count?: number
+  department?: string | null
+  agency?: string | null
+  sub_agency?: string | null
+  site_name?: string | null
+  building_type?: string | null
+  owned_or_leased?: string | null
+  building_unique_id?: string | null
+  frequency_of_use?: string | null
+  public_access?: string | null
+  building_out_of_scope?: boolean | null
+  building_out_of_scope_comments?: string | null
+  additional_comments?: string | null
+  suburb?: string | null
+  postcode?: string | null
+}
+
 export const acmApi = {
   /**
    * List ACM records with filtering and pagination
@@ -240,6 +268,73 @@ export const acmApi = {
       params: { source_id: sourceId },
     })
     return response.data
+  },
+
+  /**
+   * List buildings for a job source (legacy endpoint — derives from acm_record data).
+   * GET /api/acm/jobs/{sourceId}/buildings
+   * Works even when no V3 building_record entities exist.
+   */
+  listJobBuildings: async (sourceId: string): Promise<BuildingListResponse> => {
+    const response = await apiClient.get<JobBuildingResponse[]>(
+      `/acm/jobs/${encodeURIComponent(sourceId)}/buildings`
+    )
+    const jobBuildings = response.data ?? []
+    // Adapt JobBuildingResponse → BuildingRecord shape for BuildingGrid compatibility
+    const buildings: BuildingRecord[] = jobBuildings.map((jb) => ({
+      id: `job_building:${sourceId}_${jb.building_id}`,
+      internal_id: jb.building_id,
+      source_id: sourceId,
+      building_code: jb.building_id,
+      building_name: jb.building_name ?? null,
+      building_address: jb.building_address ?? null,
+      suburb: jb.suburb ?? null,
+      postcode: jb.postcode ?? null,
+      state: null,
+      building_type: jb.building_type ?? null,
+      building_category: null,
+      building_sub_category: null,
+      building_risk_rating: null,
+      building_year: jb.building_year != null ? String(jb.building_year) : null,
+      building_construction: jb.building_construction ?? null,
+      building_address_lga: null,
+      building_address_region: null,
+      roof_type: jb.roof_type ?? null,
+      number_of_levels: jb.number_of_levels ?? null,
+      est_building_size_m2: jb.building_size_m2 ?? null,
+      frequency_of_use: jb.frequency_of_use ?? null,
+      daily_duration: null,
+      level_of_activity: null,
+      public_access: jb.public_access ?? null,
+      mobile_plant: null,
+      asbestos_register_available: null,
+      audit_report_available: null,
+      date_of_audit_report: null,
+      no_identified_acms: null,
+      no_identified_acms_note: null,
+      site_name: jb.site_name ?? null,
+      school_uid: null,
+      building_unique_id: jb.building_unique_id ?? null,
+      external_id: null,
+      owned_or_leased: jb.owned_or_leased ?? null,
+      building_out_of_scope: null,
+      building_out_of_scope_comments: null,
+      demolished_status: null,
+      demolition_date: null,
+      demolition_type: null,
+      demolition_comments: null,
+      additional_comments: jb.additional_comments ?? null,
+      within_your_portfolio: null,
+      psb_district_region: null,
+      country: null,
+      gps_coordinates: null,
+      capital_works_project_details: null,
+      possible_capital_works_project: null,
+      record_count: jb.record_count ?? 0,
+      created: null,
+      updated: null,
+    }))
+    return { buildings, total: buildings.length }
   },
 
   /**

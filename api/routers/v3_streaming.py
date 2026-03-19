@@ -41,7 +41,7 @@ _HEARTBEAT_INTERVAL_S: float = 15.0
 _TERMINAL_EVENT_TYPES: frozenset[str] = frozenset(
     {
         "extraction.consensus_complete",
-        "ai.validation_complete",
+        "ai.save_complete",
         "bulk.complete",
         "hitl.schema_mapping_resumed",
     }
@@ -233,10 +233,11 @@ async def stream_ai(
 ) -> StreamingResponse:
     """SSE stream for ai.* pipeline events.
 
-    Forwards ``ai.building_extracted``, ``ai.items_extracted``, and
-    ``ai.validation_complete`` events for the given operation.
+    Forwards ``ai.building_extracted``, ``ai.items_extracted``,
+    ``ai.validation_complete``, ``ai.dedup_complete``, ``ai.save_started``,
+    ``ai.save_progress``, and ``ai.save_complete`` events for the given operation.
 
-    The stream terminates automatically on ``ai.validation_complete``.
+    The stream terminates automatically on ``ai.save_complete``.
     """
     _validate_operation_id(operation_id, operation_id_query)
     logger.info(f"[V3Stream] /ai SSE opened for operation {operation_id}")

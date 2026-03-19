@@ -86,8 +86,16 @@ from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.extractors.pipeline_event_bus import (
     AIBuildingExtractedData,
     AIBuildingExtractedEvent,
+    AIDedupCompleteData,
+    AIDedupCompleteEvent,
     AIItemsExtractedData,
     AIItemsExtractedEvent,
+    AISaveCompleteData,
+    AISaveCompleteEvent,
+    AISaveProgressData,
+    AISaveProgressEvent,
+    AISaveStartedData,
+    AISaveStartedEvent,
     AIValidationCompleteData,
     AIValidationCompleteEvent,
     get_event_bus,
@@ -2052,6 +2060,25 @@ async def deduplicate_records(state: dict, config: RunnableConfig) -> dict:
             "deduplicate", unique=len(deduplicated), merged=duplicates_merged
         )
 
+    # MCS9: Publish ai.dedup_complete event
+    operation_id: Optional[str] = state.get("operation_id")
+    if operation_id:
+        try:
+            await get_event_bus().publish(
+                AIDedupCompleteEvent(
+                    operation_id=operation_id,
+                    data=AIDedupCompleteData(
+                        duplicates_merged=duplicates_merged,
+                        unique_count=len(deduplicated),
+                        total_before=len(records),
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(
+                f"[MCS9] Failed to publish ai.dedup_complete: {_pub_err}"
+            )
+
     return {"records": deduplicated}
 
 
@@ -2634,6 +2661,7 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     records_filtered = state.get("records_filtered", 0)
     pl = _get_pipeline_logger(state, config)
     agui = _get_agui_emitter(state, config)
+    operation_id: Optional[str] = state.get("operation_id")
 
     if agui:
         await agui.emit_step_started("save")
@@ -2689,6 +2717,23 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
         if section_map:
             logger.info(
                 f"Created {len(section_map)} parent table sections for source {source.id}"
+            )
+
+    # MCS9: Publish ai.save_started event
+    if operation_id:
+        try:
+            await get_event_bus().publish(
+                AISaveStartedEvent(
+                    operation_id=operation_id,
+                    data=AISaveStartedData(
+                        total_records=len(records),
+                        total_sections=len(section_map),
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(
+                f"[MCS9] Failed to publish ai.save_started: {_pub_err}"
             )
 
     save_start = time.monotonic()
@@ -2752,6 +2797,24 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             await acm_record.save()
             saved_count += 1
 
+            # MCS9: Publish ai.save_progress every 10 records
+            if operation_id and saved_count % 10 == 0:
+                try:
+                    await get_event_bus().publish(
+                        AISaveProgressEvent(
+                            operation_id=operation_id,
+                            data=AISaveProgressData(
+                                saved=saved_count,
+                                total=len(records),
+                                current_building=record.building_id or "unknown",
+                            ),
+                        )
+                    )
+                except Exception as _pub_err:
+                    logger.debug(
+                        f"[MCS9] Failed to publish ai.save_progress: {_pub_err}"
+                    )
+
         except Exception as e:
             logger.error(f"Failed to save record: {e}")
             errors.append(str(e))
@@ -2804,6 +2867,25 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
             parent_sections=len(section_map),
             errors=len(errors),
         )
+
+    # MCS9: Publish ai.save_complete (new terminal event for ai category)
+    if operation_id:
+        try:
+            _save_duration_ms = int((time.monotonic() - save_start) * 1000)
+            await get_event_bus().publish(
+                AISaveCompleteEvent(
+                    operation_id=operation_id,
+                    data=AISaveCompleteData(
+                        records_saved=saved_count,
+                        sections_saved=len(section_map),
+                        duration_ms=_save_duration_ms,
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(
+                f"[MCS9] Failed to publish ai.save_complete: {_pub_err}"
+            )
 
     if errors:
         return {

@@ -78,6 +78,37 @@ class AIValidationCompleteData(BaseModel):
     validation_duration_ms: int
 
 
+class AIDedupCompleteData(BaseModel):
+    """Payload for ai.dedup_complete."""
+
+    duplicates_merged: int
+    unique_count: int
+    total_before: int
+
+
+class AISaveStartedData(BaseModel):
+    """Payload for ai.save_started."""
+
+    total_records: int
+    total_sections: int
+
+
+class AISaveProgressData(BaseModel):
+    """Payload for ai.save_progress."""
+
+    saved: int
+    total: int
+    current_building: str
+
+
+class AISaveCompleteData(BaseModel):
+    """Payload for ai.save_complete (terminal for ai category)."""
+
+    records_saved: int
+    sections_saved: int
+    duration_ms: int
+
+
 class BulkProgressData(BaseModel):
     """Payload for bulk.progress."""
 
@@ -190,6 +221,34 @@ class AIValidationCompleteEvent(V3PipelineEvent):
     data: AIValidationCompleteData  # type: ignore[assignment]
 
 
+class AIDedupCompleteEvent(V3PipelineEvent):
+    """Emitted when deduplication finishes."""
+
+    type: Literal["ai.dedup_complete"] = "ai.dedup_complete"
+    data: AIDedupCompleteData  # type: ignore[assignment]
+
+
+class AISaveStartedEvent(V3PipelineEvent):
+    """Emitted when record saving begins."""
+
+    type: Literal["ai.save_started"] = "ai.save_started"
+    data: AISaveStartedData  # type: ignore[assignment]
+
+
+class AISaveProgressEvent(V3PipelineEvent):
+    """Emitted periodically during record saving."""
+
+    type: Literal["ai.save_progress"] = "ai.save_progress"
+    data: AISaveProgressData  # type: ignore[assignment]
+
+
+class AISaveCompleteEvent(V3PipelineEvent):
+    """Emitted when all records are saved to DB (terminal for ai category)."""
+
+    type: Literal["ai.save_complete"] = "ai.save_complete"
+    data: AISaveCompleteData  # type: ignore[assignment]
+
+
 class BulkProgressEvent(V3PipelineEvent):
     """Emitted periodically during bulk batch operations."""
 
@@ -226,6 +285,10 @@ V3_EVENT_TYPES = (
     AIBuildingExtractedEvent,
     AIItemsExtractedEvent,
     AIValidationCompleteEvent,
+    AIDedupCompleteEvent,
+    AISaveStartedEvent,
+    AISaveProgressEvent,
+    AISaveCompleteEvent,
     BulkProgressEvent,
     BulkCompleteEvent,
     SchemaMappingReviewEvent,

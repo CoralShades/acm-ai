@@ -29,8 +29,12 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useBuildings } from '@/lib/hooks/useBuildings'
-import { useFieldSchema } from '@/lib/hooks/useACMItems'
+import { useJobBuildings } from '@/lib/hooks/useJobBuildings'
+import { useV3BuildingStream } from '@/lib/hooks/useV3BuildingStream'
+import { useFieldSchema, useValidationSummary, useBulkFix } from '@/lib/hooks/useACMItems'
 import { useACMStats, useDeleteACMRecord } from '@/lib/hooks/use-acm'
+import { BulkOperationsBar } from '@/components/acm/BulkOperationsBar'
+import { Input } from '@/components/ui/input'
 import { sourcesApi } from '@/lib/api/sources'
 import { acmApi } from '@/lib/api/acm'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -73,12 +77,27 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const [detailRecord, setDetailRecord] = useState<ACMRecord | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const deleteRecordMutation = useDeleteACMRecord()
+  // MCS11 Phase 2+3: Bulk operations, search, grouping
+  const [selectedRecords, setSelectedRecords] = useState<ACMRecord[]>([])
+  const [quickFilterText, setQuickFilterText] = useState('')
+  const [enableGrouping, setEnableGrouping] = useState(false)
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
-  const { data: buildingsData, isLoading: isLoadingBuildings } = useBuildings(sourceId)
+  // Try V3 building_record table first, fall back to legacy jobs endpoint
+  // which derives buildings from acm_record data (works for all extraction modes)
+  const { data: v3BuildingsData, isLoading: isLoadingV3 } = useBuildings(sourceId)
+  const { data: jobBuildingsData, isLoading: isLoadingJob } = useJobBuildings(sourceId)
+  const isLoadingBuildings = isLoadingV3 && isLoadingJob
+  const buildingsData = (v3BuildingsData?.buildings?.length ?? 0) > 0
+    ? v3BuildingsData
+    : jobBuildingsData
   const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
   const { data: fieldSchema } = useFieldSchema()
+  // MCS11 Phase 5: Validation error display
+  const { data: validationSummary } = useValidationSummary(sourceId)
+  const totalErrors = validationSummary?.buildings?.reduce((sum, b) => sum + b.error_count, 0) ?? 0
+  const bulkFixMutation = useBulkFix()
   const { data: records = [], refetch: refetchRecords } = useQuery<ACMRecord[]>({
     queryKey: ['acm-records', sourceId],
     queryFn: () =>
@@ -107,6 +126,48 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
       return false
     },
   })
+
+  const panelPhase: 'idle' | 'extracting' | 'completed' | 'failed' =
+    extractionProgress?.status === 'running'
+      ? 'extracting'
+      : extractionProgress?.status === 'completed'
+        ? 'completed'
+        : extractionProgress?.status === 'failed'
+          ? 'failed'
+          : 'idle'
+
+  // MCS11: SSE streaming for real-time extraction progress
+  // operationId comes from sessionStorage (set during extraction start) or source.command_id
+  const sseOperationId = useMemo(() => {
+    if (typeof window === 'undefined') return null
+    const stored = sessionStorage.getItem(`acm-extraction-progress-${sourceId}`)
+    if (stored) return stored
+    return source?.command_id ?? null
+  }, [sourceId, source?.command_id])
+
+  const {
+    isStreaming,
+    completedCount,
+    estimatedSecondsRemaining,
+    isSaving,
+    savedCount,
+    totalToSave,
+  } = useV3BuildingStream({
+    sourceId,
+    operationId: panelPhase === 'extracting' ? sseOperationId : null,
+    totalBuildings: buildings.length || stats?.building_count || 0,
+  })
+
+  // MCS11: Refetch records when SSE stream signals save complete
+  useEffect(() => {
+    if (!isStreaming && sseOperationId && panelPhase !== 'extracting') {
+      void refetchRecords()
+      void queryClient.invalidateQueries({ queryKey: ['job-buildings', sourceId] })
+      void queryClient.invalidateQueries({ queryKey: ['buildings', 'v3', sourceId] })
+      void queryClient.invalidateQueries({ queryKey: ['acm-stats', sourceId] })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally trigger only when streaming stops
+  }, [isStreaming])
 
   const handleReExtract = useCallback(async () => {
     // Duplicate guard — check if extraction is already running
@@ -157,15 +218,6 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
     },
     [queryClient, sourceId]
   )
-
-  const panelPhase: 'idle' | 'extracting' | 'completed' | 'failed' =
-    extractionProgress?.status === 'running'
-      ? 'extracting'
-      : extractionProgress?.status === 'completed'
-        ? 'completed'
-        : extractionProgress?.status === 'failed'
-          ? 'failed'
-          : 'idle'
 
   // ACM Records tab handlers
   const handleEditRecord = useCallback((record: ACMRecord) => {
@@ -296,6 +348,40 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 </TabsList>
               </div>
 
+              {/* MCS11: SSE streaming progress bar */}
+              {(isStreaming || isSaving) && (
+                <div className="flex-shrink-0 border-b px-4 py-2 bg-muted/30">
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    {isSaving ? (
+                      <span className="text-muted-foreground">
+                        Saving records... {savedCount}/{totalToSave}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Extracting {completedCount}/{buildings.length || stats?.building_count || '?'} buildings
+                        {estimatedSecondsRemaining != null && (
+                          <span className="ml-2 text-xs">~{estimatedSecondsRemaining}s remaining</span>
+                        )}
+                      </span>
+                    )}
+                    {/* Progress bar */}
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden max-w-xs">
+                      <div
+                        className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                        style={{
+                          width: isSaving
+                            ? `${totalToSave > 0 ? (savedCount / totalToSave) * 100 : 0}%`
+                            : `${(buildings.length || stats?.building_count || 1) > 0
+                                ? (completedCount / (buildings.length || stats?.building_count || 1)) * 100
+                                : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="min-h-0 flex-1 overflow-hidden">
                 <TabsContent
                   value="overview"
@@ -334,13 +420,41 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 >
                   <Card className="rounded-xl shadow-sm">
                     <CardContent className="space-y-4 p-4 sm:p-6">
-                      <div className="flex items-center justify-between">
-                        <BuildingTabFilter
-                          records={records}
-                          selectedBuilding={selectedBuilding}
-                          onBuildingChange={setSelectedBuilding}
+                      {/* Building filter + toolbar row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <BuildingTabFilter
+                            records={records}
+                            selectedBuilding={selectedBuilding}
+                            onBuildingChange={setSelectedBuilding}
+                          />
+                        </div>
+                        {/* MCS11 Phase 3: Quick text search */}
+                        <Input
+                          placeholder="Search records..."
+                          value={quickFilterText}
+                          onChange={(e) => setQuickFilterText(e.target.value)}
+                          className="w-48"
                         />
-                        {/* Column visibility picker */}
+                        {/* MCS11 Phase 3: Group by Room toggle */}
+                        <Button
+                          variant={enableGrouping ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEnableGrouping((prev) => !prev)}
+                        >
+                          Group by Room
+                        </Button>
+                        {/* MCS11 Phase 5: Validation fix-all button */}
+                        {totalErrors > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => bulkFixMutation.mutate({ sourceId })}
+                            disabled={bulkFixMutation.isPending}
+                          >
+                            Fix All ({totalErrors})
+                          </Button>
+                        )}
                         <ColumnVisibilityPicker
                           gridApi={gridRef.current?.getGridApi() ?? null}
                           onResetColumns={() => gridRef.current?.resetColumns()}
@@ -389,6 +503,18 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
+
+                      {/* MCS11 Phase 2: Bulk operations bar */}
+                      {selectedRecords.length > 0 && (
+                        <BulkOperationsBar
+                          sourceId={sourceId}
+                          selectedRecords={selectedRecords}
+                          onClearSelection={() => setSelectedRecords([])}
+                          onValidationRefresh={() => void refetchRecords()}
+                          schema={fieldSchema ?? null}
+                        />
+                      )}
+
                       <ACMGrid
                         ref={gridRef}
                         records={filteredRecords}
@@ -396,6 +522,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                         onDelete={handleDeleteRecord}
                         onRowClick={handleRowClick}
                         sourceId={sourceId}
+                        quickFilterText={quickFilterText}
+                        enableGrouping={enableGrouping}
                       />
                     </CardContent>
                   </Card>

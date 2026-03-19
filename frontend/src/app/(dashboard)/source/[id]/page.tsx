@@ -79,6 +79,7 @@ function BuildingTabStrip({
     const classes: Record<BuildingStreamStatus, string> = {
       extracting: 'bg-blue-500',
       validating: 'bg-yellow-500',
+      saving: 'bg-purple-500',
       complete: 'bg-green-500',
       error: 'bg-red-500',
     }

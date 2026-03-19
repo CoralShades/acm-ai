@@ -12,11 +12,16 @@ interface UseV3BuildingStreamOptions {
   totalBuildings: number
 }
 
-export function useV3BuildingStream(options: UseV3BuildingStreamOptions): {
+interface UseV3BuildingStreamResult {
   isStreaming: boolean
   completedCount: number
   estimatedSecondsRemaining: number | null
-} {
+  isSaving: boolean
+  savedCount: number
+  totalToSave: number
+}
+
+export function useV3BuildingStream(options: UseV3BuildingStreamOptions): UseV3BuildingStreamResult {
   const { sourceId, operationId, totalBuildings } = options
 
   const queryClient = useQueryClient()
@@ -26,6 +31,10 @@ export function useV3BuildingStream(options: UseV3BuildingStreamOptions): {
   const [estimatedSecondsRemaining, setEstimatedSecondsRemaining] = useState<number | null>(null)
   // Only show progress bar after first event arrives (avoids showing for stale commandIds)
   const [hasReceivedEvent, setHasReceivedEvent] = useState(false)
+  // MCS9: Save progress state
+  const [isSaving, setIsSaving] = useState(false)
+  const [savedCount, setSavedCount] = useState(0)
+  const [totalToSave, setTotalToSave] = useState(0)
 
   // Rolling average of duration_ms values for ETA
   const durationsRef = useRef<number[]>([])
@@ -56,18 +65,43 @@ export function useV3BuildingStream(options: UseV3BuildingStreamOptions): {
           }
         }
 
-        // Invalidate items query broadly so ItemGrid refetches for any building
-        queryClient.invalidateQueries({ queryKey: ['acm', 'items', sourceId] })
+        // MCS10-Gap2: Buildings ARE in DB at this point — invalidate so grid shows them
+        queryClient.invalidateQueries({ queryKey: ['buildings', 'v3', sourceId] })
+        // MCS10-Gap3: Do NOT invalidate items here — items don't exist until save
       } else if (event.type === 'ai.items_extracted') {
         const buildingId = event.data.building_id as string
         setBuildingStatus(buildingId, 'validating')
+        // MCS10-Gap3: Do NOT invalidate items query — items not saved to DB yet
       } else if (event.type === 'ai.validation_complete') {
+        // MCS9: No longer terminal — just update status to show "Saving..." phase
+        // Query invalidation moved to ai.save_complete
+      } else if (event.type === 'ai.save_started') {
+        // MCS9: Save phase begins
+        setIsSaving(true)
+        setTotalToSave((event.data.total_records as number) || 0)
+        setSavedCount(0)
+        setEstimatedSecondsRemaining(null)
+      } else if (event.type === 'ai.save_progress') {
+        // MCS9: Update save progress
+        const saved = (event.data.saved as number) || 0
+        const currentBuilding = event.data.current_building as string | undefined
+        setSavedCount(saved)
+        // MCS10: Show per-building "Saving..." status
+        if (currentBuilding) {
+          setBuildingStatus(currentBuilding, 'saving')
+        }
+      } else if (event.type === 'ai.save_complete') {
+        // MCS9+MCS10: All records saved — NOW safe to invalidate items queries
+        setIsSaving(false)
         clearBuildingStatuses()
         setEstimatedSecondsRemaining(null)
+        // MCS10-Gap2: Final buildings refresh (picks up record_count etc.)
         queryClient.invalidateQueries({ queryKey: ['buildings', 'v3', sourceId] })
+        // MCS10-Gap3: Items NOW exist in DB — safe to invalidate
+        queryClient.invalidateQueries({ queryKey: ['acm', 'items', sourceId] })
       }
     },
-    [sourceId, totalBuildings, setBuildingStatus, clearBuildingStatuses, queryClient, setHasReceivedEvent]
+    [sourceId, totalBuildings, setBuildingStatus, clearBuildingStatuses, queryClient]
   )
 
   const { status } = useV3SSE({
@@ -81,5 +115,5 @@ export function useV3BuildingStream(options: UseV3BuildingStreamOptions): {
   // for stale commandIds from prior extraction sessions
   const isStreaming = !!operationId && hasReceivedEvent && status !== 'done' && status !== 'error'
 
-  return { isStreaming, completedCount, estimatedSecondsRemaining }
+  return { isStreaming, completedCount, estimatedSecondsRemaining, isSaving, savedCount, totalToSave }
 }

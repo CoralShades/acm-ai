@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type BuildingStreamStatus = 'extracting' | 'validating' | 'complete' | 'error'
+export type BuildingStreamStatus = 'extracting' | 'validating' | 'saving' | 'complete' | 'error'
 
 interface BuildingStoreState {
   selectedBuildingId: string | null
