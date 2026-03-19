@@ -701,15 +701,20 @@ development_status:
   # MCS Post-Validation Fixes (MCS8-MCS13) — Pipeline Persistence Timing Audit
   # Branch: ACMV3
   # Dates: 2026-03-19
-  # Audit revealed 6 gaps preventing frontend real-time extraction progress display
+  # Audit revealed 6 gaps preventing frontend real-time extraction progress display.
+  # MCS11 and MCS13 emerged from E2E testing of the Jobs/Source unification work.
+  # MCS13 was a new story (not in original plan) — 3 sub-fixes for FK linkage bugs.
   # Index: docs/sprint-artifacts/prompt-packs/2026-03-19-mcs-post-validation-index.md
   # ─────────────────────────────────────────────────────
-  mcs8-ghost-save-fix-2026-03-19: done  # fix(persistence): Resolve ghost save bug in base.py and re-enable LangGraph checkpointer. Commit 31ede390. Root cause: SurrealDB Python client auto-parses record-link strings as RecordIDs. Fixed repo_create, removed 5 MCS7 workarounds, re-enabled MemorySaver checkpointer. SP:5
+  mcs8-ghost-save-fix-2026-03-19: done  # fix(persistence): Resolve ghost save bug in base.py and re-enable LangGraph checkpointer. Commit 31ede390. Root cause: SurrealDB Python client auto-parses record-link strings as RecordIDs. Fixed repo_create, removed 5 MCS7 workarounds, re-enabled MemorySaver checkpointer. SP:5. NOTE: MCS13 later disabled MemorySaver again due to RecordID msgpack serialization crash.
   mcs9-sse-save-events-2026-03-19: in_progress  # feat(streaming): add SSE events to save node and fix terminal event race condition. Prompt pack created 2026-03-19. ai.save_started, ai.save_progress, ai.save_complete events. Move terminal event from ai.validation_complete to ai.save_complete. SP:5
-  mcs10-building-query-invalidation-2026-03-19: done  # fix(ux): correct building and items query invalidation timing. Prompt pack created + MCS10 complete per progress.md. Buildings query invalidated on ai.building_extracted, items query deferred to ai.save_complete. 'saving' status added to BuildingStreamStatus. SP:3
-  mcs11-building-record-id-fk-fix-2026-03-19: backlog  # fix(extraction): restore building_record_id FK — remove MCS7 NULL workaround. Depends on MCS8. SP:3
-  mcs12-extraction-events-dead-endpoint-2026-03-19: backlog  # feat(streaming): wire extraction.* SSE events to main pipeline. Dead /v3/stream/extraction/{op_id} endpoint. Depends on MCS9. SP:3
-  mcs13-schema-inference-documentmeta-fix-2026-03-19: backlog  # fix(extraction): fix schema inference DocumentMeta attribute access and verify cache. AttributeError: 'DocumentMeta' object has no attribute 'get'. Depends on MCS8. SP:3
+  mcs10-building-query-invalidation-2026-03-19: done  # fix(ux): correct building and items query invalidation timing. Prompt pack created + MCS10 complete per progress.md. Buildings query invalidated on ai.building_extracted, items query deferred to ai.save_complete. 'saving' status added to BuildingStreamStatus. SP:3. Commits: 545d6c41 (invalidation timing), b06c5788 (partial — also carries MCS11 changes)
+  mcs11-jobs-source-unification-2026-03-19: in_progress  # feat(ux): unify /jobs/[id] as canonical page with full feature parity. SP:13. task_plan.md at repo root. Phases 1-3 DONE (SSE streaming, bulk ops, search/filter). Phase 4 DEFERRED (job card status). Phase 5: Task 5.1 DONE (useValidationSummary wired), 5.2-5.3 REMAINING. Phase 6: Task 6.1 DONE (E2E smoke), 6.2-6.6 REMAINING. Gap4 (FK exposure): DONE (commits f2941789 + 658d21bb). Commits: b06c5788 (Phases 1-3 + FK events), c254974f (JobStatusPill SSE override), 545d6c41 (query invalidation), f2941789 (API FK fields), 658d21bb (FK test)
+  mcs11-fk-exposure-fix-2026-03-19: done  # fix(api): expose building_record_id and parent_table_id in ACMRecordResponse. 2 fields added to models.py + acm.py router builders. Commit f2941789. Test added: test(extraction) RecordID conversion test for FK fields. Commit 658d21bb.
+  mcs12-extraction-events-dead-endpoint-2026-03-19: backlog  # feat(streaming): wire extraction.* SSE events to main pipeline. Dead /v3/stream/extraction/{op_id} endpoint. Depends on MCS9. SP:3. Not started.
+  mcs13-internal-id-collision-fix-2026-03-19: done  # fix(extraction): prevent building_record UNIQUE index collision across sources. Root cause: internal_id derived from title[:8] only (e.g. BLD#CLUTCH_B_001) — same prefix across sources hijacks existing record's source_id. Fix: append source_suffix to internal_id (BLD#{title_short}_{source_suffix}_{seq:03d}). Commit 5819d5e4.
+  mcs13-schema-type-mismatch-fix-2026-03-19: done  # fix(extraction): fix building_record_id FK schema type (option<string> → record<building_record>) via Migration 55. SurrealDB Migration 40 IF NOT EXISTS was silently skipped. Forced correct type. Commit 45372518. Migration files: migrations/55.surrealql, migrations/55_down.surrealql.
+  mcs13-checkpointer-crash-fix-2026-03-19: done  # fix(extraction): disable LangGraph MemorySaver checkpointer — RecordID objects in graph state cause "Type is not msgpack serializable: RecordID" crash. Disabled until custom serializer implemented. Commit 45372518 (same as schema fix). E2E verified: 101 records saved, 90% FK population rate, 14 buildings across 2 uploads, 0 UNIQUE index collisions.
 
   # ─────────────────────────────────────────────────────
   # MCS Jobs/Source Page Unification (jobs/source parity)
@@ -718,8 +723,7 @@ development_status:
   # Audit: 15-category feature matrix, 7 P0/P1 gaps on /jobs/[id] vs /source/[id]
   # Artifact: progress.md (repo root)
   # ─────────────────────────────────────────────────────
-  mcs-jobs-buildings-bug-fix-2026-03-19: done  # fix(ux): /jobs/[id] Buildings tab "No Rows To Show" bug. V3 building_record empty for old extractions. Added acmApi.listJobBuildings() V3-first + legacy fallback. JobBuildingResponse interface. useJobBuildings.ts hook. Browser verified: "1 to 2 of 2" buildings shown. Frontend build passes.
-  mcs-jobs-source-unification-2026-03-19: in_progress  # feat(ux): unify /jobs/[id] feature parity with /source/[id]. task_plan.md created (6 phases, SP:13 total). Phase 1-3 pending user review: SSE streaming, bulk operations, search/filter.
+  mcs-jobs-buildings-bug-fix-2026-03-19: done  # fix(ux): /jobs/[id] Buildings tab "No Rows To Show" bug. V3 building_record empty for old extractions. Added acmApi.listJobBuildings() V3-first + legacy fallback. JobBuildingResponse interface. useJobBuildings.ts hook. Browser verified: "1 to 2 of 2" buildings shown. Frontend build passes. (Part of MCS11 Phase 1 pre-work)
 
   # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
@@ -770,14 +774,14 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 280  (261 prior + 7 MCS multi-consultant + 1 live UX + MCS8-13 + jobs fixes)
-# Stories Done: 252 (90%)  -- 238 prior + MCS1-7 + live-extraction-ux + MCS8 + MCS10 + jobs-buildings-bug
+# Total Stories: 290  (280 prior + MCS11 FK fix + MCS13 collision fix + MCS13 schema fix + MCS13 checkpointer fix + MCS11 in-progress split + MCS12 backlog)
+# Stories Done: 259 (89%)  -- 252 prior + mcs11-fk-exposure + mcs13-internal-id-collision + mcs13-schema-type-mismatch + mcs13-checkpointer-crash + MCS10 commit updates
 # Stories Review: 0
-# Stories In-Progress: 2 (mcs9-sse-save-events, mcs-jobs-source-unification)
+# Stories In-Progress: 2 (mcs9-sse-save-events, mcs11-jobs-source-unification)
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 6 (E36-S5..S7, mcs11-building-record-id-fk-fix, mcs12-extraction-events, mcs13-schema-inference)
+# Stories Backlog: 4 (E36-S5..S7, mcs12-extraction-events)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
 # Last Updated: 2026-03-19
@@ -785,12 +789,24 @@ development_status:
 # MCS Post-Validation Fixes (2026-03-19):
 # MCS8 DONE: Ghost save bug in base.py fixed. SurrealDB RecordID auto-parse root cause resolved.
 #   5 MCS7 workarounds removed. LangGraph MemorySaver checkpointer re-enabled. Commit 31ede390.
+#   NOTE: MCS8 re-enabled MemorySaver which was later disabled again by MCS13 due to RecordID serialization crash.
 # MCS9 IN PROGRESS: SSE save events added to pipeline (ai.save_started, ai.save_progress, ai.save_complete).
 #   Terminal event race condition fixed — stream now closes on ai.save_complete, not ai.validation_complete.
 # MCS10 DONE: Buildings query invalidated on ai.building_extracted (not ai.validation_complete).
 #   Items query deferred to ai.save_complete. 'saving' status added to BuildingStreamStatus.
-# MCS11/12/13: Prompt packs created 2026-03-19, pending implementation.
-# Jobs/Source Unification: /jobs/[id] Buildings tab empty bug fixed. Full parity work pending.
+#   Commits: 545d6c41 (query invalidation timing), b06c5788 (carries MCS10+MCS11 combined).
+# MCS11 IN PROGRESS (phases 1-3 done, phases 4 deferred, phases 5-6 partial):
+#   Gap4 (FK exposure) DONE: building_record_id + parent_table_id exposed in ACMRecordResponse. Commits: f2941789, 658d21bb.
+#   Phases 1-3 DONE: SSE streaming on /jobs/[id], bulk ops bar, quick text search, Group by Room, Fix All button. Commit b06c5788.
+#   Phase 4 DEFERRED: job card status on /jobs list (status detection, mini-progress, auto-refresh).
+#   Phase 5: Task 5.1 done (useValidationSummary wired), tasks 5.2-5.3 remaining (error row highlighting, overview card).
+#   Phase 6: Task 6.1 done (E2E smoke — all tabs render), tasks 6.2-6.6 remaining (SSE test, bulk ops test, cross-page, mobile, screenshots).
+# MCS12 NOT STARTED: Wire extraction.* SSE events to main pipeline. Dead /v3/stream/extraction/{op_id} endpoint. Depends on MCS9.
+# MCS13 DONE (3 sub-fixes, all verified E2E with 2 PDF uploads):
+#   1. UNIQUE index collision fix — internal_id now includes source_suffix (BLD#{title}_{src}_{seq}). Commit 5819d5e4.
+#   2. FK schema type fix — Migration 55 forces building_record_id as record<building_record>. Commit 45372518.
+#   3. MemorySaver checkpointer disabled — RecordID objects not msgpack-serializable. Commit 45372518.
+#   E2E result: 101 records saved, 90% FK population rate, 14 buildings across 2 uploads, 0 collisions.
 #
 # Multi-Consultant Format Adaptability Sprint (2026-03-18):
 # MCS1: Detector rename (ClutchDetector→PipeTableDetector, ARADetector→TextHeaderDetector). Fixed broken import. Commit 35abe382.

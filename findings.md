@@ -87,3 +87,78 @@ ai.save_complete      → items NOW in DB, invalidate items query, clear statuse
 | `/jobs/[id]/chat` | Standalone chat | No |
 
 The `/jobs/[id]/extract` page has the MOST complete SSE experience (subscribes to both `extraction` and `ai` categories + AG-UI stream). This is separate from the main jobs detail page.
+
+---
+
+## MCS11 Implementation Results (2026-03-19)
+
+### Commits
+| Commit | Change |
+|--------|--------|
+| `b06c5788` | Phases 1-3: SSE streaming, bulk ops, search/filter + FK event bus wiring |
+| `c254974f` | JobStatusPill SSE override (Extracting during active stream) |
+| `545d6c41` | Query invalidation timing (MCS10 final + MCS11 buildings fix) |
+| `f2941789` | API FK fields: building_record_id + parent_table_id in ACMRecordResponse |
+| `658d21bb` | Test: RecordID conversion test for FK fields |
+
+### MCS11 Phase Status After Commits
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| Phase 1: SSE Streaming | 1.1-1.5 | DONE — useV3BuildingStream, progress bar, JobStatusPill override |
+| Phase 2: Bulk Ops | 2.1-2.4 | DONE — BulkOperationsBar wired, Fix All button |
+| Phase 3: Search/Filter | 3.1-3.2 | DONE — quick text search, Group by Room toggle |
+| Phase 3: Search/Filter | 3.3-3.4 | REMAINING — per-building data source, BuildingTabStrip upgrade |
+| Phase 4: Job Card Status | 4.1-4.3 | DEFERRED — not started |
+| Phase 5: Validation | 5.1 | DONE — useValidationSummary wired |
+| Phase 5: Validation | 5.2-5.3 | REMAINING — error row highlighting, overview card |
+| Phase 6: Verification | 6.1 | DONE — E2E smoke (29/29 tests pass, all tabs render) |
+| Phase 6: Verification | 6.2-6.6 | REMAINING — SSE test, bulk test, cross-page, mobile, screenshots |
+| Gap4: FK exposure | All | DONE — building_record_id + parent_table_id exposed via API |
+
+---
+
+## MCS13 Bugs Found During E2E Testing (2026-03-19)
+
+Three bugs surfaced while verifying FK linkage after MCS11 E2E testing with 2 PDF uploads.
+
+### Bug 1: UNIQUE Index Collision (building_record table)
+**Symptom**: Second upload of same PDF hijacked building_record rows from first upload.
+**Root cause**: `internal_id` derived from `source.title[:8]` only → `BLD#CLUTCH_B_001` identical for both sources.
+**Fix**: Appended first 6 chars of source record ID: `BLD#{title_short}_{source_suffix}_{seq:03d}`.
+**Commit**: `5819d5e4`
+**Files**: `open_notebook/domain/acm.py`, `open_notebook/graphs/acm_extraction.py`
+
+### Bug 2: FK Schema Type Mismatch (building_record_id)
+**Symptom**: `building_record_id` stored as `option<string>` but pipeline sends `RecordID` objects.
+**Root cause**: Migration 40's `IF NOT EXISTS` was silently skipped — an earlier schema inference had already created the field as `string` type. Field never got the correct `record<building_record>` type.
+**Fix**: Migration 55 forces `DEFINE FIELD building_record_id ON acm_record TYPE option<record<building_record>>`.
+**Commit**: `45372518`
+**Files**: `migrations/55.surrealql`, `migrations/55_down.surrealql`, `open_notebook/graphs/acm_extraction.py`
+
+### Bug 3: LangGraph MemorySaver Crash (checkpointer serialization)
+**Symptom**: Extraction crashed with `Type is not msgpack serializable: RecordID` when MemorySaver tried to checkpoint graph state.
+**Root cause**: Graph state contains `RecordID` objects (from MCS8 ghost-save fix). LangGraph's MemorySaver uses msgpack which can't serialize custom Python objects.
+**Fix**: Disabled MemorySaver (`checkpointer=None`) until a custom serializer converting RecordIDs to strings is implemented.
+**Commit**: `45372518`
+**Note**: This reverts MCS8's re-enablement of MemorySaver. Net state: checkpointer disabled (same as MCS7 state).
+
+### E2E Result After All 3 Fixes
+- 2 PDF uploads, same PDF, different sources
+- 14 buildings total (7 per upload), 0 UNIQUE index collisions
+- 101 records saved with 90% FK population rate (building_record_id populated)
+- 10% FK gap = records saved before building_record committed to DB (race condition in save ordering)
+
+---
+
+## Known Bugs Still Open (As of 2026-03-19)
+
+Bugs discovered during MCS11/MCS13 E2E testing but NOT yet fixed:
+
+| Bug | Severity | Description |
+|-----|----------|-------------|
+| Quick Upload dialog stuck after upload | P1 | Dialog doesn't close / navigate after PDF upload completes |
+| SSE streaming fails on fresh navigation | P1 | operationId not reliably picked up from sessionStorage on direct navigation |
+| `/api/acm/field-config` returns 500 | P1 | field-schema endpoint error (config_json NULL on some records) |
+| ProvenanceViewer crashes on some records | P1 | parent_table_id null causes crash in provenance fetch |
+| Product validation too strict | P2 | Rejects valid product values not in exact SF enum (e.g. compound values) |
+| Ollama timeout on large documents | P2 | STRUCTURE stage 148-208s for 27+ page docs (from BugFix12 N8) |
