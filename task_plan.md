@@ -55,7 +55,7 @@ Users navigate via `/jobs` → job card → `/jobs/source:ID`. They never see th
 - [x] 1.3 Add save progress indicator
   - Show "Saving records... {savedCount}/{totalToSave}" during save phase
   - Wire `isSaving`, `savedCount`, `totalToSave` from `useV3BuildingStream`
-- [ ] 1.4 Update `JobStatusPill` to show "Extracting" with animated indicator when SSE stream is active
+- [x] 1.4 Update `JobStatusPill` to show "Extracting" with animated indicator when SSE stream is active
   - Currently shows `review_status` from source data (may say "Review" during extraction)
   - Override with SSE-derived status when `isStreaming`
 - [x] 1.5 Invalidate records query on `ai.save_complete` in the jobs page context

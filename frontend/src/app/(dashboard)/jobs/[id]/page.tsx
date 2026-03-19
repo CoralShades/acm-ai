@@ -1,7 +1,6 @@
 'use client'
 
 import { use, useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
@@ -319,7 +318,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
           <JobDetailHeader
             sourceId={sourceId}
             title={source?.title ?? null}
-            reviewStatus={source?.review_status}
+            reviewStatus={isStreaming || panelPhase === 'extracting' ? 'extracting' : source?.review_status}
             createdAt={source?.created ?? null}
             recordCount={stats?.total_records}
             buildingCount={stats?.building_count}
