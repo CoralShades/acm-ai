@@ -587,6 +587,23 @@ async def save_intelligence_node(state: dict, config: RunnableConfig) -> dict:
     return {}
 
 
+def _assign_room_ids(records: list) -> None:
+    """Assign sequential room IDs (R001, R002, ...) per building based on room_name.
+
+    MCS11: room_id is scoped per-building (resets for each building).
+    Records with room_name=None get room_id=None.
+    Order is by first appearance of each distinct room_name.
+    """
+    room_name_to_code: dict[str, str] = {}
+    for rec in records:
+        rn = getattr(rec, "room_name", None)
+        if not rn:
+            continue
+        if rn not in room_name_to_code:
+            room_name_to_code[rn] = f"R{len(room_name_to_code) + 1:03d}"
+        rec.room_id = room_name_to_code[rn]
+
+
 _MAX_CONCURRENT_BUILDINGS = int(os.getenv("ACM_MAX_CONCURRENT_BUILDINGS", "3"))
 
 
@@ -1038,6 +1055,13 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
             for br in (saved_buildings or [])
             if br.building_code
         }
+        # MCS11: Warn if any building_code looks like a full name (defensive guard)
+        for code in code_to_id_map:
+            if len(code) > 10 and not re.match(r"^[A-Z]\d+[A-Z]?$", code, re.IGNORECASE):
+                logger.warning(
+                    f"[MCS11] building_code '{code}' looks like a name, not a code — "
+                    f"FK lookups may fail. Was building_inventory ARA fix applied?"
+                )
     except Exception as e:
         logger.warning(
             f"[E32-S2] Could not load BuildingRecords for source {source_id_str}: {e} "
@@ -1184,6 +1208,9 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                             extraction_fields=_extraction_fields,
                         )
 
+                        # MCS11: Assign room IDs per building
+                        _assign_room_ids(records)
+
                         # Populate building_record_id FK
                         building_record_id = code_to_id_map.get(
                             building_meta_entry.building_id
@@ -1252,6 +1279,9 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
             # Normalise V3 SF fields -> ACMExtractionRecord
             records = _normalize_v3_records(building_meta_result, item_result, plan)
+
+            # MCS11: Assign room IDs per building
+            _assign_room_ids(records)
 
             # Populate building_record_id FK from lookup map
             building_record_id = code_to_id_map.get(building_meta_entry.building_id)

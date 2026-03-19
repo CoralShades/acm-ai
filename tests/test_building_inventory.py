@@ -804,3 +804,141 @@ class TestBoundaryOverlap:
         b009 = buildings_by_id["B009"]
         b009_original_end = 14  # from rooms on page 14
         assert b009.page_end == b009_original_end
+
+
+# ARA-format content for testing building code generation (MCS11)
+SAMPLE_ARA_CONTENT = """
+--- Page 1 ---
+
+Building Name:
+  Nurses Accommodation
+
+Room: Bedroom 1
+Product: Ceiling Tiles
+Result: Detected
+
+--- Page 2 ---
+
+Building Name:
+  Nurses Accommodation
+
+Room: Bedroom 2
+Product: Wall Lining
+Result: Detected
+
+--- Page 3 ---
+
+Building Name:
+  Mortuary Buildings
+
+Room: Main Hall
+Product: Floor Tiles
+Result: Detected
+
+--- Page 4 ---
+
+Building Name:
+  Pathology Department
+
+Room: Lab 1
+Product: Pipe Lagging
+Result: Detected
+"""
+
+
+class TestARABuildingCodeGeneration:
+    """MCS11: ARA-format buildings must get B-codes, not name-as-id."""
+
+    def test_ara_buildings_get_sequential_codes(self):
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+
+        result = _heuristic_fallback(SAMPLE_ARA_CONTENT)
+        assert result.total_buildings == 3
+
+        building_ids = [b.building_id for b in result.buildings]
+        assert building_ids == ["B001", "B002", "B003"]
+
+    def test_ara_buildings_preserve_names(self):
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+
+        result = _heuristic_fallback(SAMPLE_ARA_CONTENT)
+        names = [b.name for b in result.buildings]
+        assert "Nurses Accommodation" in names
+        assert "Mortuary Buildings" in names
+        assert "Pathology Department" in names
+
+    def test_ara_building_code_not_a_name(self):
+        """No building_id should be longer than 10 chars (MCS11 guard)."""
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+
+        result = _heuristic_fallback(SAMPLE_ARA_CONTENT)
+        for b in result.buildings:
+            assert len(b.building_id) <= 10, (
+                f"building_id '{b.building_id}' looks like a name, not a code"
+            )
+
+    def test_det_format_codes_unchanged(self):
+        """DET-format buildings (B00A, D01) must keep their original codes."""
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+
+        result = _heuristic_fallback(SAMPLE_REGISTER_CONTENT)
+        building_ids = [b.building_id for b in result.buildings]
+        assert "B00A" in building_ids
+        assert "B00B" in building_ids
+        assert "D01" in building_ids
+        assert "B009" in building_ids
+
+    def test_is_coded_building_id_helper(self):
+        from open_notebook.extractors.building_inventory import _is_coded_building_id
+
+        # Coded IDs
+        assert _is_coded_building_id("B001") is True
+        assert _is_coded_building_id("B00A") is True
+        assert _is_coded_building_id("D01") is True
+        assert _is_coded_building_id("D123") is True
+        assert _is_coded_building_id("BUILDING_1") is True
+
+        # Names (not coded)
+        assert _is_coded_building_id("Nurses Accommodation") is False
+        assert _is_coded_building_id("Mortuary Buildings") is False
+        assert _is_coded_building_id("Main Building") is False
+
+    def test_generic_fallback_replaces_name_ids(self):
+        """Generic fallback path replaces name-as-id with B-codes."""
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+        from open_notebook.extractors.document_structure import DocumentStructure
+
+        doc_structure = DocumentStructure(
+            register_start_page=1,
+            building_ids=["Main Hall", "Science Wing", "Library"],
+            total_pages=30,
+        )
+        # Non-empty content with no DET/ARA headers to trigger generic fallback
+        result = _heuristic_fallback(
+            "--- Page 1 ---\nSome unstructured text with no building headers.\n",
+            document_structure=doc_structure,
+        )
+        building_ids = [b.building_id for b in result.buildings]
+        assert building_ids == ["B001", "B002", "B003"]
+        # Names preserved
+        assert result.buildings[0].name == "Main Hall"
+        assert result.buildings[1].name == "Science Wing"
+        assert result.buildings[2].name == "Library"
+
+    def test_generic_fallback_preserves_coded_ids(self):
+        """Generic fallback keeps already-coded IDs intact."""
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+        from open_notebook.extractors.document_structure import DocumentStructure
+
+        doc_structure = DocumentStructure(
+            register_start_page=1,
+            building_ids=["B00A", "D01"],
+            total_pages=20,
+        )
+        result = _heuristic_fallback(
+            "--- Page 1 ---\nSome unstructured text with no building headers.\n",
+            document_structure=doc_structure,
+        )
+        building_ids = [b.building_id for b in result.buildings]
+        assert "B00A" in building_ids
+        assert "D01" in building_ids

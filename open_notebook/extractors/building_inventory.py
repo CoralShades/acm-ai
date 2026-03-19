@@ -37,6 +37,14 @@ _ROOM_HEADER = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
+# Pattern for coded building IDs: single letter + digits (B00A, D01, B009, BUILDING_1)
+_CODED_BUILDING_ID = re.compile(r"^[A-Z]\d+[A-Z]?$|^D\d{2,3}$|^BUILDING_\d+$", re.IGNORECASE)
+
+
+def _is_coded_building_id(bid: str) -> bool:
+    """Return True if bid looks like a short code (B001, D02, BUILDING_1), not a full name."""
+    return bool(_CODED_BUILDING_ID.match(bid))
+
 
 class BuildingComplexity(str, Enum):
     """Building complexity classification (Task 1.1)."""
@@ -521,7 +529,8 @@ def _heuristic_fallback(
                 "'Building Name:' headers"
             )
             for i, (name, pos) in enumerate(ara_buildings):
-                # Use building name as ID (ARA doesn't use coded IDs)
+                # Generate sequential building code (ARA doesn't use coded IDs)
+                building_code = f"B{i + 1:03d}"
                 next_pos = (
                     ara_buildings[i + 1][1] if i + 1 < len(ara_buildings) else None
                 )
@@ -539,7 +548,7 @@ def _heuristic_fallback(
 
                 buildings.append(
                     BuildingMeta(
-                        building_id=name,
+                        building_id=building_code,
                         name=name,
                         page_start=page_start,
                         page_end=page_end,
@@ -574,9 +583,15 @@ def _heuristic_fallback(
                 )
                 # If we have a site_name and only one building, use it. Otherwise keep bid as name.
                 bldg_name = site_name if (site_name and n_ids == 1) else bid
+                # Generate sequential code if bid looks like a name, not a code
+                building_id = bid if _is_coded_building_id(bid) else f"B{idx + 1:03d}"
+                if building_id != bid:
+                    logger.info(
+                        f"Generic fallback: replaced name-as-id '{bid}' with code '{building_id}'"
+                    )
                 buildings.append(
                     BuildingMeta(
-                        building_id=bid,
+                        building_id=building_id,
                         name=bldg_name,
                         page_start=b_start,
                         page_end=b_end,
