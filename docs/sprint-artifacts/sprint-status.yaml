@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-16
+updated: 2026-03-19
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -579,7 +579,7 @@ development_status:
   # Infra: pipeline_logger.py per-run dirs, run_worker.py tee sink, scripts/split_logs.py
   # GitHub: #103
   # ─────────────────────────────────────────────────────
-  bug-fix-12-extraction-audit: in_progress  # 2026-03-12. Extraction log audit + per-run log categorization. 8 issue docs, per-run log infra complete. Fixes pending.
+  bug-fix-12-extraction-audit: done  # 2026-03-12. Extraction log audit + per-run log categorization. 8 issue docs, per-run log infra complete. Fixes applied in subsequent MCS stories.
 
   # ─────────────────────────────────────────────────────
   # Bug Fix: Frontend Navigation Performance (2026-03-13)
@@ -679,6 +679,49 @@ development_status:
   crud-chat-pipeline-enhancement-2026-03-17: in_progress  # Implementation DONE, E2E IN PROGRESS. 7 tools upgraded/added. Migration 53 (crud_audit old_value). HITL barrier enforced via graph routing. 70/70 unit tests pass. Frontend build clean. E2E: T01 PASS (page load), T03 PASS (count query), T04 PASS (buildings query), T10 PARTIAL (backend interrupt PASS, frontend HITL dialog blocked by BUG-4 AIMessage crash in AG-UI adapter), T15-T16 PASS (SSE streaming). BUG-4 pending fix.
 
   # ─────────────────────────────────────────────────────
+  # Multi-Consultant Format Adaptability Sprint (MCS1-MCS7 + Live UX)
+  # Branch: ACMV3
+  # Dates: 2026-03-18
+  # Goal: Support multiple consultant PDF formats (pipe-table, text-header, standard)
+  # Result: 246 records extracted across 4 PDFs / 3 consultant formats (100% Ollama llama3.1:8b)
+  # Architecture doc: docs/architecture/multi-consultant-format-design.md
+  # ─────────────────────────────────────────────────────
+  mcs-samp-to-ara-rename-2026-03-18: done  # refactor: complete SAMP→ARA terminology rename across codebase. Commits: 0febe5f9, 513790dd
+  mcs1-detector-rename-fix-2026-03-18: done  # refactor(detectors): rename detectors by structure not consultant, fix broken pipe-table import. Commit 35abe382. PipeTableDetector, TextHeaderDetector, StandardFormatDetector. Removed ClutchDetector broken import. Regression tests added. SP:3
+  mcs2-schema-inference-node-2026-03-18: done  # feat: add schema inference node for multi-consultant format adaptability. Commit 167f0c43. InferredSchema + RecoveryConfig dataclasses. LangGraph node between PREFLIGHT and ORCHESTRATOR. Graceful degradation. SP:8
+  mcs3-format-profile-registry-2026-03-18: done  # feat(extraction): add consultant format profile registry — cache column mappings in SurrealDB. Commit 881f04f1. consultant_format_profile table, cache hit/miss logic. SP:5
+  mcs4-adaptive-row-segmenter-2026-03-18: done  # refactor(extraction): make row segmenter and recovery functions format-adaptive. Commit 6ab5abb3. Dynamic column mapping from InferredSchema. SP:3
+  mcs5-format-agnostic-prompts-2026-03-18: done  # feat(prompts): make extraction prompts format-agnostic with dynamic field lists. Commit cd5f919b. prompts/acm/*.jinja updated. SP:3
+  mcs6-hitl-mapping-ui-2026-03-18: done  # feat(ux): add HITL column mapping confirmation UI for low-confidence schema inference. Commit 80267917. SP:3
+  mcs7-validation-3-formats-2026-03-18: done  # test(extraction): validate multi-consultant format support with 3+ PDF formats. Commit fa1ff9a4. 4 PDFs validated: Broadmeadows (32/31 PASS), Alexander ARA (95/≥36 PASS), Clutch_Alexander (90), Clutch_BM_2 (29). SP:3
+  mcs-live-extraction-ux-2026-03-18: done  # feat(ux): Live extraction UX with SSE streaming, job lifecycle, and real-time display. Commit 5d560d06. useV3BuildingStream hook, job controls, per-building progress. SP:5
+  # Post-validation prompt-packs docs added: 14d188dc (6 post-validation fix prompts)
+
+  # ─────────────────────────────────────────────────────
+  # MCS Post-Validation Fixes (MCS8-MCS13) — Pipeline Persistence Timing Audit
+  # Branch: ACMV3
+  # Dates: 2026-03-19
+  # Audit revealed 6 gaps preventing frontend real-time extraction progress display
+  # Index: docs/sprint-artifacts/prompt-packs/2026-03-19-mcs-post-validation-index.md
+  # ─────────────────────────────────────────────────────
+  mcs8-ghost-save-fix-2026-03-19: done  # fix(persistence): Resolve ghost save bug in base.py and re-enable LangGraph checkpointer. Commit 31ede390. Root cause: SurrealDB Python client auto-parses record-link strings as RecordIDs. Fixed repo_create, removed 5 MCS7 workarounds, re-enabled MemorySaver checkpointer. SP:5
+  mcs9-sse-save-events-2026-03-19: in_progress  # feat(streaming): add SSE events to save node and fix terminal event race condition. Prompt pack created 2026-03-19. ai.save_started, ai.save_progress, ai.save_complete events. Move terminal event from ai.validation_complete to ai.save_complete. SP:5
+  mcs10-building-query-invalidation-2026-03-19: done  # fix(ux): correct building and items query invalidation timing. Prompt pack created + MCS10 complete per progress.md. Buildings query invalidated on ai.building_extracted, items query deferred to ai.save_complete. 'saving' status added to BuildingStreamStatus. SP:3
+  mcs11-building-record-id-fk-fix-2026-03-19: backlog  # fix(extraction): restore building_record_id FK — remove MCS7 NULL workaround. Depends on MCS8. SP:3
+  mcs12-extraction-events-dead-endpoint-2026-03-19: backlog  # feat(streaming): wire extraction.* SSE events to main pipeline. Dead /v3/stream/extraction/{op_id} endpoint. Depends on MCS9. SP:3
+  mcs13-schema-inference-documentmeta-fix-2026-03-19: backlog  # fix(extraction): fix schema inference DocumentMeta attribute access and verify cache. AttributeError: 'DocumentMeta' object has no attribute 'get'. Depends on MCS8. SP:3
+
+  # ─────────────────────────────────────────────────────
+  # MCS Jobs/Source Page Unification (jobs/source parity)
+  # Branch: ACMV3
+  # Date: 2026-03-19
+  # Audit: 15-category feature matrix, 7 P0/P1 gaps on /jobs/[id] vs /source/[id]
+  # Artifact: progress.md (repo root)
+  # ─────────────────────────────────────────────────────
+  mcs-jobs-buildings-bug-fix-2026-03-19: done  # fix(ux): /jobs/[id] Buildings tab "No Rows To Show" bug. V3 building_record empty for old extractions. Added acmApi.listJobBuildings() V3-first + legacy fallback. JobBuildingResponse interface. useJobBuildings.ts hook. Browser verified: "1 to 2 of 2" buildings shown. Frontend build passes.
+  mcs-jobs-source-unification-2026-03-19: in_progress  # feat(ux): unify /jobs/[id] feature parity with /source/[id]. task_plan.md created (6 phases, SP:13 total). Phase 1-3 pending user review: SSE streaming, bulk operations, search/filter.
+
+  # ─────────────────────────────────────────────────────
   # Pipeline Debug (2026-03-14)
   # Branch: ACMV3
   # Commit: 476c285e — "fix(extraction): pipeline debug — 8 fixes, 0→29 records (93.5% ground truth)"
@@ -727,17 +770,38 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 261  (257 prior + 3 dogfood fixes + E36-S4 done)
-# Stories Done: 238 (91%)  -- 234 prior + 3 dogfood-2026-03-17 + E36-S4 status corrected
+# Total Stories: 280  (261 prior + 7 MCS multi-consultant + 1 live UX + MCS8-13 + jobs fixes)
+# Stories Done: 252 (90%)  -- 238 prior + MCS1-7 + live-extraction-ux + MCS8 + MCS10 + jobs-buildings-bug
 # Stories Review: 0
-# Stories In-Progress: 1 (bug-fix-12-extraction-audit)
+# Stories In-Progress: 2 (mcs9-sse-save-events, mcs-jobs-source-unification)
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
-# Stories Backlog: 3 (E36-S5..S7)
+# Stories Backlog: 6 (E36-S5..S7, mcs11-building-record-id-fk-fix, mcs12-extraction-events, mcs13-schema-inference)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-17
+# Last Updated: 2026-03-19
+#
+# MCS Post-Validation Fixes (2026-03-19):
+# MCS8 DONE: Ghost save bug in base.py fixed. SurrealDB RecordID auto-parse root cause resolved.
+#   5 MCS7 workarounds removed. LangGraph MemorySaver checkpointer re-enabled. Commit 31ede390.
+# MCS9 IN PROGRESS: SSE save events added to pipeline (ai.save_started, ai.save_progress, ai.save_complete).
+#   Terminal event race condition fixed — stream now closes on ai.save_complete, not ai.validation_complete.
+# MCS10 DONE: Buildings query invalidated on ai.building_extracted (not ai.validation_complete).
+#   Items query deferred to ai.save_complete. 'saving' status added to BuildingStreamStatus.
+# MCS11/12/13: Prompt packs created 2026-03-19, pending implementation.
+# Jobs/Source Unification: /jobs/[id] Buildings tab empty bug fixed. Full parity work pending.
+#
+# Multi-Consultant Format Adaptability Sprint (2026-03-18):
+# MCS1: Detector rename (ClutchDetector→PipeTableDetector, ARADetector→TextHeaderDetector). Fixed broken import. Commit 35abe382.
+# MCS2: Schema inference node added to LangGraph pipeline between PREFLIGHT and ORCHESTRATOR. Commit 167f0c43.
+# MCS3: Consultant format profile registry — SurrealDB cache for column mappings. Commit 881f04f1.
+# MCS4: Row segmenter and recovery functions made format-adaptive via InferredSchema. Commit 6ab5abb3.
+# MCS5: Extraction prompts made format-agnostic with dynamic field lists. Commit cd5f919b.
+# MCS6: HITL column mapping confirmation UI for low-confidence schema inference. Commit 80267917.
+# MCS7: Validation — 4 PDFs, 3 consultant formats, 246 records extracted (100% Ollama). Commit fa1ff9a4.
+# Live Extraction UX: SSE streaming, job lifecycle, real-time per-building display. Commit 5d560d06.
+#
 # Dogfood Session (2026-03-17): Live extraction on Broadmeadows PDF, 4 bugs found + fixed:
 # 1) _get_db_extraction_model() non-Ollama model rejection (0→28 records)
 # 2) validate_records_strict() material_description auto-fill from product
