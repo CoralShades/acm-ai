@@ -58,7 +58,7 @@
 | Buildings query too late | MCS10 | P1 | Done |
 | Items query too early | MCS10 | P1 | Done |
 | building_record_id FK always NULL | MCS11 | P1 | Backlog |
-| extraction.* dead SSE endpoint | MCS12 | P2 | Backlog |
+| extraction.* dead SSE endpoint | MCS12 | P2 | Done |
 | schema_inference DocumentMeta bug | MCS13 | P1 | Backlog |
 
 ---
@@ -100,6 +100,35 @@
 - Created findings.md with audit results
 - Created progress.md (this file)
 - Ready for user review before implementation
+
+## MCS12 — Extraction Events SSE Wiring (DONE — 2026-03-20)
+
+### Backend
+- Added `ExtractionCompleteEvent` + `ExtractionFailedEvent` to `pipeline_event_bus.py`
+- Emit `extraction.started` from `acm_commands.py` (instant) and `acm_extraction.py` (with page count)
+- Emit `extraction.complete` after `save_records` node with records_saved, buildings_count, duration_ms
+- Emit `extraction.failed` on all error paths (timeout, pipeline failure, exception) with stage info
+- Added both to `_TERMINAL_EVENT_TYPES` in `v3_streaming.py`
+- `/v3/stream/extraction/{op_id}` endpoint now delivers real events
+
+### Frontend
+- Created `useExtractionStream` hook — wraps `useV3SSE` with typed extraction phase state machine
+- Created `ExtractionStatusBanner` — compact status banner with phase-specific icons, metrics, auto-dismiss
+- Integrated on `/jobs/[id]` below `JobDetailHeader`
+
+### Files Modified
+| File | Change |
+|------|--------|
+| `open_notebook/extractors/pipeline_event_bus.py` | +2 event types (ExtractionComplete, ExtractionFailed) |
+| `api/routers/v3_streaming.py` | +2 terminal event types |
+| `open_notebook/graphs/acm_extraction.py` | +6 imports, emit started/complete/failed |
+| `commands/acm_commands.py` | +5 imports, emit started/failed on all paths |
+| `frontend/src/lib/hooks/useExtractionStream.ts` | NEW — extraction SSE hook |
+| `frontend/src/components/jobs/ExtractionStatusBanner.tsx` | NEW — status banner |
+| `frontend/src/app/(dashboard)/jobs/[id]/page.tsx` | +banner integration |
+| `frontend/src/lib/types/v3-streaming.ts` | +2 payload interfaces |
+
+---
 
 ## Next Steps
 - [ ] User reviews and approves plan

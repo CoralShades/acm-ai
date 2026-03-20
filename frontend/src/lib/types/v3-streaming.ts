@@ -29,3 +29,18 @@ export interface SchemaMappingResponse {
   action: 'approve' | 'modify' | 'reject'
   mappings?: SchemaMappingItem[]
 }
+
+/** Extraction complete payload */
+export interface ExtractionCompletePayload {
+  source_id: string
+  records_saved: number
+  buildings_count: number
+  duration_ms: number
+}
+
+/** Extraction failed payload */
+export interface ExtractionFailedPayload {
+  source_id: string
+  error: string
+  stage: string
+}

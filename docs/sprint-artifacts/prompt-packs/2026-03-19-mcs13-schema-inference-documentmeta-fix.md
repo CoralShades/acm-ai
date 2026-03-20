@@ -58,28 +58,30 @@ But `state["document_metadata"]` is a `DocumentMeta` Pydantic model, not a dict.
 
 ## Plan
 
-### Phase 1: Fix DocumentMeta Access Pattern
-- [ ] Find all 6 occurrences of `.get()` on `document_metadata` in schema_inference.py
-- [ ] Replace with `getattr(state.get("document_metadata"), "format_name", None)` or equivalent
-- [ ] Handle both dict and Pydantic model cases (defensive)
+### Phase 1: Fix DocumentMeta Access Pattern -- DONE (2026-03-20)
+- [x] Find all 3 occurrences of `.get()` on `document_metadata` in schema_inference.py (lines 463, 487, 547 — not 6 as estimated)
+- [x] Replace with `getattr(doc_meta, "format_name", None) if doc_meta else None` pattern
+- [x] Handle both dict and Pydantic model cases (defensive via getattr)
 
-### Phase 2: Test Schema Inference
-- [ ] Write unit test with mock state containing DocumentMeta Pydantic model
-- [ ] Verify schema inference produces InferredSchema with column_mapping
-- [ ] Test cache hit path (existing format profile)
-- [ ] Test cache miss path (new format → LLM inference → profile saved)
+### Phase 2: Test Schema Inference -- DONE (2026-03-20)
+- [x] Write unit test with mock state containing DocumentMeta Pydantic model
+- [x] Test LLM inference path with Pydantic model in state
+- [x] Test cache hit path with Pydantic model in state
+- [ ] Test cache miss path (new format → LLM inference → profile saved) — deferred to E2E
 
-### Phase 3: Verify Cache Behavior
+### Phase 3: Verify Cache Behavior -- DEFERRED
 - [ ] Upload new consultant format PDF (e.g., Clutch_Broadmeadows.pdf)
 - [ ] Verify schema inference triggers (confidence score in logs)
 - [ ] Verify new format profile saved to SurrealDB
 - [ ] Re-upload same format → verify cache hit (no LLM call)
 - [ ] Verify `sample_count` incremented
 
-### Phase 4: Verification
+### Phase 4: Verification -- PARTIAL
 - [ ] Run /e2e-test for schema inference flow
 - [ ] Run /acm-observability to trace inference decisions
 - [ ] Verify format profiles in DB match expected consultant patterns
+- [x] 26/26 tests pass
+- [x] ruff lint clean
 
 ---
 
@@ -97,13 +99,15 @@ Create team `mcs13-schema-inference` with 3 agents:
 
 ## Verification Checklist
 
-- [ ] `schema_inference_node` runs without AttributeError
-- [ ] New format profile created in `consultant_format_profile` table
-- [ ] Cache hit works: second upload of same format skips LLM
-- [ ] `sample_count` increments on cache hit
-- [ ] Column mapping contains correct SF field mappings
-- [ ] `/e2e-test` passes for schema inference flow
-- [ ] No `.get()` calls on Pydantic models in schema_inference.py
+- [x] `schema_inference_node` runs without AttributeError
+- [ ] New format profile created in `consultant_format_profile` table (deferred — requires live extraction)
+- [ ] Cache hit works: second upload of same format skips LLM (deferred — requires live extraction)
+- [ ] `sample_count` increments on cache hit (deferred — requires live extraction)
+- [ ] Column mapping contains correct SF field mappings (deferred — requires live extraction)
+- [ ] `/e2e-test` passes for schema inference flow (deferred)
+- [x] No `.get()` calls on Pydantic models in schema_inference.py
+- [x] 26/26 unit tests pass
+- [x] 2 regression tests added for Pydantic DocumentMeta in state
 
 ---
 

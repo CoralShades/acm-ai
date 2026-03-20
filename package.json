@@ -12,9 +12,10 @@
     "test:show-report": "playwright show-report"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0",
+    "@playwright/test": "^1.58.2",
     "@types/node": "^22.10.1",
     "dotenv": "^16.4.7",
+    "playwright": "^1.58.2",
     "shadcn": "^3.8.5",
     "typescript": "^5.7.2"
   }

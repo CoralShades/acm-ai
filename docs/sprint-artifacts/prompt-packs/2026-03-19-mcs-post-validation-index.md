@@ -31,7 +31,7 @@ MCS8 (P0, SP:5) ── Ghost save fix (base.py + checkpointer)
 | 2 | **MCS9** | 5 | P0 | Add SSE events to save node, fix terminal event race |
 | 3 | **MCS10** | 3 | P1 | Fix building query invalidation + items query timing |
 | 4 | **MCS11** | 3 | P1 | Restore building_record_id FK (remove NULL workaround) |
-| 5 | **MCS13** | 3 | P1 | Fix schema inference DocumentMeta bug + cache verification |
+| 5 | **MCS13** | 3 | P1 | Fix schema inference DocumentMeta bug + cache verification | **DONE** (2026-03-20) |
 | 6 | **MCS12** | 3 | P2 | Wire extraction.* events to dead SSE endpoint |
 
 ## Files

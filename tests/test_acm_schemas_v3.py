@@ -146,17 +146,17 @@ class TestACMItemRecord:
         assert record.no_access is False
 
     def test_quantity_float(self):
-        """quantity=10.5 is valid, quantity=None is valid."""
+        """quantity=10.5 is valid (coerced to str), quantity=None is valid."""
         record_with_qty = ACMItemRecord(quantity=10.5)
-        assert record_with_qty.quantity == 10.5
+        assert record_with_qty.quantity == "10.5"
 
         record_no_qty = ACMItemRecord(quantity=None)
         assert record_no_qty.quantity is None
 
     def test_quantity_zero(self):
-        """quantity=0.0 is valid."""
+        """quantity=0.0 is valid (coerced to str)."""
         record = ACMItemRecord(quantity=0.0)
-        assert record.quantity == 0.0
+        assert record.quantity == "0.0"
 
     def test_full_sf_fields(self):
         """All 17+ fields populated; model_dump() round-trips correctly."""
@@ -187,7 +187,7 @@ class TestACMItemRecord:
         assert record.room_or_area == "Boiler Room"
         assert record.friability_of_material == "Non-friable"
         assert record.item_name == "Ceiling"
-        assert record.quantity == 20.5
+        assert record.quantity == "20.5"
         assert record.labelled == "Yes"
         assert record.page_number == 12
 

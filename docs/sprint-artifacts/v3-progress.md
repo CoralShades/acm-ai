@@ -58,6 +58,7 @@ _This section carries forward across stories. Add patterns, conventions, and lea
 | 2026-03-17 | Dogfood Fix | Model provider mismatch + validation over-strictness | 1 | open_notebook/graphs/utils.py, open_notebook/graphs/acm_extraction.py | `_get_db_extraction_model()` returned non-Ollama model to Ollama candidate → 404. `validate_records_strict()` auto-fills material_description from product. 0→28 records. |
 | 2026-03-17 | Dogfood Fix | Quantity parse crash + Job Detail crash | 1 | open_notebook/extractors/acm_schemas_v3.py, open_notebook/extractors/orchestrator.py, frontend/src/components/jobs/JobOverviewTab.tsx | `ACMItemRecord.quantity` float→str. JobOverviewTab optional chaining on buildings?.length. |
 | 2026-03-17 | Dogfood Fix | Source cascade delete + orphaned file cleanup | 1 | api/routers/sources.py | Delete cascades file+edges+commands. New cleanup-orphaned-files endpoint. 92 files (149MB) cleaned. |
+| 2026-03-20 | MCS13 Fix | Fix Schema Inference DocumentMeta .get() Bug | 3 | schema_inference.py, test_schema_inference.py | Root cause: .get() on Pydantic DocumentMeta (not dict) silently caught — schema inference never ran. Replaced 3 occurrences with getattr(). 2 regression tests. 26/26 pass. Enables format profile creation/caching. |
 
 ## Sprint Summary
 

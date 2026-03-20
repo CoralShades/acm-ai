@@ -566,10 +566,13 @@ class TestLangGraphIntegration:
         assert ("inventory", "save_intelligence") in edges or any(
             e == ("inventory", "save_intelligence") for e in edges
         ), "inventory should connect to save_intelligence (S4)"
-        # E32-S1: save_intelligence -> extract_building
-        assert ("save_intelligence", "extract_building") in edges or any(
-            e == ("save_intelligence", "extract_building") for e in edges
-        ), "save_intelligence should connect to extract_building (E32-S1)"
+        # MCS13: save_intelligence -> schema_inference -> extract_building
+        assert ("save_intelligence", "schema_inference") in edges or any(
+            e == ("save_intelligence", "schema_inference") for e in edges
+        ), "save_intelligence should connect to schema_inference (MCS13)"
+        assert ("schema_inference", "extract_building") in edges or any(
+            e == ("schema_inference", "extract_building") for e in edges
+        ), "schema_inference should connect to extract_building (MCS13)"
         # E32-S2: extract_building -> extract_items (replaces direct edge to orchestrate)
         assert ("extract_building", "extract_items") in edges or any(
             e == ("extract_building", "extract_items") for e in edges

@@ -374,7 +374,7 @@ def test_sse_terminal_event_sends_done_sentinel():
 
     terminal_types = list(_TERMINAL_EVENT_TYPES)
     assert "extraction.consensus_complete" in terminal_types
-    assert "ai.validation_complete" in terminal_types
+    assert "ai.save_complete" in terminal_types  # MCS9: terminal moved to after save
     assert "bulk.complete" in terminal_types
 
     for terminal_type in terminal_types:

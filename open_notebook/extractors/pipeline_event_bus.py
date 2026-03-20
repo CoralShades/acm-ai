@@ -200,6 +200,37 @@ class ExtractionConsensusCompleteEvent(V3PipelineEvent):
     data: ExtractionConsensusCompleteData  # type: ignore[assignment]
 
 
+class ExtractionCompleteData(BaseModel):
+    """Payload for extraction.complete (overall extraction finished successfully)."""
+
+    source_id: str
+    records_saved: int
+    buildings_count: int
+    duration_ms: int
+
+
+class ExtractionCompleteEvent(V3PipelineEvent):
+    """Emitted when overall extraction completes successfully."""
+
+    type: Literal["extraction.complete"] = "extraction.complete"
+    data: ExtractionCompleteData  # type: ignore[assignment]
+
+
+class ExtractionFailedData(BaseModel):
+    """Payload for extraction.failed."""
+
+    source_id: str
+    error: str
+    stage: str = "unknown"
+
+
+class ExtractionFailedEvent(V3PipelineEvent):
+    """Emitted when extraction fails."""
+
+    type: Literal["extraction.failed"] = "extraction.failed"
+    data: ExtractionFailedData  # type: ignore[assignment]
+
+
 class AIBuildingExtractedEvent(V3PipelineEvent):
     """Emitted when LLM extraction completes for one building block."""
 
@@ -282,6 +313,8 @@ V3_EVENT_TYPES = (
     ExtractionStartedEvent,
     ExtractionProviderCompleteEvent,
     ExtractionConsensusCompleteEvent,
+    ExtractionCompleteEvent,
+    ExtractionFailedEvent,
     AIBuildingExtractedEvent,
     AIItemsExtractedEvent,
     AIValidationCompleteEvent,

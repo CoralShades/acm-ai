@@ -98,6 +98,12 @@ from open_notebook.extractors.pipeline_event_bus import (
     AISaveStartedEvent,
     AIValidationCompleteData,
     AIValidationCompleteEvent,
+    ExtractionCompleteData,
+    ExtractionCompleteEvent,
+    ExtractionFailedData,
+    ExtractionFailedEvent,
+    ExtractionStartedData,
+    ExtractionStartedEvent,
     get_event_bus,
 )
 from open_notebook.extractors.pipeline_events import StageId
@@ -3060,6 +3066,21 @@ async def extract_acm_from_source(
         agui = AGUIEventEmitter(command_id=command_id, source_id=source_id_str)
         await agui.emit_run_started()
 
+        # MCS12: Emit extraction.started event for SSE streaming
+        try:
+            await get_event_bus().publish(
+                ExtractionStartedEvent(
+                    operation_id=command_id,
+                    data=ExtractionStartedData(
+                        source_id=source_id_str,
+                        provider_sequence=["langgraph"],
+                        total_pages=total_pages,
+                    ),
+                )
+            )
+        except Exception as _pub_err:
+            logger.debug(f"[MCS12] Failed to publish extraction.started: {_pub_err}")
+
     if force:
         # Delete existing table sections and records (E11-S1)
         from open_notebook.domain.acm import ACMTableSection
@@ -3254,6 +3275,23 @@ async def extract_acm_from_source(
             if agui:
                 await agui.emit_run_error(error)
             pipeline_run = pl.fail(error)
+            # MCS12: Emit extraction.failed event for SSE streaming
+            if command_id:
+                try:
+                    await get_event_bus().publish(
+                        ExtractionFailedEvent(
+                            operation_id=command_id,
+                            data=ExtractionFailedData(
+                                source_id=source_id_str,
+                                error=error,
+                                stage="graph",
+                            ),
+                        )
+                    )
+                except Exception as _pub_err:
+                    logger.debug(
+                        f"[MCS12] Failed to publish extraction.failed: {_pub_err}"
+                    )
             return ACMExtractionOutput(
                 source_id=source_id_str,
                 status="failed",
@@ -3313,6 +3351,32 @@ async def extract_acm_from_source(
             )
             token_limit_exceeded = assessment["token_limit_exceeded"]
 
+        # MCS12: Emit extraction.complete event for SSE streaming
+        if command_id:
+            try:
+                _buildings = result.get("building_inventory")
+                _buildings_count = (
+                    len(_buildings.buildings)
+                    if _buildings and hasattr(_buildings, "buildings")
+                    else 0
+                )
+                _duration_ms = int((time.time() - start_time) * 1000)
+                await get_event_bus().publish(
+                    ExtractionCompleteEvent(
+                        operation_id=command_id,
+                        data=ExtractionCompleteData(
+                            source_id=source_id_str,
+                            records_saved=extraction_result.total_records,
+                            buildings_count=_buildings_count,
+                            duration_ms=_duration_ms,
+                        ),
+                    )
+                )
+            except Exception as _pub_err:
+                logger.debug(
+                    f"[MCS12] Failed to publish extraction.complete: {_pub_err}"
+                )
+
         return ACMExtractionOutput(
             source_id=source_id_str,
             status=status,
@@ -3333,6 +3397,23 @@ async def extract_acm_from_source(
         if agui:
             await agui.emit_run_error(str(e))
         pipeline_run = pl.fail(str(e))
+        # MCS12: Emit extraction.failed event for SSE streaming
+        if command_id:
+            try:
+                await get_event_bus().publish(
+                    ExtractionFailedEvent(
+                        operation_id=command_id,
+                        data=ExtractionFailedData(
+                            source_id=source_id_str,
+                            error=str(e),
+                            stage="exception",
+                        ),
+                    )
+                )
+            except Exception as _pub_err:
+                logger.debug(
+                    f"[MCS12] Failed to publish extraction.failed (exception): {_pub_err}"
+                )
         return ACMExtractionOutput(
             source_id=source_id_str,
             status="failed",
