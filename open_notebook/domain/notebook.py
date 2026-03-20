@@ -148,7 +148,7 @@ class Source(ObjectModel):
     topics: Optional[List[str]] = Field(default_factory=list)
     full_text: Optional[str] = None
     review_status: Optional[str] = None
-    command: Optional[Union[str, RecordID]] = Field(
+    command: Optional[str] = Field(
         default=None, description="Link to surreal-commands processing job"
     )
 
@@ -158,10 +158,12 @@ class Source(ObjectModel):
     @field_validator("command", mode="before")
     @classmethod
     def parse_command(cls, value):
-        """Parse command field to ensure RecordID format"""
-        if isinstance(value, str) and value:
-            return ensure_record_id(value)
-        return value
+        """Parse command field to string to avoid msgpack serialization issues."""
+        if value is None:
+            return None
+        if isinstance(value, RecordID):
+            return str(value)
+        return str(value) if value else None
 
     @field_validator("id", mode="before")
     @classmethod

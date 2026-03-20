@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "scanned_at": "2026-03-13T00:06:52Z",
+  "scanned_at": "2026-03-18T23:59:11Z",
   "skills": [
     {
       "name": "a2a-protocol",
@@ -1011,6 +1011,20 @@
       ]
     },
     {
+      "name": "flash",
+      "description": "runpod-flash SDK and CLI for deploying AI workloads on Runpod serverless GPUs/CPUs.",
+      "location": ".claude/skills/flash/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/flash/SKILL.md"
+      ]
+    },
+    {
       "name": "framework-selection",
       "description": "INVOKE THIS SKILL at the START of any LangChain/LangGraph/Deep Agents project, before writing any agent code. Determines which framework layer is right for the task: LangChain, LangGraph, Deep Agents, or a combination. Must be consulted before other agent skills.",
       "location": ".claude/skills/framework-selection/SKILL.md",
@@ -1368,6 +1382,20 @@
       ],
       "also_at": [
         ".agents/skills/requesting-code-review/SKILL.md"
+      ]
+    },
+    {
+      "name": "runpodctl",
+      "description": "Runpod CLI to manage your GPU workloads.",
+      "location": ".claude/skills/runpodctl/SKILL.md",
+      "has_scripts": false,
+      "has_references": false,
+      "platform": [
+        "claude-code",
+        "agents"
+      ],
+      "also_at": [
+        ".agents/skills/runpodctl/SKILL.md"
       ]
     },
     {
@@ -1737,6 +1765,7 @@
   "rules": {
     "source": "CLAUDE.md",
     "sections": [
+      "User Documetation Location : C:\\Users\\User\\Documents\\Obsidian Vault\\ACM",
       "CRITICAL PATH RULE (WSL/Windows)",
       "Project Overview",
       "Essential Commands",

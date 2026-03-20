@@ -503,13 +503,13 @@ class TestTextHeaderDetector:
 class TestColumnMappingInjection:
     """Test that column mapping is correctly threaded through to the prompt."""
 
-    def test_v3_item_extraction_prompt_includes_mapping(self):
-        """Verify the Jinja template renders column mapping when provided."""
+    def test_v3_item_extraction_prompt_format_agnostic(self):
+        """After MCS format-agnostic refactor, column_mapping is no longer rendered in template."""
         from ai_prompter import Prompter
 
         prompter = Prompter(prompt_template="acm/v3_item_extraction")
 
-        # Render with column mapping
+        # Column mapping param is accepted but not rendered (format-agnostic prompts)
         rendered = prompter.render(
             data={
                 "building_context": {
@@ -537,9 +537,11 @@ class TestColumnMappingInjection:
             }
         )
 
-        assert "Document Column Mapping" in rendered
-        assert "Location - Item Description" in rendered
-        assert "Hazard Type" in rendered
+        # Prompt renders successfully with building context
+        assert "B001" in rendered
+        assert "Test Building" in rendered
+        # Column mapping section no longer in template (format-agnostic since MCS refactor)
+        assert "Document Column Mapping" not in rendered
 
     def test_v3_item_extraction_prompt_no_mapping(self):
         """Verify no column mapping section when mapping is not provided."""
