@@ -245,11 +245,12 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
     """
     school = school_code or "unknown"
     building = record.building_id or "unknown"
-    area = (record.area_type or "Interior").lower()  # Default to Interior
+    area = (record.area_type or "Interior").lower().strip()
     room = record.room_id or "none"
-    product = (record.product or "unknown").lower()
-    location = (record.location or "unknown").lower()
-    sample = (record.sample_no or "no_sample").lower()
+    # Normalize: lowercase, strip, collapse whitespace for dedup stability
+    product = " ".join((record.product or "unknown").lower().strip().split())
+    location = " ".join((record.location or "unknown").lower().strip().split())
+    sample = " ".join((record.sample_no or "no_sample").lower().strip().split())
 
     # Create hash of product description (first 50 chars) using SHA-256
     desc_hash = hashlib.sha256(

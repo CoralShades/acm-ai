@@ -496,9 +496,39 @@ async def schema_inference_node(state: dict) -> dict:
         response = await model.ainvoke([SystemMessage(content=prompt_text)])
         result = parse_json_response(response.content)
 
-        if not result or "mappings" not in result:
-            logger.warning("schema_inference_node: LLM returned invalid response, skipping")
+        if not result:
+            logger.warning("schema_inference_node: LLM returned no parseable JSON, skipping")
             return {}
+
+        # Fallback: if LLM returned a flat dict {header: sf_field} instead of
+        # the expected {"mappings": [...]} structure, convert it.
+        if "mappings" not in result:
+            if isinstance(result, dict) and all(
+                isinstance(k, str) and isinstance(v, str) for k, v in result.items()
+            ):
+                logger.info(
+                    "schema_inference_node: converting flat dict response to mappings format"
+                )
+                result = {
+                    "mappings": [
+                        {"pdf_header": k, "sf_field": v, "confidence": 0.7}
+                        for k, v in result.items()
+                        if k not in ("overall_confidence", "detected_consultant", "unmapped_headers")
+                    ],
+                    "unmapped_headers": result.get("unmapped_headers", []),
+                    "overall_confidence": result.get("overall_confidence", 0.5),
+                }
+            elif isinstance(result, list):
+                # LLM returned a bare list of mappings
+                logger.info(
+                    "schema_inference_node: converting list response to mappings format"
+                )
+                result = {"mappings": result, "overall_confidence": 0.5}
+            else:
+                logger.warning(
+                    "schema_inference_node: LLM returned unrecognized format, skipping"
+                )
+                return {}
 
         # ------------------------------------------------------------------
         # 6. Parse LLM response into InferredSchema
