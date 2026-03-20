@@ -83,6 +83,49 @@ COLUMN_ALIASES: dict[str, list[str]] = {
     ],
 }
 
+# Footer indicators — rows starting with these words are summary/footer rows
+FOOTER_INDICATORS = frozenset(
+    {"total", "page", "end of", "notes:", "subtotal", "count", "sum", "continued"}
+)
+
+
+def _is_footer_row(row_cells: list[dict], num_cols: int) -> bool:
+    """Detect footer/summary rows that should not be extracted.
+
+    Returns True for:
+    - Rows where ALL cells are empty or contain only dashes/whitespace.
+    - Rows whose concatenated text starts with a known footer indicator.
+
+    Args:
+        row_cells: List of Docling cell dicts for the row.
+        num_cols: Total column count for the table.
+
+    Returns:
+        True if the row is a footer/summary row.
+    """
+    if not row_cells:
+        return True
+
+    # Collect non-empty cell texts
+    texts: list[str] = []
+    for cell in row_cells:
+        t = cell.get("text", "").strip()
+        if t and t != "-":
+            texts.append(t)
+
+    # All cells empty or dash-only → skip
+    if not texts:
+        return True
+
+    # Concatenated text check against footer indicators
+    combined = " ".join(texts).lower().strip()
+    for indicator in FOOTER_INDICATORS:
+        if combined.startswith(indicator):
+            return True
+
+    return False
+
+
 # Material keywords that indicate a multi-item cell (Type E1)
 _MATERIAL_KEYWORDS = (
     "tile",
@@ -408,6 +451,10 @@ def segment_docling_table(
                 # Type E2: note row
                 pending_notes = text
                 continue
+
+        # Skip footer/summary rows and all-empty rows
+        if _is_footer_row(row_cells, num_cols):
+            continue
 
         # Build cells dict using canonical column names
         cells_dict: dict[str, str] = {}

@@ -20,6 +20,8 @@ from open_notebook.database.repository import repo_query
 from open_notebook.domain.acm import ACMRecord, BuildingRecord
 from open_notebook.domain.notebook import Source
 from open_notebook.extractors.pipeline_event_bus import (
+    ExtractionDoclingCompleteData,
+    ExtractionDoclingCompleteEvent,
     ExtractionFailedData,
     ExtractionFailedEvent,
     ExtractionStartedData,
@@ -253,6 +255,51 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 "process_source may still be running or failed"
             )
 
+        # Emit docling_complete summary for SSE subscribers
+        if command_id:
+            try:
+                from open_notebook.database.repository import (
+                    ensure_record_id as _eri,
+                )
+
+                _sid = _eri(source_id)
+                table_rows = await repo_query(
+                    "SELECT count() as cnt, math::min(page_start) as min_page, math::max(page_end) as max_page "
+                    "FROM acm_table_section WHERE source_id=$sid GROUP ALL;",
+                    {"sid": _sid},
+                )
+                _cnt = (
+                    table_rows[0]["cnt"]
+                    if isinstance(table_rows, list) and len(table_rows) > 0
+                    else 0
+                )
+                _min_page = (
+                    table_rows[0].get("min_page", 1)
+                    if isinstance(table_rows, list) and len(table_rows) > 0
+                    else 1
+                )
+                _max_page = (
+                    table_rows[0].get("max_page", 1)
+                    if isinstance(table_rows, list) and len(table_rows) > 0
+                    else 1
+                )
+                _pages = list(range(_min_page, _max_page + 1)) if _min_page and _max_page else []
+                if _cnt > 0:
+                    await get_event_bus().publish(
+                        ExtractionDoclingCompleteEvent(
+                            operation_id=command_id,
+                            data=ExtractionDoclingCompleteData(
+                                source_id=source_id,
+                                tables_count=_cnt,
+                                page_numbers=_pages or [],
+                            ),
+                        )
+                    )
+            except Exception as _pub_err:
+                logger.debug(
+                    f"Failed to publish extraction.docling_complete: {_pub_err}"
+                )
+
         # Enhanced start logging (E1-S21)
         text_len = len(source.full_text) if source.full_text else 0
         logger.info(
@@ -350,6 +397,14 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                     logger.debug(
                         f"[MCS12] Failed to publish extraction.failed (timeout): {_pub_err}"
                     )
+            # Update review_status so job card shows correct state
+            try:
+                _src = await Source.get(source_id)
+                if _src:
+                    _src.review_status = "pending_review"
+                    await _src.save()
+            except Exception as e:
+                logger.warning(f"Failed to update review_status for {source_id}: {e}")
             return ACMExtractionOutput(
                 success=False,
                 source_id=source_id,
@@ -383,6 +438,14 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                     logger.debug(
                         f"[MCS12] Failed to publish extraction.failed (pipeline): {_pub_err}"
                     )
+            # Update review_status so job card shows correct state
+            try:
+                _src = await Source.get(source_id)
+                if _src:
+                    _src.review_status = "pending_review"
+                    await _src.save()
+            except Exception as e:
+                logger.warning(f"Failed to update review_status for {source_id}: {e}")
             return ACMExtractionOutput(
                 success=False,
                 source_id=source_id,
@@ -398,6 +461,14 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
             logger.info(f"No ACM records found in source {source_id}")
             if command_id:
                 await _write_terminal_status(command_id, "completed", 0)
+            # Update review_status so job card shows correct state
+            try:
+                _src = await Source.get(source_id)
+                if _src:
+                    _src.review_status = "pending_review"
+                    await _src.save()
+            except Exception as e:
+                logger.warning(f"Failed to update review_status for {source_id}: {e}")
             return ACMExtractionOutput(
                 success=True,
                 source_id=source_id,
@@ -463,6 +534,15 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
 
         if command_id:
             await _write_terminal_status(command_id, "completed", result.total_records)
+
+        # Update review_status so job card shows correct state
+        try:
+            _src = await Source.get(source_id)
+            if _src:
+                _src.review_status = "pending_review"
+                await _src.save()
+        except Exception as e:
+            logger.warning(f"Failed to update review_status for {source_id}: {e}")
 
         return ACMExtractionOutput(
             success=True,

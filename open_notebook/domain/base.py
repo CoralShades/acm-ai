@@ -3,6 +3,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Type, TypeVar, Union, ca
 
 from loguru import logger
 from pydantic import BaseModel, ValidationError, field_validator, model_validator
+from surrealdb import RecordID as SurrealRecordID
 
 from open_notebook.database.repository import (
     ensure_record_id,
@@ -153,6 +154,9 @@ class ObjectModel(BaseModel):
             first_result = result_list[0] if result_list else {}
             for key, value in first_result.items():
                 if hasattr(self, key):
+                    # Convert RecordID objects back to str for Pydantic str fields
+                    if isinstance(value, SurrealRecordID):
+                        value = str(value)
                     if isinstance(getattr(self, key), BaseModel):
                         setattr(self, key, type(getattr(self, key))(**value))
                     else:

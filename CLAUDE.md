@@ -163,11 +163,11 @@ frontend/src/
   components/           # React components
     ui/                 # Base shadcn/ui-style components
     common/             # Shared (CommandPalette, ModelSelector)
-    acm/                # ACM domain (BuildingGrid, ACMGrid, BuildingViewDialog, ProvenanceViewer, etc.)
+    acm/                # ACM domain (BuildingGrid, ACMGrid, BuildingViewDialog, ProvenanceViewer, DoclingTablesPanel, BuildingsProgressPanel, LiveRecordsPanel, etc.)
     chat/               # Chat components (SmartChatPanel, renderers/)
-    jobs/               # Job-related components
+    jobs/               # Job-related components (JobCard with live counters, ExtractionStatusBanner)
     notebooks/, sources/, notes/  # Feature components
-  hooks/                # Custom React hooks
+  hooks/                # Custom React hooks (useLiveStats, useExtractionStream, useV3SSE, etc.)
   lib/                  # Utilities and API clients
   stores/               # Zustand stores
 ```
@@ -275,6 +275,11 @@ Relationships:
 
 **ACM-specific fields:**
 - `ACMRecord.table_bbox`: Optional bounding box tracking `{x, y, width, height, page}` for table provenance (populated when using MinerU extraction)
+
+**SurrealDB Query Patterns:**
+- **`type::thing()` for record ref comparison**: When a column is typed as `record<table>` and you have a string ID (e.g., `"source:xxx"`), use `type::thing('source:xxx')` in the WHERE clause. Plain string comparison silently returns zero results.
+- **RecordID in base.py setattr**: SurrealDB Python client returns `RecordID` objects in query results. The `ObjectModel` setattr loop must convert these to `str()` when the target Pydantic field is typed as `str`, otherwise downstream serialization fails.
+- **LLM string-to-int coercion**: LLMs frequently return numeric fields (e.g., `page_start`, `page_end`) as strings. Use Pydantic `BeforeValidator` to coerce `str` to `int` rather than rejecting with a validation error.
 
 ## Environment Variables
 
@@ -529,6 +534,7 @@ Item__c extraction supports two modes controlled by `ACM_ITEM_EXTRACTION_MODE` e
 - Frontend hook: `frontend/src/lib/hooks/useV3SSE.ts`
 - Zustand store: `frontend/src/lib/stores/streamingStore.ts`
 - Event categories: `extraction`, `ai`, `bulk`
+- Key events: `extraction.started`, `extraction.docling_complete`, `extraction.complete`, `extraction.failed`, `ai.building_extracted`, `ai.building_saved`, `ai.save_started`, `ai.save_progress`, `ai.save_complete`
 
 ### V3 API Endpoints
 - `GET /api/acm/buildings?source_id=X` -- Building records with record_count
@@ -540,6 +546,7 @@ Item__c extraction supports two modes controlled by `ACM_ITEM_EXTRACTION_MODE` e
 - `POST /api/acm/bulk-edit` -- Bulk field edit
 - `POST /api/acm/bulk-validate` -- Bulk re-validation
 - `GET /api/acm/validation-summary/{source_id}` -- Validation summary
+- `GET /api/sources/{source_id}/live-stats` -- Live extraction counters for job card polling
 
 ### V3 Frontend Type Files
 - `frontend/src/lib/types/acm.ts` -- ACMRecord, RawExtraction, Provenance types

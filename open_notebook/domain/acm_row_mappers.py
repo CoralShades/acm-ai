@@ -22,6 +22,7 @@ from open_notebook.extractors.normalizers.taxonomy import (
 )
 
 # Case-insensitive mapping of raw friability inputs to canonical values.
+# Keys mapping to empty string are recognized N/A indicators (no warning emitted).
 _FRIABILITY_MAP: dict[str, str] = {
     "f": "Friable",
     "friable": "Friable",
@@ -32,6 +33,9 @@ _FRIABILITY_MAP: dict[str, str] = {
     "nonfriable": "Non-friable",
     "no": "Non-friable",
 }
+
+# Recognized N/A indicators — produce None without a warning.
+_FRIABILITY_NA: set[str] = {"-", "n/a", "na", "none", ""}
 
 
 def normalize_friability(raw: Optional[str]) -> Optional[str]:
@@ -60,6 +64,11 @@ def normalize_friability(raw: Optional[str]) -> Optional[str]:
     stripped = raw.strip()
     if not stripped:
         return None
+
+    # Check recognized N/A indicators first (no warning)
+    if stripped.lower() in _FRIABILITY_NA:
+        return None
+
     key = stripped.lower().replace("-", " ").replace("  ", " ").strip()
     # Re-normalize after stripping hyphens for the lookup
     canonical = _FRIABILITY_MAP.get(key)

@@ -762,6 +762,35 @@ development_status:
   bug-cleanup-mock-tests: done  # Remove self-referential mock tests
   bug-embedding-ollama-connection: done  # Fix A: RuntimeError logging + type/repr; Fix B: .env.example 3-scenario docs. Validated 2026-02-23: Ollama mxbai-embed-large returns 1024 floats ✓
   bug-zero-pages-extraction: done  # Fix: replace broken inline regex with _extract_total_pages() + warning log. Validated 2026-02-23: pipeline logs "(19 pages)" for Broadmeadows PDF ✓
+
+  # ─────────────────────────────────────────────────────
+  # UX Mega-Pack (2026-03-20)
+  # 3 interconnected UX bugs fixed as a single pack.
+  # Bug 1: Upload async_processing + review_status lifecycle
+  # Bug 2: Extract page 3-panel progressive layout (3 new components)
+  # Bug 3: Job card live dashboard counters (new /live-stats endpoint + useLiveStats hook)
+  # ─────────────────────────────────────────────────────
+  ux-mega-pack-upload-async-2026-03-20: done  # fix(ux): force async_processing=True on upload, set review_status='extracting' on upload + 'pending_review' on all terminal paths. Files: sources.py, acm_commands.py, QuickUploadDialog.tsx, UploadWizard.tsx.
+  ux-mega-pack-extract-3panel-2026-03-20: done  # feat(ux): 3-panel progressive extract page layout (DoclingTablesPanel, BuildingsProgressPanel, LiveRecordsPanel). New SSE events: extraction.docling_complete, ai.building_saved. Grouped save by building in acm_extraction.py.
+  ux-mega-pack-jobcard-live-2026-03-20: done  # feat(ux): job card live counters + elapsed timer. New GET /api/sources/{id}/live-stats endpoint. useLiveStats hook. SourceListResponse enriched with tables_count, records_count, site_name, consultant_name.
+
+  # ─────────────────────────────────────────────────────
+  # Pipeline Fix Round: E2E Test Findings (2026-03-20)
+  # 8 issues found during live E2E test with Clutch_Broadmeadows.pdf
+  # Extraction produced 42 records / 1 building / 9 tables but with
+  # Pydantic validation errors, enum gaps, and serialization warnings.
+  # Fixes applied by parallel agent during test session.
+  # Report: docs/sprint-artifacts/e2e-evidence/live/final-test-report.md
+  # ─────────────────────────────────────────────────────
+  bugfix-page-start-pydantic-coercion-2026-03-20: done  # fix(extraction): LLM returns page_start/page_end as string, Pydantic int field rejects. Added BeforeValidator coercion.
+  bugfix-recordid-serialization-warning-2026-03-20: done  # fix(persistence): base.py setattr loop sets RecordID objects on string-typed fields. Convert to str in setattr.
+  bugfix-sample-result-enum-expansion-2026-03-20: done  # fix(validation): 78 warnings from ARA sample_result values not in enum. Expanded enum + added synonym mapping.
+  bugfix-area-type-sf-values-2026-03-20: done  # fix(validation): area_type Internal/External rejected — SF picklist values differ from BAR values. Added SF values to allowed set.
+  bugfix-friability-dash-mapping-2026-03-20: done  # fix(validation): friability "-" not in friability map (10 warnings). Added dash to map.
+  bugfix-footer-row-detection-2026-03-20: done  # fix(extraction): 3/44 row extraction failures due to footer rows. Added footer row detection to row segmenter.
+  bugfix-schema-inference-mappings-key-2026-03-20: done  # fix(extraction): schema inference LLM JSON response missing "mappings" key — cascade from page_start coercion error.
+  bugfix-live-stats-surrealdb-record-ref-2026-03-20: done  # fix(api): live-stats endpoint returns zeros — SurrealDB string vs record ref comparison. Fixed with type::thing() cast.
+
   # Integration Validation: All 6 steps passed 2026-02-23
   # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
   # STEP 2: Ollama mxbai-embed-large health → 1024 floats ✓
@@ -775,8 +804,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 291  (280 prior + MCS11 FK fix + MCS13 collision fix + MCS13 schema fix + MCS13 checkpointer fix + MCS13 DocumentMeta fix + MCS11 in-progress split + MCS12 done)
-# Stories Done: 261 (90%)  -- 260 prior + mcs13-schema-inference-documentmeta-fix
+# Total Stories: 302  (294 prior + 8 pipeline fix round bug fixes)
+# Stories Done: 272 (90%)  -- 264 prior + 8 pipeline fix round bug fixes
 # Stories Review: 0
 # Stories In-Progress: 1 (mcs11-jobs-source-unification — code done, E2E verification 6.2-6.6 pending)
 # Stories Blocked: 0

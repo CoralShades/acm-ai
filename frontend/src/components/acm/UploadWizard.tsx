@@ -121,6 +121,7 @@ export function UploadWizard() {
         type: 'upload',
         title: file.name,
         file,
+        async_processing: true,
       })
       sourceId = sourceResponse.id
     } catch (err: unknown) {
@@ -160,7 +161,7 @@ export function UploadWizard() {
       return
     }
 
-    router.push(`/extraction/${encodeURIComponent(sourceId)}`)
+    router.push(`/jobs/${encodeURIComponent(sourceId)}/extract`)
   }, [file, isSubmitting, router, toastError])
 
   // ─── Processing animation state cycling ───────────────────────────────────

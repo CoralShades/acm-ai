@@ -148,6 +148,35 @@ async def ask_graph(state: AskState):
 
 **Architecture Pattern**: Command pattern with async job queue
 
+### 6. Source Review Status Lifecycle
+
+Sources track their processing state via `review_status`:
+
+```
+Upload → 'extracting' → 'pending_review' → (manual review stages) → 'published'
+```
+
+- **`extracting`**: Set on upload when `async_processing=True` (forced for all uploads)
+- **`pending_review`**: Set on all terminal paths in `acm_commands.py` (success, failure, timeout)
+- Further statuses (`building_review`, `acm_review`, `published`) are manual workflow stages
+
+### 7. Extract Page — 3-Panel Progressive Layout
+
+The extract page (`/jobs/{id}/extract`) shows extraction progress with three panels that populate progressively:
+
+1. **DoclingTablesPanel** — Raw Docling table cards (populated during DOCLING_EXTRACTION stage)
+2. **BuildingsProgressPanel** — Live building list (populated as `ai.building_saved` events arrive)
+3. **LiveRecordsPanel** — Per-building ACM records table (populated as records are saved)
+
+Each panel subscribes to SSE events via `useV3SSE` and updates in real time.
+
+### 8. Job Card Live Stats
+
+Job cards on `/jobs` poll `GET /api/sources/{id}/live-stats` to show live counters during extraction:
+- `tables_count`, `buildings_count`, `records_count` — aggregated from DB
+- `site_name`, `consultant_name` — from `source_intelligence` table
+- Polling managed by `useLiveStats` hook (2-3 second interval, auto-stops when extraction completes)
+
 ## 🗃️ Database Schema
 
 Open Notebook uses SurrealDB with a flexible document-oriented schema:

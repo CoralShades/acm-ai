@@ -51,6 +51,15 @@ class ExtractionConsensusCompleteData(BaseModel):
     consensus_duration_ms: int
 
 
+class ExtractionDoclingCompleteData(BaseModel):
+    """Payload for extraction.docling_complete."""
+
+    source_id: str
+    tables_count: int
+    page_numbers: List[int] = Field(default_factory=list)
+    duration_ms: int = 0
+
+
 class AIBuildingExtractedData(BaseModel):
     """Payload for ai.building_extracted."""
 
@@ -59,6 +68,10 @@ class AIBuildingExtractedData(BaseModel):
     records_extracted: int
     model_used: str
     duration_ms: int
+    building_type: Optional[str] = None
+    suburb: Optional[str] = None
+    postcode: Optional[str] = None
+    building_address: Optional[str] = None
 
 
 class AIItemsExtractedData(BaseModel):
@@ -107,6 +120,15 @@ class AISaveCompleteData(BaseModel):
     records_saved: int
     sections_saved: int
     duration_ms: int
+
+
+class AIBuildingSavedData(BaseModel):
+    """Payload for ai.building_saved."""
+
+    building_id: str
+    building_name: str
+    records_saved: int
+    records_total_so_far: int
 
 
 class BulkProgressData(BaseModel):
@@ -200,6 +222,13 @@ class ExtractionConsensusCompleteEvent(V3PipelineEvent):
     data: ExtractionConsensusCompleteData  # type: ignore[assignment]
 
 
+class ExtractionDoclingCompleteEvent(V3PipelineEvent):
+    """Emitted when Docling table extraction finishes."""
+
+    type: Literal["extraction.docling_complete"] = "extraction.docling_complete"
+    data: ExtractionDoclingCompleteData  # type: ignore[assignment]
+
+
 class ExtractionCompleteData(BaseModel):
     """Payload for extraction.complete (overall extraction finished successfully)."""
 
@@ -280,6 +309,13 @@ class AISaveCompleteEvent(V3PipelineEvent):
     data: AISaveCompleteData  # type: ignore[assignment]
 
 
+class AIBuildingSavedEvent(V3PipelineEvent):
+    """Emitted after each building group is saved to DB."""
+
+    type: Literal["ai.building_saved"] = "ai.building_saved"
+    data: AIBuildingSavedData  # type: ignore[assignment]
+
+
 class BulkProgressEvent(V3PipelineEvent):
     """Emitted periodically during bulk batch operations."""
 
@@ -313,6 +349,7 @@ V3_EVENT_TYPES = (
     ExtractionStartedEvent,
     ExtractionProviderCompleteEvent,
     ExtractionConsensusCompleteEvent,
+    ExtractionDoclingCompleteEvent,
     ExtractionCompleteEvent,
     ExtractionFailedEvent,
     AIBuildingExtractedEvent,
@@ -322,6 +359,7 @@ V3_EVENT_TYPES = (
     AISaveStartedEvent,
     AISaveProgressEvent,
     AISaveCompleteEvent,
+    AIBuildingSavedEvent,
     BulkProgressEvent,
     BulkCompleteEvent,
     SchemaMappingReviewEvent,

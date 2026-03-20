@@ -216,6 +216,10 @@ async def get_sources(
 
         source_ids = [str(row["id"]) for row in result if row.get("id")]
         building_counts: dict[str, int] = {}
+        tables_counts: dict[str, int] = {}
+        records_counts: dict[str, int] = {}
+        site_names: dict[str, Optional[str]] = {}
+        consultant_names: dict[str, Optional[str]] = {}
         if source_ids:
             try:
                 building_rows = await repo_query(
@@ -240,6 +244,59 @@ async def get_sources(
                         building_counts[sid] = len(filtered)
             except Exception as e:
                 logger.warning(f"Failed to fetch building counts for source list: {e}")
+
+            try:
+                tables_rows = await repo_query(
+                    """
+                    SELECT source_id, count() AS cnt
+                    FROM acm_table_section
+                    WHERE source_id INSIDE $source_ids
+                    GROUP BY source_id
+                    """,
+                    {"source_ids": source_ids},
+                )
+                for row in tables_rows or []:
+                    sid = str(row.get("source_id", ""))
+                    if sid:
+                        tables_counts[sid] = int(row.get("cnt", 0))
+            except Exception as e:
+                logger.warning(f"Failed to fetch tables counts for source list: {e}")
+
+            try:
+                records_rows = await repo_query(
+                    """
+                    SELECT source_id, count() AS cnt
+                    FROM acm_record
+                    WHERE source_id INSIDE $source_ids
+                    GROUP BY source_id
+                    """,
+                    {"source_ids": source_ids},
+                )
+                for row in records_rows or []:
+                    sid = str(row.get("source_id", ""))
+                    if sid:
+                        records_counts[sid] = int(row.get("cnt", 0))
+            except Exception as e:
+                logger.warning(f"Failed to fetch records counts for source list: {e}")
+
+            try:
+                intel_rows = await repo_query(
+                    """
+                    SELECT source_id, site_name, consultant_name
+                    FROM source_intelligence
+                    WHERE source_id INSIDE $source_ids
+                    """,
+                    {"source_ids": source_ids},
+                )
+                for row in intel_rows or []:
+                    sid = str(row.get("source_id", ""))
+                    if sid:
+                        site_names[sid] = row.get("site_name")
+                        consultant_names[sid] = row.get("consultant_name")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to fetch intelligence metadata for source list: {e}"
+                )
 
         # Extract command IDs for batch status fetching
         command_ids = []
@@ -338,6 +395,7 @@ async def get_sources(
                 except Exception:
                     pass
 
+            _sid_str = str(row["id"])
             response_list.append(
                 SourceListResponse(
                     id=row["id"],
@@ -359,10 +417,15 @@ async def get_sources(
                     status=status,
                     processing_info=processing_info,
                     review_status=row.get("review_status"),
-                    building_count=building_counts.get(str(row["id"]), 0),
+                    building_count=building_counts.get(_sid_str, 0),
                     # PDF metadata
                     page_count=row.get("page_count") or None,
                     file_size=file_size,
+                    # Live extraction stats
+                    tables_count=tables_counts.get(_sid_str),
+                    records_count=records_counts.get(_sid_str),
+                    site_name=site_names.get(_sid_str),
+                    consultant_name=consultant_names.get(_sid_str),
                 )
             )
 
@@ -443,6 +506,10 @@ async def create_source(
                     status_code=404, detail=f"Transformation {trans_id} not found"
                 )
 
+        # Force async for uploads — Docling table extraction is too slow for sync HTTP
+        if source_data.type == "upload":
+            source_data.async_processing = True
+
         # Branch based on processing mode
         if source_data.async_processing:
             # ASYNC PATH: Create source record first, then queue command
@@ -452,6 +519,7 @@ async def create_source(
             source = Source(
                 title=source_data.title or "Processing...",
                 topics=[],
+                review_status="extracting",
             )
             await source.save()
 
@@ -741,6 +809,58 @@ async def get_source(source_id: str):
     except Exception as e:
         logger.error(f"Error fetching source {source_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching source: {str(e)}")
+
+
+@router.get("/sources/{source_id}/live-stats")
+async def get_source_live_stats(source_id: str):
+    """Lightweight live stats for job card during extraction."""
+    sid = str(ensure_record_id(source_id))
+    # source_id columns store record refs — type::thing() casts string to record
+    # Pass as inline literal since SurrealDB WS param binding doesn't auto-cast
+    import re
+
+    if not re.match(r"^source:[a-zA-Z0-9_]+$", sid):
+        return {
+            "tables_count": 0,
+            "buildings_count": 0,
+            "records_count": 0,
+            "site_name": None,
+            "consultant_name": None,
+        }
+
+    tables_result = await repo_query(
+        f"SELECT count() as cnt FROM acm_table_section WHERE source_id = type::thing('{sid}') GROUP ALL;",
+        {},
+    )
+    buildings_result = await repo_query(
+        f"SELECT count() as cnt FROM building_record WHERE source_id = type::thing('{sid}') GROUP ALL;",
+        {},
+    )
+    records_result = await repo_query(
+        f"SELECT count() as cnt FROM acm_record WHERE source_id = type::thing('{sid}') GROUP ALL;",
+        {},
+    )
+    intel_result = await repo_query(
+        f"SELECT site_name, consultant_name FROM source_intelligence WHERE source_id = type::thing('{sid}') LIMIT 1;",
+        {},
+    )
+
+    def _get_cnt(r: Any) -> int:
+        if isinstance(r, list) and len(r) > 0 and isinstance(r[0], dict):
+            return r[0].get("cnt", 0)
+        return 0
+
+    intel = {}
+    if isinstance(intel_result, list) and len(intel_result) > 0 and isinstance(intel_result[0], dict):
+        intel = intel_result[0]
+
+    return {
+        "tables_count": _get_cnt(tables_result),
+        "buildings_count": _get_cnt(buildings_result),
+        "records_count": _get_cnt(records_result),
+        "site_name": intel.get("site_name"),
+        "consultant_name": intel.get("consultant_name"),
+    }
 
 
 @router.head("/sources/{source_id}/download")

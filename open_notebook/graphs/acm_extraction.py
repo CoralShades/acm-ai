@@ -9,6 +9,7 @@ Story: E1-S7 AI-Powered ACM Extraction
 
 import asyncio
 import hashlib
+import itertools
 import os
 import re
 import time
@@ -86,6 +87,8 @@ from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.extractors.pipeline_event_bus import (
     AIBuildingExtractedData,
     AIBuildingExtractedEvent,
+    AIBuildingSavedData,
+    AIBuildingSavedEvent,
     AIDedupCompleteData,
     AIDedupCompleteEvent,
     AIItemsExtractedData,
@@ -813,6 +816,10 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                                 records_extracted=1,
                                 model_used=model_id or "unknown",
                                 duration_ms=_bldg_duration_ms,
+                                building_type=result.building_type,
+                                suburb=result.suburb,
+                                postcode=result.postcode,
+                                building_address=result.building_address,
                             ),
                         )
                     )
@@ -2780,84 +2787,116 @@ async def save_records(state: dict, config: RunnableConfig) -> dict:
     saved_count = 0
     errors = []
 
-    for record in records:
-        try:
-            # Resolve parent section (E11-S1)
-            parent_id = section_map.get(record.building_id)
+    # Group records by building for per-building SSE events
+    sorted_records = sorted(records, key=lambda r: r.building_id or "unknown")
 
-            # Convert extraction record to ACMRecord
-            acm_record = ACMRecord(
-                source_id=str(source.id),
-                school_name=context.school_name or "Unknown School",
-                school_code=context.school_code,
-                building_id=record.building_id,
-                building_name=record.building_name,
-                building_year=record.building_year,
-                building_construction=record.building_construction,
-                building_record_id=record.building_record_id,  # E32-S2
-                room_id=record.room_id,
-                room_name=record.room_name,
-                room_area=record.room_area,
-                area_type=record.area_type or "Interior",
-                floor_level=record.floor_level,
-                date_of_inspection=record.date_of_inspection,
-                product=record.product,
-                material_description=record.material_description,
-                extent=record.extent,
-                location=record.location,
-                friable=record.friable,
-                material_condition=record.material_condition,
-                risk_status=record.risk_status,
-                result=record.result,
-                page_number=record.page_number,
-                parent_table_id=parent_id,
-                # New AI extraction fields
-                disturbance_potential=record.disturbance_potential,
-                sample_no=record.sample_no,
-                sample_result=record.sample_result,
-                identifying_company=record.identifying_company,
-                quantity=record.quantity,
-                acm_labelled=record.acm_labelled,
-                acm_label_details=record.acm_label_details,
-                hygienist_recommendations=record.hygienist_recommendations,
-                psb_supplied_acm_id=record.psb_supplied_acm_id,
-                removal_status=record.removal_status,
-                date_of_removal=record.date_of_removal,
-                quantity_removed=record.quantity_removed,
-                removal_notification_no=record.removal_notification_no,
-                epa_certificate_no=record.epa_certificate_no,
-                additional_comments=record.additional_comments,
-                extraction_confidence=record.extraction_confidence,
-                data_issues=record.data_issues if record.data_issues else None,
-            )
+    for building_id, building_records_iter in itertools.groupby(
+        sorted_records, key=lambda r: r.building_id or "unknown"
+    ):
+        building_records = list(building_records_iter)
+        building_name = (
+            building_records[0].building_name if building_records else "Unknown"
+        )
+        building_saved = 0
 
-            # Generate enriched text for contextual embedding (E1-S14)
-            acm_record.enriched_text = acm_record.get_enriched_embedding_text()
+        for record in building_records:
+            try:
+                # Resolve parent section (E11-S1)
+                parent_id = section_map.get(record.building_id)
 
-            await acm_record.save()
-            saved_count += 1
+                # Convert extraction record to ACMRecord
+                acm_record = ACMRecord(
+                    source_id=str(source.id),
+                    school_name=context.school_name or "Unknown School",
+                    school_code=context.school_code,
+                    building_id=record.building_id,
+                    building_name=record.building_name,
+                    building_year=record.building_year,
+                    building_construction=record.building_construction,
+                    building_record_id=record.building_record_id,  # E32-S2
+                    room_id=record.room_id,
+                    room_name=record.room_name,
+                    room_area=record.room_area,
+                    area_type=record.area_type or "Interior",
+                    floor_level=record.floor_level,
+                    date_of_inspection=record.date_of_inspection,
+                    product=record.product,
+                    material_description=record.material_description,
+                    extent=record.extent,
+                    location=record.location,
+                    friable=record.friable,
+                    material_condition=record.material_condition,
+                    risk_status=record.risk_status,
+                    result=record.result,
+                    page_number=record.page_number,
+                    parent_table_id=parent_id,
+                    # New AI extraction fields
+                    disturbance_potential=record.disturbance_potential,
+                    sample_no=record.sample_no,
+                    sample_result=record.sample_result,
+                    identifying_company=record.identifying_company,
+                    quantity=record.quantity,
+                    acm_labelled=record.acm_labelled,
+                    acm_label_details=record.acm_label_details,
+                    hygienist_recommendations=record.hygienist_recommendations,
+                    psb_supplied_acm_id=record.psb_supplied_acm_id,
+                    removal_status=record.removal_status,
+                    date_of_removal=record.date_of_removal,
+                    quantity_removed=record.quantity_removed,
+                    removal_notification_no=record.removal_notification_no,
+                    epa_certificate_no=record.epa_certificate_no,
+                    additional_comments=record.additional_comments,
+                    extraction_confidence=record.extraction_confidence,
+                    data_issues=record.data_issues if record.data_issues else None,
+                )
 
-            # MCS9: Publish ai.save_progress every 10 records
-            if operation_id and saved_count % 10 == 0:
-                try:
-                    await get_event_bus().publish(
-                        AISaveProgressEvent(
-                            operation_id=operation_id,
-                            data=AISaveProgressData(
-                                saved=saved_count,
-                                total=len(records),
-                                current_building=record.building_id or "unknown",
-                            ),
+                # Generate enriched text for contextual embedding (E1-S14)
+                acm_record.enriched_text = acm_record.get_enriched_embedding_text()
+
+                await acm_record.save()
+                saved_count += 1
+                building_saved += 1
+
+                # MCS9: Publish ai.save_progress every 10 records
+                if operation_id and saved_count % 10 == 0:
+                    try:
+                        await get_event_bus().publish(
+                            AISaveProgressEvent(
+                                operation_id=operation_id,
+                                data=AISaveProgressData(
+                                    saved=saved_count,
+                                    total=len(records),
+                                    current_building=record.building_id or "unknown",
+                                ),
+                            )
                         )
-                    )
-                except Exception as _pub_err:
-                    logger.debug(
-                        f"[MCS9] Failed to publish ai.save_progress: {_pub_err}"
-                    )
+                    except Exception as _pub_err:
+                        logger.debug(
+                            f"[MCS9] Failed to publish ai.save_progress: {_pub_err}"
+                        )
 
-        except Exception as e:
-            logger.error(f"Failed to save record: {e}")
-            errors.append(str(e))
+            except Exception as e:
+                logger.error(f"Failed to save record: {e}")
+                errors.append(str(e))
+
+        # Emit per-building saved event
+        if operation_id and building_saved > 0:
+            try:
+                await get_event_bus().publish(
+                    AIBuildingSavedEvent(
+                        operation_id=operation_id,
+                        data=AIBuildingSavedData(
+                            building_id=building_id,
+                            building_name=building_name or "Unknown",
+                            records_saved=building_saved,
+                            records_total_so_far=saved_count,
+                        ),
+                    )
+                )
+            except Exception as _pub_err:
+                logger.debug(
+                    f"Failed to publish ai.building_saved for {building_id}: {_pub_err}"
+                )
 
     extraction_time = int((time.monotonic() - save_start) * 1000)
 

@@ -45,6 +45,11 @@ export interface SourceListResponse {
   // PDF metadata for job card icons
   page_count?: number
   file_size?: number
+  // Live extraction stats (populated by backend during/after extraction)
+  tables_count?: number
+  records_count?: number
+  site_name?: string | null
+  consultant_name?: string | null
 }
 
 export interface SourceDetailResponse extends SourceListResponse {

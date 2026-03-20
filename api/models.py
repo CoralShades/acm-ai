@@ -377,6 +377,11 @@ class SourceListResponse(BaseModel):
     # PDF metadata for job card icons
     page_count: Optional[int] = None
     file_size: Optional[int] = None
+    # Live extraction stats for job cards
+    tables_count: Optional[int] = None
+    records_count: Optional[int] = None
+    site_name: Optional[str] = None
+    consultant_name: Optional[str] = None
 
 
 # Context API models

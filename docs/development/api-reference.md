@@ -232,6 +232,26 @@ Delete a source.
 }
 ```
 
+### GET /api/sources/{source_id}/live-stats
+
+Lightweight live stats for job card polling during extraction. Returns counters aggregated from `acm_table_section`, `building_record`, `acm_record`, and `source_intelligence` tables in a single efficient query.
+
+**Path Parameters**:
+- `source_id` (string): Source ID (e.g. `source:abc123`)
+
+**Response**:
+```json
+{
+  "tables_count": 8,
+  "buildings_count": 3,
+  "records_count": 42,
+  "site_name": "Broadmeadows Primary School",
+  "consultant_name": "DET"
+}
+```
+
+All fields return `0` or `null` if no data exists yet. Designed for frequent polling (every 2-3 seconds) during active extraction.
+
 ## 📝 Notes API
 
 Manage notes within notebooks.

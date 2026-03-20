@@ -130,11 +130,78 @@
 
 ---
 
+---
+
+## UX Mega-Pack (2026-03-20)
+
+Three interconnected UX bugs fixed as a single pack.
+
+### Bug 1: Upload Dialog -- Async Upload Fix (DONE)
+- `api/routers/sources.py`: Force `async_processing=True` for uploads, set `review_status='extracting'`
+- `commands/acm_commands.py`: Set `review_status='pending_review'` on all terminal paths
+- `frontend/src/components/sources/QuickUploadDialog.tsx`: `async_processing: true`, navigate to `/jobs/{id}/extract`
+- `frontend/src/components/acm/UploadWizard.tsx`: Same fix
+- **review_status lifecycle**: `extracting` -> `pending_review` (set on all terminal paths in acm_commands.py)
+
+### Bug 2: Extract Page -- 3-Panel Progressive Layout (DONE)
+- `frontend/src/app/(dashboard)/jobs/[id]/extract/page.tsx`: Rebuilt with 3-panel layout
+- NEW: `frontend/src/components/acm/DoclingTablesPanel.tsx` -- raw Docling table cards
+- NEW: `frontend/src/components/acm/BuildingsProgressPanel.tsx` -- live building list during extraction
+- NEW: `frontend/src/components/acm/LiveRecordsPanel.tsx` -- per-building records table (live)
+- `open_notebook/extractors/pipeline_event_bus.py`: New events (`extraction.docling_complete`, `ai.building_saved`)
+- `open_notebook/graphs/acm_extraction.py`: Grouped save by building
+
+### Bug 3: Job Card -- Live Dashboard Counters (DONE)
+- `frontend/src/components/jobs/JobCard.tsx`: Live counters, elapsed timer, site/consultant names
+- NEW: `frontend/src/lib/hooks/useLiveStats.ts` -- polls `GET /api/sources/{id}/live-stats`
+- `api/routers/sources.py`: New `/sources/{source_id}/live-stats` endpoint, enriched source list
+- `api/models.py`: Added `tables_count`, `records_count`, `site_name`, `consultant_name` to `SourceListResponse`
+- `frontend/src/lib/types/api.ts`: Matching TS type additions
+
+### New API Endpoint
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/sources/{source_id}/live-stats` | Lightweight counters for job card polling |
+
+Response: `{ tables_count, buildings_count, records_count, site_name, consultant_name }`
+
+### New SSE Events
+| Event | Emitted By | Payload |
+|-------|-----------|---------|
+| `extraction.docling_complete` | pipeline_event_bus | Docling table extraction finished |
+| `ai.building_saved` | pipeline_event_bus | Building record saved to DB |
+
+---
+
+## Pipeline Fix Round: E2E Test Findings (2026-03-20)
+
+Live E2E test with Clutch_Broadmeadows.pdf produced 42 records but surfaced 8 issues.
+All fixes applied during test session by parallel agent.
+
+### Errors Found & Fixed
+
+| # | Error | Severity | Fix |
+|---|-------|----------|-----|
+| 1 | page_start int_type Pydantic error | HIGH | BeforeValidator coercion on int fields |
+| 2 | RecordID serialization warning | MEDIUM | Convert RecordID to str in base.py setattr loop |
+| 3 | sample_result enum mismatch (78 warnings) | MEDIUM | Expanded enum + synonym mapping |
+| 4 | area_type Internal/External rejected (16) | LOW | Added SF picklist values to allowed set |
+| 5 | friability "-" warning (10) | LOW | Added dash to friability map |
+| 6 | Row extraction failures (3/44) | LOW | Added footer row detection to segmenter |
+| 7 | Schema inference invalid response | LOW | Cascade from Error 1 (page_start coercion) |
+| 8 | live-stats returns zeros | HIGH | type::thing() cast for SurrealDB record ref comparison |
+
+### Test Results
+- **PDF**: Clutch_Broadmeadows.pdf
+- **Records**: 42 extracted, 1 building, 9 tables
+- **Model**: ollama/llama3.1:8b on RTX 4090 (CUDA 12.6)
+- **Pipeline time**: 291s (4m 51s)
+- **E2E time**: 424s (7m 4s)
+- **Report**: `docs/sprint-artifacts/e2e-evidence/live/final-test-report.md`
+
+---
+
 ## Next Steps
-- [ ] User reviews and approves plan
-- [ ] Phase 1: Wire SSE streaming into /jobs/[id] (SP 3)
-- [ ] Phase 2: Add bulk operations to ACM Records tab (SP 3)
-- [ ] Phase 3: Search, filter, grid enhancements (SP 2)
-- [ ] Phase 4: Job card status on /jobs list (SP 2)
-- [ ] Phase 5: Validation error display (SP 2)
-- [ ] Phase 6: Verification & polish (SP 1)
+- [ ] MCS11 E2E verification (phases 6.2-6.6)
+- [ ] Phase 5.2-5.3: Error row highlighting, validation overview card
+- [ ] Phase 3.3-3.4: Per-building data source, building tab strip upgrade
