@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "scanned_at": "2026-03-18T23:59:11Z",
+  "scanned_at": "2026-03-20T02:00:42Z",
   "skills": [
     {
       "name": "a2a-protocol",
@@ -1768,6 +1768,7 @@
       "User Documetation Location : C:\\Users\\User\\Documents\\Obsidian Vault\\ACM",
       "CRITICAL PATH RULE (WSL/Windows)",
       "Project Overview",
+      "Primary User Routes (CRITICAL)",
       "Essential Commands",
       "Browser Automation",
       "Architecture",
