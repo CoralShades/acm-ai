@@ -21,13 +21,20 @@ SAMPLE_RESULT_SYNONYMS: dict[str, str] = {
     "negative": "Negative",
     "neg": "Negative",
     "not detected": "Negative",
+    "negative, organic fibres detected": "Negative",
+    "negative organic fibres detected": "Negative",
     "presumed": "Assumed Positive",
     "presumed positive": "Assumed Positive",
     "assumed": "Assumed Positive",
     "assumed positive": "Assumed Positive",
+    "negative, assumed positive": "Assumed Positive",
     "not sampled": "Assumed Positive",
     "negative - treated as positive": "Negative - Treated as Positive",
     "treated as positive": "Negative - Treated as Positive",
+    "unknown": "Unknown",
+    "not analysed": "Unknown",
+    "not analyzed": "Unknown",
+    "no access": "No Access",
 }
 
 # Condition synonyms → canonical SF values (E30-S6: "Good" → "Stable")

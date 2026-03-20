@@ -42,7 +42,14 @@ MATERIAL_CONDITION_VALUES = {
     "N/A (negative)",
     "N/A (assumed negative)",
 }
-AREA_TYPE_VALUES = {"Interior", "Exterior", "Grounds"}
+AREA_TYPE_VALUES = {
+    "Interior",
+    "Exterior",
+    "Grounds",
+    "Internal",
+    "External",
+    "External & Internal",
+}
 
 # N/A patterns — LLMs return these for fields not applicable to negative results
 _NA_PATTERNS = {"n/a", "na", "not applicable", "-", "none", ""}
@@ -272,6 +279,26 @@ class ACMExtractionRecord(BaseModel):
             if stripped.lower() == valid.lower():
                 return valid
 
+        # Compound value normalization: "Negative, Organic fibres detected" → "Negative"
+        _RESULT_SYNONYMS = {
+            "negative, organic fibres detected": "Negative",
+            "negative organic fibres detected": "Negative",
+            "negative, assumed positive": "Assumed Positive",
+            "negative, positive": "Positive",
+            "negative, treated as positive": "Negative - Treated as Positive",
+            "organic fibres detected": "Negative",
+        }
+        key = stripped.lower()
+        if key in _RESULT_SYNONYMS:
+            return _RESULT_SYNONYMS[key]
+
+        # Try matching the first word before comma
+        if "," in stripped:
+            first_part = stripped.split(",")[0].strip()
+            for valid in RESULT_VALUES:
+                if first_part.lower() == valid.lower():
+                    return valid
+
         logger.warning(f"Unknown result value: '{v}' - passing through")
         return stripped
 
@@ -350,6 +377,23 @@ class ACMExtractionRecord(BaseModel):
         if _is_na(v):
             return None
         stripped = str(v).strip()
+
+        # Synonym mapping for SF alignment
+        _area_type_map: dict[str, str] = {
+            "interior": "Interior",
+            "internal": "Internal",
+            "exterior": "Exterior",
+            "external": "External",
+            "grounds": "Grounds",
+            "external & internal": "External & Internal",
+            "external and internal": "External & Internal",
+            "internal & external": "External & Internal",
+            "internal and external": "External & Internal",
+        }
+        mapped = _area_type_map.get(stripped.lower())
+        if mapped is not None:
+            return mapped
+
         for valid in AREA_TYPE_VALUES:
             if stripped.lower() == valid.lower():
                 return valid

@@ -26,7 +26,7 @@ import { useToast } from '@/lib/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
-type UploadPhase = 'idle' | 'uploading' | 'extracting' | 'done' | 'error'
+type UploadPhase = 'idle' | 'uploading' | 'done' | 'error'
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -58,7 +58,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
   }, [])
 
   const handleClose = useCallback((nextOpen: boolean) => {
-    if (!nextOpen && phase !== 'uploading' && phase !== 'extracting') {
+    if (!nextOpen && phase !== 'uploading') {
       reset()
       onOpenChange(false)
     }
@@ -105,6 +105,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
         type: 'upload',
         title: file.name,
         file,
+        async_processing: true,
       })
       sourceId = sourceResponse.id
     } catch (err: unknown) {
@@ -113,7 +114,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
       return
     }
 
-    setPhase('extracting')
+    // Trigger extraction (backend queues it async)
     try {
       const extractResponse = await acmApi.extract(sourceId)
       const commandId = extractResponse.command_id
@@ -128,24 +129,24 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
       setPhase('done')
       toastSuccess('Extraction started!')
 
-      // Navigate to extraction progress page with live SSE streaming
+      // Navigate to extraction progress page
       onOpenChange(false)
-      router.push(`/extraction/${encodeURIComponent(sourceId)}`)
+      router.push(`/jobs/${encodeURIComponent(sourceId)}/extract`)
     } catch (err: unknown) {
       setPhase('error')
       setErrorMsg(err instanceof Error ? err.message : 'Extraction could not be started.')
     }
-  }, [file, toastSuccess])
+  }, [file, toastSuccess, onOpenChange, router])
 
   const handleGoToProgress = useCallback(() => {
     if (resultSourceId) {
       onOpenChange(false)
       reset()
-      router.push(`/extraction/${encodeURIComponent(resultSourceId)}`)
+      router.push(`/jobs/${encodeURIComponent(resultSourceId)}/extract`)
     }
   }, [resultSourceId, onOpenChange, reset, router])
 
-  const isProcessing = phase === 'uploading' || phase === 'extracting'
+  const isProcessing = phase === 'uploading'
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -211,7 +212,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
                 <>
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-sm font-medium">
-                    {phase === 'uploading' ? 'Uploading...' : 'Starting extraction...'}
+                    Uploading &amp; starting extraction...
                   </p>
                 </>
               ) : file ? (

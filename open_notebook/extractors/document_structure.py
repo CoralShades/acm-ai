@@ -10,10 +10,25 @@ Story: E1-S16 Document Structure & TOC Extraction
 
 import re
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
+
+
+def _coerce_int(v: object) -> object:
+    """Coerce string digits and None to int for LLM output tolerance."""
+    if v is None:
+        return 0
+    if isinstance(v, str):
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return 0
+    return v
+
+
+CoercedInt = Annotated[int, BeforeValidator(_coerce_int)]
 
 
 class DocumentType(str, Enum):
@@ -30,8 +45,8 @@ class SubSection(BaseModel):
 
     subsection_number: str
     title: str
-    page_start: int
-    page_end: Optional[int] = None
+    page_start: CoercedInt
+    page_end: Optional[CoercedInt] = None
 
 
 class Section(BaseModel):
@@ -48,10 +63,10 @@ class Section(BaseModel):
         7: Appendix
     """
 
-    section_id: int = Field(description="Section ID (0-7)")
+    section_id: CoercedInt = Field(description="Section ID (0-7)")
     title: str
-    page_start: int
-    page_end: Optional[int] = None
+    page_start: CoercedInt
+    page_end: Optional[CoercedInt] = None
     subsections: List[SubSection] = Field(default_factory=list)
 
 
@@ -64,8 +79,8 @@ class DocumentStructure(BaseModel):
 
     document_type: DocumentType = DocumentType.UNKNOWN
     toc_present: bool = False
-    total_pages: int = 0
-    register_start_page: Optional[int] = None
+    total_pages: CoercedInt = 0
+    register_start_page: Optional[CoercedInt] = None
     building_ids: List[str] = Field(default_factory=list)
     sections: List[Section] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -80,8 +95,8 @@ class DocumentStructureLLM(BaseModel):
 
     document_type: DocumentType = DocumentType.UNKNOWN
     toc_present: bool = False
-    total_pages: int = 0
-    register_start_page: Optional[int] = None
+    total_pages: CoercedInt = 0
+    register_start_page: Optional[CoercedInt] = None
     building_ids: List[str] = Field(default_factory=list)
     sections: List[Section] = Field(default_factory=list)
 

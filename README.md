@@ -343,6 +343,7 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 - ✅ **Provenance PDF Viewer**: Zoom controls, text search (Ctrl+F), bbox pulse animation, scrollable canvas, auto-scroll to record
 - ✅ **Building + ACM Grid Rework**: Two-tab layout (Buildings + ACM Records) on source/jobs pages, new BuildingGrid AG Grid with localStorage column state, View button dialog, 13-field column presets
 - ✅ **CRUD Chat Security Audit**: 23 issues fixed — structural HITL barrier (execute_pending_write removed from LLM tools), SQL injection allowlist (ALLOWED_ACM_FIELDS), source_id context binding, Record ID column, clipboard HTTPS guard, HITLApprovalDialog fixes
+- ✅ **UX Mega-Pack**: Async upload with review_status lifecycle, 3-panel progressive extract page (DoclingTablesPanel, BuildingsProgressPanel, LiveRecordsPanel), job card live dashboard with counters/elapsed timer via `/live-stats` endpoint
 
 ### Next for ACM-AI
 - **Salesforce Data Push**: Direct sync of validated records to Salesforce org

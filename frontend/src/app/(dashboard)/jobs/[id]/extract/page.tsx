@@ -9,10 +9,16 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { PageErrorFallback } from '@/components/common/PageErrorFallback'
 import { ExtractionProgressPanel } from '@/components/acm/ExtractionProgressPanel'
 import { ExtractionLiveView } from '@/components/jobs/ExtractionLiveView'
-import { RawExtractionTable } from '@/components/acm/RawExtractionTable'
+import { DoclingTablesPanel } from '@/components/acm/DoclingTablesPanel'
+import { BuildingsProgressPanel } from '@/components/acm/BuildingsProgressPanel'
+import { LiveRecordsPanel } from '@/components/acm/LiveRecordsPanel'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { useSource } from '@/lib/hooks/use-sources'
 import { useExtractionProgress } from '@/lib/hooks/use-extraction-progress'
@@ -21,15 +27,15 @@ import { useAGUIStream } from '@/lib/hooks/use-agui-stream'
 import { useV3SSE } from '@/lib/hooks/useV3SSE'
 import { ACM_QUERY_KEYS } from '@/lib/hooks/use-acm'
 import { acmApi } from '@/lib/api/acm'
-import { ArrowRight, FileWarning } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowRight, ChevronDown, ChevronUp, FileWarning } from 'lucide-react'
 import type { V3EventEnvelope } from '@/lib/types/v3-streaming'
 
 /**
  * Extract page — shows the ExtractionProgressPanel (stage pills + log) alongside
- * the RawExtractionTable (live-updating AG Grid) while the AI processes the document.
+ * a 3-panel progressive layout: Docling Tables, Buildings, Live Records.
  *
  * URL: /jobs/{source_id}/extract
- * Story: E19-S4 Raw Extraction Table — Live Records During Extraction
  */
 function ExtractPageContent() {
   const params = useParams()
@@ -38,6 +44,7 @@ function ExtractPageContent() {
   const queryClient = useQueryClient()
   const [isRetrying, setIsRetrying] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
+  const [liveViewOpen, setLiveViewOpen] = useState(false)
 
   const { data: source, isLoading: isLoadingSource } = useSource(sourceId)
 
@@ -60,29 +67,41 @@ function ExtractPageContent() {
   // resolved once so the hook receives a stable value on mount)
   const v3CommandId = aguiCommandId
 
+  // Fetch buildings for the live panels
+  const { data: buildingsData } = useQuery({
+    queryKey: ['acm', 'buildings', sourceId],
+    queryFn: () => acmApi.listBuildings(sourceId),
+    enabled: !!sourceId,
+    refetchInterval: extractionProgress.phase === 'extracting' ? 4000 : false,
+    staleTime: 5000,
+  })
+  const buildings = buildingsData?.buildings ?? []
+
+  const isExtracting = extractionProgress.phase === 'extracting'
+
   // On terminal V3 SSE event, immediately invalidate queries so the records
   // table refreshes without waiting for the next polling cycle.
   const handleV3Event = useCallback(
     (event: V3EventEnvelope) => {
       const TERMINAL_TYPES = new Set([
         'extraction.consensus_complete',
+        'extraction.complete',
+        'extraction.failed',
+        'ai.save_complete',
         'ai.validation_complete',
         'bulk.complete',
       ])
       if (TERMINAL_TYPES.has(event.type)) {
         queryClient.invalidateQueries({ queryKey: ['raw-extraction-records', sourceId] })
         queryClient.invalidateQueries({ queryKey: ['acm', 'records', sourceId] })
+        queryClient.invalidateQueries({ queryKey: ['acm', 'buildings', sourceId] })
         queryClient.invalidateQueries({ queryKey: ACM_QUERY_KEYS.stats(sourceId) })
       }
     },
     [queryClient, sourceId]
   )
 
-  // Subscribe to V3 SSE extraction events. The hook is gracefully disabled when
-  // there is no commandId or extraction is not running. Polling via
-  // useExtractionProgress / useExtractionStatus remains the authoritative source
-  // of phase transitions — SSE is an additive enhancement for faster query
-  // invalidation on completion.
+  // Subscribe to V3 SSE extraction events.
   useV3SSE({
     operationId: v3CommandId ?? '',
     category: 'extraction',
@@ -146,6 +165,9 @@ function ExtractPageContent() {
     queryClient.invalidateQueries({
       queryKey: ['acm', 'records', sourceId],
     })
+    queryClient.invalidateQueries({
+      queryKey: ['acm', 'buildings', sourceId],
+    })
   }, [
     extractionStatus.currentStageId,
     extractionStatus.phase,
@@ -198,11 +220,6 @@ function ExtractPageContent() {
     }
   }
 
-  const handleTableComplete = () => {
-    // RawExtractionTable calls this when streaming ends — no extra action needed here
-    // The user proceeds manually via the button
-  }
-
   const isExtractionComplete = extractionStatus.phase === 'completed'
   const isExtractionFailed = extractionStatus.phase === 'failed'
   const extractionFailureMessage =
@@ -245,8 +262,7 @@ function ExtractPageContent() {
               Extracting: {sourceTitle}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Records are written at the end of extraction. Follow stage progress
-              below while processing runs.
+              Watch the extraction progress below as buildings and records appear.
             </p>
           </div>
 
@@ -285,12 +301,46 @@ function ExtractPageContent() {
             aguiConnected={aguiStream.connected}
           />
 
-          {/* Live SSE event feed — visible while extraction is running */}
+          {/* 3-panel progressive layout */}
+          <DoclingTablesPanel sourceId={sourceId} isExtracting={isExtracting} />
+          <BuildingsProgressPanel sourceId={sourceId} isExtracting={isExtracting} />
+          <LiveRecordsPanel
+            sourceId={sourceId}
+            isExtracting={isExtracting}
+            buildings={buildings}
+          />
+
+          {/* Live SSE event feed — collapsible */}
           {v3CommandId && (
-            <ExtractionLiveView
-              operationId={v3CommandId}
-              enabled={extractionProgress.phase === 'extracting'}
-            />
+            <Collapsible open={liveViewOpen} onOpenChange={setLiveViewOpen}>
+              <div className="flex items-center justify-between rounded-lg border px-4 py-2 bg-muted/30">
+                <span className="text-sm font-medium text-muted-foreground">
+                  Extraction Event Feed
+                </span>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2">
+                    {liveViewOpen ? (
+                      <>
+                        <ChevronUp className="h-3.5 w-3.5" />
+                        <span className="text-xs">Hide</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                        <span className="text-xs">Show Events</span>
+                      </>
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent>
+                <ExtractionLiveView
+                  operationId={v3CommandId}
+                  enabled={extractionProgress.phase === 'extracting'}
+                  className="mt-2"
+                />
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {isExtractionFailed && (
@@ -308,21 +358,6 @@ function ExtractPageContent() {
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Raw Records Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">AI Mapped Records</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RawExtractionTable
-                sourceId={sourceId}
-                phase={extractionProgress.phase}
-                pipelineState={extractionProgress.pipelineState}
-                onComplete={handleTableComplete}
-              />
-            </CardContent>
-          </Card>
 
           {/* Bottom CTA — shown when complete so user can proceed without scrolling back up */}
           {isExtractionComplete && (

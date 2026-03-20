@@ -55,13 +55,24 @@ function JobsPageContent() {
     fetchMore(true)
   }, [fetchMore])
 
+  // A source is effectively extracting if review_status says so OR its command is still active
+  const isSourceExtracting = useCallback((source: (typeof sources)[0]) => {
+    return source.review_status === 'extracting' ||
+      source.status === 'running' ||
+      source.status === 'new'
+  }, [])
+
   const filteredSources = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase()
     return sources.filter((source) => {
-      const rawStatus = source.review_status ?? 'published'
-      // Fold building_review into pending_review for simplified filters
-      const sourceStatus = rawStatus === 'building_review' ? 'pending_review' : rawStatus
-      const matchesFilter = activeFilter === 'all' || sourceStatus === activeFilter
+      // Derive effective status: command-active sources count as 'extracting'
+      const effectiveStatus = isSourceExtracting(source)
+        ? 'extracting'
+        : (() => {
+            const rawStatus = source.review_status ?? 'published'
+            return rawStatus === 'building_review' ? 'pending_review' : rawStatus
+          })()
+      const matchesFilter = activeFilter === 'all' || effectiveStatus === activeFilter
       if (!matchesFilter) return false
 
       if (!normalizedSearch) return true
@@ -69,15 +80,17 @@ function JobsPageContent() {
       const id = source.id.toLowerCase()
       return title.includes(normalizedSearch) || id.includes(normalizedSearch)
     })
-  }, [activeFilter, searchText, sources])
+  }, [activeFilter, searchText, sources, isSourceExtracting])
 
   const stats = useMemo(() => {
-    const extracting = sources.filter((source) => source.review_status === 'extracting').length
+    const extracting = sources.filter(isSourceExtracting).length
     const inReview = sources.filter((source) => {
+      if (isSourceExtracting(source)) return false
       const status = source.review_status ?? 'published'
       return status === 'pending_review' || status === 'building_review' || status === 'acm_review'
     }).length
     const published = sources.filter((source) => {
+      if (isSourceExtracting(source)) return false
       const status = source.review_status ?? 'published'
       return status === 'published'
     }).length
@@ -87,7 +100,7 @@ function JobsPageContent() {
       inReview,
       published,
     }
-  }, [sources])
+  }, [sources, isSourceExtracting])
 
   if (loading) {
     return (

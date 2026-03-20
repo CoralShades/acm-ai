@@ -125,6 +125,9 @@ function buildMetrics(envelope: V3EventEnvelope): string[] {
 
 const TERMINAL_EVENT_TYPES = new Set([
   'extraction.consensus_complete',
+  'extraction.complete',
+  'extraction.failed',
+  'ai.save_complete',
   'ai.validation_complete',
   'bulk.complete',
 ])
