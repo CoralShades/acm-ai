@@ -284,6 +284,14 @@ class EvalResult:
         return self.matched_count / self.extracted_count
 
     @property
+    def f1(self) -> float:
+        """F1 score (harmonic mean of precision and recall)."""
+        p, r = self.precision, self.recall
+        if p + r == 0:
+            return 0.0
+        return 2 * p * r / (p + r)
+
+    @property
     def overall_accuracy(self) -> float:
         """Average exact accuracy across all evaluated fields."""
         scores = [fs.accuracy for fs in self.field_scores.values()]
@@ -300,6 +308,7 @@ class EvalResult:
             "matched_count": self.matched_count,
             "recall": round(self.recall, 4),
             "precision": round(self.precision, 4),
+            "f1": round(self.f1, 4),
             "overall_accuracy": round(self.overall_accuracy, 4),
             "field_scores": {
                 name: {
@@ -596,6 +605,7 @@ def print_report(result: EvalResult) -> None:
     print(f"  Matched:      {result.matched_count} records")
     print(f"  Recall:       {result.recall:.1%}")
     print(f"  Precision:    {result.precision:.1%}")
+    print(f"  F1:           {result.f1:.1%}")
     print(f"  Overall Acc:  {result.overall_accuracy:.1%}")
 
     print(f"\n  {'Field':<25} {'Exact':>7} {'Fuzzy':>7} {'Cover':>7} {'Miss':>5}")
@@ -647,6 +657,51 @@ def print_report(result: EvalResult) -> None:
     print(f"\n{'=' * 70}\n")
 
 
+def print_markdown_report(result: EvalResult) -> None:
+    """Print a Markdown-formatted evaluation report."""
+    print(f"\n## Benchmark: {result.benchmark_name}\n")
+    print(f"| Metric | Value |")
+    print(f"|--------|-------|")
+    print(f"| Ground Truth | {result.gt_count} records |")
+    print(f"| Extracted | {result.extracted_count} records |")
+    print(f"| Matched | {result.matched_count} records |")
+    print(f"| Precision | {result.precision:.1%} |")
+    print(f"| Recall | {result.recall:.1%} |")
+    print(f"| F1 | {result.f1:.1%} |")
+    print(f"| Overall Accuracy | {result.overall_accuracy:.1%} |")
+
+    print(f"\n### Per-Field Accuracy\n")
+    print(f"| Field | Exact | Fuzzy | Coverage | Mismatches |")
+    print(f"|-------|-------|-------|----------|------------|")
+    for name, fs in result.field_scores.items():
+        evaluated = fs.total - fs.gt_empty
+        if evaluated == 0:
+            print(f"| {name} | N/A | N/A | N/A | N/A |")
+        else:
+            print(
+                f"| {name} | {fs.accuracy:.1%} | {fs.fuzzy_accuracy:.1%} | "
+                f"{fs.coverage:.1%} | {fs.mismatches} |"
+            )
+
+    if result.unmatched_gt:
+        print(f"\n### Unmatched Ground Truth ({len(result.unmatched_gt)} records)\n")
+        for gt in result.unmatched_gt[:10]:
+            room = gt.get("room_name", "?")
+            prod = gt.get("product", "?")
+            sno = gt.get("sample_no", "?")
+            print(f"- {room} / {prod} / {sno}")
+
+    if result.unmatched_ext:
+        print(f"\n### Unmatched Extracted ({len(result.unmatched_ext)} records)\n")
+        for ext in result.unmatched_ext[:10]:
+            room = ext.get("room_name", "?")
+            prod = ext.get("product", "?")
+            sno = ext.get("sample_no", "?")
+            print(f"- {room} / {prod} / {sno}")
+
+    print()
+
+
 def main():
     parser = argparse.ArgumentParser(description="ACM Prompt Evaluation Harness")
     parser.add_argument(
@@ -658,12 +713,19 @@ def main():
         "--all", action="store_true", help="Run all benchmarks from cached JSON"
     )
     parser.add_argument("--save", help="Save results to JSON file")
+    parser.add_argument(
+        "--format",
+        choices=["text", "markdown"],
+        default="text",
+        help="Output format (default: text)",
+    )
     args = parser.parse_args()
 
     from dotenv import load_dotenv
 
     load_dotenv(PROJECT_ROOT / ".env")
 
+    report_fn = print_markdown_report if args.format == "markdown" else print_report
     results: list[EvalResult] = []
 
     if args.all:
@@ -679,7 +741,7 @@ def main():
             gt = load_ground_truth(name)
             ext = load_extracted_from_json(str(json_path))
             result = evaluate(name, gt, ext)
-            print_report(result)
+            report_fn(result)
             results.append(result)
     else:
         if not args.gt:
@@ -703,7 +765,7 @@ def main():
                 )
 
         result = evaluate(args.gt, gt, ext)
-        print_report(result)
+        report_fn(result)
         results.append(result)
 
     if args.save:

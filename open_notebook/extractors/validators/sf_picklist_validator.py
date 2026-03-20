@@ -87,9 +87,9 @@ SF_FLAT_ENUM_FIELD_MAP: dict[str, str] = {
     "disturbance_potential": "Disturbance_Potential_of_Material__c",
 }
 
-# Legacy values absent from SF picklists.
+# Legacy values absent from SF picklists but common in ARA documents.
 # These should be flagged for user review, not rejected or auto-corrected.
-_LEGACY_VALUES: set[str] = {"Not Sampled", "No Access"}
+_LEGACY_VALUES: set[str] = {"Not Sampled", "No Access", "Unknown"}
 
 
 def _normalize_to_sf_value(value: str, valid_values: list[str]) -> str:

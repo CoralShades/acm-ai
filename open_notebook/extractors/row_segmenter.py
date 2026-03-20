@@ -88,6 +88,50 @@ FOOTER_INDICATORS = frozenset(
     {"total", "page", "end of", "notes:", "subtotal", "count", "sum", "continued"}
 )
 
+# Known column header texts (lowercase) — used to detect header rows that
+# Docling failed to flag with column_header=True.
+_KNOWN_HEADER_TEXTS = frozenset(
+    {
+        "room",
+        "room/area",
+        "area",
+        "location",
+        "material",
+        "product",
+        "item",
+        "description",
+        "sample",
+        "sample no",
+        "sample#",
+        "result",
+        "condition",
+        "friability",
+        "friable",
+        "f/nf",
+        "risk",
+        "quantity",
+        "recommendation",
+        "item no",
+        "item no.",
+        "nata no",
+        "room no",
+        "type",
+        "access",
+        "disturbance",
+        "dp",
+        "acm type",
+        "acm status",
+        "building element",
+        "material type",
+        "priority",
+        "risk rating",
+        "lab result",
+        "analysis",
+        "asbestos type",
+        "fibre type",
+    }
+)
+
 
 def _is_footer_row(row_cells: list[dict], num_cols: int) -> bool:
     """Detect footer/summary rows that should not be extracted.
@@ -124,6 +168,39 @@ def _is_footer_row(row_cells: list[dict], num_cols: int) -> bool:
             return True
 
     return False
+
+
+def _is_header_row(row_cells: list[dict], num_cols: int) -> bool:
+    """Detect header rows that Docling failed to flag with column_header=True.
+
+    Returns True when >=50% of non-empty cell texts match known column header
+    names (case-insensitive). This catches repeated header rows at multi-page
+    table boundaries and mis-classified header rows.
+
+    Args:
+        row_cells: List of Docling cell dicts for the row.
+        num_cols: Total column count for the table.
+
+    Returns:
+        True if the row looks like a column header row.
+    """
+    if not row_cells:
+        return False
+
+    non_empty_texts: list[str] = []
+    for cell in row_cells:
+        t = cell.get("text", "").strip()
+        if t and t != "-":
+            non_empty_texts.append(t)
+
+    if len(non_empty_texts) < 2:
+        return False
+
+    header_matches = sum(
+        1 for t in non_empty_texts if t.lower() in _KNOWN_HEADER_TEXTS
+    )
+
+    return header_matches >= len(non_empty_texts) * 0.5
 
 
 # Material keywords that indicate a multi-item cell (Type E1)
@@ -454,6 +531,15 @@ def segment_docling_table(
 
         # Skip footer/summary rows and all-empty rows
         if _is_footer_row(row_cells, num_cols):
+            continue
+
+        # Skip header rows that Docling missed (e.g. repeated headers at
+        # multi-page table boundaries)
+        if _is_header_row(row_cells, num_cols):
+            logger.debug(
+                "Skipping detected header row at index %d (table %d)",
+                row_idx, table_index,
+            )
             continue
 
         # Build cells dict using canonical column names

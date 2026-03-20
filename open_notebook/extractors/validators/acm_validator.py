@@ -472,9 +472,16 @@ def validate_acm_record(record: dict) -> ValidationResult:
 
         sf_validator = SalesforcePicklistValidator()
 
-        # 2. SF flat enum validation — blocking
+        # 2. SF flat enum validation — blocking for invalid values,
+        #    non-blocking for legacy values (needs_user_review)
         sf_flat_issues = sf_validator.validate_flat_enums(record)
-        all_issues.extend(_convert_chain_issues(sf_flat_issues))
+        for fi in sf_flat_issues:
+            converted = _convert_chain_issues([fi])
+            if fi.issue_type == "needs_user_review":
+                # Legacy values (Not Sampled, No Access) are non-blocking
+                chain_warnings.extend(converted)
+            else:
+                all_issues.extend(converted)
 
         # 3. SF chain validation — REJECT policy (blocking)
         sf_chain_result = sf_validator.validate_all_chains(
