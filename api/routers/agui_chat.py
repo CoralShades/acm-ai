@@ -8,7 +8,13 @@ CopilotKit frontend.
 import json
 import re
 
-from ag_ui.core import EventType, RunAgentInput, StateSnapshotEvent
+from ag_ui.core import (
+    EventType,
+    MessagesSnapshotEvent,
+    RunAgentInput,
+    RunErrorEvent,
+    StateSnapshotEvent,
+)
 from ag_ui.encoder import EventEncoder
 from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
 from ag_ui_langgraph.utils import langchain_messages_to_agui, make_json_safe
@@ -64,6 +70,70 @@ def _sanitize_state_snapshot(event: StateSnapshotEvent) -> StateSnapshotEvent:
             {k: v for k, v in snapshot.items() if k != "messages"}
         )
         return event.model_copy(update={"snapshot": fallback_snapshot})
+
+
+def _sanitize_messages_snapshot(
+    event: MessagesSnapshotEvent,
+) -> MessagesSnapshotEvent:
+    """Re-convert any raw LangChain BaseMessage objects that leaked into a
+    MessagesSnapshotEvent.
+
+    The ag-ui-langgraph adapter calls langchain_messages_to_agui() internally
+    before constructing the event, but if that call raises (e.g. unsupported
+    message type) the exception kills the SSE stream.  This wrapper provides
+    a second chance: it inspects the event's messages list, converts any stray
+    BaseMessage objects, and returns a safe event.
+    """
+    msgs = event.messages
+    if not msgs:
+        return event
+
+    has_raw = any(isinstance(m, BaseMessage) for m in msgs)
+    if not has_raw:
+        return event
+
+    try:
+        langchain_msgs = [m for m in msgs if isinstance(m, BaseMessage)]
+        agui_msgs = langchain_messages_to_agui(langchain_msgs)
+        non_lc = [m for m in msgs if not isinstance(m, BaseMessage)]
+        return event.model_copy(update={"messages": non_lc + agui_msgs})
+    except Exception as exc:
+        logger.warning(
+            f"agui_chat: could not sanitize MessagesSnapshotEvent: {exc}"
+        )
+        non_lc = [m for m in msgs if not isinstance(m, BaseMessage)]
+        return event.model_copy(update={"messages": non_lc})
+
+
+def _safe_encode(encoder: EventEncoder, event) -> str:
+    """Encode an AG-UI event to SSE, falling back to make_json_safe on failure.
+
+    model_dump_json() can raise PydanticSerializationError when the event
+    contains Python objects (e.g. LangChain BaseMessage) that Pydantic's
+    JSON serializer cannot handle.  This wrapper catches such errors and
+    retries with a fully-sanitized copy of the event.
+    """
+    try:
+        return encoder.encode(event)
+    except Exception as first_err:
+        logger.warning(
+            f"agui_chat: encoder.encode failed ({type(first_err).__name__}: "
+            f"{first_err}), retrying with make_json_safe"
+        )
+        try:
+            safe_data = make_json_safe(
+                event.model_dump(by_alias=True, exclude_none=True)
+            )
+            return f"data: {json.dumps(safe_data)}\n\n"
+        except Exception as second_err:
+            logger.error(
+                f"agui_chat: fallback encode also failed: {second_err}"
+            )
+            error_payload = {
+                "type": "error",
+                "message": f"Event encoding error: {first_err}",
+            }
+            return f"data: {json.dumps(error_payload)}\n\n"
 
 
 # Add the AG-UI endpoint to this router's underlying FastAPI app
@@ -187,18 +257,42 @@ def register_crud_agui_endpoint(app) -> None:
             encoder = EventEncoder(accept=accept_header)
 
             async def event_generator():
-                async for event in crud_agent.run(input_data):
-                    # Sanitize StateSnapshotEvents: execute_write_node emits
-                    # AIMessage objects into state.  The encoder calls
-                    # model_dump_json() on the snapshot, which crashes on raw
-                    # langchain BaseMessage objects.  Convert them first.
-                    if (
-                        hasattr(event, "type")
-                        and event.type == EventType.STATE_SNAPSHOT
-                        and isinstance(event, StateSnapshotEvent)
-                    ):
-                        event = _sanitize_state_snapshot(event)
-                    yield encoder.encode(event)
+                try:
+                    async for event in crud_agent.run(input_data):
+                        # Sanitize StateSnapshotEvents: execute_write_node
+                        # emits AIMessage objects into state.  The encoder
+                        # calls model_dump_json() on the snapshot, which
+                        # crashes on raw langchain BaseMessage instances.
+                        if (
+                            hasattr(event, "type")
+                            and event.type == EventType.STATE_SNAPSHOT
+                            and isinstance(event, StateSnapshotEvent)
+                        ):
+                            event = _sanitize_state_snapshot(event)
+                        elif (
+                            hasattr(event, "type")
+                            and event.type == EventType.MESSAGES_SNAPSHOT
+                            and isinstance(event, MessagesSnapshotEvent)
+                        ):
+                            event = _sanitize_messages_snapshot(event)
+
+                        yield _safe_encode(encoder, event)
+                except Exception as exc:
+                    # BUG-4 defense: if the adapter generator itself raises
+                    # (e.g. langchain_messages_to_agui inside _handle_stream_events),
+                    # emit a clean error event instead of killing the SSE stream.
+                    logger.error(
+                        f"agui_chat: CRUD event stream error: "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                    try:
+                        err_event = RunErrorEvent(
+                            type=EventType.RUN_ERROR,
+                            message=f"Stream error: {exc}",
+                        )
+                        yield encoder.encode(err_event)
+                    except Exception:
+                        yield f'data: {{"type":"error","message":"Internal stream error"}}\n\n'
 
             return StreamingResponse(
                 event_generator(),
