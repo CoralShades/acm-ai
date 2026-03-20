@@ -12,6 +12,7 @@ import { JobDetailHeader } from '@/components/jobs/JobDetailHeader'
 import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
 import { JobContentPanel } from '@/components/jobs/JobContentPanel'
 import { JobCrudChatPanel } from '@/components/jobs/JobCrudChatPanel'
+import { SmartChatPanel } from '@/components/chat'
 import { BuildingGrid } from '@/components/acm/BuildingGrid'
 import { BuildingTabStrip } from '@/components/acm/BuildingTabStrip'
 import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
@@ -65,6 +66,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const { selectedBuildingId: selectedBuilding, setSelectedBuilding } = useBuildingStore()
   const [chatExpanded, setChatExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
+  const [chatMode, setChatMode] = useState<'smart' | 'crud'>('smart')
 
   // ACM Records tab state (ACMGrid + dialogs)
   const gridRef = useRef<ACMGridRef>(null)
@@ -82,6 +84,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
 
   const { data: source } = useSource(sourceId)
   const { data: stats } = useACMStats(sourceId)
+  const hasAcmData = (stats?.total_records ?? 0) > 0
 
   const { data: jobBuildingsData, isLoading: isLoadingJob } = useJobBuildings(sourceId)
   const { data: fieldSchema } = useFieldSchema()
@@ -606,9 +609,34 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
               )}
             >
               {chatExpanded && (
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <MessageSquare className="h-4 w-4" />
-                  CRUD Chat
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 shrink-0" />
+                  <div className="flex rounded-md border text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setChatMode('smart')}
+                      className={cn(
+                        'px-2 py-1 rounded-l-md transition-colors',
+                        chatMode === 'smart'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
+                      )}
+                    >
+                      Query
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChatMode('crud')}
+                      className={cn(
+                        'px-2 py-1 rounded-r-md transition-colors',
+                        chatMode === 'crud'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted'
+                      )}
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
               )}
               <Button
@@ -627,7 +655,14 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
             </div>
             {chatExpanded && (
               <div className="min-h-0 flex-1">
-                <JobCrudChatPanel sourceId={sourceId} className="h-full" />
+                {chatMode === 'smart' ? (
+                  <SmartChatPanel
+                    sourceId={sourceId}
+                    hasAcmData={hasAcmData}
+                  />
+                ) : (
+                  <JobCrudChatPanel sourceId={sourceId} className="h-full" />
+                )}
               </div>
             )}
           </div>
@@ -637,7 +672,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
           type="button"
           size="icon"
           className="fixed bottom-6 right-6 z-40 h-12 w-12 rounded-full shadow-lg lg:hidden"
-          aria-label="Open CRUD chat"
+          aria-label="Open chat"
           onClick={() => setMobileChatOpen(true)}
         >
           <MessageSquare className="h-5 w-5" />
@@ -646,14 +681,48 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
         <Sheet open={mobileChatOpen} onOpenChange={setMobileChatOpen}>
           <SheetContent side="right" className="w-full p-0 sm:max-w-md">
             <div className="flex h-full min-h-0 flex-col pt-10">
-              <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">CRUD Chat</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Create, update, and delete ACM records with explicit confirmation.
+              <div className="border-b px-4 py-3 flex items-center gap-3">
+                <div className="flex rounded-md border text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setChatMode('smart')}
+                    className={cn(
+                      'px-2.5 py-1 rounded-l-md transition-colors',
+                      chatMode === 'smart'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    )}
+                  >
+                    Query
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChatMode('crud')}
+                    className={cn(
+                      'px-2.5 py-1 rounded-r-md transition-colors',
+                      chatMode === 'crud'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    )}
+                  >
+                    Edit
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {chatMode === 'smart'
+                    ? 'Search and query ACM records.'
+                    : 'Create, update, and delete records.'}
                 </p>
               </div>
               <div className="min-h-0 flex-1">
-                <JobCrudChatPanel sourceId={sourceId} className="h-full" />
+                {chatMode === 'smart' ? (
+                  <SmartChatPanel
+                    sourceId={sourceId}
+                    hasAcmData={hasAcmData}
+                  />
+                ) : (
+                  <JobCrudChatPanel sourceId={sourceId} className="h-full" />
+                )}
               </div>
             </div>
           </SheetContent>

@@ -158,27 +158,29 @@ def _fallback_query(user_question: str) -> str:
 
     if "friable" in q:
         return (
-            "SELECT building_name, room_name, product, friable, risk_status FROM acm_record "
+            "SELECT building_name, room_name, product, friable, sample_result FROM acm_record "
             "WHERE source_id = $sid AND friable = 'Friable' LIMIT 50;"
         )
 
-    if "high risk" in q:
+    if "high risk" in q or "positive" in q:
         return (
-            "SELECT building_name, room_name, product, risk_status FROM acm_record "
-            "WHERE source_id = $sid AND risk_status = 'High' LIMIT 50;"
+            "SELECT building_name, room_name, product, sample_result, friable, "
+            "material_condition, disturbance_potential FROM acm_record "
+            "WHERE source_id = $sid AND (sample_result = 'Positive' "
+            "OR sample_result = 'Assumed Positive') LIMIT 50;"
         )
 
     if "risk" in q and (
         "breakdown" in q or "summary" in q or "count" in q or "by" in q
     ):
         return (
-            "SELECT risk_status, count() as total FROM acm_record "
-            "WHERE source_id = $sid GROUP BY risk_status;"
+            "SELECT sample_result, count() as total FROM acm_record "
+            "WHERE source_id = $sid GROUP BY sample_result;"
         )
 
     # Generic fallback
     return (
-        "SELECT building_name, room_name, product, risk_status, friable "
+        "SELECT building_name, room_name, product, sample_result, friable "
         "FROM acm_record WHERE source_id = $sid LIMIT 20;"
     )
 
