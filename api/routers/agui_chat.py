@@ -253,6 +253,14 @@ def register_crud_agui_endpoint(app) -> None:
                     "CRUD endpoint: no source_id found in state, context, or messages"
                 )
 
+            # Set recursion limit high enough for multi-step tool chains
+            if not input_data.config:
+                input_data = input_data.model_copy(
+                    update={"config": {"recursion_limit": 50}}
+                )
+            elif isinstance(input_data.config, dict):
+                input_data.config.setdefault("recursion_limit", 50)
+
             accept_header = request.headers.get("accept")
             encoder = EventEncoder(accept=accept_header)
 
@@ -278,9 +286,40 @@ def register_crud_agui_endpoint(app) -> None:
 
                         yield _safe_encode(encoder, event)
                 except Exception as exc:
-                    # BUG-4 defense: if the adapter generator itself raises
-                    # (e.g. langchain_messages_to_agui inside _handle_stream_events),
-                    # emit a clean error event instead of killing the SSE stream.
+                    err_msg = str(exc)
+                    # Stale thread recovery: if the thread state is corrupted
+                    # (e.g., from a previous recursion error), retry without
+                    # thread_id to start a fresh conversation.
+                    if "Message ID not found" in err_msg or "not found in history" in err_msg:
+                        logger.warning(
+                            f"agui_chat: CRUD stale thread detected, retrying without thread_id"
+                        )
+                        try:
+                            fresh_input = input_data.model_copy(
+                                update={"thread_id": None}
+                            )
+                            async for event in crud_agent.run(fresh_input):
+                                if (
+                                    hasattr(event, "type")
+                                    and event.type == EventType.STATE_SNAPSHOT
+                                    and isinstance(event, StateSnapshotEvent)
+                                ):
+                                    event = _sanitize_state_snapshot(event)
+                                elif (
+                                    hasattr(event, "type")
+                                    and event.type == EventType.MESSAGES_SNAPSHOT
+                                    and isinstance(event, MessagesSnapshotEvent)
+                                ):
+                                    event = _sanitize_messages_snapshot(event)
+                                yield _safe_encode(encoder, event)
+                            return  # Success on retry
+                        except Exception as retry_exc:
+                            logger.error(
+                                f"agui_chat: CRUD retry also failed: {retry_exc}"
+                            )
+                            err_msg = str(retry_exc)
+
+                    # BUG-4 defense: emit a clean error event instead of killing the SSE stream.
                     logger.error(
                         f"agui_chat: CRUD event stream error: "
                         f"{type(exc).__name__}: {exc}"

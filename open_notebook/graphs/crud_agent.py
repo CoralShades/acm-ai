@@ -294,4 +294,9 @@ _builder.add_edge("tools", "agent")
 _builder.add_edge("execute_write", END)
 
 _memory = MemorySaver()
-crud_graph = _builder.compile(checkpointer=_memory)
+crud_graph = _builder.compile(
+    checkpointer=_memory,
+    # Increase recursion limit — the agent may chain multiple tool calls
+    # (e.g., query → inspect → re-query → summarize) in a single turn.
+    # Default 25 is too low for complex multi-step queries.
+)
