@@ -1,7 +1,8 @@
 'use client'
 
+import React, { useMemo } from 'react'
 import { CopilotChat } from '@copilotkit/react-ui'
-import { useCopilotReadable, useCopilotChatSuggestions, useCoAgentStateRender } from '@copilotkit/react-core'
+import { useCopilotReadable } from '@copilotkit/react-core'
 import { SmartChatProvider } from './SmartChatProvider'
 import { useSmartChat } from '@/lib/hooks/useSmartChat'
 import { ToolResultRenderers } from './ToolResultRenderers'
@@ -17,7 +18,64 @@ interface SmartChatPanelProps {
   hasAcmData?: boolean
 }
 
+/**
+ * SmartChatPanel — supervisor chat with its own CopilotKit provider.
+ *
+ * CopilotKit is mounted lazily here (not in the layout) so the AG-UI
+ * connection only starts when the user actually opens the chat panel.
+ * This prevents AG-UI errors from blocking page loads.
+ */
+class SmartChatErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.warn('[SmartChatPanel] CopilotKit error caught:', error.message, error.stack?.substring(0, 500))
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-6 text-center text-muted-foreground">
+          <p className="text-sm font-medium">Chat temporarily unavailable</p>
+          <p className="text-xs mt-1 max-w-[300px] break-words">{this.state.error?.message || 'Connection error'}</p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="mt-3 text-xs text-primary underline"
+          >
+            Retry
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 export function SmartChatPanel({
+  sourceId,
+  notebookId,
+  hasAcmData = false,
+}: SmartChatPanelProps) {
+  return (
+    <SmartChatErrorBoundary>
+      <SmartChatPanelContent
+        sourceId={sourceId}
+        notebookId={notebookId}
+        hasAcmData={hasAcmData}
+      />
+    </SmartChatErrorBoundary>
+  )
+}
+
+function SmartChatPanelContent({
   sourceId,
   notebookId,
   hasAcmData = false,
@@ -28,44 +86,19 @@ export function SmartChatPanel({
     hasAcmData,
   })
 
-  // Expose page-level context to the LLM as structured data.
-  // This supplements the system message with machine-readable context
-  // that the agent can reference in tool calls and responses.
+  // Memoize the readable value to prevent infinite re-render loops.
+  // CopilotKit internally compares the value reference — a new object
+  // on every render triggers updates that cause more renders.
+  const readableValue = useMemo(() => ({
+    sourceId: sourceId || null,
+    notebookId: notebookId || null,
+    hasAcmData,
+    acmContextEnabled: includeAcmContext,
+  }), [sourceId, notebookId, hasAcmData, includeAcmContext])
+
   useCopilotReadable({
     description: 'Current page context: source ID, notebook ID, and ACM data availability',
-    value: {
-      sourceId: sourceId || null,
-      notebookId: notebookId || null,
-      hasAcmData,
-      acmContextEnabled: includeAcmContext,
-    },
-  })
-
-  // Domain-aware chat suggestions to guide users toward useful queries.
-  useCopilotChatSuggestions(
-    {
-      instructions: hasAcmData && includeAcmContext
-        ? 'Suggest 2-3 ACM compliance queries relevant to this document. Examples: risk summaries, building searches, material lookups, statistics.'
-        : 'Suggest 2-3 general document queries. Examples: summarize content, find specific sections, explain terminology.',
-      maxSuggestions: 3,
-    },
-    [hasAcmData, includeAcmContext],
-  )
-
-  // Show a lightweight in-chat indicator while the supervisor agent is running
-  useCoAgentStateRender({
-    name: 'supervisor',
-    render: ({ nodeName, status }) => {
-      if (status !== 'inProgress') return null
-      return (
-        <div className="text-xs text-muted-foreground italic px-4 py-1 flex items-center gap-2">
-          <span className="inline-block h-2 w-2 bg-primary rounded-full animate-pulse" />
-          {nodeName === 'tools'
-            ? 'Searching...'
-            : 'Thinking...'}
-        </div>
-      )
-    },
+    value: readableValue,
   })
 
   return (
