@@ -538,6 +538,21 @@ FROM python:3.11-slim as runtime
 
 ACM-AI integrates CopilotKit v1.51.4 for two AI-powered chat interfaces that connect to LangGraph agents via the AG-UI protocol.
 
+### Unified Agent (Phase 1 Backend — 2026-03-22)
+
+The separate `supervisor_graph` and `crud_graph` have been replaced by a single unified LangGraph agent in `open_notebook/graphs/unified_agent.py`. Key components:
+
+| File | Purpose |
+|------|---------|
+| `open_notebook/graphs/unified_agent.py` | 6-node graph: agent, tools, approval/interrupt, legacy_execute. 15 LLM-facing tools. |
+| `open_notebook/graphs/tool_context.py` | Thread-safe `contextvars` tool context (replaces module-level globals). |
+| `open_notebook/graphs/checkpointer.py` | SqliteSaver singleton for persistent chat sessions. |
+| `api/routers/agui_chat.py` | Single unified AG-UI endpoint with `session_id` support. |
+| `api/routers/unified_sessions.py` | Session CRUD REST endpoints (list/create/update/delete). |
+| `prompts/unified_agent.jinja` | System prompt covering all 7 DB tables and 15 tools. |
+
+The HITL interrupt-based write-approval flow is preserved inside the unified graph.
+
 ### Service Flow
 
 ```
@@ -560,10 +575,10 @@ Frontend (Next.js 15, port 8503)
 │
 Next.js API Routes
 ├── /api/copilotkit → CopilotRuntime (singleton) → HttpAgent
-│   → FastAPI /api/agui/chat → LangGraphAgent("supervisor") → supervisor_graph
+│   → FastAPI /api/agui/chat → LangGraphAgent("unified_agent") → unified_agent graph
 │
 └── /copilot-crud → CopilotRuntime (singleton) → HttpAgent
-    → FastAPI /api/agui/crud-chat → LangGraphAgent("crud_agent") → crud_graph
+    → FastAPI /api/agui/crud-chat → LangGraphAgent("unified_agent") → unified_agent graph
 ```
 
 ### HITL Write Approval Flow

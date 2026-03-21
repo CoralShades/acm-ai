@@ -796,6 +796,20 @@ development_status:
   bugfix-notebook-name-enrichment-2026-03-21: done  # feat(extraction): Enrich notebook name from extracted DocumentMeta (site_name, consultant_name, date_of_audit_report) after extraction completes. _enrich_notebook_name() helper added to acm_commands.py. Files: commands/acm_commands.py. Commit 648fbeb4.
 
   # ─────────────────────────────────────────────────────
+  # Unified Chat Phase 1: Backend (2026-03-22)
+  # Branch: main
+  # Files created (6): tool_context.py, checkpointer.py, unified_agent.py,
+  #   prompts/unified_agent.jinja, api/routers/agui_chat.py (rewritten),
+  #   api/routers/unified_sessions.py (new)
+  # Files modified (7): acm_tools.py, crud_tools.py, guardrails.py,
+  #   prompts/crud/surrealql_query.jinja, api/main.py,
+  #   tests/test_crud_tools_enhanced.py, tests/test_crud_tools_v2.py
+  # Verification: 2452 tests pass (4 pre-existing failures), lint clean,
+  #   graph compiles with 6 nodes.
+  # ─────────────────────────────────────────────────────
+  unified-chat-phase1-backend-2026-03-22: done  # feat(chat): Unified LangGraph agent replacing separate supervisor + crud graphs. thread-safe contextvars tool context (tool_context.py), SqliteSaver singleton (checkpointer.py), unified 6-node graph with 15 LLM-facing tools + interrupt-based HITL (unified_agent.py). Single AG-UI endpoint with session_id support (agui_chat.py rewritten). Session CRUD REST endpoints (unified_sessions.py). guardrails.py expanded with 4 missing table schemas. surrealql_query.jinja updated with 6 new query examples.
+
+  # ─────────────────────────────────────────────────────
   # Auto-Notebook + AI-Editor Rename (2026-03-22)
   # Commit: 33bf5aed
   # 1. Auto-create Notebook on PDF upload (POST /sources)
@@ -824,8 +838,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 309  (306 prior + 3 auto-notebook/AI-Editor entries)
-# Stories Done: 279 (90%)  -- 276 prior + 3 auto-notebook/AI-Editor entries
+# Total Stories: 310  (309 prior + 1 unified-chat-phase1)
+# Stories Done: 280 (90%)  -- 279 prior + 1 unified-chat-phase1
 # Stories Review: 0
 # Stories In-Progress: 1 (mcs11-jobs-source-unification — code done, E2E verification 6.2-6.6 pending)
 # Stories Blocked: 0
@@ -905,6 +919,16 @@ development_status:
 # 0→29 records (93.5% Broadmeadows ground truth). RC1-RC7 fixed. RC8 deferred.
 # Frontend Audit (2026-03-13): 8 tasks across 18 files. V3 grid unification, computed metrics,
 # provenance fixes, loading states, label corrections. Commit: c9ff25d4.
+#
+# Unified Chat Phase 1 — Backend (2026-03-22):
+# New unified LangGraph agent (open_notebook/graphs/unified_agent.py) replaces separate
+# supervisor_graph + crud_graph. 6 nodes: agent, tools, approval/interrupt, legacy_execute.
+# 15 LLM-facing tools. Thread-safe contextvars tool context (tool_context.py). SqliteSaver
+# singleton for persistent sessions (checkpointer.py). Single AG-UI endpoint with session_id
+# (agui_chat.py rewritten). Session CRUD REST endpoints (unified_sessions.py, registered in
+# main.py). guardrails.py expanded: 4 new table schemas (source, source_intelligence,
+# acm_table_section, raw_extraction_table). surrealql_query.jinja: 6 new query examples.
+# 2452 tests pass (4 pre-existing failures). Lint clean. Graph compiles 6 nodes.
 #
 # KEY CHANGES (2026-03-11 - Docling export_to_dict Fix — Per-Row Extraction Unblocked):
 # ====================================================================================

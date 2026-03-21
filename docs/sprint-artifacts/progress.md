@@ -2,6 +2,27 @@
 
 ## Completed Milestones
 
+### Unified Chat Phase 1: Backend (2026-03-22) — COMPLETE
+Replaced separate supervisor + CRUD graphs with a single unified LangGraph agent.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| T1 | Thread-safe `contextvars` tool context replacing module-level globals (`tool_context.py`) | Done |
+| T2 | SqliteSaver singleton for persistent chat sessions (`checkpointer.py`) | Done |
+| T3 | Unified LangGraph graph — 6 nodes, 15 tools, interrupt-based HITL (`unified_agent.py`) | Done |
+| T4 | Comprehensive system prompt covering all 7 DB tables + 15 tools (`prompts/unified_agent.jinja`) | Done |
+| T5 | Rewritten AG-UI endpoint with single unified path + `session_id` support (`api/routers/agui_chat.py`) | Done |
+| T6 | Session CRUD REST endpoints — list/create/update/delete (`api/routers/unified_sessions.py`) | Done |
+| T7 | Delegate tool context in `acm_tools.py` and `crud_tools.py` to `tool_context.py` | Done |
+| T8 | Expand `guardrails.py` with 4 missing table schemas (source, source_intelligence, acm_table_section, raw_extraction_table) | Done |
+| T9 | Add 6 new SurrealQL query examples to `prompts/crud/surrealql_query.jinja` | Done |
+| T10 | Register `unified_sessions` router in `api/main.py` | Done |
+| T11 | Fix stale import of removed `_crud_context` in `test_crud_tools_enhanced.py` + `test_crud_tools_v2.py` | Done |
+
+**Files created:** 6  **Files modified:** 7  **Tests:** 2452 pass (4 pre-existing failures)
+
+---
+
 ### Auto-Notebook + AI-Editor Rename (2026-03-22) — COMPLETE
 Auto-create Notebook on PDF upload, rename "Notebooks" to "AI-Editor", cascade delete.
 
