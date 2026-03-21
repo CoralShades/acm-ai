@@ -37,7 +37,7 @@ export default function LandingPage() {
             </Link>
           </Button>
           <Button variant="outline" size="lg" asChild>
-            <Link href="/notebooks">
+            <Link href="/ai-editor">
               View Dashboard
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>

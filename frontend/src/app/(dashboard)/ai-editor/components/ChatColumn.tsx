@@ -105,7 +105,7 @@ export function ChatColumn({ notebookId, contextSelections }: ChatColumnProps) {
           <SmartChatPanel notebookId={notebookId} />
         ) : (
           <ChatPanel
-            title="Chat with Notebook"
+            title="Chat with AI-Editor"
             contextType="notebook"
             messages={chat.messages}
             isStreaming={chat.isSending}

@@ -26,6 +26,7 @@ import {
   Building2,
   Table2,
   Timer,
+  BookOpen,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { JobStatusPill } from './JobStatusPill'
@@ -221,6 +222,14 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
       <CardContent className="px-4 pb-3 space-y-2">
         {/* Status pill — override to 'extracting' when command is active */}
         <JobStatusPill review_status={isExtracting ? 'extracting' : source.review_status} />
+
+        {/* Notebook badge */}
+        {source.notebook_name && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <BookOpen className="h-3 w-3 shrink-0" />
+            <span className="truncate">{source.notebook_name}</span>
+          </div>
+        )}
 
         {isExtracting && (
           <div className="rounded-lg border border-[color:var(--vaea-teal-300)]/50 bg-[color:var(--vaea-teal-100)]/20 p-3 dark:bg-[color:var(--vaea-teal-900)]/20 space-y-2">

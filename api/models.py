@@ -307,6 +307,10 @@ class SourceCreate(BaseModel):
     async_processing: bool = Field(
         False, description="Whether to process source asynchronously"
     )
+    # Auto-generated notebook name (optional override from frontend)
+    notebook_name: Optional[str] = Field(
+        None, description="Custom notebook name for auto-created notebook (defaults to cleaned filename)"
+    )
 
     @model_validator(mode="after")
     def validate_notebook_fields(self):
@@ -351,6 +355,7 @@ class SourceResponse(BaseModel):
     processing_info: Optional[Dict] = None
     # Notebook associations
     notebooks: Optional[List[str]] = None
+    notebook_name: Optional[str] = None
     # Review workflow
     review_status: Optional[str] = None
 
@@ -382,6 +387,8 @@ class SourceListResponse(BaseModel):
     records_count: Optional[int] = None
     site_name: Optional[str] = None
     consultant_name: Optional[str] = None
+    # Notebook association
+    notebook_name: Optional[str] = None
 
 
 # Context API models

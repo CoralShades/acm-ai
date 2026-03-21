@@ -181,6 +181,7 @@ export function AppSidebar() {
                               href={item.href}
                               target={item.external ? '_blank' : undefined}
                               rel={item.external ? 'noopener noreferrer' : undefined}
+                              className={item.animated ? 'group/ai-editor' : undefined}
                             >
                               <Button
                                 variant={isActive ? 'secondary' : 'ghost'}
@@ -191,7 +192,10 @@ export function AppSidebar() {
                                 )}
                                 aria-label={item.name}
                               >
-                                <item.icon className="h-4 w-4" />
+                                <item.icon className={cn(
+                                  'h-4 w-4',
+                                  item.animated && 'transition-transform duration-500 ease-in-out group-hover/ai-editor:rotate-12 group-hover/ai-editor:scale-110'
+                                )} />
                               </Button>
                             </Link>
                           </TooltipTrigger>
@@ -237,6 +241,7 @@ export function AppSidebar() {
                             href={item.href}
                             target={item.external ? '_blank' : undefined}
                             rel={item.external ? 'noopener noreferrer' : undefined}
+                            className={item.animated ? 'group/ai-editor' : undefined}
                           >
                             <Button
                               variant={isActive ? 'secondary' : 'ghost'}
@@ -246,7 +251,10 @@ export function AppSidebar() {
                                   'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                               )}
                             >
-                              <item.icon className="h-4 w-4" />
+                              <item.icon className={cn(
+                                'h-4 w-4',
+                                item.animated && 'transition-transform duration-500 ease-in-out group-hover/ai-editor:rotate-12 group-hover/ai-editor:scale-110'
+                              )} />
                               <span>{item.name}</span>
                               {item.badge && (
                                 <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">

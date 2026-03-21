@@ -12,7 +12,7 @@ import {
   SourceListResponse,
   NoteResponse
 } from '@/lib/types/api'
-import { ContextSelections } from '@/app/(dashboard)/notebooks/[id]/page'
+import { ContextSelections } from '@/app/(dashboard)/ai-editor/[id]/page'
 
 interface UseNotebookChatParams {
   notebookId: string

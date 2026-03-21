@@ -65,7 +65,7 @@ export function CreateNotebookDialog({ open, onOpenChange }: CreateNotebookDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Create New Notebook</DialogTitle>
+          <DialogTitle>Create New AI-Editor</DialogTitle>
           <DialogDescription>
             Start organizing your research with a dedicated space for related sources and notes.
           </DialogDescription>
@@ -77,7 +77,7 @@ export function CreateNotebookDialog({ open, onOpenChange }: CreateNotebookDialo
             <Input
               id="notebook-name"
               {...register('name')}
-              placeholder="Enter notebook name"
+              placeholder="Enter AI-Editor name"
               autoFocus
             />
             {errors.name && (
@@ -90,7 +90,7 @@ export function CreateNotebookDialog({ open, onOpenChange }: CreateNotebookDialo
             <Textarea
               id="notebook-description"
               {...register('description')}
-              placeholder="Describe the purpose and scope of this notebook..."
+              placeholder="Describe the purpose and scope of this AI-Editor..."
               rows={4}
             />
           </div>
@@ -100,7 +100,7 @@ export function CreateNotebookDialog({ open, onOpenChange }: CreateNotebookDialo
               Cancel
             </Button>
             <Button type="submit" disabled={!isValid || createNotebook.isPending}>
-              {createNotebook.isPending ? 'Creating…' : 'Create Notebook'}
+              {createNotebook.isPending ? 'Creating…' : 'Create AI-Editor'}
             </Button>
           </DialogFooter>
         </form>

@@ -7,7 +7,7 @@ export default function NotebooksLoading() {
   return (
     <AppShell>
       <div className="w-full space-y-4 p-6" aria-busy="true">
-        <span className="sr-only" role="status">Loading notebooks</span>
+        <span className="sr-only" role="status">Loading AI-Editors</span>
 
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-40" />

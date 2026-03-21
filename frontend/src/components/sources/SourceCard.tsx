@@ -28,7 +28,7 @@ import {
 import { useSourceStatus } from '@/lib/hooks/use-sources'
 import { cn } from '@/lib/utils'
 import { ContextToggle } from '@/components/common/ContextToggle'
-import { ContextMode } from '@/app/(dashboard)/notebooks/[id]/page'
+import { ContextMode } from '@/app/(dashboard)/ai-editor/[id]/page'
 
 interface SourceCardProps {
   source: SourceListResponse

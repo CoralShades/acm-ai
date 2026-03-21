@@ -11,7 +11,7 @@
 
 import { useRef, useState, useCallback, DragEvent, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, CheckCircle2, Loader2, ExternalLink, FileText } from 'lucide-react'
+import { Upload, CheckCircle2, Loader2, ExternalLink, FileText, BookOpen } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { sourcesApi } from '@/lib/api/sources'
 import { acmApi } from '@/lib/api/acm'
 import { useToast } from '@/lib/hooks/use-toast'
@@ -32,6 +33,11 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function cleanFilenameForNotebook(filename: string): string {
+  const stem = filename.replace(/\.pdf$/i, '')
+  return stem.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim() || 'Untitled Notebook'
 }
 
 interface QuickUploadDialogProps {
@@ -49,12 +55,14 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
   const [phase, setPhase] = useState<UploadPhase>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [resultSourceId, setResultSourceId] = useState<string | null>(null)
+  const [notebookName, setNotebookName] = useState('')
 
   const reset = useCallback(() => {
     setFile(null)
     setPhase('idle')
     setErrorMsg(null)
     setResultSourceId(null)
+    setNotebookName('')
   }, [])
 
   const handleClose = useCallback((nextOpen: boolean) => {
@@ -72,6 +80,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
     }
     setFile(incoming)
     setErrorMsg(null)
+    setNotebookName(cleanFilenameForNotebook(incoming.name))
   }, [toastError])
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -106,6 +115,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
         title: file.name,
         file,
         async_processing: true,
+        notebook_name: notebookName.trim() || undefined,
       })
       sourceId = sourceResponse.id
     } catch (err: unknown) {
@@ -136,7 +146,7 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
       setPhase('error')
       setErrorMsg(err instanceof Error ? err.message : 'Extraction could not be started.')
     }
-  }, [file, toastSuccess, onOpenChange, router])
+  }, [file, notebookName, toastSuccess, onOpenChange, router])
 
   const handleGoToProgress = useCallback(() => {
     if (resultSourceId) {
@@ -243,6 +253,20 @@ export function QuickUploadDialog({ open, onOpenChange }: QuickUploadDialogProps
               aria-hidden="true"
               onChange={handleFileInputChange}
             />
+
+            {/* Notebook name (shown after file selected) */}
+            {file && !isProcessing && (
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Input
+                  value={notebookName}
+                  onChange={(e) => setNotebookName(e.target.value)}
+                  placeholder="AI-Editor name"
+                  className="h-8 text-sm"
+                  data-testid="quick-upload-notebook-name"
+                />
+              </div>
+            )}
 
             {/* Error message */}
             {phase === 'error' && errorMsg && (

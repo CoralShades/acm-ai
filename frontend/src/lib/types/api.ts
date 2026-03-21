@@ -50,6 +50,8 @@ export interface SourceListResponse {
   records_count?: number
   site_name?: string | null
   consultant_name?: string | null
+  // Auto-created notebook name
+  notebook_name?: string | null
 }
 
 export interface SourceDetailResponse extends SourceListResponse {
@@ -108,6 +110,8 @@ export interface CreateSourceRequest {
   delete_source?: boolean
   // New async processing support
   async_processing?: boolean
+  // Custom notebook name for auto-created notebook
+  notebook_name?: string
 }
 
 export interface UpdateNoteRequest {

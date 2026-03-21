@@ -18,7 +18,7 @@ from surreal_commands import CommandInput, CommandOutput, command
 
 from open_notebook.database.repository import repo_query
 from open_notebook.domain.acm import ACMRecord, BuildingRecord
-from open_notebook.domain.notebook import Source
+from open_notebook.domain.notebook import Notebook, Source
 from open_notebook.extractors.pipeline_event_bus import (
     ExtractionDoclingCompleteData,
     ExtractionDoclingCompleteEvent,
@@ -29,6 +29,63 @@ from open_notebook.extractors.pipeline_event_bus import (
     get_event_bus,
 )
 from open_notebook.graphs.acm_extraction import extract_acm_from_source
+
+
+async def _enrich_notebook_name(source_id: str) -> None:
+    """Update auto-created notebook name with extracted site/consultant metadata.
+
+    Queries source_intelligence for site_name and consultant_name, then updates
+    the first linked notebook's name to include this richer information.
+    Non-fatal — logs warnings on failure.
+    """
+    try:
+        # Get intelligence metadata
+        intel_rows = await repo_query(
+            "SELECT site_name, consultant_name FROM source_intelligence WHERE source_id = type::thing($sid) LIMIT 1",
+            {"sid": source_id},
+        )
+        if not intel_rows:
+            return
+
+        site_name = intel_rows[0].get("site_name")
+        consultant_name = intel_rows[0].get("consultant_name")
+
+        # Only enrich if we have meaningful metadata
+        if not site_name or site_name.lower() in ("unknown", "n/a", ""):
+            return
+
+        # Find the first linked notebook via reference edge
+        nb_rows = await repo_query(
+            "SELECT out AS notebook_id FROM reference WHERE in = type::thing($sid) LIMIT 1",
+            {"sid": source_id},
+        )
+        if not nb_rows:
+            return
+
+        notebook_id = str(nb_rows[0].get("notebook_id", ""))
+        if not notebook_id:
+            return
+
+        notebook = await Notebook.get(notebook_id)
+        if not notebook:
+            return
+
+        # Only update if the notebook was auto-created (description starts with "Auto-created")
+        if not notebook.description.startswith("Auto-created"):
+            return
+
+        # Build enriched name
+        parts = [f"Site: {site_name}"]
+        if consultant_name and consultant_name.lower() not in ("unknown", "n/a", ""):
+            parts.append(f"ARA by {consultant_name}")
+        enriched_name = " — ".join(parts)
+
+        notebook.name = enriched_name
+        await notebook.save()
+        logger.info(f"Enriched notebook '{notebook_id}' name to '{enriched_name}' for source {source_id}")
+
+    except Exception as e:
+        logger.warning(f"Failed to enrich notebook name for source {source_id}: {e}")
 
 
 def _generate_worker_id() -> str:
@@ -374,11 +431,12 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                     force=False,  # Don't delete again, we already handled it
                     command_id=command_id,
                 ),
-                timeout=1800,  # 30 minutes max per extraction
+                timeout=int(os.environ.get("ACM_EXTRACT_TIMEOUT", "3600")),
             )
         except asyncio.TimeoutError:
+            _timeout = int(os.environ.get("ACM_EXTRACT_TIMEOUT", "3600"))
             processing_time = time.time() - start_time
-            logger.error(f"ACM extraction timed out after 1800s for {source_id}")
+            logger.error(f"ACM extraction timed out after {_timeout}s for {source_id}")
             if command_id:
                 await _write_terminal_status(command_id, "failed", 0)
                 # MCS12: Emit extraction.failed on timeout
@@ -543,6 +601,9 @@ async def acm_extract_command(input_data: ACMExtractionInput) -> ACMExtractionOu
                 await _src.save()
         except Exception as e:
             logger.warning(f"Failed to update review_status for {source_id}: {e}")
+
+        # Enrich auto-created notebook name with extracted metadata
+        await _enrich_notebook_name(source_id)
 
         return ACMExtractionOutput(
             success=True,

@@ -41,7 +41,7 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
   }
 
   const handleCardClick = () => {
-    router.push(`/notebooks/${encodeURIComponent(notebook.id)}`)
+    router.push(`/ai-editor/${encodeURIComponent(notebook.id)}`)
   }
 
   return (
@@ -130,7 +130,7 @@ export function NotebookCard({ notebook }: NotebookCardProps) {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Delete Notebook"
+        title="Delete AI-Editor"
         description={`Are you sure you want to delete "${notebook.name}"? This action cannot be undone and will delete all sources, notes, and chat sessions.`}
         confirmText="Delete"
         confirmVariant="destructive"

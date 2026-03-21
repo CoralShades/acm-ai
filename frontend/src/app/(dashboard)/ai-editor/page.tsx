@@ -10,7 +10,7 @@ import { useNotebooks } from '@/lib/hooks/use-notebooks'
 import { CreateNotebookDialog } from '@/components/notebooks/CreateNotebookDialog'
 import { Input } from '@/components/ui/input'
 
-export default function NotebooksPage() {
+export default function AIEditorsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const { data: notebooks, isLoading, refetch } = useNotebooks(false)
@@ -51,7 +51,7 @@ export default function NotebooksPage() {
         <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Notebooks</h1>
+            <h1 className="text-2xl font-bold">AI-Editors</h1>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -60,33 +60,33 @@ export default function NotebooksPage() {
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search notebooks..."
+              placeholder="Search AI-Editors..."
               className="w-full sm:w-64"
             />
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              New Notebook
+              New AI-Editor
             </Button>
           </div>
         </div>
-        
+
         <div className="space-y-8">
-          <NotebookList 
-            notebooks={filteredActive} 
+          <NotebookList
+            notebooks={filteredActive}
             isLoading={isLoading}
-            title="Active Notebooks"
-            emptyTitle={isSearching ? 'No notebooks match your search' : undefined}
-            emptyDescription={isSearching ? 'Try using a different notebook name.' : undefined}
+            title="Active AI-Editors"
+            emptyTitle={isSearching ? 'No AI-Editors match your search' : undefined}
+            emptyDescription={isSearching ? 'Try using a different AI-Editor name.' : undefined}
           />
-          
+
           {hasArchived && (
-            <NotebookList 
-              notebooks={filteredArchived} 
+            <NotebookList
+              notebooks={filteredArchived}
               isLoading={false}
-              title="Archived Notebooks"
+              title="Archived AI-Editors"
               collapsible
-              emptyTitle={isSearching ? 'No archived notebooks match your search' : undefined}
-              emptyDescription={isSearching ? 'Modify your search to find archived notebooks.' : undefined}
+              emptyTitle={isSearching ? 'No archived AI-Editors match your search' : undefined}
+              emptyDescription={isSearching ? 'Modify your search to find archived AI-Editors.' : undefined}
             />
           )}
         </div>

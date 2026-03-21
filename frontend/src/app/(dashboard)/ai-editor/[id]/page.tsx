@@ -108,8 +108,8 @@ function NotebookPageContent() {
     return (
       <AppShell>
         <div className="p-6">
-          <h1 className="text-2xl font-bold mb-4">Notebook Not Found</h1>
-          <p className="text-muted-foreground">The requested notebook could not be found.</p>
+          <h1 className="text-2xl font-bold mb-4">AI-Editor Not Found</h1>
+          <p className="text-muted-foreground">The requested AI-Editor could not be found.</p>
         </div>
       </AppShell>
     )
@@ -122,8 +122,8 @@ function NotebookPageContent() {
           <Breadcrumbs
             items={[
               { label: 'Home', href: '/' },
-              { label: 'Notebooks', href: '/notebooks' },
-              { label: notebook.name || 'Untitled Notebook' },
+              { label: 'AI-Editor', href: '/ai-editor' },
+              { label: notebook.name || 'Untitled AI-Editor' },
             ]}
           />
           <NotebookHeader notebook={notebook} />

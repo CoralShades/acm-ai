@@ -7,7 +7,7 @@ export default function NotebookDetailLoading() {
   return (
     <AppShell>
       <div className="flex flex-col h-full p-6 space-y-4" aria-busy="true">
-        <span className="sr-only" role="status">Loading notebook</span>
+        <span className="sr-only" role="status">Loading AI-Editor</span>
 
         <Skeleton className="h-9 w-32" />
 

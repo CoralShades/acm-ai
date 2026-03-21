@@ -40,7 +40,7 @@ export function NotebookList({
       <EmptyState
         icon={Book}
         title={emptyTitle ?? `No ${title.toLowerCase()}`}
-        description={emptyDescription ?? 'Start by creating your first notebook to organize your research.'}
+        description={emptyDescription ?? 'Start by creating your first AI-Editor to organize your research.'}
       />
     )
   }

@@ -36,6 +36,65 @@ from open_notebook.exceptions import InvalidInputError
 router = APIRouter()
 
 
+def _clean_filename_for_notebook(filename: str) -> str:
+    """Derive a human-readable notebook name from a PDF filename.
+
+    '123_Main_St_ARA_Report.pdf' -> 'ARA — 123 Main St Report'
+    'My Document.pdf' -> 'My Document'
+    """
+    from pathlib import PurePosixPath
+
+    # Strip extension
+    stem = PurePosixPath(filename).stem
+
+    # Replace underscores/hyphens with spaces, collapse multiple spaces
+    name = stem.replace("_", " ").replace("-", " ")
+    import re
+
+    name = re.sub(r"\s+", " ", name).strip()
+
+    return name or "Untitled Notebook"
+
+
+async def _auto_create_notebook(
+    source: "Source", source_data: "SourceCreate", filename: str
+) -> Optional[str]:
+    """Auto-create a notebook for a newly uploaded source and link them.
+
+    Returns the notebook name if created, None otherwise.
+    """
+    from datetime import datetime as dt
+
+    # Determine notebook name: user override > cleaned filename
+    notebook_name = (
+        source_data.notebook_name.strip()
+        if source_data.notebook_name
+        else _clean_filename_for_notebook(filename)
+    )
+
+    # Auto-generate description with audit trail
+    today = dt.now().strftime("%Y-%m-%d")
+    description = f"Auto-created from upload of {filename} on {today}"
+
+    try:
+        notebook = Notebook(name=notebook_name, description=description)
+        await notebook.save()
+
+        if notebook.id:
+            await source.add_to_notebook(str(notebook.id))
+            logger.info(
+                f"Auto-created notebook '{notebook_name}' ({notebook.id}) for source {source.id}"
+            )
+            return notebook_name
+        else:
+            logger.warning("Auto-created notebook has no ID after save")
+            return None
+    except Exception as e:
+        # Non-fatal — source was already saved, notebook is a convenience
+        logger.warning(f"Failed to auto-create notebook for source {source.id}: {e}")
+        return None
+
+
 def generate_unique_filename(original_filename: str, upload_folder: str) -> str:
     """Generate unique filename like Streamlit app (append counter if file exists)."""
     file_path = Path(upload_folder)
@@ -94,6 +153,7 @@ def parse_source_form_data(
     embed: str = Form("false"),  # Accept as string, convert to bool
     delete_source: str = Form("false"),  # Accept as string, convert to bool
     async_processing: str = Form("false"),  # Accept as string, convert to bool
+    notebook_name: Optional[str] = Form(None),  # Custom name for auto-created notebook
     file: Optional[UploadFile] = File(None),
 ) -> tuple[SourceCreate, Optional[UploadFile]]:
     """Parse form data into SourceCreate model and return upload file separately."""
@@ -140,6 +200,7 @@ def parse_source_form_data(
             embed=embed_bool,
             delete_source=delete_source_bool,
             async_processing=async_processing_bool,
+            notebook_name=notebook_name,
         )
         pass  # SourceCreate instance created successfully
     except Exception as e:
@@ -225,6 +286,7 @@ async def get_sources(
         records_counts: dict[str, int] = {}
         site_names: dict[str, Optional[str]] = {}
         consultant_names: dict[str, Optional[str]] = {}
+        notebook_names: dict[str, str] = {}
         if source_ids:
             try:
                 building_rows = await repo_query(
@@ -298,6 +360,24 @@ async def get_sources(
                 logger.warning(
                     f"Failed to fetch intelligence metadata for source list: {e}"
                 )
+
+            # Fetch notebook names linked via reference edges
+            try:
+                nb_rows = await repo_query(
+                    """
+                    SELECT in AS source_id, out.name AS notebook_name
+                    FROM reference
+                    WHERE in.id IS NOT NONE
+                    FETCH out
+                    """,
+                )
+                for row in nb_rows or []:
+                    sid = str(row.get("source_id", ""))
+                    nb_name = row.get("notebook_name")
+                    if sid and nb_name and sid not in notebook_names:
+                        notebook_names[sid] = nb_name
+            except Exception as e:
+                logger.warning(f"Failed to fetch notebook names for source list: {e}")
 
         # Extract command IDs for batch status fetching
         command_ids = []
@@ -427,6 +507,7 @@ async def get_sources(
                     records_count=records_counts.get(_sid_str),
                     site_name=site_names.get(_sid_str),
                     consultant_name=consultant_names.get(_sid_str),
+                    notebook_name=notebook_names.get(_sid_str),
                 )
             )
 
@@ -529,6 +610,16 @@ async def create_source(
             for notebook_id in source_data.notebooks or []:
                 await source.add_to_notebook(notebook_id)
 
+            # Auto-create a notebook for upload-type sources
+            auto_notebook_name: Optional[str] = None
+            if source_data.type == "upload":
+                original_filename = (
+                    upload_file.filename if upload_file and upload_file.filename else source_data.title or "document"
+                )
+                auto_notebook_name = await _auto_create_notebook(
+                    source, source_data, original_filename
+                )
+
             try:
                 # Import command modules to ensure they're registered
                 import commands.source_commands  # noqa: F401
@@ -569,6 +660,7 @@ async def create_source(
                     command_id=command_id,
                     status="new",
                     processing_info={"async": True, "queued": True},
+                    notebook_name=auto_notebook_name,
                 )
 
             except Exception as e:
@@ -1151,7 +1243,45 @@ async def delete_source(source_id: str):
         # 2. Capture command ID for agui_events cleanup
         command_id = getattr(source, "command", None)
 
-        # 3. Delete relation edges that lack cascade events
+        # 3a. Delete linked notebooks (via reference edges: source -> reference -> notebook)
+        try:
+            nb_rows = await repo_query(
+                "SELECT out AS notebook_id FROM reference WHERE in = $sid;",
+                {"sid": sid},
+            )
+            nb_deleted = 0
+            for row in nb_rows or []:
+                nb_id = str(row.get("notebook_id", ""))
+                if nb_id:
+                    try:
+                        await repo_query(f"DELETE {nb_id};")
+                        nb_deleted += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to delete notebook {nb_id}: {e}")
+            deleted_extras["notebooks"] = nb_deleted
+        except Exception as e:
+            logger.warning(f"Failed to fetch/delete notebooks for {source_id}: {e}")
+
+        # 3b. Delete chat sessions linked via refers_to edges (prevents orphans)
+        try:
+            chat_rows = await repo_query(
+                "SELECT in AS session_id FROM refers_to WHERE out = $sid;",
+                {"sid": sid},
+            )
+            chat_deleted = 0
+            for row in chat_rows or []:
+                session_id = str(row.get("session_id", ""))
+                if session_id:
+                    try:
+                        await repo_query(f"DELETE {session_id};")
+                        chat_deleted += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to delete chat session {session_id}: {e}")
+            deleted_extras["chat_sessions"] = chat_deleted
+        except Exception as e:
+            logger.warning(f"Failed to fetch/delete chat sessions for {source_id}: {e}")
+
+        # 3c. Delete relation edges that lack cascade events
         for table, field in [
             ("reference", "in"),  # reference edges FROM source TO notebook
             ("refers_to", "out"),  # chat_session refers_to edges

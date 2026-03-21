@@ -11,9 +11,11 @@
 
 import { useRef, useState, useCallback, useEffect, DragEvent, ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,11 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function cleanFilenameForNotebook(filename: string): string {
+  const stem = filename.replace(/\.pdf$/i, '')
+  return stem.replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim() || 'Untitled Notebook'
+}
+
 export function UploadWizard() {
   const router = useRouter()
   const { error: toastError } = useToast()
@@ -50,6 +57,7 @@ export function UploadWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [processingStage, setProcessingStage] = useState<'uploading' | 'starting' | null>(null)
   const [fatalError, setFatalError] = useState<string | null>(null)
+  const [notebookName, setNotebookName] = useState('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -67,6 +75,7 @@ export function UploadWizard() {
       return
     }
     setFile(incoming)
+    setNotebookName(cleanFilenameForNotebook(incoming.name))
   }, [toastError])
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -122,6 +131,7 @@ export function UploadWizard() {
         title: file.name,
         file,
         async_processing: true,
+        notebook_name: notebookName.trim() || undefined,
       })
       sourceId = sourceResponse.id
     } catch (err: unknown) {
@@ -162,7 +172,7 @@ export function UploadWizard() {
     }
 
     router.push(`/jobs/${encodeURIComponent(sourceId)}/extract`)
-  }, [file, isSubmitting, router, toastError])
+  }, [file, isSubmitting, notebookName, router, toastError])
 
   // ─── Processing animation state cycling ───────────────────────────────────
   // When submitting, we cycle dots for the current stage label to give a
@@ -328,6 +338,26 @@ export function UploadWizard() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {file ? formatFileSize(file.size) : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* Notebook name */}
+            <div className="flex items-start gap-3">
+              <BookOpen className="mt-2.5 h-5 w-5 shrink-0 text-muted-foreground" />
+              <div className="flex-1 min-w-0 space-y-1">
+                <Label htmlFor="notebook-name" className="text-xs uppercase tracking-wide text-muted-foreground">
+                  AI-Editor Name
+                </Label>
+                <Input
+                  id="notebook-name"
+                  value={notebookName}
+                  onChange={(e) => setNotebookName(e.target.value)}
+                  placeholder="Enter AI-Editor name"
+                  data-testid="notebook-name-input"
+                />
+                <p className="text-xs text-muted-foreground">
+                  An AI-Editor will be auto-created to organize this document.
                 </p>
               </div>
             </div>

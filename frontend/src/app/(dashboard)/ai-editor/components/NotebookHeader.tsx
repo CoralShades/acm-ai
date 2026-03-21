@@ -61,7 +61,7 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
                 onSave={handleUpdateName}
                 className="text-2xl font-bold"
                 inputClassName="text-2xl font-bold"
-                placeholder="Notebook name"
+                placeholder="AI-Editor name"
               />
               {notebook.archived && (
                 <Badge variant="secondary">Archived</Badge>
@@ -117,7 +117,7 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Delete Notebook"
+        title="Delete AI-Editor"
         description={`Are you sure you want to delete "${notebook.name}"? This action cannot be undone and will delete all sources, notes, and chat sessions.`}
         confirmText="Delete Forever"
         confirmVariant="destructive"

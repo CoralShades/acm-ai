@@ -9,7 +9,7 @@ import {
   Cog,
   SlidersHorizontal,
   Activity,
-  BookOpen,
+  Sparkles,
   Podcast,
   Wand2,
   Layers,
@@ -31,6 +31,8 @@ export interface NavItem {
   acmOnly?: boolean
   /** Hide from sidebar nav (available elsewhere, e.g. settings dropdown or footer) */
   hiddenFromNav?: boolean
+  /** Apply hover animation to the icon (sparkle pulse) */
+  animated?: boolean
 }
 
 export interface NavGroup {
@@ -49,7 +51,7 @@ export const navigationConfig: NavGroup[] = [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
       { name: 'Jobs', href: '/jobs', icon: ClipboardList },
       { name: 'ACM Register', href: '/acm', icon: FileWarning, acmOnly: true, hiddenFromNav: true },
-      { name: 'Notebooks', href: '/notebooks', icon: BookOpen, hideInAcm: true },
+      { name: 'AI-Editor', href: '/ai-editor', icon: Sparkles, animated: true },
       { name: 'Podcasts', href: '/podcasts', icon: Podcast, hideInAcm: true },
       { name: 'Transformations', href: '/transformations', icon: Wand2, hideInAcm: true },
       { name: 'Search', href: '/search', icon: Search, hiddenFromNav: true },

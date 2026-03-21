@@ -61,6 +61,9 @@ export const sourcesApi = {
     formData.append('embed', String(data.embed ?? false))
     formData.append('delete_source', String(data.delete_source ?? false))
     formData.append('async_processing', String(data.async_processing ?? false))
+    if (data.notebook_name) {
+      formData.append('notebook_name', data.notebook_name)
+    }
     
     const response = await apiClient.post<SourceResponse>('/sources', formData)
     return response.data
