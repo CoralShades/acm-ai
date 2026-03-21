@@ -263,3 +263,69 @@ Each finding follows:
 - **Description**: Source deletion (`DELETE /api/sources/{id}`) only deleted the source record from SurrealDB (triggering 9 DB cascade events) but left behind: (1) uploaded PDF file on disk, (2) `reference` relation edges, (3) `command` records, (4) `agui_events`, (5) `chat_session`/`refers_to` edges. Additionally, 92 orphaned PDF files (149MB) existed in `data/uploads/` from previous DB volumes with no matching source records.
 - **Evidence**: `data/uploads/` contained 93 files (149MB) but only 1 source in DB. After cleanup: 1 file (1.8MB).
 - **Recommendation**: Fixed in commit `0785f1b8`. Delete endpoint now cascades all 5 gaps. New `POST /api/sources/cleanup-orphaned-files` endpoint for batch cleanup.
+
+---
+
+## Finding 024 — 2026-03-20
+
+- **Date**: 2026-03-20 (pipeline accuracy fix session)
+- **Category**: benchmark
+- **Severity**: CONCERN
+- **Description**: Row segmenter was not filtering repeated column header rows that Docling re-emits at multi-page table boundaries. These headers were extracted as data records, inflating record counts and degrading F1. The live E2E test on Clutch_Broadmeadows.pdf confirmed the issue with 8 tables across 18 pages.
+- **Evidence**: Commit 1c6026d5 — `open_notebook/extractors/row_segmenter.py` `_is_header_row()` with 37 header texts
+- **Recommendation**: Fixed. Monitor recurrence when processing multi-page tables from non-standard formats.
+
+---
+
+## Finding 025 — 2026-03-20
+
+- **Date**: 2026-03-20 (pipeline accuracy fix session)
+- **Category**: functional
+- **Severity**: CONCERN
+- **Description**: SF Picklist validator was routing `needs_user_review` issues (Not Sampled, No Access, Unknown) to the blocking `all_issues` list, causing ~79 false validation failures per extraction run. These values are valid ARA data that have no Salesforce equivalent — they should be flagged for user review, not treated as extraction errors.
+- **Evidence**: Commit 1c6026d5 — `open_notebook/extractors/validators/sf_picklist_validator.py`; retest report shows validation failures dropped from 23 → 5 after fix
+- **Recommendation**: Fixed. `needs_user_review` issues now route to `chain_warnings` (non-blocking).
+
+---
+
+## Finding 026 — 2026-03-20
+
+- **Date**: 2026-03-20 (benchmark baseline capture)
+- **Category**: benchmark
+- **Severity**: INFO
+- **Description**: Benchmark baseline established after pipeline accuracy fixes. Broadmeadows: P=93.1%, R=87.1%, F1=90.0% (27/31 GT matched, 29 extracted). Alexander: P=22.2%, R=46.5%, F1=30.1% (20/43 GT matched, 90 extracted). Alexander low score is caused by room_name/location field misalignment — the model conflates location descriptions with room names in ARA-format pipe tables.
+- **Evidence**: `docs/sprint-artifacts/e2e-evidence/live/benchmark-results.json`
+- **Recommendation**: Alexander room_name extraction needs prompt engineering to distinguish structural room names from material location descriptions. Track F1 against this baseline on subsequent extraction changes.
+
+---
+
+## Finding 027 — 2026-03-20
+
+- **Date**: 2026-03-20 (chat system fix session)
+- **Category**: functional
+- **Severity**: CONCERN
+- **Description**: `crud_tools.py` fallback queries used `risk_status` field which was renamed to `sample_result` during the Salesforce schema alignment work. High-risk queries returned no results because the field did not exist in extracted records.
+- **Evidence**: Commit dfaf91ee — `open_notebook/graphs/crud_tools.py`; tested via Query mode in jobs page chat sidebar
+- **Recommendation**: Fixed. All fallback queries now use `sample_result`. Added "positive" keyword matching for high-risk queries.
+
+---
+
+## Finding 028 — 2026-03-21
+
+- **Date**: 2026-03-21 (SmartChatPanel stabilization)
+- **Category**: functional
+- **Severity**: BLOCKER (was causing page crashes)
+- **Description**: SmartChatPanel caused an infinite re-render loop because `useCopilotReadable` received a new object literal on every render as its value argument. Additionally, `useCopilotChatSuggestions` and `useCoAgentStateRender` hooks triggered AG-UI `TEXT_MESSAGE_CONTENT` errors on every connection, causing unhandled exceptions.
+- **Evidence**: Commit aded56d2 — `frontend/src/components/chat/SmartChatPanel.tsx`; screenshots at `docs/sprint-artifacts/e2e-evidence/live/query-edit-toggle.png`
+- **Recommendation**: Fixed. Value memoized via `useMemo`. Problematic hooks removed. `SmartChatErrorBoundary` added as safety net for future CopilotKit regressions.
+
+---
+
+## Finding 029 — 2026-03-21
+
+- **Date**: 2026-03-21 (package evaluation)
+- **Category**: functional
+- **Severity**: INFO
+- **Description**: `@copilotkit/*` v1.54.0 (latest) has breaking API changes incompatible with the current SmartChatPanel and CopilotKit runtime integration. Evaluation was performed and upgrade rejected. Python packages `ag-ui-langgraph`, `copilotkit`, and `ag-ui-protocol` were upgraded to their latest compatible versions.
+- **Evidence**: Commit aded56d2 — `frontend/package.json` pinned at v1.51.3; commit message documents reason
+- **Recommendation**: Re-evaluate @copilotkit/* v1.54.0 upgrade in a future sprint when breaking changes are understood. Track upstream changelog for stable release.

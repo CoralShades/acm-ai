@@ -344,6 +344,9 @@ ACM-AI supports multiple AI providers for flexibility and cost optimization:
 - ✅ **Building + ACM Grid Rework**: Two-tab layout (Buildings + ACM Records) on source/jobs pages, new BuildingGrid AG Grid with localStorage column state, View button dialog, 13-field column presets
 - ✅ **CRUD Chat Security Audit**: 23 issues fixed — structural HITL barrier (execute_pending_write removed from LLM tools), SQL injection allowlist (ALLOWED_ACM_FIELDS), source_id context binding, Record ID column, clipboard HTTPS guard, HITLApprovalDialog fixes
 - ✅ **UX Mega-Pack**: Async upload with review_status lifecycle, 3-panel progressive extract page (DoclingTablesPanel, BuildingsProgressPanel, LiveRecordsPanel), job card live dashboard with counters/elapsed timer via `/live-stats` endpoint
+- ✅ **Pipeline Accuracy Fixes**: Header row filtering (37 known headers), dedup key normalization, schema inference fallback parser, SF picklist `needs_user_review` non-blocking routing — eliminates 79 false validation failures per run
+- ✅ **Chat Query/Edit Toggle**: SmartChatPanel + JobCrudChatPanel mode toggle on jobs page sidebar, CRUD fallback query field rename, infinite re-render fix, SmartChatErrorBoundary isolation
+- ✅ **Benchmark Baseline**: Eval harness F1 metric + markdown output; Broadmeadows F1=90.0% (P=93.1%, R=87.1%), Alexander F1=30.1% (P=22.2%, R=46.5%)
 
 ### Next for ACM-AI
 - **Salesforce Data Push**: Direct sync of validated records to Salesforce org

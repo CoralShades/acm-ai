@@ -90,6 +90,33 @@
   - Average extraction time (completed): 167s (qwen2.5:7b) to 403s (llama3.1:8b)
 - **Next**: E36-S5 (Functional Verification)
 
+## 2026-03-20 to 2026-03-21 — Pipeline Accuracy Fixes + Chat System
+
+- **Status**: DONE
+- **Commits**: 1c6026d5, dfaf91ee, aded56d2
+- **Pipeline accuracy (Phase 1)**:
+  - Row segmenter: `_is_header_row()` with 37 known header texts prevents duplicate header records at multi-page table boundaries
+  - Dedup key normalization: strip + whitespace collapse on product/location/sample_no
+  - Schema inference fallback parser for flat dict and bare list LLM responses
+  - SF Picklist validator: `needs_user_review` routing changed to non-blocking `chain_warnings` (was causing 79 false validation failures)
+  - Added "Unknown" to `_LEGACY_VALUES` in SF picklist validator
+  - Eval harness: F1 metric + `--format markdown` CLI option
+- **Benchmark baseline established**:
+  - Broadmeadows: P=93.1%, R=87.1%, F1=90.0%
+  - Alexander: P=22.2%, R=46.5%, F1=30.1% (room_name/location field misalignment is primary gap)
+  - Evidence: `docs/sprint-artifacts/e2e-evidence/live/benchmark-results.json`
+- **Chat fixes (Phase 2)**:
+  - Query/Edit mode toggle added to jobs page chat sidebar (SmartChatPanel + JobCrudChatPanel)
+  - CRUD fallback query field `risk_status` renamed to `sample_result` in `crud_tools.py`
+  - SmartChatPanel infinite re-render fixed (useMemo on useCopilotReadable value)
+  - SmartChatErrorBoundary added to isolate CopilotKit crashes from the page
+  - Removed `useCopilotChatSuggestions` and `useCoAgentStateRender` (caused AG-UI TEXT_MESSAGE_CONTENT errors)
+- **Package upgrades**: ag-ui-langgraph 0.0.25→0.0.27, copilotkit 0.1.78→0.1.81, ag-ui-protocol 0.1.11→0.1.14 (Python); @copilotkit/* pinned at v1.51.3 (v1.54.0 has breaking changes)
+- **Known open issues (non-blocking)**:
+  - AG-UI TEXT_MESSAGE_CONTENT errors during chat (upstream ag-ui-langgraph run_id mutation bug)
+  - /notebooks redirect on direct navigation to /jobs/source:... (client-side routing)
+- **Next**: E36-S5 (Functional Verification)
+
 ## 2026-03-17 — Dogfood Session: Live Extraction + Bug Fixes
 
 - **Status**: DONE

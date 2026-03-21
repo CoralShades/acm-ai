@@ -1,6 +1,6 @@
 # MCS11: Unify `/jobs/[id]` as Canonical Page with Full Feature Parity
 
-**Status**: Phases 1-3 DONE | Phase 4 DEFERRED | Phase 5 partial (5.1 done, 5.2-5.3 remaining) | Phase 6 partial (6.1 done, 6.2-6.6 remaining) | Gap4 FK exposure DONE
+**Status**: Phases 1-3 DONE | Phase 4 DEFERRED | Phase 5 partial (5.1 done, 5.2-5.3 remaining) | Phase 6 partial (6.1 done, 6.2-6.6 remaining) | Gap4 FK exposure DONE | Pipeline accuracy fixes DONE (2026-03-21)
 **SP**: 13 | **Priority**: P0
 **Date**: 2026-03-19
 **Audit ref**: MCS10 gap analysis + visual audit of /jobs/[id] vs /source/[id]

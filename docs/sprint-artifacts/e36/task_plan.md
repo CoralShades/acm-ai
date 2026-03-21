@@ -2,10 +2,10 @@
 
 ## Reboot Check (read this FIRST every session)
 
-- **Last completed milestone**: CRUD Chat + Grid Audit Fix E2E (2026-03-16)
+- **Last completed milestone**: Pipeline Accuracy Fixes + Chat System + Benchmark Baseline (2026-03-21)
 - **Current active task**: None — ready for E36-S5
 - **Blockers**: SurrealDB v2.6.3 wire protocol (Finding 016) — pin Docker image before running extractions
-- **Last modified files**: `api/routers/agui_chat.py` (EventEncoder fix), `docs/sprint-artifacts/crud-audit-fix/audit-fix-report.md` (new), `docs/sprint-artifacts/e36/findings.md` (Findings 016-018 added)
+- **Last modified files**: `open_notebook/extractors/row_segmenter.py` (header filter), `open_notebook/extractors/validators/sf_picklist_validator.py` (non-blocking routing), `open_notebook/graphs/crud_tools.py` (field rename), `frontend/src/components/chat/SmartChatPanel.tsx` (re-render fix + error boundary), `docs/sprint-artifacts/e2e-evidence/live/benchmark-results.json` (baseline)
 - **Next planned action**: E36-S5 (Functional Verification)
 
 ---

@@ -201,7 +201,53 @@ All fixes applied during test session by parallel agent.
 
 ---
 
+## Pipeline Accuracy Fixes (2026-03-20 — 2026-03-21)
+
+Three phases of targeted accuracy improvements following live E2E test findings.
+
+### Phase 1: Over-extraction & False Validation Warnings (DONE)
+
+- **Commit**: 1c6026d5
+- **Row segmenter header filter**: Added `_is_header_row()` with 37 known column header texts; multi-page table boundaries no longer produce duplicate header records
+- **Dedup key normalization**: Strip + whitespace collapse on `product`, `location`, `sample_no` merges near-duplicate records with trivial spacing differences
+- **Schema inference fallback parser**: Added handling for flat dict and bare list LLM responses; previously these were discarded entirely
+- **SF Picklist validator — needs_user_review routing**: `needs_user_review` issues (Not Sampled, No Access, Unknown) now route to non-blocking `chain_warnings` instead of `all_issues`; eliminates 79 false validation failures per extraction run
+- **"Unknown" added to `_LEGACY_VALUES`** in SF picklist validator; no longer triggers validation failure
+
+### Phase 2: Chat System Fixes (DONE)
+
+- **Commit**: dfaf91ee
+- **Query/Edit toggle on jobs page**: Added mode toggle to jobs page chat sidebar — SmartChatPanel (Query mode) and JobCrudChatPanel (Edit mode) on both desktop sidebar and mobile drawer
+- **CRUD fallback query fix**: `risk_status` renamed to `sample_result` in all `crud_tools.py` fallback queries; added "positive" keyword matching for high-risk queries
+
+- **Commit**: aded56d2
+- **SmartChatPanel infinite re-render fix**: Memoized `useCopilotReadable` value object via `useMemo` to break the re-render loop
+- **SmartChatErrorBoundary**: Isolates CopilotKit errors so crashes do not take down the entire jobs page
+- **Removed problematic hooks**: `useCopilotChatSuggestions` and `useCoAgentStateRender` triggered AG-UI `TEXT_MESSAGE_CONTENT` auto-request errors on connection; removed from SmartChatPanel
+
+### Phase 3: Package Upgrades (DONE)
+
+- **Python packages** (applied at runtime): `ag-ui-langgraph` 0.0.25→0.0.27, `copilotkit` 0.1.78→0.1.81, `ag-ui-protocol` 0.1.11→0.1.14
+- **Frontend packages**: `@copilotkit/*` pinned at v1.51.3 — v1.54.0 evaluated and rejected due to breaking API changes
+
+### Benchmark Baseline Established (DONE)
+
+- **Commit**: 1c6026d5 (benchmark-results.json added)
+- **Eval harness**: Added F1 metric and `--format markdown` CLI output option to `scripts/eval/prompt_eval_harness.py`
+- **Broadmeadows baseline**: P=93.1%, R=87.1%, F1=90.0% (27/31 GT matched, 29 extracted)
+- **Alexander baseline**: P=22.2%, R=46.5%, F1=30.1% (20/43 GT matched, 90 extracted — field misalignment on room_name/location columns is primary gap)
+- **Evidence**: `docs/sprint-artifacts/e2e-evidence/live/benchmark-results.json`
+
+### Known Open Issues
+
+- AG-UI `TEXT_MESSAGE_CONTENT` errors still occur during chat (non-blocking; upstream `ag-ui-langgraph` run_id mutation bug)
+- `/notebooks` redirect when navigating directly to `/jobs/source:...` URLs (client-side routing issue)
+- `@copilotkit/*` v1.54.0 has breaking changes; frontend pinned at v1.51.3 until upstream resolves
+
+---
+
 ## Next Steps
 - [ ] MCS11 E2E verification (phases 6.2-6.6)
 - [ ] Phase 5.2-5.3: Error row highlighting, validation overview card
 - [ ] Phase 3.3-3.4: Per-building data source, building tab strip upgrade
+- [ ] Alexander room_name/location field misalignment (root cause of F1=30.1% score)
