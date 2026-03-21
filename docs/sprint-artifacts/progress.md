@@ -2,6 +2,24 @@
 
 ## Completed Milestones
 
+### Auto-Notebook + AI-Editor Rename (2026-03-22) — COMPLETE
+Auto-create Notebook on PDF upload, rename "Notebooks" to "AI-Editor", cascade delete.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| T1 | Auto-create Notebook in POST /sources (name from cleaned filename, editable in wizard) | Done |
+| T2 | Enrich notebook name post-extraction with site/consultant metadata | Done |
+| T3 | Show notebook name badge on JobCards | Done |
+| T4 | Move /notebooks route to /ai-editor, update all user-facing labels | Done |
+| T5 | Animated Sparkles icon with rotate+pulse hover for sidebar | Done |
+| T6 | Cascade-delete notebooks + chat sessions on source/job deletion | Done |
+| T7 | Frontend sources API client + UploadWizard + QuickUploadDialog notebook_name field | Done |
+| T8 | Fix all cross-file imports after directory move (ModalProvider, ContextToggle, SourceCard, useNotebookChat) | Done |
+
+**Files changed:** 28 frontend + 3 backend = 31 total
+**Commit:** `33bf5aed`
+
+
 ### Building Grid + ACM Records Grid Rework (2026-03-16) — COMPLETE
 Two-tab layout on `/source/[id]` and `/jobs/[id]` pages: "Buildings" tab (BuildingGrid) + "ACM Records" tab (BuildingTabStrip + ACMGrid). New `BuildingGrid.tsx` component — AG Grid with 13 default columns (Asset Name, Address, Suburb, Postcode, State, Asset Type, Category, Construction, Year, Levels, Ownership, Frequency, Records), View button opening `BuildingViewDialog`, autoHeight layout, column state persisted to localStorage. ACMGrid column defs reordered to 13 required Item__c fields. Per-building export dropdown ("Export Current Building" + "Export All"). DependentPicklistEditor, BuildingDetailForm, RecordWizard styling improvements. 3 commits, 8 files changed.
 

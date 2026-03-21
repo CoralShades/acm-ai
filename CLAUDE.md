@@ -41,7 +41,8 @@ The user's primary workflow is:
 | `/jobs/[id]` (`/jobs/source:ID`) | Primary detail view — all tabs, SSE streaming, bulk ops, chat | **P0** |
 | `/jobs/[id]/extract` | Extraction monitoring (navigated to during extraction) | P1 |
 | `/source/[id]` | Secondary ACM Register view — linked from jobs page, NOT primary | P2 |
-| `/dashboard` | Notebooks overview (legacy) | P3 |
+| `/ai-editor` | AI-Editor list (formerly Notebooks) — auto-created per upload | P2 |
+| `/ai-editor/[id]` | AI-Editor detail — sources, notes, chat columns | P2 |
 
 ### Rules for Frontend Changes
 
@@ -166,7 +167,9 @@ frontend/src/
     acm/                # ACM domain (BuildingGrid, ACMGrid, BuildingViewDialog, ProvenanceViewer, DoclingTablesPanel, BuildingsProgressPanel, LiveRecordsPanel, etc.)
     chat/               # Chat components (SmartChatPanel, renderers/)
     jobs/               # Job-related components (JobCard with live counters, ExtractionStatusBanner)
-    notebooks/, sources/, notes/  # Feature components
+    notebooks/            # AI-Editor dialogs (CreateNotebookDialog — user-facing name is "AI-Editor")
+    icons/                # Custom animated icons (AnimatedSparkleIcon)
+    sources/, notes/      # Feature components
   hooks/                # Custom React hooks (useLiveStats, useExtractionStream, useV3SSE, etc.)
   lib/                  # Utilities and API clients
   stores/               # Zustand stores
@@ -530,6 +533,15 @@ Item__c extraction supports two modes controlled by `ACM_ITEM_EXTRACTION_MODE` e
 - Activated by `ACM_ITEM_EXTRACTION_MODE=bulk` or automatic fallback when no DoclingDocument JSON
 
 **Truncation protection**: TruncationError detection → cloud model retry, 30% output budget reservation
+
+### Auto-Notebook on Upload (AI-Editor)
+- **Trigger**: `POST /sources` with `type=upload` auto-creates a `Notebook` record
+- **Name**: Cleaned filename (editable by user via `notebook_name` form field)
+- **Description**: `"Auto-created from upload of {filename} on {date}"`
+- **Post-extraction enrichment**: `_enrich_notebook_name()` in `commands/acm_commands.py` updates name with site/consultant metadata
+- **Cascade delete**: `DELETE /sources/{id}` deletes linked notebooks + chat sessions (not just edges)
+- **Frontend**: "AI-Editor" in sidebar (`/ai-editor` route), `Sparkles` icon with hover animation
+- **Internal code**: Variable names remain `notebook`/`notebookId` — only user-facing labels say "AI-Editor"
 
 ### SSE Streaming (PipelineEventBus)
 - Backend: `open_notebook/extractors/pipeline_event_bus.py`
