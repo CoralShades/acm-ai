@@ -984,18 +984,25 @@ async def _chunk_and_extract_items(
         )
         if result.status == "truncated":
             # Only retry with cloud fallback if cloud API keys are configured;
-            # otherwise retrying re-provisions the same Ollama model → infinite loop
-            cloud_available = bool(
-                os.environ.get("ACM_ANTHROPIC_API_KEY")
-                or os.environ.get("ACM_OPENROUTER_API_KEY")
-                or os.environ.get("OPENAI_API_KEY")
-            )
-            if cloud_available:
+            # otherwise retrying re-provisions the same Ollama model → infinite loop.
+            # BUG FIX: model_id=None selects the default (Ollama) via
+            # _provision_extraction_primary_model(). Must explicitly set a cloud
+            # model ID so provision_langchain_model() takes the model_id branch
+            # (line 609) and skips the Ollama-first priority chain.
+            cloud_model_id: Optional[str] = None
+            if os.environ.get("ACM_ANTHROPIC_API_KEY"):
+                cloud_model_id = "anthropic/claude-sonnet-4-20250514"
+            elif os.environ.get("ACM_OPENROUTER_API_KEY"):
+                cloud_model_id = "openrouter/anthropic/claude-sonnet-4"
+            elif os.environ.get("OPENAI_API_KEY"):
+                cloud_model_id = "openai/gpt-4o-mini"
+
+            if cloud_model_id:
                 logger.warning(
                     f"[E32-S2] Truncation detected for building {plan.building_id} "
-                    "— retrying with cloud provider (model_id=None)"
+                    f"— retrying with cloud model {cloud_model_id}"
                 )
-                cloud_state = {**state, "model_id": None}
+                cloud_state = {**state, "model_id": cloud_model_id}
                 result = await _v3_extract_items(
                     building_content,
                     plan,
@@ -1031,17 +1038,22 @@ async def _chunk_and_extract_items(
             docling_tables=docling_tables,
         )
         if result.status == "truncated":
-            cloud_available = bool(
-                os.environ.get("ACM_ANTHROPIC_API_KEY")
-                or os.environ.get("ACM_OPENROUTER_API_KEY")
-                or os.environ.get("OPENAI_API_KEY")
-            )
-            if cloud_available:
+            # BUG FIX: Same cloud fallback fix as non-chunked path —
+            # use explicit cloud model ID instead of model_id=None.
+            chunk_cloud_model: Optional[str] = None
+            if os.environ.get("ACM_ANTHROPIC_API_KEY"):
+                chunk_cloud_model = "anthropic/claude-sonnet-4-20250514"
+            elif os.environ.get("ACM_OPENROUTER_API_KEY"):
+                chunk_cloud_model = "openrouter/anthropic/claude-sonnet-4"
+            elif os.environ.get("OPENAI_API_KEY"):
+                chunk_cloud_model = "openai/gpt-4o-mini"
+
+            if chunk_cloud_model:
                 logger.warning(
                     f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
-                    "— retrying chunk with cloud provider (model_id=None)"
+                    f"— retrying chunk with cloud model {chunk_cloud_model}"
                 )
-                cloud_state = {**state, "model_id": None}
+                cloud_state = {**state, "model_id": chunk_cloud_model}
                 result = await _v3_extract_items(
                     chunk,
                     plan,
