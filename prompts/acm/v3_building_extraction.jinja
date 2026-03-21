@@ -13,6 +13,15 @@ You are extracting building-level metadata for a Salesforce **Building__c** reco
 {% if building_context.site_name %}
 - Site: {{ building_context.site_name }}
 {% endif %}
+{% if building_context.site_address %}
+- Site Address (from title page): {{ building_context.site_address }}
+{% endif %}
+{% if building_context.suburb %}
+- Suburb (from title page): {{ building_context.suburb }}
+{% endif %}
+{% if building_context.postcode %}
+- Postcode (from title page): {{ building_context.postcode }}
+{% endif %}
 
 ## SF Field Reference
 

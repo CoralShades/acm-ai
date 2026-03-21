@@ -323,6 +323,11 @@ def _create_building_prompt_context(
         ctx["consultant_name"] = doc_meta.consultant_name
         ctx["site_name"] = doc_meta.site_name
         ctx["report_date"] = doc_meta.report_date
+        # Pass address fields so LLM has site-level defaults when
+        # building-specific pages don't contain address info (title page only).
+        ctx["site_address"] = doc_meta.site_address
+        ctx["suburb"] = doc_meta.suburb
+        ctx["postcode"] = doc_meta.postcode
     return ctx
 
 

@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-20
+updated: 2026-03-21
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -790,6 +790,7 @@ development_status:
   bugfix-footer-row-detection-2026-03-20: done  # fix(extraction): 3/44 row extraction failures due to footer rows. Added footer row detection to row segmenter.
   bugfix-schema-inference-mappings-key-2026-03-20: done  # fix(extraction): schema inference LLM JSON response missing "mappings" key — cascade from page_start coercion error.
   bugfix-live-stats-surrealdb-record-ref-2026-03-20: done  # fix(api): live-stats endpoint returns zeros — SurrealDB string vs record ref comparison. Fixed with type::thing() cast.
+  bugfix-building-metadata-backfill-2026-03-21: done  # fix(extraction): Building fields (address, suburb, postcode, site_name) empty after extraction. Root cause: Phase 1 LLM only sees building-specific pages, not title page where metadata lives. Fix: (1) enrich prompt context with DocumentMeta address fields, (2) post-extraction backfill from DocumentMeta for None fields on BuildingRecord — applied to both success and minimal-record paths. No new migration needed (fields already in migration 40).
 
   # Integration Validation: All 6 steps passed 2026-02-23
   # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
@@ -804,8 +805,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 302  (294 prior + 8 pipeline fix round bug fixes)
-# Stories Done: 272 (90%)  -- 264 prior + 8 pipeline fix round bug fixes
+# Total Stories: 303  (294 prior + 9 pipeline fix round bug fixes)
+# Stories Done: 273 (90%)  -- 264 prior + 9 pipeline fix round bug fixes
 # Stories Review: 0
 # Stories In-Progress: 1 (mcs11-jobs-source-unification — code done, E2E verification 6.2-6.6 pending)
 # Stories Blocked: 0

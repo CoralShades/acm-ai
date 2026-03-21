@@ -617,6 +617,33 @@ def _assign_room_ids(records: list) -> None:
 _MAX_CONCURRENT_BUILDINGS = int(os.getenv("ACM_MAX_CONCURRENT_BUILDINGS", "3"))
 
 
+def _backfill_building_from_doc_meta(
+    record: BuildingRecord,
+    doc_meta: Optional[DocumentMeta],
+) -> None:
+    """Backfill None fields on BuildingRecord from DocumentMeta.
+
+    Only fills fields that are None — never overwrites LLM-extracted data.
+    Called after Phase 1 LLM extraction (or minimal record creation) to ensure
+    document-level metadata (from title page) populates building records.
+
+    Address/suburb/postcode are typically on the title page which falls outside
+    individual building page ranges, so the Phase 1 LLM often can't find them.
+    """
+    if not doc_meta:
+        return
+    if not record.building_address and doc_meta.site_address:
+        record.building_address = doc_meta.site_address
+    if not record.suburb and doc_meta.suburb:
+        record.suburb = doc_meta.suburb
+    if not record.postcode and doc_meta.postcode:
+        record.postcode = doc_meta.postcode
+    if not record.date_of_audit_report and doc_meta.report_date:
+        record.date_of_audit_report = doc_meta.report_date
+    if not record.site_name and doc_meta.site_name:
+        record.site_name = doc_meta.site_name
+
+
 async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
     """Phase 1 Building__c extraction: concurrent AI calls per building section.
 
@@ -723,6 +750,12 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                     building_code=building_meta_entry.building_id,
                     building_name=building_meta_entry.name,
                 )
+                # Backfill from DocumentMeta even on LLM failure — title-page
+                # data is still valuable for address/suburb/postcode fields.
+                doc_meta_fallback: Optional[DocumentMeta] = state.get(
+                    "document_metadata"
+                )
+                _backfill_building_from_doc_meta(minimal_record, doc_meta_fallback)
                 try:
                     await minimal_record.save()
                 except Exception as save_err:
@@ -779,6 +812,11 @@ async def extract_building_node(state: dict, config: RunnableConfig) -> dict:
                 building_sub_category=result.building_sub_category,
                 building_risk_rating=result.building_risk_rating,
             )
+
+            # Backfill None fields from DocumentMeta (title-page data the
+            # Phase 1 LLM missed because it only saw building-specific pages).
+            doc_meta: Optional[DocumentMeta] = state.get("document_metadata")
+            _backfill_building_from_doc_meta(record, doc_meta)
 
             try:
                 await record.save()
