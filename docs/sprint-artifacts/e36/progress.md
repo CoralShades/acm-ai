@@ -134,3 +134,15 @@
   - Confidence: 25 high, 0 medium, 3 low (no-access recovery)
   - Orphaned files cleaned: 92 files, 149MB→0MB
 - **Next**: E36-S5 (Functional Verification)
+
+## 2026-03-21 — Bug Fix: Job Page Crash, Missing Counts, Chat Freeze
+
+- **Status**: DONE
+- **What completed**:
+  - Fixed `building_count=0`, `records_count=null`, `tables_count=null` on all job cards — 4 aggregate queries in `api/routers/sources.py` used plain string IDs against `record<source>`-typed fields; wrapped with `type::thing()`. Counts now correct (building_count=1, records_count=55, tables_count=9 verified).
+  - Fixed chat panel infinite re-render (`useSmartChat.ts`) — CopilotKit `useCoAgent` returns a new `setState` ref on every render; moved to `useRef` + `didSyncRef` guard. Page no longer freezes when chat panel is opened.
+  - Fixed empty Document Metadata card (`JobOverviewTab.tsx`) — card now only renders when at least one of the 5 metadata fields is populated.
+  - Added Finding 030 to e36/findings.md
+  - Created artifact: `docs/sprint-artifacts/bug-fix-job-page-crash-counts.md`
+- **Commit**: ad3379ef (`fix(frontend+api): resolve job page crash, missing counts, and chat freeze`)
+- **Next**: E36-S5 (Functional Verification)

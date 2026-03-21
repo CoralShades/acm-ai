@@ -329,3 +329,14 @@ Each finding follows:
 - **Description**: `@copilotkit/*` v1.54.0 (latest) has breaking API changes incompatible with the current SmartChatPanel and CopilotKit runtime integration. Evaluation was performed and upgrade rejected. Python packages `ag-ui-langgraph`, `copilotkit`, and `ag-ui-protocol` were upgraded to their latest compatible versions.
 - **Evidence**: Commit aded56d2 — `frontend/package.json` pinned at v1.51.3; commit message documents reason
 - **Recommendation**: Re-evaluate @copilotkit/* v1.54.0 upgrade in a future sprint when breaking changes are understood. Track upstream changelog for stable release.
+
+---
+
+## Finding 030 — 2026-03-21
+
+- **Date**: 2026-03-21 (job page crash / counts fix session)
+- **Category**: functional
+- **Severity**: BLOCKER (job cards showed all-zero counts; chat panel froze browser tab)
+- **Description**: Three defects on the jobs page fixed in commit ad3379ef. (1) `api/routers/sources.py` — four aggregate queries used plain string source IDs against `record<source>`-typed columns. SurrealDB's INSIDE operator silently returns 0 rows when comparing `record<source>` fields with uncast strings; wrapping with `type::thing()` resolved building_count, records_count, and tables_count returning null/0 on all job cards. (2) `useSmartChat.ts` — CopilotKit's `useCoAgent` returns a new `setState` reference on every render; placing it in a `useEffect` dependency array caused an infinite re-render loop that froze the page. Fixed with `useRef` stable reference + `didSyncRef` guard. (3) `JobOverviewTab.tsx` — Document Metadata card rendered when `document_meta` was a truthy empty object `{}`; fixed by checking individual field values.
+- **Evidence**: Commit ad3379ef — `api/routers/sources.py`, `frontend/src/components/jobs/JobOverviewTab.tsx`, `frontend/src/lib/hooks/useSmartChat.ts`; artifact at `docs/sprint-artifacts/bug-fix-job-page-crash-counts.md`
+- **Recommendation**: Fixed. SurrealDB `type::thing()` pattern documented in CLAUDE.md. CopilotKit `useRef`/`didSyncRef` stabilization is the canonical pattern for all `useCoAgent` hooks.
