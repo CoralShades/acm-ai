@@ -302,6 +302,13 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
           </div>
         )}
 
+        {/* Site / consultant names (published view) */}
+        {!isExtracting && (siteName || consultantName) && (
+          <div className="text-xs text-muted-foreground truncate">
+            {[siteName, consultantName].filter(Boolean).join(' · ')}
+          </div>
+        )}
+
         {/* Uploaded date + counts */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Uploaded {formatRelativeDate(source.created)}</span>
@@ -311,10 +318,10 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
               <span>{source.building_count} building{source.building_count !== 1 ? 's' : ''}</span>
             </>
           )}
-          {source.insights_count > 0 && (
+          {recordsCount != null && recordsCount > 0 && (
             <>
               <span className="text-border">·</span>
-              <span>{source.insights_count} record{source.insights_count !== 1 ? 's' : ''}</span>
+              <span>{recordsCount} record{recordsCount !== 1 ? 's' : ''}</span>
             </>
           )}
         </div>
@@ -341,7 +348,7 @@ export function JobCard({ source, onRefetch }: JobCardProps) {
         </Button>
 
         {/* Export actions for published jobs */}
-        {isPublished && source.insights_count > 0 && (
+        {isPublished && (recordsCount ?? 0) > 0 && (
           <div className="flex gap-2">
             <Button
               size="sm"

@@ -203,7 +203,7 @@ function DocumentRow({ source }: { source: SourceListResponse }) {
         {source.building_count ?? '—'}
       </td>
       <td className="px-3 py-3 text-right tabular-nums text-muted-foreground hidden md:table-cell">
-        {source.insights_count > 0 ? source.insights_count : '—'}
+        {(source.records_count ?? 0) > 0 ? source.records_count : '—'}
       </td>
       <td className="px-3 py-3 text-right tabular-nums text-muted-foreground hidden lg:table-cell">
         {source.page_count ? source.page_count : '—'}
