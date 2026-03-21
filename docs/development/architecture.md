@@ -353,6 +353,16 @@ DEBUG=false
 LOG_LEVEL=INFO
 ```
 
+**ACM Extraction Configuration**:
+```bash
+ACM_EXTRACT_TIMEOUT=3600            # Max seconds for extraction job (default 3600; large Ollama docs need >30min)
+ACM_ITEM_EXTRACTION_MODE=per_row    # per_row (default) or bulk
+ACM_ROW_EXTRACTION_NUM_CTX=2048     # Ollama context window for per-row extraction
+ACM_EXTRACTION_MODEL=llama3.1:8b    # Ollama model for extraction
+ACM_ANTHROPIC_API_KEY=sk-ant-...    # Cloud fallback key (Anthropic) for truncation retries
+ACM_OPENROUTER_API_KEY=sk-or-...    # Cloud fallback key (OpenRouter) for truncation retries
+```
+
 ### Configuration Loading
 
 Configuration is managed through the `open_notebook/config.py` module:

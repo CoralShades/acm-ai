@@ -306,6 +306,9 @@ OLLAMA_MAX_CONTENT_CHARS=24000  # explicit override (optional; default: num_ctx 
 ACM_ITEM_EXTRACTION_MODE=per_row    # per_row (default) or bulk
 ACM_ROW_EXTRACTION_NUM_CTX=2048     # Context window for per-row extraction
 ACM_EXTRACTION_MODEL=llama3.1:8b    # Ollama model for extraction (configurable)
+
+# Extraction timeout
+ACM_EXTRACT_TIMEOUT=3600            # Max seconds for full extraction job (default 3600; large Ollama docs need >30min)
 ```
 
 ## Code Style

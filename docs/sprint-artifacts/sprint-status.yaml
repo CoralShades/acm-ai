@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-21
+updated: 2026-03-22
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -791,6 +791,9 @@ development_status:
   bugfix-schema-inference-mappings-key-2026-03-20: done  # fix(extraction): schema inference LLM JSON response missing "mappings" key — cascade from page_start coercion error.
   bugfix-live-stats-surrealdb-record-ref-2026-03-20: done  # fix(api): live-stats endpoint returns zeros — SurrealDB string vs record ref comparison. Fixed with type::thing() cast.
   bugfix-building-metadata-backfill-2026-03-21: done  # fix(extraction): Building fields (address, suburb, postcode, site_name) empty after extraction. Root cause: Phase 1 LLM only sees building-specific pages, not title page where metadata lives. Fix: (1) enrich prompt context with DocumentMeta address fields, (2) post-extraction backfill from DocumentMeta for None fields on BuildingRecord — applied to both success and minimal-record paths. No new migration needed (fields already in migration 40).
+  bugfix-cloud-fallback-truncation-2026-03-21: done  # fix(extraction): Truncation retry used model_id=None, causing Ollama to be re-provisioned instead of a cloud model. Fixed BOTH non-chunked and chunked retry paths to use explicit cloud model IDs (priority: Anthropic → OpenRouter → OpenAI). Files: open_notebook/graphs/acm_extraction.py. Commit ce41f328. Verified: Alexander District Hospital 98 records / 7 buildings all extracted.
+  bugfix-extraction-timeout-configurable-2026-03-21: done  # fix(extraction): Extraction timeout was hard-coded at 1800s. Large multi-building documents on Ollama need >30min. Added ACM_EXTRACT_TIMEOUT env var (default 3600s) read in acm_commands.py. Files: commands/acm_commands.py. Commit ce41f328.
+  bugfix-notebook-name-enrichment-2026-03-21: done  # feat(extraction): Enrich notebook name from extracted DocumentMeta (site_name, consultant_name, date_of_audit_report) after extraction completes. _enrich_notebook_name() helper added to acm_commands.py. Files: commands/acm_commands.py. Commit 648fbeb4.
 
   # Integration Validation: All 6 steps passed 2026-02-23
   # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
@@ -805,8 +808,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 303  (294 prior + 9 pipeline fix round bug fixes)
-# Stories Done: 273 (90%)  -- 264 prior + 9 pipeline fix round bug fixes
+# Total Stories: 306  (303 prior + 3 bug fix 14 entries)
+# Stories Done: 276 (90%)  -- 273 prior + 3 bug fix 14 entries
 # Stories Review: 0
 # Stories In-Progress: 1 (mcs11-jobs-source-unification — code done, E2E verification 6.2-6.6 pending)
 # Stories Blocked: 0
@@ -815,7 +818,7 @@ development_status:
 # Stories Backlog: 3 (E36-S5..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-20
+# Last Updated: 2026-03-22
 #
 # MCS Post-Validation Fixes (2026-03-19):
 # MCS8 DONE: Ghost save bug in base.py fixed. SurrealDB RecordID auto-parse root cause resolved.
