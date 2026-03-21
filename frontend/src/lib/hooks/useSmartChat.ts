@@ -1,7 +1,7 @@
 'use client'
 
 import { useCoAgent } from '@copilotkit/react-core'
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { SupervisorAgentState } from '@/lib/types/smart-chat'
 
 interface UseSmartChatOptions {
@@ -16,8 +16,8 @@ export function useSmartChat({
   hasAcmData = false,
 }: UseSmartChatOptions) {
   const [includeAcmContext, setIncludeAcmContextState] = useState(hasAcmData)
-
   const [chatModelId, setChatModelIdState] = useState('')
+  const didSyncRef = useRef(false)
 
   const defaultState = useMemo<SupervisorAgentState>(
     () => ({
@@ -37,46 +37,62 @@ export function useSmartChat({
     initialState: defaultState,
   })
 
-  // Force state sync to backend on mount — initialState alone doesn't trigger sync
+  // Keep a stable ref to setState to avoid re-render loops.
+  // CopilotKit's useCoAgent may return a new setState reference on each
+  // render, which would cause useEffect to re-fire endlessly.
+  const setStateRef = useRef(setState)
+  setStateRef.current = setState
+
+  // Reset sync guard when sourceId/notebookId changes
   useEffect(() => {
-    setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+    didSyncRef.current = false
+  }, [sourceId, notebookId])
+
+  // Force state sync to backend once on mount (or when scope changes).
+  // Uses ref guard to prevent re-render loop — useCoAgent's setState
+  // may return a new reference that would cause deps to cycle.
+  useEffect(() => {
+    if (didSyncRef.current) return
+    didSyncRef.current = true
+    setStateRef.current((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
       ...(prev ?? defaultState),
       source_id: sourceId ?? null,
       notebook_id: notebookId ?? null,
     }))
-  }, [sourceId, notebookId, setState, defaultState])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceId, notebookId])
 
   const setIncludeAcmContext = useCallback(
     (value: boolean) => {
       setIncludeAcmContextState(value)
-      setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+      setStateRef.current((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
         ...(prev ?? defaultState),
         include_acm_context: value,
       }))
     },
-    [setState, defaultState]
+    [defaultState]
   )
 
   const setChatModelId = useCallback(
     (modelId: string) => {
       setChatModelIdState(modelId)
-      setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+      setStateRef.current((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
         ...(prev ?? defaultState),
         model_id: modelId || null,
       }))
     },
-    [setState, defaultState]
+    [defaultState]
   )
 
   const setScope = useCallback(
     (newSourceId?: string, newNotebookId?: string) => {
-      setState((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
+      setStateRef.current((prev: SupervisorAgentState | undefined): SupervisorAgentState => ({
         ...(prev ?? defaultState),
         source_id: newSourceId ?? null,
         notebook_id: newNotebookId ?? null,
       }))
     },
-    [setState, defaultState]
+    [defaultState]
   )
 
   return {

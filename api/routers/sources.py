@@ -215,6 +215,11 @@ async def get_sources(
             result = await repo_query(query, {"limit": limit, "offset": offset})
 
         source_ids = [str(row["id"]) for row in result if row.get("id")]
+        # SurrealDB record<source> fields need type::thing() for comparison.
+        # Plain string INSIDE silently returns zero results.
+        source_things = ", ".join(
+            f"type::thing('{sid}')" for sid in source_ids
+        )
         building_counts: dict[str, int] = {}
         tables_counts: dict[str, int] = {}
         records_counts: dict[str, int] = {}
@@ -223,13 +228,12 @@ async def get_sources(
         if source_ids:
             try:
                 building_rows = await repo_query(
-                    """
+                    f"""
                     SELECT source_id, array::distinct(building_id) AS buildings
                     FROM acm_record
-                    WHERE source_id INSIDE $source_ids
+                    WHERE source_id INSIDE [{source_things}]
                     GROUP BY source_id
                     """,
-                    {"source_ids": source_ids},
                 )
 
                 for row in building_rows or []:
@@ -247,13 +251,12 @@ async def get_sources(
 
             try:
                 tables_rows = await repo_query(
-                    """
+                    f"""
                     SELECT source_id, count() AS cnt
                     FROM acm_table_section
-                    WHERE source_id INSIDE $source_ids
+                    WHERE source_id INSIDE [{source_things}]
                     GROUP BY source_id
                     """,
-                    {"source_ids": source_ids},
                 )
                 for row in tables_rows or []:
                     sid = str(row.get("source_id", ""))
@@ -264,13 +267,12 @@ async def get_sources(
 
             try:
                 records_rows = await repo_query(
-                    """
+                    f"""
                     SELECT source_id, count() AS cnt
                     FROM acm_record
-                    WHERE source_id INSIDE $source_ids
+                    WHERE source_id INSIDE [{source_things}]
                     GROUP BY source_id
                     """,
-                    {"source_ids": source_ids},
                 )
                 for row in records_rows or []:
                     sid = str(row.get("source_id", ""))
@@ -281,12 +283,11 @@ async def get_sources(
 
             try:
                 intel_rows = await repo_query(
-                    """
+                    f"""
                     SELECT source_id, site_name, consultant_name
                     FROM source_intelligence
-                    WHERE source_id INSIDE $source_ids
+                    WHERE source_id INSIDE [{source_things}]
                     """,
-                    {"source_ids": source_ids},
                 )
                 for row in intel_rows or []:
                     sid = str(row.get("source_id", ""))

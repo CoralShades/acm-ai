@@ -168,7 +168,7 @@ export function JobOverviewTab({
       )}
 
       {/* Document Metadata (from intelligence API) */}
-      {docMeta && (
+      {docMeta && (docMeta.consultant_name || docMeta.site_name || docMeta.site_address || docMeta.report_date || intelligence?.document_type) && (
         <Card className="rounded-xl shadow-sm">
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-semibold">Document Metadata</CardTitle>
