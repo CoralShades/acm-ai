@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DependentPicklistEditor } from '@/components/acm/DependentPicklistEditor'
 import { cn } from '@/lib/utils'
+import { Save, RotateCcw } from 'lucide-react'
 import type { BuildingRecord } from '@/lib/types/building'
 import type { SFFieldSchemaConfig } from '@/lib/types/sf-schema'
 import type { ACMRecord } from '@/lib/types/acm'
@@ -57,6 +58,7 @@ const DEPENDENT_PICKLIST_API_NAME = 'Building_Category__c'
 /** Regular picklist fields — look up from schema.building_fields.picklists. */
 const PICKLIST_FIELDS = new Set([
   'building_type',
+  'building_category',
   'roof_type',
   'frequency_of_use',
   'daily_duration',
@@ -75,7 +77,6 @@ const PICKLIST_FIELDS = new Set([
 
 /**
  * Map a BuildingRecord field key to the SF api_name used in schema.building_fields.picklists.
- * Most keys just need __c suffix uppercased PascalCase, but there are explicit mappings.
  */
 function buildingKeyToApiName(key: string): string {
   const overrides: Record<string, string> = {
@@ -206,7 +207,7 @@ function FieldInput({
         id={inputId}
         value={value != null ? String(value) : ''}
         disabled
-        className="bg-muted/50 cursor-not-allowed"
+        className="bg-muted/50 cursor-not-allowed text-muted-foreground"
         aria-readonly="true"
       />
     )
@@ -313,7 +314,6 @@ export function BuildingDetailForm({
       if (READ_ONLY_FIELDS.has(key)) continue
       const orig = building[key]
       const curr = formValues[key]
-      // Use loose equality to handle null vs undefined
       if (curr !== orig) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(dirty as any)[key] = curr
@@ -331,71 +331,96 @@ export function BuildingDetailForm({
     []
   )
 
+  const handleReset = useCallback(() => {
+    setFormValues({ ...building })
+  }, [building])
+
   const handleSave = () => {
     if (isDirty) onSave(dirtyFields)
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Form body — scrollable */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-8">
-        {FIELD_GROUPS.map((group) => (
-          <section key={group.title}>
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 pb-2 border-b">
-              {group.title}
-            </h2>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {group.fields.map((fieldKey) => {
-                const value = formValues[fieldKey as keyof BuildingRecord]
-                const label = fieldLabel(fieldKey, schema)
-                const isReadOnly = READ_ONLY_FIELDS.has(fieldKey)
-                const inputId = `field-${fieldKey}`
+    <div className="flex flex-col h-full">
+      {/* Scrollable form body */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <div className="px-5 py-5 sm:px-6 sm:py-6 space-y-6">
+          {FIELD_GROUPS.map((group) => (
+            <section key={group.title} className="rounded-lg border bg-card">
+              <div className="border-b px-4 py-2.5">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {group.title}
+                </h2>
+              </div>
+              <div className="p-4 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                {group.fields.map((fieldKey) => {
+                  const value = formValues[fieldKey as keyof BuildingRecord]
+                  const label = fieldLabel(fieldKey, schema)
+                  const isReadOnly = READ_ONLY_FIELDS.has(fieldKey)
+                  const inputId = `field-${fieldKey}`
+                  const isChanged = fieldKey in dirtyFields
 
-                return (
-                  <div key={fieldKey} className="flex flex-col gap-1.5">
-                    <Label
-                      htmlFor={inputId}
-                      className={cn(
-                        'text-xs',
-                        isReadOnly && 'text-muted-foreground'
-                      )}
-                    >
-                      {label}
-                      {isReadOnly && (
-                        <span className="ml-1 text-xs text-muted-foreground font-normal">
-                          (read-only)
-                        </span>
-                      )}
-                    </Label>
-                    <FieldInput
-                      fieldKey={fieldKey}
-                      value={value}
-                      onChange={handleChange}
-                      schema={schema}
-                      formValues={formValues}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        ))}
+                  return (
+                    <div key={fieldKey} className="flex flex-col gap-1.5">
+                      <Label
+                        htmlFor={inputId}
+                        className={cn(
+                          'text-xs font-medium',
+                          isReadOnly && 'text-muted-foreground',
+                          isChanged && 'text-primary'
+                        )}
+                      >
+                        {label}
+                        {isReadOnly && (
+                          <span className="ml-1 text-[10px] text-muted-foreground/70 font-normal">
+                            (read-only)
+                          </span>
+                        )}
+                      </Label>
+                      <FieldInput
+                        fieldKey={fieldKey}
+                        value={value}
+                        onChange={handleChange}
+                        schema={schema}
+                        formValues={formValues}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
       </div>
 
-      {/* Save footer */}
-      <div className="shrink-0 border-t px-6 py-4 bg-background flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+      {/* Sticky footer */}
+      <div className="shrink-0 border-t bg-muted/30 px-5 py-3 sm:px-6 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
           {isDirty
             ? `${Object.keys(dirtyFields).length} unsaved change${Object.keys(dirtyFields).length !== 1 ? 's' : ''}`
             : 'No changes'}
         </p>
-        <Button
-          onClick={handleSave}
-          disabled={!isDirty || isSaving}
-          size="sm"
-        >
-          {isSaving ? 'Saving...' : 'Save Changes'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              disabled={isSaving}
+              className="text-xs"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              Reset
+            </Button>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={!isDirty || isSaving}
+            size="sm"
+          >
+            <Save className="h-3.5 w-3.5 mr-1" />
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </div>
     </div>
   )
