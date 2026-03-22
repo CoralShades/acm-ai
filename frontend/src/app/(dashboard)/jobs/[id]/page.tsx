@@ -632,6 +632,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 <UnifiedChatPanel
                   sourceId={sourceId}
                   hasAcmData={hasAcmData}
+                  activeTab={activeTab}
                 />
               </div>
             )}
@@ -649,7 +650,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
         </Button>
 
         <Sheet open={mobileChatOpen} onOpenChange={setMobileChatOpen}>
-          <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+          <SheetContent side="right" className="w-full p-0 sm:max-w-md h-[85dvh]">
             <div className="flex h-full min-h-0 flex-col pt-10">
               <div className="border-b px-4 py-3 flex items-center gap-3">
                 <MessageSquare className="h-4 w-4 shrink-0" />
@@ -659,6 +660,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                 <UnifiedChatPanel
                   sourceId={sourceId}
                   hasAcmData={hasAcmData}
+                  activeTab={activeTab}
                 />
               </div>
             </div>

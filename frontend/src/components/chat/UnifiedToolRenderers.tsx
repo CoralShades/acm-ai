@@ -233,9 +233,9 @@ export function UnifiedToolRenderers() {
               <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{String(parsed.operation)} Preview</span>
               <span className="text-[10px] font-mono text-muted-foreground">#{String(parsed.operation_id)}</span>
             </div>
-            {parsed.record_id && <div><span className="text-muted-foreground">Record:</span> <span className="font-mono">{String(parsed.record_id)}</span></div>}
-            {parsed.field && <div><span className="text-muted-foreground">Field:</span> <span className="font-semibold">{String(parsed.field)}</span> → <span className="text-green-700 dark:text-green-400 font-semibold">{String(parsed.new_value)}</span></div>}
-            {parsed.reason && <p className="text-muted-foreground italic">{String(parsed.reason)}</p>}
+            {!!parsed.record_id && <div><span className="text-muted-foreground">Record:</span> <span className="font-mono">{String(parsed.record_id)}</span></div>}
+            {!!parsed.field && <div><span className="text-muted-foreground">Field:</span> <span className="font-semibold">{String(parsed.field)}</span> → <span className="text-green-700 dark:text-green-400 font-semibold">{String(parsed.new_value)}</span></div>}
+            {!!parsed.reason && <p className="text-muted-foreground italic">{String(parsed.reason)}</p>}
             <p className="text-amber-600 dark:text-amber-400 text-[10px]">Awaiting approval via interrupt dialog...</p>
           </div>
         </ToolStepItem>
@@ -260,8 +260,8 @@ export function UnifiedToolRenderers() {
               <span className="text-[10px] font-mono text-muted-foreground">#{String(parsed.operation_id)}</span>
             </div>
             <div><span className="text-muted-foreground">Affected:</span> <span className="font-semibold">{String(parsed.affected_count)} records</span></div>
-            {parsed.field && <div><span className="text-muted-foreground">Field:</span> <span className="font-semibold">{String(parsed.field)}</span> → <span className="text-green-700 dark:text-green-400 font-semibold">{String(parsed.new_value)}</span></div>}
-            {parsed.reason && <p className="text-muted-foreground italic">{String(parsed.reason)}</p>}
+            {!!parsed.field && <div><span className="text-muted-foreground">Field:</span> <span className="font-semibold">{String(parsed.field)}</span> → <span className="text-green-700 dark:text-green-400 font-semibold">{String(parsed.new_value)}</span></div>}
+            {!!parsed.reason && <p className="text-muted-foreground italic">{String(parsed.reason)}</p>}
             <p className="text-amber-600 dark:text-amber-400 text-[10px]">Awaiting approval via interrupt dialog...</p>
           </div>
         </ToolStepItem>

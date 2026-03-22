@@ -6,6 +6,7 @@ interface SmartChatScope {
   sourceId?: string
   notebookId?: string
   hasAcmData: boolean
+  activeTab?: string
 }
 
 const SmartChatContext = createContext<SmartChatScope>({
@@ -25,9 +26,10 @@ export function SmartChatProvider({
   sourceId,
   notebookId,
   hasAcmData,
+  activeTab,
 }: SmartChatProviderProps) {
   return (
-    <SmartChatContext.Provider value={{ sourceId, notebookId, hasAcmData }}>
+    <SmartChatContext.Provider value={{ sourceId, notebookId, hasAcmData, activeTab }}>
       {children}
     </SmartChatContext.Provider>
   )

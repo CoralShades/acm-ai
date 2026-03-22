@@ -17,7 +17,6 @@ const TOOL_LABELS: Record<string, string> = {
   list_acm_buildings: 'Loading buildings',
   semantic_search_acm: 'Semantic search',
   search_documents: 'Searching documents',
-  search_documents: 'Searching documents',
   search_documents_vector: 'Searching documents',
   text_search_documents: 'Text search',
   search_documents_text: 'Text search',
