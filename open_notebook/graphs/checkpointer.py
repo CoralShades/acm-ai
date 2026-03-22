@@ -1,31 +1,23 @@
 """Shared checkpointer for the unified agent graph.
 
-Uses SqliteSaver for durable session persistence across restarts.
-The checkpoint DB lives in data/sqlite-db/ alongside the legacy checkpoints.
+Uses MemorySaver for in-process persistence. Conversations persist within
+a server session but are lost on restart. For durable persistence, a future
+upgrade to PostgresSaver or a properly initialized AsyncSqliteSaver is needed.
 """
 
-import sqlite3
+from langgraph.checkpoint.memory import MemorySaver
 
-from langgraph.checkpoint.sqlite import SqliteSaver
-
-from open_notebook.config import LANGGRAPH_CHECKPOINT_FILE
-
-# Separate file for unified chat to avoid conflicts with legacy graphs
-_UNIFIED_CHECKPOINT_FILE = LANGGRAPH_CHECKPOINT_FILE.replace(
-    "checkpoints.sqlite", "unified_chat_checkpoints.sqlite"
-)
-
-_checkpointer: SqliteSaver | None = None
+_checkpointer: MemorySaver | None = None
 
 
-def get_checkpointer() -> SqliteSaver:
-    """Get or create the shared SqliteSaver checkpointer.
+def get_checkpointer() -> MemorySaver:
+    """Get or create the shared MemorySaver checkpointer.
 
-    Uses a singleton pattern to avoid opening multiple connections.
-    check_same_thread=False is required for async LangGraph usage.
+    MemorySaver works with both sync and async graph execution,
+    making it compatible with add_langgraph_fastapi_endpoint (async)
+    and direct invoke (sync).
     """
     global _checkpointer
     if _checkpointer is None:
-        conn = sqlite3.connect(_UNIFIED_CHECKPOINT_FILE, check_same_thread=False)
-        _checkpointer = SqliteSaver(conn)
+        _checkpointer = MemorySaver()
     return _checkpointer
