@@ -46,18 +46,18 @@ _jinja_env = Environment(
 # --- Pending write store ---
 _pending_writes: dict = {}
 
-# --- Tool context (set by agent before invocation) ---
-_crud_context: dict = {}
+# --- Tool context (delegates to unified tool_context module) ---
+from open_notebook.graphs.tool_context import get_source_id, set_tool_scope
 
 
 def set_crud_context(source_id: str) -> None:
     """Set the source_id scope for CRUD operations. Called by the agent graph."""
-    _crud_context["source_id"] = source_id
+    set_tool_scope(source_id=source_id)
 
 
 def get_crud_context() -> str:
     """Get the current source_id scope."""
-    return _crud_context.get("source_id", "")
+    return get_source_id() or ""
 
 
 def _run_async(coro):

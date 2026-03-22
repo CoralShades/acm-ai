@@ -44,10 +44,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useSourceChat } from '@/lib/hooks/useSourceChat';
-import { ChatPanel } from '@/components/source/ChatPanel';
-import { SmartChatPanel, ChatModeSwitch } from '@/components/chat';
-import type { ChatMode } from '@/lib/types/smart-chat';
+import { UnifiedChatPanel } from '@/components/chat';
 import { useNavigation } from '@/lib/hooks/use-navigation';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { acmApi } from '@/lib/api/acm';
@@ -77,13 +74,9 @@ export default function SourceDetailPage() {
 
   // State
   const [chatExpanded, setChatExpanded] = useState(true);
-  const [chatMode, setChatMode] = useState<ChatMode>('classic');
   const [activeTab, setActiveTab] = useState<string>('content');
   const [isEmbedding, setIsEmbedding] = useState(false);
   const [isDownloadingFile, setIsDownloadingFile] = useState(false);
-
-  // Initialize source chat
-  const chat = useSourceChat(sourceId);
 
   // Fetch source data
   const {
@@ -458,10 +451,6 @@ export default function SourceDetailPage() {
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" />
                 <BentoCardTitle>Chat</BentoCardTitle>
-                <ChatModeSwitch
-                  onChange={setChatMode}
-                  storageKey={`chat-mode-source-${sourceId}`}
-                />
               </div>
               <Button
                 variant="ghost"
@@ -478,40 +467,10 @@ export default function SourceDetailPage() {
             </BentoCardHeader>
             {chatExpanded && (
               <BentoCardContent noPadding className="flex-1 overflow-hidden">
-                {chatMode === 'smart' ? (
-                  <SmartChatPanel
-                    sourceId={sourceId}
-                    hasAcmData={showAcmToggle}
-                  />
-                ) : (
-                  <ChatPanel
-                    messages={chat.messages}
-                    isStreaming={chat.isStreaming}
-                    contextIndicators={chat.contextIndicators}
-                    onSendMessage={(message, model, includeAcm) =>
-                      chat.sendMessage(message, model, includeAcm)
-                    }
-                    modelOverride={chat.currentSession?.model_override}
-                    onModelChange={(model) => {
-                      if (chat.currentSessionId) {
-                        chat.updateSession(chat.currentSessionId, {
-                          model_override: model,
-                        });
-                      }
-                    }}
-                    sessions={chat.sessions}
-                    currentSessionId={chat.currentSessionId}
-                    onCreateSession={(title) => chat.createSession({ title })}
-                    onSelectSession={chat.switchSession}
-                    onUpdateSession={(sessionId, title) =>
-                      chat.updateSession(sessionId, { title })
-                    }
-                    onDeleteSession={chat.deleteSession}
-                    loadingSessions={chat.loadingSessions}
-                    sourceId={sourceId}
-                    hasAcmData={showAcmToggle}
-                  />
-                )}
+                <UnifiedChatPanel
+                  sourceId={sourceId}
+                  hasAcmData={showAcmToggle}
+                />
               </BentoCardContent>
             )}
           </BentoCard>

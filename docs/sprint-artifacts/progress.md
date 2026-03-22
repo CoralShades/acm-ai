@@ -2,6 +2,41 @@
 
 ## Completed Milestones
 
+### Unified Chat Phase 3: Polish + Testing (2026-03-22) — COMPLETE
+
+| Task | Description | Status |
+|------|-------------|--------|
+| S1 | LLM intent router (`open_notebook/graphs/llm_router.py`) — rule-based fast-path + LLM fallback, entity extraction (buildings, rooms, risk_levels, materials, record_ids), injected into `unified_agent.py` system prompt | Done |
+| S2 | Legacy chat deprecation — 14 files deleted (8 backend: `supervisor_agent.py`, `crud_agent.py`, `chat.py`, `source_chat.py`, `acm_analyst_agent.py`, `doc_search_agent.py`, `api/routers/chat.py`, `api/routers/source_chat.py`; 6 frontend: `SmartChatPanel.tsx`, `ChatModeSwitch.tsx`, `CrudToolRenderers.tsx`, `useSmartChat.ts`, `smart-chat.ts`, `copilot-crud/route.ts`). `api/main.py` + `langgraph.json` cleaned up | Done |
+| S3 | E2E live testing (4 queries, screenshots via chrome-devtools MCP), prompt hardening for schema tool forcing, session store 404 graceful degradation, Playwright specs + mobile/dark/a11y audit | Done |
+
+**Tests:** 2477 backend pass | **S1 unit tests:** 17/17 pass (`tests/test_llm_router.py`)
+
+**Unified Chat Epic complete:** 13 stories across 3 phases, 21 files created, 14 legacy files deleted, 2477 tests passing.
+
+---
+
+### Unified Chat Phase 1: Backend (2026-03-22) — COMPLETE
+Replaced separate supervisor + CRUD graphs with a single unified LangGraph agent.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| T1 | Thread-safe `contextvars` tool context replacing module-level globals (`tool_context.py`) | Done |
+| T2 | SqliteSaver singleton for persistent chat sessions (`checkpointer.py`) | Done |
+| T3 | Unified LangGraph graph — 6 nodes, 15 tools, interrupt-based HITL (`unified_agent.py`) | Done |
+| T4 | Comprehensive system prompt covering all 7 DB tables + 15 tools (`prompts/unified_agent.jinja`) | Done |
+| T5 | Rewritten AG-UI endpoint with single unified path + `session_id` support (`api/routers/agui_chat.py`) | Done |
+| T6 | Session CRUD REST endpoints — list/create/update/delete (`api/routers/unified_sessions.py`) | Done |
+| T7 | Delegate tool context in `acm_tools.py` and `crud_tools.py` to `tool_context.py` | Done |
+| T8 | Expand `guardrails.py` with 4 missing table schemas (source, source_intelligence, acm_table_section, raw_extraction_table) | Done |
+| T9 | Add 6 new SurrealQL query examples to `prompts/crud/surrealql_query.jinja` | Done |
+| T10 | Register `unified_sessions` router in `api/main.py` | Done |
+| T11 | Fix stale import of removed `_crud_context` in `test_crud_tools_enhanced.py` + `test_crud_tools_v2.py` | Done |
+
+**Files created:** 6  **Files modified:** 7  **Tests:** 2452 pass (4 pre-existing failures)
+
+---
+
 ### Auto-Notebook + AI-Editor Rename (2026-03-22) — COMPLETE
 Auto-create Notebook on PDF upload, rename "Notebooks" to "AI-Editor", cascade delete.
 
@@ -50,7 +85,7 @@ PDFPageViewer rewrite: zoom (50-300%), page navigation, text search (Ctrl+F), sc
 See: `docs/sprint-artifacts/frontend-audit/progress.md` for full details.
 
 ## Blockers
-None — session complete.
+None.
 
 ## Status
-COMPLETE
+COMPLETE — Unified Chat Epic done (all 3 phases). 2477 tests passing.

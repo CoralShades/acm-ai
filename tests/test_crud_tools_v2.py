@@ -25,9 +25,9 @@ class TestCrudContext:
         assert get_crud_context() == "source:abc123"
 
     def test_default_empty(self):
-        from open_notebook.graphs.crud_tools import _crud_context
+        from open_notebook.graphs.tool_context import set_tool_scope
 
-        _crud_context.clear()
+        set_tool_scope(source_id=None, notebook_id=None)
         assert get_crud_context() == ""
 
 
@@ -141,9 +141,9 @@ class TestPreviewWrite:
         assert "error" in result
 
     def test_no_context(self):
-        from open_notebook.graphs.crud_tools import _crud_context
+        from open_notebook.graphs.tool_context import set_tool_scope
 
-        _crud_context.clear()
+        set_tool_scope(source_id=None, notebook_id=None)
         result_str = preview_write.invoke(
             {
                 "operation": "UPDATE",
@@ -189,9 +189,9 @@ class TestSurrealQueryNoDb:
     """Tests for surreal_query that don't require a running DB."""
 
     def test_no_context_returns_error(self):
-        from open_notebook.graphs.crud_tools import _crud_context
+        from open_notebook.graphs.tool_context import set_tool_scope
 
-        _crud_context.clear()
+        set_tool_scope(source_id=None, notebook_id=None)
         result_str = surreal_query.invoke({"question": "how many records?"})
         result = json.loads(result_str)
         assert result["type"] == "surreal_query"

@@ -43,6 +43,20 @@ export function ACMAssistantMessage({
 
   const LinkComponent = createCompactReferenceLinkComponent(handleReferenceClick)
 
+  // Show loading/thinking indicator when the agent is processing
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-2 text-muted-foreground">
+        <div className="flex gap-1">
+          <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.3s]" />
+          <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.15s]" />
+          <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" />
+        </div>
+        <span className="text-xs">Thinking...</span>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none break-words prose-headings:font-semibold prose-a:text-blue-600 prose-a:break-all prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-p:mb-4 prose-p:leading-7 prose-li:mb-2">

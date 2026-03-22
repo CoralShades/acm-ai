@@ -55,6 +55,21 @@ SELECT timestamp, operation, record_id, field_name, old_value, new_value, natura
 User: "what was the last edit?"
 SELECT timestamp, operation, record_id, field_name, old_value, new_value FROM crud_audit WHERE job_id = $sid ORDER BY timestamp DESC LIMIT 1;
 
+User: "who was the consultant?"
+SELECT consultant, site_name, site_address, document_type FROM source_intelligence WHERE source_id = $sid LIMIT 1;
+
+User: "show source metadata"
+SELECT name, page_count, total_pages, state, created FROM source WHERE id = $sid LIMIT 1;
+
+User: "how many tables were extracted?"
+SELECT count() as total FROM acm_table_section WHERE source_id = $sid GROUP ALL;
+
+User: "show table sections with page ranges"
+SELECT table_index, page_start, page_end, row_count, column_count, headers_json FROM acm_table_section WHERE source_id = $sid ORDER BY table_index;
+
+User: "show raw extraction tables"
+SELECT table_index, page_number, row_count, column_count, headers FROM raw_extraction_table WHERE source_id = $sid ORDER BY table_index LIMIT 20;
+
 ## User Question
 
 {{ user_question }}

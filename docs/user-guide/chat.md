@@ -311,25 +311,42 @@ The Ask feature provides sophisticated research assistance:
 - Choose more cost-effective models
 - Be more targeted with questions
 
-## ACM Smart Chat
+## ACM-AI Chat
 
-### Smart Chat Panel (Supervisor)
+The ACM-AI Chat is a unified assistant panel on job detail pages. It handles both data queries and record edits in a single interface — there is no separate "Query" and "Edit" toggle.
 
-The Smart Chat panel provides an AI assistant for querying ACM register data and document content. It appears on source detail pages and supports:
+### What You Can Do
 
-- **ACM Data Toggle**: A toggle badge at the bottom of the chat switches ACM data context on/off. When enabled, the AI can query buildings, rooms, products, risk statuses, and statistics.
-- **Domain-Aware Suggestions**: The chat provides contextual suggestions based on whether ACM data is enabled (compliance queries) or disabled (document queries).
-- **Tool Result Rendering**: Search results render as structured tables and cards directly in the chat, not raw JSON.
-- **Supervisor Progress Indicator**: A pulsing dot shows when the AI is searching or thinking.
+- **Query records**: Ask questions like "Show all high risk records in Building B" or "How many records does this job have?" The AI returns structured tables and stat cards directly in the chat.
+- **Edit records**: Ask the AI to update, create, or delete ACM records in plain English.
+- **Search documents**: Ask about document content — the AI searches the underlying PDF text.
+- **Run SurrealQL**: Power users can request raw database queries.
 
-### CRUD Chat Panel
+### Session Management
 
-The CRUD chat panel appears on job detail pages and provides natural language record editing:
+The chat header includes a session dropdown. You can:
 
-- **Create, Update, Delete**: Ask the AI to modify ACM records in plain English.
-- **HITL Approval**: All write operations show a preview dialog before executing. You must explicitly approve or reject each change.
-- **Edit Before Approving**: Click the pencil icon on the preview to modify a value before approving.
-- **Automatic Previews**: The AI always previews changes — it never writes without your approval.
+- **Create a new session** to start a fresh conversation (previous sessions are preserved)
+- **Switch between sessions** to resume earlier conversations
+- **Rename a session** to give it a meaningful label
+- **Delete a session** when it is no longer needed
+
+If a session is unavailable (e.g., deleted elsewhere), the chat silently creates a new one.
+
+### Write Operations Require Approval
+
+All record modifications go through a human-in-the-loop (HITL) approval step:
+
+1. The AI shows a preview dialog (amber card) with the field name, new value, record ID, and reason
+2. You can **edit the value** before approving by clicking the pencil icon
+3. Click **Approve** to execute the write — the change is logged to the audit trail
+4. Click **Reject** to cancel — no data is modified
+
+The AI never writes to the database without your explicit approval.
+
+### Tool Step Indicators
+
+While the AI is working, animated step indicators show what it is doing (e.g., "Querying ACM records...", "Preparing write preview..."). Each step transitions to a checkmark when complete.
 
 ### Keyboard Shortcuts
 
@@ -339,10 +356,10 @@ The CRUD chat panel appears on job detail pages and provides natural language re
 
 ### In-Chat Model Selector
 
-Both chat panels include a compact model selector in the header. Click the model name pill to switch between available language models during a conversation.
+The ACM-AI Chat panel includes a compact model selector in the header. Click the model name pill to switch between available language models during a conversation.
 
 - **Visibility**: The selector only appears when 2 or more language models are registered in the system.
-- **Persistence**: Your selection is saved to the browser and restored on page refresh. Each chat panel (Smart Chat, CRUD Chat) remembers its own model separately.
+- **Persistence**: Your selection is saved to the browser and restored on page refresh.
 - **Available Models**: Shows all registered language models from Settings > Models, including Ollama local models and cloud providers (Anthropic, OpenAI, etc.).
 - **Default Behavior**: When no model is selected, the system uses the default chat model configured in Settings > Models.
 

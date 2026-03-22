@@ -131,14 +131,56 @@ Fields: id, internal_id (string), source_id (record<source>),
   no_identified_acms (int), date_of_audit_report (string),
   created (datetime), updated (datetime)"""
 
+SOURCE_SCHEMA = """Table: source
+Fields: id, name (string), full_text (string), asset_type (string),
+  size (int), state (string: "processing"|"ready"|"error"),
+  url (string), notebook_id (record<notebook>),
+  page_count (int), total_pages (int),
+  created (datetime), updated (datetime)"""
+
+SOURCE_INTELLIGENCE_SCHEMA = """Table: source_intelligence
+Fields: id, source_id (record<source>),
+  consultant (string), site_name (string), site_address (string),
+  building_names (array<string>), document_type (string),
+  estimated_buildings (int), estimated_pages (int),
+  metadata_json (object),
+  created (datetime), updated (datetime)"""
+
+ACM_TABLE_SECTION_SCHEMA = """Table: acm_table_section
+Fields: id, source_id (record<source>),
+  table_index (int), page_start (int), page_end (int),
+  row_count (int), column_count (int),
+  headers_json (array<string>), content_preview (string),
+  bbox_json (object),
+  created (datetime)"""
+
+RAW_EXTRACTION_TABLE_SCHEMA = """Table: raw_extraction_table
+Fields: id, source_id (record<source>),
+  table_index (int), page_number (int),
+  html_content (string), headers (array<string>),
+  row_count (int), column_count (int), bbox (object),
+  created (datetime)"""
+
 DB_SCHEMA_CONTEXT = f"""{ACM_RECORD_SCHEMA}
 
 {BUILDING_RECORD_SCHEMA}
 
+{SOURCE_SCHEMA}
+
+{SOURCE_INTELLIGENCE_SCHEMA}
+
+{ACM_TABLE_SECTION_SCHEMA}
+
+{RAW_EXTRACTION_TABLE_SCHEMA}
+
 Relationships:
 - acm_record.source_id → source (the job/document)
 - acm_record.building_record_id → building_record
-- building_record.source_id → source"""
+- building_record.source_id → source
+- source_intelligence.source_id → source
+- acm_table_section.source_id → source
+- raw_extraction_table.source_id → source
+- crud_audit.job_id → source"""
 
 
 @dataclass
