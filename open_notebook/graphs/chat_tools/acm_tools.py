@@ -4,11 +4,10 @@ These tools enable chat agents to query structured ACM (Asbestos Containing
 Material) records from SurrealDB. Each tool returns formatted results with
 record IDs suitable for citation in chat responses.
 
-Tools are designed to be used in a ReAct agent loop where the LLM decides
-which tool to call based on the user's question.
+All tools are async — they run in the same async context as the LangGraph
+graph nodes, ensuring contextvars (source_id scoping) propagate correctly.
 """
 
-import asyncio
 import json
 from typing import Optional
 
@@ -16,26 +15,19 @@ from langchain_core.tools import tool
 from loguru import logger
 
 from open_notebook.database.repository import ensure_record_id, repo_query
+from open_notebook.graphs.tool_context import get_tool_scope, set_tool_scope
 
 
-def _run_async(coro):
-    """Run an async coroutine from a sync context (LangGraph tool nodes are sync)."""
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
+def set_tool_context(
+    source_id: Optional[str] = None, notebook_id: Optional[str] = None
+):
+    """Set the scope context for tools. Called by the agent graph before tool execution."""
+    set_tool_scope(source_id=source_id, notebook_id=notebook_id)
 
-    if loop and loop.is_running():
-        import concurrent.futures
 
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            new_loop = asyncio.new_event_loop()
-            try:
-                return pool.submit(new_loop.run_until_complete, coro).result()
-            finally:
-                new_loop.close()
-    else:
-        return asyncio.run(coro)
+def _get_scope():
+    """Get current source_id and notebook_id from tool context."""
+    return get_tool_scope()
 
 
 def _format_record_summary(record: dict) -> dict:
@@ -75,24 +67,8 @@ def _build_vars(source_id: Optional[str], notebook_id: Optional[str], **extra) -
     return vars_
 
 
-# --- Tool context (delegates to unified tool_context module) ---
-from open_notebook.graphs.tool_context import get_tool_scope, set_tool_scope
-
-
-def set_tool_context(
-    source_id: Optional[str] = None, notebook_id: Optional[str] = None
-):
-    """Set the scope context for tools. Called by the agent graph before tool execution."""
-    set_tool_scope(source_id=source_id, notebook_id=notebook_id)
-
-
-def _get_scope():
-    """Get current source_id and notebook_id from tool context."""
-    return get_tool_scope()
-
-
 @tool
-def search_acm_by_risk(risk_status: str, limit: int = 20) -> str:
+async def search_acm_by_risk(risk_status: str, limit: int = 20) -> str:
     """Search ACM records by risk level (High, Medium, or Low).
 
     Use this tool when the user asks about risk levels, dangerous materials,
@@ -104,7 +80,7 @@ def search_acm_by_risk(risk_status: str, limit: int = 20) -> str:
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         filter_clause = _build_source_filter(source_id, notebook_id)
         query = f"""
             SELECT * FROM acm_record
@@ -115,25 +91,18 @@ def search_acm_by_risk(risk_status: str, limit: int = 20) -> str:
         vars_ = _build_vars(
             source_id, notebook_id, risk_status=risk_status, limit=limit
         )
-        return await repo_query(query, vars_)
-
-    try:
-        records = _run_async(_query())
+        records = await repo_query(query, vars_)
         summaries = [_format_record_summary(r) for r in records]
 
         # Also get total count
-        async def _count():
-            filter_clause = _build_source_filter(source_id, notebook_id)
-            query = f"""
-                SELECT count() as total FROM acm_record
-                WHERE {filter_clause} AND risk_status = $risk_status
-                GROUP ALL
-            """
-            vars_ = _build_vars(source_id, notebook_id, risk_status=risk_status)
-            result = await repo_query(query, vars_)
-            return result[0].get("total", 0) if result else 0
-
-        total = _run_async(_count())
+        count_query = f"""
+            SELECT count() as total FROM acm_record
+            WHERE {filter_clause} AND risk_status = $risk_status
+            GROUP ALL
+        """
+        count_vars = _build_vars(source_id, notebook_id, risk_status=risk_status)
+        count_result = await repo_query(count_query, count_vars)
+        total = count_result[0].get("total", 0) if count_result else 0
 
         return json.dumps(
             {
@@ -150,7 +119,7 @@ def search_acm_by_risk(risk_status: str, limit: int = 20) -> str:
 
 
 @tool
-def search_acm_by_building(building_name: str, limit: int = 20) -> str:
+async def search_acm_by_building(building_name: str, limit: int = 20) -> str:
     """Search ACM records by building name.
 
     Use this tool when the user asks about a specific building, wing, or block.
@@ -162,7 +131,7 @@ def search_acm_by_building(building_name: str, limit: int = 20) -> str:
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         filter_clause = _build_source_filter(source_id, notebook_id)
         query = f"""
             SELECT * FROM acm_record
@@ -177,10 +146,7 @@ def search_acm_by_building(building_name: str, limit: int = 20) -> str:
         vars_ = _build_vars(
             source_id, notebook_id, building_name=building_name, limit=limit
         )
-        return await repo_query(query, vars_)
-
-    try:
-        records = _run_async(_query())
+        records = await repo_query(query, vars_)
         summaries = [_format_record_summary(r) for r in records]
         return json.dumps(
             {
@@ -196,7 +162,7 @@ def search_acm_by_building(building_name: str, limit: int = 20) -> str:
 
 
 @tool
-def search_acm_by_room(
+async def search_acm_by_room(
     room_name: str, building_name: Optional[str] = None, limit: int = 20
 ) -> str:
     """Search ACM records by room name, optionally within a specific building.
@@ -211,7 +177,7 @@ def search_acm_by_room(
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         filter_clause = _build_source_filter(source_id, notebook_id)
         building_filter = ""
         if building_name:
@@ -231,10 +197,7 @@ def search_acm_by_room(
         vars_ = _build_vars(source_id, notebook_id, room_name=room_name, limit=limit)
         if building_name:
             vars_["building_name"] = building_name
-        return await repo_query(query, vars_)
-
-    try:
-        records = _run_async(_query())
+        records = await repo_query(query, vars_)
         summaries = [_format_record_summary(r) for r in records]
         return json.dumps(
             {
@@ -251,7 +214,7 @@ def search_acm_by_room(
 
 
 @tool
-def search_acm_by_material(material_keyword: str, limit: int = 20) -> str:
+async def search_acm_by_material(material_keyword: str, limit: int = 20) -> str:
     """Search ACM records by material type or product description.
 
     Use this tool when the user asks about specific materials like asbestos,
@@ -263,7 +226,7 @@ def search_acm_by_material(material_keyword: str, limit: int = 20) -> str:
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         filter_clause = _build_source_filter(source_id, notebook_id)
         query = f"""
             SELECT * FROM acm_record
@@ -278,10 +241,7 @@ def search_acm_by_material(material_keyword: str, limit: int = 20) -> str:
         vars_ = _build_vars(
             source_id, notebook_id, keyword=material_keyword, limit=limit
         )
-        return await repo_query(query, vars_)
-
-    try:
-        records = _run_async(_query())
+        records = await repo_query(query, vars_)
         summaries = [_format_record_summary(r) for r in records]
         return json.dumps(
             {
@@ -297,7 +257,7 @@ def search_acm_by_material(material_keyword: str, limit: int = 20) -> str:
 
 
 @tool
-def get_acm_stats() -> str:
+async def get_acm_stats() -> str:
     """Get summary statistics for ACM records.
 
     Use this tool when the user asks for an overview, summary, totals,
@@ -307,7 +267,7 @@ def get_acm_stats() -> str:
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         filter_clause = _build_source_filter(source_id, notebook_id)
         query = f"""
             SELECT
@@ -322,10 +282,8 @@ def get_acm_stats() -> str:
             GROUP ALL
         """
         vars_ = _build_vars(source_id, notebook_id)
-        return await repo_query(query, vars_)
+        result = await repo_query(query, vars_)
 
-    try:
-        result = _run_async(_query())
         if result:
             stats = result[0]
             buildings = [b for b in (stats.get("buildings") or []) if b]
@@ -349,7 +307,7 @@ def get_acm_stats() -> str:
 
 
 @tool
-def get_acm_record_detail(record_id: str) -> str:
+async def get_acm_record_detail(record_id: str) -> str:
     """Get full details of a specific ACM record by its ID.
 
     Use this tool when you need complete information about a specific record,
@@ -358,13 +316,10 @@ def get_acm_record_detail(record_id: str) -> str:
     Args:
         record_id: The ACM record ID (e.g. "acm_record:abc123")
     """
-
-    async def _query():
-        query = "SELECT * FROM $record_id"
-        return await repo_query(query, {"record_id": ensure_record_id(record_id)})
-
     try:
-        result = _run_async(_query())
+        query = "SELECT * FROM $record_id"
+        result = await repo_query(query, {"record_id": ensure_record_id(record_id)})
+
         if not result:
             return json.dumps({"error": f"Record {record_id} not found"})
 
@@ -399,7 +354,7 @@ def get_acm_record_detail(record_id: str) -> str:
 
 
 @tool
-def semantic_search_acm(query: str, limit: int = 10) -> str:
+async def semantic_search_acm(query: str, limit: int = 10) -> str:
     """Search ACM records using semantic similarity (vector search).
 
     Use this tool for natural language searches that don't fit exact field
@@ -411,7 +366,7 @@ def semantic_search_acm(query: str, limit: int = 10) -> str:
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         # Get embedding for the query
         from open_notebook.domain.models import model_manager
 
@@ -436,10 +391,8 @@ def semantic_search_acm(query: str, limit: int = 10) -> str:
             query_embedding=query_embedding,
             limit=limit,
         )
-        return await repo_query(surql, vars_)
+        records = await repo_query(surql, vars_)
 
-    try:
-        records = _run_async(_query())
         summaries = []
         for r in records:
             summary = _format_record_summary(r)

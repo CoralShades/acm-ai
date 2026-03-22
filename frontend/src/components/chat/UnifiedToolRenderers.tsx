@@ -10,7 +10,7 @@ import { TextMessage, Role } from '@copilotkit/runtime-client-gql'
 import { ACMTableResult } from './renderers/ACMTableResult'
 import { ACMStatsResult } from './renderers/ACMStatsResult'
 import { SearchResult } from './renderers/SearchResult'
-import { HITLApprovalDialog } from './renderers/HITLApprovalDialog'
+import { RiskDistributionChart } from './renderers/RiskDistributionChart'
 import { ToolErrorCard } from './renderers/ToolErrorCard'
 import { ToolStepItem } from './renderers/ToolStepItem'
 import { isErrorResult } from '@/lib/utils/tool-result'
@@ -39,7 +39,27 @@ function parseResult(result: unknown): Record<string, unknown> | null {
   return parsed
 }
 
-/** Schema info card (extracted from CrudToolRenderers) */
+// --- Centralized render helpers ---
+
+/** Render an ACM table tool result (risk, building, room, product, detail) */
+function renderACMTable(toolName: string, queryType: string, status: string, result: unknown) {
+  if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName={toolName} status="executing" />
+  if (isErrorResult(result)) return <ToolStepItem toolName={toolName} status="error"><ToolErrorCard tool={toolName} /></ToolStepItem>
+  const data = parseResult(result)
+  if (!data) return <></>
+  return <ToolStepItem toolName={toolName} status="complete"><ACMTableResult data={data} queryType={queryType} /></ToolStepItem>
+}
+
+/** Render a search tool result (vector or text) */
+function renderSearch(toolName: string, searchType: 'Vector' | 'Text', status: string, result: unknown) {
+  if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName={toolName} status="executing" />
+  if (isErrorResult(result)) return <ToolStepItem toolName={toolName} status="error"><ToolErrorCard tool={toolName} /></ToolStepItem>
+  const data = parseResult(result)
+  if (!data) return <></>
+  return <ToolStepItem toolName={toolName} status="complete"><SearchResult data={data} searchType={searchType} /></ToolStepItem>
+}
+
+/** Schema info card */
 function SchemaInfoCard({ data }: { data: Record<string, unknown> }) {
   const tables = data.tables as Record<string, { updatable_fields: string[]; enum_values: Record<string, string[]> }> | undefined
   const error = data.error as string | undefined
@@ -104,9 +124,12 @@ function QueryResultsTable({ data }: { data: Record<string, unknown> }) {
 }
 
 /**
- * UnifiedToolRenderers — merges all 16+ tool renderers into one component.
+ * UnifiedToolRenderers — all tool renderers in one component.
  *
- * Each tool is wrapped in ToolStepItem for ChatGPT-style step indicators.
+ * Uses centralized render helpers to eliminate copy-paste.
+ * HITL approval is handled by useLangGraphInterrupt in UnifiedChatPanel,
+ * NOT by text-message generation here.
+ *
  * Must be rendered inside a CopilotKit provider.
  */
 export function UnifiedToolRenderers() {
@@ -118,108 +141,52 @@ export function UnifiedToolRenderers() {
     []
   )
 
-  // ── ACM Search Tools (9 read tools) ──
+  // ── ACM Search Tools (centralized via renderACMTable) ──
 
-  useRenderToolCall({
-    name: 'search_acm_by_risk',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_risk" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_risk" status="error"><ToolErrorCard tool="search_acm_by_risk" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="search_acm_by_risk" status="complete"><ACMTableResult data={data} queryType="Risk Status" /></ToolStepItem>
-    },
-  })
+  useRenderToolCall({ name: 'search_acm_by_risk', render: ({ status, result }) => renderACMTable('search_acm_by_risk', 'Risk Status', status, result) })
+  useRenderToolCall({ name: 'search_acm_by_building', render: ({ status, result }) => renderACMTable('search_acm_by_building', 'Building', status, result) })
+  useRenderToolCall({ name: 'search_acm_by_room', render: ({ status, result }) => renderACMTable('search_acm_by_room', 'Room', status, result) })
+  useRenderToolCall({ name: 'search_acm_by_material', render: ({ status, result }) => renderACMTable('search_acm_by_material', 'Product', status, result) })
+  useRenderToolCall({ name: 'get_acm_record_detail', render: ({ status, result }) => {
+    if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_acm_record_detail" status="executing" />
+    if (isErrorResult(result)) return <ToolStepItem toolName="get_acm_record_detail" status="error"><ToolErrorCard tool="get_acm_record_detail" /></ToolStepItem>
+    const data = parseResult(result)
+    if (!data) return <></>
+    return <ToolStepItem toolName="get_acm_record_detail" status="complete"><ACMTableResult data={{ records: [data], total: 1 }} queryType="Detail" /></ToolStepItem>
+  }})
+  useRenderToolCall({ name: 'list_acm_buildings', render: ({ status, result }) => {
+    if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="list_acm_buildings" status="executing" />
+    if (isErrorResult(result)) return <ToolStepItem toolName="list_acm_buildings" status="error"><ToolErrorCard tool="list_acm_buildings" /></ToolStepItem>
+    const data = parseResult(result)
+    if (!data) return <></>
+    return <ToolStepItem toolName="list_acm_buildings" status="complete"><ACMStatsResult data={data} /></ToolStepItem>
+  }})
 
-  useRenderToolCall({
-    name: 'search_acm_by_building',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_building" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_building" status="error"><ToolErrorCard tool="search_acm_by_building" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="search_acm_by_building" status="complete"><ACMTableResult data={data} queryType="Building" /></ToolStepItem>
-    },
-  })
+  // ── Stats with RiskDistributionChart ──
 
-  useRenderToolCall({
-    name: 'search_acm_by_room',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_room" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_room" status="error"><ToolErrorCard tool="search_acm_by_room" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="search_acm_by_room" status="complete"><ACMTableResult data={data} queryType="Room" /></ToolStepItem>
-    },
-  })
+  useRenderToolCall({ name: 'get_acm_stats', render: ({ status, result }) => {
+    if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_acm_stats" status="executing" />
+    if (isErrorResult(result)) return <ToolStepItem toolName="get_acm_stats" status="error"><ToolErrorCard tool="get_acm_stats" /></ToolStepItem>
+    const data = parseResult(result)
+    if (!data) return <></>
+    const high = (data.high_risk as number) || 0
+    const medium = (data.medium_risk as number) || 0
+    const low = (data.low_risk as number) || 0
+    const total = high + medium + low
+    return (
+      <ToolStepItem toolName="get_acm_stats" status="complete">
+        <ACMStatsResult data={data} />
+        {total > 0 && <div className="mt-2"><RiskDistributionChart high={high} medium={medium} low={low} total={total} /></div>}
+      </ToolStepItem>
+    )
+  }})
 
-  useRenderToolCall({
-    name: 'search_acm_by_product',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_product" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_product" status="error"><ToolErrorCard tool="search_acm_by_product" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="search_acm_by_product" status="complete"><ACMTableResult data={data} queryType="Product" /></ToolStepItem>
-    },
-  })
+  // ── Document Search Tools (FIXED: names match backend) ──
 
-  useRenderToolCall({
-    name: 'get_acm_stats',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_acm_stats" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="get_acm_stats" status="error"><ToolErrorCard tool="get_acm_stats" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="get_acm_stats" status="complete"><ACMStatsResult data={data} /></ToolStepItem>
-    },
-  })
+  useRenderToolCall({ name: 'search_documents', render: ({ status, result }) => renderSearch('search_documents', 'Vector', status, result) })
+  useRenderToolCall({ name: 'text_search_documents', render: ({ status, result }) => renderSearch('text_search_documents', 'Text', status, result) })
 
-  useRenderToolCall({
-    name: 'get_acm_record_detail',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_acm_record_detail" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="get_acm_record_detail" status="error"><ToolErrorCard tool="get_acm_record_detail" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="get_acm_record_detail" status="complete"><ACMTableResult data={{ records: [data], total: 1 }} queryType="Detail" /></ToolStepItem>
-    },
-  })
-
-  useRenderToolCall({
-    name: 'list_acm_buildings',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="list_acm_buildings" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="list_acm_buildings" status="error"><ToolErrorCard tool="list_acm_buildings" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="list_acm_buildings" status="complete"><ACMStatsResult data={data} /></ToolStepItem>
-    },
-  })
-
-  useRenderToolCall({
-    name: 'search_documents_vector',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_documents_vector" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="search_documents_vector" status="error"><ToolErrorCard tool="search_documents_vector" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="search_documents_vector" status="complete"><SearchResult data={data} searchType="Vector" /></ToolStepItem>
-    },
-  })
-
-  useRenderToolCall({
-    name: 'search_documents_text',
-    render: ({ status, result }) => {
-      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_documents_text" status="executing" />
-      if (isErrorResult(result)) return <ToolStepItem toolName="search_documents_text" status="error"><ToolErrorCard tool="search_documents_text" /></ToolStepItem>
-      const data = parseResult(result)
-      if (!data) return <></>
-      return <ToolStepItem toolName="search_documents_text" status="complete"><SearchResult data={data} searchType="Text" /></ToolStepItem>
-    },
-  })
-
-  // ── CRUD Tools (7 write tools) ──
+  // ── CRUD Tools ──
 
   useRenderToolCall({
     name: 'surreal_query',
@@ -247,6 +214,9 @@ export function UnifiedToolRenderers() {
     },
   })
 
+  // Write tools: show read-only preview indicator.
+  // Actual approval is handled by useLangGraphInterrupt in UnifiedChatPanel.
+
   useRenderToolCall({
     name: 'preview_write',
     render: ({ status, result }) => {
@@ -254,17 +224,20 @@ export function UnifiedToolRenderers() {
       if (isErrorResult(result)) return <ToolStepItem toolName="preview_write" status="error"><ToolErrorCard tool="preview_write" /></ToolStepItem>
       if (!result) return <></>
       const parsed = safeParseJSON(result)
-      if (!parsed || parsed.type !== 'preview_write') {
-        if (parsed?.error) return <ToolStepItem toolName="preview_write" status="error"><div className="text-xs text-red-500 px-3 py-2">{String(parsed.error)}</div></ToolStepItem>
-        return <></>
-      }
+      if (parsed?.error) return <ToolStepItem toolName="preview_write" status="error"><div className="text-xs text-red-500 px-3 py-2">{String(parsed.error)}</div></ToolStepItem>
+      if (!parsed || parsed.type !== 'preview_write') return <></>
       return (
         <ToolStepItem toolName="preview_write" status="complete" defaultExpanded>
-          <HITLApprovalDialog
-            preview={parsed as never}
-            onApprove={(edits) => { const opId = parsed.operation_id as string; const editStr = edits ? ` with edits: ${JSON.stringify(edits)}` : ''; stableAppend(new TextMessage({ role: Role.User, content: `Approved. Execute operation #${opId}${editStr}` })) }}
-            onReject={() => { const opId = parsed.operation_id as string; stableAppend(new TextMessage({ role: Role.User, content: `Rejected. Cancel operation #${opId}` })) }}
-          />
+          <div className="border border-amber-200 dark:border-amber-800 rounded-lg p-3 my-1 text-xs space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{String(parsed.operation)} Preview</span>
+              <span className="text-[10px] font-mono text-muted-foreground">#{String(parsed.operation_id)}</span>
+            </div>
+            {parsed.record_id && <div><span className="text-muted-foreground">Record:</span> <span className="font-mono">{String(parsed.record_id)}</span></div>}
+            {parsed.field && <div><span className="text-muted-foreground">Field:</span> <span className="font-semibold">{String(parsed.field)}</span> → <span className="text-green-700 dark:text-green-400 font-semibold">{String(parsed.new_value)}</span></div>}
+            {parsed.reason && <p className="text-muted-foreground italic">{String(parsed.reason)}</p>}
+            <p className="text-amber-600 dark:text-amber-400 text-[10px]">Awaiting approval via interrupt dialog...</p>
+          </div>
         </ToolStepItem>
       )
     },
@@ -277,18 +250,20 @@ export function UnifiedToolRenderers() {
       if (isErrorResult(result)) return <ToolStepItem toolName="preview_bulk_write" status="error"><ToolErrorCard tool="preview_bulk_write" /></ToolStepItem>
       if (!result) return <></>
       const parsed = safeParseJSON(result)
-      if (!parsed || parsed.type !== 'preview_bulk_write') {
-        if (parsed?.error) return <ToolStepItem toolName="preview_bulk_write" status="error"><div className="text-xs text-red-500 px-3 py-2">{String(parsed.error)}</div></ToolStepItem>
-        return <></>
-      }
-      const bulkPreview = { type: 'preview_write', operation_id: parsed.operation_id, operation: `BULK ${parsed.operation}`, record_id: `${parsed.affected_count} records`, field: parsed.field, new_value: parsed.new_value, reason: parsed.reason }
+      if (parsed?.error) return <ToolStepItem toolName="preview_bulk_write" status="error"><div className="text-xs text-red-500 px-3 py-2">{String(parsed.error)}</div></ToolStepItem>
+      if (!parsed || parsed.type !== 'preview_bulk_write') return <></>
       return (
         <ToolStepItem toolName="preview_bulk_write" status="complete" defaultExpanded>
-          <HITLApprovalDialog
-            preview={bulkPreview as never}
-            onApprove={(edits) => { const opId = parsed.operation_id as string; const editStr = edits ? ` with edits: ${JSON.stringify(edits)}` : ''; stableAppend(new TextMessage({ role: Role.User, content: `Approved. Execute operation #${opId}${editStr}` })) }}
-            onReject={() => { const opId = parsed.operation_id as string; stableAppend(new TextMessage({ role: Role.User, content: `Rejected. Cancel operation #${opId}` })) }}
-          />
+          <div className="border border-amber-200 dark:border-amber-800 rounded-lg p-3 my-1 text-xs space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">BULK {String(parsed.operation)} Preview</span>
+              <span className="text-[10px] font-mono text-muted-foreground">#{String(parsed.operation_id)}</span>
+            </div>
+            <div><span className="text-muted-foreground">Affected:</span> <span className="font-semibold">{String(parsed.affected_count)} records</span></div>
+            {parsed.field && <div><span className="text-muted-foreground">Field:</span> <span className="font-semibold">{String(parsed.field)}</span> → <span className="text-green-700 dark:text-green-400 font-semibold">{String(parsed.new_value)}</span></div>}
+            {parsed.reason && <p className="text-muted-foreground italic">{String(parsed.reason)}</p>}
+            <p className="text-amber-600 dark:text-amber-400 text-[10px]">Awaiting approval via interrupt dialog...</p>
+          </div>
         </ToolStepItem>
       )
     },
@@ -358,11 +333,10 @@ export function UnifiedToolRenderers() {
       if (parsed?.type === 'preview_write') {
         return (
           <ToolStepItem toolName="undo_last_write" status="complete" defaultExpanded>
-            <HITLApprovalDialog
-              preview={parsed as never}
-              onApprove={(edits) => { const opId = parsed.operation_id as string; const editStr = edits ? ` with edits: ${JSON.stringify(edits)}` : ''; stableAppend(new TextMessage({ role: Role.User, content: `Approved. Execute operation #${opId}${editStr}` })) }}
-              onReject={() => { const opId = parsed.operation_id as string; stableAppend(new TextMessage({ role: Role.User, content: `Rejected. Cancel operation #${opId}` })) }}
-            />
+            <div className="border border-amber-200 dark:border-amber-800 rounded-lg p-3 my-1 text-xs space-y-1">
+              <div className="text-muted-foreground">Undo: restoring <span className="font-semibold">{String(parsed.field)}</span> to <span className="text-green-700 dark:text-green-400 font-semibold">{String(parsed.new_value)}</span></div>
+              <p className="text-amber-600 dark:text-amber-400 text-[10px]">Awaiting approval via interrupt dialog...</p>
+            </div>
           </ToolStepItem>
         )
       }

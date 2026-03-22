@@ -1,7 +1,7 @@
 """LangGraph Studio entrypoint for Unified Agent graph.
 
 Studio provides its own persistence, so we compile without a checkpointer here.
-The production graph in unified_agent.py uses SqliteSaver for runtime use.
+The production graph in unified_agent.py uses MemorySaver for runtime use.
 """
 
 import os
@@ -26,18 +26,15 @@ if missing:
         "Visualization mode still works; runtime execution may fail without DB."
     )
 
+from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import ToolNode
+
 from open_notebook.graphs.unified_agent import (
-    END,
-    START,
-    StateGraph,
-    ToolNode,
     UnifiedAgentState,
     _get_unified_tools,
     approval_node,
     call_unified_agent,
     check_pending_and_route,
-    legacy_execute_write_node,
-    route_entry,
     should_continue,
 )
 
@@ -49,10 +46,7 @@ _builder = StateGraph(UnifiedAgentState)
 _builder.add_node("agent", call_unified_agent)
 _builder.add_node("tools", _tool_node)
 _builder.add_node("approval", approval_node)
-_builder.add_node("legacy_execute", legacy_execute_write_node)
-_builder.add_conditional_edges(
-    START, route_entry, {"agent": "agent", "legacy_execute": "legacy_execute"}
-)
+_builder.add_edge(START, "agent")
 _builder.add_conditional_edges(
     "agent", should_continue, {"tools": "tools", END: END}
 )
@@ -60,6 +54,5 @@ _builder.add_conditional_edges(
     "tools", check_pending_and_route, {"approval": "approval", "agent": "agent"}
 )
 _builder.add_edge("approval", "agent")
-_builder.add_edge("legacy_execute", END)
 
 graph = _builder.compile()

@@ -4,6 +4,7 @@ Provides CRUD for chat sessions tied to sources (jobs), integrated with
 the unified LangGraph agent's SqliteSaver checkpointer.
 """
 
+import uuid as _uuid
 from datetime import datetime
 from typing import Optional
 
@@ -28,6 +29,7 @@ class UpdateSessionRequest(BaseModel):
 class SessionResponse(BaseModel):
     id: str
     title: Optional[str] = None
+    thread_id: Optional[str] = None
     created: Optional[str] = None
     updated: Optional[str] = None
 
@@ -64,6 +66,7 @@ async def list_sessions(source_id: str):
                             SessionResponse(
                                 id=str(s.get("id", "")),
                                 title=s.get("title"),
+                                thread_id=s.get("thread_id"),
                                 created=str(s.get("created", ""))
                                 if s.get("created")
                                 else None,
@@ -83,8 +86,10 @@ async def list_sessions(source_id: str):
 async def create_session(source_id: str, body: CreateSessionRequest):
     """Create a new unified chat session for a source/job."""
     try:
+        thread_id = str(_uuid.uuid4())
         session = ChatSession(
             title=body.title or f"Chat {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            thread_id=thread_id,
         )
         await session.save()
 
@@ -96,6 +101,7 @@ async def create_session(source_id: str, body: CreateSessionRequest):
         return SessionResponse(
             id=str(session.id),
             title=session.title,
+            thread_id=session.thread_id,
             created=str(session.created) if hasattr(session, "created") else None,
         )
     except HTTPException:

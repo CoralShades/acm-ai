@@ -127,12 +127,34 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"SF schema provisioning failed (non-fatal): {e}")
 
+    # Initialize durable chat checkpointer (AsyncSqliteSaver)
+    try:
+        from open_notebook.graphs.checkpointer import init_checkpointer
+
+        await init_checkpointer()
+    except Exception as e:
+        logger.warning(f"Chat checkpointer init failed (non-fatal): {e}")
+
+    # Register AG-UI endpoints AFTER checkpointer is ready (graph needs checkpointer)
+    try:
+        from api.routers.agui_chat import register_agui_endpoints
+
+        register_agui_endpoints(app)
+    except Exception as e:
+        logger.warning(f"AG-UI endpoint registration failed (non-fatal): {e}")
+
     logger.success("API initialization completed successfully")
 
     # Yield control to the application
     yield
 
-    # Shutdown: cleanup if needed
+    # Shutdown: close checkpointer
+    try:
+        from open_notebook.graphs.checkpointer import close_checkpointer
+
+        await close_checkpointer()
+    except Exception as e:
+        logger.warning(f"Chat checkpointer shutdown error: {e}")
     logger.info("API shutdown complete")
 
 
@@ -220,21 +242,8 @@ if _static_dir.exists():
         name="well-known",
     )
 
-# Register AG-UI endpoint for CopilotKit integration
-try:
-    from api.routers.agui_chat import register_agui_endpoints
-
-    register_agui_endpoints(app)
-except Exception as e:
-    logger.warning(f"AG-UI endpoint registration failed (non-fatal): {e}")
-
-# Register AG-UI CRUD chat endpoint (E19-S8)
-try:
-    from api.routers.agui_chat import register_crud_agui_endpoint
-
-    register_crud_agui_endpoint(app)
-except Exception as e:
-    logger.warning(f"AG-UI CRUD endpoint registration failed (non-fatal): {e}")
+# AG-UI endpoints are now registered inside the lifespan (after checkpointer init).
+# See lifespan() above.
 
 
 @app.get("/")

@@ -2,7 +2,10 @@
 
 Replaces both supervisor_agent.py (read-only) and crud_agent.py (CRUD + HITL).
 Uses a single ReAct loop with all 16 tools, interrupt-based HITL for writes,
-and SqliteSaver for session persistence.
+and MemorySaver for session persistence (upgrade to SqliteSaver planned).
+
+All nodes are async — this ensures contextvars propagate correctly to tools
+(no threadpool context loss).
 
 Graph topology:
   START → agent_node (all tools bound)
@@ -11,8 +14,6 @@ Graph topology:
     └─ no tool_calls → END
 """
 
-import asyncio
-import concurrent.futures
 import json
 import os
 import re
@@ -139,35 +140,16 @@ def _build_system_prompt(
         return prompt
 
 
-def _run_in_thread(coro):
-    """Run an async coroutine in a new event loop on a thread pool."""
-    def _run():
-        new_loop = asyncio.new_event_loop()
-        try:
-            asyncio.set_event_loop(new_loop)
-            return new_loop.run_until_complete(coro)
-        finally:
-            new_loop.close()
-            asyncio.set_event_loop(None)
-
-    try:
-        asyncio.get_running_loop()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            return executor.submit(_run).result()
-    except RuntimeError:
-        return asyncio.run(coro)
+# --- Graph Nodes (all async) ---
 
 
-# --- Graph Nodes ---
-
-
-def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -> dict:
+async def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -> dict:
     """Main agent node — sets context, provisions model with all tools, invokes LLM."""
     source_id = _resolve_source_id(state, config)
     notebook_id = state.get("notebook_id")
     include_acm = state.get("include_acm_context", True)
 
-    # Set unified tool context for all tools
+    # Set unified tool context for all tools (async context — propagates to tool calls)
     set_tool_scope(source_id=source_id, notebook_id=notebook_id)
     if source_id:
         set_crud_context(source_id)
@@ -206,34 +188,26 @@ def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -> dict
 
     model_id = state.get("model_id") or config.get("configurable", {}).get("model_id")
 
-    model = _run_in_thread(
-        provision_langchain_model_with_tools(
-            str(payload),
-            model_id,
-            "chat",
-            tools=tools,
-            max_tokens=8192,
-        )
+    model = await provision_langchain_model_with_tools(
+        str(payload),
+        model_id,
+        "chat",
+        tools=tools,
+        max_tokens=8192,
     )
 
-    ai_message = model.invoke(payload)
+    ai_message = await model.ainvoke(payload)
 
     # Emit intermediate state for CopilotKit
     if _HAS_COPILOTKIT:
         try:
-            emit_loop = asyncio.new_event_loop()
-            try:
-                emit_loop.run_until_complete(
-                    copilotkit_emit_state(
-                        config,
-                        {
-                            "include_acm_context": include_acm,
-                            "status": "responding",
-                        },
-                    )
-                )
-            finally:
-                emit_loop.close()
+            await copilotkit_emit_state(
+                config,
+                {
+                    "include_acm_context": include_acm,
+                    "status": "responding",
+                },
+            )
         except Exception:
             pass  # Non-fatal
 
@@ -277,7 +251,7 @@ def check_pending_and_route(state: UnifiedAgentState) -> str:
     return "agent"
 
 
-def approval_node(state: UnifiedAgentState) -> dict:
+async def approval_node(state: UnifiedAgentState) -> dict:
     """Pause for user approval of a write operation using LangGraph interrupt().
 
     The interrupt payload is surfaced to the frontend via AG-UI protocol.
@@ -321,7 +295,7 @@ def approval_node(state: UnifiedAgentState) -> dict:
         edits = decision.get("edits")
         source_id = state.get("source_id")
         try:
-            result = execute_pending_write.invoke({
+            result = await execute_pending_write.ainvoke({
                 "operation_id": operation_id,
                 "source_id": source_id,
                 "edits": edits,
@@ -341,73 +315,6 @@ def approval_node(state: UnifiedAgentState) -> dict:
             ],
             "pending_operation": None,
         }
-
-
-def route_entry(state: UnifiedAgentState) -> str:
-    """Route at graph entry — handle legacy HITL approval messages for backward compat.
-
-    The new flow uses interrupt() + Command(resume=...), but we keep support
-    for the old "Approved. Execute operation #ID" message pattern during transition.
-    """
-    messages = state.get("messages", [])
-    if not messages:
-        return "agent"
-
-    last_msg = messages[-1]
-    content = getattr(last_msg, "content", "")
-
-    if isinstance(content, str) and re.search(
-        r"Approved\.\s*Execute operation #\w+", content
-    ):
-        return "legacy_execute"
-    return "agent"
-
-
-def legacy_execute_write_node(state: UnifiedAgentState) -> dict:
-    """Handle legacy HITL approval messages ("Approved. Execute operation #ID").
-
-    Kept for backward compatibility during the transition period.
-    """
-    messages = state.get("messages", [])
-    last_msg = messages[-1]
-    content = getattr(last_msg, "content", "")
-
-    source_id = state.get("source_id")
-    if not source_id:
-        source_id = _extract_source_id_from_messages(messages)
-    if source_id:
-        set_crud_context(source_id)
-        set_tool_scope(source_id=source_id)
-
-    match = re.search(r"Execute operation #(\w+)", content)
-    if not match:
-        return {
-            "messages": [
-                AIMessage(content="Could not parse operation ID from approval.")
-            ]
-        }
-
-    operation_id = match.group(1)
-
-    edits = None
-    edits_match = re.search(r"with edits:\s*(\{.*\})", content)
-    if edits_match:
-        try:
-            edits = json.loads(edits_match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    try:
-        result = execute_pending_write.invoke({
-            "operation_id": operation_id,
-            "source_id": source_id,
-            "edits": edits,
-        })
-    except Exception as e:
-        logger.error(f"Error in legacy_execute_write_node: {e}")
-        result = f"Error executing write: {str(e)}"
-
-    return {"messages": [AIMessage(content=result)]}
 
 
 def should_continue(state: UnifiedAgentState) -> str:
@@ -435,14 +342,9 @@ def build_unified_graph():
     builder.add_node("agent", call_unified_agent)
     builder.add_node("tools", tool_node)
     builder.add_node("approval", approval_node)
-    builder.add_node("legacy_execute", legacy_execute_write_node)
 
-    # Entry routing (handles legacy HITL approval messages)
-    builder.add_conditional_edges(
-        START,
-        route_entry,
-        {"agent": "agent", "legacy_execute": "legacy_execute"},
-    )
+    # START → agent (direct, no legacy routing)
+    builder.add_edge(START, "agent")
 
     # Agent decides: call tools or end
     builder.add_conditional_edges(
@@ -461,12 +363,26 @@ def build_unified_graph():
     # After approval, loop back to agent (to summarize result)
     builder.add_edge("approval", "agent")
 
-    # Legacy execute → end
-    builder.add_edge("legacy_execute", END)
-
     checkpointer = get_checkpointer()
     return builder.compile(checkpointer=checkpointer)
 
 
-# Default unified graph instance
-unified_graph = build_unified_graph()
+# Lazy graph instance — compiled on first access (after checkpointer init)
+_unified_graph = None
+
+
+def get_unified_graph():
+    """Get the compiled unified graph. Lazy initialization.
+
+    Must be called after init_checkpointer() for durable persistence.
+    Falls back to MemorySaver if checkpointer not initialized.
+    """
+    global _unified_graph
+    if _unified_graph is None:
+        _unified_graph = build_unified_graph()
+    return _unified_graph
+
+
+# Backward-compat: module-level access for imports that use `unified_graph` directly.
+# Prefer get_unified_graph() for new code.
+unified_graph = None  # Set to None; callers should use get_unified_graph()

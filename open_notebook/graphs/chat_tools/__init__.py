@@ -27,16 +27,11 @@ def get_acm_tools(
     source_id: Optional[str] = None,
     notebook_id: Optional[str] = None,
 ) -> List[BaseTool]:
-    """Get all ACM-related tools, scoped to a source or notebook.
+    """Get all ACM-related tools.
 
-    When source_id is provided, tools query within that single source.
-    When notebook_id is provided, tools query across all sources in the notebook.
+    Scope (source_id/notebook_id) is set via contextvars by the graph node
+    before tool execution, not via function partials.
     """
-    # Bind the scope parameters into each tool via partial
-    from functools import partial
-
-    scope = {"source_id": source_id, "notebook_id": notebook_id}
-
     return [
         search_acm_by_risk,
         search_acm_by_building,
