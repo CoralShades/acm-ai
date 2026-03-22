@@ -1,0 +1,4 @@
+-- Migration 56: Add thread_id to chat_session for LangGraph checkpointer mapping
+-- Each chat session maps to a LangGraph thread_id for durable conversation persistence.
+DEFINE FIELD IF NOT EXISTS thread_id ON TABLE chat_session TYPE option<string>;
+DEFINE INDEX IF NOT EXISTS idx_chat_session_thread_id ON TABLE chat_session COLUMNS thread_id UNIQUE;

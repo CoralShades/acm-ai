@@ -5,6 +5,7 @@
 export interface ChatSessionSummary {
   id: string
   title: string | null
+  thread_id: string | null
   created: string | null
   updated: string | null
 }

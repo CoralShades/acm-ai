@@ -26,24 +26,28 @@ from open_notebook.graphs.guardrails import (
 class TestGetSchemaInfo:
     """Tests for get_schema_info tool."""
 
-    def test_returns_both_tables(self):
-        result = json.loads(get_schema_info.invoke({"table": None}))
+    @pytest.mark.asyncio
+    async def test_returns_both_tables(self):
+        result = json.loads(await get_schema_info.ainvoke({"table": None}))
         assert result["type"] == "schema_info"
         assert "acm_record" in result["tables"]
         assert "building_record" in result["tables"]
 
-    def test_returns_acm_record_only(self):
-        result = json.loads(get_schema_info.invoke({"table": "acm_record"}))
+    @pytest.mark.asyncio
+    async def test_returns_acm_record_only(self):
+        result = json.loads(await get_schema_info.ainvoke({"table": "acm_record"}))
         assert result["type"] == "schema_info"
         assert "acm_record" in result["tables"]
 
-    def test_returns_building_record_only(self):
-        result = json.loads(get_schema_info.invoke({"table": "building_record"}))
+    @pytest.mark.asyncio
+    async def test_returns_building_record_only(self):
+        result = json.loads(await get_schema_info.ainvoke({"table": "building_record"}))
         assert result["type"] == "schema_info"
         assert "building_record" in result["tables"]
 
-    def test_includes_enum_values(self):
-        result = json.loads(get_schema_info.invoke({"table": "acm_record"}))
+    @pytest.mark.asyncio
+    async def test_includes_enum_values(self):
+        result = json.loads(await get_schema_info.ainvoke({"table": "acm_record"}))
         enums = result["tables"]["acm_record"]["enum_values"]
         assert "friable" in enums
         assert "Friable" in enums["friable"]
@@ -53,15 +57,17 @@ class TestGetSchemaInfo:
         assert "sample_result" in enums
         assert "Positive" in enums["sample_result"]
 
-    def test_includes_updatable_fields(self):
-        result = json.loads(get_schema_info.invoke({"table": "acm_record"}))
+    @pytest.mark.asyncio
+    async def test_includes_updatable_fields(self):
+        result = json.loads(await get_schema_info.ainvoke({"table": "acm_record"}))
         fields = result["tables"]["acm_record"]["updatable_fields"]
         assert "risk_status" in fields
         assert "friable" in fields
         assert "product" in fields
 
-    def test_unknown_table(self):
-        result = json.loads(get_schema_info.invoke({"table": "nonexistent"}))
+    @pytest.mark.asyncio
+    async def test_unknown_table(self):
+        result = json.loads(await get_schema_info.ainvoke({"table": "nonexistent"}))
         assert result["type"] == "schema_info"
         # Should return empty or both defaults
         assert "tables" in result
@@ -73,9 +79,10 @@ class TestAskUserChoice:
     def setup_method(self):
         set_crud_context("source:test123")
 
-    def test_static_options(self):
+    @pytest.mark.asyncio
+    async def test_static_options(self):
         result = json.loads(
-            ask_user_choice.invoke(
+            await ask_user_choice.ainvoke(
                 {
                     "question": "Which risk level?",
                     "static_options": ["High", "Medium", "Low"],
@@ -89,9 +96,10 @@ class TestAskUserChoice:
         assert result["options"][0]["value"] == "High"
         assert "choice_id" in result
 
-    def test_no_options_provided(self):
+    @pytest.mark.asyncio
+    async def test_no_options_provided(self):
         result = json.loads(
-            ask_user_choice.invoke(
+            await ask_user_choice.ainvoke(
                 {
                     "question": "Pick one?",
                 }
@@ -109,9 +117,10 @@ class TestPreviewBulkWrite:
         set_crud_context("source:test123")
         _pending_writes.clear()
 
-    def test_with_explicit_record_ids(self):
+    @pytest.mark.asyncio
+    async def test_with_explicit_record_ids(self):
         result = json.loads(
-            preview_bulk_write.invoke(
+            await preview_bulk_write.ainvoke(
                 {
                     "operation": "UPDATE",
                     "filter_description": "all friable items",
@@ -132,9 +141,10 @@ class TestPreviewBulkWrite:
         assert op_id in _pending_writes
         assert _pending_writes[op_id]["type"] == "bulk"
 
-    def test_blocked_field(self):
+    @pytest.mark.asyncio
+    async def test_blocked_field(self):
         result = json.loads(
-            preview_bulk_write.invoke(
+            await preview_bulk_write.ainvoke(
                 {
                     "operation": "UPDATE",
                     "filter_description": "all items",
@@ -147,12 +157,13 @@ class TestPreviewBulkWrite:
         )
         assert "error" in result
 
-    def test_no_context(self):
+    @pytest.mark.asyncio
+    async def test_no_context(self):
         from open_notebook.graphs.tool_context import set_tool_scope
 
         set_tool_scope(source_id=None, notebook_id=None)
         result = json.loads(
-            preview_bulk_write.invoke(
+            await preview_bulk_write.ainvoke(
                 {
                     "operation": "UPDATE",
                     "filter_description": "all items",
@@ -173,21 +184,23 @@ class TestUndoLastWrite:
         set_crud_context("source:test123")
         _pending_writes.clear()
 
-    @patch("open_notebook.graphs.crud_tools._run_async")
-    def test_no_audit_records(self, mock_run_async):
+    @pytest.mark.asyncio
+    @patch("open_notebook.graphs.crud_tools.repo_query", new_callable=AsyncMock)
+    async def test_no_audit_records(self, mock_repo_query):
         """When no audit records exist, return error."""
-        mock_run_async.return_value = []
-        result = json.loads(undo_last_write.invoke({"record_id": None}))
+        mock_repo_query.return_value = []
+        result = json.loads(await undo_last_write.ainvoke({"record_id": None}))
         assert (
             "error" in result
             or "no" in result.get("message", "").lower()
             or "error" in str(result).lower()
         )
 
-    @patch("open_notebook.graphs.crud_tools._run_async")
-    def test_audit_without_old_value(self, mock_run_async):
+    @pytest.mark.asyncio
+    @patch("open_notebook.graphs.crud_tools.repo_query", new_callable=AsyncMock)
+    async def test_audit_without_old_value(self, mock_repo_query):
         """When audit exists but has no old_value, return error."""
-        mock_run_async.return_value = [
+        mock_repo_query.return_value = [
             {
                 "record_id": "acm_record:x",
                 "field_name": "risk_status",
@@ -195,7 +208,7 @@ class TestUndoLastWrite:
                 "new_value": "High",
             }
         ]
-        result = json.loads(undo_last_write.invoke({"record_id": None}))
+        result = json.loads(await undo_last_write.ainvoke({"record_id": None}))
         # Should indicate can't undo
         assert (
             "error" in result

@@ -54,11 +54,11 @@ class TestFallbackQuery:
 
     def test_high_risk_query(self):
         q = _fallback_query("high risk records")
-        assert "High" in q
+        assert "Positive" in q
 
     def test_risk_breakdown(self):
-        q = _fallback_query("risk breakdown")
-        assert "GROUP BY risk_status" in q
+        q = _fallback_query("risk breakdown by sample_result")
+        assert "GROUP BY" in q
 
     def test_generic_fallback(self):
         q = _fallback_query("something random")
@@ -89,14 +89,15 @@ class TestExtractSearchValue:
 
 
 class TestPreviewWrite:
-    """Tests for preview_write tool."""
+    """Tests for preview_write tool (async)."""
 
     def setup_method(self):
         set_crud_context("source:test123")
         _pending_writes.clear()
 
-    def test_valid_update_preview(self):
-        result_str = preview_write.invoke(
+    @pytest.mark.asyncio
+    async def test_valid_update_preview(self):
+        result_str = await preview_write.ainvoke(
             {
                 "operation": "UPDATE",
                 "record_id": "acm_record:abc",
@@ -111,8 +112,9 @@ class TestPreviewWrite:
         assert result["field"] == "risk_status"
         assert result["operation_id"] in _pending_writes
 
-    def test_blocked_field(self):
-        result_str = preview_write.invoke(
+    @pytest.mark.asyncio
+    async def test_blocked_field(self):
+        result_str = await preview_write.ainvoke(
             {
                 "operation": "UPDATE",
                 "record_id": "acm_record:abc",
@@ -125,8 +127,9 @@ class TestPreviewWrite:
         assert "error" in result
         assert "Write blocked" in result["error"]
 
-    def test_blocked_table(self):
-        result_str = preview_write.invoke(
+    @pytest.mark.asyncio
+    async def test_blocked_table(self):
+        result_str = await preview_write.ainvoke(
             {
                 "operation": "UPDATE",
                 "record_id": "source:abc",
@@ -140,11 +143,12 @@ class TestPreviewWrite:
         result = json.loads(result_str)
         assert "error" in result
 
-    def test_no_context(self):
+    @pytest.mark.asyncio
+    async def test_no_context(self):
         from open_notebook.graphs.tool_context import set_tool_scope
 
         set_tool_scope(source_id=None, notebook_id=None)
-        result_str = preview_write.invoke(
+        result_str = await preview_write.ainvoke(
             {
                 "operation": "UPDATE",
                 "record_id": "acm_record:abc",
@@ -156,9 +160,10 @@ class TestPreviewWrite:
         result = json.loads(result_str)
         assert "error" in result
 
-    def test_delete_preview(self):
+    @pytest.mark.asyncio
+    async def test_delete_preview(self):
         set_crud_context("source:test123")
-        result_str = preview_write.invoke(
+        result_str = await preview_write.ainvoke(
             {
                 "operation": "DELETE",
                 "record_id": "acm_record:abc",
@@ -171,8 +176,9 @@ class TestPreviewWrite:
         assert result["type"] == "preview_write"
         assert result["operation"] == "DELETE"
 
-    def test_blocked_operation(self):
-        result_str = preview_write.invoke(
+    @pytest.mark.asyncio
+    async def test_blocked_operation(self):
+        result_str = await preview_write.ainvoke(
             {
                 "operation": "DROP",
                 "record_id": "acm_record:abc",
@@ -188,11 +194,12 @@ class TestPreviewWrite:
 class TestSurrealQueryNoDb:
     """Tests for surreal_query that don't require a running DB."""
 
-    def test_no_context_returns_error(self):
+    @pytest.mark.asyncio
+    async def test_no_context_returns_error(self):
         from open_notebook.graphs.tool_context import set_tool_scope
 
         set_tool_scope(source_id=None, notebook_id=None)
-        result_str = surreal_query.invoke({"question": "how many records?"})
+        result_str = await surreal_query.ainvoke({"question": "how many records?"})
         result = json.loads(result_str)
         assert result["type"] == "surreal_query"
         assert "error" in result

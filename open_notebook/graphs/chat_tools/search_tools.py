@@ -3,25 +3,22 @@
 These tools enable chat agents to search PDF document content via vector
 similarity search and BM25 full-text search on the source_embedding,
 source_insight, and note tables in SurrealDB.
+
+All tools are async — they run in the same async context as the LangGraph
+graph nodes, ensuring contextvars (source_id scoping) propagate correctly.
 """
 
-import asyncio
 import json
-from typing import Optional
 
 from langchain_core.tools import tool
 from loguru import logger
 
 from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.graphs.chat_tools.acm_tools import (
-    _build_vars,
-    _get_scope,
-    _run_async,
-)
+from open_notebook.graphs.chat_tools.acm_tools import _get_scope
 
 
 @tool
-def search_documents(query: str, limit: int = 10) -> str:
+async def search_documents(query: str, limit: int = 10) -> str:
     """Search document content using semantic similarity (vector search).
 
     Use this tool to find relevant passages from PDF documents, source content,
@@ -34,7 +31,7 @@ def search_documents(query: str, limit: int = 10) -> str:
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         from open_notebook.domain.models import model_manager
 
         embedding_model = await model_manager.get_embedding_model()
@@ -42,12 +39,10 @@ def search_documents(query: str, limit: int = 10) -> str:
 
         # Build source filter for scoping
         source_filter = ""
-        notebook_sources_subquery = ""
         if source_id:
             source_filter = f"AND source = {ensure_record_id(source_id)}"
         elif notebook_id:
-            notebook_sources_subquery = f"AND source IN (SELECT out FROM reference WHERE in = {ensure_record_id(notebook_id)})"
-            source_filter = notebook_sources_subquery
+            source_filter = f"AND source IN (SELECT out FROM reference WHERE in = {ensure_record_id(notebook_id)})"
 
         # Search source_embedding (document chunks)
         chunks_query = f"""
@@ -89,10 +84,8 @@ def search_documents(query: str, limit: int = 10) -> str:
         # Merge and sort by similarity
         all_results = chunks_result + insights_result
         all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
-        return all_results[:limit]
+        results = all_results[:limit]
 
-    try:
-        results = _run_async(_query())
         formatted = []
         for r in results:
             content = r.get("content", "")
@@ -123,7 +116,7 @@ def search_documents(query: str, limit: int = 10) -> str:
 
 
 @tool
-def text_search_documents(query: str, limit: int = 10) -> str:
+async def text_search_documents(query: str, limit: int = 10) -> str:
     """Search document content using keyword/text search (BM25).
 
     Use this tool for exact keyword or phrase matching in documents.
@@ -136,7 +129,7 @@ def text_search_documents(query: str, limit: int = 10) -> str:
     """
     source_id, notebook_id = _get_scope()
 
-    async def _query():
+    try:
         source_filter = ""
         if source_id:
             source_filter = f"AND source = {ensure_record_id(source_id)}"
@@ -181,10 +174,8 @@ def text_search_documents(query: str, limit: int = 10) -> str:
         # Merge and sort by score
         all_results = source_results + chunk_results
         all_results.sort(key=lambda x: x.get("score", 0), reverse=True)
-        return all_results[:limit]
+        results = all_results[:limit]
 
-    try:
-        results = _run_async(_query())
         formatted = []
         for r in results:
             content = r.get("highlight") or r.get("content") or r.get("title") or ""

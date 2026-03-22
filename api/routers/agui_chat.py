@@ -25,14 +25,16 @@ def register_agui_endpoints(app) -> None:
     unified agent graph's call_unified_agent node.
     """
     try:
-        from open_notebook.graphs.unified_agent import unified_graph
+        from open_notebook.graphs.unified_agent import get_unified_graph
+
+        graph = get_unified_graph()
 
         try:
             from copilotkit import LangGraphAGUIAgent
 
             agent = LangGraphAGUIAgent(
                 name="acm_agent",
-                graph=unified_graph,
+                graph=graph,
                 description="ACM-AI unified agent for queries and record modification",
             )
             logger.info("Using LangGraphAGUIAgent (CopilotKit SDK)")
@@ -41,7 +43,7 @@ def register_agui_endpoints(app) -> None:
 
             agent = LangGraphAgent(
                 name="acm_agent",
-                graph=unified_graph,
+                graph=graph,
                 description="ACM-AI unified agent for queries and record modification",
             )
             logger.info("Using LangGraphAgent (ag-ui-langgraph)")

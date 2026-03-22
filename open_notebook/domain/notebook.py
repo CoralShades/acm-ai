@@ -398,6 +398,7 @@ class ChatSession(ObjectModel):
     table_name: ClassVar[str] = "chat_session"
     title: Optional[str] = None
     model_override: Optional[str] = None
+    thread_id: Optional[str] = None  # LangGraph checkpointer thread_id
 
     async def relate_to_notebook(self, notebook_id: str) -> Any:
         if not notebook_id:
