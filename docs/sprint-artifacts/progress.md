@@ -2,6 +2,23 @@
 
 ## Completed Milestones
 
+### Chat Pipeline Audit + Fix (2026-03-23) — IN PROGRESS (Phases 2-4 remaining)
+
+Root cause fix for chat tools ignoring `source_id` context. Python 3.11 `ThreadPoolExecutor` does not propagate `contextvars`, so the `_run_async()` threadpool hack caused all tools to return stale data regardless of which job was active.
+
+| Session | Description | Status |
+|---------|-------------|--------|
+| S1 | Async tool conversion — all 16 tools in `acm_tools`, `crud_tools`, `search_tools` converted from sync to async. `_run_async()` and `_run_in_thread()` helpers removed. Graph nodes `call_unified_agent` + `approval_node` made async. | Done |
+| S2 | Persistent checkpointer — `MemorySaver` replaced with `AsyncSqliteSaver` (`data/chat_checkpoints.db`). Deferred graph compilation via `get_unified_graph()` lazy accessor, initialized in FastAPI lifespan. `thread_id` (UUID) added to `ChatSession` model and API responses. Migration 56 adds `thread_id` field + unique index. Legacy HITL nodes (`route_entry`, `legacy_execute_write_node`) removed — graph is now interrupt-only. | Done |
+| S3 | Streaming improvements, tool registry, copilot suggestions | Pending |
+| S4 | Polish, final E2E, documentation | Pending |
+
+**Tests:** 57 pass (all updated to async `.ainvoke()` pattern) | **PR:** #114 | **Branch:** `fix/chat-v2` | **Commit:** `beedf620`
+
+**Files changed (16):** `api/main.py`, `api/routers/agui_chat.py`, `api/routers/unified_sessions.py`, `frontend/src/lib/types/chat-session.ts`, `migrations/56.surrealql`, `migrations/56_down.surrealql`, `open_notebook/domain/notebook.py`, `open_notebook/graphs/chat_tools/__init__.py`, `open_notebook/graphs/chat_tools/acm_tools.py`, `open_notebook/graphs/chat_tools/search_tools.py`, `open_notebook/graphs/checkpointer.py`, `open_notebook/graphs/crud_tools.py`, `open_notebook/graphs/studio_entry_unified.py`, `open_notebook/graphs/unified_agent.py`, `tests/test_crud_tools_enhanced.py`, `tests/test_crud_tools_v2.py`
+
+---
+
 ### Unified Chat Phase 3: Polish + Testing (2026-03-22) — COMPLETE
 
 | Task | Description | Status |
@@ -88,4 +105,4 @@ See: `docs/sprint-artifacts/frontend-audit/progress.md` for full details.
 None.
 
 ## Status
-COMPLETE — Unified Chat Epic done (all 3 phases). 2477 tests passing.
+IN PROGRESS — Chat Pipeline Fix (fix/chat-v2, PR #114): Sessions 1-2 done (async tools + AsyncSqliteSaver). Sessions 3-4 pending (streaming, tool registry, copilot suggestions, polish). Prior work: Unified Chat Epic done (all 3 phases, 2477 tests).

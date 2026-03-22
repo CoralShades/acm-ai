@@ -78,6 +78,13 @@ export function ACMAssistantMessage({
         >
           {content}
         </ReactMarkdown>
+        {/* Streaming cursor — visible while tokens are arriving */}
+        {isGenerating && isCurrentMessage && (
+          <span
+            aria-hidden="true"
+            className="inline-block w-0.5 h-4 bg-primary/70 align-text-bottom ml-0.5 animate-pulse"
+          />
+        )}
       </div>
       {!isLoading && !isGenerating && (
         <MessageActions content={rawContent} notebookId={notebookId} />
