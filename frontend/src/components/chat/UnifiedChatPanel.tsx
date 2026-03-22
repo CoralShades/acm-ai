@@ -2,7 +2,7 @@
 
 import React, { useMemo, useEffect } from 'react'
 import { CopilotChat } from '@copilotkit/react-ui'
-import { useCopilotReadable, useLangGraphInterrupt } from '@copilotkit/react-core'
+import { useCopilotReadable, useLangGraphInterrupt, useCopilotChatSuggestions } from '@copilotkit/react-core'
 import { SmartChatProvider } from './SmartChatProvider'
 import { useUnifiedChat } from '@/lib/hooks/useUnifiedChat'
 import { UnifiedToolRenderers } from './UnifiedToolRenderers'
@@ -153,6 +153,18 @@ function UnifiedChatPanelContent({
       />
     ),
   })
+
+  // Context-aware quick-start suggestions shown before the first message
+  useCopilotChatSuggestions(
+    {
+      instructions: hasAcmData
+        ? `Suggest 3 helpful questions for a compliance officer viewing ACM records. Focus on: risk summary, building overview, high-risk items. Keep suggestions under 8 words each.`
+        : `Suggest 3 helpful questions about this document. Focus on: key findings, recommendations, summary. Keep suggestions under 8 words each.`,
+      minSuggestions: 2,
+      maxSuggestions: 3,
+    },
+    [sourceId, hasAcmData]
+  )
 
   return (
     <SmartChatProvider

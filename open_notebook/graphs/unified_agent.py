@@ -196,7 +196,9 @@ async def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -
         max_tokens=8192,
     )
 
-    ai_message = await model.ainvoke(payload)
+    # Pass config for streaming propagation — LangGraph intercepts model
+    # callbacks and emits TEXT_MESSAGE_CONTENT events via AG-UI protocol
+    ai_message = await model.ainvoke(payload, config=config)
 
     # Emit intermediate state for CopilotKit
     if _HAS_COPILOTKIT:
