@@ -536,54 +536,46 @@ FROM python:3.11-slim as runtime
 
 ### Overview
 
-ACM-AI integrates CopilotKit v1.51.4 for two AI-powered chat interfaces that connect to LangGraph agents via the AG-UI protocol.
+ACM-AI integrates CopilotKit v1.51.4 with a single unified LangGraph agent (`unified_agent`) connecting to the frontend via the AG-UI protocol. The previous dual-chat architecture (separate supervisor + CRUD graphs, `SmartChatPanel`, `JobCrudChatPanel`) was fully deprecated in the Unified Chat Epic (2026-03-22).
 
-### Unified Agent (Phase 1 Backend — 2026-03-22)
+### Unified Agent (Complete — 2026-03-22)
 
-The separate `supervisor_graph` and `crud_graph` have been replaced by a single unified LangGraph agent in `open_notebook/graphs/unified_agent.py`. Key components:
+The separate `supervisor_graph` and `crud_graph` have been replaced by a single unified LangGraph agent. 14 legacy files were deleted: 8 backend (`supervisor_agent.py`, `crud_agent.py`, `chat.py`, `source_chat.py`, `acm_analyst_agent.py`, `doc_search_agent.py`, `api/routers/chat.py`, `api/routers/source_chat.py`) and 6 frontend (`SmartChatPanel.tsx`, `ChatModeSwitch.tsx`, `CrudToolRenderers.tsx`, `useSmartChat.ts`, `smart-chat.ts`, `copilot-crud/route.ts`).
+
+Key components:
 
 | File | Purpose |
 |------|---------|
 | `open_notebook/graphs/unified_agent.py` | 6-node graph: agent, tools, approval/interrupt, legacy_execute. 15 LLM-facing tools. |
+| `open_notebook/graphs/llm_router.py` | LLM intent router — rule-based fast-path + LLM fallback. Extracts entity hints (buildings, rooms, risk_levels, materials, record_ids) injected into system prompt. |
 | `open_notebook/graphs/tool_context.py` | Thread-safe `contextvars` tool context (replaces module-level globals). |
 | `open_notebook/graphs/checkpointer.py` | SqliteSaver singleton for persistent chat sessions. |
-| `api/routers/agui_chat.py` | Single unified AG-UI endpoint with `session_id` support. |
+| `api/routers/agui_chat.py` | Single unified AG-UI endpoint at `/api/agui/chat` with `session_id` support. |
 | `api/routers/unified_sessions.py` | Session CRUD REST endpoints (list/create/update/delete). |
 | `prompts/unified_agent.jinja` | System prompt covering all 7 DB tables and 15 tools. |
 
-The HITL interrupt-based write-approval flow is preserved inside the unified graph.
+The HITL interrupt-based write-approval flow is preserved inside the unified graph. Session management is provided by `SessionDropdown` + `chatSessionStore`. `ToolStepItem` renders ChatGPT-style step indicators. `UnifiedToolRenderers` merges all 16+ tool renderers from the previous separate panels.
 
 ### Service Flow
 
 ```
 Frontend (Next.js 15, port 8503)
-├── CopilotProvider (root, /api/copilotkit)
-│   └── SmartChatPanel (supervisor agent)
-│       ├── useCopilotReadable (page context → LLM)
-│       ├── useCopilotChatSuggestions (domain prompts)
-│       ├── useCoAgentStateRender (progress display)
-│       ├── useCoAgent (shared state)
-│       ├── ToolResultRenderers (9 tools + useDefaultTool)
-│       └── CopilotChat (UI)
-│
-├── CopilotKit (/copilot-crud, job-scoped)
-│   └── JobCrudChatPanel (CRUD agent)
-│       ├── CrudToolRenderers
-│       │   ├── useLangGraphInterrupt → HITLApprovalDialog
-│       │   └── useRenderToolCall (preview_write, write_acm_record)
-│       └── CopilotChat (UI)
-│
-Next.js API Routes
-├── /api/copilotkit → CopilotRuntime (singleton) → HttpAgent
-│   → FastAPI /api/agui/chat → LangGraphAgent("unified_agent") → unified_agent graph
-│
-└── /copilot-crud → CopilotRuntime (singleton) → HttpAgent
-    → FastAPI /api/agui/crud-chat → LangGraphAgent("unified_agent") → unified_agent graph
+└── CopilotProvider (root, /api/copilotkit)
+    └── UnifiedChatPanel
+        ├── SessionDropdown + chatSessionStore (session management)
+        ├── UnifiedToolRenderers (16+ tools + useLangGraphInterrupt HITL)
+        │   └── HITLApprovalDialog (approve/reject/edit write ops)
+        ├── ToolStepItem (ChatGPT-style step indicators)
+        └── CopilotChat (UI)
+
+Next.js API Route
+└── /api/copilotkit → CopilotRuntime (singleton) → HttpAgent
+    → FastAPI /api/agui/chat → LangGraphAgent("unified_agent") → unified_agent graph
 ```
 
 ### HITL Write Approval Flow
 
-The CRUD agent uses LangGraph's `interrupt()` for human-in-the-loop write approval:
+The unified agent uses LangGraph's `interrupt()` for human-in-the-loop write approval:
 
 ```
 1. User requests update → agent calls preview_write tool

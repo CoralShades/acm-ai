@@ -2,6 +2,20 @@
 
 ## Completed Milestones
 
+### Unified Chat Phase 3: Polish + Testing (2026-03-22) — COMPLETE
+
+| Task | Description | Status |
+|------|-------------|--------|
+| S1 | LLM intent router (`open_notebook/graphs/llm_router.py`) — rule-based fast-path + LLM fallback, entity extraction (buildings, rooms, risk_levels, materials, record_ids), injected into `unified_agent.py` system prompt | Done |
+| S2 | Legacy chat deprecation — 14 files deleted (8 backend: `supervisor_agent.py`, `crud_agent.py`, `chat.py`, `source_chat.py`, `acm_analyst_agent.py`, `doc_search_agent.py`, `api/routers/chat.py`, `api/routers/source_chat.py`; 6 frontend: `SmartChatPanel.tsx`, `ChatModeSwitch.tsx`, `CrudToolRenderers.tsx`, `useSmartChat.ts`, `smart-chat.ts`, `copilot-crud/route.ts`). `api/main.py` + `langgraph.json` cleaned up | Done |
+| S3 | E2E live testing (4 queries, screenshots via chrome-devtools MCP), prompt hardening for schema tool forcing, session store 404 graceful degradation, Playwright specs + mobile/dark/a11y audit | Done |
+
+**Tests:** 2477 backend pass | **S1 unit tests:** 17/17 pass (`tests/test_llm_router.py`)
+
+**Unified Chat Epic complete:** 13 stories across 3 phases, 21 files created, 14 legacy files deleted, 2477 tests passing.
+
+---
+
 ### Unified Chat Phase 1: Backend (2026-03-22) — COMPLETE
 Replaced separate supervisor + CRUD graphs with a single unified LangGraph agent.
 
@@ -71,7 +85,7 @@ PDFPageViewer rewrite: zoom (50-300%), page navigation, text search (Ctrl+F), sc
 See: `docs/sprint-artifacts/frontend-audit/progress.md` for full details.
 
 ## Blockers
-None — session complete.
+None.
 
 ## Status
-COMPLETE
+COMPLETE — Unified Chat Epic done (all 3 phases). 2477 tests passing.
