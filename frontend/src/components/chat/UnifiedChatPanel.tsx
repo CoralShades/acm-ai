@@ -191,16 +191,6 @@ function UnifiedChatPanelContent({
                 onAcmToggle={setIncludeAcmContext}
               />
             )}
-            makeSystemMessage={(contextString) =>
-              `You are ACM-AI, an intelligent assistant for Asbestos Containing Material compliance data. ` +
-              `You can both query and modify ACM records for the current job. ` +
-              (sourceId ? `Current source: ${sourceId}. ` : '') +
-              (notebookId ? `Current notebook: ${notebookId}. ` : '') +
-              (includeAcmContext
-                ? `ACM context is enabled - use ACM tools for structured data queries and modifications. `
-                : `ACM context is disabled - focus on document content only. `) +
-              (contextString ? `\n\nAdditional context:\n${contextString}` : '')
-            }
           />
         </div>
 
