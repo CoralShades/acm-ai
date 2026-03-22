@@ -13,13 +13,13 @@ import { SessionDropdown } from './SessionDropdown'
 import { HITLApprovalCard } from './renderers/HITLApprovalCard'
 import { useChatSessionStore } from '@/lib/stores/chatSessionStore'
 import { cn } from '@/lib/utils'
-import { TableProperties } from 'lucide-react'
 
 interface UnifiedChatPanelProps {
   sourceId?: string
   notebookId?: string
   hasAcmData?: boolean
   sessionId?: string
+  activeTab?: string
   className?: string
 }
 
@@ -71,6 +71,7 @@ export function UnifiedChatPanel({
   notebookId,
   hasAcmData = false,
   sessionId,
+  activeTab,
   className,
 }: UnifiedChatPanelProps) {
   return (
@@ -80,6 +81,7 @@ export function UnifiedChatPanel({
         notebookId={notebookId}
         hasAcmData={hasAcmData}
         sessionId={sessionId}
+        activeTab={activeTab}
         className={className}
       />
     </UnifiedChatErrorBoundary>
@@ -91,6 +93,7 @@ function UnifiedChatPanelContent({
   notebookId,
   hasAcmData = false,
   sessionId: sessionIdProp,
+  activeTab,
   className,
 }: UnifiedChatPanelProps) {
   const { activeSessionId, fetchSessions } = useChatSessionStore()
@@ -171,6 +174,7 @@ function UnifiedChatPanelContent({
       sourceId={sourceId}
       notebookId={notebookId}
       hasAcmData={hasAcmData}
+      activeTab={activeTab}
     >
       <UnifiedToolRenderers />
       <div className={cn('flex flex-col h-full', className)}>
@@ -206,25 +210,7 @@ function UnifiedChatPanelContent({
           />
         </div>
 
-        {/* ACM toggle badge */}
-        {hasAcmData && (
-          <div className="px-4 py-2 border-t flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIncludeAcmContext(!includeAcmContext)}
-              aria-label={`Toggle ACM data context: currently ${includeAcmContext ? 'on' : 'off'}`}
-              className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                includeAcmContext
-                  ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80'
-                  : 'border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground'
-              )}
-            >
-              <TableProperties className="h-3 w-3" />
-              ACM Data {includeAcmContext ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        )}
+        {/* ACM toggle is in SmartChatInput — no duplicate badge needed */}
       </div>
     </SmartChatProvider>
   )
