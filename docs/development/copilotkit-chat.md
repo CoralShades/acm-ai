@@ -20,27 +20,28 @@ Browser (port 8503)
                        └─> unified_agent graph  (SqliteSaver checkpointer)
 ```
 
-The runtime route uses the **lazy singleton pattern** — the `CopilotRuntime` is created once on the first request and reused for all subsequent requests. `SqliteSaver` (instead of the previous `MemorySaver`) persists thread state across sessions and server restarts.
+The runtime route uses the **lazy singleton pattern** — the `CopilotRuntime` is created once on the first request and reused for all subsequent requests. `AsyncSqliteSaver` (replacing the previous `MemorySaver`) persists thread state to `data/chat_checkpoints.db` across sessions and server restarts. The graph itself is compiled lazily via `get_unified_graph()` and initialized in FastAPI lifespan after the checkpointer is ready.
 
 The `AgUiAdapter` subclass overrides `EmptyAdapter.name` to return `"AgUiAdapter"`, bypassing the CopilotKit name blocklist. All LLM calls happen in the Python backend.
 
 ### Unified Agent
 
-The backend `unified_agent` graph (`open_notebook/graphs/unified_agent.py`) is a single 6-node LangGraph graph that handles both read queries and write operations:
+The backend `unified_agent` graph (`open_notebook/graphs/unified_agent.py`) is a single LangGraph graph that handles both read queries and write operations:
 
-- **Nodes**: `agent`, `tools`, `check_write_approval` (interrupt/HITL), `execute_write`, `legacy_execute`, `END`
-- **Tools**: 15 LLM-facing tools covering ACM queries, document search, record writes, bulk writes, schema info, SurrealQL query, user choice prompts, and undo
-- **Checkpointer**: `SqliteSaver` singleton (`open_notebook/graphs/checkpointer.py`) — sessions persist across restarts
+- **Nodes**: `agent`, `tools`, `approval_node` (interrupt-only HITL), `END` — all nodes are async. Legacy nodes `route_entry` and `legacy_execute_write_node` have been removed.
+- **Tools**: 15 LLM-facing tools covering ACM queries, document search, record writes, bulk writes, schema info, SurrealQL query, user choice prompts, and undo. All 16 tool functions are `async def` — the previous `_run_async()` threadpool hack has been eliminated, fixing a `contextvars` scoping bug where `source_id` was silently lost across thread boundaries.
+- **Checkpointer**: `AsyncSqliteSaver` singleton (`open_notebook/graphs/checkpointer.py`, file: `data/chat_checkpoints.db`) — sessions persist across restarts. Graph compiled via `get_unified_graph()` lazy accessor.
+- **Session threading**: each `ChatSession` record carries a UUID `thread_id` generated at creation time. This `thread_id` is passed as the LangGraph `config["configurable"]["thread_id"]`, ensuring per-session conversation isolation in the checkpointer.
 - **Intent Router**: `open_notebook/graphs/llm_router.py` — rule-based fast-path + LLM fallback; extracts entity hints (buildings, rooms, risk_levels, materials, record_ids) injected into the system prompt each turn
 
 ### Session Management
 
-Sessions are managed via `SessionDropdown` in the chat header and `chatSessionStore` (Zustand). REST endpoints for session CRUD are provided by `api/routers/unified_sessions.py`:
+Sessions are managed via `SessionDropdown` in the chat header and `chatSessionStore` (Zustand). REST endpoints for session CRUD are provided by `api/routers/unified_sessions.py`. Each session carries a UUID `thread_id` (generated on `POST /api/sessions`) that maps directly to the LangGraph `AsyncSqliteSaver` checkpointer, providing per-session conversation isolation:
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| `GET` | `/api/sessions` | List all chat sessions |
-| `POST` | `/api/sessions` | Create a new session |
+| `GET` | `/api/sessions` | List all chat sessions (includes `thread_id`) |
+| `POST` | `/api/sessions` | Create a new session (generates UUID `thread_id`) |
 | `PATCH` | `/api/sessions/{id}` | Rename a session |
 | `DELETE` | `/api/sessions/{id}` | Delete a session |
 
@@ -191,10 +192,10 @@ ChatGPT-style step indicator component. Shows a spinner while a tool is executin
 ### Unified Agent (`open_notebook/graphs/unified_agent.py`)
 
 - **State**: `UnifiedAgentState` (messages, source_id, session_id, pending_writes, model_id)
-- **Nodes**: `agent`, `tools`, `check_write_approval`, `execute_write`, `legacy_execute`, `END`
-- **Edges**: `START → agent → [tools | END]`, `tools → check_write_approval → [execute_write | agent]`
-- **Checkpointer**: `SqliteSaver` singleton (persistent, survives restarts)
-- **Tools exposed to LLM** (15): `search_acm_by_risk`, `search_acm_by_building`, `search_acm_by_room`, `search_acm_by_product`, `get_acm_stats`, `get_acm_record_detail`, `semantic_search_acm`, `search_documents`, `text_search_documents`, `surreal_query`, `preview_write`, `preview_bulk_write`, `get_schema_info`, `ask_user_choice`, `undo_last_write`
+- **Nodes**: `agent`, `tools`, `approval_node`, `END` — all `async def`. Legacy nodes `route_entry` and `legacy_execute_write_node` removed; `approval_node` is the sole HITL path.
+- **Edges**: `START → agent → [tools | END]`, `tools → approval_node → [agent | interrupt]`
+- **Checkpointer**: `AsyncSqliteSaver` singleton (`data/chat_checkpoints.db`), initialized in FastAPI lifespan, compiled lazily via `get_unified_graph()`
+- **Tools exposed to LLM** (15 — all `async def`): `search_acm_by_risk`, `search_acm_by_building`, `search_acm_by_room`, `search_acm_by_product`, `get_acm_stats`, `get_acm_record_detail`, `semantic_search_acm`, `search_documents`, `text_search_documents`, `surreal_query`, `preview_write`, `preview_bulk_write`, `get_schema_info`, `ask_user_choice`, `undo_last_write`
 
 ### LLM Intent Router (`open_notebook/graphs/llm_router.py`)
 
@@ -349,13 +350,14 @@ If `INTERNAL_API_URL` is not set, the runtime route defaults to `http://localhos
 | `frontend/src/components/chat/renderers/ItemDetailCard.tsx` | Expandable ACM item card |
 | `frontend/src/components/chat/renderers/ExtractionProgress.tsx` | Progress bar for extraction status |
 | `frontend/src/components/chat/renderers/DefaultToolFallback.tsx` | Fallback renderer for unregistered tools |
-| `open_notebook/graphs/unified_agent.py` | Unified LangGraph — 6 nodes, 15 tools, interrupt-based HITL, SqliteSaver |
+| `open_notebook/graphs/unified_agent.py` | Unified LangGraph — 4 async nodes, 15 async tools, interrupt-only HITL via `approval_node` |
 | `open_notebook/graphs/llm_router.py` | LLM intent router with rule-based fast-path + entity extraction |
 | `open_notebook/graphs/tool_context.py` | Thread-safe `contextvars` tool context |
-| `open_notebook/graphs/checkpointer.py` | SqliteSaver singleton for persistent sessions |
-| `open_notebook/graphs/chat_tools/acm_tools.py` | ACM query tools (search by risk, building, room, material; stats; detail; semantic search) |
-| `open_notebook/graphs/chat_tools/search_tools.py` | Document search tools (vector + text) |
-| `open_notebook/graphs/crud_tools.py` | Write tools: `preview_write`, `preview_bulk_write`, `execute_pending_write`, `undo_last_write`, `surreal_query`, `get_schema_info`, `ask_user_choice` |
+| `open_notebook/graphs/checkpointer.py` | `AsyncSqliteSaver` singleton (`data/chat_checkpoints.db`) + `get_unified_graph()` lazy accessor |
+| `open_notebook/graphs/chat_tools/acm_tools.py` | ACM query tools — all `async def` (search by risk, building, room, material; stats; detail; semantic search) |
+| `open_notebook/graphs/chat_tools/search_tools.py` | Document search tools — all `async def` (vector + text) |
+| `open_notebook/graphs/crud_tools.py` | Write tools — all `async def`: `preview_write`, `preview_bulk_write`, `execute_pending_write`, `undo_last_write`, `surreal_query`, `get_schema_info`, `ask_user_choice` |
+| `migrations/56.surrealql` | Adds `thread_id` field + unique index to `chat_session` table |
 | `api/routers/agui_chat.py` | Single unified AG-UI endpoint at `/api/agui/chat` |
 | `api/routers/unified_sessions.py` | Session CRUD REST endpoints |
 | `prompts/unified_agent.jinja` | Unified system prompt (all 7 DB tables, 15 tools) |
