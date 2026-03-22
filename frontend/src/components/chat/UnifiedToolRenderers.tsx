@@ -1,0 +1,391 @@
+'use client'
+
+import React, { useCallback, useRef } from 'react'
+import {
+  useRenderToolCall,
+  useDefaultTool,
+  useCopilotChat,
+} from '@copilotkit/react-core'
+import { TextMessage, Role } from '@copilotkit/runtime-client-gql'
+import { ACMTableResult } from './renderers/ACMTableResult'
+import { ACMStatsResult } from './renderers/ACMStatsResult'
+import { SearchResult } from './renderers/SearchResult'
+import { HITLApprovalDialog } from './renderers/HITLApprovalDialog'
+import { ToolErrorCard } from './renderers/ToolErrorCard'
+import { ToolStepItem } from './renderers/ToolStepItem'
+import { isErrorResult } from '@/lib/utils/tool-result'
+import { ChatMiniGrid } from '@/components/jobs/ChatMiniGrid'
+import { ChatChoiceCard } from '@/components/jobs/ChatChoiceCard'
+
+function safeParseJSON(val: unknown): Record<string, unknown> | null {
+  if (!val) return null
+  if (typeof val === 'object') return val as Record<string, unknown>
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val)
+      return typeof parsed === 'object' ? parsed : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+function parseResult(result: unknown): Record<string, unknown> | null {
+  if (!result) return null
+  const parsed = safeParseJSON(result)
+  if (!parsed) return null
+  if ('error' in parsed) return null
+  return parsed
+}
+
+/** Schema info card (extracted from CrudToolRenderers) */
+function SchemaInfoCard({ data }: { data: Record<string, unknown> }) {
+  const tables = data.tables as Record<string, { updatable_fields: string[]; enum_values: Record<string, string[]> }> | undefined
+  const error = data.error as string | undefined
+  if (error) return <div className="border border-red-200 dark:border-red-900 rounded-lg p-3 my-2 text-sm"><p className="text-red-600 dark:text-red-400 text-xs">{error}</p></div>
+  if (!tables) return null
+  return (
+    <div className="border rounded-lg p-3 my-2 text-sm bg-background space-y-3">
+      <div className="text-xs font-medium text-muted-foreground">Schema Information</div>
+      {Object.entries(tables).map(([tableName, schema]) => (
+        <div key={tableName}>
+          <div className="text-xs font-semibold mb-1.5">{tableName}</div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {schema.updatable_fields.map((field) => (
+              <span key={field} className="inline-block px-1.5 py-0.5 text-[10px] bg-muted rounded-md text-muted-foreground">{field}</span>
+            ))}
+          </div>
+          {Object.keys(schema.enum_values || {}).length > 0 && (
+            <div className="space-y-1">
+              {Object.entries(schema.enum_values).map(([field, values]) => (
+                <div key={field} className="text-xs">
+                  <span className="text-muted-foreground">{field}:</span>{' '}
+                  <span className="flex flex-wrap gap-1 mt-0.5 inline">
+                    {values.map((v) => (
+                      <span key={v} className="inline-block px-1.5 py-0.5 text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-full">{v}</span>
+                    ))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Compact query results table */
+function QueryResultsTable({ data }: { data: Record<string, unknown> }) {
+  const results = (data.results as Record<string, unknown>[]) || []
+  const totalResults = (data.total_results as number) || 0
+  const warnings = (data.warnings as string[]) || []
+  const generatedSql = data.generated_sql as string | undefined
+  const error = data.error as string | undefined
+  if (error) return <div className="border border-red-200 dark:border-red-900 rounded-lg p-3 my-2 text-sm"><div className="text-xs text-red-500 font-medium mb-1">Query Error</div><p className="text-red-600 dark:text-red-400">{error}</p>{generatedSql && <pre className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded">{generatedSql}</pre>}</div>
+  if (results.length === 0) return <div className="border rounded-lg p-3 my-2 text-sm bg-background"><p className="text-muted-foreground">No results found.</p></div>
+  const visibleCols = Object.keys(results[0]).filter((k) => !['id', 'source_id', 'embedding', 'embedding_text', 'embedding_model'].includes(k))
+  return (
+    <div className="border rounded-lg my-2 text-sm bg-background overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/50">
+        <span className="text-xs font-medium text-muted-foreground">Query Results ({totalResults} total{results.length < totalResults ? `, showing ${results.length}` : ''})</span>
+        {generatedSql && <details className="text-xs"><summary className="cursor-pointer text-muted-foreground hover:text-foreground">SQL</summary><pre className="mt-1 p-2 bg-muted rounded text-xs max-w-md overflow-auto">{generatedSql}</pre></details>}
+      </div>
+      {warnings.length > 0 && <div className="px-3 py-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-b">{warnings.join('; ')}</div>}
+      <div className="overflow-auto max-h-80">
+        <table className="w-full text-xs">
+          <thead><tr className="border-b bg-muted/30">{visibleCols.map((col) => <th key={col} className="px-3 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">{col.replace(/_/g, ' ')}</th>)}</tr></thead>
+          <tbody>{results.map((row, i) => <tr key={i} className="border-b last:border-0 hover:bg-muted/20">{visibleCols.map((col) => <td key={col} className="px-3 py-1.5 whitespace-nowrap max-w-[200px] truncate">{row[col] == null ? '—' : typeof row[col] === 'boolean' ? (row[col] ? 'Yes' : 'No') : String(row[col])}</td>)}</tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * UnifiedToolRenderers — merges all 16+ tool renderers into one component.
+ *
+ * Each tool is wrapped in ToolStepItem for ChatGPT-style step indicators.
+ * Must be rendered inside a CopilotKit provider.
+ */
+export function UnifiedToolRenderers() {
+  const { appendMessage } = useCopilotChat()
+  const appendRef = useRef(appendMessage)
+  appendRef.current = appendMessage
+  const stableAppend = useCallback(
+    (...args: Parameters<typeof appendMessage>) => appendRef.current(...args),
+    []
+  )
+
+  // ── ACM Search Tools (9 read tools) ──
+
+  useRenderToolCall({
+    name: 'search_acm_by_risk',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_risk" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_risk" status="error"><ToolErrorCard tool="search_acm_by_risk" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="search_acm_by_risk" status="complete"><ACMTableResult data={data} queryType="Risk Status" /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'search_acm_by_building',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_building" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_building" status="error"><ToolErrorCard tool="search_acm_by_building" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="search_acm_by_building" status="complete"><ACMTableResult data={data} queryType="Building" /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'search_acm_by_room',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_room" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_room" status="error"><ToolErrorCard tool="search_acm_by_room" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="search_acm_by_room" status="complete"><ACMTableResult data={data} queryType="Room" /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'search_acm_by_product',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_acm_by_product" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="search_acm_by_product" status="error"><ToolErrorCard tool="search_acm_by_product" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="search_acm_by_product" status="complete"><ACMTableResult data={data} queryType="Product" /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'get_acm_stats',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_acm_stats" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="get_acm_stats" status="error"><ToolErrorCard tool="get_acm_stats" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="get_acm_stats" status="complete"><ACMStatsResult data={data} /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'get_acm_record_detail',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_acm_record_detail" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="get_acm_record_detail" status="error"><ToolErrorCard tool="get_acm_record_detail" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="get_acm_record_detail" status="complete"><ACMTableResult data={{ records: [data], total: 1 }} queryType="Detail" /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'list_acm_buildings',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="list_acm_buildings" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="list_acm_buildings" status="error"><ToolErrorCard tool="list_acm_buildings" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="list_acm_buildings" status="complete"><ACMStatsResult data={data} /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'search_documents_vector',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_documents_vector" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="search_documents_vector" status="error"><ToolErrorCard tool="search_documents_vector" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="search_documents_vector" status="complete"><SearchResult data={data} searchType="Vector" /></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'search_documents_text',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="search_documents_text" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="search_documents_text" status="error"><ToolErrorCard tool="search_documents_text" /></ToolStepItem>
+      const data = parseResult(result)
+      if (!data) return <></>
+      return <ToolStepItem toolName="search_documents_text" status="complete"><SearchResult data={data} searchType="Text" /></ToolStepItem>
+    },
+  })
+
+  // ── CRUD Tools (7 write tools) ──
+
+  useRenderToolCall({
+    name: 'surreal_query',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="surreal_query" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="surreal_query" status="error"><ToolErrorCard tool="surreal_query" /></ToolStepItem>
+      if (!result) return <></>
+      const parsed = safeParseJSON(result)
+      if (parsed?.type === 'surreal_query') {
+        const results = (parsed.results as Record<string, unknown>[]) || []
+        if (results.length > 5 && Object.keys(results[0] || {}).length > 2) {
+          return (
+            <ToolStepItem toolName="surreal_query" status="complete">
+              <ChatMiniGrid
+                data={results}
+                onEditRecord={(id, row) => stableAppend(new TextMessage({ role: Role.User, content: `Edit record ${id}: ${JSON.stringify(row)}` }))}
+                onViewRecord={(id) => stableAppend(new TextMessage({ role: Role.User, content: `Show details for record ${id}` }))}
+              />
+            </ToolStepItem>
+          )
+        }
+        return <ToolStepItem toolName="surreal_query" status="complete"><QueryResultsTable data={parsed} /></ToolStepItem>
+      }
+      return <ToolStepItem toolName="surreal_query" status="complete"><pre className="text-xs p-2 bg-muted rounded max-h-40 overflow-auto">{typeof result === 'string' ? result : JSON.stringify(result, null, 2)}</pre></ToolStepItem>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'preview_write',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="preview_write" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="preview_write" status="error"><ToolErrorCard tool="preview_write" /></ToolStepItem>
+      if (!result) return <></>
+      const parsed = safeParseJSON(result)
+      if (!parsed || parsed.type !== 'preview_write') {
+        if (parsed?.error) return <ToolStepItem toolName="preview_write" status="error"><div className="text-xs text-red-500 px-3 py-2">{String(parsed.error)}</div></ToolStepItem>
+        return <></>
+      }
+      return (
+        <ToolStepItem toolName="preview_write" status="complete" defaultExpanded>
+          <HITLApprovalDialog
+            preview={parsed as never}
+            onApprove={(edits) => { const opId = parsed.operation_id as string; const editStr = edits ? ` with edits: ${JSON.stringify(edits)}` : ''; stableAppend(new TextMessage({ role: Role.User, content: `Approved. Execute operation #${opId}${editStr}` })) }}
+            onReject={() => { const opId = parsed.operation_id as string; stableAppend(new TextMessage({ role: Role.User, content: `Rejected. Cancel operation #${opId}` })) }}
+          />
+        </ToolStepItem>
+      )
+    },
+  })
+
+  useRenderToolCall({
+    name: 'preview_bulk_write',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="preview_bulk_write" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="preview_bulk_write" status="error"><ToolErrorCard tool="preview_bulk_write" /></ToolStepItem>
+      if (!result) return <></>
+      const parsed = safeParseJSON(result)
+      if (!parsed || parsed.type !== 'preview_bulk_write') {
+        if (parsed?.error) return <ToolStepItem toolName="preview_bulk_write" status="error"><div className="text-xs text-red-500 px-3 py-2">{String(parsed.error)}</div></ToolStepItem>
+        return <></>
+      }
+      const bulkPreview = { type: 'preview_write', operation_id: parsed.operation_id, operation: `BULK ${parsed.operation}`, record_id: `${parsed.affected_count} records`, field: parsed.field, new_value: parsed.new_value, reason: parsed.reason }
+      return (
+        <ToolStepItem toolName="preview_bulk_write" status="complete" defaultExpanded>
+          <HITLApprovalDialog
+            preview={bulkPreview as never}
+            onApprove={(edits) => { const opId = parsed.operation_id as string; const editStr = edits ? ` with edits: ${JSON.stringify(edits)}` : ''; stableAppend(new TextMessage({ role: Role.User, content: `Approved. Execute operation #${opId}${editStr}` })) }}
+            onReject={() => { const opId = parsed.operation_id as string; stableAppend(new TextMessage({ role: Role.User, content: `Rejected. Cancel operation #${opId}` })) }}
+          />
+        </ToolStepItem>
+      )
+    },
+  })
+
+  useRenderToolCall({
+    name: 'execute_pending_write',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="execute_pending_write" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="execute_pending_write" status="error"><ToolErrorCard tool="execute_pending_write" /></ToolStepItem>
+      if (!result) return <></>
+      const parsed = safeParseJSON(result)
+      const msg = parsed?.message ? String(parsed.message) : typeof result === 'string' ? result : JSON.stringify(result)
+      return (
+        <ToolStepItem toolName="execute_pending_write" status="complete">
+          <div className="text-xs border border-green-200 dark:border-green-900 rounded-lg px-3 py-2 text-green-700 dark:text-green-400">{msg}</div>
+        </ToolStepItem>
+      )
+    },
+  })
+
+  useRenderToolCall({
+    name: 'get_schema_info',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_schema_info" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="get_schema_info" status="error"><ToolErrorCard tool="get_schema_info" /></ToolStepItem>
+      if (!result) return <></>
+      const parsed = safeParseJSON(result)
+      if (parsed?.type === 'schema_info') return <ToolStepItem toolName="get_schema_info" status="complete"><SchemaInfoCard data={parsed} /></ToolStepItem>
+      return <></>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'ask_user_choice',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="ask_user_choice" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="ask_user_choice" status="error"><ToolErrorCard tool="ask_user_choice" /></ToolStepItem>
+      if (!result) return <></>
+      const parsed = safeParseJSON(result)
+      if (parsed?.type === 'ask_user_choice' && parsed?.options) {
+        return (
+          <ToolStepItem toolName="ask_user_choice" status="complete" defaultExpanded>
+            <ChatChoiceCard
+              question={parsed.question as string}
+              options={parsed.options as { label: string; value: string }[]}
+              choiceId={parsed.choice_id as string}
+              onSelect={(value) => { stableAppend(new TextMessage({ role: Role.User, content: `Selected: ${value} for choice #${parsed.choice_id}` })) }}
+            />
+          </ToolStepItem>
+        )
+      }
+      return <></>
+    },
+  })
+
+  useRenderToolCall({
+    name: 'undo_last_write',
+    render: ({ status, result }) => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="undo_last_write" status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName="undo_last_write" status="error"><ToolErrorCard tool="undo_last_write" /></ToolStepItem>
+      if (!result) return <></>
+      const parsed = safeParseJSON(result)
+      if (parsed?.type === 'undo_error') {
+        return <ToolStepItem toolName="undo_last_write" status="error"><div className="text-xs text-amber-700 dark:text-amber-400 px-3 py-2">{String(parsed.error)}</div></ToolStepItem>
+      }
+      if (parsed?.type === 'preview_write') {
+        return (
+          <ToolStepItem toolName="undo_last_write" status="complete" defaultExpanded>
+            <HITLApprovalDialog
+              preview={parsed as never}
+              onApprove={(edits) => { const opId = parsed.operation_id as string; const editStr = edits ? ` with edits: ${JSON.stringify(edits)}` : ''; stableAppend(new TextMessage({ role: Role.User, content: `Approved. Execute operation #${opId}${editStr}` })) }}
+              onReject={() => { const opId = parsed.operation_id as string; stableAppend(new TextMessage({ role: Role.User, content: `Rejected. Cancel operation #${opId}` })) }}
+            />
+          </ToolStepItem>
+        )
+      }
+      return <></>
+    },
+  })
+
+  // ── Fallback ──
+
+  useDefaultTool({
+    render: ({ name, status, result }): React.ReactElement => {
+      if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName={name} status="executing" />
+      if (isErrorResult(result)) return <ToolStepItem toolName={name} status="error"><ToolErrorCard tool={name} /></ToolStepItem>
+      if (!result) return <></>
+      return (
+        <ToolStepItem toolName={name} status="complete">
+          <div className="border rounded-lg p-3 text-sm bg-muted/30">
+            <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-40">{typeof result === 'string' ? result : JSON.stringify(result, null, 2)}</pre>
+          </div>
+        </ToolStepItem>
+      )
+    },
+  })
+
+  return null
+}

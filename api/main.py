@@ -48,7 +48,6 @@ from api.routers import (
     acm,
     agui_extraction,
     auth,
-    chat,
     config,
     context,
     embedding,
@@ -66,10 +65,10 @@ from api.routers import (
     search,
     settings,
     source_bulk,
-    source_chat,
     sources,
     speaker_profiles,
     transformations,
+    unified_sessions,
     v3_streaming,
 )
 from api.routers import commands as commands_router
@@ -197,8 +196,6 @@ app.include_router(commands_router.router, prefix="/api", tags=["commands"])
 app.include_router(podcasts.router, prefix="/api", tags=["podcasts"])
 app.include_router(episode_profiles.router, prefix="/api", tags=["episode-profiles"])
 app.include_router(speaker_profiles.router, prefix="/api", tags=["speaker-profiles"])
-app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(source_chat.router, prefix="/api", tags=["source-chat"])
 app.include_router(acm.router, prefix="/api/acm", tags=["acm"])
 app.include_router(format_profiles.router, prefix="/api/acm", tags=["format-profiles"])
 app.include_router(extraction_events.router, prefix="/api", tags=["extraction-events"])
@@ -208,6 +205,7 @@ app.include_router(source_bulk.router, prefix="/api", tags=["source-bulk"])
 app.include_router(v3_streaming.router, prefix="/api", tags=["v3-streaming"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(job_lifecycle.router, prefix="/api", tags=["job-lifecycle"])
+app.include_router(unified_sessions.router, tags=["unified-sessions"])
 
 # Mount static files for A2A agent card (.well-known)
 from pathlib import Path as _Path

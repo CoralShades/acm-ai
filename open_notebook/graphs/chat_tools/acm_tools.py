@@ -75,22 +75,20 @@ def _build_vars(source_id: Optional[str], notebook_id: Optional[str], **extra) -
     return vars_
 
 
-# --- Tool context holder (set by agent before invocation) ---
-# Tools read scope from this module-level dict, set by the agent graph
-_tool_context: dict = {}
+# --- Tool context (delegates to unified tool_context module) ---
+from open_notebook.graphs.tool_context import get_tool_scope, set_tool_scope
 
 
 def set_tool_context(
     source_id: Optional[str] = None, notebook_id: Optional[str] = None
 ):
     """Set the scope context for tools. Called by the agent graph before tool execution."""
-    global _tool_context
-    _tool_context = {"source_id": source_id, "notebook_id": notebook_id}
+    set_tool_scope(source_id=source_id, notebook_id=notebook_id)
 
 
 def _get_scope():
     """Get current source_id and notebook_id from tool context."""
-    return _tool_context.get("source_id"), _tool_context.get("notebook_id")
+    return get_tool_scope()
 
 
 @tool

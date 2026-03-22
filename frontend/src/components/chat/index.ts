@@ -1,6 +1,5 @@
-export { SmartChatPanel } from './SmartChatPanel'
 export { SmartChatProvider, useSmartChatScope } from './SmartChatProvider'
-export { ChatModeSwitch } from './ChatModeSwitch'
 export { ACMAssistantMessage } from './ACMAssistantMessage'
 export { SmartChatInput } from './SmartChatInput'
 export { ToolResultRenderers } from './ToolResultRenderers'
+export { UnifiedChatPanel } from './UnifiedChatPanel'

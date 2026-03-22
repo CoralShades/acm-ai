@@ -1,15 +1,12 @@
 /**
- * CopilotKit Runtime Route — Main Supervisor Agent (v1 API)
+ * CopilotKit Runtime Route — Unified Agent (v1 API)
  *
- * Bridges the CopilotKit React frontend to the FastAPI backend's AG-UI
- * supervisor agent at /api/agui/chat. This is the primary CopilotKit
- * runtime endpoint used by the dashboard-level CopilotProvider.
- *
- * The CRUD chat has a separate runtime at /copilot-crud/route.ts to
- * keep write-capable tools isolated from the read-only supervisor.
+ * Bridges the CopilotKit React frontend to the FastAPI backend's unified
+ * agent at /api/agui/chat. Handles both read queries and write operations
+ * with interrupt-based HITL approval.
  *
  * Path: /api/copilotkit (CopilotKit convention)
- * Backend: /api/agui/chat (supervisor agent)
+ * Backend: /api/agui/chat (unified agent)
  *
  * @see docs/ag-ui-pipeline-spec.md Section 4 - AG-UI / CopilotKit Integration
  */
@@ -45,15 +42,15 @@ function getSharedRuntime() {
         }
       }
 
-      const supervisorAgent = new HttpAgent({
+      const unifiedAgent = new HttpAgent({
         url: `${BACKEND_URL}/api/agui/chat`,
       });
 
       const runtime = new CopilotRuntime({
         /* eslint-disable @typescript-eslint/no-explicit-any */
         agents: {
-          default: supervisorAgent.clone() as any,
-          supervisor: supervisorAgent as any,
+          default: unifiedAgent.clone() as any,
+          acm_agent: unifiedAgent as any,
         },
         /* eslint-enable @typescript-eslint/no-explicit-any */
       });

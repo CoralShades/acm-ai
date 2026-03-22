@@ -148,9 +148,9 @@ class TestPreviewBulkWrite:
         assert "error" in result
 
     def test_no_context(self):
-        from open_notebook.graphs.crud_tools import _crud_context
+        from open_notebook.graphs.tool_context import set_tool_scope
 
-        _crud_context.clear()
+        set_tool_scope(source_id=None, notebook_id=None)
         result = json.loads(
             preview_bulk_write.invoke(
                 {
