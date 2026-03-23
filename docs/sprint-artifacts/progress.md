@@ -2,6 +2,23 @@
 
 ## Completed Milestones
 
+### Bug Fix 15: Broadmeadows Page 8 Missing Records (2026-03-23) — COMPLETE
+Three compounding failures caused 2 ACM records to be permanently excluded from Broadmeadows extraction.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| T1 | Add page_end expansion to LLM success path in compile_building_inventory() | Done |
+| T2 | Add Docling gap-detection warning in source_commands.py | Done |
+| T3 | 3 new unit tests for page_end expansion in test_building_inventory.py | Done |
+
+**Root Causes:**
+- Docling TableFormer skips page 8 (only 2 sparse "no access" rows — not detected as a valid table)
+- LLM sets page_end=7 (visually correct but misses continuation page); heuristic expansion only ran on LLM failure, not success
+- With page_end=7, both _extract_building_content() and _get_docling_tables() excluded page 8 entirely
+
+**Files changed:** `open_notebook/extractors/building_inventory.py`, `commands/source_commands.py`, `tests/test_building_inventory.py`
+**Expected result:** 29/31 → 31/31 Broadmeadows (recovers "Lift Foyer — Internal lining" and "Main Foyer — Room adjacent disabled toilet")
+
 ### Auto-Notebook + AI-Editor Rename (2026-03-22) — COMPLETE
 Auto-create Notebook on PDF upload, rename "Notebooks" to "AI-Editor", cascade delete.
 

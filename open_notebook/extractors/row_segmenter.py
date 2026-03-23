@@ -859,6 +859,15 @@ _TYPE_F_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Type F2 pattern: broader "no access" detection from raw PyMuPDF text.
+# Catches phrases like "No access at the time of the Assessment" or
+# "No access due to locked door" that appear in page text where
+# Docling's TableFormer failed to detect a table fragment.
+_TYPE_F2_NO_ACCESS = re.compile(
+    r"(No access\b[^.\n]*(?:assessment|locked|restricted|denied|unavailable)[^.\n]*)",
+    re.IGNORECASE,
+)
+
 # Type D patterns: hierarchical text (Building/Level/Room/Item indentation)
 _TYPE_D_BUILDING = re.compile(r"^(Building|Block|Wing)\s*[:\-]?\s*(.+)", re.IGNORECASE)
 _TYPE_D_LEVEL = re.compile(
@@ -912,6 +921,42 @@ def scan_text_for_synthetics(
             is_synthetic=True,
             edge_case_type="F",
             confidence=0.7,
+        )
+        row.debug_html = generate_row_html(row)
+        rows.append(row)
+        row_counter += 1
+
+    # Type F2: broader "no access" detection from raw PyMuPDF text.
+    # When Docling misses a small table fragment (e.g. page 8 of Broadmeadows
+    # with only 2 "no access" rows), the raw text still contains phrases like
+    # "No access at the time of the Assessment" or "No access due to locked
+    # door". We extract context from surrounding lines to build minimal rows.
+    for match in _TYPE_F2_NO_ACCESS.finditer(markdown):
+        no_access_text = match.group(1).strip()
+        # Look backwards from match position for room context
+        pre_text = markdown[max(0, match.start() - 200) : match.start()]
+        pre_lines = [ln.strip() for ln in pre_text.splitlines() if ln.strip() and ln.strip() != "-"]
+        # Extract room from nearby lines (heuristic: first non-dash line above)
+        room_hint = pre_lines[-1] if pre_lines else "Unknown"
+        # Skip if this "no access" was already captured by Type F
+        if any(r.raw_text and no_access_text.lower() in r.raw_text.lower() for r in rows):
+            continue
+        cells = {
+            "room_location": room_hint,
+            "sample_result": "No Access",
+            "notes": no_access_text,
+        }
+        row = RawTableRow(
+            source_id=source_id,
+            building_id=building_id,
+            table_index=0,
+            row_index=row_counter,
+            page_number=0,
+            cells=cells,
+            raw_text=f"{room_hint}: {no_access_text}",
+            is_synthetic=True,
+            edge_case_type="F2",
+            confidence=0.6,
         )
         row.debug_html = generate_row_html(row)
         rows.append(row)

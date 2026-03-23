@@ -942,3 +942,146 @@ class TestARABuildingCodeGeneration:
         building_ids = [b.building_id for b in result.buildings]
         assert "B00A" in building_ids
         assert "D01" in building_ids
+
+
+class TestLLMPathPageEndExpansion:
+    """Tests for single-building page_end expansion in LLM success path.
+
+    Bug: Broadmeadows PDF page 8 has 2 'no access' register rows that Docling's
+    TableFormer skips (too few rows to detect as table). The LLM path set
+    page_end=7, excluding page 8 from content extraction. The heuristic
+    fallback had a fix for this but the LLM success path did not.
+    """
+
+    @pytest.mark.asyncio
+    async def test_single_building_page_end_expanded_in_llm_path(self):
+        """compile_building_inventory expands page_end when LLM returns 1 building."""
+        from unittest.mock import AsyncMock, patch
+
+        from open_notebook.extractors.building_inventory import (
+            compile_building_inventory,
+        )
+        from open_notebook.extractors.document_structure import DocumentStructure
+
+        doc_structure = DocumentStructure(
+            register_start_page=5,
+            total_pages=19,
+        )
+
+        # Mock LLM to return single building with page_end=7 (misses page 8)
+        mock_inventory = BuildingInventory(
+            buildings=[
+                BuildingMeta(
+                    building_id="B001",
+                    name="Broadmeadows Police Station",
+                    page_start=5,
+                    page_end=7,
+                    complexity=BuildingComplexity.COMPLEX,
+                )
+            ],
+            processing_groups=[],
+            total_buildings=1,
+        )
+
+        with patch(
+            "open_notebook.extractors.building_inventory._llm_compile_inventory",
+            new_callable=AsyncMock,
+            return_value=mock_inventory,
+        ):
+            result = await compile_building_inventory(
+                content="--- Page 5 ---\nRegister content\n--- Page 8 ---\nMore rows\n--- Page 19 ---\n",
+                document_structure=doc_structure,
+            )
+
+        assert len(result.buildings) >= 1
+        bld = result.buildings[0]
+        # page_end should be expanded from 7 to 9 (7 + 2 margin)
+        # Uses +2 margin to avoid including non-register content
+        assert bld.page_end == 9, (
+            f"Expected page_end=9 (7+2 margin) but got {bld.page_end}. "
+            "Single-building page_end expansion not applied in LLM path."
+        )
+
+    @pytest.mark.asyncio
+    async def test_multi_building_page_end_not_expanded(self):
+        """compile_building_inventory does NOT expand page_end for multi-building docs."""
+        from unittest.mock import AsyncMock, patch
+
+        from open_notebook.extractors.building_inventory import (
+            compile_building_inventory,
+        )
+        from open_notebook.extractors.document_structure import DocumentStructure
+
+        doc_structure = DocumentStructure(
+            register_start_page=5,
+            total_pages=30,
+        )
+
+        mock_inventory = BuildingInventory(
+            buildings=[
+                BuildingMeta(
+                    building_id="B001",
+                    name="Building A",
+                    page_start=5,
+                    page_end=12,
+                    complexity=BuildingComplexity.COMPLEX,
+                ),
+                BuildingMeta(
+                    building_id="B002",
+                    name="Building B",
+                    page_start=13,
+                    page_end=20,
+                    complexity=BuildingComplexity.COMPLEX,
+                ),
+            ],
+            processing_groups=[],
+            total_buildings=2,
+        )
+
+        with patch(
+            "open_notebook.extractors.building_inventory._llm_compile_inventory",
+            new_callable=AsyncMock,
+            return_value=mock_inventory,
+        ):
+            result = await compile_building_inventory(
+                content="--- Page 5 ---\nContent A\n--- Page 13 ---\nContent B\n--- Page 30 ---\n",
+                document_structure=doc_structure,
+            )
+
+        # Multi-building: page_end should NOT be expanded to total_pages
+        # (boundary overlap applies instead)
+        bld_a = next(b for b in result.buildings if b.building_id == "B001")
+        # With boundary overlap, B001's page_end extends to B002's page_start (13)
+        assert bld_a.page_end <= 13, (
+            f"Multi-building doc: B001 page_end should not expand to total_pages, "
+            f"got {bld_a.page_end}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_heuristic_fallback_still_has_expansion(self):
+        """Verify _heuristic_fallback retains its single-building expansion."""
+        from open_notebook.extractors.building_inventory import _heuristic_fallback
+        from open_notebook.extractors.document_structure import DocumentStructure
+
+        doc_structure = DocumentStructure(
+            register_start_page=5,
+            total_pages=19,
+        )
+
+        # ARA-style content with one building
+        content = (
+            "--- Page 5 ---\n"
+            "Building Name:\n"
+            "  Broadmeadows Police Station\n"
+            "Some register content\n"
+            "--- Page 7 ---\n"
+            "More content\n"
+            "--- Page 19 ---\n"
+        )
+
+        result = _heuristic_fallback(content, doc_structure)
+        assert len(result.buildings) == 1
+        assert result.buildings[0].page_end == 19, (
+            f"Heuristic fallback should expand single building page_end to 19, "
+            f"got {result.buildings[0].page_end}"
+        )

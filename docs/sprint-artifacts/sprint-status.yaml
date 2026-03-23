@@ -811,6 +811,20 @@ development_status:
   feat-ai-editor-rename-2026-03-22: done  # refactor(ui): rename "Notebooks" to "AI-Editor" in all user-facing labels. Route moved from /notebooks to /ai-editor. Old notebooks directory deleted. Sparkles icon with rotate+pulse hover animation. Visible in ACM mode (was hidden). 28 files changed. Commit 33bf5aed.
   feat-cascade-delete-notebook-chat-2026-03-22: done  # fix(api): cascade-delete notebooks + chat sessions when source deleted. DELETE /sources/{id} now deletes all linked notebooks (via reference edges) and all chat_session records (via refers_to edges) before deleting edges/source. Fixes orphaned chat_session gap. Commit 33bf5aed.
 
+  # ─────────────────────────────────────────────────────
+  # Bug Fix 15: Broadmeadows Page 8 Missing Records (2026-03-23)
+  # 3 compounding failures caused 2 ACM records missing from Broadmeadows extraction.
+  # Root causes: (1) Docling skips page 8 (sparse "no access" rows, not detected as table),
+  #   (2) LLM sets page_end=7 (heuristic expansion only ran on LLM failure, not success),
+  #   (3) content extraction excluded page 8 (page_end=7 filtered it out entirely).
+  # Fix: page_end expansion added to LLM success path + Docling gap-detection warning.
+  # Files: open_notebook/extractors/building_inventory.py, commands/source_commands.py,
+  #   tests/test_building_inventory.py (3 new tests)
+  # Expected result: 29/31 → 31/31 Broadmeadows
+  # ─────────────────────────────────────────────────────
+  bugfix-page8-page-end-expansion-2026-03-23: done  # fix(extraction): page_end expansion for single-building docs added to LLM success path in compile_building_inventory(). Previously only ran in _heuristic_fallback() (LLM failure). LLM correctly parsed structure but returned page_end=7; page 8 excluded from content and Docling table queries. Fix expands page_end to total_pages for single-building docs after LLM succeeds. Files: open_notebook/extractors/building_inventory.py.
+  bugfix-docling-gap-detection-warning-2026-03-23: done  # fix(extraction): add Docling gap-detection warning in source_commands.py. Logs warning when Docling skips pages between first and last register table page numbers. Helps diagnose sparse-page cases (like page 8 "no access" rows) in future PDFs. Files: commands/source_commands.py.
+
   # Integration Validation: All 6 steps passed 2026-02-23
   # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
   # STEP 2: Ollama mxbai-embed-large health → 1024 floats ✓
@@ -824,8 +838,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 309  (306 prior + 3 auto-notebook/AI-Editor entries)
-# Stories Done: 279 (90%)  -- 276 prior + 3 auto-notebook/AI-Editor entries
+# Total Stories: 311  (309 prior + 2 Bug Fix 15 entries)
+# Stories Done: 281 (90%)  -- 279 prior + 2 Bug Fix 15 entries
 # Stories Review: 0
 # Stories In-Progress: 1 (mcs11-jobs-source-unification — code done, E2E verification 6.2-6.6 pending)
 # Stories Blocked: 0
@@ -834,7 +848,7 @@ development_status:
 # Stories Backlog: 3 (E36-S5..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
 #
-# Last Updated: 2026-03-22
+# Last Updated: 2026-03-23
 #
 # MCS Post-Validation Fixes (2026-03-19):
 # MCS8 DONE: Ghost save bug in base.py fixed. SurrealDB RecordID auto-parse root cause resolved.

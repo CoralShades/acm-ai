@@ -816,6 +816,31 @@ async def compile_building_inventory(
         inventory.buildings = _deduplicate_overlapping_buildings(inventory.buildings)
         inventory.total_buildings = len(inventory.buildings)
 
+        # Single-building page_end expansion: when only 1 building detected
+        # after dedup, extend page_end by a small margin to catch continuation
+        # fragments on the next few pages. Docling's TableFormer can miss
+        # small table fragments (e.g. Broadmeadows page 8 has only 2 "no
+        # access" rows). Without expansion, _extract_building_content and
+        # _get_docling_tables exclude those pages entirely.
+        #
+        # We use +2 pages (not total_pages) to avoid including non-register
+        # content (lab results, risk assessments) that causes over-extraction.
+        # Must run BEFORE heuristic cross-validation — the heuristic may add
+        # a catch-all building which would make len(buildings) > 1.
+        _PAGE_END_EXPANSION_MARGIN = 2
+        if len(inventory.buildings) == 1 and document_structure:
+            total = document_structure.total_pages
+            bld = inventory.buildings[0]
+            current_end = bld.page_end or bld.page_start
+            if total and current_end < total:
+                expanded_end = min(current_end + _PAGE_END_EXPANSION_MARGIN, total)
+                logger.info(
+                    f"Single-building doc (LLM path): expanding page_end from "
+                    f"{current_end} to {expanded_end} "
+                    f"(+{_PAGE_END_EXPANSION_MARGIN} margin, total_pages={total})"
+                )
+                bld.page_end = expanded_end
+
         # Cross-validate: run heuristic on FULL content (not trimmed) to catch
         # buildings whose register data precedes the detected register_start_page
         heuristic = _heuristic_fallback(

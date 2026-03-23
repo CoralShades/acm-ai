@@ -199,6 +199,24 @@ async def _extract_tables_with_docling(
         )
 
     logger.info(f"Docling Direct API: {len(tables)} tables extracted from {pdf_path}")
+
+    # Gap detection: warn when Docling skips pages between first and last
+    # register-like tables. Helps diagnose missing records caused by
+    # TableFormer failing to detect small table fragments (e.g. 1-2 rows
+    # at a page boundary). See: Broadmeadows page 8 bug.
+    register_pages = sorted({t["page"] for t in tables if t.get("rows", 0) >= 3})
+    if len(register_pages) >= 2:
+        expected_range = set(range(register_pages[0], register_pages[-1] + 1))
+        all_table_pages = {t["page"] for t in tables}
+        gap_pages = expected_range - all_table_pages
+        if gap_pages:
+            logger.warning(
+                f"Docling table gap detected: pages {sorted(gap_pages)} have no "
+                f"tables between first register table (page {register_pages[0]}) "
+                f"and last (page {register_pages[-1]}). Small table fragments "
+                f"on these pages may have been missed by TableFormer."
+            )
+
     return tables
 
 
