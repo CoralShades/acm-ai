@@ -8,12 +8,13 @@ Provides tool categories:
 5. get_schema_info — returns allowed fields and enum values for ACM tables
 6. ask_user_choice — present a multiple-choice question to the user
 
+All tools are async — they run in the same async context as the LangGraph
+graph nodes, ensuring contextvars (source_id scoping) propagate correctly.
+
 All operations are scoped to a specific source_id to prevent cross-job data modification.
 Security: all generated SurrealQL MUST include WHERE source_id = $sid.
 """
 
-import asyncio
-import concurrent.futures
 import json
 import os
 import re
@@ -46,39 +47,21 @@ _jinja_env = Environment(
 # --- Pending write store ---
 _pending_writes: dict = {}
 
-# --- Tool context (set by agent before invocation) ---
-_crud_context: dict = {}
+# --- Tool context (delegates to unified tool_context module) ---
+from open_notebook.graphs.tool_context import get_source_id, set_tool_scope
 
 
 def set_crud_context(source_id: str) -> None:
     """Set the source_id scope for CRUD operations. Called by the agent graph."""
-    _crud_context["source_id"] = source_id
+    set_tool_scope(source_id=source_id)
 
 
 def get_crud_context() -> str:
     """Get the current source_id scope."""
-    return _crud_context.get("source_id", "")
+    return get_source_id() or ""
 
 
-def _run_async(coro):
-    """Run an async coroutine from a sync LangGraph context."""
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop and loop.is_running():
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            new_loop = asyncio.new_event_loop()
-            try:
-                return pool.submit(new_loop.run_until_complete, coro).result()
-            finally:
-                new_loop.close()
-    else:
-        return asyncio.run(coro)
-
-
-def _generate_surrealql(user_question: str, source_id: str) -> str:
+async def _generate_surrealql(user_question: str, source_id: str) -> str:
     """Use an LLM to generate a SurrealQL query from natural language.
 
     Falls back to a simple keyword-based query if the LLM is unavailable.
@@ -96,34 +79,16 @@ def _generate_surrealql(user_question: str, source_id: str) -> str:
     try:
         from open_notebook.graphs.utils import provision_langchain_model
 
-        def _provision():
-            new_loop = asyncio.new_event_loop()
-            try:
-                asyncio.set_event_loop(new_loop)
-                return new_loop.run_until_complete(
-                    provision_langchain_model(
-                        prompt_text,
-                        None,  # use default model
-                        "chat",
-                        max_tokens=512,
-                    )
-                )
-            finally:
-                new_loop.close()
-                asyncio.set_event_loop(None)
-
-        try:
-            asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                model = executor.submit(_provision).result()
-        except RuntimeError:
-            model = asyncio.run(
-                provision_langchain_model(prompt_text, None, "chat", max_tokens=512)
-            )
+        model = await provision_langchain_model(
+            prompt_text,
+            None,  # use default model
+            "chat",
+            max_tokens=512,
+        )
 
         from langchain_core.messages import HumanMessage
 
-        response = model.invoke([HumanMessage(content=prompt_text)])
+        response = await model.ainvoke([HumanMessage(content=prompt_text)])
         raw_query = response.content.strip()
 
         # Strip markdown code fences if present
@@ -186,7 +151,7 @@ def _fallback_query(user_question: str) -> str:
 
 
 @tool
-def surreal_query(question: str) -> str:
+async def surreal_query(question: str) -> str:
     """Query ACM records for the current job using natural language.
 
     Automatically generates and executes a SurrealQL query scoped to this job.
@@ -208,7 +173,7 @@ def surreal_query(question: str) -> str:
         )
 
     # Generate SurrealQL from natural language
-    generated_sql = _generate_surrealql(question, source_id)
+    generated_sql = await _generate_surrealql(question, source_id)
     logger.info(f"Generated SurrealQL: {generated_sql}")
 
     # Validate through guardrails
@@ -225,7 +190,7 @@ def surreal_query(question: str) -> str:
         )
 
     # Execute the validated query
-    async def run():
+    try:
         sid = ensure_record_id(source_id)
         # Build vars — always include $sid, optionally $val for search terms
         query_vars: dict = {"sid": sid}
@@ -259,9 +224,6 @@ def surreal_query(question: str) -> str:
                 "warnings": check.warnings,
             }
         )
-
-    try:
-        return _run_async(run())
     except Exception as e:
         logger.error(f"Error in surreal_query: {e}")
         return json.dumps(
@@ -275,10 +237,7 @@ def surreal_query(question: str) -> str:
 
 
 def _extract_search_value(question: str) -> str:
-    """Extract the most likely search term from a natural language question.
-
-    Heuristic: look for quoted strings, building names, or the last noun phrase.
-    """
+    """Extract the most likely search term from a natural language question."""
     # Check for quoted strings
     quoted = re.findall(r'"([^"]+)"', question) or re.findall(r"'([^']+)'", question)
     if quoted:
@@ -301,7 +260,7 @@ def _extract_search_value(question: str) -> str:
 
 
 @tool
-def preview_write(
+async def preview_write(
     operation: str,
     record_id: Optional[str],
     field: Optional[str],
@@ -369,7 +328,7 @@ def preview_write(
 
 
 @tool
-def preview_bulk_write(
+async def preview_bulk_write(
     operation: str,
     filter_description: str,
     field: str,
@@ -418,11 +377,10 @@ def preview_bulk_write(
         resolved_ids = [str(rid) for rid in record_ids]
     else:
         # Generate SurrealQL from filter description to collect IDs
-        generated_sql = _generate_surrealql(filter_description, source_id)
+        generated_sql = await _generate_surrealql(filter_description, source_id)
         check_read = validate_read_query(generated_sql)
         if check_read.allowed:
-
-            async def _fetch_ids():
+            try:
                 sid = ensure_record_id(source_id)
                 result = await repo_query(check_read.sanitized_query, {"sid": sid})
                 if (
@@ -432,15 +390,10 @@ def preview_bulk_write(
                     and isinstance(result[0], list)
                 ):
                     result = result[0]
-                ids = []
                 if result:
                     for row in result:
                         if isinstance(row, dict) and "id" in row:
-                            ids.append(str(row["id"]))
-                return ids
-
-            try:
-                resolved_ids = _run_async(_fetch_ids())
+                            resolved_ids.append(str(row["id"]))
             except Exception as e:
                 logger.warning(f"preview_bulk_write: failed to resolve record IDs: {e}")
 
@@ -488,7 +441,7 @@ def _fetch_old_value(rows, field: Optional[str] = None):
 
 
 @tool
-def execute_pending_write(
+async def execute_pending_write(
     operation_id: str,
     source_id: Optional[str] = None,
     edits: Optional[dict] = None,
@@ -527,7 +480,7 @@ def execute_pending_write(
         if "field" in edits:
             pending["field"] = edits["field"]
 
-    async def execute():
+    try:
         sid = ensure_record_id(source_id)
         op = pending["operation"]
         record_id = pending.get("record_id")
@@ -718,15 +671,13 @@ def execute_pending_write(
         else:
             return f"Error: Unsupported operation {op} or missing parameters."
 
-    try:
-        return _run_async(execute())
     except Exception as e:
         logger.error(f"Error executing write {operation_id}: {e}")
         return f"Error executing write: {str(e)}"
 
 
 @tool
-def undo_last_write(record_id: Optional[str] = None) -> str:
+async def undo_last_write(record_id: Optional[str] = None) -> str:
     """Undo the most recent write operation for this job.
 
     Args:
@@ -737,31 +688,27 @@ def undo_last_write(record_id: Optional[str] = None) -> str:
     if not source_id:
         return json.dumps({"type": "undo_error", "error": "No job context set."})
 
-    async def _fetch_audit():
+    try:
         sid = ensure_record_id(source_id)
         if record_id:
-            rows = await repo_query(
+            audit_rows = await repo_query(
                 "SELECT * FROM crud_audit WHERE job_id = $sid AND record_id = $rid "
                 "ORDER BY timestamp DESC LIMIT 1",
                 {"sid": sid, "rid": str(record_id)},
             )
         else:
-            rows = await repo_query(
+            audit_rows = await repo_query(
                 "SELECT * FROM crud_audit WHERE job_id = $sid "
                 "ORDER BY timestamp DESC LIMIT 1",
                 {"sid": sid},
             )
         if (
-            rows
-            and isinstance(rows, list)
-            and len(rows) == 1
-            and isinstance(rows[0], list)
+            audit_rows
+            and isinstance(audit_rows, list)
+            and len(audit_rows) == 1
+            and isinstance(audit_rows[0], list)
         ):
-            rows = rows[0]
-        return rows
-
-    try:
-        audit_rows = _run_async(_fetch_audit())
+            audit_rows = audit_rows[0]
     except Exception as e:
         logger.error(f"undo_last_write: failed to query audit log: {e}")
         return json.dumps(
@@ -792,7 +739,7 @@ def undo_last_write(record_id: Optional[str] = None) -> str:
                     "error": "Audit row is missing record_id, field_name, or old_value — cannot undo.",
                 }
             )
-        return preview_write.invoke(
+        return await preview_write.ainvoke(
             {
                 "operation": "UPDATE",
                 "record_id": audited_record_id,
@@ -820,7 +767,7 @@ def undo_last_write(record_id: Optional[str] = None) -> str:
 
 
 @tool
-def get_schema_info(table: Optional[str] = None) -> str:
+async def get_schema_info(table: Optional[str] = None) -> str:
     """Get schema information about ACM database tables.
 
     Args:
@@ -865,7 +812,7 @@ def get_schema_info(table: Optional[str] = None) -> str:
 
 
 @tool
-def ask_user_choice(
+async def ask_user_choice(
     question: str,
     options_query: Optional[str] = None,
     static_options: Optional[list] = None,
@@ -890,22 +837,19 @@ def ask_user_choice(
                 }
             )
 
-        async def _fetch_options():
+        try:
             query_vars: dict = {}
             if source_id:
                 query_vars["sid"] = ensure_record_id(source_id)
-            result = await repo_query(check.sanitized_query, query_vars)
+            rows = await repo_query(check.sanitized_query, query_vars)
             if (
-                result
-                and isinstance(result, list)
-                and len(result) == 1
-                and isinstance(result[0], list)
+                rows
+                and isinstance(rows, list)
+                and len(rows) == 1
+                and isinstance(rows[0], list)
             ):
-                result = result[0]
-            return result or []
-
-        try:
-            rows = _run_async(_fetch_options())
+                rows = rows[0]
+            rows = rows or []
         except Exception as e:
             logger.error(f"ask_user_choice: failed to execute options_query: {e}")
             return json.dumps(

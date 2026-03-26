@@ -536,39 +536,48 @@ FROM python:3.11-slim as runtime
 
 ### Overview
 
-ACM-AI integrates CopilotKit v1.51.4 for two AI-powered chat interfaces that connect to LangGraph agents via the AG-UI protocol.
+ACM-AI integrates CopilotKit v1.51.4 with a single unified LangGraph agent (`unified_agent`) connecting to the frontend via the AG-UI protocol. The previous dual-chat architecture (separate supervisor + CRUD graphs, `SmartChatPanel`, `JobCrudChatPanel`) was fully deprecated in the Unified Chat Epic (2026-03-22).
+
+### Unified Agent (Complete — 2026-03-22; async fix — 2026-03-23)
+
+The separate `supervisor_graph` and `crud_graph` have been replaced by a single unified LangGraph agent. 14 legacy files were deleted: 8 backend (`supervisor_agent.py`, `crud_agent.py`, `chat.py`, `source_chat.py`, `acm_analyst_agent.py`, `doc_search_agent.py`, `api/routers/chat.py`, `api/routers/source_chat.py`) and 6 frontend (`SmartChatPanel.tsx`, `ChatModeSwitch.tsx`, `CrudToolRenderers.tsx`, `useSmartChat.ts`, `smart-chat.ts`, `copilot-crud/route.ts`).
+
+A root-cause fix (commit `beedf620`, branch `fix/chat-v2`) resolved a `contextvars` scoping bug: Python 3.11's `ThreadPoolExecutor` does not propagate `contextvars`, so the previous `_run_async()` threadpool hack silently discarded `source_id` context, causing all tools to return stale data for every job. All 16 tools are now async; the threadpool helpers are removed.
+
+Key components:
+
+| File | Purpose |
+|------|---------|
+| `open_notebook/graphs/unified_agent.py` | 4-node graph: agent, tools, approval_node (interrupt-only HITL). 15 LLM-facing tools. All nodes async. |
+| `open_notebook/graphs/llm_router.py` | LLM intent router — rule-based fast-path + LLM fallback. Extracts entity hints (buildings, rooms, risk_levels, materials, record_ids) injected into system prompt. |
+| `open_notebook/graphs/tool_context.py` | Thread-safe `contextvars` tool context (replaces module-level globals). |
+| `open_notebook/graphs/checkpointer.py` | `AsyncSqliteSaver` singleton (`data/chat_checkpoints.db`) — durable sessions survive restarts. Graph compiled lazily via `get_unified_graph()` after lifespan init. |
+| `api/routers/agui_chat.py` | Single unified AG-UI endpoint at `/api/agui/chat` with `session_id` support. |
+| `api/routers/unified_sessions.py` | Session CRUD REST endpoints (list/create/update/delete). Returns `thread_id` per session. |
+| `prompts/unified_agent.jinja` | System prompt covering all 7 DB tables and 15 tools. |
+
+The HITL interrupt-based write-approval flow is the only HITL path (legacy `route_entry` and `legacy_execute_write_node` have been removed). Session management is provided by `SessionDropdown` + `chatSessionStore`. Each `ChatSession` carries a UUID `thread_id` that maps directly to the LangGraph checkpointer. `ToolStepItem` renders ChatGPT-style step indicators. `UnifiedToolRenderers` merges all 16+ tool renderers.
 
 ### Service Flow
 
 ```
 Frontend (Next.js 15, port 8503)
-├── CopilotProvider (root, /api/copilotkit)
-│   └── SmartChatPanel (supervisor agent)
-│       ├── useCopilotReadable (page context → LLM)
-│       ├── useCopilotChatSuggestions (domain prompts)
-│       ├── useCoAgentStateRender (progress display)
-│       ├── useCoAgent (shared state)
-│       ├── ToolResultRenderers (9 tools + useDefaultTool)
-│       └── CopilotChat (UI)
-│
-├── CopilotKit (/copilot-crud, job-scoped)
-│   └── JobCrudChatPanel (CRUD agent)
-│       ├── CrudToolRenderers
-│       │   ├── useLangGraphInterrupt → HITLApprovalDialog
-│       │   └── useRenderToolCall (preview_write, write_acm_record)
-│       └── CopilotChat (UI)
-│
-Next.js API Routes
-├── /api/copilotkit → CopilotRuntime (singleton) → HttpAgent
-│   → FastAPI /api/agui/chat → LangGraphAgent("supervisor") → supervisor_graph
-│
-└── /copilot-crud → CopilotRuntime (singleton) → HttpAgent
-    → FastAPI /api/agui/crud-chat → LangGraphAgent("crud_agent") → crud_graph
+└── CopilotProvider (root, /api/copilotkit)
+    └── UnifiedChatPanel
+        ├── SessionDropdown + chatSessionStore (session management)
+        ├── UnifiedToolRenderers (16+ tools + useLangGraphInterrupt HITL)
+        │   └── HITLApprovalDialog (approve/reject/edit write ops)
+        ├── ToolStepItem (ChatGPT-style step indicators)
+        └── CopilotChat (UI)
+
+Next.js API Route
+└── /api/copilotkit → CopilotRuntime (singleton) → HttpAgent
+    → FastAPI /api/agui/chat → LangGraphAgent("unified_agent") → unified_agent graph
 ```
 
 ### HITL Write Approval Flow
 
-The CRUD agent uses LangGraph's `interrupt()` for human-in-the-loop write approval:
+The unified agent uses LangGraph's `interrupt()` for human-in-the-loop write approval:
 
 ```
 1. User requests update → agent calls preview_write tool
@@ -592,35 +601,22 @@ The CRUD agent uses LangGraph's `interrupt()` for human-in-the-loop write approv
                                               interrupt() → resume
 ```
 
-- **agent**: Calls LLM with CRUD tools bound
-- **tools**: ToolNode executes query_job_records or preview_write
-- **check_write_approval**: Inspects tool results, interrupts for write approval
-- **MemorySaver**: Checkpointer for conversation persistence + interrupt state
-
-### Supervisor Graph Structure
-
-```
-[START] → supervisor → should_continue → {tools, END}
-                                           ↓
-                                         tools → supervisor
-```
-
-- 9 tools: 7 ACM search tools + 2 document search tools
-- copilotkit_emit_state streams intermediate state for progress display
-- MemorySaver checkpointer for conversation persistence
+- **agent**: Calls LLM with CRUD tools bound (async)
+- **tools**: ToolNode executes query_job_records or preview_write (all tools async)
+- **approval_node**: Inspects tool results, calls `interrupt()` for write approval (replaces legacy `check_write_approval` + `legacy_execute_write_node`)
+- **AsyncSqliteSaver**: Checkpointer for conversation persistence + interrupt state (`data/chat_checkpoints.db`)
 
 ### Chat Model Selector
 
-Both chat panels expose a compact in-header model picker (`ChatModelSelector.tsx`). Selecting a model:
+The chat panel exposes a compact in-header model picker (`ChatModelSelector.tsx`). Selecting a model:
 
 1. Writes the chosen `model_id` into CoAgent state via `useCoAgent` (`chatModelId`/`setChatModelId`)
-2. Frontend persists the selection to `localStorage` per chat context (key: `chat-model-supervisor` / `chat-model-crud`)
+2. Frontend persists the selection to `localStorage` (key: `chat-model-unified`)
 3. On the next graph invocation the backend reads `state.get("model_id")` first; falls back to `config.configurable.model_id` if not set
 4. The selector only renders when 2 or more language models are registered in the model table
 
-Backend state fields:
-- `SupervisorAgentState.model_id: Optional[str]` in `supervisor_agent.py`
-- `CRUDAgentState.model_id: Optional[str]` in `crud_agent.py`
+Backend state field:
+- `UnifiedAgentState.model_id: Optional[str]` in `unified_agent.py`
 
 ### Key Patterns
 

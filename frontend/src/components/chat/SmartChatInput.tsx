@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, type KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -29,6 +29,15 @@ export function SmartChatInput({
 }: SmartChatInputProps) {
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const prevInProgress = useRef(false)
+
+  // Clear input when send starts (handles CopilotKit internal sends)
+  useEffect(() => {
+    if (inProgress && !prevInProgress.current) {
+      setInput('')
+    }
+    prevInProgress.current = inProgress
+  }, [inProgress])
 
   const keyHint = IS_MAC ? '\u2318+Enter' : 'Ctrl+Enter'
 

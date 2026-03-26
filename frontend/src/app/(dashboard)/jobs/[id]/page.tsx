@@ -11,8 +11,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { JobDetailHeader } from '@/components/jobs/JobDetailHeader'
 import { JobOverviewTab } from '@/components/jobs/JobOverviewTab'
 import { JobContentPanel } from '@/components/jobs/JobContentPanel'
-import { JobCrudChatPanel } from '@/components/jobs/JobCrudChatPanel'
-import { SmartChatPanel } from '@/components/chat'
+import { UnifiedChatPanel } from '@/components/chat/UnifiedChatPanel'
 import { BuildingGrid } from '@/components/acm/BuildingGrid'
 import { BuildingTabStrip } from '@/components/acm/BuildingTabStrip'
 import { ACMGrid, type ACMGridRef } from '@/components/acm/ACMGrid'
@@ -66,7 +65,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   const { selectedBuildingId: selectedBuilding, setSelectedBuilding } = useBuildingStore()
   const [chatExpanded, setChatExpanded] = useState(false)
   const [mobileChatOpen, setMobileChatOpen] = useState(false)
-  const [chatMode, setChatMode] = useState<'smart' | 'crud'>('smart')
+  // chatMode removed — unified chat panel handles both read + write
 
   // ACM Records tab state (ACMGrid + dialogs)
   const gridRef = useRef<ACMGridRef>(null)
@@ -611,32 +610,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
               {chatExpanded && (
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 shrink-0" />
-                  <div className="flex rounded-md border text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setChatMode('smart')}
-                      className={cn(
-                        'px-2 py-1 rounded-l-md transition-colors',
-                        chatMode === 'smart'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      Query
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setChatMode('crud')}
-                      className={cn(
-                        'px-2 py-1 rounded-r-md transition-colors',
-                        chatMode === 'crud'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      Edit
-                    </button>
-                  </div>
+                  <span className="text-xs font-medium text-foreground">ACM-AI Chat</span>
                 </div>
               )}
               <Button
@@ -655,14 +629,11 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
             </div>
             {chatExpanded && (
               <div className="min-h-0 flex-1">
-                {chatMode === 'smart' ? (
-                  <SmartChatPanel
-                    sourceId={sourceId}
-                    hasAcmData={hasAcmData}
-                  />
-                ) : (
-                  <JobCrudChatPanel sourceId={sourceId} className="h-full" />
-                )}
+                <UnifiedChatPanel
+                  sourceId={sourceId}
+                  hasAcmData={hasAcmData}
+                  activeTab={activeTab}
+                />
               </div>
             )}
           </div>
@@ -679,50 +650,18 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
         </Button>
 
         <Sheet open={mobileChatOpen} onOpenChange={setMobileChatOpen}>
-          <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+          <SheetContent side="right" className="w-full p-0 sm:max-w-md h-[85dvh]">
             <div className="flex h-full min-h-0 flex-col pt-10">
               <div className="border-b px-4 py-3 flex items-center gap-3">
-                <div className="flex rounded-md border text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setChatMode('smart')}
-                    className={cn(
-                      'px-2.5 py-1 rounded-l-md transition-colors',
-                      chatMode === 'smart'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
-                    )}
-                  >
-                    Query
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChatMode('crud')}
-                    className={cn(
-                      'px-2.5 py-1 rounded-r-md transition-colors',
-                      chatMode === 'crud'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
-                    )}
-                  >
-                    Edit
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {chatMode === 'smart'
-                    ? 'Search and query ACM records.'
-                    : 'Create, update, and delete records.'}
-                </p>
+                <MessageSquare className="h-4 w-4 shrink-0" />
+                <span className="text-sm font-medium">ACM-AI Chat</span>
               </div>
               <div className="min-h-0 flex-1">
-                {chatMode === 'smart' ? (
-                  <SmartChatPanel
-                    sourceId={sourceId}
-                    hasAcmData={hasAcmData}
-                  />
-                ) : (
-                  <JobCrudChatPanel sourceId={sourceId} className="h-full" />
-                )}
+                <UnifiedChatPanel
+                  sourceId={sourceId}
+                  hasAcmData={hasAcmData}
+                  activeTab={activeTab}
+                />
               </div>
             </div>
           </SheetContent>

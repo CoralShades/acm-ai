@@ -1,5 +1,6 @@
 'use client'
 
+import { motion } from 'framer-motion'
 import { Building2, AlertTriangle, FileText } from 'lucide-react'
 
 interface BuildingSummaryData {
@@ -18,7 +19,14 @@ export function BuildingSummaryCard({ data }: BuildingSummaryCardProps) {
   const { building_name, building_id, record_count, high_risk_count, address } = data
 
   return (
-    <div role="article" aria-label={`Building: ${building_name}`} className="border rounded-lg p-3 my-2">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      role="article"
+      aria-label={`Building: ${building_name}`}
+      className="border border-l-2 border-l-primary rounded-lg p-3 my-2"
+    >
       <div className="flex items-start gap-2">
         <Building2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
@@ -45,6 +53,6 @@ export function BuildingSummaryCard({ data }: BuildingSummaryCardProps) {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -2,7 +2,7 @@
   "dependencies": ["."],
   "graphs": {
     "acm_extraction": "./open_notebook/graphs/studio_entry.py:graph",
-    "supervisor": "./open_notebook/graphs/studio_entry_supervisor.py:graph"
+    "unified_agent": "./open_notebook/graphs/studio_entry_unified.py:graph"
   },
   "env": ".env"
 }

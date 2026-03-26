@@ -48,7 +48,6 @@ from api.routers import (
     acm,
     agui_extraction,
     auth,
-    chat,
     config,
     context,
     embedding,
@@ -66,10 +65,10 @@ from api.routers import (
     search,
     settings,
     source_bulk,
-    source_chat,
     sources,
     speaker_profiles,
     transformations,
+    unified_sessions,
     v3_streaming,
 )
 from api.routers import commands as commands_router
@@ -128,12 +127,34 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"SF schema provisioning failed (non-fatal): {e}")
 
+    # Initialize durable chat checkpointer (AsyncSqliteSaver)
+    try:
+        from open_notebook.graphs.checkpointer import init_checkpointer
+
+        await init_checkpointer()
+    except Exception as e:
+        logger.warning(f"Chat checkpointer init failed (non-fatal): {e}")
+
+    # Register AG-UI endpoints AFTER checkpointer is ready (graph needs checkpointer)
+    try:
+        from api.routers.agui_chat import register_agui_endpoints
+
+        register_agui_endpoints(app)
+    except Exception as e:
+        logger.warning(f"AG-UI endpoint registration failed (non-fatal): {e}")
+
     logger.success("API initialization completed successfully")
 
     # Yield control to the application
     yield
 
-    # Shutdown: cleanup if needed
+    # Shutdown: close checkpointer
+    try:
+        from open_notebook.graphs.checkpointer import close_checkpointer
+
+        await close_checkpointer()
+    except Exception as e:
+        logger.warning(f"Chat checkpointer shutdown error: {e}")
     logger.info("API shutdown complete")
 
 
@@ -197,8 +218,6 @@ app.include_router(commands_router.router, prefix="/api", tags=["commands"])
 app.include_router(podcasts.router, prefix="/api", tags=["podcasts"])
 app.include_router(episode_profiles.router, prefix="/api", tags=["episode-profiles"])
 app.include_router(speaker_profiles.router, prefix="/api", tags=["speaker-profiles"])
-app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(source_chat.router, prefix="/api", tags=["source-chat"])
 app.include_router(acm.router, prefix="/api/acm", tags=["acm"])
 app.include_router(format_profiles.router, prefix="/api/acm", tags=["format-profiles"])
 app.include_router(extraction_events.router, prefix="/api", tags=["extraction-events"])
@@ -208,6 +227,7 @@ app.include_router(source_bulk.router, prefix="/api", tags=["source-bulk"])
 app.include_router(v3_streaming.router, prefix="/api", tags=["v3-streaming"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(job_lifecycle.router, prefix="/api", tags=["job-lifecycle"])
+app.include_router(unified_sessions.router, tags=["unified-sessions"])
 
 # Mount static files for A2A agent card (.well-known)
 from pathlib import Path as _Path
@@ -222,21 +242,8 @@ if _static_dir.exists():
         name="well-known",
     )
 
-# Register AG-UI endpoint for CopilotKit integration
-try:
-    from api.routers.agui_chat import register_agui_endpoints
-
-    register_agui_endpoints(app)
-except Exception as e:
-    logger.warning(f"AG-UI endpoint registration failed (non-fatal): {e}")
-
-# Register AG-UI CRUD chat endpoint (E19-S8)
-try:
-    from api.routers.agui_chat import register_crud_agui_endpoint
-
-    register_crud_agui_endpoint(app)
-except Exception as e:
-    logger.warning(f"AG-UI CRUD endpoint registration failed (non-fatal): {e}")
+# AG-UI endpoints are now registered inside the lifespan (after checkpointer init).
+# See lifespan() above.
 
 
 @app.get("/")

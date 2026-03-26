@@ -796,6 +796,20 @@ development_status:
   bugfix-notebook-name-enrichment-2026-03-21: done  # feat(extraction): Enrich notebook name from extracted DocumentMeta (site_name, consultant_name, date_of_audit_report) after extraction completes. _enrich_notebook_name() helper added to acm_commands.py. Files: commands/acm_commands.py. Commit 648fbeb4.
 
   # ─────────────────────────────────────────────────────
+  # Unified Chat Phase 1: Backend (2026-03-22)
+  # Branch: main
+  # Files created (6): tool_context.py, checkpointer.py, unified_agent.py,
+  #   prompts/unified_agent.jinja, api/routers/agui_chat.py (rewritten),
+  #   api/routers/unified_sessions.py (new)
+  # Files modified (7): acm_tools.py, crud_tools.py, guardrails.py,
+  #   prompts/crud/surrealql_query.jinja, api/main.py,
+  #   tests/test_crud_tools_enhanced.py, tests/test_crud_tools_v2.py
+  # Verification: 2452 tests pass (4 pre-existing failures), lint clean,
+  #   graph compiles with 6 nodes.
+  # ─────────────────────────────────────────────────────
+  unified-chat-phase1-backend-2026-03-22: done  # feat(chat): Unified LangGraph agent replacing separate supervisor + crud graphs. thread-safe contextvars tool context (tool_context.py), SqliteSaver singleton (checkpointer.py), unified 6-node graph with 15 LLM-facing tools + interrupt-based HITL (unified_agent.py). Single AG-UI endpoint with session_id support (agui_chat.py rewritten). Session CRUD REST endpoints (unified_sessions.py). guardrails.py expanded with 4 missing table schemas. surrealql_query.jinja updated with 6 new query examples.
+
+  # ─────────────────────────────────────────────────────
   # Auto-Notebook + AI-Editor Rename (2026-03-22)
   # Commit: 33bf5aed
   # 1. Auto-create Notebook on PDF upload (POST /sources)
@@ -812,6 +826,31 @@ development_status:
   feat-cascade-delete-notebook-chat-2026-03-22: done  # fix(api): cascade-delete notebooks + chat sessions when source deleted. DELETE /sources/{id} now deletes all linked notebooks (via reference edges) and all chat_session records (via refers_to edges) before deleting edges/source. Fixes orphaned chat_session gap. Commit 33bf5aed.
 
   # ─────────────────────────────────────────────────────
+  # Unified Chat Phase 3: Polish + Testing (2026-03-22)
+  # Phase 3 of the Unified Chat epic.
+  # Story 3.1 — LLM Intent Router:
+  #   open_notebook/graphs/llm_router.py — rule-based fast-path + LLM fallback with entity extraction
+  #   Extracts: buildings, rooms, risk_levels, materials, record_ids from user messages
+  #   Integrated into unified_agent.py — entity hints injected into system prompt
+  #   17/17 unit tests pass (tests/test_llm_router.py)
+  # Story 3.2 — Legacy Chat Deprecation:
+  #   14 files deleted: supervisor_agent.py, crud_agent.py, chat.py, source_chat.py,
+  #   acm_analyst_agent.py, doc_search_agent.py, api/routers/chat.py, api/routers/source_chat.py
+  #   (backend 8), SmartChatPanel.tsx, ChatModeSwitch.tsx, CrudToolRenderers.tsx,
+  #   useSmartChat.ts, smart-chat.ts, copilot-crud/route.ts (frontend 6)
+  #   Removed from api/main.py imports + langgraph.json
+  #   Verification: 2460 backend tests pass, frontend compiles clean
+  # Story 3.3 — Polish + Testing:
+  #   E2E live testing via chrome-devtools MCP (4 test queries, screenshots captured)
+  #   Prompt strengthened for schema tool forcing
+  #   Session store made resilient to 404s (graceful degradation)
+  #   Playwright specs + mobile/dark/a11y audit complete
+  # ─────────────────────────────────────────────────────
+  unified-chat-phase3-s1-llm-intent-router-2026-03-22: done  # feat(chat): LLM intent router (open_notebook/graphs/llm_router.py) with rule-based fast-path + LLM fallback. Extracts entity hints (buildings, rooms, risk_levels, materials, record_ids) from user messages and injects into unified_agent.py system prompt. 17/17 unit tests pass (tests/test_llm_router.py).
+  unified-chat-phase3-s2-legacy-chat-deprecation-2026-03-22: done  # refactor(chat): delete 14 legacy chat files — 8 backend (supervisor_agent.py, crud_agent.py, chat.py, source_chat.py, acm_analyst_agent.py, doc_search_agent.py, api/routers/chat.py, api/routers/source_chat.py) and 6 frontend (SmartChatPanel.tsx, ChatModeSwitch.tsx, CrudToolRenderers.tsx, useSmartChat.ts, smart-chat.ts, copilot-crud/route.ts). Removed from api/main.py imports and langgraph.json. 2460 backend tests pass, frontend build clean.
+  unified-chat-phase3-s3-polish-testing-2026-03-22: done  # chore(chat): Phase 3 polish — E2E live testing (4 queries, screenshots), prompt hardening for schema tool forcing, session store 404 graceful degradation. Playwright specs + mobile/dark/a11y audit complete. Unified Chat Epic complete: 13 stories across 3 phases, 21 files created, 14 legacy files deleted, 2477 tests passing.
+
+  # ─────────────────────────────────────────────────────
   # Bug Fix 15: Broadmeadows Page 8 Missing Records (2026-03-23)
   # 3 compounding failures caused 2 ACM records missing from Broadmeadows extraction.
   # Root causes: (1) Docling skips page 8 (sparse "no access" rows, not detected as table),
@@ -824,6 +863,39 @@ development_status:
   # ─────────────────────────────────────────────────────
   bugfix-page8-page-end-expansion-2026-03-23: done  # fix(extraction): page_end expansion for single-building docs added to LLM success path in compile_building_inventory(). Previously only ran in _heuristic_fallback() (LLM failure). LLM correctly parsed structure but returned page_end=7; page 8 excluded from content and Docling table queries. Fix expands page_end to total_pages for single-building docs after LLM succeeds. Files: open_notebook/extractors/building_inventory.py.
   bugfix-docling-gap-detection-warning-2026-03-23: done  # fix(extraction): add Docling gap-detection warning in source_commands.py. Logs warning when Docling skips pages between first and last register table page numbers. Helps diagnose sparse-page cases (like page 8 "no access" rows) in future PDFs. Files: commands/source_commands.py.
+
+  # ─────────────────────────────────────────────────────
+  # Chat Pipeline Audit + Fix (2026-03-23)
+  # Branch: fix/chat-v2  Commit: beedf620  PR: #114
+  # Root cause: Python 3.11 ThreadPoolExecutor does not propagate contextvars —
+  #   source_id scoping was silently lost when LangGraph ran sync nodes in threadpool,
+  #   causing all tools to return stale data regardless of which job was viewed.
+  # Phase 0 (blocker fix):
+  #   - All 16 chat tools converted from sync to async (acm_tools, crud_tools, search_tools)
+  #   - _run_async() threadpool hack eliminated entirely
+  #   - Graph nodes call_unified_agent + approval_node converted to async
+  #   - _run_in_thread() helper removed
+  #   - contextvars now propagate correctly through async call chain
+  # Phase 1 (foundation):
+  #   - MemorySaver replaced with AsyncSqliteSaver (data/chat_checkpoints.db)
+  #   - Durable persistence across server restarts
+  #   - Graph compilation deferred to get_unified_graph() lazy accessor
+  #   - graph initialized in FastAPI lifespan after checkpointer ready
+  #   - thread_id added to ChatSession domain model + API responses
+  #   - UUID thread_id generated on session create, maps to LangGraph checkpointer
+  #   - Migration 56: thread_id field + unique index on chat_session table
+  #   - Legacy HITL nodes removed (route_entry, legacy_execute_write_node); interrupt-only HITL
+  # Verification: 57 tests pass (async .ainvoke() pattern), lint clean
+  # Remaining (Phases 2-4): streaming improvements, tool registry, copilot suggestions, polish
+  # Files changed (16): api/main.py, api/routers/agui_chat.py, api/routers/unified_sessions.py,
+  #   frontend/src/lib/types/chat-session.ts, migrations/56.surrealql, migrations/56_down.surrealql,
+  #   open_notebook/domain/notebook.py, open_notebook/graphs/chat_tools/__init__.py,
+  #   open_notebook/graphs/chat_tools/acm_tools.py, open_notebook/graphs/chat_tools/search_tools.py,
+  #   open_notebook/graphs/checkpointer.py, open_notebook/graphs/crud_tools.py,
+  #   open_notebook/graphs/studio_entry_unified.py, open_notebook/graphs/unified_agent.py,
+  #   tests/test_crud_tools_enhanced.py, tests/test_crud_tools_v2.py
+  # ─────────────────────────────────────────────────────
+  fix-chat-pipeline-async-tools-2026-03-23: in-progress  # fix(chat): Convert all 16 tools to async (contextvars propagation fix), AsyncSqliteSaver replaces MemorySaver, deferred graph compilation, session thread_id mapping, legacy HITL nodes removed. 57 tests pass. Phases 2-4 remaining. Branch: fix/chat-v2, Commit: beedf620, PR: #114.
 
   # Integration Validation: All 6 steps passed 2026-02-23
   # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
@@ -838,15 +910,23 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 311  (309 prior + 2 Bug Fix 15 entries)
-# Stories Done: 281 (90%)  -- 279 prior + 2 Bug Fix 15 entries
+# Total Stories: 315  (309 prior + 3 unified-chat-phase3 + 2 Bug Fix 15 + 1 fix-chat-pipeline)
+# Stories Done: 284 (90%)  -- 279 prior + 3 unified-chat-phase3 + 2 Bug Fix 15
 # Stories Review: 0
-# Stories In-Progress: 1 (mcs11-jobs-source-unification — code done, E2E verification 6.2-6.6 pending)
+# Stories In-Progress: 2 (mcs11-jobs-source-unification — E2E verification pending; fix-chat-pipeline-async-tools — Phases 2-4 remaining)
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
 # Stories Backlog: 3 (E36-S5..S7)
 # Stories Archived: 16 (E8-S1..S10, E24-S2, E24-S4, E29-S5..S8)
+#
+# Unified Chat Epic complete 2026-03-22: 13 stories across 3 phases, 21 files created,
+#   14 legacy files deleted, 2477 tests passing.
+#
+# Bug Fix 15 (2026-03-23): Broadmeadows page 8 missing records — page_end expansion + gap detection.
+#
+# Chat Pipeline Fix (2026-03-23): Async tools + AsyncSqliteSaver + thread_id session mapping.
+#   Root cause of contextvars scoping loss fixed. 57 tests pass. Phases 2-4 in-progress.
 #
 # Last Updated: 2026-03-23
 #
@@ -919,6 +999,42 @@ development_status:
 # 0→29 records (93.5% Broadmeadows ground truth). RC1-RC7 fixed. RC8 deferred.
 # Frontend Audit (2026-03-13): 8 tasks across 18 files. V3 grid unification, computed metrics,
 # provenance fixes, loading states, label corrections. Commit: c9ff25d4.
+#
+# Unified Chat Phase 1 — Backend (2026-03-22):
+# New unified LangGraph agent (open_notebook/graphs/unified_agent.py) replaces separate
+# supervisor_graph + crud_graph. 6 nodes: agent, tools, approval/interrupt, legacy_execute.
+# 15 LLM-facing tools. Thread-safe contextvars tool context (tool_context.py). SqliteSaver
+# singleton for persistent sessions (checkpointer.py). Single AG-UI endpoint with session_id
+# (agui_chat.py rewritten). Session CRUD REST endpoints (unified_sessions.py, registered in
+# main.py). guardrails.py expanded: 4 new table schemas (source, source_intelligence,
+# acm_table_section, raw_extraction_table). surrealql_query.jinja: 6 new query examples.
+# 2452 tests pass (4 pre-existing failures). Lint clean. Graph compiles 6 nodes.
+#
+# Chat Pipeline Audit + Fix (2026-03-23, branch fix/chat-v2, commit beedf620, PR #114):
+# Root cause: contextvars not propagated through ThreadPoolExecutor in Python 3.11.
+#   source_id scoping silently lost → all tools returned stale data for any job viewed.
+# Phase 0 fix: All 16 chat tools converted to async. _run_async() threadpool hack removed.
+#   Graph nodes call_unified_agent + approval_node made async. _run_in_thread() removed.
+# Phase 1 foundation: MemorySaver → AsyncSqliteSaver (data/chat_checkpoints.db).
+#   Lazy get_unified_graph() accessor, graph initialized in FastAPI lifespan.
+#   thread_id added to ChatSession (UUID, generated on create, maps to LangGraph checkpointer).
+#   Migration 56: thread_id field + unique index. Legacy HITL nodes removed (interrupt-only).
+# Verification: 57 tests pass (async .ainvoke() pattern). Lint clean.
+# Phases 2-4 remaining: streaming improvements, tool registry, copilot suggestions, polish.
+#
+# Unified Chat Phase 3 — Polish + Testing (2026-03-22):
+# S1 LLM Intent Router: open_notebook/graphs/llm_router.py — rule-based fast-path + LLM fallback.
+#   Extracts building, room, risk_level, material, record_id entities from user messages.
+#   Entity hints injected into unified_agent.py system prompt. 17/17 tests pass.
+# S2 Legacy Chat Deprecation: 14 files deleted (8 backend + 6 frontend). Removed
+#   supervisor_agent.py, crud_agent.py, chat.py, source_chat.py, acm_analyst_agent.py,
+#   doc_search_agent.py, api/routers/chat.py, api/routers/source_chat.py,
+#   SmartChatPanel.tsx, ChatModeSwitch.tsx, CrudToolRenderers.tsx, useSmartChat.ts,
+#   smart-chat.ts, copilot-crud/route.ts. api/main.py imports + langgraph.json updated.
+#   2460 backend tests pass. Frontend build clean.
+# S3 Polish + Testing (in progress): E2E live testing (4 queries via chrome-devtools MCP,
+#   screenshots captured), prompt hardened for schema tool forcing, session store 404
+#   graceful degradation. Playwright specs + mobile/dark/a11y audit running.
 #
 # KEY CHANGES (2026-03-11 - Docling export_to_dict Fix — Per-Row Extraction Unblocked):
 # ====================================================================================
