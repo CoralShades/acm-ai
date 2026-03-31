@@ -131,14 +131,22 @@ async def search_acm_by_building(building_name: str, limit: int = 20) -> str:
     """
     source_id, notebook_id = _get_scope()
 
+    if not building_name or not building_name.strip():
+        return json.dumps(
+            {
+                "error": "building_name is required. Provide a building name to search for.",
+                "records": [],
+            }
+        )
+
     try:
         filter_clause = _build_source_filter(source_id, notebook_id)
         query = f"""
             SELECT * FROM acm_record
             WHERE {filter_clause}
             AND (
-                string::lowercase(building_name) CONTAINS string::lowercase($building_name)
-                OR string::lowercase(building_id) CONTAINS string::lowercase($building_name)
+                (building_name IS NOT NONE AND string::lowercase(building_name) CONTAINS string::lowercase($building_name))
+                OR (building_id IS NOT NONE AND string::lowercase(building_id) CONTAINS string::lowercase($building_name))
             )
             ORDER BY room_id
             LIMIT $limit
@@ -181,14 +189,14 @@ async def search_acm_by_room(
         filter_clause = _build_source_filter(source_id, notebook_id)
         building_filter = ""
         if building_name:
-            building_filter = "AND string::lowercase(building_name) CONTAINS string::lowercase($building_name)"
+            building_filter = "AND building_name IS NOT NONE AND string::lowercase(building_name) CONTAINS string::lowercase($building_name)"
 
         query = f"""
             SELECT * FROM acm_record
             WHERE {filter_clause}
             AND (
-                string::lowercase(room_name) CONTAINS string::lowercase($room_name)
-                OR string::lowercase(room_id) CONTAINS string::lowercase($room_name)
+                (room_name IS NOT NONE AND string::lowercase(room_name) CONTAINS string::lowercase($room_name))
+                OR (room_id IS NOT NONE AND string::lowercase(room_id) CONTAINS string::lowercase($room_name))
             )
             {building_filter}
             ORDER BY building_id, room_id
@@ -232,8 +240,8 @@ async def search_acm_by_material(material_keyword: str, limit: int = 20) -> str:
             SELECT * FROM acm_record
             WHERE {filter_clause}
             AND (
-                string::lowercase(product) CONTAINS string::lowercase($keyword)
-                OR string::lowercase(material_description) CONTAINS string::lowercase($keyword)
+                (product IS NOT NONE AND string::lowercase(product) CONTAINS string::lowercase($keyword))
+                OR (material_description IS NOT NONE AND string::lowercase(material_description) CONTAINS string::lowercase($keyword))
             )
             ORDER BY building_id, room_id
             LIMIT $limit
@@ -354,6 +362,179 @@ async def get_acm_record_detail(record_id: str) -> str:
 
 
 @tool
+async def list_acm_buildings(limit: int = 50) -> str:
+    """List all buildings in the current job with record counts and risk summary.
+
+    Use this tool when the user asks for a list of buildings, building overview,
+    or wants to know what buildings are in the document.
+
+    Args:
+        limit: Maximum number of buildings to return (default 50)
+    """
+    source_id, notebook_id = _get_scope()
+
+    try:
+        filter_clause = _build_source_filter(source_id, notebook_id)
+
+        # Get building records if they exist
+        building_query = f"""
+            SELECT
+                id, internal_id, building_name, building_address, suburb,
+                building_type, building_year, number_of_levels, site_name
+            FROM building_record
+            WHERE {filter_clause.replace("source_id", "source_id")}
+            LIMIT $limit
+        """
+        vars_ = _build_vars(source_id, notebook_id, limit=limit)
+        buildings = await repo_query(building_query, vars_)
+
+        # Get per-building record counts and risk stats from acm_record
+        stats_query = f"""
+            SELECT
+                building_name,
+                count() as record_count,
+                count(risk_status = 'High' OR NULL) as high_risk,
+                count(risk_status = 'Medium' OR NULL) as medium_risk,
+                count(risk_status = 'Low' OR NULL) as low_risk
+            FROM acm_record
+            WHERE {filter_clause}
+            GROUP BY building_name
+        """
+        stats_vars = _build_vars(source_id, notebook_id)
+        stats = await repo_query(stats_query, stats_vars)
+
+        # Build stats lookup
+        stats_by_name = {}
+        for s in stats:
+            name = s.get("building_name", "")
+            if name:
+                stats_by_name[name] = s
+
+        result_buildings = []
+        if buildings:
+            for b in buildings:
+                name = b.get("building_name", "")
+                s = stats_by_name.get(name, {})
+                result_buildings.append(
+                    {
+                        "building_id": str(b.get("id", "")),
+                        "internal_id": b.get("internal_id", ""),
+                        "building_name": name,
+                        "address": b.get("building_address", ""),
+                        "suburb": b.get("suburb", ""),
+                        "building_type": b.get("building_type", ""),
+                        "building_year": b.get("building_year", ""),
+                        "number_of_levels": b.get("number_of_levels"),
+                        "site_name": b.get("site_name", ""),
+                        "record_count": s.get("record_count", 0),
+                        "high_risk_count": s.get("high_risk", 0),
+                        "medium_risk_count": s.get("medium_risk", 0),
+                        "low_risk_count": s.get("low_risk", 0),
+                    }
+                )
+        else:
+            # Fallback: derive buildings from acm_record if no building_record rows
+            for name, s in stats_by_name.items():
+                result_buildings.append(
+                    {
+                        "building_name": name,
+                        "record_count": s.get("record_count", 0),
+                        "high_risk_count": s.get("high_risk", 0),
+                        "medium_risk_count": s.get("medium_risk", 0),
+                        "low_risk_count": s.get("low_risk", 0),
+                    }
+                )
+
+        return json.dumps(
+            {
+                "tool": "list_acm_buildings",
+                "buildings": result_buildings,
+                "total_buildings": len(result_buildings),
+            }
+        )
+    except Exception as e:
+        logger.error(f"list_acm_buildings error: {e}")
+        return json.dumps({"error": str(e), "buildings": []})
+
+
+@tool
+async def get_source_metadata() -> str:
+    """Get metadata about the current document/source and its extraction.
+
+    Use this tool when the user asks about the document itself: who created it,
+    when it was uploaded, how many pages, what consultant did the survey, etc.
+
+    Returns source info, intelligence data (consultant, site, building names),
+    and extraction statistics.
+    """
+    source_id, notebook_id = _get_scope()
+
+    if not source_id:
+        return json.dumps({"error": "No source context set."})
+
+    try:
+        sid = ensure_record_id(source_id)
+
+        # Get source record
+        source_result = await repo_query(
+            "SELECT name, page_count, total_pages, state, asset_type, created, updated "
+            "FROM source WHERE id = $sid LIMIT 1",
+            {"sid": sid},
+        )
+
+        # Get intelligence record
+        intel_result = await repo_query(
+            "SELECT consultant, site_name, site_address, building_names, "
+            "document_type, estimated_buildings, estimated_pages, metadata_json "
+            "FROM source_intelligence WHERE source_id = $sid LIMIT 1",
+            {"sid": sid},
+        )
+
+        # Get extraction stats
+        stats_result = await repo_query(
+            "SELECT count() as total_records FROM acm_record "
+            "WHERE source_id = $sid GROUP ALL",
+            {"sid": sid},
+        )
+
+        building_count_result = await repo_query(
+            "SELECT count() as total FROM building_record "
+            "WHERE source_id = $sid GROUP ALL",
+            {"sid": sid},
+        )
+
+        source_data = source_result[0] if source_result else {}
+        intel_data = intel_result[0] if intel_result else {}
+        total_records = stats_result[0].get("total_records", 0) if stats_result else 0
+        total_buildings = (
+            building_count_result[0].get("total", 0) if building_count_result else 0
+        )
+
+        # Clean up RecordID objects
+        for key, val in source_data.items():
+            if not isinstance(val, (str, int, float, bool, list, type(None))):
+                source_data[key] = str(val)
+        for key, val in intel_data.items():
+            if not isinstance(val, (str, int, float, bool, list, type(None))):
+                intel_data[key] = str(val)
+
+        return json.dumps(
+            {
+                "tool": "get_source_metadata",
+                "source": source_data,
+                "intelligence": intel_data,
+                "extraction_stats": {
+                    "total_records": total_records,
+                    "total_buildings": total_buildings,
+                },
+            }
+        )
+    except Exception as e:
+        logger.error(f"get_source_metadata error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+@tool
 async def semantic_search_acm(query: str, limit: int = 10) -> str:
     """Search ACM records using semantic similarity (vector search).
 
@@ -371,7 +552,27 @@ async def semantic_search_acm(query: str, limit: int = 10) -> str:
         from open_notebook.domain.models import model_manager
 
         embedding_model = await model_manager.get_embedding_model()
-        query_embedding = embedding_model.embed_query(query)
+        if not embedding_model:
+            return json.dumps(
+                {
+                    "error": "No embedding model configured. Semantic search unavailable.",
+                    "records": [],
+                }
+            )
+        # Esperanto embedding models may use embed_query() or embed()
+        if hasattr(embedding_model, "embed_query"):
+            query_embedding = embedding_model.embed_query(query)
+        elif hasattr(embedding_model, "embed"):
+            query_embedding = embedding_model.embed(query)
+        elif hasattr(embedding_model, "embed_documents"):
+            query_embedding = embedding_model.embed_documents([query])[0]
+        else:
+            return json.dumps(
+                {
+                    "error": f"Embedding model {type(embedding_model).__name__} has no embed method.",
+                    "records": [],
+                }
+            )
 
         filter_clause = _build_source_filter(source_id, notebook_id)
         surql = f"""

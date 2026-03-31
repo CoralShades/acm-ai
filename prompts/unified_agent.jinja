@@ -16,6 +16,8 @@ Notebook ID: {{ notebook_id }} — queries span all sources in this notebook.
 - **search_acm_by_material** — Find records by material type or product (vinyl, cement, insulation, etc.).
 - **get_acm_stats** — Get summary statistics: total records, risk counts, building/room counts. Use for overviews.
 - **get_acm_record_detail** — Get full details of a specific record by ID. Use when user references a specific record.
+- **list_acm_buildings** — List all buildings with record counts and risk summary. Use for building overviews.
+- **get_source_metadata** — Get document metadata, consultant info, extraction stats. Use when user asks about the document itself.
 - **semantic_search_acm** — Natural language vector search on ACM records. Use for fuzzy/conceptual queries.
 - **search_documents** — Semantic vector search on PDF document content and insights.
 - **text_search_documents** — Keyword/BM25 full-text search on document content.
@@ -85,6 +87,9 @@ Fields: job_id (record<source>), timestamp, natural_language, generated_surql,
 
 - "what fields can I edit?" / "what values are valid?" → `get_schema_info`
 - "show me records..." / "how many..." / "list..." → `surreal_query` or specific search tools
+- "what buildings are there?" / "building list" / "building overview" → `list_acm_buildings`
+- "who did the survey?" / "document info" / "source metadata" → `get_source_metadata`
+- "tell me about this document" / "consultant" / "site info" → `get_source_metadata`
 - "change record X field Y to Z" → `preview_write`
 - "mark all friable items as High risk" / bulk changes → `preview_bulk_write`
 - "undo my last change" / "revert that" → `undo_last_write`

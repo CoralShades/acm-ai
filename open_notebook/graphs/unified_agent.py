@@ -67,6 +67,8 @@ class UnifiedAgentState(TypedDict):
     model_id: Optional[str]
     include_acm_context: Optional[bool]
     pending_operation: Optional[dict]
+    session_id: Optional[str]
+    thread_id: Optional[str]  # Option A: session's LangGraph thread_id
 
 
 def _extract_source_id_from_messages(messages: list) -> Optional[str]:
@@ -74,7 +76,7 @@ def _extract_source_id_from_messages(messages: list) -> Optional[str]:
     for msg in messages:
         content = getattr(msg, "content", "")
         if isinstance(content, str) and "source:" in content:
-            match = re.search(r"(source:[a-z0-9]+)", content)
+            match = re.search(r"(source:[a-zA-Z0-9_]+)", content)
             if match:
                 return match.group(1)
     return None
@@ -83,18 +85,33 @@ def _extract_source_id_from_messages(messages: list) -> Optional[str]:
 def _resolve_source_id(
     state: UnifiedAgentState, config: RunnableConfig
 ) -> Optional[str]:
-    """Resolve source_id from state, messages, or config."""
+    """Resolve source_id from state, messages, or config.
+
+    Tries three sources in order:
+    1. Graph state (from CopilotKit useCoAgent setState)
+    2. Message content (from useCopilotReadable system messages)
+    3. Config (from manual configurable override)
+    """
     source_id = state.get("source_id")
+    if source_id:
+        logger.debug(f"Unified agent source_id from state: {source_id}")
+        return source_id
 
-    if not source_id:
-        source_id = _extract_source_id_from_messages(state.get("messages", []))
-        if source_id:
-            logger.info(f"Unified agent extracted source_id from messages: {source_id}")
+    source_id = _extract_source_id_from_messages(state.get("messages", []))
+    if source_id:
+        logger.info(f"Unified agent extracted source_id from messages: {source_id}")
+        return source_id
 
-    if not source_id:
-        source_id = config.get("configurable", {}).get("source_id")
+    source_id = config.get("configurable", {}).get("source_id")
+    if source_id:
+        logger.info(f"Unified agent source_id from config: {source_id}")
+        return source_id
 
-    return source_id
+    logger.warning(
+        "Unified agent: source_id is None — tools will return 'No job context'. "
+        "Check CopilotKit useCoAgent state sync."
+    )
+    return None
 
 
 def _get_unified_tools(include_acm: bool = True):
@@ -105,14 +122,16 @@ def _get_unified_tools(include_acm: bool = True):
 
     # CRUD tools — note: execute_pending_write is NOT exposed to the LLM.
     # It runs internally inside the approval_node after interrupt() resume.
-    tools.extend([
-        surreal_query,
-        preview_write,
-        preview_bulk_write,
-        get_schema_info,
-        ask_user_choice,
-        undo_last_write,
-    ])
+    tools.extend(
+        [
+            surreal_query,
+            preview_write,
+            preview_bulk_write,
+            get_schema_info,
+            ask_user_choice,
+            undo_last_write,
+        ]
+    )
     return tools
 
 
@@ -172,6 +191,7 @@ async def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -
                 break
             elif hasattr(msg, "content") and not hasattr(msg, "tool_calls"):
                 from langchain_core.messages import HumanMessage
+
                 if isinstance(msg, HumanMessage):
                     last_user_msg = msg.content
                     break
@@ -213,7 +233,15 @@ async def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -
         except Exception:
             pass  # Non-fatal
 
-    return {"messages": [ai_message]}
+    # Persist resolved source_id/notebook_id back to state so the tools node
+    # and future turns always have them — even if the initial state was None
+    # and resolution came from messages or config fallbacks.
+    result: dict = {"messages": [ai_message]}
+    if source_id:
+        result["source_id"] = source_id
+    if notebook_id:
+        result["notebook_id"] = notebook_id
+    return result
 
 
 def _detect_pending_operation(state: UnifiedAgentState) -> Optional[dict]:
@@ -297,11 +325,13 @@ async def approval_node(state: UnifiedAgentState) -> dict:
         edits = decision.get("edits")
         source_id = state.get("source_id")
         try:
-            result = await execute_pending_write.ainvoke({
-                "operation_id": operation_id,
-                "source_id": source_id,
-                "edits": edits,
-            })
+            result = await execute_pending_write.ainvoke(
+                {
+                    "operation_id": operation_id,
+                    "source_id": source_id,
+                    "edits": edits,
+                }
+            )
         except Exception as e:
             logger.error(f"Error executing approved write: {e}")
             result = f"Error executing write: {str(e)}"
@@ -333,16 +363,35 @@ def should_continue(state: UnifiedAgentState) -> str:
 # --- Build the Graph ---
 
 
+async def context_aware_tools(state: UnifiedAgentState, config: RunnableConfig) -> dict:
+    """Wrapper around ToolNode that sets source_id/notebook_id context before execution.
+
+    contextvars set in the 'agent' node do NOT propagate to the 'tools' node
+    because LangGraph runs each node in its own async context. This wrapper
+    re-establishes the scope from graph state before delegating to ToolNode.
+    """
+    source_id = state.get("source_id")
+    notebook_id = state.get("notebook_id")
+
+    # Re-set context for this node's execution scope
+    set_tool_scope(source_id=source_id, notebook_id=notebook_id)
+    if source_id:
+        set_crud_context(source_id)
+
+    # Delegate to ToolNode
+    tools = _get_unified_tools(include_acm=state.get("include_acm_context", True))
+    node = ToolNode(tools)
+    return await node.ainvoke(state, config=config)
+
+
 def build_unified_graph():
     """Build and compile the unified agent graph."""
-    tools = _get_unified_tools(include_acm=True)
-    tool_node = ToolNode(tools)
 
     builder = StateGraph(UnifiedAgentState)
 
     # Nodes
     builder.add_node("agent", call_unified_agent)
-    builder.add_node("tools", tool_node)
+    builder.add_node("tools", context_aware_tools)
     builder.add_node("approval", approval_node)
 
     # START → agent (direct, no legacy routing)

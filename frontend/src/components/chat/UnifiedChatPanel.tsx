@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useMemo, useEffect } from 'react'
+import React, { useMemo, useEffect, useRef } from 'react'
 import { CopilotChat } from '@copilotkit/react-ui'
-import { useCopilotReadable, useLangGraphInterrupt, useCopilotChatSuggestions } from '@copilotkit/react-core'
+import { useCopilotReadable, useLangGraphInterrupt } from '@copilotkit/react-core'
 import { SmartChatProvider } from './SmartChatProvider'
 import { useUnifiedChat } from '@/lib/hooks/useUnifiedChat'
 import { UnifiedToolRenderers } from './UnifiedToolRenderers'
@@ -109,13 +109,29 @@ function UnifiedChatPanelContent({
   // Resolve effective session: store's active takes priority, then the prop
   const effectiveSessionId = activeSessionId ?? sessionIdProp
 
-  const { includeAcmContext, setIncludeAcmContext, chatModelId, setChatModelId } =
+  const { state: agentState, includeAcmContext, setIncludeAcmContext, chatModelId, setChatModelId } =
     useUnifiedChat({
       sourceId,
       notebookId,
       hasAcmData,
       sessionId: effectiveSessionId ?? undefined,
     })
+
+  // Option B: capture CopilotKit's auto-generated thread_id and store back
+  // to SurrealDB session so future page loads can resume the same thread.
+  const savedThreadRef = useRef<string | null>(null)
+  useEffect(() => {
+    const ckThreadId = agentState?.thread_id
+    if (!ckThreadId || !sourceId || !effectiveSessionId) return
+    if (savedThreadRef.current === ckThreadId) return
+    savedThreadRef.current = ckThreadId
+    // Fire-and-forget: persist CopilotKit's thread_id to the session record
+    fetch(`/api/sources/${encodeURIComponent(sourceId)}/unified-sessions/${encodeURIComponent(effectiveSessionId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thread_id: ckThreadId }),
+    }).catch(() => { /* non-critical */ })
+  }, [agentState?.thread_id, sourceId, effectiveSessionId])
 
   const readableValue = useMemo(
     () => ({
@@ -157,16 +173,22 @@ function UnifiedChatPanelContent({
     ),
   })
 
-  // Context-aware quick-start suggestions shown before the first message
-  useCopilotChatSuggestions(
-    {
-      instructions: hasAcmData
-        ? `Suggest 3 helpful questions for a compliance officer viewing ACM records. Focus on: risk summary, building overview, high-risk items. Keep suggestions under 8 words each.`
-        : `Suggest 3 helpful questions about this document. Focus on: key findings, recommendations, summary. Keep suggestions under 8 words each.`,
-      minSuggestions: 2,
-      maxSuggestions: 3,
-    },
-    [sourceId, hasAcmData]
+  // Static quick-start suggestions — useCopilotChatSuggestions doesn't work with
+  // custom AG-UI backends (copilotkitSuggest tool never injected into LangGraph).
+  // Static suggestions are faster, free, and more reliable.
+  const suggestions = useMemo(
+    () =>
+      hasAcmData
+        ? [
+            { title: 'Show ACM statistics summary', message: 'Give me a summary of ACM statistics for this document' },
+            { title: 'List all buildings', message: 'What buildings are in this document?' },
+            { title: 'Find high risk items', message: 'Show me all high risk ACM items' },
+          ]
+        : [
+            { title: 'Summarize this document', message: 'Give me a summary of this document' },
+            { title: 'Key findings', message: 'What are the key findings in this document?' },
+          ],
+    [hasAcmData]
   )
 
   return (
@@ -192,6 +214,7 @@ function UnifiedChatPanelContent({
         <div className="flex-1 min-h-0" key={effectiveSessionId || 'default'}>
           <CopilotChat
             className="h-full"
+            suggestions={suggestions}
             labels={{
               title: 'ACM-AI Chat',
               initial: sourceId

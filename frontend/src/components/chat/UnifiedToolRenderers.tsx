@@ -13,6 +13,8 @@ import { SearchResult } from './renderers/SearchResult'
 import { RiskDistributionChart } from './renderers/RiskDistributionChart'
 import { ToolErrorCard } from './renderers/ToolErrorCard'
 import { ToolStepItem } from './renderers/ToolStepItem'
+import { ItemDetailCard } from './renderers/ItemDetailCard'
+import { BuildingSummaryCard } from './renderers/BuildingSummaryCard'
 import { isErrorResult } from '@/lib/utils/tool-result'
 import { ChatMiniGrid } from '@/components/jobs/ChatMiniGrid'
 import { ChatChoiceCard } from '@/components/jobs/ChatChoiceCard'
@@ -35,7 +37,8 @@ function parseResult(result: unknown): Record<string, unknown> | null {
   if (!result) return null
   const parsed = safeParseJSON(result)
   if (!parsed) return null
-  if ('error' in parsed) return null
+  // Don't swallow errors — let individual renderers decide how to display them.
+  // Previously returned null here, which caused empty renders for any tool error.
   return parsed
 }
 
@@ -152,14 +155,32 @@ export function UnifiedToolRenderers() {
     if (isErrorResult(result)) return <ToolStepItem toolName="get_acm_record_detail" status="error"><ToolErrorCard tool="get_acm_record_detail" /></ToolStepItem>
     const data = parseResult(result)
     if (!data) return <></>
-    return <ToolStepItem toolName="get_acm_record_detail" status="complete"><ACMTableResult data={{ records: [data], total: 1 }} queryType="Detail" /></ToolStepItem>
+    const record = (data.record as Record<string, unknown>) || data
+    return <ToolStepItem toolName="get_acm_record_detail" status="complete"><ItemDetailCard data={record as Parameters<typeof ItemDetailCard>[0]['data']} /></ToolStepItem>
   }})
   useRenderToolCall({ name: 'list_acm_buildings', render: ({ status, result }) => {
     if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="list_acm_buildings" status="executing" />
     if (isErrorResult(result)) return <ToolStepItem toolName="list_acm_buildings" status="error"><ToolErrorCard tool="list_acm_buildings" /></ToolStepItem>
     const data = parseResult(result)
     if (!data) return <></>
-    return <ToolStepItem toolName="list_acm_buildings" status="complete"><ACMStatsResult data={data} /></ToolStepItem>
+    const buildings = (data.buildings as Array<Record<string, unknown>>) || []
+    if (buildings.length === 0) return <ToolStepItem toolName="list_acm_buildings" status="complete"><div className="text-xs text-muted-foreground p-3">No buildings found.</div></ToolStepItem>
+    return (
+      <ToolStepItem toolName="list_acm_buildings" status="complete">
+        <div className="space-y-1">
+          {buildings.map((b, i) => (
+            <BuildingSummaryCard key={i} data={{
+              building_name: String(b.building_name || 'Unknown'),
+              building_id: b.internal_id ? String(b.internal_id) : undefined,
+              record_count: (b.record_count as number) || 0,
+              high_risk_count: (b.high_risk_count as number) || 0,
+              address: b.address ? String(b.address) : undefined,
+            }} />
+          ))}
+          <div className="text-xs text-muted-foreground px-1">{String(data.total_buildings)} building{Number(data.total_buildings) !== 1 ? 's' : ''} total</div>
+        </div>
+      </ToolStepItem>
+    )
   }})
 
   // ── Stats with RiskDistributionChart ──
@@ -185,6 +206,46 @@ export function UnifiedToolRenderers() {
 
   useRenderToolCall({ name: 'search_documents', render: ({ status, result }) => renderSearch('search_documents', 'Vector', status, result) })
   useRenderToolCall({ name: 'text_search_documents', render: ({ status, result }) => renderSearch('text_search_documents', 'Text', status, result) })
+
+  // ── Semantic ACM Search ──
+
+  useRenderToolCall({ name: 'semantic_search_acm', render: ({ status, result }) => renderACMTable('semantic_search_acm', 'Semantic', status, result) })
+
+  // ── Source Metadata ──
+
+  useRenderToolCall({ name: 'get_source_metadata', render: ({ status, result }) => {
+    if (status === 'inProgress' || status === 'executing') return <ToolStepItem toolName="get_source_metadata" status="executing" />
+    if (isErrorResult(result)) return <ToolStepItem toolName="get_source_metadata" status="error"><ToolErrorCard tool="get_source_metadata" /></ToolStepItem>
+    const data = parseResult(result)
+    if (!data) return <></>
+    const source = (data.source as Record<string, unknown>) || {}
+    const intel = (data.intelligence as Record<string, unknown>) || {}
+    const stats = (data.extraction_stats as Record<string, unknown>) || {}
+    return (
+      <ToolStepItem toolName="get_source_metadata" status="complete">
+        <div className="border rounded-lg p-3 my-2 text-sm bg-background space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">Document Information</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            {source.name ? <div><span className="text-muted-foreground">Name:</span> {String(source.name)}</div> : null}
+            {source.page_count ? <div><span className="text-muted-foreground">Pages:</span> {String(source.page_count)}</div> : null}
+            {source.state ? <div><span className="text-muted-foreground">Status:</span> {String(source.state)}</div> : null}
+            {intel.consultant ? <div><span className="text-muted-foreground">Consultant:</span> {String(intel.consultant)}</div> : null}
+            {intel.site_name ? <div><span className="text-muted-foreground">Site:</span> {String(intel.site_name)}</div> : null}
+            {intel.site_address ? <div><span className="text-muted-foreground">Address:</span> {String(intel.site_address)}</div> : null}
+            {intel.document_type ? <div><span className="text-muted-foreground">Type:</span> {String(intel.document_type)}</div> : null}
+            {stats.total_records != null ? <div><span className="text-muted-foreground">Records:</span> {String(stats.total_records)}</div> : null}
+            {stats.total_buildings != null ? <div><span className="text-muted-foreground">Buildings:</span> {String(stats.total_buildings)}</div> : null}
+          </div>
+          {Array.isArray(intel.building_names) && (intel.building_names as string[]).length > 0 ? (
+            <div className="text-xs">
+              <span className="text-muted-foreground">Buildings:</span>{' '}
+              {(intel.building_names as string[]).join(', ')}
+            </div>
+          ) : null}
+        </div>
+      </ToolStepItem>
+    )
+  }})
 
   // ── CRUD Tools ──
 

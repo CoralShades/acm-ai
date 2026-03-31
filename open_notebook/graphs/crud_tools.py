@@ -46,9 +46,18 @@ _jinja_env = Environment(
 
 # --- Pending write store ---
 _pending_writes: dict = {}
+_PENDING_WRITE_TTL = 600  # 10 minutes — stale writes are auto-cleaned
 
 # --- Tool context (delegates to unified tool_context module) ---
 from open_notebook.graphs.tool_context import get_source_id, set_tool_scope
+
+
+def _cleanup_stale_writes() -> None:
+    """Remove pending writes older than TTL. Called before creating new ones."""
+    now = time.time()
+    stale = [k for k, v in _pending_writes.items() if now - v.get("_created_at", 0) > _PENDING_WRITE_TTL]
+    for k in stale:
+        del _pending_writes[k]
 
 
 def set_crud_context(source_id: str) -> None:
@@ -195,12 +204,18 @@ async def surreal_query(question: str) -> str:
         # Build vars — always include $sid, optionally $val for search terms
         query_vars: dict = {"sid": sid}
 
-        # Extract search value if the query uses $val
-        if "$val" in check.sanitized_query:
+        # Extract search value if the query uses $val or other common param names
+        sanitized = check.sanitized_query
+        if "$val" in sanitized:
             val = _extract_search_value(question)
             query_vars["val"] = val
+        # Also handle LLM-generated queries that use alternate variable names
+        for param_name in re.findall(r"\$(\w+)", sanitized):
+            if param_name not in query_vars:
+                # Bind unmatched params to the extracted search value
+                query_vars[param_name] = _extract_search_value(question)
 
-        result = await repo_query(check.sanitized_query, query_vars)
+        result = await repo_query(sanitized, query_vars)
 
         # Flatten nested list results from SurrealDB
         if (
@@ -299,6 +314,7 @@ async def preview_write(
             }
         )
 
+    _cleanup_stale_writes()
     operation_id = str(uuid.uuid4())[:8]
 
     _pending_writes[operation_id] = {
@@ -397,6 +413,7 @@ async def preview_bulk_write(
             except Exception as e:
                 logger.warning(f"preview_bulk_write: failed to resolve record IDs: {e}")
 
+    _cleanup_stale_writes()
     operation_id = str(uuid.uuid4())[:8]
 
     _pending_writes[operation_id] = {

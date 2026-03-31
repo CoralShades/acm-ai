@@ -1,164 +1,119 @@
-# MCS11 Findings — Jobs vs Source Page Audit
+# Chat Debug Findings — 2026-03-31
 
-## Audit Date: 2026-03-19
+## Trace IDs Under Investigation
+- `1249fde5-2ce2-4940-a7a3-95c62a7ddbcf`
+- `82b131ac-05d6-4fa5-a6c1-e808cecef770`
+- `53e7f1e5-147a-4362-91b3-b834a21cbc76`
 
-### Visual Audit (Screenshots)
+---
 
-| Page | Screenshot | Observations |
-|------|-----------|-------------|
-| `/jobs/source:ID` Overview | `audit-job-detail.png` | 6 tabs, stats cards, Re-Extract — no SSE, no live progress |
-| `/jobs/source:ID` Buildings | `audit-job-buildings.png` | **BUG**: "No Rows To Show" despite 2 buildings (V3 API returns 0) → **FIXED** with `useJobBuildings` |
-| `/jobs/source:ID` Buildings (fixed) | `audit-job-buildings-fixed.png` | 2 buildings now visible via legacy API fallback |
-| `/jobs/source:ID` ACM Records | `audit-job-acm.png` | Records work, building filter tabs, but no bulk ops/search/validation |
-| `/source/source:ID` | `audit-source-page.png` | "No buildings extracted yet" — V3 API has no data for this source |
-| User D1.png | Production reference | Shows the ideal layout for jobs page |
-| User view3.png | Production reference | Shows buildings grid with data |
+## ROOT CAUSE ANALYSIS
 
-### Two Buildings APIs (Root Cause of Buildings Bug)
+### RC-1: call_unified_agent didn't persist resolved source_id back to state — ✅ FIXED (Fixes 1, 3, 4)
 
-1. **V3 endpoint**: `GET /api/acm/buildings?source_id=X`
-   - Queries `building_record` table (E30-S2)
-   - Only populated by V3 extraction pipeline
-   - Returns 0 for sources extracted via old pipeline
+**Previously titled**: CopilotKit sends agent state as AgentStateMessage, NOT input.state (CONFIRMED)
 
-2. **Legacy endpoint**: `GET /api/acm/jobs/{source_id}/buildings`
-   - Derives buildings from `acm_record` data
-   - Always works — joins acm_record GROUP BY building_id
-   - Returns full building data for all extraction modes
+**Evidence from `@copilotkit/runtime/dist/index.js`:**
+- Line 3088: `function aguiToGQL(messages, actions, coAgentStateRenders)` — converts AG-UI messages, recognizes `AgentStateMessage` as a special message type
+- Line 3095-3110: Agent state is embedded as a message with `agentName` and `state` properties within the messages array
+- `AgentStateMessageInput` (line 1582) has fields: `threadId`, `agentName`, `role`, `state`, `running`, `nodeName`, `runId`, `active`
 
-**Fix applied**: Created `useJobBuildings` hook + `acmApi.listJobBuildings()` adapter that maps `BuildingResponse` → `BuildingRecord` shape. Jobs page tries V3 first, falls back to legacy.
+**Evidence from `ag_ui_langgraph/agent.py`:**
+- Line 271: `state_input = input.state or {}` — uses `RunAgentInput.state` which CopilotKit may NOT populate
+- Line 279: `state = self.langgraph_default_merge_state(state_input, langchain_messages, input)`
+- Line 476: `{**state, "messages": new_messages, ...}` — if state_input is `{}`, source_id/notebook_id are missing
+- **BUT**: The `prepare_stream` at line 271 takes `input.state or {}`, and CopilotKit runtime likely passes agent state in `input.state` for AG-UI protocol (not just as a message)
 
-### Feature Distribution Analysis
+**Verification**: Graph schema IS correct — `get_input_jsonschema()` returns `['messages', 'source_id', 'notebook_id', 'model_id', 'include_acm_context', 'pending_operation']`. So schema-based filtering at `get_stream_payload_input` would NOT strip source_id.
 
-| Feature | `/jobs/[id]` | `/source/[id]` | Gap Priority |
-|---------|:-----------:|:--------------:|:------------|
-| SSE live streaming | No | Yes | **P0** — core UX |
-| Building status badges | No | Yes | **P0** — progress visibility |
-| Live progress bar + ETA | No | Yes | **P0** |
-| Bulk edit/validate | No | Yes | **P1** — core workflow |
-| Validation error counts | No | Yes | **P1** |
-| Quick text search | No | Yes | **P2** |
-| Group by Room | No | Yes | **P2** |
-| Building selection persistence | useState | Zustand | **P3** |
-| Save phase tracking | No | Yes (MCS10) | **P0** |
-| CRUD Chat (CopilotKit) | Yes | No | Jobs-only |
-| Content/Log/Raw Tables | Yes | No | Jobs-only |
+**STATUS**: Partially confirmed. The CopilotKit runtime constructs RunAgentInput with `state` from `useCoAgent`, which should include source_id. However, the actual propagation needs instrumentation to confirm.
 
-### Hooks Usage Comparison
+### RC-2: _resolve_source_id message regex only matches lowercase hex — ✅ FIXED (Fix 2)
 
-| Hook | `/jobs/[id]` | `/source/[id]` |
-|------|:-----------:|:--------------:|
-| `useV3BuildingStream` | No | Yes |
-| `useV3SSE` | No | Yes (indirect) |
-| `useBuildings` | Yes | Yes |
-| `useJobBuildings` | Yes (MCS10 fix) | No |
-| `useACMItems` | No (uses raw fetch) | Yes (per-building) |
-| `useValidationSummary` | No | Yes |
-| `useBulkFix` | No | Yes |
-| `useBuildingStore` (Zustand) | No | Yes |
-| `useACMStats` | Yes | No |
-| `useSource` | Yes | No |
-
-### State Management Gap
-
-- `/jobs/[id]` uses `useState` for building selection → resets on tab navigation
-- `/source/[id]` uses Zustand `useBuildingStore` → persists across navigation
-- `/jobs/[id]` fetches ALL records upfront (500 limit) → inefficient
-- `/source/[id]` fetches per-building on demand → efficient
-
-### SSE Event Flow (for reference)
-
+**Evidence from `unified_agent.py` line 78:**
+```python
+match = re.search(r"(source:[a-z0-9]+)", content)
 ```
-ai.building_extracted → building in DB, invalidate buildings query
-ai.items_extracted    → items extracted (not saved), update status to "Validating"
-ai.validation_complete → validation done, status to "Saving..."
-ai.save_started       → save phase begins
-ai.save_progress      → per-building save status
-ai.save_complete      → items NOW in DB, invalidate items query, clear statuses
+This ONLY matches lowercase hex characters. SurrealDB record IDs can contain any alphanumeric characters. If the source_id is `source:ABC123` or `source:some-uuid`, the regex fails silently.
+
+**Fix applied**: Changed to `[a-zA-Z0-9_]` pattern in `_extract_source_id_from_messages`.
+
+### RC-3: CopilotKit useCopilotReadable sends context as system messages
+
+**Evidence from `UnifiedChatPanel.tsx` line 130-134:**
+```tsx
+useCopilotReadable({
+  description: 'Current page context: source ID, notebook ID...',
+  value: readableValue,  // includes sourceId
+})
+```
+This injects a system message with the context. However, `_extract_source_id_from_messages` only regex-searches for `source:xxx` — it doesn't parse JSON or structured context. If CopilotKit formats it as JSON like `{"sourceId": "source:abc"}`, the regex won't match because JavaScript uses camelCase (`sourceId`) not the `source:xxx` pattern.
+
+### RC-4: Session/Thread ID disconnect
+
+**Evidence from `unified_sessions.py` line 89:**
+```python
+thread_id = str(_uuid.uuid4())  # Creates a NEW UUID
+```
+**Evidence from `ag_ui_langgraph/agent.py` line 118:**
+```python
+thread_id = input.thread_id or str(uuid.uuid4())  # Uses CopilotKit's thread_id or generates new
 ```
 
-### Sub-pages Under /jobs/[id]/ (Discovery)
+The frontend `chatSessionStore` creates sessions with `thread_id` (line 89 of unified_sessions.py), but CopilotKit manages its own `thread_id`. These are DIFFERENT values. The checkpointer stores state under CopilotKit's thread_id, not the session's thread_id.
 
-| Route | Purpose | Has SSE? |
-|-------|---------|----------|
-| `/jobs/[id]/extract` | Extraction monitoring | **YES** — richest SSE (dual category) |
-| `/jobs/[id]/review/buildings` | Building review wizard | No |
-| `/jobs/[id]/review/records` | Records review wizard | No |
-| `/jobs/[id]/chat` | Standalone chat | No |
+**Impact**: Session switching doesn't actually change the LangGraph thread — conversations may bleed across sessions.
 
-The `/jobs/[id]/extract` page has the MOST complete SSE experience (subscribes to both `extraction` and `ai` categories + AG-UI stream). This is separate from the main jobs detail page.
+### RC-5: _pending_writes in-memory dict (CONFIRMED) — ✅ PARTIALLY FIXED (Fix 8)
 
----
+**Evidence from `crud_tools.py` line 48:**
+```python
+_pending_writes: dict = {}
+```
+This is module-level in-memory storage. Issues:
+1. Lost on server restart
+2. No TTL — stale pending writes accumulate forever ← **Fixed: 10-minute TTL, cleaned on each new preview**
+3. No locking for concurrent access
+4. The HITL interrupt/resume flow goes: preview_write → stores in dict → interrupt() → frontend gets payload → user approves → Command(resume=...) → approval_node reads from dict
 
-## MCS11 Implementation Results (2026-03-19)
+The `approval_node` calls `execute_pending_write.ainvoke()` — but this is a @tool function. Since `execute_pending_write` is NOT in the LLM-facing tools list (line 106-107), it can only be called internally. The dict access SHOULD work within the same process, but timing and restart issues remain.
 
-### Commits
-| Commit | Change |
-|--------|--------|
-| `b06c5788` | Phases 1-3: SSE streaming, bulk ops, search/filter + FK event bus wiring |
-| `c254974f` | JobStatusPill SSE override (Extracting during active stream) |
-| `545d6c41` | Query invalidation timing (MCS10 final + MCS11 buildings fix) |
-| `f2941789` | API FK fields: building_record_id + parent_table_id in ACMRecordResponse |
-| `658d21bb` | Test: RecordID conversion test for FK fields |
+**Fix applied**: TTL cleanup added — entries older than 10 minutes purged on each new `preview_write` call. Restart persistence still unresolved (would require Redis or DB storage).
 
-### MCS11 Phase Status After Commits
-| Phase | Tasks | Status |
-|-------|-------|--------|
-| Phase 1: SSE Streaming | 1.1-1.5 | DONE — useV3BuildingStream, progress bar, JobStatusPill override |
-| Phase 2: Bulk Ops | 2.1-2.4 | DONE — BulkOperationsBar wired, Fix All button |
-| Phase 3: Search/Filter | 3.1-3.2 | DONE — quick text search, Group by Room toggle |
-| Phase 3: Search/Filter | 3.3-3.4 | REMAINING — per-building data source, BuildingTabStrip upgrade |
-| Phase 4: Job Card Status | 4.1-4.3 | DEFERRED — not started |
-| Phase 5: Validation | 5.1 | DONE — useValidationSummary wired |
-| Phase 5: Validation | 5.2-5.3 | REMAINING — error row highlighting, overview card |
-| Phase 6: Verification | 6.1 | DONE — E2E smoke (29/29 tests pass, all tabs render) |
-| Phase 6: Verification | 6.2-6.6 | REMAINING — SSE test, bulk test, cross-page, mobile, screenshots |
-| Gap4: FK exposure | All | DONE — building_record_id + parent_table_id exposed via API |
+### RC-6: parseResult silently swallowed error results — ✅ FIXED (Fix 6)
+
+**Evidence**: `UnifiedToolRenderers.tsx` `parseResult` helper returned `null`/empty on error-shaped payloads — failed tool calls showed no UI feedback.
+
+**Fix applied**: `parseResult` now propagates error results through to the renderer.
+
+**Also fixed (S-1)**: `search_documents` and `text_search_documents` used f-string SQL interpolation instead of parameterized bindings — replaced with `$source_id`/`$notebook_id` parameters (Fix 7).
 
 ---
 
-## MCS13 Bugs Found During E2E Testing (2026-03-19)
+## Secondary Issues
 
-Three bugs surfaced while verifying FK linkage after MCS11 E2E testing with 2 PDF uploads.
+### S-1: useCoAgent setState race condition
+`useUnifiedChat.ts` uses `didSyncRef` guard but only syncs once per scope change. If CopilotKit sends a request before the setState propagates, the first message may lack source_id.
 
-### Bug 1: UNIQUE Index Collision (building_record table)
-**Symptom**: Second upload of same PDF hijacked building_record rows from first upload.
-**Root cause**: `internal_id` derived from `source.title[:8]` only → `BLD#CLUTCH_B_001` identical for both sources.
-**Fix**: Appended first 6 chars of source record ID: `BLD#{title_short}_{source_suffix}_{seq:03d}`.
-**Commit**: `5819d5e4`
-**Files**: `open_notebook/domain/acm.py`, `open_notebook/graphs/acm_extraction.py`
+### S-2: Session endpoint query may fail
+`unified_sessions.py` line 48 uses SurrealQL graph traversal: `SELECT <-refers_to<-chat_session.* as sessions FROM $sid`. If the `refers_to` edge or `chat_session` table doesn't exist, this silently returns empty.
 
-### Bug 2: FK Schema Type Mismatch (building_record_id)
-**Symptom**: `building_record_id` stored as `option<string>` but pipeline sends `RecordID` objects.
-**Root cause**: Migration 40's `IF NOT EXISTS` was silently skipped — an earlier schema inference had already created the field as `string` type. Field never got the correct `record<building_record>` type.
-**Fix**: Migration 55 forces `DEFINE FIELD building_record_id ON acm_record TYPE option<record<building_record>>`.
-**Commit**: `45372518`
-**Files**: `migrations/55.surrealql`, `migrations/55_down.surrealql`, `open_notebook/graphs/acm_extraction.py`
-
-### Bug 3: LangGraph MemorySaver Crash (checkpointer serialization)
-**Symptom**: Extraction crashed with `Type is not msgpack serializable: RecordID` when MemorySaver tried to checkpoint graph state.
-**Root cause**: Graph state contains `RecordID` objects (from MCS8 ghost-save fix). LangGraph's MemorySaver uses msgpack which can't serialize custom Python objects.
-**Fix**: Disabled MemorySaver (`checkpointer=None`) until a custom serializer converting RecordIDs to strings is implemented.
-**Commit**: `45372518`
-**Note**: This reverts MCS8's re-enablement of MemorySaver. Net state: checkpointer disabled (same as MCS7 state).
-
-### E2E Result After All 3 Fixes
-- 2 PDF uploads, same PDF, different sources
-- 14 buildings total (7 per upload), 0 UNIQUE index collisions
-- 101 records saved with 90% FK population rate (building_record_id populated)
-- 10% FK gap = records saved before building_record committed to DB (race condition in save ordering)
+### S-3: Frontend tool name alignment
+All 18 frontend renderer names need to match the backend @tool function names exactly. Previous fix (PR #114-#116) corrected some mismatches, but new issues may have been introduced.
 
 ---
 
-## Known Bugs Still Open (As of 2026-03-19)
+## Recommended Fix Order — STATUS
 
-Bugs discovered during MCS11/MCS13 E2E testing but NOT yet fixed:
-
-| Bug | Severity | Description |
-|-----|----------|-------------|
-| Quick Upload dialog stuck after upload | P1 | Dialog doesn't close / navigate after PDF upload completes |
-| SSE streaming fails on fresh navigation | P1 | operationId not reliably picked up from sessionStorage on direct navigation |
-| `/api/acm/field-config` returns 500 | P1 | field-schema endpoint error (config_json NULL on some records) |
-| ProvenanceViewer crashes on some records | P1 | parent_table_id null causes crash in provenance fetch |
-| Product validation too strict | P2 | Rejects valid product values not in exact SF enum (e.g. compound values) |
-| Ollama timeout on large documents | P2 | STRUCTURE stage 148-208s for 27+ page docs (from BugFix12 N8) |
+| Priority | Fix | Status |
+|----------|-----|--------|
+| P0 | Persist source_id/notebook_id to state output (Fix 1) | ✅ DONE |
+| P0 | Fix regex for mixed-case source IDs (Fix 2) | ✅ DONE |
+| P0 | Add resolution logging (Fix 3) | ✅ DONE |
+| P1 | Add session_id to UnifiedAgentState (Fix 4) | ✅ DONE |
+| P1 | Per-request agent creation — fix concurrent corruption (Fix 5) | ✅ DONE |
+| P2 | parseResult error propagation (Fix 6) | ✅ DONE |
+| P2 | Parameterized queries in search_tools.py (Fix 7) | ✅ DONE |
+| P2 | TTL cleanup for _pending_writes (Fix 8) | ✅ DONE |
+| OPEN | RC-4: thread_id alignment (session ↔ CopilotKit) | ⏳ Partial — session_id in state added; full wiring pending |
+| OPEN | RC-5: _pending_writes restart persistence | ⏳ TTL added; Redis/DB storage still needed for production |
