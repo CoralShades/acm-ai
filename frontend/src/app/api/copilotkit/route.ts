@@ -16,8 +16,7 @@ export const dynamic = "force-dynamic";
 const BACKEND_URL = process.env.INTERNAL_API_URL || "http://localhost:5055";
 
 // Lazy singleton — initialized once on first request, reused across all requests.
-// Avoids the anti-pattern of creating CopilotRuntime per-request (memory pressure,
-// prevents thread persistence).
+// Reset on failure so subsequent requests can retry instead of permanently failing.
 let _initPromise: Promise<{
   runtime: InstanceType<typeof import("@copilotkit/runtime").CopilotRuntime>;
   adapter: InstanceType<typeof import("@copilotkit/runtime").EmptyAdapter>;
@@ -61,18 +60,30 @@ function getSharedRuntime() {
         createEndpoint: copilotRuntimeNextJSAppRouterEndpoint,
       };
     })();
+    // Reset on failure so next request retries instead of caching rejection forever
+    _initPromise.catch(() => {
+      _initPromise = null;
+    });
   }
   return _initPromise;
 }
 
 export const POST = async (req: Request) => {
-  const { runtime, adapter, createEndpoint } = await getSharedRuntime();
+  try {
+    const { runtime, adapter, createEndpoint } = await getSharedRuntime();
 
-  const { handleRequest } = createEndpoint({
-    runtime,
-    serviceAdapter: adapter,
-    endpoint: "/api/copilotkit",
-  });
+    const { handleRequest } = createEndpoint({
+      runtime,
+      serviceAdapter: adapter,
+      endpoint: "/api/copilotkit",
+    });
 
-  return handleRequest(req);
+    return handleRequest(req);
+  } catch (error) {
+    console.error("[CopilotKit route] Request failed:", error);
+    return new Response(
+      JSON.stringify({ error: "Chat service temporarily unavailable" }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
+    );
+  }
 };

@@ -24,6 +24,7 @@ class CreateSessionRequest(BaseModel):
 
 class UpdateSessionRequest(BaseModel):
     title: Optional[str] = None
+    thread_id: Optional[str] = None  # Option B: store CopilotKit's thread_id back
 
 
 class SessionResponse(BaseModel):
@@ -115,13 +116,18 @@ async def create_session(source_id: str, body: CreateSessionRequest):
     "/{source_id}/unified-sessions/{session_id}", response_model=SessionResponse
 )
 async def update_session(source_id: str, session_id: str, body: UpdateSessionRequest):
-    """Update a session's title."""
+    """Update a session's title and/or thread_id."""
     try:
         sid = ensure_record_id(session_id)
         if body.title is not None:
             await repo_query(
                 "UPDATE $sid SET title = $title",
                 {"sid": sid, "title": body.title},
+            )
+        if body.thread_id is not None:
+            await repo_query(
+                "UPDATE $sid SET thread_id = $thread_id",
+                {"sid": sid, "thread_id": body.thread_id},
             )
 
         rows = await repo_query("SELECT * FROM $sid", {"sid": sid})
@@ -132,6 +138,7 @@ async def update_session(source_id: str, session_id: str, body: UpdateSessionReq
         return SessionResponse(
             id=str(s.get("id", "")),
             title=s.get("title"),
+            thread_id=s.get("thread_id"),
             updated=str(s.get("updated", "")) if s.get("updated") else None,
         )
     except HTTPException:

@@ -1,0 +1,96 @@
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - button "Open Next.js Dev Tools" [ref=e26] [cursor=pointer]:
+    - img [ref=e27]
+  - alert [ref=e30]
+  - main [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - img "VAEA - Victorian Asbestos Eradication Agency" [ref=e36]
+            - generic [ref=e37]: VAEA | ACM AI
+          - button "Collapse sidebar" [ref=e38] [cursor=pointer]:
+            - img
+        - navigation [ref=e39]:
+          - button "Upload Document" [ref=e41] [cursor=pointer]:
+            - img
+            - text: Upload Document
+          - generic [ref=e43]:
+            - button "Workspace" [expanded] [ref=e44] [cursor=pointer]:
+              - generic [ref=e45]: Workspace
+              - img
+            - generic [ref=e46]:
+              - link "Dashboard" [ref=e47] [cursor=pointer]:
+                - /url: /
+                - button "Dashboard" [ref=e48]
+              - link "Jobs" [ref=e50] [cursor=pointer]:
+                - /url: /jobs
+                - button "Jobs" [ref=e51]
+              - link "AI-Editor" [ref=e53] [cursor=pointer]:
+                - /url: /ai-editor
+                - button "AI-Editor" [ref=e54]
+        - generic [ref=e56]:
+          - generic [ref=e59]: Powered by CoralShades
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - generic [ref=e62]:
+                - img [ref=e63]
+                - text: Quick actions
+              - generic:
+                - generic: Ctrl+
+                - text: K
+            - paragraph [ref=e65]: Navigation, search, ask, theme
+          - button "Settings" [ref=e66] [cursor=pointer]:
+            - img
+            - text: Settings
+          - generic [ref=e67]:
+            - link "VAEA" [ref=e68] [cursor=pointer]:
+              - /url: https://vaea.coralshades.ai
+              - text: VAEA
+              - img [ref=e69]
+            - generic [ref=e73]: ·
+            - link "Docs" [ref=e74] [cursor=pointer]:
+              - /url: https://vaea.coralshades.ai/docs
+              - text: Docs
+              - img [ref=e75]
+      - main [ref=e79]:
+        - generic [ref=e80]:
+          - generic [ref=e82]:
+            - generic [ref=e83]:
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]
+              - generic [ref=e93]:
+                - button "Cancel Extraction" [ref=e94] [cursor=pointer]
+                - button "Export CSV" [ref=e95] [cursor=pointer]
+                - button "Export Excel" [ref=e96] [cursor=pointer]
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - heading "AlexanderHospital (1).pdf" [level=1] [ref=e99]
+                - button "Edit job title" [ref=e100] [cursor=pointer]
+              - generic [ref=e101]: Extracting
+              - generic [ref=e102]: "Uploaded: 2 days ago"
+              - generic [ref=e103]: 118 records
+              - generic [ref=e104]: 7 buildings
+          - generic [ref=e105]:
+            - generic [ref=e107]:
+              - tablist [ref=e109] [cursor=pointer]:
+                - tab "Overview" [selected] [ref=e110]
+                - tab "Buildings" [ref=e111]
+                - tab "ACM Records" [ref=e112]
+                - tab "Content" [ref=e113]
+                - tab "Raw Tables" [ref=e114]
+                - tab "Log" [ref=e115]
+              - tabpanel "Overview" [ref=e117] [cursor=pointer]:
+                - generic [ref=e118]
+            - button "Expand chat panel" [ref=e182] [cursor=pointer]:
+              - img
+  - generic [ref=e183]:
+    - heading "Command Palette" [level=2] [ref=e184]
+    - paragraph [ref=e185]: Navigate, search, or ask your knowledge base
+  - button "Web Inspector" [ref=e187]:
+    - note [ref=e188]:
+      - generic [ref=e189]: CopilotKit v1.50 is now live!
+    - img "Inspector logo" [ref=e191]
+  - region "Notifications alt+T"

@@ -57,12 +57,12 @@ async def search_documents(query: str, limit: int = 10) -> str:
                 }
             )
 
-        # Build source filter for scoping
+        # Build source filter for scoping — use parameterized $source_id/$notebook_id
         source_filter = ""
         if source_id:
-            source_filter = f"AND source = {ensure_record_id(source_id)}"
+            source_filter = "AND source = $source_id"
         elif notebook_id:
-            source_filter = f"AND source IN (SELECT out FROM reference WHERE in = {ensure_record_id(notebook_id)})"
+            source_filter = "AND source IN (SELECT out FROM reference WHERE in = $notebook_id)"
 
         # Search source_embedding (document chunks)
         chunks_query = f"""
@@ -94,12 +94,14 @@ async def search_documents(query: str, limit: int = 10) -> str:
             LIMIT $limit
         """
 
-        chunks_result = await repo_query(
-            chunks_query, {"query_embedding": query_embedding, "limit": limit}
-        )
-        insights_result = await repo_query(
-            insights_query, {"query_embedding": query_embedding, "limit": limit}
-        )
+        query_vars: dict = {"query_embedding": query_embedding, "limit": limit}
+        if source_id:
+            query_vars["source_id"] = ensure_record_id(source_id)
+        if notebook_id:
+            query_vars["notebook_id"] = ensure_record_id(notebook_id)
+
+        chunks_result = await repo_query(chunks_query, query_vars)
+        insights_result = await repo_query(insights_query, query_vars)
 
         # Merge and sort by similarity
         all_results = chunks_result + insights_result
@@ -151,10 +153,13 @@ async def text_search_documents(query: str, limit: int = 10) -> str:
 
     try:
         source_filter = ""
+        source_id_filter = ""
         if source_id:
-            source_filter = f"AND source = {ensure_record_id(source_id)}"
+            source_filter = "AND source = $source_id"
+            source_id_filter = "AND id = $source_id"
         elif notebook_id:
-            source_filter = f"AND source IN (SELECT out FROM reference WHERE in = {ensure_record_id(notebook_id)})"
+            source_filter = "AND source IN (SELECT out FROM reference WHERE in = $notebook_id)"
+            source_id_filter = "AND id IN (SELECT out FROM reference WHERE in = $notebook_id)"
 
         # Search source full_text
         source_query = f"""
@@ -165,7 +170,7 @@ async def text_search_documents(query: str, limit: int = 10) -> str:
                 'source' as result_type
             FROM source
             WHERE full_text @1@ $query_text
-            {source_filter.replace("source =", "id =").replace("source IN", "id IN")}
+            {source_id_filter}
             ORDER BY score DESC
             LIMIT $limit
         """
@@ -184,12 +189,14 @@ async def text_search_documents(query: str, limit: int = 10) -> str:
             LIMIT $limit
         """
 
-        source_results = await repo_query(
-            source_query, {"query_text": query, "limit": limit}
-        )
-        chunk_results = await repo_query(
-            chunks_query, {"query_text": query, "limit": limit}
-        )
+        query_vars: dict = {"query_text": query, "limit": limit}
+        if source_id:
+            query_vars["source_id"] = ensure_record_id(source_id)
+        if notebook_id:
+            query_vars["notebook_id"] = ensure_record_id(notebook_id)
+
+        source_results = await repo_query(source_query, query_vars)
+        chunk_results = await repo_query(chunks_query, query_vars)
 
         # Merge and sort by score
         all_results = source_results + chunk_results

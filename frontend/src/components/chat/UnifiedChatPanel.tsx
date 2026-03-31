@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useEffect } from 'react'
+import React, { useMemo, useEffect, useRef } from 'react'
 import { CopilotChat } from '@copilotkit/react-ui'
 import { useCopilotReadable, useLangGraphInterrupt } from '@copilotkit/react-core'
 import { SmartChatProvider } from './SmartChatProvider'
@@ -109,13 +109,29 @@ function UnifiedChatPanelContent({
   // Resolve effective session: store's active takes priority, then the prop
   const effectiveSessionId = activeSessionId ?? sessionIdProp
 
-  const { includeAcmContext, setIncludeAcmContext, chatModelId, setChatModelId } =
+  const { state: agentState, includeAcmContext, setIncludeAcmContext, chatModelId, setChatModelId } =
     useUnifiedChat({
       sourceId,
       notebookId,
       hasAcmData,
       sessionId: effectiveSessionId ?? undefined,
     })
+
+  // Option B: capture CopilotKit's auto-generated thread_id and store back
+  // to SurrealDB session so future page loads can resume the same thread.
+  const savedThreadRef = useRef<string | null>(null)
+  useEffect(() => {
+    const ckThreadId = agentState?.thread_id
+    if (!ckThreadId || !sourceId || !effectiveSessionId) return
+    if (savedThreadRef.current === ckThreadId) return
+    savedThreadRef.current = ckThreadId
+    // Fire-and-forget: persist CopilotKit's thread_id to the session record
+    fetch(`/api/sources/${encodeURIComponent(sourceId)}/unified-sessions/${encodeURIComponent(effectiveSessionId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thread_id: ckThreadId }),
+    }).catch(() => { /* non-critical */ })
+  }, [agentState?.thread_id, sourceId, effectiveSessionId])
 
   const readableValue = useMemo(
     () => ({

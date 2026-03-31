@@ -3,6 +3,7 @@
 import { useCoAgent } from '@copilotkit/react-core'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { UnifiedAgentState } from '@/lib/types/unified-chat'
+import { useChatSessionStore } from '@/lib/stores/chatSessionStore'
 
 interface UseUnifiedChatOptions {
   sourceId?: string
@@ -17,6 +18,12 @@ interface UseUnifiedChatOptions {
  * Replaces both useSmartChat (supervisor) and the inline useCoAgent in
  * JobCrudChatPanel (CRUD). Uses the stable useRef pattern to prevent
  * infinite re-renders from useCoAgent's unstable setState reference.
+ *
+ * Session/thread alignment:
+ * - Option A: passes the session's thread_id from SurrealDB into agent state,
+ *   so the backend can use it for LangGraph checkpointer persistence
+ * - Option B: captures CopilotKit's auto-generated thread_id and stores it
+ *   back to the SurrealDB session (handled in UnifiedChatPanel via state watch)
  */
 export function useUnifiedChat({
   sourceId,
@@ -28,6 +35,14 @@ export function useUnifiedChat({
   const [chatModelId, setChatModelIdState] = useState('')
   const didSyncRef = useRef(false)
 
+  // Option A: look up the session's thread_id from the store
+  const sessions = useChatSessionStore((s) => s.sessions)
+  const sessionThreadId = useMemo(() => {
+    if (!sessionId) return null
+    const session = sessions.find((s) => s.id === sessionId)
+    return session?.thread_id ?? null
+  }, [sessionId, sessions])
+
   const defaultState = useMemo<UnifiedAgentState>(
     () => ({
       source_id: sourceId ?? null,
@@ -36,8 +51,9 @@ export function useUnifiedChat({
       model_id: null,
       pending_operation: null,
       session_id: sessionId ?? null,
+      thread_id: sessionThreadId,
     }),
-    [sourceId, notebookId, hasAcmData, sessionId]
+    [sourceId, notebookId, hasAcmData, sessionId, sessionThreadId]
   )
 
   const { state, setState } = useCoAgent<UnifiedAgentState>({
@@ -52,7 +68,7 @@ export function useUnifiedChat({
   // Reset sync guard when scope changes
   useEffect(() => {
     didSyncRef.current = false
-  }, [sourceId, notebookId, sessionId])
+  }, [sourceId, notebookId, sessionId, sessionThreadId])
 
   // Force state sync to backend once on mount or scope change.
   useEffect(() => {
@@ -63,9 +79,10 @@ export function useUnifiedChat({
       source_id: sourceId ?? null,
       notebook_id: notebookId ?? null,
       session_id: sessionId ?? null,
+      thread_id: sessionThreadId,
     }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceId, notebookId, sessionId])
+  }, [sourceId, notebookId, sessionId, sessionThreadId])
 
   const setIncludeAcmContext = useCallback(
     (value: boolean) => {

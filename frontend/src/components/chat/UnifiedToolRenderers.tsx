@@ -37,7 +37,8 @@ function parseResult(result: unknown): Record<string, unknown> | null {
   if (!result) return null
   const parsed = safeParseJSON(result)
   if (!parsed) return null
-  if ('error' in parsed) return null
+  // Don't swallow errors — let individual renderers decide how to display them.
+  // Previously returned null here, which caused empty renders for any tool error.
   return parsed
 }
 

@@ -46,9 +46,18 @@ _jinja_env = Environment(
 
 # --- Pending write store ---
 _pending_writes: dict = {}
+_PENDING_WRITE_TTL = 600  # 10 minutes — stale writes are auto-cleaned
 
 # --- Tool context (delegates to unified tool_context module) ---
 from open_notebook.graphs.tool_context import get_source_id, set_tool_scope
+
+
+def _cleanup_stale_writes() -> None:
+    """Remove pending writes older than TTL. Called before creating new ones."""
+    now = time.time()
+    stale = [k for k, v in _pending_writes.items() if now - v.get("_created_at", 0) > _PENDING_WRITE_TTL]
+    for k in stale:
+        del _pending_writes[k]
 
 
 def set_crud_context(source_id: str) -> None:
@@ -305,6 +314,7 @@ async def preview_write(
             }
         )
 
+    _cleanup_stale_writes()
     operation_id = str(uuid.uuid4())[:8]
 
     _pending_writes[operation_id] = {
@@ -403,6 +413,7 @@ async def preview_bulk_write(
             except Exception as e:
                 logger.warning(f"preview_bulk_write: failed to resolve record IDs: {e}")
 
+    _cleanup_stale_writes()
     operation_id = str(uuid.uuid4())[:8]
 
     _pending_writes[operation_id] = {

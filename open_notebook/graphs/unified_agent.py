@@ -67,6 +67,8 @@ class UnifiedAgentState(TypedDict):
     model_id: Optional[str]
     include_acm_context: Optional[bool]
     pending_operation: Optional[dict]
+    session_id: Optional[str]
+    thread_id: Optional[str]  # Option A: session's LangGraph thread_id
 
 
 def _extract_source_id_from_messages(messages: list) -> Optional[str]:
@@ -74,7 +76,7 @@ def _extract_source_id_from_messages(messages: list) -> Optional[str]:
     for msg in messages:
         content = getattr(msg, "content", "")
         if isinstance(content, str) and "source:" in content:
-            match = re.search(r"(source:[a-z0-9]+)", content)
+            match = re.search(r"(source:[a-zA-Z0-9_]+)", content)
             if match:
                 return match.group(1)
     return None
@@ -83,18 +85,33 @@ def _extract_source_id_from_messages(messages: list) -> Optional[str]:
 def _resolve_source_id(
     state: UnifiedAgentState, config: RunnableConfig
 ) -> Optional[str]:
-    """Resolve source_id from state, messages, or config."""
+    """Resolve source_id from state, messages, or config.
+
+    Tries three sources in order:
+    1. Graph state (from CopilotKit useCoAgent setState)
+    2. Message content (from useCopilotReadable system messages)
+    3. Config (from manual configurable override)
+    """
     source_id = state.get("source_id")
+    if source_id:
+        logger.debug(f"Unified agent source_id from state: {source_id}")
+        return source_id
 
-    if not source_id:
-        source_id = _extract_source_id_from_messages(state.get("messages", []))
-        if source_id:
-            logger.info(f"Unified agent extracted source_id from messages: {source_id}")
+    source_id = _extract_source_id_from_messages(state.get("messages", []))
+    if source_id:
+        logger.info(f"Unified agent extracted source_id from messages: {source_id}")
+        return source_id
 
-    if not source_id:
-        source_id = config.get("configurable", {}).get("source_id")
+    source_id = config.get("configurable", {}).get("source_id")
+    if source_id:
+        logger.info(f"Unified agent source_id from config: {source_id}")
+        return source_id
 
-    return source_id
+    logger.warning(
+        "Unified agent: source_id is None — tools will return 'No job context'. "
+        "Check CopilotKit useCoAgent state sync."
+    )
+    return None
 
 
 def _get_unified_tools(include_acm: bool = True):
@@ -216,7 +233,15 @@ async def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -
         except Exception:
             pass  # Non-fatal
 
-    return {"messages": [ai_message]}
+    # Persist resolved source_id/notebook_id back to state so the tools node
+    # and future turns always have them — even if the initial state was None
+    # and resolution came from messages or config fallbacks.
+    result: dict = {"messages": [ai_message]}
+    if source_id:
+        result["source_id"] = source_id
+    if notebook_id:
+        result["notebook_id"] = notebook_id
+    return result
 
 
 def _detect_pending_operation(state: UnifiedAgentState) -> Optional[dict]:
