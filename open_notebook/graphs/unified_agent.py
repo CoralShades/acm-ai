@@ -105,14 +105,16 @@ def _get_unified_tools(include_acm: bool = True):
 
     # CRUD tools — note: execute_pending_write is NOT exposed to the LLM.
     # It runs internally inside the approval_node after interrupt() resume.
-    tools.extend([
-        surreal_query,
-        preview_write,
-        preview_bulk_write,
-        get_schema_info,
-        ask_user_choice,
-        undo_last_write,
-    ])
+    tools.extend(
+        [
+            surreal_query,
+            preview_write,
+            preview_bulk_write,
+            get_schema_info,
+            ask_user_choice,
+            undo_last_write,
+        ]
+    )
     return tools
 
 
@@ -172,6 +174,7 @@ async def call_unified_agent(state: UnifiedAgentState, config: RunnableConfig) -
                 break
             elif hasattr(msg, "content") and not hasattr(msg, "tool_calls"):
                 from langchain_core.messages import HumanMessage
+
                 if isinstance(msg, HumanMessage):
                     last_user_msg = msg.content
                     break
@@ -297,11 +300,13 @@ async def approval_node(state: UnifiedAgentState) -> dict:
         edits = decision.get("edits")
         source_id = state.get("source_id")
         try:
-            result = await execute_pending_write.ainvoke({
-                "operation_id": operation_id,
-                "source_id": source_id,
-                "edits": edits,
-            })
+            result = await execute_pending_write.ainvoke(
+                {
+                    "operation_id": operation_id,
+                    "source_id": source_id,
+                    "edits": edits,
+                }
+            )
         except Exception as e:
             logger.error(f"Error executing approved write: {e}")
             result = f"Error executing write: {str(e)}"
@@ -333,16 +338,35 @@ def should_continue(state: UnifiedAgentState) -> str:
 # --- Build the Graph ---
 
 
+async def context_aware_tools(state: UnifiedAgentState, config: RunnableConfig) -> dict:
+    """Wrapper around ToolNode that sets source_id/notebook_id context before execution.
+
+    contextvars set in the 'agent' node do NOT propagate to the 'tools' node
+    because LangGraph runs each node in its own async context. This wrapper
+    re-establishes the scope from graph state before delegating to ToolNode.
+    """
+    source_id = state.get("source_id")
+    notebook_id = state.get("notebook_id")
+
+    # Re-set context for this node's execution scope
+    set_tool_scope(source_id=source_id, notebook_id=notebook_id)
+    if source_id:
+        set_crud_context(source_id)
+
+    # Delegate to ToolNode
+    tools = _get_unified_tools(include_acm=state.get("include_acm_context", True))
+    node = ToolNode(tools)
+    return await node.ainvoke(state, config=config)
+
+
 def build_unified_graph():
     """Build and compile the unified agent graph."""
-    tools = _get_unified_tools(include_acm=True)
-    tool_node = ToolNode(tools)
 
     builder = StateGraph(UnifiedAgentState)
 
     # Nodes
     builder.add_node("agent", call_unified_agent)
-    builder.add_node("tools", tool_node)
+    builder.add_node("tools", context_aware_tools)
     builder.add_node("approval", approval_node)
 
     # START → agent (direct, no legacy routing)

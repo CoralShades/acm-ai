@@ -9,7 +9,27 @@ import { MessageActions } from '@/components/source/MessageActions'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { useSmartChatScope } from './SmartChatProvider'
 import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
 import type { AssistantMessageProps } from '@copilotkit/react-ui'
+
+/**
+ * Detect if the message content looks like short "thinking" text
+ * that shouldn't be rendered as a full message bubble.
+ * Examples: "Let me search for that...", "I'll look up the records"
+ */
+function isThinkingContent(content: string): boolean {
+  if (!content) return false
+  const trimmed = content.trim()
+  // Short messages that are still generating are likely intermediate thoughts
+  if (trimmed.length > 200) return false
+  // Check for common thinking patterns
+  const thinkingPatterns = [
+    /^(let me|i'll|i will|searching|looking|querying|checking|analyzing|loading|fetching|getting)/i,
+    /^(one moment|just a moment|hold on|working on|processing)/i,
+    /\.\.\.\s*$/,  // ends with ellipsis
+  ]
+  return thinkingPatterns.some((p) => p.test(trimmed))
+}
 
 export function ACMAssistantMessage({
   message,
@@ -35,6 +55,11 @@ export function ACMAssistantMessage({
 
   const rawContent = message?.content ?? ''
 
+  // Render tool call UI from useRenderToolCall registrations.
+  // CopilotKit attaches tool renders as generativeUI on the message.
+  // Without this, all useRenderToolCall results are silently dropped.
+  const toolUI = message?.generativeUI?.() ?? null
+
   // Don't process references while still generating (partial refs like [source: are invalid)
   const content =
     isGenerating && isCurrentMessage
@@ -43,22 +68,41 @@ export function ACMAssistantMessage({
 
   const LinkComponent = createCompactReferenceLinkComponent(handleReferenceClick)
 
-  // Show loading/thinking indicator when the agent is processing
+  // Show loading/thinking indicator when the agent is processing (no content yet)
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-2 text-muted-foreground">
-        <div className="flex gap-1">
-          <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.3s]" />
-          <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.15s]" />
-          <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" />
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2 py-1.5 text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary/60" />
+          <span className="text-xs">Thinking...</span>
         </div>
-        <span className="text-xs">Thinking...</span>
+        {toolUI}
       </div>
     )
   }
 
+  // Compact thinking indicator for short intermediate messages while still generating
+  if (isGenerating && isCurrentMessage && isThinkingContent(rawContent)) {
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2 py-1.5 text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary/60" />
+          <span className="text-xs">{rawContent.trim().replace(/\.{3,}$/, '...')}</span>
+        </div>
+        {toolUI}
+      </div>
+    )
+  }
+
+  // Tool-only message (no text content) — render just the tool UI
+  if (!rawContent.trim() && !isGenerating) {
+    return toolUI ? <div className="my-1">{toolUI}</div> : null
+  }
+
   return (
     <div className="flex flex-col gap-2">
+      {/* Tool call renders (from useRenderToolCall) — shown before text content */}
+      {toolUI}
       <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none break-words prose-headings:font-semibold prose-a:text-blue-600 prose-a:break-all prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-p:mb-4 prose-p:leading-7 prose-li:mb-2">
         <ReactMarkdown
           components={{

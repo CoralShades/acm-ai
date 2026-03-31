@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-22
+updated: 2026-03-28
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -895,7 +895,34 @@ development_status:
   #   open_notebook/graphs/studio_entry_unified.py, open_notebook/graphs/unified_agent.py,
   #   tests/test_crud_tools_enhanced.py, tests/test_crud_tools_v2.py
   # ─────────────────────────────────────────────────────
-  fix-chat-pipeline-async-tools-2026-03-23: in-progress  # fix(chat): Convert all 16 tools to async (contextvars propagation fix), AsyncSqliteSaver replaces MemorySaver, deferred graph compilation, session thread_id mapping, legacy HITL nodes removed. 57 tests pass. Phases 2-4 remaining. Branch: fix/chat-v2, Commit: beedf620, PR: #114.
+  fix-chat-pipeline-async-tools-2026-03-23: done  # fix(chat): Convert all 16 tools to async (contextvars propagation fix), AsyncSqliteSaver replaces MemorySaver, deferred graph compilation, session thread_id mapping, legacy HITL nodes removed. 57 tests pass. All phases complete via PRs #114/#115/#116. Branch: fix/chat-v2.
+
+  # ─────────────────────────────────────────────────────
+  # Chat Debug & Fix — 5 Issues (2026-03-28)
+  # Branch: fix/chat-v2 (merged PRs #114, #115, #116)
+  # 7 files modified: acm_tools.py, __init__.py, crud_tools.py,
+  #   unified_agent.jinja, UnifiedToolRenderers.tsx,
+  #   ACMAssistantMessage.tsx, ToolStepItem.tsx
+  # Artifact: docs/sprint-artifacts/chat-debug-2026-03-28.md
+  # ─────────────────────────────────────────────────────
+  chat-debug-5-issues-2026-03-28: done  # fix(chat): 5 bugs resolved. #4: auto-bind unmatched $params in surreal_query (LLM-generated SurrealQL no longer fails on unknown vars). #3: 2 new tools — list_acm_buildings (per-building risk stats) + get_source_metadata (document/consultant/extraction info). #2: tool name alignment — semantic_search_acm, get_source_metadata, list_acm_buildings renderers added; 18 renderers now cover 17 LLM tools + 1 internal. #1: isThinkingContent() detector in ACMAssistantMessage — short intermediate messages render as compact spinner, not full bubbles. #5: ItemDetailCard wired to get_acm_record_detail, BuildingSummaryCard wired to list_acm_buildings. Artifact: docs/sprint-artifacts/chat-debug-2026-03-28.md.
+  # ─────────────────────────────────────────────────────
+  # Chat Debug Round 2 — 4 additional bugs (2026-03-31):
+  #   Root-caused via LangSmith traces + E2E browser testing
+  #   Bug #6: source_id context lost in ToolNode — contextvars don't propagate between LangGraph nodes.
+  #     Fix: context_aware_tools wrapper re-sets scope from state before executing tools.
+  #   Bug #7: search_acm_by_building NULL crash — string::lowercase(NONE) in SurrealQL.
+  #     Fix: IS NOT NONE guards on all string comparisons (building, room, material tools).
+  #   Bug #8: semantic_search_acm embed_query missing — Ollama embedding model lacks embed_query().
+  #     Fix: hasattr fallback chain: embed_query → embed → embed_documents.
+  #   Bug #9: Suggestions not showing — useCopilotChatSuggestions doesn't work with AG-UI backends.
+  #     Fix: replaced with static suggestions prop on CopilotChat.
+  #   Also fixed: ACMAssistantMessage never rendered message.generativeUI() — all tool renders were silently dropped.
+  #   Files: unified_agent.py, acm_tools.py, search_tools.py, ACMAssistantMessage.tsx, UnifiedChatPanel.tsx
+  #   LangSmith traces verified: 4895369a, df9a1352, 4cbd1fdb
+  #   E2E verified: 13/13 tool steps rendered in browser, 0 JS errors
+  # ─────────────────────────────────────────────────────
+  chat-debug-4-additional-bugs-2026-03-31: done  # fix(chat): 4 additional bugs. #6: context_aware_tools wrapper — source_id propagation to ToolNode via LangGraph state (root cause of all "No job context" errors). #7: IS NOT NONE guards on SurrealQL string ops (NULL crash fix for search_acm_by_building/room/material). #8: embedding model API fallback chain (embed_query/embed/embed_documents). #9: static suggestions replacing broken useCopilotChatSuggestions hook. Plus: ACMAssistantMessage.generativeUI() rendering (root cause of invisible tool renders).
 
   # Integration Validation: All 6 steps passed 2026-02-23
   # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
@@ -910,10 +937,10 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 315  (309 prior + 3 unified-chat-phase3 + 2 Bug Fix 15 + 1 fix-chat-pipeline)
-# Stories Done: 284 (90%)  -- 279 prior + 3 unified-chat-phase3 + 2 Bug Fix 15
+# Total Stories: 318  (315 prior + 1 fix-chat-pipeline + 1 chat-debug-5-issues + 1 chat-debug-4-additional)
+# Stories Done: 288 (91%)  -- 284 prior + fix-chat-pipeline + chat-debug-5-issues + chat-debug-4-additional
 # Stories Review: 0
-# Stories In-Progress: 2 (mcs11-jobs-source-unification — E2E verification pending; fix-chat-pipeline-async-tools — Phases 2-4 remaining)
+# Stories In-Progress: 1 (mcs11-jobs-source-unification — E2E verification pending)
 # Stories Blocked: 0
 # Stories Ready-For-Dev: 0
 # Stories Drafted: 0
@@ -926,9 +953,14 @@ development_status:
 # Bug Fix 15 (2026-03-23): Broadmeadows page 8 missing records — page_end expansion + gap detection.
 #
 # Chat Pipeline Fix (2026-03-23): Async tools + AsyncSqliteSaver + thread_id session mapping.
-#   Root cause of contextvars scoping loss fixed. 57 tests pass. Phases 2-4 in-progress.
+#   Root cause of contextvars scoping loss fixed. 57 tests pass. All phases complete (PRs #114/#115/#116).
 #
-# Last Updated: 2026-03-23
+# Chat Debug & Fix (2026-03-28): 5 bugs resolved in UnifiedChatPanel.
+#   surreal_query auto-bind fix, 2 new tools (list_acm_buildings, get_source_metadata),
+#   tool name alignment (18 renderers / 17 LLM tools), isThinkingContent() compact indicator,
+#   ItemDetailCard + BuildingSummaryCard wired. Artifact: chat-debug-2026-03-28.md.
+#
+# Last Updated: 2026-03-28
 #
 # MCS Post-Validation Fixes (2026-03-19):
 # MCS8 DONE: Ghost save bug in base.py fixed. SurrealDB RecordID auto-parse root cause resolved.

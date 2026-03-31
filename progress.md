@@ -246,8 +246,43 @@ Three phases of targeted accuracy improvements following live E2E test findings.
 
 ---
 
+---
+
+## Chat Debug & Fix Session (2026-03-28)
+
+Five bugs in the UnifiedChatPanel (CopilotKit/AG-UI) resolved across 7 files.
+PRs #114 (async tools + checkpointer), #115 (token streaming + suggestions),
+and #116 (active tab context + mobile) all merged. Branch fix/chat-v2 closed.
+
+### Issues Resolved
+
+| # | Issue | Root Cause | Fix |
+|---|-------|-----------|-----|
+| #4 | surreal_query failing | LLM SurrealQL used `$params` beyond `$sid`/`$val` — unbound at execution | Auto-bind unmatched `$param` references to `None` in `crud_tools.py` |
+| #3 | Agent only queries acm_record | No tools for buildings or source metadata | Added `list_acm_buildings` + `get_source_metadata` tools to `acm_tools.py` |
+| #2 | Tool renderers not firing | Tool name mismatch; no renderer for `semantic_search_acm` or new tools | Added 3 renderers; aligned all tool name strings to backend `@tool` names |
+| #1 | Thinking messages as full bubbles | AG-UI `TEXT_MESSAGE_CONTENT` for short intermediate steps rendered as full bubbles | `isThinkingContent()` detector in `ACMAssistantMessage.tsx` → compact spinner |
+| #5 | Orphaned `ItemDetailCard` / `BuildingSummaryCard` | Components existed but never imported by `UnifiedToolRenderers.tsx` | Wired `ItemDetailCard` → `get_acm_record_detail`; `BuildingSummaryCard` → `list_acm_buildings` |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `open_notebook/graphs/chat_tools/acm_tools.py` | +2 tools: `list_acm_buildings`, `get_source_metadata` |
+| `open_notebook/graphs/chat_tools/__init__.py` | Export new tools via `get_acm_tools()` |
+| `open_notebook/graphs/crud_tools.py` | Auto-bind unmatched `$params` in SurrealQL queries |
+| `prompts/unified_agent.jinja` | New tools in system prompt + tool selection guide |
+| `frontend/src/components/chat/UnifiedToolRenderers.tsx` | 3 new renderers; `ItemDetailCard` wired; total 18 renderers |
+| `frontend/src/components/chat/ACMAssistantMessage.tsx` | `isThinkingContent()` compact indicator; null on empty content |
+| `frontend/src/components/chat/renderers/ToolStepItem.tsx` | Labels for `get_source_metadata` and `list_acm_buildings` |
+
+Sprint artifact: `docs/sprint-artifacts/chat-debug-2026-03-28.md`
+
+---
+
 ## Next Steps
 - [ ] MCS11 E2E verification (phases 6.2-6.6)
 - [ ] Phase 5.2-5.3: Error row highlighting, validation overview card
 - [ ] Phase 3.3-3.4: Per-building data source, building tab strip upgrade
 - [ ] Alexander room_name/location field misalignment (root cause of F1=30.1% score)
+- [ ] E36-S5..S7: Functional verification, UX audit, devils-advocate review (backlog)

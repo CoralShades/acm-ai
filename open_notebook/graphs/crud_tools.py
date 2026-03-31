@@ -195,12 +195,18 @@ async def surreal_query(question: str) -> str:
         # Build vars — always include $sid, optionally $val for search terms
         query_vars: dict = {"sid": sid}
 
-        # Extract search value if the query uses $val
-        if "$val" in check.sanitized_query:
+        # Extract search value if the query uses $val or other common param names
+        sanitized = check.sanitized_query
+        if "$val" in sanitized:
             val = _extract_search_value(question)
             query_vars["val"] = val
+        # Also handle LLM-generated queries that use alternate variable names
+        for param_name in re.findall(r"\$(\w+)", sanitized):
+            if param_name not in query_vars:
+                # Bind unmatched params to the extracted search value
+                query_vars[param_name] = _extract_search_value(question)
 
-        result = await repo_query(check.sanitized_query, query_vars)
+        result = await repo_query(sanitized, query_vars)
 
         # Flatten nested list results from SurrealDB
         if (

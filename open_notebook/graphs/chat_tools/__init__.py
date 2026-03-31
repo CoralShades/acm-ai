@@ -11,6 +11,8 @@ from langchain_core.tools import BaseTool
 from open_notebook.graphs.chat_tools.acm_tools import (
     get_acm_record_detail,
     get_acm_stats,
+    get_source_metadata,
+    list_acm_buildings,
     search_acm_by_building,
     search_acm_by_material,
     search_acm_by_risk,
@@ -39,6 +41,8 @@ def get_acm_tools(
         search_acm_by_material,
         get_acm_stats,
         get_acm_record_detail,
+        list_acm_buildings,
+        get_source_metadata,
         semantic_search_acm,
     ]
 

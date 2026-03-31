@@ -2,7 +2,7 @@
 
 import React, { useMemo, useEffect } from 'react'
 import { CopilotChat } from '@copilotkit/react-ui'
-import { useCopilotReadable, useLangGraphInterrupt, useCopilotChatSuggestions } from '@copilotkit/react-core'
+import { useCopilotReadable, useLangGraphInterrupt } from '@copilotkit/react-core'
 import { SmartChatProvider } from './SmartChatProvider'
 import { useUnifiedChat } from '@/lib/hooks/useUnifiedChat'
 import { UnifiedToolRenderers } from './UnifiedToolRenderers'
@@ -157,16 +157,22 @@ function UnifiedChatPanelContent({
     ),
   })
 
-  // Context-aware quick-start suggestions shown before the first message
-  useCopilotChatSuggestions(
-    {
-      instructions: hasAcmData
-        ? `Suggest 3 helpful questions for a compliance officer viewing ACM records. Focus on: risk summary, building overview, high-risk items. Keep suggestions under 8 words each.`
-        : `Suggest 3 helpful questions about this document. Focus on: key findings, recommendations, summary. Keep suggestions under 8 words each.`,
-      minSuggestions: 2,
-      maxSuggestions: 3,
-    },
-    [sourceId, hasAcmData]
+  // Static quick-start suggestions — useCopilotChatSuggestions doesn't work with
+  // custom AG-UI backends (copilotkitSuggest tool never injected into LangGraph).
+  // Static suggestions are faster, free, and more reliable.
+  const suggestions = useMemo(
+    () =>
+      hasAcmData
+        ? [
+            { title: 'Show ACM statistics summary', message: 'Give me a summary of ACM statistics for this document' },
+            { title: 'List all buildings', message: 'What buildings are in this document?' },
+            { title: 'Find high risk items', message: 'Show me all high risk ACM items' },
+          ]
+        : [
+            { title: 'Summarize this document', message: 'Give me a summary of this document' },
+            { title: 'Key findings', message: 'What are the key findings in this document?' },
+          ],
+    [hasAcmData]
   )
 
   return (
@@ -192,6 +198,7 @@ function UnifiedChatPanelContent({
         <div className="flex-1 min-h-0" key={effectiveSessionId || 'default'}>
           <CopilotChat
             className="h-full"
+            suggestions={suggestions}
             labels={{
               title: 'ACM-AI Chat',
               initial: sourceId

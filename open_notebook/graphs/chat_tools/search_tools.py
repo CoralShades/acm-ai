@@ -35,7 +35,27 @@ async def search_documents(query: str, limit: int = 10) -> str:
         from open_notebook.domain.models import model_manager
 
         embedding_model = await model_manager.get_embedding_model()
-        query_embedding = embedding_model.embed_query(query)
+        if not embedding_model:
+            return json.dumps(
+                {
+                    "error": "No embedding model configured. Vector search unavailable.",
+                    "results": [],
+                }
+            )
+        # Esperanto embedding models may use embed_query() or embed()
+        if hasattr(embedding_model, "embed_query"):
+            query_embedding = embedding_model.embed_query(query)
+        elif hasattr(embedding_model, "embed"):
+            query_embedding = embedding_model.embed(query)
+        elif hasattr(embedding_model, "embed_documents"):
+            query_embedding = embedding_model.embed_documents([query])[0]
+        else:
+            return json.dumps(
+                {
+                    "error": f"Embedding model {type(embedding_model).__name__} has no embed method.",
+                    "results": [],
+                }
+            )
 
         # Build source filter for scoping
         source_filter = ""
