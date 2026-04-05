@@ -1,16 +1,19 @@
 import { create } from 'zustand'
-import type { ChatSessionSummary, SessionListResponse } from '@/lib/types/chat-session'
+import type { ChatSessionSummary, MessageHistoryResponse, SessionListResponse } from '@/lib/types/chat-session'
 
 interface ChatSessionStoreState {
   sessions: ChatSessionSummary[]
   activeSessionId: string | null
   isLoading: boolean
+  /** Session ID for which message history has been loaded (prevents cross-session race). */
+  messagesLoadedFor: string | null
 
   fetchSessions: (sourceId: string) => Promise<void>
   createSession: (sourceId: string, title?: string) => Promise<ChatSessionSummary | null>
   renameSession: (sourceId: string, sessionId: string, title: string) => Promise<void>
   deleteSession: (sourceId: string, sessionId: string) => Promise<void>
   setActive: (sessionId: string | null) => void
+  loadMessages: (sourceId: string, sessionId: string) => Promise<MessageHistoryResponse>
 }
 
 function sessionsUrl(sourceId: string) {
@@ -21,10 +24,18 @@ function sessionUrl(sourceId: string, sessionId: string) {
   return `/api/sources/${encodeURIComponent(sourceId)}/unified-sessions/${encodeURIComponent(sessionId)}`
 }
 
+function sessionMessagesUrl(sourceId: string, sessionId: string) {
+  return `/api/sources/${encodeURIComponent(sourceId)}/unified-sessions/${encodeURIComponent(sessionId)}/messages`
+}
+
+/** ISO timestamp threshold: sessions updated within 10 minutes are considered recent. */
+const RECENT_SESSION_MS = 10 * 60 * 1000
+
 export const useChatSessionStore = create<ChatSessionStoreState>((set, get) => ({
   sessions: [],
   activeSessionId: null,
   isLoading: false,
+  messagesLoadedFor: null,
 
   fetchSessions: async (sourceId: string) => {
     set({ isLoading: true })
@@ -42,7 +53,14 @@ export const useChatSessionStore = create<ChatSessionStoreState>((set, get) => (
           const tb = b.updated ?? b.created ?? ''
           return tb.localeCompare(ta)
         })
-        set({ activeSessionId: sorted[0].id })
+        const mostRecent = sorted[0]
+        const updatedAt = mostRecent.updated ?? mostRecent.created ?? null
+        const isRecent =
+          updatedAt !== null &&
+          Date.now() - new Date(updatedAt).getTime() < RECENT_SESSION_MS
+        // Activate most-recent session; clear messagesLoadedFor so history is fetched
+        // only when the session was recently active (within 10 min threshold).
+        set({ activeSessionId: mostRecent.id, messagesLoadedFor: isRecent ? null : mostRecent.id })
       }
     } catch (err) {
       // Graceful degradation: if sessions endpoint isn't available (e.g., API
@@ -112,6 +130,27 @@ export const useChatSessionStore = create<ChatSessionStoreState>((set, get) => (
   },
 
   setActive: (sessionId: string | null) => {
-    set({ activeSessionId: sessionId })
+    // Clear messagesLoadedFor so the panel re-fetches history for the new session
+    set({ activeSessionId: sessionId, messagesLoadedFor: null })
+  },
+
+  loadMessages: async (sourceId: string, sessionId: string) => {
+    try {
+      const res = await fetch(sessionMessagesUrl(sourceId, sessionId))
+      if (!res.ok) {
+        console.debug(
+          `[chatSessionStore] loadMessages: non-OK response ${res.status} for session ${sessionId}`
+        )
+        set({ messagesLoadedFor: sessionId })
+        return { messages: [], total: 0 }
+      }
+      const data: MessageHistoryResponse = await res.json()
+      set({ messagesLoadedFor: sessionId })
+      return data
+    } catch (err) {
+      console.error('[chatSessionStore] loadMessages error:', err)
+      set({ messagesLoadedFor: sessionId })
+      return { messages: [], total: 0 }
+    }
   },
 }))

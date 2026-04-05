@@ -340,3 +340,14 @@ Each finding follows:
 - **Description**: Three defects on the jobs page fixed in commit ad3379ef. (1) `api/routers/sources.py` — four aggregate queries used plain string source IDs against `record<source>`-typed columns. SurrealDB's INSIDE operator silently returns 0 rows when comparing `record<source>` fields with uncast strings; wrapping with `type::thing()` resolved building_count, records_count, and tables_count returning null/0 on all job cards. (2) `useSmartChat.ts` — CopilotKit's `useCoAgent` returns a new `setState` reference on every render; placing it in a `useEffect` dependency array caused an infinite re-render loop that froze the page. Fixed with `useRef` stable reference + `didSyncRef` guard. (3) `JobOverviewTab.tsx` — Document Metadata card rendered when `document_meta` was a truthy empty object `{}`; fixed by checking individual field values.
 - **Evidence**: Commit ad3379ef — `api/routers/sources.py`, `frontend/src/components/jobs/JobOverviewTab.tsx`, `frontend/src/lib/hooks/useSmartChat.ts`; artifact at `docs/sprint-artifacts/bug-fix-job-page-crash-counts.md`
 - **Recommendation**: Fixed. SurrealDB `type::thing()` pattern documented in CLAUDE.md. CopilotKit `useRef`/`didSyncRef` stabilization is the canonical pattern for all `useCoAgent` hooks.
+
+---
+
+## Finding 031 — 2026-04-05
+
+- **Date**: 2026-04-05 (Chat & UI Bug Fix Sprint log audit)
+- **Category**: functional
+- **Severity**: INFO
+- **Description**: Log audit of all ACM-AI services after B1-B4 fixes. All services healthy except Ollama container (pre-existing unhealthy state, unrelated to sprint). No new error patterns introduced by this sprint's commits. api-error.log contains only pre-existing errors from March 2026 test runs (MagicMock Pydantic leak in `table_bbox`, `building_record` migration pre-check, row_extractor Ollama failures). Today's test run at 2026-04-05 19:23:29 shows clean extraction pipeline behavior with one expected FAILED test scenario. B1 model IDs confirmed present in `/api/models`. B3 buildings endpoint returns correct dict structure. B4 is frontend-only with no backend log exposure. B2 session messages endpoint not exercised in today's run — requires live chat session for full coverage.
+- **Evidence**: `docs/sprint-artifacts/e36/logs/chat-ui-bugfix-sprint-audit-2026-04-05.md`
+- **Recommendation**: Run a live chat session to generate B2 log coverage. Ollama unhealthy container should be investigated separately — currently causes provider fallback to Anthropic/OpenRouter on all extraction runs.

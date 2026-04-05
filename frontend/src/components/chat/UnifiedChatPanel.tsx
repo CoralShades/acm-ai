@@ -2,7 +2,7 @@
 
 import React, { useMemo, useEffect, useRef } from 'react'
 import { CopilotChat } from '@copilotkit/react-ui'
-import { useCopilotReadable, useLangGraphInterrupt } from '@copilotkit/react-core'
+import { useCopilotReadable, useLangGraphInterrupt, useCopilotChatInternal } from '@copilotkit/react-core'
 import { SmartChatProvider } from './SmartChatProvider'
 import { useUnifiedChat } from '@/lib/hooks/useUnifiedChat'
 import { UnifiedToolRenderers } from './UnifiedToolRenderers'
@@ -13,6 +13,8 @@ import { SessionDropdown } from './SessionDropdown'
 import { HITLApprovalCard } from './renderers/HITLApprovalCard'
 import { useChatSessionStore } from '@/lib/stores/chatSessionStore'
 import { cn } from '@/lib/utils'
+import type { ChatMessage } from '@/lib/types/chat-session'
+import type { Message } from '@copilotkit/shared'
 
 interface UnifiedChatPanelProps {
   sourceId?: string
@@ -21,6 +23,64 @@ interface UnifiedChatPanelProps {
   sessionId?: string
   activeTab?: string
   className?: string
+}
+
+/**
+ * Convert backend ChatMessage to CopilotKit AG-UI Message format.
+ * Messages that cannot be mapped are returned as null and filtered out.
+ */
+function toCopilotMessage(msg: ChatMessage, index: number): Message | null {
+  // Use a stable deterministic id based on position
+  const id = `history-${index}`
+
+  if (msg.role === 'user') {
+    return {
+      id,
+      role: 'user',
+      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+    } satisfies Message
+  }
+
+  if (msg.role === 'assistant') {
+    const toolCalls = msg.tool_calls
+      ? (msg.tool_calls as Array<{ id?: string; type?: string; function?: { name?: string; arguments?: string } }>)
+          .filter((tc) => tc.id && tc.function?.name)
+          .map((tc) => ({
+            id: tc.id as string,
+            type: 'function' as const,
+            function: {
+              name: tc.function?.name ?? '',
+              arguments: tc.function?.arguments ?? '{}',
+            },
+          }))
+      : undefined
+    return {
+      id,
+      role: 'assistant',
+      content: typeof msg.content === 'string' ? (msg.content || undefined) : undefined,
+      ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
+    } satisfies Message
+  }
+
+  if (msg.role === 'tool') {
+    return {
+      id,
+      role: 'tool',
+      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+      toolCallId: msg.tool_call_id ?? id,
+    } satisfies Message
+  }
+
+  if (msg.role === 'system') {
+    return {
+      id,
+      role: 'system',
+      content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+    } satisfies Message
+  }
+
+  // Skip unknown/unsupported roles
+  return null
 }
 
 /**
@@ -96,7 +156,7 @@ function UnifiedChatPanelContent({
   activeTab,
   className,
 }: UnifiedChatPanelProps) {
-  const { activeSessionId, fetchSessions } = useChatSessionStore()
+  const { activeSessionId, fetchSessions, loadMessages, messagesLoadedFor } = useChatSessionStore()
 
   // Fetch sessions when we have a sourceId, and auto-activate the most recent
   useEffect(() => {
@@ -132,6 +192,33 @@ function UnifiedChatPanelContent({
       body: JSON.stringify({ thread_id: ckThreadId }),
     }).catch(() => { /* non-critical */ })
   }, [agentState?.thread_id, sourceId, effectiveSessionId])
+
+  // Inject persisted message history into CopilotKit when activating a session.
+  // useCopilotChatInternal exposes setMessages which replaces the in-memory history.
+  const { setMessages } = useCopilotChatInternal()
+  useEffect(() => {
+    if (!effectiveSessionId || !sourceId || messagesLoadedFor === effectiveSessionId) return
+
+    let cancelled = false
+    loadMessages(sourceId, effectiveSessionId).then((data) => {
+      if (cancelled) return
+      if (data.messages.length === 0) return
+
+      const copilotMessages = data.messages
+        .map((msg, i) => toCopilotMessage(msg, i))
+        .filter((m): m is Message => m !== null)
+
+      if (copilotMessages.length > 0) {
+        setMessages(copilotMessages)
+      }
+    }).catch(() => {
+      // Non-critical: if injection fails chat still works with empty history
+    })
+
+    return () => { cancelled = true }
+  // messagesLoadedFor changes to null whenever session switches — triggering a reload
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveSessionId, sourceId, messagesLoadedFor])
 
   const readableValue = useMemo(
     () => ({
