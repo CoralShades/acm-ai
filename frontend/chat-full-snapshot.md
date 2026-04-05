@@ -1,0 +1,230 @@
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - button "Open Next.js Dev Tools" [ref=e8] [cursor=pointer]:
+    - img [ref=e9]
+  - alert [ref=e12]
+  - main [ref=e13]:
+    - generic [ref=e97]:
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - img "VAEA - Victorian Asbestos Eradication Agency" [ref=e101]
+            - generic [ref=e102]: VAEA | ACM AI
+          - button "Collapse sidebar" [ref=e103] [cursor=pointer]:
+            - img
+        - navigation [ref=e104]:
+          - button "Upload Document" [ref=e106] [cursor=pointer]:
+            - img
+            - text: Upload Document
+          - generic [ref=e108]:
+            - button "Workspace" [expanded] [ref=e109] [cursor=pointer]:
+              - generic [ref=e110]: Workspace
+              - img
+            - generic [ref=e111]:
+              - link "Dashboard" [ref=e112] [cursor=pointer]:
+                - /url: /
+                - button "Dashboard" [ref=e113]:
+                  - img
+                  - generic [ref=e114]: Dashboard
+              - link "Jobs" [ref=e115] [cursor=pointer]:
+                - /url: /jobs
+                - button "Jobs" [ref=e116]:
+                  - img
+                  - generic [ref=e117]: Jobs
+              - link "AI-Editor" [ref=e118] [cursor=pointer]:
+                - /url: /ai-editor
+                - button "AI-Editor" [ref=e119]:
+                  - img
+                  - generic [ref=e120]: AI-Editor
+        - generic [ref=e121]:
+          - generic [ref=e124]: Powered by CoralShades
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - generic [ref=e127]:
+                - img [ref=e128]
+                - text: Quick actions
+              - generic:
+                - generic: Ctrl+
+                - text: K
+            - paragraph [ref=e130]: Navigation, search, ask, theme
+          - button "Settings" [ref=e131] [cursor=pointer]:
+            - img
+            - text: Settings
+          - generic [ref=e132]:
+            - link "VAEA" [ref=e133] [cursor=pointer]:
+              - /url: https://vaea.coralshades.ai
+              - text: VAEA
+              - img [ref=e134]
+            - generic [ref=e138]: ·
+            - link "Docs" [ref=e139] [cursor=pointer]:
+              - /url: https://vaea.coralshades.ai/docs
+              - text: Docs
+              - img [ref=e140]
+      - main [ref=e144]:
+        - generic [ref=e145]:
+          - generic [ref=e147]:
+            - generic [ref=e148]:
+              - navigation "Breadcrumb" [ref=e149]:
+                - list [ref=e150]:
+                  - listitem [ref=e151]:
+                    - link "Jobs" [ref=e152] [cursor=pointer]:
+                      - /url: /jobs
+                  - listitem [ref=e153]:
+                    - img [ref=e154]
+                  - listitem [ref=e156]:
+                    - generic [ref=e157]: AlexanderHospital (1).pdf
+              - generic [ref=e158]:
+                - button "Cancel Extraction" [ref=e159] [cursor=pointer]:
+                  - img
+                  - text: Cancel Extraction
+                - button "Export CSV" [ref=e160] [cursor=pointer]:
+                  - img
+                  - text: Export CSV
+                - button "Export Excel" [ref=e161] [cursor=pointer]:
+                  - img
+                  - text: Export Excel
+            - generic [ref=e162]:
+              - generic [ref=e163]:
+                - heading "AlexanderHospital (1).pdf" [level=1] [ref=e164]
+                - button "Edit job title" [ref=e165] [cursor=pointer]:
+                  - img
+              - generic [ref=e166]: Extracting
+              - generic [ref=e167]: "Uploaded: 2 days ago"
+              - generic [ref=e168]: 118 records
+              - generic [ref=e169]: 7 buildings
+          - generic [ref=e170]:
+            - generic [ref=e172]:
+              - tablist [ref=e174] [cursor=pointer]:
+                - tab "Overview" [selected] [ref=e175]
+                - tab "Buildings" [ref=e176]
+                - tab "ACM Records" [ref=e177]
+                - tab "Content" [ref=e178]
+                - tab "Raw Tables" [ref=e179]
+                - tab "Log" [ref=e180]
+              - tabpanel "Overview" [ref=e182] [cursor=pointer]:
+                - generic [ref=e183]:
+                  - generic [ref=e184]:
+                    - generic [ref=e185]:
+                      - generic [ref=e187]:
+                        - img [ref=e188]
+                        - text: Total Records
+                      - paragraph [ref=e192]: "118"
+                    - generic [ref=e193]:
+                      - generic [ref=e195]:
+                        - img [ref=e196]
+                        - text: Buildings
+                      - paragraph [ref=e201]: "7"
+                    - generic [ref=e202]:
+                      - generic [ref=e204]:
+                        - img [ref=e205]
+                        - text: Missing Fields %
+                      - paragraph [ref=e210]: 42.5%
+                    - generic [ref=e211]:
+                      - generic [ref=e213]:
+                        - img [ref=e214]
+                        - text: Extraction Quality
+                      - paragraph [ref=e218]: 0/100
+                  - generic [ref=e219]:
+                    - generic [ref=e221]:
+                      - img [ref=e222]
+                      - text: Validation Passed
+                    - paragraph [ref=e226]: All 118 records pass validation.
+                  - generic [ref=e227]:
+                    - generic [ref=e229]: Document Metadata
+                    - generic [ref=e232]:
+                      - img [ref=e233]
+                      - generic [ref=e236]:
+                        - paragraph [ref=e237]: Document Type
+                        - paragraph [ref=e238]: ARA
+                  - generic [ref=e239]:
+                    - heading "Quick Actions" [level=2] [ref=e240]
+                    - generic [ref=e241]:
+                      - link "Re-Review Buildings" [ref=e242]:
+                        - /url: /jobs/source:y6ho76tw33ky4rga7c30/review/buildings
+                        - text: Re-Review Buildings
+                        - img
+                      - link "Re-Review Records" [ref=e243]:
+                        - /url: /jobs/source:y6ho76tw33ky4rga7c30/review/records
+                        - text: Re-Review Records
+                        - img
+                      - button "Re-Extract" [ref=e244]:
+                        - img
+                        - text: Re-Extract
+            - generic [ref=e245]:
+              - generic [ref=e246]:
+                - generic [ref=e254]:
+                  - img [ref=e255]
+                  - generic [ref=e257]: ACM-AI Chat
+                - button "Collapse chat panel" [ref=e258] [cursor=pointer]:
+                  - img
+              - generic [ref=e260]:
+                - generic [ref=e261]:
+                  - button "Switch chat session" [ref=e262] [cursor=pointer]:
+                    - generic [ref=e263]: Chat 2026-03-31 17:01
+                    - img [ref=e264]
+                  - button "Default" [ref=e266] [cursor=pointer]:
+                    - text: Default
+                    - img [ref=e267]
+                - generic [ref=e270]:
+                  - generic [ref=e271]:
+                    - generic [ref=e272]:
+                      - generic [ref=e273]:
+                        - paragraph [ref=e335]: Ask about this document, query records, or make changes...
+                        - button [ref=e277] [cursor=pointer]:
+                          - img
+                      - generic [ref=e293]: Show ACM statistics for this document
+                      - generic [ref=e294]:
+                        - button "Analyzing statistics" [ref=e337] [cursor=pointer]:
+                          - img [ref=e340]
+                          - generic [ref=e342]: Analyzing statistics
+                          - img [ref=e343]
+                        - paragraph [ref=e345]: I'll get the ACM statistics for this document to give you an overview of the data.
+                        - button [ref=e304] [cursor=pointer]:
+                          - img
+                      - generic [ref=e346]:
+                        - generic [ref=e347]:
+                          - paragraph [ref=e348]: "Here are the ACM statistics for this document:"
+                          - heading "📊 ACM Data Summary" [level=2] [ref=e349]
+                          - list [ref=e350]:
+                            - listitem [ref=e351]:
+                              - strong [ref=e352]: "Total ACM Records:"
+                              - text: 175 items
+                            - listitem [ref=e353]:
+                              - strong [ref=e354]: "Risk Distribution:"
+                              - list [ref=e355]
+                            - listitem [ref=e359]:
+                              - strong [ref=e360]: "Buildings:"
+                              - text: 0 identified
+                            - listitem [ref=e361]:
+                              - strong [ref=e362]: "Rooms/Areas:"
+                              - text: 29 different locations
+                          - paragraph [ref=e363]: It looks like this document contains 175 ACM records, but the risk classifications haven't been populated yet. This is common with raw survey data that may need further processing or classification.
+                          - paragraph [ref=e364]: "The records are spread across 29 different rooms or areas. Would you like me to:"
+                          - list [ref=e365]:
+                            - listitem [ref=e366]: Show you a list of the buildings/areas in this survey?
+                            - listitem [ref=e367]: Display some sample records to see what data is available?
+                            - listitem [ref=e368]: Search for specific types of materials or locations?
+                        - button [ref=e370] [cursor=pointer]:
+                          - img
+                    - generic [ref=e279]:
+                      - button "Show ACM statistics summary" [ref=e280] [cursor=pointer]
+                      - button "List all buildings" [ref=e281] [cursor=pointer]
+                      - button "Find high risk items" [ref=e282] [cursor=pointer]
+                  - generic [ref=e283]:
+                    - generic [ref=e284]:
+                      - img [ref=e285]
+                      - generic [ref=e287] [cursor=pointer]: ACM Data
+                      - switch "ACM Data" [checked] [ref=e288] [cursor=pointer]
+                    - generic [ref=e289]:
+                      - textbox "Ask a question... (Ctrl+Enter to send)" [ref=e290]
+                      - button [disabled]:
+                        - img
+  - generic [ref=e94]:
+    - heading "Command Palette" [level=2] [ref=e95]
+    - paragraph [ref=e96]: Navigate, search, or ask your knowledge base
+  - button "Web Inspector" [ref=e249]:
+    - note [ref=e250]:
+      - generic [ref=e251]: CopilotKit v1.50 is now live!
+    - img "Inspector logo" [ref=e253]
+  - region "Notifications alt+T"

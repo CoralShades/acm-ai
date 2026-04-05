@@ -1,6 +1,35 @@
 # Chat System Debug & Fix — 2026-03-31
 
-**Branch**: main
+## Final Status
+
+**11 fixes merged. 11/11 verifications passed. 1 known pre-existing issue.**
+
+| Metric | Value |
+|--------|-------|
+| Fixes applied | 11 (Fixes 1–11) |
+| Root causes resolved | RC-1, RC-2, RC-3 (logging), RC-4, RC-5, RC-6, S-1 + concurrency + init leak |
+| Verifications passed | 11/11 |
+| Known pre-existing issue | `building_record.record_count` NULL (data model debt, not chat bug) |
+
+### Modified Files
+
+**Backend**
+- `open_notebook/graphs/unified_agent.py` — state persistence, regex fix, session_id field, debug logging
+- `open_notebook/graphs/chat_tools/search_tools.py` — parameterized queries (SQL injection fix)
+- `open_notebook/graphs/crud_tools.py` — _pending_writes TTL cleanup
+- `api/routers/agui_chat.py` — per-request agent creation (concurrency fix)
+- `api/routers/unified_sessions.py` — thread_id field on UpdateSessionRequest
+
+**Frontend**
+- `frontend/src/lib/hooks/useUnifiedChat.ts` — thread_id from chatSessionStore into agent state
+- `frontend/src/components/chat/UnifiedChatPanel.tsx` — capture + persist CopilotKit thread_id
+- `frontend/src/components/chat/UnifiedToolRenderers.tsx` — parseResult error propagation
+- `frontend/src/components/providers/CopilotProvider.tsx` — _initPromise reset on failure
+- `frontend/src/app/api/copilotkit/route.ts` — 503 error handling
+
+---
+
+**Branch**: fix/chat-pipeline-v3
 **Date**: 2026-03-31
 **Trace IDs**: `1249fde5-2ce2-4940-a7a3-95c62a7ddbcf`, `82b131ac-05d6-4fa5-a6c1-e808cecef770`, `53e7f1e5-147a-4362-91b3-b834a21cbc76`
 **Scope**: Full chat stack — CopilotKit → AG-UI → LangGraph unified_agent → SurrealDB

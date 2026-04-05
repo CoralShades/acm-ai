@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-28
+updated: 2026-03-31
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -924,6 +924,17 @@ development_status:
   # ─────────────────────────────────────────────────────
   chat-debug-4-additional-bugs-2026-03-31: done  # fix(chat): 4 additional bugs. #6: context_aware_tools wrapper — source_id propagation to ToolNode via LangGraph state (root cause of all "No job context" errors). #7: IS NOT NONE guards on SurrealQL string ops (NULL crash fix for search_acm_by_building/room/material). #8: embedding model API fallback chain (embed_query/embed/embed_documents). #9: static suggestions replacing broken useCopilotChatSuggestions hook. Plus: ACMAssistantMessage.generativeUI() rendering (root cause of invisible tool renders).
 
+  # ─────────────────────────────────────────────────────
+  # Chat Pipeline Deep Fix (2026-03-31)
+  # Branch: fix/chat-pipeline-v3
+  # 11 fixes across 9 files: RC-1..RC-6 + S-1 + concurrency + CopilotKit init leak + session sync
+  # Root causes: source_id state loss, mixed-case regex gap, thread_id mismatch,
+  #   _pending_writes TTL-less memory leak, shared agent concurrency corruption,
+  #   parseResult swallowing errors, f-string SQL injection in search_tools.py
+  # Artifact: docs/sprint-artifacts/chat-debug-2026-03-31.md
+  # ─────────────────────────────────────────────────────
+  chat-debug-11-fixes-2026-03-31: done  # fix(chat): 11 root-cause fixes. RC-1: source_id/notebook_id persisted back to LangGraph state after resolution (call_unified_agent). RC-2: regex expanded to [a-zA-Z0-9_] — mixed-case SurrealDB IDs no longer silently bypassed. RC-4: session_id added to UnifiedAgentState; useUnifiedChat pushes thread_id from chatSessionStore; UnifiedChatPanel+unified_sessions.py persist CopilotKit thread_id bidirectionally. RC-5: _pending_writes TTL-based cleanup (10-min purge on each preview_write). RC-6: parseResult propagates error-shaped payloads instead of swallowing them. S-1: f-string SQL replaced with $source_id/$notebook_id bindings in search_tools.py. Per-request agent creation in agui_chat.py (concurrency fix). _initPromise reset on failure in copilotkit/route.ts. Structured logging at all _resolve_source_id() branches. 11 checks verified (npm build, pytest, ruff, tool rendering, HITL flow, session sync). Known pre-existing: building_record.record_count NULL (data model debt, not chat bug). 10 files modified.
+
   # Integration Validation: All 6 steps passed 2026-02-23
   # STEP 1: GET /api/settings/extraction/stage-models → HTTP 200 ✓
   # STEP 2: Ollama mxbai-embed-large health → 1024 floats ✓
@@ -937,8 +948,8 @@ development_status:
 # SUMMARY:
 # ========
 # Total Epics: 36  (+6 V3 epics: E30-E35, +1 E36 verification, +1 E37 per-row extraction)
-# Total Stories: 318  (315 prior + 1 fix-chat-pipeline + 1 chat-debug-5-issues + 1 chat-debug-4-additional)
-# Stories Done: 288 (91%)  -- 284 prior + fix-chat-pipeline + chat-debug-5-issues + chat-debug-4-additional
+# Total Stories: 319  (315 prior + 1 fix-chat-pipeline + 1 chat-debug-5-issues + 1 chat-debug-4-additional + 1 chat-debug-11-fixes)
+# Stories Done: 289 (91%)  -- 284 prior + fix-chat-pipeline + chat-debug-5-issues + chat-debug-4-additional + chat-debug-11-fixes
 # Stories Review: 0
 # Stories In-Progress: 1 (mcs11-jobs-source-unification — E2E verification pending)
 # Stories Blocked: 0
@@ -960,7 +971,19 @@ development_status:
 #   tool name alignment (18 renderers / 17 LLM tools), isThinkingContent() compact indicator,
 #   ItemDetailCard + BuildingSummaryCard wired. Artifact: chat-debug-2026-03-28.md.
 #
-# Last Updated: 2026-03-28
+# Chat Debug Round 2 (2026-03-31): 9 additional bugs fixed in commit 5f7c8fab + deep pipeline fix.
+#   4 more bugs (context_aware_tools wrapper, NULL guards, embedding fallback, static suggestions).
+#   ACMAssistantMessage.generativeUI() root cause of invisible tool renders fixed.
+#   E2E verified: 13/13 tool steps rendered, 0 JS errors.
+#
+# Chat Pipeline Deep Fix (2026-03-31): 11 root-cause fixes across 10 files.
+#   RC-1: source_id persisted in LangGraph state. RC-2: mixed-case ID regex fix.
+#   RC-4: bidirectional session/thread_id alignment. RC-5: _pending_writes TTL cleanup.
+#   RC-6: parseResult error propagation. S-1: parameterized search_tools queries.
+#   Concurrency: per-request agent creation. CopilotKit: _initPromise reset on failure.
+#   11/11 verifications passed. Artifact: chat-debug-2026-03-31.md.
+#
+# Last Updated: 2026-03-31
 #
 # MCS Post-Validation Fixes (2026-03-19):
 # MCS8 DONE: Ghost save bug in base.py fixed. SurrealDB RecordID auto-parse root cause resolved.

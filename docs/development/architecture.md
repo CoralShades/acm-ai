@@ -538,11 +538,21 @@ FROM python:3.11-slim as runtime
 
 ACM-AI integrates CopilotKit v1.51.4 with a single unified LangGraph agent (`unified_agent`) connecting to the frontend via the AG-UI protocol. The previous dual-chat architecture (separate supervisor + CRUD graphs, `SmartChatPanel`, `JobCrudChatPanel`) was fully deprecated in the Unified Chat Epic (2026-03-22).
 
-### Unified Agent (Complete — 2026-03-22; async fix — 2026-03-23)
+### Unified Agent (Complete — 2026-03-22; async fix — 2026-03-23; pipeline hardening — 2026-03-31)
 
 The separate `supervisor_graph` and `crud_graph` have been replaced by a single unified LangGraph agent. 14 legacy files were deleted: 8 backend (`supervisor_agent.py`, `crud_agent.py`, `chat.py`, `source_chat.py`, `acm_analyst_agent.py`, `doc_search_agent.py`, `api/routers/chat.py`, `api/routers/source_chat.py`) and 6 frontend (`SmartChatPanel.tsx`, `ChatModeSwitch.tsx`, `CrudToolRenderers.tsx`, `useSmartChat.ts`, `smart-chat.ts`, `copilot-crud/route.ts`).
 
 A root-cause fix (commit `beedf620`, branch `fix/chat-v2`) resolved a `contextvars` scoping bug: Python 3.11's `ThreadPoolExecutor` does not propagate `contextvars`, so the previous `_run_async()` threadpool hack silently discarded `source_id` context, causing all tools to return stale data for every job. All 16 tools are now async; the threadpool helpers are removed.
+
+A second round of pipeline fixes (branch `fix/chat-pipeline-v3`) resolved 11 further root causes:
+- `call_unified_agent` now writes resolved `source_id`/`notebook_id` back to LangGraph state (prevents re-resolution loss on subsequent node invocations)
+- `_extract_source_id_from_messages` regex expanded from `[a-z0-9]` to `[a-zA-Z0-9_]` (mixed-case SurrealDB IDs no longer silently fail)
+- `agui_chat.py` creates a new agent per-request instead of sharing a module-level singleton (concurrent request corruption fix)
+- `_pending_writes` dict has a 10-minute TTL with purge-on-write (prevents unbounded accumulation)
+- `UnifiedToolRenderers.parseResult` propagates error-shaped payloads to renderers (failed tool calls now show UI)
+- `search_documents`/`text_search_documents` use parameterized `$source_id`/`$notebook_id` bindings (replaces f-string interpolation)
+- Bidirectional session/thread_id alignment: `useUnifiedChat` passes `thread_id` from `chatSessionStore` into agent state; `UnifiedChatPanel` persists CopilotKit's internal `thread_id` back to the sessions API via `PUT /api/sessions/{id}`
+- `_initPromise` in `copilotkit/route.ts` resets on failure, preventing init-state leaks from blocking subsequent requests
 
 Key components:
 
@@ -623,12 +633,15 @@ Backend state field:
 | Pattern | Implementation | Purpose |
 |---------|---------------|---------|
 | Lazy singleton runtime | Module-level promise in route.ts | Avoid per-request CopilotRuntime instantiation |
+| Per-request agent | New agent created inside endpoint handler | Prevent concurrent request state corruption |
 | Backend tool rendering | useRenderToolCall | Render custom UI for LangGraph tool results |
 | Default tool fallback | useDefaultTool | Catch-all for unregistered tool calls |
 | HITL approval | interrupt() + useLangGraphInterrupt | Gate irreversible writes behind user approval |
 | State streaming | copilotkit_emit_state | Show agent progress in real-time |
 | Page context | useCopilotReadable | Expose frontend state to agent |
 | In-chat model switching | ChatModelSelector + useCoAgent state_id | User selects model per conversation; state flows to backend |
+| Bidirectional thread sync | useUnifiedChat + UnifiedChatPanel + unified_sessions.py | CopilotKit thread_id and app session_id kept in sync across both directions |
+| Source_id state persistence | call_unified_agent returns resolved ids to state | Prevents re-resolution failure across multi-node graph invocations |
 
 ### Dependencies
 
