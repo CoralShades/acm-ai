@@ -388,36 +388,59 @@ async def list_acm_buildings(limit: int = 50) -> str:
         vars_ = _build_vars(source_id, notebook_id, limit=limit)
         buildings = await repo_query(building_query, vars_)
 
-        # Get per-building record counts and risk stats from acm_record
-        stats_query = f"""
-            SELECT
-                building_name,
-                count() as record_count,
-                count(risk_status = 'High' OR NULL) as high_risk,
-                count(risk_status = 'Medium' OR NULL) as medium_risk,
-                count(risk_status = 'Low' OR NULL) as low_risk
-            FROM acm_record
-            WHERE {filter_clause}
-            GROUP BY building_name
-        """
-        stats_vars = _build_vars(source_id, notebook_id)
-        stats = await repo_query(stats_query, stats_vars)
+        # Get per-building record counts and risk stats via building_record_id FK
+        # (matches the REST API approach in acm.py — avoids building_name mismatch)
+        stats_by_id: dict[str, dict] = {}
+        if buildings:
+            fk_stats_query = f"""
+                SELECT
+                    building_record_id,
+                    count() as record_count,
+                    count(risk_status = 'High' OR NULL) as high_risk,
+                    count(risk_status = 'Medium' OR NULL) as medium_risk,
+                    count(risk_status = 'Low' OR NULL) as low_risk
+                FROM acm_record
+                WHERE {filter_clause} AND building_record_id != NONE
+                GROUP BY building_record_id
+            """
+            stats_vars = _build_vars(source_id, notebook_id)
+            fk_stats = await repo_query(fk_stats_query, stats_vars)
+            for s in fk_stats:
+                bid = str(s.get("building_record_id", ""))
+                if bid:
+                    stats_by_id[bid] = s
 
-        # Build stats lookup
-        stats_by_name = {}
-        for s in stats:
-            name = s.get("building_name", "")
-            if name:
-                stats_by_name[name] = s
+        # Also group by building_name for records without FK (mixed datasets)
+        stats_by_name: dict[str, dict] = {}
+        if buildings:
+            name_stats_query = f"""
+                SELECT
+                    building_name,
+                    count() as record_count,
+                    count(risk_status = 'High' OR NULL) as high_risk,
+                    count(risk_status = 'Medium' OR NULL) as medium_risk,
+                    count(risk_status = 'Low' OR NULL) as low_risk
+                FROM acm_record
+                WHERE {filter_clause}
+                GROUP BY building_name
+            """
+            stats_vars = _build_vars(source_id, notebook_id)
+            name_stats = await repo_query(name_stats_query, stats_vars)
+            for s in name_stats:
+                name = s.get("building_name", "")
+                if name:
+                    stats_by_name[name] = s
 
         result_buildings = []
         if buildings:
             for b in buildings:
+                bid = str(b.get("id", ""))
                 name = b.get("building_name", "")
-                s = stats_by_name.get(name, {})
+                # Prefer FK-based stats, fall back to name-based
+                s = stats_by_id.get(bid) or stats_by_name.get(name, {})
                 result_buildings.append(
                     {
-                        "building_id": str(b.get("id", "")),
+                        "building_id": bid,
                         "internal_id": b.get("internal_id", ""),
                         "building_name": name,
                         "address": b.get("building_address", ""),

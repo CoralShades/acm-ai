@@ -94,11 +94,11 @@ FALLBACK_MODELS = {
         "embedding": "mxbai-embed-large",
     },
     "anthropic": {
-        "chat": "claude-3-5-haiku-20241022",
-        "transformation": "claude-sonnet-4-20250514",
-        "tools": "claude-sonnet-4-20250514",
-        "large_context": "claude-sonnet-4-20250514",
-        "extraction": "claude-sonnet-4-20250514",
+        "chat": "claude-haiku-4-5-20251001",
+        "transformation": "claude-sonnet-4-5-20250514",
+        "tools": "claude-sonnet-4-5-20250514",
+        "large_context": "claude-sonnet-4-5-20250514",
+        "extraction": "claude-sonnet-4-5-20250514",
         "embedding": None,
     },
     "openai": {
@@ -136,7 +136,11 @@ MODEL_CATALOG: list[tuple[str, str, str]] = [
     ("ollama", "phi4:14b-q4_K_M", "language"),
     ("ollama", "mistral:7b", "language"),
     ("ollama", "mxbai-embed-large", "embedding"),
-    # Anthropic
+    # Anthropic — latest model IDs (2026-04)
+    ("anthropic", "claude-haiku-4-5-20251001", "language"),
+    ("anthropic", "claude-sonnet-4-5-20250514", "language"),
+    ("anthropic", "claude-opus-4-6-20250610", "language"),
+    # Legacy IDs kept for existing DB references
     ("anthropic", "claude-3-5-haiku-20241022", "language"),
     ("anthropic", "claude-3-5-sonnet-20241022", "language"),
     ("anthropic", "claude-sonnet-4-20250514", "language"),

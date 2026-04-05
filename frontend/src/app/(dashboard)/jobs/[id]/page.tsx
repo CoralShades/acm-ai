@@ -151,6 +151,22 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
     totalBuildings: stats?.building_count || 0,
   })
 
+  // Derive effective review status — prevents stale 'extracting' in DB from
+  // showing Cancel button after extraction has actually completed (B4 fix)
+  const effectiveReviewStatus = useMemo(() => {
+    if (isStreaming || panelPhase === 'extracting') return 'extracting'
+    // DB says extracting but extraction progress confirms it finished — stale status.
+    // Note: 'idle' is excluded — on cold page load panelPhase starts as idle before
+    // SSE connects, so we must not override during the SSE initialization window.
+    if (
+      source?.review_status === 'extracting' &&
+      (panelPhase === 'completed' || panelPhase === 'failed')
+    ) {
+      return 'pending_review'
+    }
+    return source?.review_status
+  }, [isStreaming, panelPhase, source?.review_status])
+
   // Try V3 building_record table first, fall back to legacy jobs endpoint
   // which derives buildings from acm_record data (works for all extraction modes)
   const { data: v3BuildingsData, isLoading: isLoadingV3 } = useBuildings(sourceId, { isExtracting: isStreaming || panelPhase === 'extracting' })
@@ -310,7 +326,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
           <JobDetailHeader
             sourceId={sourceId}
             title={source?.title ?? null}
-            reviewStatus={isStreaming || panelPhase === 'extracting' ? 'extracting' : source?.review_status}
+            reviewStatus={effectiveReviewStatus}
             createdAt={source?.created ?? null}
             recordCount={stats?.total_records}
             buildingCount={stats?.building_count}
@@ -323,8 +339,8 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
             <ExtractionStatusBanner
               operationId={source.command_id}
               enabled={
-                source?.review_status === 'processing' ||
-                source?.review_status === 'extracting' ||
+                effectiveReviewStatus === 'processing' ||
+                effectiveReviewStatus === 'extracting' ||
                 panelPhase === 'extracting' ||
                 isStreaming
               }
@@ -394,7 +410,7 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
                     sourceId={sourceId}
                     recordCount={stats?.total_records ?? 0}
                     buildingCount={stats?.building_count ?? 0}
-                    reviewStatus={source?.review_status}
+                    reviewStatus={effectiveReviewStatus}
                     missingFieldsPercent={missingFieldsPercent}
                     extractionQualityScore={extractionQualityScore}
                     onReExtract={handleReExtract}

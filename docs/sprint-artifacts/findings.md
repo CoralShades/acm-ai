@@ -26,20 +26,20 @@
 | B2 (full) | "Chat sessions don't persist — empty on navigate/refresh, no auto-restore" |
 | B4 | "Cancel Extraction button visible on completed jobs (Alexander)" |
 
-## Root Cause Hypotheses
+## Root Causes (Confirmed 2026-04-05)
 
-### B1 — Model Selection
-- **Hypothesis**: `model_provisioning.py` registers models with provider-specific names but LangChain's `init_chat_model()` needs exact model ID strings. Haiku might be registered as `claude-3-haiku-20240307` (old) instead of `claude-haiku-4-5-20251001`.
-- **Check**: Query `SELECT * FROM model WHERE provider = 'anthropic'` in SurrealDB.
+### B1 — Model Selection (CONFIRMED)
+- **Root cause**: `MODEL_CATALOG` in `model_provisioning.py` had old Anthropic model IDs. `claude-3-5-haiku-20241022` (old) instead of `claude-haiku-4-5-20251001` (current). `FALLBACK_MODELS` also referenced the old haiku ID.
+- **Fix**: Updated MODEL_CATALOG with latest 3 Anthropic model IDs (haiku 4.5, sonnet 4.5, opus 4.6). Updated FALLBACK_MODELS. Kept legacy IDs for existing DB references.
 
-### B2 — Chat Session Persistence
-- **Hypothesis**: `MemorySaver` is in-memory only — all state lost on API restart. Session REST API (`unified_sessions.py`) stores metadata but not message history. CopilotKit `useCoAgent` doesn't replay messages from checkpointer.
-- **Check**: Read `checkpointer.py` and `useUnifiedChat.ts` for message restoration logic.
+### B2 — Chat Session Persistence (CONFIRMED)
+- **Root cause**: NOT a MemorySaver issue — `checkpointer.py` already uses `AsyncSqliteSaver` (durable). The real issue: no backend endpoint to read message history from checkpointer, and frontend `chatSessionStore.ts` never loads messages when switching sessions or on page refresh.
+- **Fix**: Add `GET /{source_id}/unified-sessions/{session_id}/messages` endpoint that reads from AsyncSqliteSaver. Frontend: load messages on session switch and auto-restore recent session on page load.
 
-### B3 — Building Record Count NULL
-- **Hypothesis**: `record_count` field exists on `BuildingRecord` model but is never populated during extraction. The extraction graph saves buildings but doesn't count their items afterward.
-- **Check**: Search for `record_count` assignment in `acm_extraction.py`.
+### B3 — Building Record Count NULL (CONFIRMED)
+- **Root cause**: Chat tool `list_acm_buildings` (acm_tools.py:395) computed `record_count` by grouping `acm_record` by `building_name` and matching to `building_record.building_name`. Name mismatches between tables caused 0 counts. The REST API (`acm.py:2623`) uses `building_record_id` FK which works correctly.
+- **Fix**: Updated chat tool to use `building_record_id` FK matching (like the REST API) with fallback to name matching for records without FK.
 
-### B4 — Cancel Extraction Button
-- **Hypothesis**: `ExtractionStatusBanner` or `JobControls` checks `isExtracting` from SSE state which may remain stale after extraction completes if the SSE connection was interrupted.
-- **Check**: Read `ExtractionStatusBanner.tsx` and trace `processing_status` prop source.
+### B4 — Cancel Extraction Button (CONFIRMED)
+- **Root cause**: `page.tsx:312-313` passed `reviewStatus` directly from `source?.review_status`. If the `review_status` update in `acm_commands.py:597-603` failed silently (wrapped in try/except), the DB value stayed as `'extracting'`. Frontend had no defensive check for stale status.
+- **Fix**: Added `effectiveReviewStatus` computed value in page.tsx that treats `'extracting'` as `'pending_review'` when `panelPhase` indicates extraction is done (idle/completed/failed).
