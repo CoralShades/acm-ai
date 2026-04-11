@@ -403,53 +403,369 @@ SF_SCHEMA_DIR = os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "V3", "output"
 )
 
+# E38-S0 (2026-04-12): canonical SF schema source moved from V3/output/*.md to
+# config/sf-schema-snapshot.json + raw describe JSON. Markdown path retained
+# as a legacy fallback until E38-S2 cleans up the V3/ directory.
+REPO_ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "..")
+SF_SNAPSHOT_PATH = os.path.join(REPO_ROOT, "config", "sf-schema-snapshot.json")
+
 _SF_SCHEMA: Optional[SFSchemaBundle] = None
 
 
 def load_sf_field_schema() -> SFSchemaBundle:
-    """Load Salesforce field schema from V3 markdown files.
+    """Load Salesforce field schema, preferring config/sf-schema-snapshot.json.
 
-    Returns cached bundle on subsequent calls.
+    E38-S0 (2026-04-12): canonical source is now the snapshot file created in
+    Phase 2a of the SF reconciliation sprint. The snapshot points at the live
+    vaea-demidev describe dumps in docs/sprint-artifacts/full-audit-2026-04-11/
+    sf-describe/ for detailed field metadata (picklist values, length, nillable,
+    dependent picklists).
+
+    The snapshot captures only the *extractable* subset (~52 fields) of the
+    SF schema, per DEC-001 (only literally-extractable-from-PDF fields count).
+    The legacy V3/output/*.md loader returned all ~260 custom fields; this
+    function returns only the extractable ones.
+
+    Falls back to the legacy markdown loader if the snapshot file is missing
+    (for safety during transitions). Returns a cached bundle on subsequent
+    calls.
+
     Raises SFSchemaLoadError on malformed source files.
     """
     global _SF_SCHEMA
     if _SF_SCHEMA is not None:
         return _SF_SCHEMA
 
+    if os.path.exists(SF_SNAPSHOT_PATH):
+        _SF_SCHEMA = _load_sf_field_schema_from_snapshot(SF_SNAPSHOT_PATH)
+        logger.info(
+            f"Loaded SF schema from snapshot v{_SF_SCHEMA.version}: "
+            f"building={len(_SF_SCHEMA.building_fields.fields)} extractable, "
+            f"item={len(_SF_SCHEMA.item_fields.fields)} extractable, "
+            f"{len(_SF_SCHEMA.picklists)} picklists, "
+            f"{len(_SF_SCHEMA.dependencies)} dependency chains"
+        )
+        return _SF_SCHEMA
+
+    logger.warning(
+        f"SF schema snapshot not found at {SF_SNAPSHOT_PATH}; "
+        "falling back to legacy V3/output/*.md loader. "
+        "This is a Phase 2 transition fallback and should not fire in production."
+    )
+    _SF_SCHEMA = _load_sf_field_schema_legacy_markdown()
+    return _SF_SCHEMA
+
+
+def _load_sf_field_schema_from_snapshot(snapshot_path: str) -> SFSchemaBundle:
+    """Build SFSchemaBundle from config/sf-schema-snapshot.json + raw describe JSON.
+
+    Reads the snapshot for the extractable field list, then enriches each field
+    with full metadata (length, nillable, custom, calc, picklistValues,
+    controllerName) from the raw SF describe dumps pointed at by the snapshot's
+    `source_files` map.
+
+    Picklist values come directly from the raw describe (full lists, not just
+    the snapshot's sampled values). Dependent picklist chains are derived from
+    the raw describe's `controllerName` + `dependentPicklist` flags.
+
+    Returns:
+        A fully populated SFSchemaBundle with only the extractable subset.
+
+    Raises:
+        SFSchemaLoadError if the snapshot or a raw describe cannot be read.
+    """
+    try:
+        with open(snapshot_path, encoding="utf-8") as f:
+            snapshot = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        raise SFSchemaLoadError(
+            f"Cannot load SF schema snapshot {snapshot_path}: {e}"
+        ) from e
+
+    version = snapshot.get("version", "salesforce-v2-unknown")
+    objects = snapshot.get("objects", {})
+    source_files = snapshot.get("source_files", {})
+
+    # Resolve raw describe paths (relative to repo root)
+    building_raw_rel = source_files.get("Building__c_raw")
+    item_raw_rel = source_files.get("Item__c_raw")
+    if not building_raw_rel or not item_raw_rel:
+        raise SFSchemaLoadError(
+            f"Snapshot {snapshot_path} is missing source_files entries for "
+            "Building__c_raw or Item__c_raw"
+        )
+
+    building_raw_path = os.path.join(REPO_ROOT, building_raw_rel)
+    item_raw_path = os.path.join(REPO_ROOT, item_raw_rel)
+
+    building_describe = _read_json_file(building_raw_path, "Building__c describe")
+    item_describe = _read_json_file(item_raw_path, "Item__c describe")
+
+    # Build per-object configs filtered to extractable fields
+    building_config = _build_sf_field_schema_config(
+        object_name="Building__c",
+        object_label=objects.get("Building__c", {}).get("display_label", "Asset"),
+        extractable=objects.get("Building__c", {}).get("extractable_fields", {}),
+        describe=building_describe,
+        version=version,
+    )
+    item_config = _build_sf_field_schema_config(
+        object_name="Item__c",
+        object_label=objects.get("Item__c", {}).get("display_label", "Hazmat Item"),
+        extractable=objects.get("Item__c", {}).get("extractable_fields", {}),
+        describe=item_describe,
+        version=version,
+    )
+
+    # Combine picklists across both objects (building + item)
+    combined_picklists: dict[str, list[str]] = {}
+    combined_picklists.update(building_config.picklists)
+    combined_picklists.update(item_config.picklists)
+
+    # Build dependency chains from the describe metadata, filtered to
+    # chains where every field is in our extractable set.
+    dependencies = _build_dependency_chains_from_describes(
+        building_describe=building_describe,
+        item_describe=item_describe,
+        extractable_building=building_config,
+        extractable_item=item_config,
+    )
+
+    return SFSchemaBundle(
+        version=version,
+        building_fields=building_config,
+        item_fields=item_config,
+        picklists=combined_picklists,
+        dependencies=dependencies,
+    )
+
+
+def _read_json_file(path: str, label: str) -> dict:
+    """Read and parse a JSON file; raise SFSchemaLoadError on failure."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError as e:
+        raise SFSchemaLoadError(f"{label} file not found: {path}") from e
+    except json.JSONDecodeError as e:
+        raise SFSchemaLoadError(f"Cannot parse {label} JSON at {path}: {e}") from e
+    except OSError as e:
+        raise SFSchemaLoadError(f"Cannot read {label} file {path}: {e}") from e
+
+
+def _build_sf_field_schema_config(
+    object_name: str,
+    object_label: str,
+    extractable: dict,
+    describe: dict,
+    version: str,
+) -> SFFieldSchemaConfig:
+    """Build SFFieldSchemaConfig for one object from snapshot + describe.
+
+    Iterates the snapshot's extractable_fields map, looks up each field in
+    the raw describe to pull full metadata (length, nillable, picklistValues,
+    controllerName, calc, updateable), and constructs SFFieldDef objects.
+
+    Fields that are in the snapshot but absent from the describe are skipped
+    with a warning — this would indicate snapshot drift and should be fixed
+    by regenerating the snapshot.
+    """
+    describe_fields_by_name = {f["name"]: f for f in describe.get("fields", [])}
+
+    sf_fields: list[SFFieldDef] = []
+    picklists: dict[str, list[str]] = {}
+
+    for api_name, snapshot_meta in extractable.items():
+        raw = describe_fields_by_name.get(api_name)
+        if raw is None:
+            logger.warning(
+                f"Snapshot references {object_name}.{api_name} but the raw "
+                "describe does not contain this field. Snapshot may be stale; "
+                "regenerate via a fresh sf sobject describe."
+            )
+            continue
+
+        # Translate describe "type" to our internal field_type string.
+        raw_type = raw.get("type", "string").lower()
+
+        is_restricted = bool(raw.get("restrictedPicklist"))
+        is_dependent = bool(raw.get("dependentPicklist"))
+        controller_field = raw.get("controllerName") or None
+
+        notes_parts: list[str] = []
+        if is_restricted:
+            notes_parts.append("Restricted picklist")
+        if is_dependent and controller_field:
+            notes_parts.append(f"Dependent on {controller_field}")
+        snapshot_note = snapshot_meta.get("note")
+        if snapshot_note:
+            notes_parts.append(str(snapshot_note))
+
+        sf_fields.append(
+            SFFieldDef(
+                api_name=api_name,
+                label=raw.get("label") or snapshot_meta.get("label") or api_name,
+                field_type=raw_type,
+                length=raw.get("length"),
+                nillable=bool(raw.get("nillable", True)),
+                custom=bool(raw.get("custom", True)),
+                calc=bool(raw.get("calculated", False)),
+                updateable=bool(raw.get("updateable", True)),
+                notes="; ".join(notes_parts) if notes_parts else None,
+                is_restricted_picklist=is_restricted,
+                is_dependent=is_dependent,
+                controller_field=controller_field,
+            )
+        )
+
+        # Extract picklist values directly from the raw describe
+        if raw_type == "picklist":
+            values = [
+                pv["value"]
+                for pv in raw.get("picklistValues", [])
+                if pv.get("active", True)
+            ]
+            if values:
+                picklists[api_name] = values
+
+    # Ensure Item_Name__c also carries the BAR -> product group lookup keys
+    # when present as an extractable picklist (preserves legacy behavior so
+    # consumers that iterate ITEM_NAME_TO_PRODUCT_GROUP keep working).
+    if object_name == "Item__c" and "Item_Name__c" in picklists:
+        existing = set(picklists["Item_Name__c"])
+        for name in ITEM_NAME_TO_PRODUCT_GROUP.keys():
+            if name not in existing:
+                picklists["Item_Name__c"].append(name)
+
+    # Count how many extractable fields are custom vs formula vs picklist.
+    total = len(sf_fields)
+    custom = sum(1 for f in sf_fields if f.custom)
+    picklist_count = sum(1 for f in sf_fields if f.field_type == "picklist")
+
+    return SFFieldSchemaConfig(
+        object_name=object_name,
+        object_label=object_label,
+        total_fields=total,
+        custom_fields=custom,
+        picklist_fields=picklist_count,
+        fields=sf_fields,
+        picklists=picklists,
+        version=version,
+    )
+
+
+def _build_dependency_chains_from_describes(
+    building_describe: dict,
+    item_describe: dict,
+    extractable_building: SFFieldSchemaConfig,
+    extractable_item: SFFieldSchemaConfig,
+) -> list[SFDependencyChain]:
+    """Derive dependent picklist chains from raw describe metadata.
+
+    Looks for any picklist field with `dependentPicklist=true` and a non-null
+    `controllerName`, then uses the project's existing chain builders to
+    populate the `mapping` dict (which contains the curated
+    controller-value -> dependent-value pairings).
+
+    Only chains where BOTH the controller and dependent fields are in the
+    extractable set are returned. This keeps the dependency validator focused
+    on fields the extraction path actually writes.
+    """
+    chains: list[SFDependencyChain] = []
+
+    # Collect all (controller, dependent) pairs from the describes
+    pairs: list[tuple[str, str, str]] = []  # (object, controller, dependent)
+    for obj_name, describe in (
+        ("Building__c", building_describe),
+        ("Item__c", item_describe),
+    ):
+        for f in describe.get("fields", []):
+            if f.get("type") == "picklist" and f.get("dependentPicklist"):
+                controller = f.get("controllerName")
+                if controller:
+                    pairs.append((obj_name, controller, f["name"]))
+
+    extractable_field_names_by_object = {
+        "Building__c": {f.api_name for f in extractable_building.fields},
+        "Item__c": {f.api_name for f in extractable_item.fields},
+    }
+
+    for obj_name, controller, dependent in pairs:
+        field_names = extractable_field_names_by_object[obj_name]
+        if controller not in field_names or dependent not in field_names:
+            continue
+
+        # Use the existing in-code chain builders for the canonical mapping.
+        # These tables ship the curated controller_value -> dependent_values
+        # pairings that match the live SF dependency data in demidev.
+        if (
+            controller == "Friability_of_Material__c"
+            and dependent == "ACM_Classification__c"
+        ):
+            chains.append(_build_friability_chain())
+        elif (
+            controller == "ACM_Classification__c"
+            and dependent == "ACM_Sub_Classification__c"
+        ):
+            chains.append(_build_acm_classification_chain())
+        elif (
+            controller == "Building_Type__c" and dependent == "Building_Category__c"
+        ):
+            chains.append(_build_building_type_chain())
+        else:
+            # Any other chain we discover gets an empty mapping; callers
+            # that require curated pairings should add a builder.
+            chains.append(
+                SFDependencyChain(
+                    controller_api_name=controller,
+                    dependent_api_name=dependent,
+                    mapping={},
+                )
+            )
+
+    return chains
+
+
+def _load_sf_field_schema_legacy_markdown() -> SFSchemaBundle:
+    """Legacy loader: parse V3/output/*.md for the full pre-pivot field list.
+
+    This is the pre-E38-S0 implementation, retained only for safety when the
+    snapshot file is absent. Do not rely on it in production — it returns
+    fields that no longer exist on the live SF schema, and was the root cause
+    of the Phase 5 'snapshot is INERT' finding.
+    """
     building_path = os.path.join(SF_SCHEMA_DIR, "building_fields_summary.md")
     item_path = os.path.join(SF_SCHEMA_DIR, "item_fields_summary.md")
 
     building_config = _parse_sf_field_table_from_path(building_path, "Building__c")
     item_config = _parse_sf_field_table_from_path(item_path, "Item__c")
 
-    # Build combined picklists across both objects
     combined_picklists: dict[str, list[str]] = {}
     combined_picklists.update(building_config.picklists)
     combined_picklists.update(item_config.picklists)
-    # Add Item_Name__c values from the item config
     if "Item_Name__c" not in combined_picklists:
         combined_picklists["Item_Name__c"] = list(ITEM_NAME_TO_PRODUCT_GROUP.keys())
 
-    # Build dependency chains
     dependencies = [
         _build_friability_chain(),
         _build_acm_classification_chain(),
         _build_building_type_chain(),
     ]
 
-    _SF_SCHEMA = SFSchemaBundle(
-        version="salesforce-v1",
+    bundle = SFSchemaBundle(
+        version="salesforce-v1-legacy-markdown",
         building_fields=building_config,
         item_fields=item_config,
         picklists=combined_picklists,
         dependencies=dependencies,
     )
     logger.info(
-        f"Loaded SF schema: building={len(building_config.fields)} fields, "
+        f"Loaded SF schema via legacy markdown path: "
+        f"building={len(building_config.fields)} fields, "
         f"item={len(item_config.fields)} fields, "
         f"{len(combined_picklists)} picklists"
     )
-    return _SF_SCHEMA
+    return bundle
 
 
 def _parse_sf_field_table_from_path(
