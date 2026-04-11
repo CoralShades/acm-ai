@@ -34,16 +34,16 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-03-31
+updated: 2026-04-11
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
 story_location: docs/sprint-artifacts
 
 reconciliation:
-  last_reconciled: 2026-03-11
-  reconciled_branches: [main, ACMV3]
-  notes: "V3 Sprint Planning 2026-03-03: 5 V3 epics (E30-E34) added, 34 stories, 100 SP. Schema freeze gate after E30-S6. Critical path: E30→E31→E32→E33-S3→E34. Parallel lane: E33-S1,S2 after E30. E32-S6 and E30-S8 independent. E30-S9 added 2026-03-04 (GitHub #85, persist pre-extraction intelligence, 3 SP). Source: Party Mode plan, readiness report Step 08 (CONDITIONAL GO → fixes applied Step 08b), PRD v3.0, Architecture v3.0."
+  last_reconciled: 2026-04-11
+  reconciled_branches: [main, ACMV3, feat/sf-reconciliation-20260411]
+  notes: "SF Reconciliation Sprint 2026-04-11: Epic E38 added (5 stories, ~21 SP). Audit against vaea-demidev found ~21 fabricated SF field names in sf_export.py that don't exist in live SF. Phase 2a/2b code changes on feat/sf-reconciliation-20260411 (4 commits): config/sf-schema-snapshot.json + config/bar_to_sf_mapping.yaml + surgical RAG fix at acm_extraction.py:1811 + full sf_export.py rewrite with hash-based External_ID. Item__c upsert blocked pending VAEA SF admin fix to Item__c.External_ID__c field type (E38-S1). Source: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260411-sf-reconciliation.md, docs/sprint-artifacts/full-audit-2026-04-11/PHASE-1-FINDINGS.md, docs/cleanup/assumptions-and-decisions.md. Prior reconcile: V3 Sprint Planning 2026-03-03."
 
 development_status:
   # Epic 1: ACM Data Extraction Pipeline (P0)
@@ -1445,6 +1445,34 @@ development_status:
 #   - Queue snapshot: command totals 591 (553 completed, 27 failed, 11 running), extraction_progress=2, agui_events=0
 # Story tracking decision:
 #   - Keep E20-S5 as in-progress until 31/31 closure evidence and healthy browser UX re-validation are complete.
+
+  # ─────────────────────────────────────────────────────
+  # Epic 38: SF Reconciliation Follow-Up (P0) — NEW 2026-04-11
+  # 5 stories, ~21 SP
+  # Source: docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260411-sf-reconciliation.md
+  # Branch: feat/sf-reconciliation-20260411 (4 commits ahead of main, not pushed)
+  # Trigger: SF audit against vaea-demidev found ~21 fabricated SF field names
+  # in sf_export.py + 1 external blocker (Item__c.External_ID__c misconfigured)
+  # Phase 2a/2b code changes already landed on the branch. Phase 2c/3/5
+  # deferred to these follow-up stories.
+  # ─────────────────────────────────────────────────────
+  epic-38: drafted
+  e38-s1-vaea-sf-admin-externalid-fix: blocked    # external dependency. VAEA SF admin must change Item__c.External_ID__c from Text Area(32768) to Text(255) with externalId=true. Blocks all Item__c upsert. 0 ACM-AI SP (external).
+  e38-s2-delete-non-sf-field-refs: drafted        # 5 SP. Remove 127 references to est_building_size_m2, daily_duration, level_of_activity, mobile_plant, building_risk_rating, psb_district_region, demolished_*, building_out_of_scope*, no_identified_acms*, room_id, risk_status, result, hygienist_recommendations, psb_supplied_acm_id, removal_* across 10 files. Also delete _llm_correct_records() dead function. Blocked by E38-S3 for test coverage.
+  e38-s3-test-scorched-earth-rebuild: drafted     # 8 SP. rm -rf tests/ + frontend/tests/ + *.spec.ts. Rebuild via Sonnet agent team with skill registry + context7 + MCP. Priority: contract tests asserting sf_export field mappings exist in SF describe dump; BAR->SF mapping round-trip tests; External_ID determinism test.
+  e38-s4-bar-to-sf-mapping-ui: drafted            # 5 SP. Frontend UI to create/manage config/bar_to_sf_mapping.yaml. User said "we already have some parts made but not functioning" — start with grep discovery of existing skeleton before scaffolding new.
+  e38-s5-post-code-6agent-audit: drafted          # 3 SP. Run 6-agent audit team (acm-extraction-core/pre/post, acm-schema-expert, acm-observability-debugger, acm-rag-strategist) on feat/sf-reconciliation-20260411 after E38-S2 and E38-S3 land. Sonnet only per CLAUDE.md teams rule.
+  epic-38-retrospective: optional
+
+  # ─────────────────────────────────────────────────────
+  # SF Reconciliation Phase 1+2a+2b (2026-04-11) — COMPLETED IN-SESSION
+  # Branch: feat/sf-reconciliation-20260411
+  # ─────────────────────────────────────────────────────
+  sf-reconciliation-phase-1-audit: done           # 2026-04-11. SF schema audit against vaea-demidev. Commits ebfabef0 + 7ad8a871. Output: docs/sprint-artifacts/full-audit-2026-04-11/ (PHASE-1-FINDINGS.md, sf-describe/*.json, picklists.json, rag-disposition-research.md).
+  sf-reconciliation-phase-2a-config: done         # 2026-04-11. Commit 5dc3ef30. Added config/sf-schema-snapshot.json + config/bar_to_sf_mapping.yaml. Surgical RAG fix at acm_extraction.py:1811 per rag-disposition-research.md Option C (keep E1-S14, remove E1-S15 Layer 2 LLM call).
+  sf-reconciliation-phase-2b-export-rewrite: done # 2026-04-11. Commit 444a66f9. Rewrote sf_export.py BUILDING_SF_MAPPING (25 fields) + ITEM_SF_MAPPING (21 fields) against live describe. Deleted ~21 fabricated SF field names. Switched generate_external_id() to deterministic sha256(source_id + building_name)[:16] hash.
+  sf-reconciliation-phase-4-doc-audit: in-progress # 2026-04-11. Sonnet subagent producing deletion manifest at docs/cleanup/phase-4-doc-cleanup-manifest.md. Read-only audit; parent session reviews before deleting.
+  sf-reconciliation-phase-6-scp: done             # 2026-04-11. SCP at docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260411-sf-reconciliation.md. Proposes E38 + documents all Phase 1/2a/2b changes + risk register.
 
 # ═══════════════════════════════════════════════════════════════════════
 # Full System Audit 2026-04-09
