@@ -1803,23 +1803,13 @@ async def correct_records(state: dict, config: RunnableConfig) -> dict:
         if still_invalid:
             records_needing_llm.append(i)
 
-    # Layer 2: LLM correction for remaining issues
+    # Layer 2 LLM correction disabled 2026-04-11 (SF reconciliation).
+    # Why: literal-only extraction rule forbids LLM inference over SF-bound fields
+    # (sample_result, material_condition, friable, disturbance_potential).
+    # Remaining invalid values are now marked failed; operator must fix via grid.
     if records_needing_llm:
-        try:
-            if pl:
-                logger.info("[PIPELINE] Prompt template: acm/correction")
-            await _llm_correct_records(
-                records,
-                records_needing_llm,
-                correction_stats,
-                model_id,
-                correction_attempt,
-                pl=pl,
-            )
-        except Exception as e:
-            logger.warning(f"LLM correction failed: {e}")
-            for idx in records_needing_llm:
-                correction_stats["failed"] = correction_stats.get("failed", 0) + 1
+        for _idx in records_needing_llm:
+            correction_stats["failed"] = correction_stats.get("failed", 0) + 1
 
     if pl:
         auto = correction_stats.get("auto_corrected", 0)

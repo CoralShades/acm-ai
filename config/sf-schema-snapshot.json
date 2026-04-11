@@ -1,0 +1,141 @@
+{
+  "version": "salesforce-v2-2026-04-11",
+  "generated": "2026-04-11",
+  "generated_from": {
+    "org": "vaea-demidev",
+    "username": "demi.thathsara@vaea.vic.gov.au.demidev",
+    "instance": "vaea--demidev.sandbox.my.salesforce.com",
+    "org_id": "00D9200000AgZd7EAF"
+  },
+  "source_files": {
+    "Building__c_raw": "docs/sprint-artifacts/full-audit-2026-04-11/sf-describe/Building__c.json",
+    "Item__c_raw": "docs/sprint-artifacts/full-audit-2026-04-11/sf-describe/Item__c.json",
+    "picklists_raw": "docs/sprint-artifacts/full-audit-2026-04-11/sf-describe/picklists.json"
+  },
+  "scope_rule": "Only fields literally extractable from ARA PDFs are tracked. The full SF schema has 132 custom fields on Building__c and 144 on Item__c; this snapshot captures the subset required for extraction and export.",
+  "objects": {
+    "Building__c": {
+      "api_name": "Building__c",
+      "display_label": "Asset",
+      "upsert_key": {
+        "field": "External_ID__c",
+        "type": "string",
+        "external_id": true,
+        "length": 255,
+        "usable_for_upsert": true
+      },
+      "required_custom_fields": [
+        "Building_Type__c",
+        "Building_Name__c",
+        "Public_Access__c",
+        "Frequency_of_Use__c",
+        "Organisation__c"
+      ],
+      "extractable_fields": {
+        "Building_Name__c":         {"type": "string",    "required": true,  "label": "Asset Name"},
+        "Building_Type__c":         {"type": "picklist",  "required": true,  "label": "Asset Type", "restricted": true, "value_count": 137, "controls": "Building_Category__c"},
+        "Building_Category__c":     {"type": "picklist",  "required": false, "label": "Asset Category", "restricted": true, "value_count": 13, "depends_on": "Building_Type__c"},
+        "Building_Address__c":      {"type": "string",    "required": false, "label": "Asset Address"},
+        "Suburb__c":                {"type": "string",    "required": false, "label": "Suburb"},
+        "Postcode__c":              {"type": "string",    "required": false, "label": "Postcode"},
+        "State__c":                 {"type": "string",    "required": false, "label": "State", "default": "Victoria"},
+        "Site_Name__c":             {"type": "string",    "required": false, "label": "Site Name (if applicable)"},
+        "Building_Unique_ID__c":    {"type": "string",    "required": false, "label": "Asset Unique ID"},
+        "Owned_or_Leased__c":       {"type": "picklist",  "required": false, "label": "Owned or Leased", "restricted": true, "values": ["Owned", "Leased"]},
+        "Public_Access__c":         {"type": "picklist",  "required": true,  "label": "Public Access", "restricted": true, "values": ["Yes", "No"]},
+        "Frequency_of_Use__c":      {"type": "picklist",  "required": true,  "label": "Frequency of Use", "restricted": true, "values": ["Every day", "Every day with intermittent breaks", "Once every 3–5 days", "Every 2–3 weeks", "Once every 2–3 months", "Annually or less frequently"]},
+        "Within_Your_Portfolio__c": {"type": "picklist",  "required": false, "label": "Within Your Portfolio", "restricted": true, "values": ["Yes", "No"]},
+        "Asbestos_Register_Available__c": {"type": "picklist", "required": false, "label": "Asbestos Register Available", "restricted": true, "values": ["Yes", "No"]},
+        "Audit_Report_Available__c":{"type": "picklist",  "required": false, "label": "Audit Report Available", "restricted": true, "values": ["Yes", "No"]},
+        "Date_of_Audit_Report__c":  {"type": "date",      "required": false, "label": "Date of Audit Report"},
+        "Estimated_Year_Built__c":  {"type": "date",      "required": false, "label": "Estimated Date Built"},
+        "Estimated_Year_Build_New__c": {"type": "picklist", "required": false, "label": "Estimated Year Built", "restricted": true, "value_count": 330, "note": "Picklist from ~1700 to 2029"},
+        "Construction_Type__c":     {"type": "string",    "required": false, "label": "Construction Type"},
+        "Number_of_Levels__c":      {"type": "picklist",  "required": false, "label": "Number of Levels", "restricted": true, "value_count": 99, "note": "1-99"},
+        "Roof_Type__c":             {"type": "string",    "required": false, "label": "Roof Type"},
+        "School_UID__c":            {"type": "string",    "required": false, "label": "School UID"},
+        "Responsible_Agency_Department__c": {"type": "string", "required": false, "label": "Responsible Agency/Department"},
+        "Additional_Comments__c":   {"type": "textarea",  "required": false, "label": "Additional Comments"},
+        "External_ID__c":           {"type": "string",    "required": false, "label": "External ID", "external_id": true, "length": 255}
+      },
+      "non_extractable_required": {
+        "Organisation__c": "Reference to Account — must be selected from dropdown, not extracted"
+      }
+    },
+    "Item__c": {
+      "api_name": "Item__c",
+      "display_label": "Hazmat Item",
+      "parent_relationship": {
+        "field": "Building_Code__c",
+        "parent_object": "Building__c",
+        "type": "master-detail",
+        "cascade_delete": true,
+        "required": true
+      },
+      "upsert_key": {
+        "field": null,
+        "usable_for_upsert": false,
+        "blocker": "External_ID__c is type=textarea with externalId=false — unusable as Data Loader upsert key. Unique_Item_Code__c is autoNumber with createable=false — unusable for INSERT. VAEA SF admin must fix Item__c.External_ID__c (type=string, externalId=true) before Item__c upsert works. Until fix: INSERT-only or feature-flag gate."
+      },
+      "required_custom_fields": [
+        "Building_Code__c"
+      ],
+      "extractable_fields": {
+        "Building_Code__c":         {"type": "reference", "required": true,  "label": "Asset Code", "references": "Building__c", "note": "Auto-assigned from extraction context (the building row containing this item)"},
+        "Item_Name__c":             {"type": "picklist",  "required": false, "label": "Item Name", "restricted": true, "value_count": 294, "fallback_field": "If_Other_Item_Name__c"},
+        "If_Other_Item_Name__c":    {"type": "string",    "required": false, "label": "If Other Please Specify the ACM Name"},
+        "Friability_of_Material__c":{"type": "picklist",  "required": false, "label": "Friability of Material", "restricted": true, "values": ["Non-friable", "Friable"], "controls": "ACM_Classification__c"},
+        "ACM_Classification__c":    {"type": "picklist",  "required": false, "label": "ACM Product Group", "restricted": true, "value_count": 18, "depends_on": "Friability_of_Material__c", "controls": "ACM_Sub_Classification__c"},
+        "ACM_Sub_Classification__c":{"type": "picklist",  "required": false, "label": "ACM Product Type", "restricted": true, "value_count": 133, "depends_on": "ACM_Classification__c"},
+        "NATA_Endorsed_Sample_no__c":{"type": "string",   "required": false, "label": "Sample no (if applicable)"},
+        "Sample_Analysis_Result_Material_Status__c": {"type": "picklist", "required": false, "label": "Sample Result", "restricted": true, "values": ["Positive", "Assumed Positive", "Negative", "Assumed Negative", "Negative - Treated as Positive"]},
+        "Identifying_Hygiene_Consulting_Company__c": {"type": "string", "required": false, "label": "Identifying Hygiene / Consulting Company"},
+        "Condition__c":             {"type": "picklist",  "required": false, "label": "Condition", "restricted": true, "values": ["Poor", "Fair", "Stable", "Unknown", "N/A (negative)", "N/A (assumed negative)"]},
+        "Disturbance_Potential_of_Material__c": {"type": "picklist", "required": false, "label": "Disturbance Potential", "restricted": true, "values": ["Low", "Moderate", "High", "N/A (negative)", "Unknown", "N/A (assumed negative)"]},
+        "Quantity__c":              {"type": "double",    "required": false, "label": "Quantity"},
+        "Units_of_Measure__c":      {"type": "string",    "required": false, "label": "Units of Measure"},
+        "Internal_External__c":     {"type": "picklist",  "required": false, "label": "Internal / External", "restricted": true, "values": ["Internal", "External", "External & Internal"]},
+        "Level__c":                 {"type": "string",    "required": false, "label": "Level"},
+        "Room_or_Area__c":          {"type": "string",    "required": false, "label": "Room or Area"},
+        "Location_in_Room__c":      {"type": "string",    "required": false, "label": "Location in Room/Area"},
+        "Labelled__c":              {"type": "picklist",  "required": false, "label": "Labelled", "restricted": true, "values": ["Yes", "No"]},
+        "Labelled_Details__c":      {"type": "string",    "required": false, "label": "Label Details"},
+        "Frequency_of_Use__c":      {"type": "picklist",  "required": false, "label": "Frequency of Use (ACM)", "restricted": true, "values": ["Every day", "Every day with intermittent breaks", "Once every 3–5 days", "Every 2–3 weeks", "Once every 2–3 months", "Annually or less frequently"]},
+        "Public_Access__c":         {"type": "picklist",  "required": false, "label": "Public Access (ACM)", "restricted": true, "values": ["Yes", "No"]},
+        "Clearance_Certificates_Available__c": {"type": "picklist", "required": false, "label": "Clearance Certificates Available", "restricted": true, "values": ["Yes", "No"]},
+        "Photo_Ref__c":             {"type": "string",    "required": false, "label": "Photo Ref"},
+        "Asbestos_Register_Reference_No__c": {"type": "string", "required": false, "label": "Asbestos Register Reference No"},
+        "Lot_No__c":                {"type": "string",    "required": false, "label": "Lot No"},
+        "Survey_Date__c":           {"type": "date",      "required": false, "label": "Survey Date"},
+        "Additional_Comments__c":   {"type": "textarea",  "required": false, "label": "Additional Comments"}
+      }
+    }
+  },
+  "dependent_picklist_chains": [
+    {
+      "chain": ["Friability_of_Material__c", "ACM_Classification__c", "ACM_Sub_Classification__c"],
+      "object": "Item__c",
+      "notes": "Classic 3-level dependent picklist. Friability (2 values) controls ACM Product Group (18 values), which controls ACM Product Type (133 values). validFor bitmaps available in raw describe JSON."
+    },
+    {
+      "chain": ["Building_Type__c", "Building_Category__c"],
+      "object": "Building__c",
+      "notes": "Asset Type (137 values) controls Asset Category (13 values). validFor bitmaps available in raw describe JSON."
+    }
+  ],
+  "out_of_scope_non_extractable": {
+    "Building__c": [
+      "All score/rating fields (Proportional_Total_Building_Risk_Score__c, Mobile_Plant_Operating_Score__c, etc.) — computed by SF formulas",
+      "All cost/currency fields (Total_Item_Removal_Cost_*__c) — rollups from child Items",
+      "All geocode/address-normalization fields (Building_Location__*, GNAF_Id__c, Meshblock__c) — auto-populated",
+      "Number_of_Items__c / Number_of_ACMs__c — rollup counts"
+    ],
+    "Item__c": [
+      "All score/rating fields (Specific_Item_Rating__c, Condition_Rating__c, etc.) — computed by SF formulas",
+      "All cost/unit-price fields (Item_Removal_Cost_*__c) — computed from Pricing__c lookup",
+      "All 17 boolean workflow flags (Removed__c, Assumed_Removed__c, Requires_Re_Inspection__c, etc.) — default=false, updated by SF workflows",
+      "Reference fields beyond Building_Code__c (Pricing__c, Hygiene_Lab__c, Program__c, Removal_Job__c, etc.) — populated by SF workflow or linked from other records",
+      "Unique_Item_Code__c — autoNumber, SF generates at insert time"
+    ]
+  }
+}

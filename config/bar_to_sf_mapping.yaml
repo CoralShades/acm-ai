@@ -1,0 +1,118 @@
+version: "1.0"
+generated: "2026-04-11"
+generated_from: "vaea-demidev sandbox describe snapshot (docs/sprint-artifacts/full-audit-2026-04-11/sf-describe/)"
+description: |
+  Deterministic vocabulary mapping from BAR (Building Asbestos Register)
+  consultant terminology to Salesforce picklist values.
+
+  Used by the extraction pipeline's normalizer layer to translate literal
+  values extracted from ARA PDFs into SF-accepted picklist values. This
+  mapping is the ONLY form of transformation allowed under the literal-only
+  extraction rule (2026-04-11). No free-form LLM inference.
+
+  Rules for editing this file:
+  1. Every mapping must be auditable — keep the source (CSV/PRD/user decision) in a comment.
+  2. Identity mappings are omitted for brevity; extractor treats unmapped values as identity.
+  3. `null` on the right side means "drop this value; do not write to SF".
+  4. When the SF schema snapshot is refreshed, re-validate that every right-hand value
+     still appears in the active picklist for the target field.
+
+# ============================================================================
+# Building__c mappings
+# ============================================================================
+Building__c:
+  # No translations required — PDF values match SF picklists for these fields
+  # based on Clutch_Broadmeadows.csv inspection 2026-04-11.
+  # - Building_Type__c, Building_Category__c: 137/13 values, too many to anticipate
+  #   without case studies; extractor falls through to nearest-match or flag-for-review.
+  # - Owned_or_Leased__c: identity (Owned/Leased match SF exactly).
+  # - Public_Access__c, Asbestos_Register_Available__c, Audit_Report_Available__c:
+  #   all `Yes/No` in SF. CSV uses `YES/NO` (caps) — case normalization applied below.
+  Public_Access__c:
+    "YES": "Yes"  # CSV caps -> SF mixed case
+    "NO": "No"
+  Asbestos_Register_Available__c:
+    "YES": "Yes"
+    "NO": "No"
+  Audit_Report_Available__c:
+    "YES": "Yes"
+    "NO": "No"
+  Within_Your_Portfolio__c:
+    "YES": "Yes"
+    "NO": "No"
+
+# ============================================================================
+# Item__c mappings
+# ============================================================================
+Item__c:
+  # Condition__c — CRITICAL (PRD FR-1405)
+  # SF picklist: Poor, Fair, Stable, Unknown, N/A (negative), N/A (assumed negative)
+  # CSV observed values: Good, Fair, Poor, Unknown, N/A (negative)
+  Condition__c:
+    "Good": "Stable"  # BAR "Good" = SF "Stable" per PRD FR-1405, verified in sandbox
+    # "Fair": identity
+    # "Poor": identity
+    # "Unknown": identity
+    # "N/A (negative)": identity
+
+  # Disturbance_Potential_of_Material__c
+  # SF picklist: Low, Moderate, High, N/A (negative), Unknown, N/A (assumed negative)
+  # CSV observed: Low, Medium, High
+  Disturbance_Potential_of_Material__c:
+    "Medium": "Moderate"  # CSV uses "Medium", SF uses "Moderate"
+    # Low, High, Unknown: identity
+
+  # Sample_Analysis_Result_Material_Status__c
+  # SF picklist: Positive, Assumed Positive, Negative, Assumed Negative, Negative - Treated as Positive
+  # CSV observed: Positive, Negative, Assumed Positive, N/A (negative), Not Sampled
+  Sample_Analysis_Result_Material_Status__c:
+    "Not Sampled": null  # "Not Sampled" is not a valid SF value; drop or set via Assumed
+    "N/A (negative)": "Negative"  # Narrative fallback — consultants mean "negative result"
+
+  # Labelled__c — CSV caps -> SF mixed case
+  Labelled__c:
+    "YES": "Yes"
+    "NO": "No"
+
+  # Friability_of_Material__c — identity (Non-friable / Friable match SF)
+  # ACM_Classification__c / ACM_Sub_Classification__c — dependent picklists
+  # Controlled by Friability (18 values) -> ACM_Classification (133 values).
+  # Identity mapping with validation fallback. Extractor must check controller-dependent
+  # validity before writing ACM_Classification__c and ACM_Sub_Classification__c.
+  # Dependent picklist enforcement: see config/sf-schema-snapshot.json for valid pairings.
+
+  # Internal_External__c — identity (Internal / External / External & Internal)
+  # CSV only has Internal/External; SF adds External & Internal which is fine.
+
+  # Frequency_of_Use__c — identity
+  # SF values match CSV "Every day" verbatim.
+
+  # Item_Name__c — RESTRICTED picklist with 294 values
+  # Strategy: attempt exact-match; on miss, write the PDF value to If_Other_Item_Name__c
+  # and leave Item_Name__c blank. Do NOT attempt fuzzy matching in the normalizer.
+  # The fallback is enforced in the extraction pipeline, not this mapping file.
+
+  # ACM_Classification__c — RESTRICTED + dependent on Friability_of_Material__c
+  # 18 allowed values, some require a matching Friability value.
+  # Identity mapping attempted first; on validation miss, flag for grid review.
+
+# ============================================================================
+# Drop-list — values that should be filtered out of SF payload entirely
+# ============================================================================
+drop_values:
+  # Consultant-entered narrative values that aren't valid SF data
+  - "N/A"
+  - "N/A (negative)"  # handled per-field above where it has special meaning
+  - "Not Applicable"
+  - "TBD"
+  - "Unknown"  # allow in Condition/DP, drop everywhere else
+
+# ============================================================================
+# Notes for Phase 2B
+# ============================================================================
+# - Building_Type__c (137 values) and Building_Category__c (13 values) need a
+#   static mapping table from common ARA document phrases to SF picklist values.
+#   Example: "Police Station" (from Clutch_Broadmeadows.csv) -> verify exact match.
+# - Estimated_Year_Build_New__c is a restricted picklist of 330 values (every year
+#   from ~1700 to 2029). Extractor should coerce an extracted year to matching string.
+# - Number_of_Levels__c is a 99-value picklist (1..99). Coerce extracted integer.
