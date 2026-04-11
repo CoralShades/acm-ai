@@ -195,7 +195,9 @@ Consolidates Phase 1 findings, Phase 2a/2b changes, and deferred work
 into a single SCP at
 `docs/sprint-artifacts/change-proposals/sprint-change-proposal-20260411-sf-reconciliation.md`.
 
-## Security note
+## Security notes (2 incidents)
+
+### Incident 1 — SF access token leaked early in session
 
 `sf org display --target-org vaea-demidev` ran early in the session
 and leaked the sandbox access token into the conversation buffer.
@@ -205,3 +207,27 @@ User should rotate the token out-of-session:
 sf org logout --target-org vaea-demidev
 sf org login web -a vaea-demidev
 ```
+
+### Incident 2 — Shell env API keys leaked via `ps -ef` (Phase 5 extension)
+
+When spawning the API + frontend as background processes during Phase 5
+live-state agent setup, `ps -ef` was used to verify the processes were
+alive. The output dumped the full shell environment of the parent bash
+(because the Claude Code shell snapshot exports `.env` to the shell),
+exposing these keys in plaintext to the conversation buffer:
+
+- `ACM_ANTHROPIC_API_KEY`
+- `LANGCHAIN_API_KEY` (LangSmith)
+- `LANGFUSE_SECRET_KEY`
+- `RUNPOD_API_KEY`
+
+User must rotate all 4 out-of-band. The parent session immediately
+switched to `ps -o pid,etime,comm -p <pid>` (short format) for any
+further process inspection to avoid re-exposing.
+
+Root cause: Claude Code shell snapshot + .env export + `ps -ef` is a
+systemic leak pattern. Any `ps -ef` on this system shows these keys
+to any process that can read /proc. Consider moving secrets out of
+exported env and into a managed loader (e.g., Bitwarden CLI,
+pass-store, or a Python dotenv loader that only exposes vars to
+specific Python processes).
