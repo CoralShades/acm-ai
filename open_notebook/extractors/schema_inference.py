@@ -227,12 +227,13 @@ SF_TO_ITEM_ROW_FIELD: dict[str, str] = {
     "Condition__c": "condition",
     "NATA_Endorsed_Sample_no__c": "sample_number",
     "Sample_Analysis_Result_Material_Status__c": "sample_result",
+    "Quantity__c": "quantity",
     "Disturbance_Potential__c": "disturbance_potential",
     "Specific_Location__c": "item_location",
     "Asbestos_Type__c": "acm_classification",
 }
 
-# Default ACMItemRow field descriptions (matches the 13 hardcoded fields)
+# Default ACMItemRow field descriptions (matches all ACMItemRow fields)
 _DEFAULT_FIELD_DESCRIPTIONS: dict[str, str] = {
     "room_name": "room or area name, e.g. 'Room 101', 'Library', 'Corridor'",
     "floor_level": "floor or level, e.g. 'Ground Floor', 'Level 1', 'Roof Space'",
@@ -244,9 +245,18 @@ _DEFAULT_FIELD_DESCRIPTIONS: dict[str, str] = {
     "condition": "material condition, e.g. 'Good', 'Fair', 'Poor'",
     "disturbance_potential": "disturbance likelihood, e.g. 'Low', 'Medium', 'High'",
     "sample_number": "lab/sample ID, e.g. '34511-039-001'",
-    "sample_result": "Positive, Negative, Assumed Positive, or Not Sampled",
-    "acm_product": "product type, e.g. 'Floor covering', 'Skirting'",
+    "sample_result": (
+        "MUST be one of: Positive, Negative, Assumed Positive, Not Sampled, or Unknown. "
+        "Use 'Assumed Positive' for items presumed/assumed to contain asbestos without lab "
+        "testing (e.g. 'Presumed', 'Assumed', 'Assumed Positive'). "
+        "Use 'Not Sampled' when stated not sampled. "
+        "Use 'Unknown' only when result is completely absent or unreadable."
+    ),
+    "acm_product": "product type, e.g. 'Floor covering', 'Skirting', 'Flange joints'",
     "internal_external": "Internal or External",
+    "quantity": "amount of ACM material, e.g. '10 m²', '5 linear meters', '2 sheets', or a count like '60'",
+    "acm_labelled": "whether the ACM item is physically labelled on-site: 'Yes' or 'No'",
+    "risk_status": "risk priority level if stated: 'Low', 'Medium', or 'High'",
 }
 
 
@@ -276,7 +286,10 @@ def build_extraction_fields(schema: "InferredSchema") -> list[dict[str, str]]:
             seen_names.add(item_field)
 
     # Always include core required fields if not already present
-    for core_field in ("item_name", "room_name", "sample_result"):
+    for core_field in (
+        "item_name", "room_name", "sample_result",
+        "quantity", "acm_labelled", "risk_status",
+    ):
         if core_field not in seen_names:
             fields.append({
                 "name": core_field,

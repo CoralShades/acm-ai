@@ -990,10 +990,12 @@ async def _chunk_and_extract_items(
             # model ID so provision_langchain_model() takes the model_id branch
             # (line 609) and skips the Ollama-first priority chain.
             cloud_model_id: Optional[str] = None
-            if os.environ.get("ACM_ANTHROPIC_API_KEY"):
-                cloud_model_id = "anthropic/claude-sonnet-4-20250514"
-            elif os.environ.get("ACM_OPENROUTER_API_KEY"):
+            if os.environ.get("ACM_OPENROUTER_API_KEY") or os.environ.get(
+                "OPENROUTER_API_KEY"
+            ):
                 cloud_model_id = "openrouter/anthropic/claude-sonnet-4"
+            elif os.environ.get("ACM_ANTHROPIC_API_KEY"):
+                cloud_model_id = "anthropic/claude-sonnet-4-20250514"
             elif os.environ.get("OPENAI_API_KEY"):
                 cloud_model_id = "openai/gpt-4o-mini"
 
@@ -1017,7 +1019,7 @@ async def _chunk_and_extract_items(
                     f"[E32-S2] Truncation detected for building {plan.building_id} "
                     f"but no cloud API keys configured (OLLAMA_NUM_CTX={current_num_ctx}) "
                     f"— skipping retry. Increase OLLAMA_NUM_CTX or configure "
-                    f"ACM_ANTHROPIC_API_KEY."
+                    f"ACM_OPENROUTER_API_KEY (preferred) or ACM_ANTHROPIC_API_KEY."
                 )
         return result
 
@@ -1041,10 +1043,12 @@ async def _chunk_and_extract_items(
             # BUG FIX: Same cloud fallback fix as non-chunked path —
             # use explicit cloud model ID instead of model_id=None.
             chunk_cloud_model: Optional[str] = None
-            if os.environ.get("ACM_ANTHROPIC_API_KEY"):
-                chunk_cloud_model = "anthropic/claude-sonnet-4-20250514"
-            elif os.environ.get("ACM_OPENROUTER_API_KEY"):
+            if os.environ.get("ACM_OPENROUTER_API_KEY") or os.environ.get(
+                "OPENROUTER_API_KEY"
+            ):
                 chunk_cloud_model = "openrouter/anthropic/claude-sonnet-4"
+            elif os.environ.get("ACM_ANTHROPIC_API_KEY"):
+                chunk_cloud_model = "anthropic/claude-sonnet-4-20250514"
             elif os.environ.get("OPENAI_API_KEY"):
                 chunk_cloud_model = "openai/gpt-4o-mini"
 
@@ -1067,7 +1071,8 @@ async def _chunk_and_extract_items(
                 logger.warning(
                     f"[E32-S2] Truncation detected in chunk for building {plan.building_id} "
                     f"but no cloud API keys configured (OLLAMA_NUM_CTX={current_num_ctx}) "
-                    f"— skipping retry. Increase OLLAMA_NUM_CTX."
+                    f"— skipping retry. Increase OLLAMA_NUM_CTX or configure "
+                    f"ACM_OPENROUTER_API_KEY (preferred) or ACM_ANTHROPIC_API_KEY."
                 )
         merged_records.extend(result.records)
         if result.status == "invalid":

@@ -1,3 +1,9 @@
+/* ============================================================
+   VAEA Semantic UI Tokens — Light Mode
+   ============================================================
+   Requires: vaea-main.css loaded first (provides --vaea-* vars)
+   ============================================================ */
+
 :root {
   /* Backgrounds */
   --bg-page:        var(--vaea-grey-50);
@@ -15,13 +21,31 @@
   --border-default: var(--vaea-grey-100);
   --border-accent:  var(--vaea-teal-300);
 
-  /* Brand actions */
+  /* Brand Actions */
   --brand-primary:        var(--vaea-teal-300);
   --brand-primary-hover:  var(--vaea-teal-700);
   --brand-primary-soft:   var(--vaea-teal-100);
+  --brand-cta:            var(--vaea-coral);
+  --brand-cta-hover:      #E0686A;  /* coral darkened ~5% */
+  --brand-gold:           var(--vaea-gold);
 
   /* Status */
-  --success: var(--vaea-green-200);
-  --info:    var(--vaea-teal-100);
-  --focus:   var(--vaea-teal-300);
+  --success:  var(--vaea-green-200);
+  --info:     var(--vaea-teal-100);
+  --warning:  var(--vaea-gold);
+  --focus:    var(--vaea-coral);
+
+  /* Risk Status (dual-encoded: always pair with icon) */
+  --risk-low:       #22c55e;
+  --risk-low-bg:    #f0fdf4;
+  --risk-medium:    #f59e0b;
+  --risk-medium-bg: #fffbeb;
+  --risk-high:      #ef4444;
+  --risk-high-bg:   #fef2f2;
+  --risk-presumed:    #a855f7;
+  --risk-presumed-bg: #faf5ff;
+
+  /* Navy (marketing / demo contexts) */
+  --navy:       var(--vaea-navy);
+  --navy-light: var(--vaea-navy-light);
 }

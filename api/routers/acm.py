@@ -2745,12 +2745,12 @@ async def get_validation_summary(
     validation_errors and groups results by building_id.
     """
     try:
-        sid = ensure_record_id(source_id)
+        sid = str(ensure_record_id(source_id))
         query = """
             SELECT building_id,
                    count() as error_count
             FROM acm_record
-            WHERE source_id = $source_id
+            WHERE source_id = type::thing($source_id)
               AND validation_errors IS NOT NONE AND array::len(validation_errors) > 0
             GROUP BY building_id;
         """

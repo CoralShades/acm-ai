@@ -1445,3 +1445,76 @@ development_status:
 #   - Queue snapshot: command totals 591 (553 completed, 27 failed, 11 running), extraction_progress=2, agui_events=0
 # Story tracking decision:
 #   - Keep E20-S5 as in-progress until 31/31 closure evidence and healthy browser UX re-validation are complete.
+
+# ═══════════════════════════════════════════════════════════════════════
+# Full System Audit 2026-04-09
+# 6-agent audit team: log-monitor, browser-tester, pipeline-inspector,
+# extraction-runner, fixer, scribe
+# ═══════════════════════════════════════════════════════════════════════
+audit-2026-04-09:
+  date: 2026-04-09
+  status: completed
+  services_healthy: [surrealdb, fastapi, frontend, ollama, langfuse, langsmith]
+  issues_found: 15
+  issues_fixed: 8  # 1 critical + 5 high/medium code-fixed + 1 no-fix-needed + 1 already-implemented; Task #5 complete 2026-04-09
+  issues_deferred: 7  # 1 medium (MemorySaver→SqliteSaver planned) + 6 low (see full-audit-2026-04-09/tech-debt.md TD-1..TD-9)
+  extraction_test:
+    pdf: broadmeadows-police-station-samp.pdf
+    source_id: source:gn4mity61x2pcil3rjtv
+    model: ollama/llama3.1:8b
+    records_extracted: 57
+    records_expected: 31
+    duration_seconds: 727
+    assumed_positive_coverage: 17%  # REGRESSION — was ~70% at 2026-02-22; fixed in retest
+    assumed_positive_expected: 6
+    assumed_positive_actual: 1
+    missing_fields: [acm_labelled, quantity, risk_status]  # 0% coverage in initial test; improved in retest
+    ground_truth_full_match: 5
+    ground_truth_partial_match: 7
+    assessment: fixes_applied_validated  # Retest confirms improvements; some noise filtering remaining
+  retest:
+    date: 2026-04-09
+    records_extracted: 35
+    records_expected: 31
+    assumed_positive_coverage: 50%  # improved from 17% (3/6 correct)
+    assumed_positive_regression: false
+    field_coverage:
+      quantity: 28%      # was 0%
+      acm_labelled: 68%  # was 0%
+      risk_status: 34%   # was 0%
+    ground_truth_full_match: 9   # was 5/12
+    ground_truth_partial_match: 3
+    remaining_gaps:
+      - 2 Assumed Positive still missed
+      - Non-ACM noise filtering incomplete (35 vs 31 expected)
+      - Fan Room deduplication (duplicate records remain)
+    report: docs/sprint-artifacts/reports/extraction-retest-2026-04-09.md
+  top_issues:
+    - severity: critical
+      id: issue-1
+      description: "Assumed Positive result category extracted as Unknown — regression from ~70% to 17%"
+      file: "prompts/acm/row_extraction.jinja"
+    - severity: high
+      id: issue-2
+      description: "Cloud fallback uses hardcoded direct Anthropic/OpenAI model IDs; system is OpenRouter-only"
+      file: "open_notebook/graphs/acm_extraction.py:994"
+    - severity: high
+      id: issue-3
+      description: "Over-extraction: 57 records vs 31 expected — non-ACM tables included as noise"
+    - severity: high
+      id: issue-4
+      description: "Missing critical fields: acm_labelled, quantity, risk_status (0% coverage since baseline 2026-02-10)"
+      file: "open_notebook/domain/acm_row_schemas.py"
+    - severity: medium
+      id: issue-5
+      description: "validation-summary endpoint returns {buildings:[]} for source with 120 records"
+      file: "api/routers/acm.py"
+    - severity: medium
+      id: issue-6
+      description: "Job detail status badge shows Extracting when extraction is completed (completed_at is None)"
+  reports:
+    - docs/sprint-artifacts/reports/log-audit-2026-04-09.md
+    - docs/sprint-artifacts/reports/browser-test-2026-04-09.md
+    - docs/sprint-artifacts/reports/pipeline-analysis-2026-04-09.md
+    - docs/sprint-artifacts/reports/extraction-test-2026-04-09.md
+    - docs/sprint-artifacts/reports/full-audit-2026-04-09.md

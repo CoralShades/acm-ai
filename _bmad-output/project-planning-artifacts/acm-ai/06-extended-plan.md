@@ -1,58 +1,80 @@
-# Extended Implementation Plan - ACM-AI v1.0
+# Extended Implementation Plan - ACM-AI v4.0
 
 > **Created:** 2025-12-07
-> **Status:** Planning
-> **Scope:** Original epics + Upload Wizard + UI Refresh
+> **Last Updated:** 2026-03-31
+> **Status:** Delivered
+> **Scope:** 37 epics, 319 stories — core MVP through V3.5 per-row extraction, multi-consultant format, unified chat, and 20+ bug fix rounds
 
 ---
 
 ## Executive Summary
 
-This plan extends the original ACM-AI implementation with two new epics:
-- **E7: Upload Wizard** - Multi-step wizard with batch upload support
-- **E8: UI Refresh** - Bento Grid design system overhaul
+ACM-AI has evolved from a planning-stage prototype (8 epics, 35 stories) into a fully delivered asbestos compliance management platform spanning **37 epics and 319 stories**. This document records the extended plan as delivered through 2026-03-31.
 
-Combined with the original 6 epics (25 stories), this brings the total to **8 epics and 35+ stories**.
+**Delivery summary by phase:**
+
+- **E1-E7: Core MVP** -- Extraction pipeline, AG Grid spreadsheet, cell citations, chat with ACM context, export, branding, upload wizard. ALL DONE.
+- **E8: UI Refresh (Bento Grid)** -- ARCHIVED by decision 2026-02-08. E8-S11 (ACM Register Grid UI Polish) completed as standalone. All other E8 stories archived.
+- **E9-E16: Enterprise Readiness** -- Document library, UI simplification, search/RAG, extraction settings, knowledge graph, UX enhancements, extraction monitor. ALL DONE.
+- **E17-E20: Intelligence & Hardening** -- Live extraction intelligence, production hardening, stakeholder UX, extraction completeness. ALL DONE.
+- **E21-E29: Post-Audit & Research** -- Loading states, post-audit remediation, MinerU, TableFormer, table extraction research, Docling Direct API, structured output resilience, not-sampled recovery, pipeline unification. ALL DONE (some stories archived).
+- **E30-E35: V3 (Salesforce Alignment)** -- Foundation & schema, multi-provider extraction, AI processing & validation, frontend & UX, integration & polish, post-V3 hardening. ALL DONE (37/37 stories).
+- **E36: E2E Verification** -- IN PROGRESS (4/8 stories done).
+- **E37: V3.5 Per-Row Extraction** -- One LLM call per table row, 163 new tests. DONE.
+- **MCS Sprint: Multi-Consultant Format** -- 246 records across 3 document formats, 13 stories. DONE.
+- **Unified Chat: 3 phases** -- Smart chat panel, model selection, session persistence, 14 legacy files deleted, 13 stories. DONE.
+- **Bug Fixes & Polish** -- 20+ standalone bug fix rounds addressing extraction accuracy, SurrealDB queries, frontend state, pipeline resilience. DONE.
 
 ---
 
 ## Current Progress
 
-### Completed Stories (2)
-| Story | Title | Notes |
-|-------|-------|-------|
-| E1-S1 | Create ACM Data Model | Migration 10.surrealql applied |
-| E1-S2 | Create ACM Record Domain Model | `open_notebook/domain/acm.py` |
+### Overall Status (2026-03-31)
 
-### Ready for Implementation (6)
-| Story | Title | Tech-Spec |
-|-------|-------|-----------|
-| E1-S3 | Implement ACM Extraction Transformation | Yes |
-| E1-S4 | Create ACM API Endpoints | Yes |
-| E2-S2 | Create ACMSpreadsheet Component | Yes |
-| E3-S2 | Create PDF Viewer Modal | Yes |
-| E4-S1 | Add ACM Records to Chat Context | Yes |
-| E4-S3 | Generate ACM-Aware Chat Responses | Yes |
+| Metric | Count |
+|--------|-------|
+| Total Epics | 37 |
+| Total Stories | 319 |
+| Done | 289 (91%) |
+| In Progress | 1 |
+| Backlog | 3 |
+| Archived | 16 |
+
+### Key Milestones
+
+| Date | Milestone |
+|------|-----------|
+| 2025-12-07 | Project kickoff, initial planning |
+| 2026-02-22 | E1-E17 complete (core MVP + enterprise readiness) |
+| 2026-02-27 | E23 MinerU extraction (90.3% accuracy) |
+| 2026-02-28 | E26 Docling Direct API (100% Broadmeadows) |
+| 2026-03-05 | V3 complete (E30-E35, 37/37 stories) |
+| 2026-03-10 | V3.5 Per-Row Extraction (E37, 163 new tests) |
+| 2026-03-18 | MCS Multi-Consultant Format (246 records, 3 formats) |
+| 2026-03-22 | Unified Chat (3 phases, 14 legacy files deleted) |
+| 2026-03-31 | Chat pipeline stabilized (4 debug rounds, 20+ fixes) |
 
 ---
 
-## New Epic 7: Upload Wizard
+## Epic 7: Upload Wizard -- DONE
+
+> **Status:** All 6 stories complete.
 
 ### Overview
 Replace the current 3-step add source dialog with a comprehensive multi-step wizard supporting batch uploads with better UX.
 
-### E7-S1: Create Wizard Framework Component
+### E7-S1: Create Wizard Framework Component -- DONE
 **As a** developer
 **I want** a reusable multi-step wizard framework
 **So that** I can build consistent wizard experiences
 
 **Acceptance Criteria:**
-- [ ] `WizardContainer` component with step navigation
-- [ ] Progress indicator showing current step
-- [ ] Previous/Next/Finish buttons with proper states
-- [ ] Step validation before proceeding
-- [ ] Keyboard navigation support (Enter, Escape)
-- [ ] Mobile-responsive design
+- [x] `WizardContainer` component with step navigation
+- [x] Progress indicator showing current step
+- [x] Previous/Next/Finish buttons with proper states
+- [x] Step validation before proceeding
+- [x] Keyboard navigation support (Enter, Escape)
+- [x] Mobile-responsive design
 
 **Technical Notes:**
 - Location: `frontend/src/components/ui/wizard.tsx`
@@ -60,19 +82,19 @@ Replace the current 3-step add source dialog with a comprehensive multi-step wiz
 
 ---
 
-### E7-S2: File Upload Step with Drag & Drop
+### E7-S2: File Upload Step with Drag & Drop -- DONE
 **As a** user
 **I want** to drag and drop files or click to browse
 **So that** uploading is intuitive
 
 **Acceptance Criteria:**
-- [ ] Large drop zone with visual feedback
-- [ ] Click to browse fallback
-- [ ] File type validation with clear error messages
-- [ ] File size validation (configurable limit)
-- [ ] Preview of selected files with remove option
-- [ ] Batch support: up to 50 files
-- [ ] Progress indicator per file
+- [x] Large drop zone with visual feedback
+- [x] Click to browse fallback
+- [x] File type validation with clear error messages
+- [x] File size validation (configurable limit)
+- [x] Preview of selected files with remove option
+- [x] Batch support: up to 50 files
+- [x] Progress indicator per file
 
 **Technical Notes:**
 - Use `react-dropzone` library
@@ -81,17 +103,17 @@ Replace the current 3-step add source dialog with a comprehensive multi-step wiz
 
 ---
 
-### E7-S3: Document Type Detection Step
+### E7-S3: Document Type Detection Step -- DONE
 **As a** user
 **I want** the system to detect document types automatically
 **So that** I don't have to classify them manually
 
 **Acceptance Criteria:**
-- [ ] Auto-detect document type from filename/content
-- [ ] Types: SAMP/ACM Register, General Document, Media, Other
-- [ ] Manual override option per file
-- [ ] Batch classification (apply to all similar)
-- [ ] Visual cards showing detected type with confidence
+- [x] Auto-detect document type from filename/content
+- [x] Types: ARA/ACM Register, General Document, Media, Other
+- [x] Manual override option per file
+- [x] Batch classification (apply to all similar)
+- [x] Visual cards showing detected type with confidence
 
 **Technical Notes:**
 - Simple heuristics: filename patterns, PDF metadata
@@ -100,18 +122,18 @@ Replace the current 3-step add source dialog with a comprehensive multi-step wiz
 
 ---
 
-### E7-S4: Processing Options Step
+### E7-S4: Processing Options Step -- DONE
 **As a** user
 **I want** to configure how documents are processed
 **So that** I get the right output for each type
 
 **Acceptance Criteria:**
-- [ ] ACM Documents: Enable ACM extraction toggle (default ON)
-- [ ] All Documents: Embedding option (Yes/No/Ask)
-- [ ] Transformation selection (multi-select)
-- [ ] Notebook assignment (multi-select)
-- [ ] Processing mode: Sync vs Async
-- [ ] Preset configurations (save for reuse)
+- [x] ACM Documents: Enable ACM extraction toggle (default ON)
+- [x] All Documents: Embedding option (Yes/No/Ask)
+- [x] Transformation selection (multi-select)
+- [x] Notebook assignment (multi-select)
+- [x] Processing mode: Sync vs Async
+- [x] Preset configurations (save for reuse)
 
 **Technical Notes:**
 - Different options shown based on document type
@@ -119,17 +141,17 @@ Replace the current 3-step add source dialog with a comprehensive multi-step wiz
 
 ---
 
-### E7-S5: Review & Confirm Step
+### E7-S5: Review & Confirm Step -- DONE
 **As a** user
 **I want** to review my selections before uploading
 **So that** I can catch mistakes
 
 **Acceptance Criteria:**
-- [ ] Summary table of all files
-- [ ] Document type, notebooks, transformations per file
-- [ ] Edit button to go back to specific step
-- [ ] Total count and estimated processing time
-- [ ] "Start Upload" button with confirmation
+- [x] Summary table of all files
+- [x] Document type, notebooks, transformations per file
+- [x] Edit button to go back to specific step
+- [x] Total count and estimated processing time
+- [x] "Start Upload" button with confirmation
 
 **Technical Notes:**
 - Collapsible sections for large batches
@@ -137,19 +159,19 @@ Replace the current 3-step add source dialog with a comprehensive multi-step wiz
 
 ---
 
-### E7-S6: Upload Progress & Results Step
+### E7-S6: Upload Progress & Results Step -- DONE
 **As a** user
 **I want** to see upload progress and results
 **So that** I know what succeeded and failed
 
 **Acceptance Criteria:**
-- [ ] Real-time progress per file
-- [ ] Overall progress bar
-- [ ] Success/failure status per file
-- [ ] Error messages for failures
-- [ ] Retry failed uploads option
-- [ ] "View Source" link for successful uploads
-- [ ] "Upload More" or "Done" actions
+- [x] Real-time progress per file
+- [x] Overall progress bar
+- [x] Success/failure status per file
+- [x] Error messages for failures
+- [x] Retry failed uploads option
+- [x] "View Source" link for successful uploads
+- [x] "Upload More" or "Done" actions
 
 **Technical Notes:**
 - Use WebSocket or polling for real-time updates
@@ -157,7 +179,9 @@ Replace the current 3-step add source dialog with a comprehensive multi-step wiz
 
 ---
 
-## New Epic 8: UI Refresh (Bento Grid Design)
+## Epic 8: UI Refresh (Bento Grid Design) -- ARCHIVED
+
+> **Status: ARCHIVED** -- Skipped by decision 2026-02-08. E8-S11 (ACM Register Grid UI Polish) was completed as a standalone story. All other E8 stories archived.
 
 ### Overview
 Refresh the ACM-AI interface using a Bento Grid design system - card-based layouts optimized for data-heavy professional applications.
@@ -377,101 +401,106 @@ Refresh the ACM-AI interface using a Bento Grid design system - card-based layou
 
 ---
 
-## Implementation Order
+## Post-E8 Epics: Full Delivery Summary (E9-E37 + Sprints)
 
-### Phase 1: Foundation (Current)
-1. ~~E1-S1: ACM Data Model~~ ✅
-2. ~~E1-S2: ACM Domain Model~~ ✅
-3. **E1-S3: ACM Extraction** ← Next
-4. **E1-S4: ACM API Endpoints**
-
-### Phase 2: UI Framework
-5. E8-S1: Install UI/UX Pro Max Skill
-6. E8-S2: Define Design Tokens
-7. E8-S3: Bento Card Component
-8. E8-S4: Bento Grid Layout
-
-### Phase 3: Upload Wizard
-9. E7-S1: Wizard Framework
-10. E7-S2: File Upload Step
-11. E7-S3: Document Type Detection
-12. E7-S4: Processing Options
-13. E7-S5: Review & Confirm
-14. E7-S6: Upload Progress
-
-### Phase 4: ACM Spreadsheet
-15. E2-S1: Install AG Grid
-16. E2-S2: ACMSpreadsheet Component
-17. E2-S3: Sorting/Filtering
-18. E2-S4: Row Grouping
-19. E2-S5: Risk Color Coding
-20. E2-S6: Search Bar
-
-### Phase 5: UI Refresh Pages
-21. E8-S5: Dashboard Redesign
-22. E8-S6: Sources List Redesign
-23. E8-S7: Source Detail Redesign
-24. E8-S8: Navigation Update
-25. E8-S9: Typography Update
-26. E8-S10: Dark Mode Refinement
-
-### Phase 6: Citations & Chat
-27. E3-S1: Clickable Cells
-28. E3-S2: PDF Viewer Modal
-29. E3-S3: ACM Citation Type
-30. E4-S1: ACM in Chat Context
-31. E4-S3: ACM-Aware Responses
-
-### Phase 7: Polish & Export
-32. E1-S5: Integration with Source Processing
-33. E5-S1: CSV Export
-34. E6-S1: Rebranding (title, name)
-
----
-
-## Story Count Summary
+The following epics were delivered after the original E1-E8 plan. See `05-epics-and-stories.md` for full story details, acceptance criteria, and implementation notes.
 
 | Epic | Title | Stories | Status |
 |------|-------|---------|--------|
-| E1 | ACM Data Extraction Pipeline | 5 | 2 done, 3 pending |
-| E2 | AG Grid Spreadsheet | 6 | All pending |
-| E3 | Cell Citations & PDF | 4 | All pending |
-| E4 | Chat with ACM Context | 4 | All pending |
-| E5 | Export Functionality | 2 | All pending |
-| E6 | Rebranding | 4 | All pending |
-| **E7** | **Upload Wizard** | **6** | **NEW** |
-| **E8** | **UI Refresh (Bento Grid)** | **10** | **NEW** |
-| **Total** | | **41** | |
+| E9 | Document Library Management | 3 | Done |
+| E10 | UI Simplification | 1 | Done |
+| E11 | Search & Retrieval (RAG) | 2 | Done |
+| E12 | Extraction Settings UI | 4 | Done |
+| E13 | Knowledge Graph | 3 | Done |
+| E14 | UX & Enterprise Readiness | 11 | Done |
+| E15 | Extraction Monitor | 2 | Done |
+| E16 | UX Enhancement | 3 | Done |
+| E17 | Live Extraction Intelligence | 6 | Done |
+| E18 | Production Hardening | 7 | Done |
+| E19 | Standard User UX | 8 | Done |
+| E20 | Extraction Completeness | 6 | Done |
+| E21 | Loading States | 4 | Done |
+| E22 | Post-Audit Remediation | 5 | Done |
+| E23 | MinerU Table Extraction | 4 | Done |
+| E24 | TableFormer Activation | 4 | Done (2 archived) |
+| E25 | Table Extraction Research | 3 | Done |
+| E26 | Docling Direct API | 7 | Done |
+| E27 | Structured Output Resilience | 4 | Done |
+| E28 | Not Sampled Recovery | 3 | Done |
+| E29 | Pipeline Unification | 10 | Partial (4 done, 6 archived) |
+| E30 | V3 Foundation & Schema | 9 | Done |
+| E31 | Multi-Provider Extraction | 8 | Done |
+| E32 | AI Processing & Validation | 8 | Done |
+| E33 | Frontend & UX (V3) | 8 | Done |
+| E34 | Integration & Polish (V3) | 4 | Done |
+| E35 | Post-V3 Hardening | 8 | Done |
+| E36 | E2E Verification | 8 | In Progress (4/8) |
+| E37 | Per-Row Extraction (V3.5) | 8 | Done |
+| MCS | Multi-Consultant Format | 13 | Done |
+| UC | Unified Chat | 13 | Done |
+| -- | Bug Fixes & Polish | 30+ | Done |
 
 ---
 
-## Dependencies
+## Implementation Order (Actual)
 
-```
-E8-S1 → E8-S2 → E8-S3 → E8-S4
-                    ↓
-              E8-S5/S6/S7/S8
+### Phase 1: Core MVP (Dec 2025 - Feb 2026)
+- E1-E7: Extraction pipeline, AG Grid, citations, chat, export, branding, upload wizard
 
-E7-S1 → E7-S2 → E7-S3 → E7-S4 → E7-S5 → E7-S6
+### Phase 2: Enterprise Readiness (Feb 2026)
+- E9-E16: Document library, search, settings, knowledge graph, UX, extraction monitor
 
-E1-S1 → E1-S2 → E1-S3 → E1-S4 → E1-S5
-              ↓
-        E2-S1 → E2-S2 → ...
-              ↓
-        E3-S1 → E3-S2 → E3-S3
-              ↓
-        E4-S1 → E4-S3
-```
+### Phase 3: Intelligence & Hardening (Feb 2026)
+- E17-E20: Live intelligence, production hardening, stakeholder UX, extraction completeness
+
+### Phase 4: Post-Audit & Research (Feb 2026)
+- E21-E29: Loading states, remediation, MinerU, TableFormer, Docling, structured output, pipeline unification
+
+### Phase 5: V3 Salesforce Alignment (Mar 2026)
+- E30-E35: Schema alignment, multi-provider, AI processing, frontend, integration, hardening (37/37 stories)
+
+### Phase 6: V3.5 + Sprints (Mar 2026)
+- E37: Per-row extraction (163 new tests)
+- MCS: Multi-consultant format (246 records, 3 formats)
+- UC: Unified chat (3 phases, 14 legacy files deleted)
+- 20+ bug fix rounds
+
+### Phase 7: Verification (ongoing)
+- E36: E2E verification (4/8 complete as of 2026-03-31)
+
+---
+
+## Story Count Summary (Final)
+
+| Epic | Title | Stories | Status |
+|------|-------|---------|--------|
+| E1 | ACM Data Extraction Pipeline | 5 | Done |
+| E2 | AG Grid Spreadsheet | 6 | Done |
+| E3 | Cell Citations & PDF | 4 | Done |
+| E4 | Chat with ACM Context | 4 | Done |
+| E5 | Export Functionality | 2 | Done |
+| E6 | Rebranding | 4 | Done |
+| E7 | Upload Wizard | 6 | Done |
+| E8 | UI Refresh (Bento Grid) | 10 | Archived |
+| E9-E29 | Enterprise + Research | 88 | Done (8 archived) |
+| E30-E35 | V3 Salesforce Alignment | 45 | Done |
+| E36 | E2E Verification | 8 | In Progress (4/8) |
+| E37 | Per-Row Extraction (V3.5) | 8 | Done |
+| MCS | Multi-Consultant Format | 13 | Done |
+| UC | Unified Chat | 13 | Done |
+| -- | Bug Fixes & Polish | 30+ | Done |
+| **Total** | | **319** | **289 done (91%)** |
 
 ---
 
 ## Resources
 
-- [UI/UX Pro Max Skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
-- [Bento Grid Design Patterns](https://bentogrids.com/)
-- [Magic UI Bento Component](https://magicui.design/docs/components/bento-grid)
 - [AG Grid Documentation](https://www.ag-grid.com/react-data-grid/)
+- [Docling Documentation](https://ds4sd.github.io/docling/)
+- [MinerU Documentation](https://github.com/opendatalab/MinerU)
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- [SurrealDB Documentation](https://surrealdb.com/docs)
 
 ---
 
-*Extended Plan created: 2025-12-07*
+*Extended Plan created: 2025-12-07 | Last updated: 2026-03-31*

@@ -16,8 +16,11 @@ from open_notebook.extractors.parsers.base import DocumentMeta
 from open_notebook.extractors.recovery_config import RecoveryConfig
 from open_notebook.extractors.schema_inference import (
     SF_FIELD_CATALOG,
+    SF_TO_ITEM_ROW_FIELD,
+    _DEFAULT_FIELD_DESCRIPTIONS,
     ColumnMapping,
     InferredSchema,
+    build_extraction_fields,
     compute_header_signature,
     schema_inference_node,
 )
@@ -667,3 +670,84 @@ async def test_schema_inference_node_cache_hit_with_pydantic_meta():
     assert schema.confidence == 0.95
     assert schema.consultant_name == "Prensa Pty Ltd"
     assert schema.profile_id == "consultant_format_profile:cached1"
+
+
+# ---------------------------------------------------------------------------
+# Regression: build_extraction_fields must include quantity/acm_labelled/risk_status
+# (Bug: these fields were in ACMItemRow schema but missing from SF_TO_ITEM_ROW_FIELD
+#  and _DEFAULT_FIELD_DESCRIPTIONS, causing 0% field coverage in extractions.)
+# ---------------------------------------------------------------------------
+
+
+def _make_broadmeadows_schema() -> InferredSchema:
+    """InferredSchema simulating typical Broadmeadows ARA column detection."""
+    return InferredSchema(
+        column_mapping={
+            "Room/Area": "Room_or_Area__c",
+            "Material": "Item_Name__c",
+            "Friability": "Friability_of_Material__c",
+            "Sample No": "NATA_Endorsed_Sample_no__c",
+            "Result": "Sample_Analysis_Result_Material_Status__c",
+            "Condition": "Condition__c",
+        },
+        canonical_mapping={},
+        confidence=0.9,
+    )
+
+
+def test_build_extraction_fields_includes_quantity():
+    """quantity must appear in build_extraction_fields output (regression: was missing)."""
+    fields = build_extraction_fields(_make_broadmeadows_schema())
+    names = {f["name"] for f in fields}
+    assert "quantity" in names, (
+        "quantity missing from extraction fields — check SF_TO_ITEM_ROW_FIELD "
+        "and _DEFAULT_FIELD_DESCRIPTIONS and build_extraction_fields always-include list"
+    )
+
+
+def test_build_extraction_fields_includes_acm_labelled():
+    """acm_labelled must appear in build_extraction_fields output (regression: was missing)."""
+    fields = build_extraction_fields(_make_broadmeadows_schema())
+    names = {f["name"] for f in fields}
+    assert "acm_labelled" in names, (
+        "acm_labelled missing from extraction fields — check _DEFAULT_FIELD_DESCRIPTIONS "
+        "and build_extraction_fields always-include list"
+    )
+
+
+def test_build_extraction_fields_includes_risk_status():
+    """risk_status must appear in build_extraction_fields output (regression: was missing)."""
+    fields = build_extraction_fields(_make_broadmeadows_schema())
+    names = {f["name"] for f in fields}
+    assert "risk_status" in names, (
+        "risk_status missing from extraction fields — check _DEFAULT_FIELD_DESCRIPTIONS "
+        "and build_extraction_fields always-include list"
+    )
+
+
+def test_sf_to_item_row_field_has_quantity():
+    """Quantity__c must be in SF_TO_ITEM_ROW_FIELD (regression: was missing)."""
+    assert "Quantity__c" in SF_TO_ITEM_ROW_FIELD, (
+        "Quantity__c missing from SF_TO_ITEM_ROW_FIELD — PDF Quantity columns won't be recognized"
+    )
+
+
+def test_sample_result_description_guides_assumed_positive():
+    """sample_result description must explicitly mention Assumed Positive vs Unknown."""
+    desc = _DEFAULT_FIELD_DESCRIPTIONS.get("sample_result", "")
+    assert "Assumed Positive" in desc, (
+        "sample_result description must guide LLM to use 'Assumed Positive' — "
+        "without this, models default to 'Unknown' for presumed asbestos items"
+    )
+    assert "Unknown" in desc, (
+        "sample_result description must clarify when to use 'Unknown' vs 'Assumed Positive'"
+    )
+
+
+def test_build_extraction_fields_min_field_count():
+    """build_extraction_fields should return at least 16 fields for a well-mapped schema."""
+    fields = build_extraction_fields(_make_broadmeadows_schema())
+    assert len(fields) >= 16, (
+        f"Expected at least 16 fields but got {len(fields)} — "
+        "some fields may have been dropped from _DEFAULT_FIELD_DESCRIPTIONS"
+    )

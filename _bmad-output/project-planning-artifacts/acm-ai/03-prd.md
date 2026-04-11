@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) - ACM-AI
 
-> **Product:** ACM-AI v3.5
-> **Date:** 2025-12-07 (Updated: 2026-03-11)
-> **Status:** v3.5 - Per-Row Extraction Pipeline (E37: 8 stories, 18 SP; all offline verification passed)
+> **Product:** ACM-AI v4.0
+> **Date:** 2025-12-07 (Updated: 2026-03-31)
+> **Status:** v4.0 - Multi-Consultant Format Adaptability (E38/MCS), Unified Chat Architecture, Auto-Notebook/AI-Editor, UX Streaming Enhancements (319 stories complete)
 > **Author:** John (Product Manager)
-> **Change Log:** 2026-03-11 - v3.5: Per-Row ACM Extraction Pipeline (E37) — redesigned Item__c extraction from bulk-per-building to per-row mode (9 fields, num_ctx=2048), DoclingDocument JSON as primary input, 8 edge case types handled by row segmentation, Ollama truncation fallback with cloud retry, deterministic post-processing (no LLM for classification/normalization), 163 new tests; 2026-03-05 - v3.1: V3 Implementation Audit — verified all FR-1400..FR-1800 series against actual implementation, updated status to 36/37 stories complete (E30-S8 deferred), corrected story counts (E30: 9 stories incl. S9, E31: 8 stories incl. S8, E32: 8 stories incl. S8); 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
+> **Change Log:** 2026-03-31 - v4.0: Multi-Consultant Format Adaptability (FR-2000 series, E38/MCS — 13 stories), schema inference node, format profile registry, adaptive row segmenter, HITL column mapping UI, 3+ consultant formats validated (246 records across 4 PDFs); Unified Chat Architecture (FR-2100 series — 13 stories across 3 phases), single LangGraph agent with 15+ tools replacing supervisor+CRUD dual-agent pattern, AsyncSqliteSaver persistence, LLM intent router, 18 tool renderers; Auto-Notebook/AI-Editor (FR-2200 series), auto-create notebook on upload, /ai-editor route rename, cascade delete, post-extraction enrichment; UX Streaming Enhancements (FR-2300 series), 3-panel extract page, job card live counters, new SSE events, ExtractionStatusBanner; 2026-03-11 - v3.5: Per-Row ACM Extraction Pipeline (E37) — redesigned Item__c extraction from bulk-per-building to per-row mode (9 fields, num_ctx=2048), DoclingDocument JSON as primary input, 8 edge case types handled by row segmentation, Ollama truncation fallback with cloud retry, deterministic post-processing (no LLM for classification/normalization), 163 new tests; 2026-03-05 - v3.1: V3 Implementation Audit — verified all FR-1400..FR-1800 series against actual implementation, updated status to 36/37 stories complete (E30-S8 deferred), corrected story counts (E30: 9 stories incl. S9, E31: 8 stories incl. S8, E32: 8 stories incl. S8); 2026-03-02 - v3.0: V3 Scope Expansion — Salesforce schema alignment (FR-1400 series, E30), multi-provider extraction + consensus layer (FR-1500, E31), two-view building/item UI (FR-1600, E33), SSE streaming (FR-1700, E34), AI strategy with capability registry (FR-1800, E32), 33 new stories across 5 epics (97 SP). Source: Party Mode synthesis + SF alignment SCP + multi-agent audit; 2026-03-01 - v1.7: E29 reconciliation (unified orchestrator, benchmark-gated NFRs, decision gates); 2026-02-23 - v1.6: E20 Cross-Site Navigation and Domain Cutover (marketing as primary entrypoint, app on demo subdomain, bidirectional navigation links, env-driven host contract); 2026-02-22 - v1.5: E17 Live Extraction Intelligence (AG-UI extraction relay, A2A agent card, incremental record streaming, reasoning/tool observability, 6 new models); 2026-02-20 - v1.4: SCP-20260220 (Extraction Monitor + UX Enhancement, schema fields, table additions, MinerU primary); 2026-02-08 - v1.3 UX Audit &amp; Enterprise Readiness; Course correction: single generic configurable parser
 
 ---
 
@@ -17,7 +17,7 @@ This PRD defines the requirements for transforming Open Notebook into ACM-AI, a 
 See [Product Brief](./02-product-brief.md) for business context and [System Analysis](./01-system-analysis.md) for technical foundation.
 
 ### 1.3 Scope
-This document covers MVP requirements (Epics 1-20, 29), V3 scope expansion (Epics 30-34), and V3.5 per-row extraction pipeline (Epic 37). V3 adds Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, and AI capability routing. **V3.5 adds per-row Item__c extraction** with DoclingDocument JSON input, row segmentation for 8 edge case types, and Ollama truncation fallback. See [Section 11: V3 Scope](#11-v3-scope-expansion) and [Section 12: V3.5 Per-Row Extraction](#12-v35-per-row-extraction-pipeline) for details.
+This document covers MVP requirements (Epics 1-20, 29), V3 scope expansion (Epics 30-34), V3.5 per-row extraction pipeline (Epic 37), and V4.0 additions (2026-03-17 to 2026-03-31). V3 adds Salesforce schema alignment, multi-provider extraction with consensus, two-view building/item UI, and AI capability routing. **V3.5 adds per-row Item__c extraction** with DoclingDocument JSON input, row segmentation for 8 edge case types, and Ollama truncation fallback. **V4.0 adds Multi-Consultant Format Adaptability** (E38/MCS — schema inference, format profiles, adaptive segmenter, HITL mapping UI), **Unified Chat Architecture** (single LangGraph agent with 15+ tools replacing dual-agent pattern), **Auto-Notebook/AI-Editor** (auto-create on upload, cascade delete, enrichment), and **UX Streaming Enhancements** (3-panel extract page, live counters, new SSE events). See [Section 11: V3 Scope](#11-v3-scope-expansion), [Section 12: V3.5 Per-Row Extraction](#12-v35-per-row-extraction-pipeline), and [Section 13: V4.0 Scope](#13-v40-scope-expansion) for details.
 
 ### 1.4 Document Formats Supported
 | Format | Description | Status |
@@ -26,8 +26,10 @@ This document covers MVP requirements (Epics 1-20, 29), V3 scope expansion (Epic
 | NSW SAMP | School Asbestos Management Plan | Supported |
 | Prensa PDF | Asbestos assessment format (Prensa Pty Ltd) | Supported |
 | Greencap PDF | Asbestos assessment format (Greencap) | Supported |
+| Alexander ARA | Text-header format (ARA/Greencap-style) | **Validated (V4.0 MCS)** |
+| Clutch | Pipe-table format | **Validated (V4.0 MCS)** |
 
-> **Note:** Prensa and Greencap formats are not separate parser implementations. All consultant formats are handled by the single generic configurable parser (see Section 5.7) driven by `field_schema` configuration in SurrealDB. Format-specific differences are expressed as JSON configuration, not code.
+> **Note:** Prensa and Greencap formats are not separate parser implementations. All consultant formats are handled by the single generic configurable parser (see Section 5.7) driven by `field_schema` configuration in SurrealDB. Format-specific differences are expressed as JSON configuration, not code. As of V4.0, the MCS schema inference node (FR-2001) auto-detects column mappings for any format, with the format profile registry (FR-2002) caching validated mappings for reuse.
 
 ---
 
@@ -91,6 +93,8 @@ This document covers MVP requirements (Epics 1-20, 29), V3 scope expansion (Epic
 | FR-405 | Citation format: `[acm:record_id:field_name]` | P0 | Parser handles new citation type |
 
 ### 2.5 Chat Integration (FR-500 Series)
+
+> **Superseded:** FR-500 series has been replaced by the Unified Chat Architecture (FR-2100 series, Section 2.18). The supervisor + CRUD agent pattern described below was removed in the Unified Chat rewrite (2026-03-22). See Section 2.18 for the current architecture.
 
 | ID | Requirement | Priority | Acceptance Criteria |
 |----|-------------|----------|---------------------|
@@ -273,6 +277,66 @@ This document covers MVP requirements (Epics 1-20, 29), V3 scope expansion (Epic
 | FR-1802 | Ollama local for embeddings (zero cloud dependency) | P1 | Embedding generation uses Ollama local exclusively (nomic-embed-text or similar); no cloud API calls for embeddings; $0 embedding cost; data never leaves machine |
 | FR-1803 | AI model selection invisible to end users (admin settings only) | P0 | Upload wizard shows no model selection; officers interact with accuracy results not model choices; admin settings page provides provider routing configuration |
 | FR-1804 | Structured output via Pydantic models + Claude tool_use | P0 | BuildingExtractionResult and ACMItemExtractionResult Pydantic schemas used for Claude structured output via tool_use; schemas compatible with both Anthropic direct API and OpenRouter request/response formats |
+
+### 2.17 Multi-Consultant Format Adaptability (FR-2000 Series)
+
+> **Added:** 2026-03-31 (MCS Sprint, 2026-03-18 to 2026-03-20 — 13 stories)
+> **Source:** [Multi-Consultant Format Design](../../../docs/architecture/multi-consultant-format-design.md)
+> **Epic:** E38 — Multi-Consultant Format Support (MCS)
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-2001 | System shall auto-detect column mappings from any ARA/BAR PDF format via a schema inference LangGraph node | P0 | Schema inference node runs between PREFLIGHT and ORCHESTRATOR stages; produces InferredSchema + RecoveryConfig; handles varied consultant column layouts without hardcoded mappings |
+| FR-2002 | System shall cache consultant column mappings in a SurrealDB `consultant_format_profile` table for reuse | P0 | Format profile registry stores validated mappings per consultant; cache hit skips schema inference on repeated uploads; cache miss triggers full inference |
+| FR-2003 | Row segmenter shall use dynamic column mapping from InferredSchema instead of hardcoded column positions | P0 | Adaptive row segmenter reads column mappings at runtime; no hardcoded column indices; works with any column order |
+| FR-2004 | Extraction prompts shall use dynamic field lists from InferredSchema via Jinja templates | P0 | Format-agnostic extraction prompts; Jinja templates receive field lists dynamically; no consultant-specific prompt variants |
+| FR-2005 | System shall show a HITL column mapping confirmation dialog when schema inference confidence is low | P1 | When inference confidence < threshold, user sees mapping confirmation UI; user can correct mappings before extraction proceeds |
+| FR-2006 | System shall support 3+ consultant PDF formats validated end-to-end | P0 | Validated formats: Broadmeadows (standard), Alexander ARA (text-header), Clutch (pipe-table); 246 records extracted across 4 PDFs |
+| FR-2007 | System shall detect document structure format using pluggable format detectors | P0 | PipeTableDetector, TextHeaderDetector, StandardFormatDetector implemented; detectors named by structure type (not consultant name); extensible detector registry |
+
+### 2.18 Unified Chat Architecture (FR-2100 Series)
+
+> **Added:** 2026-03-31 (Unified Chat Rewrite, 2026-03-22 — 13 stories across 3 phases)
+> **Supersedes:** FR-500 series (Section 2.5) — supervisor + CRUD dual-agent pattern removed
+> **Epic:** Unified Chat Sprint
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-2101 | System shall provide a single unified LangGraph agent with 15+ LLM-facing tools replacing separate supervisor and CRUD agents | P0 | Single graph definition in unified chat module; all previous supervisor and CRUD tool capabilities preserved; no dual-agent routing overhead |
+| FR-2102 | Chat tool context shall use thread-safe contextvars for source_id scoping | P0 | `tool_context.py` uses Python contextvars; thread-safe access to source_id within tool execution; no global mutable state |
+| FR-2103 | Chat sessions shall persist across server restarts via AsyncSqliteSaver | P0 | AsyncSqliteSaver replaces MemorySaver; chat history survives API restarts; SQLite database stored on disk |
+| FR-2104 | System shall provide session CRUD REST endpoints with LangGraph thread_id mapping | P0 | `POST/GET/DELETE /api/unified-sessions/` endpoints; each session maps to a LangGraph thread_id; session metadata (name, source_id, created_at) stored |
+| FR-2105 | System shall route user messages via an LLM intent router with rule-based fast-path and LLM fallback | P0 | `llm_router.py` classifies intent; rule-based matching for common patterns (greetings, record queries); LLM fallback with entity extraction (buildings, rooms, risk_levels, materials, record_ids) |
+| FR-2106 | All 16 chat tools shall be async with proper contextvars propagation | P0 | All tools defined as async functions; Python 3.11 ThreadPoolExecutor contextvars propagation fix applied; no sync-to-async wrapper issues |
+| FR-2107 | Chat tools wrapper shall re-set source_id scope from LangGraph state before tool execution | P0 | Context-aware tools wrapper reads source_id from graph state; re-establishes contextvars before each tool invocation; handles contextvars not propagating between LangGraph nodes |
+| FR-2108 | Frontend shall render 18 tool result types with dedicated renderers | P0 | `UnifiedToolRenderers.tsx` covers 17 LLM tools + 1 internal tool; rich UI rendering (tables, stats, cards) for each tool result type |
+| FR-2109 | Chat suggestions shall be static, replacing broken useCopilotChatSuggestions hook | P1 | Static suggestion chips displayed in chat panel; no dependency on CopilotKit suggestion hook; contextually relevant suggestions |
+
+### 2.19 Auto-Notebook & AI-Editor (FR-2200 Series)
+
+> **Added:** 2026-03-31 (Commit 33bf5aed, 2026-03-22)
+> **Epic:** Auto-Notebook Sprint
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-2201 | System shall auto-create a Notebook record when a PDF is uploaded via POST /sources | P0 | Upload triggers notebook creation; name derived from cleaned filename; notebook_id linked to source |
+| FR-2202 | User-facing "Notebooks" shall be renamed to "AI-Editor" with Sparkles icon | P0 | Route `/notebooks` redirects to `/ai-editor`; sidebar shows "AI-Editor" with Sparkles icon; internal code retains `notebook` naming |
+| FR-2203 | Deleting a source/job shall cascade-delete linked notebooks and chat sessions | P0 | `DELETE /sources/{id}` removes associated notebook records and chat sessions; not just edge records — full cascade |
+| FR-2204 | Notebook name shall be enriched post-extraction with site/consultant metadata | P1 | `_enrich_notebook_name()` in `commands/acm_commands.py` updates notebook name using DocumentMeta (site name, consultant) after extraction completes |
+| FR-2205 | Job cards shall display notebook name badge | P1 | JobCard component shows notebook name; visible on `/jobs` list page |
+
+### 2.20 UX Streaming Enhancements (FR-2300 Series)
+
+> **Added:** 2026-03-31 (UX Mega-Pack, 2026-03-20)
+> **Epic:** UX Streaming Sprint
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| FR-2301 | Extract page shall use a 3-panel progressive layout with DoclingTablesPanel, BuildingsProgressPanel, and LiveRecordsPanel | P0 | Three distinct panels show extraction progress; DoclingTablesPanel shows raw tables as they arrive; BuildingsProgressPanel shows per-building status; LiveRecordsPanel shows extracted records in real-time |
+| FR-2302 | Job cards shall display live extraction counters with elapsed timer | P0 | New `GET /api/sources/{id}/live-stats` endpoint returns building_count, record_count, status; `useLiveStats` hook polls during extraction; elapsed timer shows duration |
+| FR-2303 | System shall emit new SSE events for extraction milestones | P0 | `extraction.docling_complete` emitted when Docling finishes; `ai.building_saved` emitted when a building is persisted; events consumed by frontend streaming store |
+| FR-2304 | SourceListResponse shall be enriched with tables_count, records_count, site_name, and consultant_name | P1 | API response includes aggregate counts and metadata; jobs page displays enriched data without extra API calls |
+| FR-2305 | Job detail page shall display an ExtractionStatusBanner with real-time SSE progress | P0 | `ExtractionStatusBanner` component on `/jobs/[id]`; subscribes to SSE stream; shows stage, progress percentage, and current operation |
 
 ---
 
@@ -1248,6 +1312,34 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 - Performance optimization
 - Canonical artifact update
 
+### V4.0 Phase 10: Multi-Consultant Format Adaptability (E38/MCS)
+- Schema inference LangGraph node (auto-detect column mappings)
+- Format profile registry (SurrealDB caching)
+- Adaptive row segmenter (dynamic column mapping)
+- Format-agnostic extraction prompts (Jinja templates)
+- HITL column mapping confirmation UI
+- Format detectors by structure type (PipeTableDetector, TextHeaderDetector, StandardFormatDetector)
+- Multi-format validation (3+ consultant formats, 246 records across 4 PDFs)
+
+### V4.0 Phase 11: Unified Chat Architecture
+- Single LangGraph agent with 15+ tools (replaces supervisor + CRUD agents)
+- Thread-safe contextvars-based tool context
+- AsyncSqliteSaver for durable chat persistence
+- Session CRUD REST endpoints with LangGraph thread_id mapping
+- LLM intent router (rule-based fast-path + LLM fallback)
+- Async tools with contextvars propagation fix
+- 18 tool renderers in UnifiedToolRenderers.tsx
+
+### V4.0 Phase 12: Auto-Notebook, AI-Editor & UX Streaming
+- Auto-create Notebook on PDF upload
+- Notebooks renamed to AI-Editor (route + sidebar)
+- Cascade delete (notebooks + chat sessions)
+- Post-extraction notebook enrichment
+- 3-panel progressive extract page
+- Job card live counters + elapsed timer
+- New SSE events (extraction.docling_complete, ai.building_saved)
+- ExtractionStatusBanner on /jobs/[id]
+
 ---
 
 ## 9. Open Items
@@ -1283,6 +1375,13 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 | Consensus Layer | V3 component that merges extraction results from multiple providers |
 | VLM | Vision Language Model — MinerU backend that processes page images |
 | Hybrid Backend | MinerU mode that auto-routes pages to pipeline or VLM based on complexity |
+| InferredSchema | V4.0 schema inference output mapping column positions to field names for any consultant format |
+| Format Profile | Cached consultant column mapping stored in `consultant_format_profile` table |
+| HITL | Human-in-the-Loop — user confirmation step for low-confidence schema inference |
+| AsyncSqliteSaver | LangGraph checkpoint saver using async SQLite for durable chat persistence |
+| AI-Editor | User-facing name for Notebooks feature (internally still `notebook`) |
+| MCS | Multi-Consultant Format Support — E38 sprint adding format adaptability |
+| ARA | Asbestos Register Assessment (formerly incorrectly called SAMP in some docs) |
 
 ### B. References
 
@@ -1308,6 +1407,7 @@ BAR Excel template â†’ JSON config files â†’ SurrealDB field_schema ta
 | 2026-03-01 | 1.7 | Epic 29 reconciliation: unified orchestrator path contract, parser resilience requirement, benchmark-gated NFRs, and decision-gate release controls added. |
 | 2026-03-02 | 3.0 | **V3 Scope Expansion:** FR-1400 series (SF alignment, 12 FRs); FR-1500 series (multi-provider extraction, 6 FRs); FR-1600 series (UI/UX flows, 10 FRs); FR-1700 series (streaming, 4 FRs); FR-1800 series (AI strategy, 4 FRs); FR-1409 amended (Anthropic default + OpenRouter fallback); NFR-500 (V3 performance), NFR-600 (data sovereignty); Building Record schema (§5.1.5), Raw Extraction Table (§5.1.6), V3 schema additions (§5.1.7); V3 pipeline architecture (§5.4.1); SF vocabulary mapping (§5.5); SF export format (§5.3.1); V3 UI structure (§4.4); 20 V3 test scenarios; V3 rollout phases 5-9; Section 11 V3 Scope |
 | 2026-03-11 | 3.5 | **V3.5 Per-Row Extraction Pipeline (E37):** FR-1900 series (per-row extraction, 6 FRs); per-row Item__c extraction mode (§5.4.2); 9-field extraction schema; DoclingDocument JSON input; row segmentation for 8 edge case types (A-H); Ollama truncation fallback with cloud retry; deterministic post-processing; 163 new tests; Section 12 V3.5 Scope |
+| 2026-03-31 | 4.0 | **V4.0 Scope Expansion:** FR-2000 series (Multi-Consultant Format Adaptability, 7 FRs, E38/MCS — 13 stories); FR-2100 series (Unified Chat Architecture, 9 FRs — 13 stories across 3 phases, supersedes FR-500); FR-2200 series (Auto-Notebook & AI-Editor, 5 FRs); FR-2300 series (UX Streaming Enhancements, 5 FRs); Section 1.3 scope updated; FR-500 superseded note added; V4.0 rollout phases 10-12; Section 13 V4.0 Scope; Glossary expanded (InferredSchema, Format Profile, HITL, AsyncSqliteSaver, AI-Editor, MCS, ARA) |
 
 ---
 
@@ -1337,7 +1437,12 @@ V3 transforms ACM-AI from a BAR-centric extraction tool into a Salesforce-aligne
 | E32: AI Processing & Validation | Two-phase extraction, SF validation + correction, classifier update, Ollama evaluation | 6 | 16 | E30, E31 |
 | E33: Frontend & UX | Upload wizard, building/item grid, picklist editors, validation badges, provenance viewer, building detail, export | 8 | 25 | E30, E32 |
 | E34: Integration & Polish | Record streaming, bulk operations, performance, artifact update | 4 | 9 | E30-E33 |
-| **TOTAL** | | **33** | **97** | |
+| E37: Per-Row Extraction | Row segmentation, per-row extractor, DoclingDocument JSON, truncation fallback | 8 | 18 | E30-E34 |
+| E38: Multi-Consultant Format (MCS) | Schema inference, format profiles, adaptive segmenter, HITL UI, format detectors | 13 | — | E37 |
+| Unified Chat Sprint | Single LangGraph agent, 15+ tools, AsyncSqliteSaver, LLM router, tool renderers | 13 | — | E30+ |
+| Auto-Notebook Sprint | Auto-create on upload, AI-Editor rename, cascade delete, enrichment | 5 | — | Source pipeline |
+| UX Streaming Sprint | 3-panel extract page, live counters, new SSE events, ExtractionStatusBanner | 5 | — | E34 |
+| **TOTAL (V3-V4.0)** | | **81** | **—** | |
 
 ### 11.3 V3 Dependency Graph
 
@@ -1395,6 +1500,10 @@ source
 | FR-1702, FR-1703 | E34 | v3-party-mode-plan.md § PRD Delta | NEW |
 | FR-1801–FR-1804 | E32 | v3-party-mode-plan.md § PRD Delta | NEW |
 | FR-1901–FR-1906 | E37 | v3.5/task_plan.md, v3.5/findings.md | NEW |
+| FR-2001–FR-2007 | E38 (MCS) | docs/architecture/multi-consultant-format-design.md | NEW (v4.0) |
+| FR-2101–FR-2109 | Unified Chat | Unified Chat Sprint (2026-03-22) | NEW (v4.0, supersedes FR-500) |
+| FR-2201–FR-2205 | Auto-Notebook | Commit 33bf5aed (2026-03-22) | NEW (v4.0) |
+| FR-2301–FR-2305 | UX Streaming | UX Mega-Pack (2026-03-20) | NEW (v4.0) |
 
 ---
 
@@ -1440,3 +1549,74 @@ V3.5 redesigns Item__c extraction from a bulk-per-building approach (one LLM cal
 | `ACM_EXTRACTION_MODEL` | `llama3.1:8b` | Ollama model for extraction (was hardcoded `qwen2.5:7b`) |
 | `ACM_PRE_EXTRACTION_MODEL` | `qwen2.5:14b-instruct-q4_K_M` | Ollama model for building metadata (large context) |
 | `ACM_PRE_EXTRACTION_NUM_CTX` | `32768` | Ollama context window for pre-extraction |
+
+---
+
+## 13. V4.0 Scope Expansion
+
+> **Added:** 2026-03-31
+> **Period:** 2026-03-17 to 2026-03-31
+> **Source Documents:** [Multi-Consultant Format Design](../../../docs/architecture/multi-consultant-format-design.md), Unified Chat Sprint artifacts, UX Mega-Pack sprint artifacts
+
+### 13.1 V4.0 Overview
+
+V4.0 extends ACM-AI with four major capability areas completed between 2026-03-17 and 2026-03-31: multi-consultant format adaptability (E38/MCS), a unified chat architecture replacing the dual-agent pattern, auto-notebook creation with AI-Editor branding, and UX streaming enhancements for real-time extraction monitoring.
+
+**Key V4.0 Capabilities:**
+1. **Multi-Consultant Format Adaptability** (E38/MCS) — Schema inference node auto-detects column mappings from any ARA/BAR PDF format; format profile registry caches consultant mappings in SurrealDB; adaptive row segmenter uses dynamic column mapping; HITL confirmation UI for low-confidence inference; 3+ consultant formats validated (246 records across 4 PDFs)
+2. **Unified Chat Architecture** — Single LangGraph agent with 15+ LLM-facing tools replaces separate supervisor and CRUD agents; thread-safe contextvars for tool context; AsyncSqliteSaver for durable persistence; LLM intent router with rule-based fast-path; 18 tool renderers in frontend
+3. **Auto-Notebook & AI-Editor** — Notebooks auto-created on PDF upload; user-facing rename from "Notebooks" to "AI-Editor" with Sparkles icon; cascade delete for notebooks + chat sessions; post-extraction enrichment with site/consultant metadata
+4. **UX Streaming Enhancements** — 3-panel progressive extract page (DoclingTablesPanel, BuildingsProgressPanel, LiveRecordsPanel); job card live counters with elapsed timer via useLiveStats hook; new SSE events (extraction.docling_complete, ai.building_saved); ExtractionStatusBanner on job detail page
+
+### 13.2 V4.0 Epic Boundary Summary
+
+| Epic | Scope | Stories | Dependencies |
+|------|-------|--------:|-------------|
+| E38: Multi-Consultant Format Support (MCS) | Schema inference, format profiles, adaptive segmenter, format-agnostic prompts, HITL UI, multi-format validation, format detectors | 13 | E37 complete |
+| Unified Chat Sprint | Single LangGraph agent, tool context, AsyncSqliteSaver, session CRUD, LLM router, async tools, tool renderers | 13 | E30+ (chat infrastructure) |
+| Auto-Notebook Sprint | Auto-create on upload, AI-Editor rename, cascade delete, enrichment, job card badge | 5 | Source upload pipeline |
+| UX Streaming Sprint | 3-panel extract page, live counters, new SSE events, enriched SourceListResponse, ExtractionStatusBanner | 5 | E34 (SSE infrastructure) |
+
+### 13.3 V4.0 Architecture Changes
+
+**Schema Inference Pipeline (MCS):**
+```
+PDF Upload → PREFLIGHT → [Schema Inference Node] → ORCHESTRATOR → ...
+                              ↓
+                    InferredSchema + RecoveryConfig
+                              ↓
+                    consultant_format_profile (SurrealDB cache)
+                              ↓
+                    Adaptive Row Segmenter (dynamic column mapping)
+                              ↓
+                    Format-Agnostic Jinja Prompts
+```
+
+**Unified Chat Architecture:**
+```
+User Message → LLM Intent Router (rule-based fast-path + LLM fallback)
+                    ↓
+              Single LangGraph Agent (15+ tools)
+                    ↓
+              contextvars tool_context (source_id scoping)
+                    ↓
+              AsyncSqliteSaver (persistent threads)
+                    ↓
+              UnifiedToolRenderers.tsx (18 renderers)
+```
+
+**Format Detectors:**
+| Detector | Triggers On | Example |
+|----------|-------------|---------|
+| StandardFormatDetector | Regular table with column headers | Broadmeadows BAR |
+| TextHeaderDetector | Text-based building headers, no table structure | Alexander ARA |
+| PipeTableDetector | Pipe-delimited table format | Clutch format |
+
+### 13.4 V4.0 FR Traceability
+
+| FR Series | Section | Epic | Status |
+|-----------|---------|------|--------|
+| FR-2001–FR-2007 | 2.17 | E38 (MCS) | COMPLETE |
+| FR-2101–FR-2109 | 2.18 | Unified Chat | COMPLETE |
+| FR-2201–FR-2205 | 2.19 | Auto-Notebook | COMPLETE |
+| FR-2301–FR-2305 | 2.20 | UX Streaming | COMPLETE |

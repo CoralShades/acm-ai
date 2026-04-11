@@ -24,8 +24,11 @@ Focus on these fields which were identified in this document's column headers:
   "condition": "string or null",
   "disturbance_potential": "string or null",
   "sample_number": "string or null — lab/sample ID e.g. 34511-039-001",
-  "sample_result": "string or null — Positive, Negative, Assumed Positive, or Not Sampled",
+  "sample_result": "string or null — MUST be one of: Positive, Negative, Assumed Positive, Not Sampled, or Unknown. Use 'Assumed Positive' for items presumed or assumed to contain asbestos without lab testing (e.g. 'Presumed', 'Presumed Positive', 'Assumed'). Use 'Not Sampled' only if the column says the item was not sampled.",
   "acm_product": "string or null — product type e.g. Floor covering, Skirting",
-  "internal_external": "string or null — Internal or External"
+  "internal_external": "string or null — Internal or External",
+  "quantity": "string or null — amount of material e.g. '10 m²', '5 linear meters', '2 sheets'",
+  "acm_labelled": "string or null — whether item is labelled on-site: 'Yes' or 'No'",
+  "risk_status": "string or null — risk level if stated: 'Low', 'Medium', or 'High'"
 }
 {% endif %}

@@ -1,7 +1,14 @@
+/* ============================================================
+   VAEA Button Styles
+   ============================================================
+   Requires: vaea-main.css + sample-vaea-UI.css loaded first.
+   ============================================================ */
+
 .btn-primary {
   background: var(--brand-primary);
   color: var(--text-inverse);
   border: none;
+  border-radius: 12px;
 }
 
 .btn-primary:hover {
@@ -12,8 +19,29 @@
   background: transparent;
   color: var(--brand-primary);
   border: 1px solid var(--brand-primary);
+  border-radius: 12px;
 }
 
 .btn-secondary:hover {
   background: var(--brand-primary-soft);
+}
+
+/* CTA — coral accent for important actions */
+.btn-cta {
+  background: var(--brand-cta);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: 12px;
+}
+
+.btn-cta:hover {
+  background: var(--brand-cta-hover);
+}
+
+/* Focus ring — coral */
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-cta:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }

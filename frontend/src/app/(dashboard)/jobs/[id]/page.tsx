@@ -154,6 +154,11 @@ function JobDetailPageContent({ sourceId }: { sourceId: string }) {
   // Derive effective review status — prevents stale 'extracting' in DB from
   // showing Cancel button after extraction has actually completed (B4 fix)
   const effectiveReviewStatus = useMemo(() => {
+    // If source has reached pending_review and SSE is not actively streaming,
+    // trust the source status (fixes: processing_info.completed_at = null bug)
+    if (source?.review_status === 'pending_review' && !isStreaming) {
+      return 'pending_review'
+    }
     if (isStreaming || panelPhase === 'extracting') return 'extracting'
     // DB says extracting but extraction progress confirms it finished — stale status.
     // Note: 'idle' is excluded — on cold page load panelPhase starts as idle before

@@ -722,3 +722,91 @@ State files: `docs/sprint-artifacts/e36/` (task_plan.md, progress.md, findings.m
 | `acm-observability-debugger` | sonnet | Root-cause extraction failures via trace analysis |
 | `acm-trace-analyst` | sonnet | Bulk cost/performance analysis across runs |
 | `acm-graph-inspector` | sonnet | LangGraph thread state inspection |
+
+---
+
+## Salesforce CLI Usage Rules (READ-ONLY)
+
+**Purpose:** This project queries VAEA Salesforce sandboxes for ACM-AI pipeline development (schema discovery, sample data, validation). It is **NEVER** a deployment target. Source of truth for deploys lives in `/home/demi/gitrepo/vaea` (VAEA SF repo).
+
+> **Enforcement note:** Demi runs Claude Code with `--dangerously-skip-permissions`, so `allow` and `ask` permission buckets are bypassed. The rules below are backed by **hard `deny` entries in `.claude/settings.json`** — those are still enforced under skip-permissions mode and will block the tool call before it executes. Do not attempt to work around them with shell tricks (`eval`, `bash -c`, `sh -c`, writing a script to disk and running it) — treat the deny list as a security boundary, not a speed bump.
+
+### Allowed Orgs (read-only)
+
+| Alias / Username | Purpose | Access Level |
+|---|---|---|
+| `demi.thathsara@vaea.vic.gov.au.demidev` | VAEA Dev sandbox — schema/data discovery for ACM-AI | **READ-ONLY from this repo** |
+
+> **TODO for Demi:** Confirm this is the correct alias for ACM-AI work, or add additional read-only aliases here. Any org not in this list is implicitly **forbidden**.
+
+### Forbidden Orgs (hard block — never target)
+
+- `demi.thathsara@vaea.vic.gov.au.sit` (VAEA SIT)
+- Any VAEA UAT sandbox
+- Any VAEA Production org
+- Any org alias not explicitly listed in "Allowed Orgs" above
+
+**Rule:** If you cannot find the `--target-org` value in the Allowed Orgs table, **stop and ask**. Do not guess, do not default to `sf config get target-org`, do not pick the first org from `sf org list`.
+
+### Allowed `sf` Commands (safe, read-only)
+
+Run freely, no confirmation needed (still honor the target-org allowlist):
+
+- `sf org display`, `sf org list`, `sf org list users`
+- `sf data query --query "SELECT ..."` — SOQL reads only
+- `sf data search --query "FIND ..."` — SOSL reads only
+- `sf data export tree` — local export only (no `--target-org` outside allowlist)
+- `sf sobject describe`, `sf schema list sobjects`, `sf schema list fields`
+- `sf project retrieve start` — metadata retrieve to local only (never `deploy`)
+- `sf apex run --file <file>` — **only** for read-only anonymous Apex (see rules below)
+
+### Forbidden `sf` Commands (ALWAYS ask first)
+
+Never run without explicit, per-command confirmation from Demi:
+
+- `sf project deploy *` — any deploy, including `--dry-run` against a non-allowlisted org
+- `sf data create`, `sf data update`, `sf data delete`, `sf data upsert`, `sf data import`
+- `sf data resume` on a mutating bulk job
+- `sf apex run` where the anonymous block contains any of: `insert`, `update`, `delete`, `upsert`, `undelete`, `merge`, `Database.execute*`, `Http` callouts that mutate, `System.enqueueJob`, `System.schedule`
+- `sf org delete`, `sf org create scratch`, `sf org login` (new auth flows)
+- `sf config set target-org` — do not silently change the default org; ask first
+- Anything with `--target-org` resolving to a non-allowlisted org
+
+### Pre-flight Protocol (MANDATORY before every `sf` call)
+
+1. **Print the exact command** you are about to run.
+2. **Resolve and print the target org** (`sf org display --target-org <alias>` or inspect `--target-org` flag).
+3. **Classify the command**:
+   - Pure SELECT SOQL / describe / display → OK to run.
+   - Anything else → **STOP, ask Demi, wait for explicit "yes, run it"**.
+4. **Never chain** a forbidden command inside a shell pipeline (`&&`, `;`, `|`) to try to bypass this.
+
+### SOQL Guardrails
+
+- Always add `LIMIT N` on exploratory queries (default `LIMIT 10` for discovery).
+- Prefer `SELECT Id, Name, <specific fields>` over `SELECT FIELDS(ALL)` for performance.
+- Never run `UPDATE`, `DELETE`, or `UPSERT` via Tooling API or REST from this repo.
+- For Building__c / Item__c discovery, cross-reference field names against the VAEA repo's `knowledge-base/data-model/` instead of describing the full object when possible.
+
+### Anonymous Apex Rules
+
+If you must run anonymous Apex for read-only diagnostics:
+
+- The file must live under `scripts/apex/readonly/` (create if missing) and be named `ro_*.apex`.
+- File header must contain: `// READ-ONLY — no DML, no callouts, no async enqueue`.
+- You must `grep` the file for DML keywords **before** running and abort if any are found.
+- Prefer `System.debug()` output over DML even for "just a test".
+
+### Secrets & Auth Files
+
+- Never commit: `.sf/`, `.sfdx/`, `demidev.json`, any `*.key`, `*.pem`, or files with `access_token`, `refresh_token`, `client_secret`.
+- If you see an auth artifact in a diff, **stop and warn Demi** before proceeding.
+- Use `sf org login web` interactively if auth is missing — never hardcode credentials or accept them via CLI flags.
+
+### Cross-Reference
+
+The canonical VAEA Salesforce standards (Apex conventions, deployment rules, data model, governance) live in:
+- `/home/demi/gitrepo/vaea/CLAUDE.md`
+- `/home/demi/gitrepo/vaea/knowledge-base/`
+
+When in doubt about a Salesforce convention, **read those first** — this ACM-AI repo defers to them.

@@ -70,3 +70,15 @@ class ACMItemRow(BaseModel):
         None,
         description="Whether item is internal or external, e.g. 'Internal', 'External'",
     )
+    quantity: Optional[str] = Field(
+        None,
+        description="Amount of ACM material, e.g. '10 m²', '5 linear meters', '2 sheets'",
+    )
+    acm_labelled: Optional[str] = Field(
+        None,
+        description="Whether item is labelled on-site: 'Yes' or 'No'",
+    )
+    risk_status: Optional[str] = Field(
+        None,
+        description="Risk level if stated: 'Low', 'Medium', 'High'",
+    )

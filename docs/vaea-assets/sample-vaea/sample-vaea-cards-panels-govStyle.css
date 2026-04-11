@@ -1,3 +1,10 @@
+/* ============================================================
+   VAEA Cards, Panels & Government Style Patterns
+   ============================================================
+   Requires: vaea-main.css + sample-vaea-UI.css loaded first.
+   ============================================================ */
+
+/* Standard card — branded teal shadow */
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
@@ -5,6 +12,26 @@
   box-shadow: 0 4px 12px rgba(42, 89, 81, 0.08);
 }
 
+/* Left-border accent card — government UI pattern */
 .card-accent {
-  border-left: 6px solid var(--brand-primary);
+  border-left: 4px solid var(--brand-primary);
+  padding-left: 1rem;
+}
+
+/* Risk-level left-border cards */
+.card-risk-low    { border-left: 4px solid var(--risk-low); }
+.card-risk-medium { border-left: 4px solid var(--risk-medium); }
+.card-risk-high   { border-left: 4px solid var(--risk-high);   background: var(--risk-high-bg); }
+
+/* CTA accent card — coral border for important notices */
+.card-cta {
+  border-left: 4px solid var(--brand-cta);
+}
+
+/* Panel — subtle muted background */
+.panel {
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 1.5rem;
 }

@@ -133,6 +133,57 @@ _KNOWN_HEADER_TEXTS = frozenset(
 )
 
 
+# Canonical columns that indicate an ACM register table.
+# A table must have item_description AND at least one other ACM column.
+_ACM_CORE_COLUMNS = {"item_description", "room_location"}
+_ACM_SUPPORTING_COLUMNS = {
+    "sample_result",
+    "sample_number",
+    "condition",
+    "friability",
+    "disturbance_potential",
+    "quantity",
+    "recommendation",
+    "asbestos_type",
+}
+
+
+def _is_acm_table(table_data: dict, extra_mappings: dict[str, str] | None = None) -> bool:
+    """Return True if table headers indicate an ACM register table.
+
+    Filters out TOC, summary, and diagnostic tables by checking that the
+    table has item_description mapped (material/product column) plus at least
+    one ACM supporting column.
+
+    Args:
+        table_data: Docling table JSON object.
+        extra_mappings: Optional explicit column header mappings.
+
+    Returns:
+        True if the table looks like an ACM register table.
+    """
+    all_cells = table_data.get("table_cells", [])
+    header_cells = [c for c in all_cells if c.get("column_header", False)]
+
+    if not header_cells:
+        # No explicit headers — cannot classify, include by default
+        return True
+
+    mapping = detect_column_mapping(header_cells, extra_mappings=extra_mappings)
+    mapped_canonical = set(mapping.keys())
+
+    # Must have item_description (the product/material column) to be an ACM table
+    if "item_description" not in mapped_canonical:
+        return False
+
+    # Must also have at least one ACM supporting column
+    has_supporting = bool(
+        (mapped_canonical & _ACM_CORE_COLUMNS) - {"item_description"}
+        or mapped_canonical & _ACM_SUPPORTING_COLUMNS
+    )
+    return has_supporting
+
+
 def _is_footer_row(row_cells: list[dict], num_cols: int) -> bool:
     """Detect footer/summary rows that should not be extracted.
 
@@ -703,6 +754,26 @@ def segment_multiple_tables(
                 len(tables),
             )
         tables = filtered if filtered else tables
+
+    # Filter out non-ACM tables (TOC, summary, diagnostic tables)
+    acm_tables = [t for t in tables if _is_acm_table(t, extra_mappings=extra_mappings)]
+    if not acm_tables:
+        logger.warning(
+            "No ACM tables found for building %s after classification filter "
+            "(all %d tables skipped) — falling back to unfiltered",
+            building_id or "?",
+            len(tables),
+        )
+        # Fall back to all tables to avoid empty extraction
+        acm_tables = tables
+    elif len(acm_tables) < len(tables):
+        logger.info(
+            "ACM table filter: %d/%d tables kept for building %s",
+            len(acm_tables),
+            len(tables),
+            building_id or "?",
+        )
+    tables = acm_tables
 
     if len(tables) == 1:
         page = tables[0].get("page_number", 1)

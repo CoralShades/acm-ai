@@ -1,10 +1,52 @@
+/* ============================================================
+   VAEA Dark Mode — Teal-Tinted (App Identity)
+   ============================================================
+   Requires: vaea-main.css + sample-vaea-UI.css loaded first.
+
+   IMPORTANT: App dark mode uses TEAL-tinted backgrounds,
+   not neutral grey. This is a deliberate brand choice per
+   .impeccable.md — "this is my VAEA app".
+
+   Marketing-site dark mode uses NAVY-tinted backgrounds
+   instead (#0f1219, #1a1f2e) — intentionally different.
+   ============================================================ */
+
 [data-theme="dark"] {
+  /* Backgrounds — teal-tinted */
   --bg-page:        #0F1F1D;
   --bg-surface:     #162B28;
+  --bg-muted:       #1D3633;
+
+  /* Text */
   --text-primary:   #E6F2F1;
   --text-secondary: #B8D9D6;
-  --border-default: #244743;
+  --text-muted:     #6B9B96;
+  --text-inverse:   #0F1F1D;
 
-  --brand-primary:       #9AD9D9;
-  --brand-primary-hover: #A9D9AC;
+  /* Borders — teal-tinted */
+  --border-default: #244743;
+  --border-accent:  var(--vaea-teal-100);
+
+  /* Brand Actions (inverted for dark) */
+  --brand-primary:       var(--vaea-teal-100);
+  --brand-primary-hover: var(--vaea-green-200);
+  --brand-primary-soft:  #244743;
+  --brand-cta:           var(--vaea-coral);
+  --brand-cta-hover:     #F08A8C;  /* coral lightened for dark bg */
+
+  /* Status */
+  --success:  var(--vaea-green-200);
+  --info:     #244743;
+  --warning:  var(--vaea-gold);
+  --focus:    var(--vaea-coral);
+
+  /* Risk Status — brighter for dark backgrounds */
+  --risk-low:       #4ade80;
+  --risk-low-bg:    #14332A;
+  --risk-medium:    #fbbf24;
+  --risk-medium-bg: #332B14;
+  --risk-high:      #f87171;
+  --risk-high-bg:   #331414;
+  --risk-presumed:    #c084fc;
+  --risk-presumed-bg: #2A1433;
 }

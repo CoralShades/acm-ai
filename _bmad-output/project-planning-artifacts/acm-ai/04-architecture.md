@@ -320,6 +320,36 @@ DEFINE FIELD log_entries.* ON extraction_progress TYPE string;
 DEFINE FIELD updated_at ON extraction_progress TYPE datetime DEFAULT time::now();
 DEFINE FIELD created_at ON extraction_progress TYPE datetime DEFAULT time::now();
 DEFINE INDEX idx_extraction_progress_command ON extraction_progress FIELDS command_id UNIQUE;
+
+-- Consultant Format Profile Table (MCS sprint, 2026-03-18)
+-- Caches column mappings per consultant format for faster subsequent uploads
+DEFINE TABLE consultant_format_profile SCHEMAFULL;
+DEFINE FIELD format_name ON consultant_format_profile TYPE string;
+DEFINE FIELD detector_type ON consultant_format_profile TYPE string;  -- "pipe_table", "text_header", "standard"
+DEFINE FIELD column_mapping ON consultant_format_profile TYPE object;  -- Inferred column -> canonical field mapping
+DEFINE FIELD confidence ON consultant_format_profile TYPE float;
+DEFINE FIELD sample_count ON consultant_format_profile TYPE int DEFAULT 1;
+DEFINE FIELD created_at ON consultant_format_profile TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON consultant_format_profile TYPE datetime DEFAULT time::now();
+
+-- CRUD Audit Trail Table (Unified Chat, 2026-03-22)
+-- Tracks CRUD operations performed via chat with undo support
+DEFINE TABLE crud_audit SCHEMAFULL;
+DEFINE FIELD operation ON crud_audit TYPE string;  -- "create", "update", "delete"
+DEFINE FIELD table_name ON crud_audit TYPE string;
+DEFINE FIELD record_id ON crud_audit TYPE string;
+DEFINE FIELD old_value ON crud_audit TYPE option<object>;
+DEFINE FIELD new_value ON crud_audit TYPE option<object>;
+DEFINE FIELD user_id ON crud_audit TYPE option<string>;
+DEFINE FIELD session_id ON crud_audit TYPE option<string>;
+DEFINE FIELD created_at ON crud_audit TYPE datetime DEFAULT time::now();
+
+-- Chat Session thread_id (Migration 56, 2026-03-22)
+DEFINE FIELD thread_id ON chat_session TYPE option<string>;
+DEFINE INDEX idx_chat_session_thread ON chat_session FIELDS thread_id UNIQUE;
+
+-- Building Record FK fix (Migration 55, 2026-03-20)
+-- Corrected building_record_id schema type from string to record<building_record>
 ```
 
 ### 3.2 Relationships
@@ -948,151 +978,160 @@ Telemetry payloads must include:
 
 ## 6. Chat Architecture
 
+> **Rewritten 2026-04-08.** This section was completely rewritten to reflect the Unified Chat Architecture (2026-03-22), which replaced the separate supervisor and CRUD agent pattern described in the original version. Legacy files (`supervisor_agent.py`, `crud_agent.py`, `chat.py`, `source_chat.py`, `acm_analyst_agent.py`, `doc_search_agent.py`, `SmartChatPanel.tsx`, `ChatModeSwitch.tsx`, `CrudToolRenderers.tsx`, `useSmartChat.ts`) have been deleted.
+
 ### 6.1 Overview
 
-ACM-AI implements a supervisor agent pattern where a single orchestrating agent has direct access to all tools (both ACM and document search), rather than delegating through sub-agents. This architecture:
+ACM-AI implements a **unified LangGraph agent** that consolidates all chat capabilities into a single graph with 15+ LLM-facing tools. This architecture:
 
-- Eliminates agent-to-agent communication overhead for same-process tools
-- Provides real-time streaming via AG-UI protocol / CopilotKit
-- Supports dynamic ACM context toggle for domain-specific queries
-- Integrates with the frontend via SSE and custom tool result renderers
+- Replaces the previous supervisor + CRUD agent split with one agent
+- Provides 15+ tools across 3 categories: ACM queries (8), CRUD operations (4), search (3)
+- Uses LangGraph `interrupt()` for human-in-the-loop (HITL) write approval
+- Employs thread-safe `contextvars` for source_id scoping
+- Persists conversation state via `AsyncSqliteSaver` (durable checkpoint storage)
+- Streams responses via AG-UI protocol to CopilotKit frontend
 
-### 6.2 Supervisor Agent Pattern
+### 6.2 Unified Agent Architecture
 
-The supervisor agent (`open_notebook/graphs/supervisor_agent.py`) uses a **ReAct loop** where it:
+The unified agent (`open_notebook/graphs/unified_agent.py`) is a 6-node LangGraph `StateGraph`:
 
-1. Receives user message
-2. Decides which tools to invoke (ACM tools, search tools, or both)
-3. Executes tools directly (no sub-agent delegation)
-4. Synthesizes results into coherent response
+```
+START -> call_unified_agent -> should_continue
+should_continue -> tools (if tool calls)
+should_continue -> END (if done)
+tools -> call_unified_agent (loop)
+call_unified_agent -> approval_node (if write pending, uses interrupt())
+approval_node -> call_unified_agent
+```
 
-**Direct Tool Access:**
+All 15+ tools are bound to the agent at graph construction time. The `should_continue` conditional edge inspects the last AI message for tool calls and routes accordingly. Write operations (create, update, delete) trigger the `approval_node` which uses LangGraph's `interrupt()` primitive to pause execution until the user confirms or rejects the operation.
+
+**Key Files:**
+
+| File | Purpose |
+|------|---------|
+| `open_notebook/graphs/unified_agent.py` | Main graph definition (6 nodes, 15+ tools) |
+| `open_notebook/graphs/chat_tools/acm_tools.py` | 8 ACM query tools (buildings, records, risk, compliance) |
+| `open_notebook/graphs/crud_tools.py` | 4 CRUD tools with HITL write barrier |
+| `open_notebook/graphs/chat_tools/search_tools.py` | 3 search tools (document, semantic, note retrieval) |
+| `open_notebook/graphs/llm_router.py` | Rule-based fast-path + LLM fallback intent router |
+| `open_notebook/graphs/tool_context.py` | Thread-safe `contextvars` for source_id scoping |
+| `open_notebook/graphs/checkpointer.py` | `AsyncSqliteSaver` singleton (`data/chat_checkpoints.db`) |
+
+### 6.3 Tool Context & Source Scoping
+
+The `tool_context.py` module uses Python `contextvars` to provide thread-safe source_id and notebook_id scoping to all tools without passing IDs through every function signature.
+
+**Design Constraints:**
+- All 15+ tools are **async** -- Python 3.11's `ThreadPoolExecutor` does not propagate `contextvars` to sync functions run in threads
+- A `context_aware_tools` wrapper re-sets the scope from LangGraph state before each tool execution
+- Source_id is resolved from (in priority order): (1) LangGraph state, (2) session metadata, (3) user message parsing
+
 ```python
-def _get_supervisor_tools(include_acm: bool = True):
-    """Get the tools available to the supervisor."""
-    tools = get_search_tools()  # Document search, note retrieval
-    if include_acm:
-        tools = get_acm_tools() + tools  # ACM record queries, building search
-    return tools
+# open_notebook/graphs/tool_context.py
+from contextvars import ContextVar
+
+_source_id_var: ContextVar[str | None] = ContextVar("source_id", default=None)
+_notebook_id_var: ContextVar[str | None] = ContextVar("notebook_id", default=None)
+
+def set_tool_context(source_id: str | None, notebook_id: str | None):
+    _source_id_var.set(source_id)
+    _notebook_id_var.set(notebook_id)
+
+def get_source_id() -> str | None:
+    return _source_id_var.get()
 ```
 
-**ReAct Loop Implementation:**
-```python
-def call_supervisor(state: SupervisorState, config: RunnableConfig) -> dict:
-    # Set tool context for scoping (source_id, notebook_id)
-    set_tool_context(source_id=source_id, notebook_id=notebook_id)
+### 6.4 LLM Intent Router
 
-    # Get tools based on ACM context toggle
-    tools = _get_supervisor_tools(include_acm=include_acm)
+The `llm_router.py` module provides a two-tier intent routing system that runs before the main agent loop:
 
-    # Build system prompt with context
-    system_prompt = Prompter(prompt_template="supervisor").render(data=prompt_data)
+**Tier 1 -- Rule-based fast-path** (regex patterns, zero LLM cost):
+- "show buildings" / "list buildings" -> `list_acm_buildings` tool
+- Record ID patterns (e.g., `BLD#XXX_001`) -> `get_acm_record_detail` tool
+- "export" / "download" -> export tool
 
-    # Provision model with tools
-    model = await provision_langchain_model_with_tools(payload, model_id, "chat", tools=tools)
+**Tier 2 -- LLM fallback** with entity extraction:
+- Extracts structured entities: buildings, rooms, risk_levels, materials, record_ids
+- Entity hints are injected into the unified agent's system prompt to guide tool selection
+- Falls back gracefully when entity extraction fails (agent uses its own judgment)
 
-    # Invoke and return AI message (may contain tool calls)
-    return {"messages": [ai_message]}
-```
+### 6.5 Session Management
 
-The supervisor graph uses LangGraph's conditional edges to loop back after tool execution:
-```
-START ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ supervisor ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ (has tool calls?) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ tools ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ supervisor ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ END
-```
+Chat sessions are persisted in SurrealDB with LangGraph checkpoint linkage:
 
-### 6.3 AG-UI Protocol Integration
+**REST Endpoints:** `/api/unified-sessions/`
+- `POST /` -- Create new session (generates UUID `thread_id`)
+- `GET /?source_id=X` -- List sessions for a source
+- `GET /{id}` -- Get session with message history
+- `DELETE /{id}` -- Delete session and associated checkpoints
 
-AG-UI (Agent-User Interaction) protocol provides a standard for agents to communicate state, actions, and reasoning to frontend UIs. ACM-AI uses the `ag-ui-langgraph` adapter to expose the supervisor graph as an AG-UI compatible endpoint.
+**Database Schema:**
+- Migration 56 adds `thread_id` field + unique index to `chat_session` table
+- Each `ChatSession` record maps a `thread_id` (UUID) to a LangGraph checkpointer thread
+- CopilotKit's `thread_id` is bidirectionally synced via `UnifiedChatPanel`
 
-**Adapter Implementation:**
-```python
-# api/routers/agui_chat.py
-from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
+**Checkpoint Storage:**
+- `AsyncSqliteSaver` in `open_notebook/graphs/checkpointer.py`
+- SQLite file: `data/chat_checkpoints.db`
+- Provides durable multi-turn conversation persistence across server restarts
 
-def register_agui_endpoints(app):
-    agent = LangGraphAgent(
-        name="supervisor",
-        graph=supervisor_graph,
-        description="ACM-AI supervisor agent for asbestos compliance queries"
-    )
-    add_langgraph_fastapi_endpoint(app, agent, "/api/agui/chat")
-```
+### 6.6 AG-UI Protocol Integration
 
-**SSE Endpoint:** `/api/agui/chat`
+AG-UI (Agent-User Interaction) protocol provides a standard for agents to communicate state, actions, and reasoning to frontend UIs. ACM-AI uses the `ag-ui-langgraph` adapter to expose the unified agent as an AG-UI compatible endpoint.
+
+**Single Endpoint:** `POST /api/agui/chat`
+- Replaces the previous separate `/api/agui/chat` and `/api/agui/crud-chat` endpoints
 - Accepts `RunAgentInput` via POST
 - Returns AG-UI SSE event stream
-- Automatic LangGraph ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ AG-UI event mapping:
+- Supports `session_id` for multi-turn conversations
+- Automatic LangGraph -> AG-UI event mapping:
   - `ToolCallStart`, `ToolCallArgs`, `ToolCallEnd`, `ToolCallResult`
   - `TextMessageStart`, `TextMessageContent`, `TextMessageEnd`
   - State snapshots and deltas
 
-**Event Mapping:**
-LangGraph emits low-level node/edge events; the AG-UI adapter transforms these into standardized AG-UI events that CopilotKit can consume without custom parsing.
+**Implementation:**
+```python
+# api/routers/agui_chat.py
+from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint
 
-### 6.4 CopilotKit Frontend
-
-CopilotKit is a React framework that implements the AG-UI protocol client-side, providing hooks and components for agent interaction.
-
-**Provider Setup:**
-```tsx
-// SmartChatProvider wraps the chat component
-<SmartChatProvider sourceId={sourceId} notebookId={notebookId} hasAcmData={hasAcmData}>
-  <CopilotChat
-    labels={{ title: 'Smart Chat' }}
-    AssistantMessage={ACMAssistantMessage}
-    Input={SmartChatInput}
-    makeSystemMessage={(contextString) => /* build prompt with ACM context */ }
-  />
-</SmartChatProvider>
+agent = LangGraphAgent(
+    name="unified",
+    graph=unified_graph,
+    description="ACM-AI unified agent for compliance queries and data management"
+)
+add_langgraph_fastapi_endpoint(app, agent, "/api/agui/chat")
 ```
 
-**Custom Hooks:**
-- `useSmartChat({ sourceId, notebookId, hasAcmData })` - Manages ACM context toggle state
-- `useSmartChatScope()` - Accesses current source/notebook scope from context
+### 6.7 Frontend Components
 
-**Custom Renderers:**
-- `ACMAssistantMessage` - Custom message renderer for ACM-specific formatting
-- `ToolResultRenderers` - Renders tool invocation results (e.g., ACM record tables)
-- `SmartChatInput` - Input component with ACM context toggle badge
+The chat frontend was consolidated into a unified component set:
 
-**Streaming Support:**
-CopilotKit automatically handles SSE streaming from the `/api/agui/chat` endpoint, updating the UI in real-time as the agent:
-- Invokes tools
-- Receives results
-- Generates response text
-
-### 6.5 ACM Context Management
-
-ACM context is a **dynamic toggle** that controls whether the supervisor agent has access to ACM-specific tools (record queries, building search, compliance checks).
-
-**Toggle Implementation:**
-```tsx
-// SmartChatPanel.tsx
-const { includeAcmContext, setIncludeAcmContext } = useSmartChat({ sourceId, hasAcmData });
-
-// Badge UI
-<Badge onClick={() => setIncludeAcmContext(!includeAcmContext)}>
-  <TableProperties /> ACM Data {includeAcmContext ? 'ON' : 'OFF'}
-</Badge>
+**Component Hierarchy:**
+```
+<CopilotKitProvider>
+  <UnifiedChatPanel>                    // Main chat UI
+    <CopilotChat>                       // CopilotKit chat component
+      <ACMAssistantMessage />           // generativeUI() + thinking indicator
+      <UnifiedToolRenderers />          // 18 renderers for all tool types
+      <HITLApprovalDialog />            // Interrupt-based write approval
 ```
 
-**Context Injection:**
-When ACM context is enabled:
-1. **Tool Availability:** `get_acm_tools()` are included in the supervisor's tool list
-2. **System Prompt:** Modified to indicate ACM context is active:
-   ```
-   "ACM context is enabled - use ACM tools for structured data queries."
-   ```
-3. **Tool Scoping:** `set_tool_context(source_id, notebook_id)` ensures ACM tools only query relevant records
+**Key Components:**
 
-When disabled:
-- Only document search and note retrieval tools available
-- System prompt focuses on general document content
-- ACM-specific queries return "ACM context is disabled" message
+| Component | File | Purpose |
+|-----------|------|---------|
+| `UnifiedChatPanel` | `frontend/src/components/chat/UnifiedChatPanel.tsx` | Main chat UI (replaces SmartChatPanel + JobCrudChatPanel) |
+| `UnifiedToolRenderers` | `frontend/src/components/chat/UnifiedToolRenderers.tsx` | 18 renderers for 17 LLM tools + 1 internal |
+| `ACMAssistantMessage` | `frontend/src/components/chat/ACMAssistantMessage.tsx` | Handles `generativeUI()` + `isThinkingContent()` compact indicator |
+| `HITLApprovalDialog` | `frontend/src/components/chat/renderers/HITLApprovalDialog.tsx` | Interrupt-based write approval with timeout/escape |
 
-**Use Cases:**
-- **ACM ON:** "Show all asbestos in Building B003", "What's the risk status of ceiling tiles?"
-- **ACM OFF:** "Summarize the methodology section", "What does page 5 say about surveys?"
+**HITL Approval Flow:**
+1. User requests a write operation (e.g., "update the condition of record X to Poor")
+2. Agent selects the appropriate CRUD tool
+3. `interrupt()` pauses the graph and sends the pending operation to the frontend
+4. `HITLApprovalDialog` renders with operation details and Approve/Reject buttons
+5. User decision resumes the graph (approved -> execute, rejected -> cancel message)
 
 ---
 
@@ -1247,6 +1286,8 @@ function parseACMReferences(text: string): ACMReference[] {
 ---
 
 ## 7. Chat Context Integration
+
+> **Partially superseded by Section 6.3 (Tool Context & Source Scoping).** The context builder and system prompt patterns below still apply conceptually but the implementation now uses `tool_context.py` contextvars rather than direct system prompt injection.
 
 ### 7.1 ACM Context Builder
 
@@ -1674,7 +1715,9 @@ Three new Zustand stores extend the existing state management architecture:
 
 ### 13.5 Smart Chat Components
 
-Smart Chat provides an AI-powered interface for querying ACM data and document content using the supervisor agent architecture (Section 6).
+> **Superseded by Section 6 (rewritten 2026-04-08).** The components listed below (`SmartChatPanel`, `SmartChatInput`, `useSmartChat`) have been replaced by the Unified Chat Architecture. See Section 6.7 for the current component hierarchy.
+
+Smart Chat provides an AI-powered interface for querying ACM data and document content using the unified agent architecture (Section 6).
 
 **Component Hierarchy:**
 ```
@@ -3241,3 +3284,236 @@ Per-row mode gates the `recover_no_access_node` (returns state unchanged) since 
 | `tests/test_truncation_fallback.py` | 17 | TruncationError detection, cloud retry, output budget |
 | `tests/fixtures/edge_case_tables/` | 14 files | JSON + Markdown fixtures for Types A-H |
 | **Total** | **163** | |
+
+---
+
+## 15. Multi-Consultant Format Architecture (NEW - 2026-03-18)
+
+> **Addresses:** Multi-Consultant Support (MCS) sprint (2026-03-18 to 2026-03-20)
+> **Reference:** `docs/architecture/multi-consultant-format-design.md`
+
+The extraction pipeline was originally designed for a single ARA document format (Broadmeadows standard). The Multi-Consultant Format (MCS) architecture extends the pipeline to handle diverse ARA formats from different environmental consultants without per-consultant code changes.
+
+### 15.1 Format Detection Pipeline
+
+```
+PDF Upload -> Format Detector Selection -> Schema Inference -> Extraction
+```
+
+Three format detectors classify the document structure (by structure, not consultant name):
+
+| Detector | File | Trigger |
+|----------|------|---------|
+| `PipeTableDetector` | `open_notebook/extractors/format_detectors/pipe_table_detector.py` | Pipe-separated (`|`) table format |
+| `TextHeaderDetector` | `open_notebook/extractors/format_detectors/text_header_detector.py` | Text-based headers with indented content blocks |
+| `StandardFormatDetector` | `open_notebook/extractors/format_detectors/standard_detector.py` | Standard tabular format (Broadmeadows-style) |
+| `LLMDetector` | `open_notebook/extractors/format_detectors/llm_detector.py` | LLM fallback when heuristic detectors are inconclusive |
+
+Detection runs in priority order. The first detector that returns a confidence score above threshold wins. The `LLMDetector` is the final fallback when heuristic detectors fail.
+
+### 15.2 Schema Inference Node
+
+A new LangGraph node between PREFLIGHT and ORCHESTRATOR stages infers column mappings from the document's table headers:
+
+**Key Dataclasses:**
+- `InferredSchema` -- column index -> canonical field name mapping with confidence scores
+- `RecoveryConfig` -- fallback behavior when inference produces low-confidence results
+
+**Behavior:**
+1. Table headers are extracted from the first few pages
+2. Column names are matched against canonical ACM field names using fuzzy matching (Jaro-Winkler)
+3. Mapping confidence is computed per-column
+4. Low-confidence mappings are flagged for optional HITL confirmation
+5. On failure, falls back to the default schema (Broadmeadows format)
+
+**File:** `open_notebook/extractors/schema_inference.py`
+
+### 15.3 Format Profile Registry
+
+Consultant format profiles are cached in SurrealDB to avoid re-running schema inference on subsequent uploads from the same consultant format:
+
+**Table:** `consultant_format_profile` (see Section 3.1)
+
+**Cache Logic:**
+- **Cache hit:** Column mapping is loaded from the profile, schema inference is skipped
+- **Cache miss:** Full schema inference runs, then the resulting profile is stored for future uploads
+- Profile matching uses detector type + column structure fingerprint
+
+**Files:**
+- `open_notebook/extractors/format_profile_repository.py` -- SurrealDB repository for format profiles
+- `api/routers/format_profiles.py` -- REST endpoints for profile management
+
+### 15.4 Adaptive Components
+
+The format-agnostic architecture uses dynamic column mapping throughout the extraction pipeline:
+
+- **Row segmenter** receives `InferredSchema` and uses the dynamic column mapping instead of hardcoded column indices
+- **Extraction prompts** use Jinja2 template variables for field lists, making them format-agnostic
+- **HITL column mapping confirmation** UI is available for low-confidence inference results (optional)
+
+### 15.5 Validation Results
+
+The MCS architecture was validated against 4 PDFs spanning 3 consultant formats:
+
+| PDF | Format | Detector | Records |
+|-----|--------|----------|---------|
+| Broadmeadows | Standard tabular | `StandardFormatDetector` | 31 |
+| Alexander ARA | Text-header | `TextHeaderDetector` | ~80 |
+| Clutch_Alexander | Mixed | `TextHeaderDetector` | ~65 |
+| Clutch_BM_2 | Standard | `StandardFormatDetector` | ~70 |
+| **Total** | **3 formats** | | **~246** |
+
+All extractions used Ollama `llama3.1:8b` with zero cloud API calls.
+
+---
+
+## 16. Auto-Notebook & AI-Editor Lifecycle (NEW - 2026-03-20)
+
+### 16.1 Auto-Creation on Upload
+
+When a PDF is uploaded via `POST /sources` with `type=upload`, the system automatically creates a corresponding `Notebook` record:
+
+- **Name:** Cleaned filename with extension stripped (editable via `notebook_name` form field)
+- **Description:** `"Auto-created from upload of {filename} on {date}"`
+- **Link:** The source record's `notebook_id` is set to the new notebook's ID
+
+This ensures every uploaded document immediately has an associated AI-Editor workspace without manual creation.
+
+### 16.2 Post-Extraction Enrichment
+
+After extraction completes, `_enrich_notebook_name()` in `commands/acm_commands.py` updates the auto-created notebook's name with metadata extracted from the document:
+
+- Site name (e.g., "Broadmeadows Primary School")
+- Consultant name (e.g., "Alexander Environmental")
+- Survey date
+
+This enrichment produces descriptive names like "Broadmeadows PS - Alexander Environmental (2024)" instead of raw filenames.
+
+### 16.3 Cascade Delete
+
+`DELETE /sources/{id}` performs cascade deletion:
+1. Deletes the source record
+2. Deletes linked notebook records (not just edge relationships)
+3. Deletes associated chat sessions
+4. Prevents orphaned records accumulating in the database
+
+### 16.4 Frontend
+
+- **Route:** `/ai-editor` (renamed from `/notebooks` for user-facing clarity)
+- **Icon:** Sparkles icon (`lucide-react`) with hover animation
+- **Internal code:** Variable names remain `notebook`/`notebookId` -- only user-facing labels say "AI-Editor"
+- **Navigation:** Sidebar entry with `Sparkles` icon links to `/ai-editor` list page
+- **Detail page:** `/ai-editor/[id]` shows sources, notes, and chat columns
+
+---
+
+## 17. UX Streaming Enhancements (NEW - 2026-03-20)
+
+> **Addresses:** UX Mega-Pack sprint (2026-03-20)
+
+### 17.1 3-Panel Extract Page
+
+The extraction monitoring page (`/jobs/[id]/extract`) displays three real-time panels during extraction:
+
+| Panel | Component | Purpose |
+|-------|-----------|---------|
+| Docling Tables | `frontend/src/components/acm/DoclingTablesPanel.tsx` | Shows tables as they are discovered by Docling |
+| Buildings Progress | `frontend/src/components/acm/BuildingsProgressPanel.tsx` | Per-building extraction status with progress bars |
+| Live Records | `frontend/src/components/acm/LiveRecordsPanel.tsx` | ACM records appearing in real-time as they are extracted |
+
+All three panels update via SSE events from the `PipelineEventBus`.
+
+### 17.2 Job Card Live Counters
+
+Job cards on `/jobs` now display live extraction counters:
+
+**New Endpoint:** `GET /api/sources/{source_id}/live-stats`
+- Returns `tables_count`, `records_count`, `buildings_count`
+- Also includes `site_name` and `consultant_name` from document metadata
+
+**Frontend Hook:** `frontend/src/lib/hooks/useLiveStats.ts`
+- Polls the live-stats endpoint during active extraction
+- Updates job card counters in real-time without page refresh
+- `SourceListResponse` enriched with `tables_count`, `records_count`, `site_name`, `consultant_name`
+
+### 17.3 New SSE Events
+
+Added to `PipelineEventBus` (`open_notebook/extractors/pipeline_event_bus.py`):
+
+| Event | Category | Payload | When |
+|-------|----------|---------|------|
+| `extraction.started` | `extraction` | `{ page_count }` | Extraction job begins |
+| `extraction.docling_complete` | `extraction` | `{ tables_count }` | Docling table extraction finished |
+| `ai.building_extracted` | `ai` | `{ building_id, building_name }` | Individual building records extracted |
+| `ai.building_saved` | `ai` | `{ building_id, records_count }` | Individual building records persisted to DB |
+| `ai.save_started` | `ai` | `{ total_buildings }` | Save phase begins |
+| `ai.save_progress` | `ai` | `{ saved, total }` | Save progress update |
+| `ai.save_complete` | `ai` | `{ total_records }` | All records saved |
+| `extraction.complete` | `extraction` | `{ total_records, duration_s }` | Extraction job finished successfully |
+| `extraction.failed` | `extraction` | `{ error }` | Extraction job failed |
+
+### 17.4 ExtractionStatusBanner
+
+A real-time status banner component on the `/jobs/[id]` page:
+
+**Component:** `frontend/src/components/jobs/ExtractionStatusBanner.tsx`
+
+**Behavior:**
+- Appears when extraction is in progress for the current source
+- Shows current stage, progress percentage, and elapsed time
+- Powered by `useExtractionStream` hook consuming SSE from `/v3/stream/extraction/{op_id}`
+- Auto-dismisses when extraction completes or fails
+- Links to the full extraction monitoring page (`/jobs/[id]/extract`)
+
+---
+
+## Appendix A: Key File Locations Summary (Updated 2026-04-08)
+
+> **Added 2026-04-08.** New files from the Unified Chat Architecture, Multi-Consultant Format, and UX Streaming Enhancements sprints.
+
+### Chat Architecture (Section 6)
+
+| File | Purpose |
+|------|---------|
+| `open_notebook/graphs/unified_agent.py` | Unified LangGraph agent (6 nodes, 15+ tools) |
+| `open_notebook/graphs/llm_router.py` | Rule-based fast-path + LLM fallback intent router |
+| `open_notebook/graphs/tool_context.py` | Thread-safe `contextvars` for source_id scoping |
+| `open_notebook/graphs/checkpointer.py` | `AsyncSqliteSaver` singleton for chat persistence |
+| `open_notebook/graphs/chat_tools/acm_tools.py` | 8 ACM query tools |
+| `open_notebook/graphs/crud_tools.py` | 4 CRUD tools with HITL write barrier |
+| `open_notebook/graphs/chat_tools/search_tools.py` | 3 search tools |
+| `api/routers/agui_chat.py` | AG-UI protocol endpoint |
+| `api/routers/unified_sessions.py` | Chat session REST endpoints |
+| `frontend/src/components/chat/UnifiedChatPanel.tsx` | Main chat UI component |
+| `frontend/src/components/chat/UnifiedToolRenderers.tsx` | 18 tool result renderers |
+| `frontend/src/components/chat/ACMAssistantMessage.tsx` | Custom message renderer |
+| `frontend/src/components/chat/renderers/HITLApprovalDialog.tsx` | Write approval dialog |
+
+### Multi-Consultant Format (Section 15)
+
+| File | Purpose |
+|------|---------|
+| `open_notebook/extractors/schema_inference.py` | Schema inference LangGraph node |
+| `open_notebook/extractors/format_detectors/pipe_table_detector.py` | Pipe-table format detector |
+| `open_notebook/extractors/format_detectors/text_header_detector.py` | Text-header format detector |
+| `open_notebook/extractors/format_detectors/standard_detector.py` | Standard format detector |
+| `open_notebook/extractors/format_detectors/llm_detector.py` | LLM fallback detector |
+| `open_notebook/extractors/format_profile_repository.py` | Format profile SurrealDB repository |
+| `api/routers/format_profiles.py` | Format profile REST endpoints |
+
+### UX Streaming Enhancements (Section 17)
+
+| File | Purpose |
+|------|---------|
+| `frontend/src/components/acm/DoclingTablesPanel.tsx` | Real-time table discovery panel |
+| `frontend/src/components/acm/BuildingsProgressPanel.tsx` | Per-building extraction progress |
+| `frontend/src/components/acm/LiveRecordsPanel.tsx` | Live record stream panel |
+| `frontend/src/components/jobs/ExtractionStatusBanner.tsx` | Job page extraction status banner |
+| `frontend/src/lib/hooks/useLiveStats.ts` | Live counter polling hook |
+
+### Database Migrations (2026-03-17 to 2026-03-31)
+
+| Migration | Purpose |
+|-----------|---------|
+| `migrations/55.surrealql` | FK schema type fix (`building_record_id` from string to `record<building_record>`) |
+| `migrations/56.surrealql` | `thread_id` field + unique index on `chat_session` table |

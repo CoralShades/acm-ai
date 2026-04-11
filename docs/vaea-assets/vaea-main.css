@@ -1,16 +1,43 @@
+/* ============================================================
+   VAEA BRAND PALETTE — Canonical Source of Truth
+   ============================================================
+   All other CSS files (frontend/globals.css, marketing-site/
+   globals.css, sample-vaea/*) MUST match these values.
+
+   Last audited: 2026-04-05
+   Authoritative reference: .impeccable.md § Color System
+   ============================================================ */
+
 :root {
-  /* Primary brand colours */
-  --vaea-teal-100: #9AD9D9; /* Light teal */
-  --vaea-teal-300: #53A69D; /* Primary teal */
-  --vaea-teal-700: #2A5951; /* Deep teal */
+  /* ---- Primary Teal Scale ---- */
+  --vaea-teal-100: #9AD9D9;   /* Soft backgrounds, muted accents */
+  --vaea-teal-300: #53A69D;   /* PRIMARY BRAND — buttons, links, active states */
+  --vaea-teal-500: #01A09C;   /* Alternative primary */
+  --vaea-teal-700: #2A5951;   /* Hover states, headings, branded shadows */
+  --vaea-teal-900: #01706D;   /* Dark accents */
 
-  /* Accent / environmental green */
-  --vaea-green-200: #A9D9AC;
+  /* ---- Green / Environmental ---- */
+  --vaea-green-200: #A9D9AC;  /* Success states, environmental accent */
+  --vaea-green-500: #95D60C;  /* Vibrant green (gradient endpoint) */
 
-  /* Neutral */
+  /* ---- Accent Colours ---- */
+  --vaea-coral: #EB787A;      /* CTAs, badges, notifications, focus rings, critical alerts */
+  --vaea-gold:  #D4A843;      /* Premium accent, gradient endpoint */
+
+  /* ---- Navy (Marketing-site identity) ---- */
+  --vaea-navy:       #1e2235; /* Marketing dark backgrounds, foreground text */
+  --vaea-navy-light: #2a2f45; /* Marketing card backgrounds, demo contexts */
+
+  /* ---- Neutral Scale ---- */
   --vaea-grey-50:  #F2F2F2;
   --vaea-grey-100: #E6E6E6;
+  --vaea-grey-200: #D9D9D9;
   --vaea-grey-300: #BFBFBF;
-  --vaea-grey-700: #4D4D4D;
+  --vaea-grey-500: #808080;
+  --vaea-grey-700: #4C4D52;   /* Cool-tinted neutral (matches frontend) */
   --vaea-grey-900: #1F1F1F;
+
+  /* ---- Gradients ---- */
+  --vaea-gradient: linear-gradient(135deg, #53A69D 0%, #95D60C 50%, #D4A843 100%);
+  --vaea-gradient-subtle: linear-gradient(135deg, rgba(83,166,157,0.15) 0%, rgba(149,214,12,0.10) 50%, rgba(212,168,67,0.08) 100%);
 }

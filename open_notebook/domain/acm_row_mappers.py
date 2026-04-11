@@ -224,6 +224,17 @@ def map_item_row_to_extraction_record(
         or "Unknown"
     )
 
+    # Map acm_labelled string -> bool
+    acm_labelled_bool: Optional[bool] = None
+    if row.acm_labelled is not None:
+        if row.acm_labelled.strip().lower() in ("yes", "y", "true"):
+            acm_labelled_bool = True
+        elif row.acm_labelled.strip().lower() in ("no", "n", "false"):
+            acm_labelled_bool = False
+
+    # Normalize risk_status via enum normalizer
+    normalized_risk_status = normalize_enum_value(row.risk_status, "risk_status")
+
     # Build the full ACMExtractionRecord
     record = ACMExtractionRecord(
         # Building identity
@@ -248,6 +259,10 @@ def map_item_row_to_extraction_record(
         # Condition & disturbance
         material_condition=normalized_condition,
         disturbance_potential=normalized_disturbance,
+        # Quantity and labelling
+        quantity=row.quantity,
+        acm_labelled=acm_labelled_bool,
+        risk_status=normalized_risk_status,
         # Pipeline metadata
         extraction_confidence="medium",
         data_issues=data_issues,
