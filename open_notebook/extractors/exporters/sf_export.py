@@ -1,74 +1,84 @@
-"""
-Salesforce-ready export utilities.
+"""Salesforce-ready export utilities.
 
-Maps ACMRecord and BuildingRecord fields to SF API names
-for Data Loader-compatible CSV/Excel export.
+Maps ACMRecord and BuildingRecord fields to SF API names for Data
+Loader-compatible CSV/Excel export. Field names MUST match the live
+Salesforce schema in vaea-demidev — see config/sf-schema-snapshot.json
+and docs/sprint-artifacts/full-audit-2026-04-11/PHASE-1-FINDINGS.md.
 
-Story: E33-S8 Salesforce-Ready Export UI
+Why a rewrite (2026-04-11): the original mappings (E33-S8) accumulated
+~17 fabricated field names that don't exist in SF (Room_ID__c, ACM_Name__c,
+Extent__c, Location__c, Risk_Status__c, ACM_Labelled__c, and more). Every
+export would fail Data Loader validation. The tables below were regenerated
+from the live describe dump.
 """
+
+import hashlib
 
 from loguru import logger
 
 # ---------------------------------------------------------------------------
-# Field mapping tables
-# Each tuple: (sf_api_name, building_record_or_acm_record_field_name)
+# Field mapping tables — verified against vaea-demidev describe 2026-04-11
+# Each tuple: (sf_api_name, python_field_name)
 # ---------------------------------------------------------------------------
 
 BUILDING_SF_MAPPING: list[tuple[str, str]] = [
-    # Core identification — External_ID__c is generated at export time
+    # Upsert key — valid external ID field (string, externalId=true, length=255)
     ("External_ID__c", "external_id"),
-    ("Building_Code__c", "building_code"),
+    # Required custom fields
     ("Building_Name__c", "building_name"),
     ("Building_Type__c", "building_type"),
-    ("Building_Category__c", "building_category"),
+    ("Frequency_of_Use__c", "frequency_of_use"),
+    ("Public_Access__c", "public_access"),
+    # Extractable from ARA PDF cover page / site description
+    ("Building_Category__c", "building_category"),  # dependent on Building_Type__c
     ("Building_Address__c", "building_address"),
     ("Suburb__c", "suburb"),
     ("Postcode__c", "postcode"),
-    ("Estimated_Year_Build_New__c", "building_year"),
+    ("State__c", "state"),
+    ("Country__c", "country"),
+    ("Estimated_Year_Build_New__c", "building_year"),  # picklist, 330 values
     ("Construction_Type__c", "building_construction"),
-    ("Number_of_Levels__c", "number_of_levels"),
-    ("Est_Building_Size_m2__c", "est_building_size_m2"),
-    ("Frequency_of_Use__c", "frequency_of_use"),
-    ("Daily_Duration__c", "daily_duration"),
-    ("Level_of_Activity__c", "level_of_activity"),
-    ("Public_Access__c", "public_access"),
-    ("Mobile_Plant__c", "mobile_plant"),
-    ("Owned_or_Leased__c", "owned_or_leased"),
+    ("Number_of_Levels__c", "number_of_levels"),  # picklist 1-99
     ("Roof_Type__c", "roof_type"),
+    ("Owned_or_Leased__c", "owned_or_leased"),
     ("Asbestos_Register_Available__c", "asbestos_register_available"),
     ("Audit_Report_Available__c", "audit_report_available"),
     ("Date_of_Audit_Report__c", "date_of_audit_report"),
     ("Site_Name__c", "site_name"),
+    ("School_UID__c", "school_uid"),
     ("Building_Unique_ID__c", "building_unique_id"),
-    ("State__c", "state"),
-    ("Country__c", "country"),
+    ("Within_Your_Portfolio__c", "within_your_portfolio"),
+    ("GPS_Coordinates_provided_by_metro__c", "gps_coordinates"),
     ("Additional_Comments__c", "additional_comments"),
 ]
 
 ITEM_SF_MAPPING: list[tuple[str, str]] = [
-    # FK to parent Building__c — resolved at export time using External_ID linkage
+    # Parent lookup via Building external ID (master-detail, required=true, cascade=true)
+    # Item__c.External_ID__c is textarea+externalId=false in demidev — NOT usable as
+    # upsert key. Item__c export is INSERT-only until VAEA SF admin fixes the field
+    # type (see PHASE-1-FINDINGS.md §4). This row gives Data Loader the parent link.
     ("Building__r.External_ID__c", "building_external_id"),
-    ("Room_ID__c", "room_id"),
-    ("Room_Name__c", "room_name"),
-    ("Floor_Level__c", "floor_level"),
-    ("Internal_External__c", "area_type"),
-    ("ACM_Name__c", "product"),
-    ("ACM_Description__c", "material_description"),
-    ("Extent__c", "extent"),
-    ("Location__c", "location"),
-    ("Friability_of_Material__c", "friable"),
-    ("Condition__c", "material_condition"),
-    ("Risk_Status__c", "risk_status"),
-    ("Result__c", "result"),
-    ("Sample_No__c", "sample_no"),
-    ("Sample_Result__c", "sample_result"),
+    # Extractable from table rows
+    ("Item_Name__c", "product"),  # restricted picklist, 294 values
+    ("If_Other_Item_Name__c", "material_description"),  # fallback when picklist miss
+    ("Friability_of_Material__c", "friable"),  # 2 values, controls ACM_Classification__c
+    ("ACM_Classification__c", "acm_product_group"),  # dependent on Friability, 18 values
+    ("ACM_Sub_Classification__c", "acm_product_type"),  # dependent on Group, 133 values
+    ("Condition__c", "material_condition"),  # needs BAR->SF: Good -> Stable
+    ("Disturbance_Potential_of_Material__c", "disturbance_potential"),  # Medium -> Moderate
+    ("Sample_Analysis_Result_Material_Status__c", "sample_result"),
+    ("NATA_Endorsed_Sample_no__c", "sample_no"),
+    ("Identifying_Hygiene_Consulting_Company__c", "identifying_company"),
     ("Quantity__c", "quantity"),
-    ("ACM_Labelled__c", "acm_labelled"),
-    ("Disturbance_Potential__c", "disturbance_potential"),
-    ("Identifying_Company__c", "identifying_company"),
-    ("Hygienist_Recommendations__c", "hygienist_recommendations"),
-    ("ACM_Classification__c", "acm_product_group"),
-    ("ACM_Sub_Classification__c", "acm_product_type"),
+    ("Units_of_Measure__c", "extent"),  # note: ACMRecord.extent carries the unit string
+    ("Internal_External__c", "area_type"),
+    ("Level__c", "floor_level"),
+    ("Room_or_Area__c", "room_name"),
+    ("Location_in_Room__c", "location"),
+    ("Labelled__c", "labelled_sf"),  # ACMRecord has both acm_labelled (bool) and labelled_sf (Yes/No string)
+    ("Labelled_Details__c", "acm_label_details"),
+    ("Survey_Date__c", "date_identified"),
+    ("Additional_Comments__c", "additional_comments"),
 ]
 
 
@@ -93,19 +103,23 @@ def get_item_sf_headers() -> list[str]:
 
 
 def generate_external_id(building: object, source_id: str) -> str:
-    """Generate External_ID__c for a building if one is not already stored.
+    """Generate a stable External_ID__c for a building.
 
-    Resolution order:
-      1. building.external_id (if set)
-      2. building.building_unique_id (if set)
-      3. Synthesised "{source_short}_{building_code}" fallback
+    Resolution order (2026-04-11 — deterministic hash-based):
+      1. building.external_id (if already set) — honour stored value
+      2. building.building_unique_id (if set) — consultant-provided ID
+      3. Deterministic hash: "ACM_" + sha256(source_id + building_name)[:16]
+
+    The hash-based fallback is stable across re-extractions of the same
+    PDF: identical inputs always produce identical IDs, so SF upsert
+    updates in place instead of creating duplicates.
 
     Args:
         building: BuildingRecord instance.
-        source_id: Source document ID used for the fallback.
+        source_id: Source document ID (stable per PDF).
 
     Returns:
-        A non-empty string to use as External_ID__c.
+        A non-empty string <= 255 chars suitable for External_ID__c.
     """
     external_id = getattr(building, "external_id", None)
     if external_id:
@@ -115,17 +129,18 @@ def generate_external_id(building: object, source_id: str) -> str:
     if building_unique_id:
         return str(building_unique_id)
 
-    # Fallback: derive from source_id + building_code
-    source_part = source_id.split(":")[-1][:8] if ":" in source_id else source_id[:8]
-    code = (
-        getattr(building, "building_code", None)
+    # Deterministic hash fallback: sha256(source_id + building_name)
+    # Same PDF extracted twice -> same external ID -> SF upsert updates in place.
+    name_part = (
+        getattr(building, "building_name", None)
         or getattr(building, "internal_id", None)
         or "unknown"
     )
-    generated = f"{source_part}_{code}"
+    digest = hashlib.sha256(f"{source_id}|{name_part}".encode()).hexdigest()[:16]
+    generated = f"ACM_{digest}"
     logger.debug(
         f"Building has no external_id or building_unique_id — "
-        f"generated External_ID__c: {generated!r}"
+        f"generated deterministic External_ID__c: {generated!r}"
     )
     return generated
 
