@@ -55,27 +55,19 @@ async def content_process(state: SourceState) -> dict:
     content_state["url_engine"] = (
         content_settings.default_content_processing_engine_url or "auto"
     )
-    # TableFormer activation (ADR-001)
-    # When enabled, forces Docling engine and activates table structure recognition.
-    # Controlled via environment variable for gradual rollout.
-    table_structure_enabled = (
-        os.environ.get("DOCLING_TABLE_STRUCTURE", "false").lower() == "true"
-    )
-
-    if table_structure_enabled:
-        content_state["document_engine"] = "docling"
-        content_state["docling_table_structure"] = True
-        content_state["docling_table_mode"] = os.environ.get(
-            "DOCLING_TABLE_MODE", "accurate"
-        )
-        logger.info(
-            f"TableFormer enabled: docling_table_structure=True, "
-            f"mode={content_state['docling_table_mode']}"
-        )
-    else:
-        content_state["document_engine"] = (
-            content_settings.default_content_processing_engine_doc or "auto"
-        )
+    # Content extraction engine selection.
+    #
+    # IMPORTANT: Always use "simple" (PyMuPDF) for content text extraction.
+    # content_core's Docling path (extract_with_docling) uses a bare
+    # DocumentConverter() with NO PdfPipelineOptions — Docling defaults
+    # enable OCR, which causes a CPU-bound hang (>100s) on native PDFs
+    # with selectable text. Table extraction is handled separately by
+    # DOCLING_DIRECT_TABLE_EXTRACTION with proper do_ocr=False.
+    #
+    # Legacy: DOCLING_TABLE_STRUCTURE env var previously routed content
+    # extraction through Docling. Now ignored for the content pass —
+    # tables come from the direct API extraction pass in source_commands.py.
+    content_state["document_engine"] = "simple"
 
     content_state["output_format"] = "markdown"
 

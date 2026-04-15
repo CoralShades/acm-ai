@@ -303,27 +303,55 @@ phase_5() {
     uv sync --quiet
     ok "Python deps installed"
 
-    # CUDA smoke test (critical for RTX 5090 Blackwell)
+    # CRITICAL: uv sync pulls stable torch from PyPI (sm_50–sm_90 only).
+    # This overwrites nightly cu128 which is required for RTX 5090 (sm_120).
+    # All runtime commands MUST use .venv/bin/python (not uv run) to avoid
+    # re-triggering uv sync. See start-services-5090.sh.
+    #
+    # RTX 5090 sm_120 guard: detect and auto-fix by installing stable cu128.
+    echo "  Checking PyTorch sm_120 (Blackwell) support..."
+    local torch_archs
+    torch_archs=$("$REPO_DIR/.venv/bin/python" -c "
+import torch
+archs = torch.cuda.get_arch_list() if hasattr(torch.cuda, 'get_arch_list') else []
+print(' '.join(archs))
+" 2>/dev/null || echo "")
+
+    if ! echo "$torch_archs" | grep -q "sm_120"; then
+        warn "PyTorch missing sm_120 — reinstalling stable cu128..."
+        "$REPO_DIR/.venv/bin/pip" install --force-reinstall \
+            torch torchvision torchaudio \
+            --index-url https://download.pytorch.org/whl/cu128 \
+            2>&1 | tail -3
+        ok "PyTorch stable cu128 installed"
+    else
+        ok "PyTorch already supports sm_120"
+    fi
+
+    # CUDA smoke test
     echo "  Verifying CUDA + PyTorch..."
     local cuda_result
-    cuda_result=$(uv run python -c "
+    cuda_result=$("$REPO_DIR/.venv/bin/python" -c "
 import torch
 assert torch.cuda.is_available(), 'CUDA not available'
+archs = torch.cuda.get_arch_list() if hasattr(torch.cuda, 'get_arch_list') else []
+assert 'sm_120' in archs, f'sm_120 not in arch list: {archs}'
 print(f'PyTorch {torch.__version__}, CUDA {torch.version.cuda}')
 print(f'GPU: {torch.cuda.get_device_name(0)}')
 print(f'Compute capability: {torch.cuda.get_device_capability(0)}')
+print(f'Arch list includes sm_120: OK')
 " 2>&1) || {
         fail "PyTorch CUDA check failed: $cuda_result"
-        warn "RTX 5090 (Blackwell) may need CUDA 12.8+ wheels"
-        warn "Try: uv pip install torch --index-url https://download.pytorch.org/whl/cu128"
+        warn "RTX 5090 (Blackwell) needs PyTorch nightly with cu128"
+        warn "Manual fix: .venv/bin/pip install --force-reinstall --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128"
         return 1
     }
     echo "  $cuda_result"
-    ok "PyTorch CUDA verified"
+    ok "PyTorch CUDA verified (sm_120 OK)"
 
     # Docling import test
     echo "  Verifying Docling..."
-    uv run python -c "from docling.document_converter import DocumentConverter; print('Docling OK')" 2>&1 || {
+    "$REPO_DIR/.venv/bin/python" -c "from docling.document_converter import DocumentConverter; print('Docling OK')" 2>&1 || {
         warn "Docling import failed — table extraction may not work"
     }
     ok "Docling verified"
@@ -481,7 +509,7 @@ phase_10() {
             echo "  2. Create an account and project"
             echo "  3. Copy the API keys"
             echo "  4. Update LANGFUSE_SECRET_KEY and LANGFUSE_PUBLIC_KEY in .env"
-            echo "  5. Restart the API: tmux send-keys -t api C-c && sleep 1 && tmux send-keys -t api 'cd $REPO_DIR && API_HOST=0.0.0.0 uv run python run_api.py' Enter"
+            echo "  5. Restart the API: tmux send-keys -t api C-c && sleep 1 && tmux send-keys -t api 'cd $REPO_DIR && API_HOST=0.0.0.0 .venv/bin/python run_api.py' Enter"
             echo ""
         fi
     fi

@@ -64,9 +64,9 @@ fi
 # PyTorch CUDA check
 if [[ -d "$REPO_DIR" ]]; then
     check "PyTorch CUDA available" \
-        "cd $REPO_DIR && uv run python -c \"import torch; assert torch.cuda.is_available(), 'CUDA not available'; print(f'PyTorch {torch.__version__}, CUDA {torch.version.cuda}, Device: {torch.cuda.get_device_name()}')\""
+        "cd $REPO_DIR && .venv/bin/python -c \"import torch; assert torch.cuda.is_available(), 'CUDA not available'; print(f'PyTorch {torch.__version__}, CUDA {torch.version.cuda}, Device: {torch.cuda.get_device_name()}')\""
     warn_check "Docling import" \
-        "cd $REPO_DIR && uv run python -c \"from docling.document_converter import DocumentConverter; print('Docling OK')\""
+        "cd $REPO_DIR && .venv/bin/python -c \"from docling.document_converter import DocumentConverter; print('Docling OK')\""
 fi
 
 # ── SurrealDB Version Gate ───────────

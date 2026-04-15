@@ -36,6 +36,51 @@ echo "========================================"
 mkdir -p "$REPO_DIR/logs" "$DATA_DIR"/{surrealdb,ollama,uploads}
 mkdir -p "$DATA_DIR"/langfuse/{postgres,clickhouse,clickhouse-logs,redis,minio}
 
+# ── Pre-flight: PyTorch sm_120 guard ───
+# RTX 5090 (Blackwell, sm_120) needs PyTorch nightly with cu128.
+# Standard stable releases only support up to sm_90. If uv sync ran,
+# it may have downgraded torch. Detect and auto-fix here.
+echo -e "\n${CYAN}[pre]${NC} Checking PyTorch CUDA compatibility..."
+TORCH_CUDA_OK=false
+if command -v "$REPO_DIR/.venv/bin/python" &>/dev/null; then
+    TORCH_ARCHS=$("$REPO_DIR/.venv/bin/python" -c "
+import torch
+archs = torch.cuda.get_arch_list() if hasattr(torch.cuda, 'get_arch_list') else []
+print(' '.join(archs))
+" 2>/dev/null || echo "")
+
+    if echo "$TORCH_ARCHS" | grep -q "sm_120"; then
+        TORCH_VER=$("$REPO_DIR/.venv/bin/python" -c "import torch; print(torch.__version__)" 2>/dev/null)
+        echo -e "  ${GREEN}[OK]${NC} PyTorch $TORCH_VER supports sm_120 (RTX 5090)"
+        TORCH_CUDA_OK=true
+    else
+        echo -e "  ${YELLOW}[FIX]${NC} PyTorch missing sm_120 support (archs: $TORCH_ARCHS)"
+        echo "  Installing PyTorch stable cu128 — this takes 2-4 minutes..."
+        "$REPO_DIR/.venv/bin/pip" install --force-reinstall \
+            torch torchvision torchaudio \
+            --index-url https://download.pytorch.org/whl/cu128 \
+            2>&1 | tail -3
+
+        # Verify the fix
+        TORCH_ARCHS_NEW=$("$REPO_DIR/.venv/bin/python" -c "
+import torch
+archs = torch.cuda.get_arch_list() if hasattr(torch.cuda, 'get_arch_list') else []
+print(' '.join(archs))
+" 2>/dev/null || echo "")
+        if echo "$TORCH_ARCHS_NEW" | grep -q "sm_120"; then
+            TORCH_VER=$("$REPO_DIR/.venv/bin/python" -c "import torch; print(torch.__version__)" 2>/dev/null)
+            echo -e "  ${GREEN}[OK]${NC} Fixed — PyTorch $TORCH_VER now supports sm_120"
+            TORCH_CUDA_OK=true
+        else
+            echo -e "  ${RED}[FAIL]${NC} PyTorch still missing sm_120 after reinstall"
+            echo "  Docling GPU inference will fail. Manual fix:"
+            echo "    .venv/bin/pip install --force-reinstall torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
+        fi
+    fi
+else
+    echo -e "  ${YELLOW}[SKIP]${NC} Python venv not found — skipping torch check"
+fi
+
 # Kill existing tmux sessions (clean slate)
 tmux kill-server 2>/dev/null || true
 sleep 1
@@ -102,7 +147,7 @@ fi
 # ── 3. API Server ────────────────────
 echo -e "${CYAN}[3/7]${NC} Starting API server (port 5055)..."
 tmux new-session -d -s api -c "$REPO_DIR" \
-    "cd $REPO_DIR && API_HOST=0.0.0.0 API_RELOAD=false uv run python run_api.py 2>&1 | tee logs/api.log"
+    "cd $REPO_DIR && API_HOST=0.0.0.0 API_RELOAD=false .venv/bin/python run_api.py 2>&1 | tee logs/api.log"
 
 if ! wait_for_service "API" "http://localhost:5055/health" 30 3; then
     echo -e "${RED}API failed to start. Check: tmux attach -t api${NC}"
@@ -112,7 +157,7 @@ fi
 # ── 4. Background Worker ─────────────
 echo -e "${CYAN}[4/7]${NC} Starting background worker..."
 tmux new-session -d -s worker -c "$REPO_DIR" \
-    "cd $REPO_DIR && uv run python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log"
+    "cd $REPO_DIR && .venv/bin/python run_worker.py --import-modules commands 2>&1 | tee logs/worker.log"
 sleep 2
 if tmux has-session -t worker 2>/dev/null; then
     echo -e "  ${GREEN}Worker session started${NC}"

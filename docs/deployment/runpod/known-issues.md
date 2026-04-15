@@ -76,18 +76,19 @@ Previously: `acmv3.coralshades.ai` tunnel had DNS/TLS issues. Migrated to new Cl
 | **Severity** | Medium |
 | **Status** | Mitigated |
 
-The RTX 5090 uses NVIDIA Blackwell architecture with compute capability `sm_120`. Standard PyTorch stable releases only support up to `sm_90` (Ada Lovelace / RTX 4090). The pod must run PyTorch nightly with CUDA 12.8 support: `torch-2.12.0.dev20260407+cu128`.
+The RTX 5090 uses NVIDIA Blackwell architecture with compute capability `sm_120`. Standard PyTorch from PyPI (`pip install torch`) only supports up to `sm_90` (Ada Lovelace / RTX 4090). The pod must run PyTorch stable with CUDA 12.8: `torch-2.11.0+cu128` from the cu128 index.
 
-**Impact:** Potential instability from dev builds. Running `uv sync` may overwrite the nightly torch with an incompatible stable version if `pyproject.toml` pins a torch version.
+**Impact:** Running `uv sync` overwrites cu128 torch with PyPI's default (cu126, sm_50–sm_90 only). All runtime commands must use `.venv/bin/python` (not `uv run`) to avoid re-triggering `uv sync`.
 
-**Workaround:** After any `uv sync`, force-reinstall PyTorch nightly:
+**Workaround:** After any `uv sync`, force-reinstall PyTorch cu128:
 ```bash
-source .venv/bin/activate
-pip install --force-reinstall torch torchvision torchaudio \
-  --index-url https://download.pytorch.org/whl/nightly/cu128
+.venv/bin/pip install --force-reinstall torch torchvision torchaudio \
+  --index-url https://download.pytorch.org/whl/cu128
 ```
 
-**Fix:** Wait for a PyTorch stable release with CUDA 12.8+ and `sm_120` support (expected in PyTorch 2.12 or later).
+The `start-services-5090.sh` sm_120 guard auto-detects and fixes this on every service start.
+
+**Fix:** Resolved in PyTorch 2.11.0+cu128 (stable). Guard scripts ensure automatic remediation.
 
 ---
 

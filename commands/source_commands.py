@@ -108,9 +108,13 @@ async def _extract_tables_with_docling(
             StageId.DOCLING_EXTRACTION, "Starting Docling table extraction"
         )
 
-    pipeline_options = PdfPipelineOptions(do_table_structure=True)
+    pipeline_options = PdfPipelineOptions(do_table_structure=True, do_ocr=False)
     pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
     pipeline_options.table_structure_options.do_cell_matching = True
+
+    # OCR disabled: ARA PDFs are native (selectable text), not scanned images.
+    # RapidOCR on 30+ pages of native text causes a CPU-bound hang (>100s).
+    # The PDF parser extracts text natively; OCR is only needed for scanned docs.
 
     # accelerator_options belongs on PdfPipelineOptions, NOT DocumentConverter.
     # AUTO lets Docling use GPU when PyTorch has correct CUDA kernels (e.g.
