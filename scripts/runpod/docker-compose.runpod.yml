@@ -1,57 +1,13 @@
-# ACM-AI RunPod Docker Compose — all services in one file
+# ACM-AI RunPod Docker Compose — Langfuse observability stack only
 # Usage: docker compose -f docker-compose.runpod.yml up -d
 #
-# This compose file runs on a RunPod GPU pod with:
-#   - SurrealDB (port 8000)
-#   - Ollama with GPU (port 11434)
-#   - Langfuse v3 full stack (port 3000)
+# SurrealDB and Ollama run NATIVELY (not in Docker) for maximum GPU performance.
+# This compose file only manages the Langfuse v3 stack (~3GB RAM):
+#   - PostgreSQL, ClickHouse, Redis, MinIO, Langfuse Web + Worker
 #
-# Volumes are stored on the network volume at /workspace/data/
+# Volumes are stored on the network volume at /workspace/data/langfuse/
 
 services:
-  # --- SurrealDB Database ---
-  surrealdb:
-    image: surrealdb/surrealdb:v2
-    container_name: acm-ai-db
-    ports:
-      - "8000:8000"
-    volumes:
-      - /workspace/data/surrealdb:/mydata
-    environment:
-      - SURREAL_EXPERIMENTAL_GRAPHQL=true
-    command: start --log info --user root --pass root surrealkv://mydata/open_notebook.db
-    user: root
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "/surreal", "isready", "--conn", "http://localhost:8000"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # --- Ollama with GPU ---
-  ollama:
-    image: ollama/ollama:latest
-    container_name: acm-ai-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - /workspace/data/ollama:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # --- Langfuse: PostgreSQL ---
   langfuse-postgres:
     image: postgres:17-alpine

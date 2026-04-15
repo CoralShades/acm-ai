@@ -147,7 +147,7 @@ mcp__runpod__create-pod with:
 
 ## Pod Initialization
 
-After the pod is created and running (~30s), SSH in and run the setup script:
+After the pod is created and running (~30s), SSH in and run the 5090 setup script:
 
 ```bash
 # Get SSH info
@@ -157,8 +157,21 @@ runpodctl pod get <pod-id>
 # SSH in
 ssh -i ~/.runpod/ssh/RunPod-Key-Go root@<ip> -p <port>
 
-# On the pod — run one-time setup:
-bash /workspace/acm-ai/scripts/runpod/setup-pod.sh
+# On the pod — run one-time setup (10-phase bootstrap):
+bash /workspace/acm-ai/scripts/runpod/setup-pod-5090.sh
+```
+
+The `setup-pod-5090.sh` script runs 10 phases (compared to 8 in the old `setup-pod.sh`) and includes deploy key configuration, PyTorch nightly installation, and Cloudflare tunnel setup.
+
+### Deploy Key (GitHub read-only access)
+
+The pod uses a deploy key (`~/.ssh/acm-ai-deploy`) for read-only git clone access instead of a personal access token. The local copy of the key is at `~/.ssh/acm-ai-deploy`.
+
+### Or deploy from WSL (one-command)
+
+```bash
+# From your local WSL machine — handles SSH + setup in one shot:
+bash /mnt/d/ailocal/acm-ai/scripts/runpod/deploy-5090.sh
 ```
 
 ### Or run setup manually
@@ -174,13 +187,14 @@ curl -fsSL https://ollama.com/install.sh | sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 
-# Install Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+# Install Node.js 22 (was 20 on old pod)
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
 
-# Clone repo
+# Clone repo (using deploy key)
 cd /workspace
-git clone --branch ACMV3 https://github.com/CoralShades/acm-ai.git
+GIT_SSH_COMMAND="ssh -i ~/.ssh/acm-ai-deploy -o StrictHostKeyChecking=no" \
+  git clone --branch main https://github.com/CoralShades/acm-ai.git
 cd acm-ai
 
 # Copy env template
@@ -190,10 +204,21 @@ nano .env
 
 # Install dependencies
 uv sync
-cd frontend && npm install
+cd frontend && npm install && npm run build
 ```
 
 > **Critical:** Install SurrealDB v2.x specifically (`--version v2.2.1`). The default `curl | sh` installs v3 nightly which has incompatible migration syntax (`FLEXIBLE TYPE` parse error).
+
+### PyTorch Nightly (Required for RTX 5090)
+
+Standard PyTorch releases do not yet support the RTX 5090 (Blackwell / sm_120 architecture). You must install the nightly build with CUDA 12.8:
+
+```bash
+pip install --force-reinstall torch torchvision torchaudio \
+  --index-url https://download.pytorch.org/whl/nightly/cu128
+```
+
+The current pod runs PyTorch 2.12.0.dev (nightly) with CUDA 12.8.
 
 ## Verify Setup
 
@@ -201,8 +226,10 @@ cd frontend && npm install
 surreal version    # → 2.2.1
 ollama --version   # → 0.18.0+
 uv --version       # → 0.9.0+
-node -v            # → v20.x
-nvidia-smi         # → Shows RTX 5090, 32607 MiB
+node -v            # → v22.x
+nvidia-smi         # → Shows RTX 5090, 32607 MiB, Driver 570.195.03
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+                   # → 2.12.0.dev... True
 ```
 
 ---

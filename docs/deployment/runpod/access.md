@@ -7,12 +7,12 @@ How to access the RunPod pod — SSH, proxy URLs, tmux sessions, and remote comm
 ### Connect
 
 ```bash
-ssh -i ~/.runpod/ssh/RunPod-Key-Go root@174.94.157.109 -p 31130
+ssh -i ~/.runpod/ssh/RunPod-Key-Go root@142.127.93.36 -p 11392
 ```
 
 > **Note:** The IP and port may change after pod restarts. Always check first:
 > ```bash
-> runpodctl pod get 9eusawy77gd1d0
+> runpodctl pod get qpzht3hvrbg95w
 > # Look for ssh.ssh_command field
 > ```
 
@@ -26,7 +26,7 @@ ssh -i ~/.runpod/ssh/RunPod-Key-Go root@174.94.157.109 -p 31130
 ### Run a Remote Command (without interactive shell)
 
 ```bash
-ssh -i ~/.runpod/ssh/RunPod-Key-Go -p 31130 root@174.94.157.109 \
+ssh -i ~/.runpod/ssh/RunPod-Key-Go -p 11392 root@142.127.93.36 \
   "curl -sf http://localhost:5055/health"
 ```
 
@@ -34,12 +34,12 @@ ssh -i ~/.runpod/ssh/RunPod-Key-Go -p 31130 root@174.94.157.109 \
 
 ```bash
 # Local → Pod
-scp -i ~/.runpod/ssh/RunPod-Key-Go -P 31130 \
-  ./my-file.pdf root@174.94.157.109:/workspace/acm-ai/docs/samplePDF/
+scp -i ~/.runpod/ssh/RunPod-Key-Go -P 11392 \
+  ./my-file.pdf root@142.127.93.36:/workspace/acm-ai/docs/samplePDF/
 
 # Pod → Local
-scp -i ~/.runpod/ssh/RunPod-Key-Go -P 31130 \
-  root@174.94.157.109:/workspace/acm-ai/logs/api.log ./
+scp -i ~/.runpod/ssh/RunPod-Key-Go -P 11392 \
+  root@142.127.93.36:/workspace/acm-ai/logs/api.log ./
 
 # Or use runpodctl send/receive (uses transfer codes, no SSH needed)
 # On local machine:
@@ -55,17 +55,26 @@ RunPod provides HTTPS proxy URLs for every exposed port. Format:
 https://<pod-id>-<port>.proxy.runpod.net
 ```
 
-### Current URLs
+### Current URLs (RunPod Proxy)
 
 | Service | URL |
 |---------|-----|
-| Frontend | `https://9eusawy77gd1d0-8502.proxy.runpod.net` |
-| API | `https://9eusawy77gd1d0-5055.proxy.runpod.net` |
-| API Docs (Swagger) | `https://9eusawy77gd1d0-5055.proxy.runpod.net/docs` |
-| SurrealDB | `https://9eusawy77gd1d0-8000.proxy.runpod.net` |
-| Ollama | `https://9eusawy77gd1d0-11434.proxy.runpod.net` |
+| Frontend | `https://qpzht3hvrbg95w-8502.proxy.runpod.net` |
+| API | `https://qpzht3hvrbg95w-5055.proxy.runpod.net` |
+| API Docs (Swagger) | `https://qpzht3hvrbg95w-5055.proxy.runpod.net/docs` |
+| SurrealDB | `https://qpzht3hvrbg95w-8000.proxy.runpod.net` |
+| Ollama | `https://qpzht3hvrbg95w-11434.proxy.runpod.net` |
 
 > **Pod ID changes when you delete and recreate a pod.** After creating a new pod, update all proxy URLs with the new pod ID.
+
+### Cloudflare Tunnel URLs
+
+| Service | URL | Status |
+|---------|-----|--------|
+| Frontend | `https://app.acmv3.coralshades.ai` | DNS/TLS issue — not resolving |
+| API | `https://api.acmv3.coralshades.ai` | DNS/TLS issue — not resolving |
+
+> **Note:** Cloudflare tunnel is configured and connected on the pod, but external DNS/TLS is not resolving. Use RunPod proxy URLs as the primary access method until resolved.
 
 ### Proxy Authentication
 
@@ -78,10 +87,10 @@ RunPod proxy URLs are public by default. Anyone with the URL can access your ser
 
 ```bash
 # Test API health remotely
-curl https://9eusawy77gd1d0-5055.proxy.runpod.net/health
+curl https://qpzht3hvrbg95w-5055.proxy.runpod.net/health
 
 # Use the remote API from local code
-export API_URL=https://9eusawy77gd1d0-5055.proxy.runpod.net
+export API_URL=https://qpzht3hvrbg95w-5055.proxy.runpod.net
 ```
 
 ## tmux Terminal Sessions
@@ -92,12 +101,13 @@ All services run in named tmux sessions. This provides persistent terminals that
 
 ```bash
 tmux list-sessions
-# Output:
-# api: 1 windows (created Mon Mar 16 02:16:34 2026)
-# frontend: 1 windows (created Mon Mar 16 02:13:19 2026)
-# ollama: 1 windows (created Mon Mar 16 02:13:09 2026)
-# surrealdb: 1 windows (created Mon Mar 16 02:16:30 2026)
-# worker: 1 windows (created Mon Mar 16 02:17:10 2026)
+# Output (6 sessions):
+# api: 1 windows (created ...)
+# frontend: 1 windows (created ...)
+# ollama: 1 windows (created ...)
+# surrealdb: 1 windows (created ...)
+# tunnel: 1 windows (created ...)
+# worker: 1 windows (created ...)
 ```
 
 ### Attach to a Session
@@ -108,6 +118,7 @@ tmux attach -t worker      # View worker logs
 tmux attach -t frontend    # View frontend logs
 tmux attach -t ollama      # View Ollama logs
 tmux attach -t surrealdb   # View SurrealDB logs
+tmux attach -t tunnel      # View Cloudflare tunnel logs
 ```
 
 ### Detach from a Session
@@ -154,13 +165,13 @@ From Claude Code on your local machine, you can run commands on the pod:
 
 ```bash
 # Run a health check from Claude Code
-ssh -i "/c/Users/User/.runpod/ssh/RunPod-Key-Go" -o StrictHostKeyChecking=no -p 31130 root@174.94.157.109 "bash /workspace/acm-ai/scripts/runpod/health-check.sh"
+ssh -i "/c/Users/User/.runpod/ssh/RunPod-Key-Go" -o StrictHostKeyChecking=no -p 11392 root@142.127.93.36 "bash /workspace/acm-ai/scripts/runpod/health-check-5090.sh"
 
 # Check GPU status
-ssh -i "/c/Users/User/.runpod/ssh/RunPod-Key-Go" -o StrictHostKeyChecking=no -p 31130 root@174.94.157.109 "nvidia-smi"
+ssh -i "/c/Users/User/.runpod/ssh/RunPod-Key-Go" -o StrictHostKeyChecking=no -p 11392 root@142.127.93.36 "nvidia-smi"
 
 # Pull a new Ollama model
-ssh -i "/c/Users/User/.runpod/ssh/RunPod-Key-Go" -o StrictHostKeyChecking=no -p 31130 root@174.94.157.109 "ollama pull qwen2.5:32b"
+ssh -i "/c/Users/User/.runpod/ssh/RunPod-Key-Go" -o StrictHostKeyChecking=no -p 11392 root@142.127.93.36 "ollama pull gemma4:26b"
 ```
 
 ## Port Reference

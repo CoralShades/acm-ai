@@ -47,24 +47,28 @@ echo Stopping SurrealDB...
 docker compose down >nul 2>&1
 
 echo.
-REM Verify port 5055 is free (connect test -- fails = port is free)
+REM Verify port 5055 is truly free (bind test — catches WSL2 ghost processes
+REM that hold the port but are invisible to curl/netstat)
 echo Verifying port 5055 is available...
-set "PORT_FREE=0"
-for /L %%i in (1,1,15) do (
-    if "!PORT_FREE!"=="0" (
-        curl -sf http://localhost:5055/health >nul 2>&1
-        if errorlevel 1 (
-            set "PORT_FREE=1"
-        ) else (
-            timeout /t 1 /nobreak >nul
-        )
-    )
+set "PORT_RETRIES=0"
+:check_port_5055_free
+python -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',5055)); s.close()" >nul 2>&1
+if not errorlevel 1 goto port_5055_confirmed_free
+set /a PORT_RETRIES+=1
+if !PORT_RETRIES! GEQ 10 (
+    echo [WARN] Port 5055 still blocked after 10s. Attempting WSL shutdown...
+    wsl --shutdown >nul 2>&1
+    timeout /t 5 /nobreak >nul
+    python -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',5055)); s.close()" >nul 2>&1
+    if not errorlevel 1 goto port_5055_confirmed_free
+    echo [WARN] Port 5055 still blocked after WSL shutdown. Try: wsl --shutdown manually
+    goto port_5055_check_done
 )
-if "!PORT_FREE!"=="0" (
-    echo [WARN] Port 5055 still responds after 15s. Try: wsl --shutdown
-) else (
-    echo Port 5055 is free.
-)
+timeout /t 1 /nobreak >nul
+goto check_port_5055_free
+:port_5055_confirmed_free
+echo Port 5055 is free.
+:port_5055_check_done
 
 echo.
 echo ========================================

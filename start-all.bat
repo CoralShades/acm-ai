@@ -14,6 +14,9 @@ if not exist "%ACM_DIR%logs" mkdir "%ACM_DIR%logs"
 
 echo [0/7] Syncing Python dependencies...
 set UV_LINK_MODE=copy
+REM Clean WSL-created symlinks that break Windows uv (lib64 -> lib, bin/)
+if exist "%ACM_DIR%.venv\lib64" del /f /q "%ACM_DIR%.venv\lib64" >nul 2>&1
+if exist "%ACM_DIR%.venv\bin" rd /s /q "%ACM_DIR%.venv\bin" >nul 2>&1
 uv sync --quiet
 echo Dependencies synced.
 echo.
@@ -69,17 +72,23 @@ REM Save SurrealDB startup logs
 docker compose logs --no-color --tail 200 surrealdb > "%ACM_DIR%logs\surrealdb.log" 2>&1
 echo.
 
-REM Verify port 5055 is free before starting API (connect test)
+REM Verify port 5055 is truly free (bind test — catches WSL2 ghost processes
+REM that hold the port but are invisible to curl/netstat)
 echo Verifying port 5055 is free before starting API...
 set "PORT_RETRIES=0"
 :check_port_5055
-curl -sf http://localhost:5055/health >nul 2>&1
-if errorlevel 1 goto port_5055_free
+python -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',5055)); s.close()" >nul 2>&1
+if not errorlevel 1 goto port_5055_free
 set /a PORT_RETRIES+=1
-if !PORT_RETRIES! GEQ 15 (
-    echo ERROR: Port 5055 still responding after 15s. Cannot start API.
-    echo Try running: wsl --shutdown
-    echo Then re-run this script.
+if !PORT_RETRIES! GEQ 10 (
+    echo WARNING: Port 5055 blocked after 10s. Attempting WSL shutdown to clear ghost processes...
+    wsl --shutdown >nul 2>&1
+    timeout /t 5 /nobreak >nul
+    python -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',5055)); s.close()" >nul 2>&1
+    if not errorlevel 1 goto port_5055_free
+    echo ERROR: Port 5055 still blocked after WSL shutdown. Cannot start API.
+    echo A WSL2 or Windows process is holding port 5055.
+    echo Try: wsl --shutdown   then re-run this script.
     pause
     exit /b 1
 )

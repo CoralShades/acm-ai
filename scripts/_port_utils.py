@@ -69,6 +69,31 @@ def _get_process_name(pid: int) -> str | None:
         return result.stdout.strip() or None
 
 
+def _is_docker_mapped_port(port: int) -> bool:
+    """Check if a port is mapped by a running Docker container.
+
+    On Windows with Docker Desktop (WSL2 backend), container-mapped ports
+    appear in netstat with PIDs from the Linux namespace that are invisible
+    to Windows process tools. This causes find_port_owner() to misidentify
+    them as orphaned ghost processes.
+    """
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "--format", "{{.Ports}}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                # Docker port format: "0.0.0.0:8000->8000/tcp, :::8000->8000/tcp"
+                if f":{port}->" in line:
+                    return True
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return False
+
+
 def _get_ghost_pids_on_port(port: int) -> set[int]:
     """Find PIDs in netstat LISTENING on a port that don't exist as processes."""
     ghost_pids: set[int] = set()
@@ -176,9 +201,14 @@ def find_port_owner(port: int) -> PortConflict | None:
     except (subprocess.TimeoutExpired, FileNotFoundError, ValueError, IndexError):
         pass
 
-    # Port is in use but no visible process found — likely orphaned multiprocessing
-    # children that inherited the socket from a killed parent (ghost parent PID
-    # shows in netstat but doesn't exist as a Windows process)
+    # Port is in use but no visible process found.
+    # Check if a Docker container owns the port before labeling as orphaned.
+    if _is_docker_mapped_port(port):
+        return None  # Docker container — expected, not a conflict
+
+    # Likely orphaned multiprocessing children that inherited the socket from a
+    # killed parent (ghost parent PID shows in netstat but doesn't exist as a
+    # Windows process)
     return PortConflict(port=port, pid=None, process_name="orphaned (ghost parent PID)")
 
 

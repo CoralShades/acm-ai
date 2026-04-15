@@ -48,8 +48,8 @@ def _make_resume_safe_agent_class(base_class):
                 # Skip the message-count check entirely for resume requests.
                 # Temporarily patch agent_state so the parent sees equal counts,
                 # preventing the regenerate branch from triggering.
-                from langchain_core.messages import SystemMessage
                 from ag_ui_langgraph.utils import agui_messages_to_langchain
+                from langchain_core.messages import SystemMessage
 
                 messages = input.messages or []
                 langchain_messages = agui_messages_to_langchain(messages)

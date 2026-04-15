@@ -29,7 +29,7 @@ echo "y" | runpodctl ssh add-key
 **Fix:**
 ```bash
 # Get current SSH info
-runpodctl pod get <pod-id>
+runpodctl pod get qpzht3hvrbg95w
 # Use the new IP and port from ssh.ssh_command
 ```
 
@@ -56,6 +56,29 @@ Host runpod
     ServerAliveCountMax 5
 ```
 
+## PyTorch CUDA Compatibility Error on RTX 5090
+
+### "CUDA error: no kernel image is available for execution on the device" / sm_120 not supported
+
+**Cause:** The RTX 5090 (Blackwell architecture) uses compute capability sm_120, which is not
+supported by standard PyTorch releases. Only PyTorch nightly builds with CUDA 12.8 (cu128)
+include Blackwell support.
+
+**Fix:**
+```bash
+# Install PyTorch nightly with cu128 support
+pip install --pre torch torchvision torchaudio \
+  --index-url https://download.pytorch.org/whl/nightly/cu128
+
+# Verify CUDA is working
+python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+# Should output: True / NVIDIA GeForce RTX 5090
+```
+
+**Prevention:** The `setup-pod-5090.sh` script installs the correct PyTorch nightly automatically.
+If you reinstall Python dependencies (`uv sync` / `pip install`), ensure torch is not downgraded
+to a stable release.
+
 ## API Startup Failures
 
 ### "Failed to run database migrations: FLEXIBLE must be specified after TYPE"
@@ -65,9 +88,9 @@ Host runpod
 **Fix:**
 ```bash
 # Check version
-surreal version  # If 3.x → wrong version
+surreal version  # If 3.x -> wrong version
 
-# Install v2
+# Install v2.2.1
 curl -sSf https://install.surrealdb.com | sh -s -- --version v2.2.1
 
 # Clear incompatible data
@@ -76,7 +99,7 @@ rm -rf /workspace/data/surrealdb/*
 # Restart SurrealDB and API
 tmux kill-session -t surrealdb
 tmux kill-session -t api
-bash /workspace/acm-ai/scripts/runpod/start-services.sh
+bash /workspace/acm-ai/scripts/runpod/start-services-5090.sh
 ```
 
 ### "Connection refused" on port 5055
@@ -124,8 +147,10 @@ surreal sql --conn http://localhost:8000 --user root --pass root \
 # List available models
 ollama list
 
-# Pull missing model
-ollama pull llama3.1:8b-instruct-q8_0
+# Pull missing model (gemma4 family)
+ollama pull gemma4:26b
+ollama pull gemma4:e4b
+ollama pull gemma4:latest
 
 # Check OLLAMA_MODELS is set in tmux session
 # Models should be at /workspace/data/ollama/
@@ -145,7 +170,7 @@ nvidia-smi
 curl http://localhost:11434/api/ps
 
 # Unload all models (frees VRAM)
-curl -X DELETE http://localhost:11434/api/generate -d '{"model":"llama3.1:8b-instruct-q8_0","keep_alive":0}'
+curl -X DELETE http://localhost:11434/api/generate -d '{"model":"gemma4:26b","keep_alive":0}'
 
 # Reduce concurrent models
 export OLLAMA_MAX_LOADED_MODELS=1
@@ -169,6 +194,50 @@ tmux new-session -d -s ollama \
 curl http://localhost:11434/api/tags
 ```
 
+## Disk Full (Container Disk)
+
+### "No space left on device"
+
+**Cause:** The 100GB container disk is full. No network volume is attached, so all data
+(models, DB, repo, venv) shares the same 100GB. With 5 models loaded, disk usage is ~64%.
+
+**Diagnosis:**
+```bash
+# Check overall disk usage
+df -h /workspace
+
+# Find what's using space
+du -sh /workspace/data/ollama/
+du -sh /workspace/data/surrealdb/
+du -sh /workspace/acm-ai/.venv/
+du -sh /workspace/acm-ai/node_modules/ 2>/dev/null
+du -sh /workspace/acm-ai/logs/
+```
+
+**Fix:**
+```bash
+# Remove unused Ollama models (biggest space saver)
+ollama rm <unused-model>
+
+# Clear logs
+rm -rf /workspace/acm-ai/logs/*.log
+
+# Clear temp files
+rm -rf /tmp/*
+
+# Clear caches
+pip cache purge
+npm cache clean --force
+
+# Clear Python bytecache
+find /workspace/acm-ai -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+```
+
+**Prevention:**
+- Do not pull additional large models without removing one first
+- Cannot fit gemma4:31b (19GB) alongside existing models
+- Consider attaching a network volume if more storage is needed
+
 ## Docker Issues
 
 ### "iptables failed: Permission denied" when starting Docker
@@ -178,6 +247,38 @@ curl http://localhost:11434/api/tags
 **This is expected.** ACM-AI on RunPod uses native services, not Docker. The `docker-compose.runpod.yml` file is for reference only.
 
 **Workaround for Langfuse:** Use Langfuse cloud (free tier) instead of self-hosted.
+
+## Cloudflare Tunnel Issues
+
+### Tunnel not connecting / "connection refused" on tunnel URL
+
+**Cause:** Cloudflare tunnel process crashed or was not started after pod restart.
+
+**Fix:**
+```bash
+# Check if cloudflared is running
+tmux list-sessions | grep tunnel
+ps aux | grep cloudflared
+
+# If not running, restart the tunnel (adjust token/config as needed)
+tmux new-session -d -s tunnel \
+  "cloudflared tunnel run --token <YOUR_TUNNEL_TOKEN>"
+
+# Verify tunnel is connected
+curl -sf http://localhost:5055/health && echo "API reachable"
+```
+
+### Tunnel connected but frontend/API returns 502
+
+**Cause:** The upstream service (API on 5055 or frontend on 8502) is not running.
+
+**Fix:**
+```bash
+# Check which services are up
+bash /workspace/acm-ai/scripts/runpod/health-check-5090.sh
+
+# Restart the failing service, then the tunnel should recover automatically
+```
 
 ## Frontend Issues
 
@@ -213,12 +314,12 @@ tmux new-session -d -s frontend -c /workspace/acm-ai/frontend \
 nvidia-smi
 
 # If no output, check pod details
-runpodctl pod get <pod-id>
+runpodctl pod get qpzht3hvrbg95w
 # Verify gpuCount > 0 and machine.gpuId is correct
 
 # If GPU is missing, restart the pod:
-runpodctl pod stop <pod-id>
-runpodctl pod start <pod-id>
+runpodctl pod stop qpzht3hvrbg95w
+runpodctl pod start qpzht3hvrbg95w
 ```
 
 ### CUDA out of memory
@@ -231,7 +332,7 @@ runpodctl pod start <pod-id>
 nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
 
 # Unload models
-curl http://localhost:11434/api/generate -d '{"model":"qwen2.5:32b","keep_alive":0}'
+curl http://localhost:11434/api/generate -d '{"model":"gemma4:26b","keep_alive":0}'
 
 # Reduce context window in .env
 OLLAMA_NUM_CTX=16384  # Reduce from 32768
@@ -242,36 +343,17 @@ OLLAMA_MAX_LOADED_MODELS=1
 
 ## Volume / Disk Issues
 
-### "No space left on device"
-
-**Cause:** Container disk (50GB) or volume (75GB) is full.
-
-**Fix:**
-```bash
-# Check disk usage
-df -h
-
-# Find large files
-du -sh /workspace/data/*
-du -sh /workspace/acm-ai/.venv/
-du -sh /workspace/acm-ai/node_modules/ 2>/dev/null
-
-# Clean up
-ollama rm <unused-model>                    # Remove unused models
-rm -rf /workspace/acm-ai/logs/*.log        # Clear logs
-rm -rf /tmp/*                               # Clear temp files
-pip cache purge                             # Clear pip cache
-npm cache clean --force                     # Clear npm cache
-```
-
 ### Data lost after pod restart
 
-**Cause:** Data was stored outside `/workspace` (which is the only persistent volume).
+**Cause:** Data was stored outside `/workspace` (which is the persistent container disk).
 
 **Prevention:** Always store data under `/workspace/data/`:
 - SurrealDB: `/workspace/data/surrealdb/`
 - Ollama models: `/workspace/data/ollama/`
 - Backups: `/workspace/data/backups/`
+
+> **Important:** There is no network volume attached. The 100GB container disk persists across
+> stop/start but is **destroyed on pod deletion or disk resize**. Back up critical data regularly.
 
 ## Diagnostic Commands
 
@@ -286,6 +368,7 @@ echo "=== Ollama ===" && curl -sf http://localhost:11434/api/tags > /dev/null &&
 echo "=== API ===" && curl -sf http://localhost:5055/health && echo " OK" || echo " FAIL"
 echo "=== Frontend ===" && curl -sf http://localhost:8502 > /dev/null && echo "OK" || echo "FAIL"
 echo "=== Models ===" && ollama list 2>/dev/null
+echo "=== PyTorch CUDA ===" && python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')" 2>/dev/null
 ```
 
 ---

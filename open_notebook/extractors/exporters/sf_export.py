@@ -49,6 +49,8 @@ BUILDING_SF_MAPPING: list[tuple[str, str]] = [
     ("Building_Unique_ID__c", "building_unique_id"),
     ("Within_Your_Portfolio__c", "within_your_portfolio"),
     ("GPS_Coordinates_provided_by_metro__c", "gps_coordinates"),
+    # Merged from SiteConfig at export time (department + agency combined)
+    ("Responsible_Agency_Department__c", "responsible_agency_department"),
     ("Additional_Comments__c", "additional_comments"),
 ]
 
@@ -203,6 +205,19 @@ def item_to_sf_row(record: object, building_external_id: str) -> dict[str, str]:
     for sf_name, field_name in ITEM_SF_MAPPING:
         if sf_name == "Building__r.External_ID__c":
             row[sf_name] = building_external_id
+        elif sf_name == "Labelled__c":
+            # labelled_sf (str "Yes"/"No") takes priority; fall back to acm_labelled (bool)
+            labelled_sf = getattr(record, "labelled_sf", None)
+            if labelled_sf is not None:
+                row[sf_name] = str(labelled_sf)
+            else:
+                acm_labelled = getattr(record, "acm_labelled", None)
+                if acm_labelled is True:
+                    row[sf_name] = "Yes"
+                elif acm_labelled is False:
+                    row[sf_name] = "No"
+                else:
+                    row[sf_name] = ""
         else:
             val = getattr(record, field_name, None)
             row[sf_name] = _format_value(val)
@@ -225,12 +240,13 @@ def _merge_site_config(row: dict[str, str], site_config: object) -> None:
         site_config: SiteConfig instance.
     """
     department = getattr(site_config, "department", None)
-    if department:
-        row["Department__c"] = str(department)
-
     agency = getattr(site_config, "agency", None)
-    if agency:
-        row["Agency__c"] = str(agency)
+
+    # SF Building__c has one combined field for agency/department.
+    # Combine both parts if available; use whichever is set if only one exists.
+    parts = [p for p in [department, agency] if p]
+    if parts:
+        row["Responsible_Agency_Department__c"] = " / ".join(parts)
 
     # SiteConfig.site_name overrides any extracted value
     site_name = getattr(site_config, "site_name", None)

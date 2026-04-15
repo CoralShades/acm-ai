@@ -6,20 +6,22 @@ GPU memory management, model selection strategies, performance tuning, and cost 
 
 ### RTX 5090 Memory Budget (32GB)
 
-| Model | VRAM Usage | Tokens/sec | Use Case |
-|-------|-----------|------------|----------|
-| llama3.1:8b-instruct-q8_0 | ~9GB | 207 tok/s | Extraction (primary) |
-| qwen2.5:7b | ~5GB | ~180 tok/s | Extraction (alternative) |
-| qwen3:latest (8b) | ~5GB | ~180 tok/s | Chat |
-| mxbai-embed-large | ~1GB | N/A | Embeddings |
-| qwen2.5:32b | ~19GB | ~45 tok/s | Large context |
-| qwen3:32b | ~19GB | ~45 tok/s | Advanced chat |
+| Model | VRAM Usage | Disk Size | Use Case |
+|-------|-----------|-----------|----------|
+| gemma4:26b | ~18GB | 17GB | Extraction, tools, transformation |
+| gemma4:e4b | ~10GB | 9.6GB | ACM per-row extraction |
+| gemma4:latest | ~10GB | 9.6GB | Chat |
+| mxbai-embed-large | ~1GB | 669MB | Embeddings |
+
+> **Note:** PyTorch nightly (cu128) is required for Blackwell GPUs (RTX 5090). Standard
+> PyTorch builds do not support the sm_120 compute capability. See
+> [Troubleshooting](troubleshooting.md) for details.
 
 ### Multi-Model Loading
 
 Ollama keeps recently used models in VRAM. On 32GB RTX 5090:
-- **2-3 small models** (8b-class) can coexist (~15GB total)
-- **1 large model** (32b-class) uses most VRAM (~19GB)
+- **2 medium models** (gemma4:e4b + gemma4:latest + embedding) can coexist (~21GB total)
+- **1 large model** (gemma4:26b) uses most VRAM (~18GB), can coexist with embedding (~19GB total)
 - **Switching penalty**: Loading a new model takes 3-10 seconds (vs <1s if already loaded)
 
 ### Control VRAM Usage
@@ -58,29 +60,34 @@ curl http://localhost:11434/api/ps
 
 | Priority | Model | Why |
 |----------|-------|-----|
-| 1st | `llama3.1:8b-instruct-q8_0` | Best JSON compliance, fastest (207 tok/s) |
-| 2nd | `qwen2.5:7b` | Good alternative, slightly different extraction patterns |
-| Avoid | `qwen2.5:32b` for per-row | Overkill for single-row extraction, wastes VRAM |
+| 1st | `gemma4:26b` | Best quality for structured extraction, tools support |
+| 2nd | `gemma4:e4b` | Lighter alternative for per-row extraction |
 
-### For Metadata/Structure Extraction
+### For Chat
 
 | Priority | Model | Why |
 |----------|-------|-----|
-| 1st | `qwen2.5:32b` | Better at understanding document structure |
-| 2nd | `llama3.1:8b-instruct-q8_0` | Acceptable with `num_ctx=16384+` |
+| 1st | `gemma4:latest` | General-purpose chat |
+| 2nd | `gemma4:26b` | Higher quality when VRAM budget allows |
+
+### For Embeddings
+
+| Priority | Model | Why |
+|----------|-------|-----|
+| 1st | `mxbai-embed-large` | Standard embedding model, small VRAM footprint |
 
 ### .env Model Configuration
 
 ```bash
-# Per-row extraction (small, fast)
-ACM_EXTRACTION_MODEL=llama3.1:8b-instruct-q8_0
+# Per-row extraction
+ACM_EXTRACTION_MODEL=gemma4:e4b
 ACM_ROW_EXTRACTION_NUM_CTX=2048
 
 # Default models (general purpose)
-DEFAULT_CHAT_MODEL=ollama/qwen3:latest
-DEFAULT_TRANSFORMATION_MODEL=ollama/qwen3:32b
-DEFAULT_LARGE_CONTEXT_MODEL=ollama/qwen2.5:32b
-DEFAULT_EXTRACTION_MODEL=ollama/qwen2.5:7b
+DEFAULT_CHAT_MODEL=ollama/gemma4:latest
+DEFAULT_TRANSFORMATION_MODEL=ollama/gemma4:26b
+DEFAULT_LARGE_CONTEXT_MODEL=ollama/gemma4:26b
+DEFAULT_EXTRACTION_MODEL=ollama/gemma4:e4b
 DEFAULT_EMBEDDING_MODEL=ollama/mxbai-embed-large
 ```
 
@@ -97,7 +104,7 @@ ACM_ROW_EXTRACTION_NUM_CTX=2048
 # (8k produces "consultant=Unknown, buildings=0")
 ```
 
-> **Rule of thumb:** Each 1k tokens of context ≈ 50MB VRAM (varies by model and quantization).
+> **Rule of thumb:** Each 1k tokens of context ~ 50MB VRAM (varies by model and quantization).
 
 ## Cost Optimization
 
@@ -106,7 +113,7 @@ ACM_ROW_EXTRACTION_NUM_CTX=2048
 | GPU | Cost/hr | VRAM | Best For |
 |-----|---------|------|----------|
 | RTX 4090 | $0.39 | 24GB | Development, small models |
-| RTX 5090 | $0.69 | 32GB | **Recommended** — all models fit |
+| RTX 5090 | $0.69 | 32GB | **Current deployment** — gemma4 family fits |
 | A100 80GB | $1.64 | 80GB | Multiple large models simultaneously |
 | H100 80GB | $3.89 | 80GB | Maximum throughput |
 
@@ -114,18 +121,18 @@ ACM_ROW_EXTRACTION_NUM_CTX=2048
 
 1. **Stop the pod when not using it**
    ```bash
-   runpodctl pod stop 9eusawy77gd1d0   # Stops billing
-   runpodctl pod start 9eusawy77gd1d0  # Resume later
+   runpodctl pod stop qpzht3hvrbg95w   # Stops billing
+   runpodctl pod start qpzht3hvrbg95w  # Resume later
    ```
-   Volume data persists across stop/start. You only pay when the pod is running.
+   Container disk data persists across stop/start. You only pay when the pod is running.
 
 2. **Use spot/interruptible instances** for batch processing
    - Set `cloudType: COMMUNITY` for lower prices
    - `SECURE` cloud is ~2x more expensive
 
 3. **Right-size your GPU**
-   - If only running 8b models → RTX 4090 ($0.39/hr) is sufficient
-   - If running 32b models → RTX 5090 ($0.69/hr) is the sweet spot
+   - If only running gemma4:e4b/latest -> RTX 4090 ($0.39/hr) may suffice
+   - If running gemma4:26b -> RTX 5090 ($0.69/hr) is the sweet spot
    - Only use A100/H100 if you need multi-model concurrency
 
 4. **Use `OLLAMA_MAX_LOADED_MODELS=1`** if running one model at a time
@@ -140,22 +147,24 @@ ACM_ROW_EXTRACTION_NUM_CTX=2048
 
 ## Performance Benchmarks (RTX 5090)
 
-Measured on the current deployment:
+> **TBD:** No benchmarks have been run yet for the gemma4 model family on the RTX 5090.
+> Previous benchmarks were for phi4/qwen/llama models on the old deployment and are not
+> comparable. Benchmarks will be added once extraction pipeline testing is complete.
 
 | Model | Tokens/sec | First Token (ms) | VRAM Usage |
 |-------|-----------|-------------------|------------|
-| llama3.1:8b-instruct-q8_0 | 207.6 | ~200 | ~9GB |
-| qwen2.5:7b | ~180 | ~250 | ~5GB |
-| qwen3:latest (8b) | ~180 | ~250 | ~5GB |
-| mxbai-embed-large | N/A | ~50 | ~1GB |
+| gemma4:26b | TBD | TBD | ~18GB |
+| gemma4:e4b | TBD | TBD | ~10GB |
+| gemma4:latest | TBD | TBD | ~10GB |
+| mxbai-embed-large | N/A | TBD | ~1GB |
 
 ### Extraction Pipeline Performance
 
 | Metric | RTX 4090 (local) | RTX 5090 (RunPod) | Improvement |
 |--------|-------------------|-------------------|-------------|
-| 8b tok/s | ~120 | ~207 | 1.7x |
+| gemma4 tok/s | TBD | TBD | TBD |
 | VRAM | 24GB | 32GB | +33% |
-| Max concurrent models | 1-2 small | 2-3 small or 1 large + 1 small | Better multi-model |
+| Max concurrent models | 1-2 small | 2 medium or 1 large + embedding | Better multi-model |
 
 ## Network Performance
 
@@ -182,18 +191,24 @@ OLLAMA_NUM_PARALLEL=2
 OLLAMA_MAX_LOADED_MODELS=3     # Keep embedding + extraction + chat loaded
 ```
 
-## Quantization Guide
+## Disk Budget
 
-Higher quantization = better quality but more VRAM:
+Container disk is 100GB with no network volume. Current usage is ~64%:
 
-| Quantization | Quality | VRAM (8b model) | Speed |
-|-------------|---------|-----------------|-------|
-| q4_0 | Acceptable | ~4.5GB | Fastest |
-| q4_K_M | Good | ~5GB | Fast |
-| q8_0 | Excellent | ~8.5GB | Moderate |
-| f16 | Maximum | ~16GB | Slowest |
+| Item | Approximate Size | Notes |
+|------|-----------------|-------|
+| gemma4:e4b + gemma4:latest | 9.6GB | Shared blob (same model ID) |
+| gemma4:26b | 17GB | Default extraction + tools |
+| gemma4:31b | 19GB | Large context |
+| mxbai-embed-large | 669MB | Embeddings |
+| Python venv + deps | ~3GB | |
+| Node modules + frontend | ~1GB | |
+| SurrealDB data | ~500MB | |
+| System + repo + misc | ~12GB | |
+| **Total** | **~63GB / 100GB** | **37GB free** |
 
-For ACM extraction, `q8_0` is recommended — it provides near-lossless quality and the RTX 5090 has plenty of VRAM.
+> Optional fallback models can still fit: `phi4:14b` (8GB) and `llama3.1:8b` (5GB).
+> Monitor with `df -h /`.
 
 ---
 

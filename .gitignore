@@ -209,6 +209,8 @@ nul*
 /.venv-mineru
 opencode.json
 .langgraph_api/.langgraph_ops.pckl
-.langgraph_api/.langgraph_ops.pckl
+
+# Interview/hiring materials (private)
+docs/interview/
 
 .vercel

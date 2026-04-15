@@ -9,10 +9,9 @@ const nextConfig: NextConfig = {
     esmExternals: 'loose',
   },
 
-  // Turbopack: set root to frontend dir to silence multiple-lockfile warning
-  // (used when running `npm run dev:turbo` on systems where Turbopack works)
+  // Turbopack: root must match outputFileTracingRoot (monorepo parent)
   turbopack: {
-    root: __dirname,
+    root: path.join(__dirname, '../'),
   },
 
   // Externalize CopilotKit runtime dependencies to avoid webpack bundling issues
