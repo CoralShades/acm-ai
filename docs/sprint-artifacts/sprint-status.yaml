@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-04-11
+updated: 2026-04-16
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -1536,6 +1536,126 @@ audit-2026-04-09:
       - Non-ACM noise filtering incomplete (35 vs 31 expected)
       - Fan Room deduplication (duplicate records remain)
     report: docs/sprint-artifacts/reports/extraction-retest-2026-04-09.md
+
+# ═══════════════════════════════════════════════════════════════════════
+# RunPod RTX 5090 Deployment (2026-04-15/16)
+# Branch: deploy/runpod-5090 (forked from feat/sf-reconciliation-20260411)
+# Pod: qpzht3hvrbg95w | CA community cloud | $0.69/hr
+# ═══════════════════════════════════════════════════════════════════════
+runpod-5090-deployment:
+  date: 2026-04-15
+  status: operational
+  pod_id: qpzht3hvrbg95w
+  gpu: RTX 5090 (32GB VRAM)
+  branch: deploy/runpod-5090
+  external_urls:
+    frontend: https://acm.silvatron.au
+    api: https://acmapi.silvatron.au
+  commits:
+    - "97b78311 feat(deploy): RTX 5090 RunPod deployment scripts + docs refresh"
+    - "def8a791 feat(deploy): migrate Cloudflare tunnel to silvatron.au domain"
+    - "5aefa9a3 fix(extraction): disable OCR + force PyMuPDF for content pass on RTX 5090"
+  fixes_applied:
+    - "PyTorch stable cu128 (2.11.0+cu128) for Blackwell sm_120 support"
+    - "All scripts: uv run -> .venv/bin/python (prevents uv sync overwriting cu128)"
+    - "sm_120 pre-flight guard in start-services-5090.sh (auto-detects and fixes)"
+    - "do_ocr=False on all Docling PdfPipelineOptions (OCR hangs on native PDFs)"
+    - "document_engine=simple in source.py (content_core Docling path has no PdfPipelineOptions)"
+    - "AcceleratorDevice.AUTO for GPU table extraction"
+  extraction_test:
+    pdf: Alexander District Hospital (34 pages)
+    source_id: source:gacsy7ium0mykbtyd6dx
+    content_extraction: 12s (PyMuPDF)
+    table_extraction: 28.3s (Docling GPU, 17 tables, 140 rows)
+    total_time: 45.4s
+    status: completed
+  broadmeadows_test:
+    records_extracted: 10
+    records_expected: 31
+    status: under_investigation  # Pipeline audit planned — unclear where data loss occurs
+  known_issues:
+    - "KI-2: Network volume not attached (wrong datacenter)"
+    - "KI-5: Docker not available (community cloud — no Langfuse on pod)"
+    - "10/31 Broadmeadows records — needs pipeline audit"
+
+# ═══════════════════════════════════════════════════════════════════════
+# Pipeline Audit Plan (2026-04-16)
+# Goal: End-to-end extraction pipeline audit — accuracy, speed, observability
+# Priority: Accuracy → Speed → Observability
+# Test docs: Broadmeadows (31 GT records) + Alexander District (43 GT records)
+# Environment: Local RTX 4090 first (with Langfuse/LangSmith), then RunPod
+# ═══════════════════════════════════════════════════════════════════════
+pipeline-audit-2026-04-16:
+  date: 2026-04-16
+  status: planned
+  langsmith_traces:
+    broadmeadows_10_records:
+      - "d890fadf-1816-4ca5-9b6a-2a593c7409d9"
+      - "2c0961fd-6d28-4e6d-8152-77351182e8c2"
+  audit_scope:
+    # Phase 1: Observability setup (local Docker services)
+    - id: PA-1
+      name: "Start local observability stack (Langfuse + LangSmith Docker)"
+      priority: P0
+      status: planned
+    # Phase 2: Accuracy audit — where are records lost?
+    - id: PA-2
+      name: "Trace Broadmeadows 10/31 record loss (LangSmith traces above)"
+      priority: P0
+      status: planned
+      notes: "Check: (a) Docling table detection (page 8 small table), (b) page range/TOC logic, (c) per-row LLM extraction quality, (d) did acm_extract even trigger?"
+    - id: PA-3
+      name: "Run both test PDFs through full pipeline locally with observability"
+      priority: P0
+      status: planned
+      notes: "Broadmeadows + Alexander District Hospital on RTX 4090"
+    # Phase 3: Pipeline component audit
+    - id: PA-4
+      name: "Table detection — small table sensitivity (Broadmeadows page 8)"
+      priority: P0
+      status: planned
+      notes: "Known issue: 2-row table on page 8 not detected by TableFormer, losing all subsequent pages"
+    - id: PA-5
+      name: "TOC / page range logic audit"
+      priority: P0
+      status: planned
+      notes: "How pages are tagged, building boundaries identified, section structure parsed"
+    - id: PA-6
+      name: "Per-row LLM extraction quality"
+      priority: P0
+      status: planned
+      notes: "Prompt effectiveness, model choice (Ollama vs cloud), structured output quality"
+    - id: PA-7
+      name: "Pipeline component necessity audit"
+      priority: P1
+      status: planned
+      notes: "Identify unnecessary components (vision models, etc.) that slow pipeline without adding value"
+    # Phase 4: Worker queue audit
+    - id: PA-8
+      name: "Worker queue health — handoff timing between stages"
+      priority: P1
+      status: planned
+      notes: "Time from source_process complete → acm_extract start. Does it auto-trigger?"
+    - id: PA-9
+      name: "Worker reliability — auto-trigger, retry, error recovery"
+      priority: P1
+      status: planned
+    - id: PA-10
+      name: "Full queue health — depth, concurrency, stuck commands"
+      priority: P1
+      status: planned
+    # Phase 5: Speed optimization
+    - id: PA-11
+      name: "Benchmark local pipeline with OCR fix (was 37min-1hr, now should be much faster)"
+      priority: P1
+      status: planned
+      notes: "Old pipeline pre-OCR-fix took 37min-1hr. New code not yet tested locally."
+    # Phase 6: Cloud observability
+    - id: PA-12
+      name: "Configure Langfuse Cloud + LangSmith for RunPod pod"
+      priority: P2
+      status: planned
+
   top_issues:
     - severity: critical
       id: issue-1

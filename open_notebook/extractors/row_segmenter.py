@@ -39,8 +39,15 @@ COLUMN_ALIASES: dict[str, list[str]] = {
         "description",
         "product description",
         "acm type",
+        "acm description",
+        "acm item",
+        "suspected acm",
+        "suspected material",
         "building element",  # Greencap ARA
         "material type",  # Greencap ARA
+        "finish",  # Some consultants use "Finish" for material
+        "component",
+        "element description",
     ],
     "friability": [
         "friable",
@@ -756,7 +763,27 @@ def segment_multiple_tables(
         tables = filtered if filtered else tables
 
     # Filter out non-ACM tables (TOC, summary, diagnostic tables)
-    acm_tables = [t for t in tables if _is_acm_table(t, extra_mappings=extra_mappings)]
+    # Log per-table rejection for debugging record loss
+    acm_tables = []
+    for t in tables:
+        if _is_acm_table(t, extra_mappings=extra_mappings):
+            acm_tables.append(t)
+        else:
+            page = t.get("page_number", "?")
+            num_rows = t.get("num_rows", "?")
+            headers = [
+                c.get("text", "")
+                for c in t.get("table_cells", [])
+                if c.get("column_header", False)
+            ]
+            logger.warning(
+                "Table on page %s rejected by _is_acm_table() filter "
+                "(rows=%s, headers=%s) for building %s",
+                page,
+                num_rows,
+                headers[:6],
+                building_id or "?",
+            )
     if not acm_tables:
         logger.warning(
             "No ACM tables found for building %s after classification filter "

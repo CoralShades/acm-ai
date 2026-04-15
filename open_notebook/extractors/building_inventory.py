@@ -817,29 +817,26 @@ async def compile_building_inventory(
         inventory.total_buildings = len(inventory.buildings)
 
         # Single-building page_end expansion: when only 1 building detected
-        # after dedup, extend page_end by a small margin to catch continuation
-        # fragments on the next few pages. Docling's TableFormer can miss
-        # small table fragments (e.g. Broadmeadows page 8 has only 2 "no
-        # access" rows). Without expansion, _extract_building_content and
-        # _get_docling_tables exclude those pages entirely.
-        #
-        # We use +2 pages (not total_pages) to avoid including non-register
-        # content (lab results, risk assessments) that causes over-extraction.
+        # after dedup, extend page_end to total_pages so ALL register pages
+        # are included. This matches the heuristic fallback behaviour at
+        # line ~618. The old +2 margin caused 60%+ record loss when the LLM
+        # underestimated the register end page (e.g. Broadmeadows 31->10).
+        # Over-extraction risk is handled by downstream filters:
+        #   - _is_acm_table() rejects non-register tables
+        #   - validate_records_strict() rejects invalid records
+        #   - deduplicate_records() removes duplicates
         # Must run BEFORE heuristic cross-validation — the heuristic may add
         # a catch-all building which would make len(buildings) > 1.
-        _PAGE_END_EXPANSION_MARGIN = 2
         if len(inventory.buildings) == 1 and document_structure:
             total = document_structure.total_pages
             bld = inventory.buildings[0]
             current_end = bld.page_end or bld.page_start
             if total and current_end < total:
-                expanded_end = min(current_end + _PAGE_END_EXPANSION_MARGIN, total)
                 logger.info(
                     f"Single-building doc (LLM path): expanding page_end from "
-                    f"{current_end} to {expanded_end} "
-                    f"(+{_PAGE_END_EXPANSION_MARGIN} margin, total_pages={total})"
+                    f"{current_end} to {total} (total_pages={total})"
                 )
-                bld.page_end = expanded_end
+                bld.page_end = total
 
         # Cross-validate: run heuristic on FULL content (not trimmed) to catch
         # buildings whose register data precedes the detected register_start_page
@@ -847,22 +844,41 @@ async def compile_building_inventory(
             content, document_structure, document_metadata=document_metadata
         )
         if heuristic.buildings:
-            llm_ids = {b.building_id.lower() for b in inventory.buildings}
-            llm_names = {(b.name or "").lower() for b in inventory.buildings}
+            llm_ids = {b.building_id.lower(): b for b in inventory.buildings}
+            llm_names = {(b.name or "").lower(): b for b in inventory.buildings}
             added = 0
+            extended = 0
             for h_building in heuristic.buildings:
                 h_id_lower = h_building.building_id.lower()
                 h_name_lower = (h_building.name or "").lower()
-                if h_id_lower not in llm_ids and h_name_lower not in llm_names:
+                # Check if this building already exists in LLM inventory
+                existing = llm_ids.get(h_id_lower) or llm_names.get(h_name_lower)
+                if existing:
+                    # Extend page range to the wider of LLM vs heuristic
+                    h_start = h_building.page_start or 1
+                    h_end = h_building.page_end or h_start
+                    old_start = existing.page_start or 1
+                    old_end = existing.page_end or old_start
+                    if h_start < old_start or h_end > old_end:
+                        existing.page_start = min(old_start, h_start)
+                        existing.page_end = max(old_end, h_end)
+                        extended += 1
+                        logger.info(
+                            f"Extended building '{existing.building_id}' page range: "
+                            f"[{old_start}-{old_end}] -> [{existing.page_start}-{existing.page_end}] "
+                            f"(heuristic had [{h_start}-{h_end}])"
+                        )
+                else:
                     inventory.buildings.append(h_building)
                     added += 1
-            if added:
+            if added or extended:
                 inventory.total_buildings = len(inventory.buildings)
                 inventory.processing_groups = _create_processing_groups(
                     inventory.buildings
                 )
                 logger.info(
-                    f"Merged {added} heuristic buildings into LLM inventory "
+                    f"Heuristic cross-validation: {added} buildings added, "
+                    f"{extended} buildings extended "
                     f"(total: {inventory.total_buildings})"
                 )
 
