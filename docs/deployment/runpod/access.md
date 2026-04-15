@@ -71,10 +71,11 @@ https://<pod-id>-<port>.proxy.runpod.net
 
 | Service | URL | Status |
 |---------|-----|--------|
-| Frontend | `https://app.acmv3.coralshades.ai` | DNS/TLS issue — not resolving |
-| API | `https://api.acmv3.coralshades.ai` | DNS/TLS issue — not resolving |
+| Frontend | `https://acm.silvatron.au` | Active |
+| API | `https://acmapi.silvatron.au` | Active |
+| API Docs | `https://acmapi.silvatron.au/docs` | Active |
 
-> **Note:** Cloudflare tunnel is configured and connected on the pod, but external DNS/TLS is not resolving. Use RunPod proxy URLs as the primary access method until resolved.
+> **Tunnel:** `acm-ai-runpod` (ID `157a5fd8-4eee-458c-83b7-f9055b45b20b`) on silvatron.au Cloudflare account.
 
 ### Proxy Authentication
 

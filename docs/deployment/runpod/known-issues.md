@@ -52,28 +52,20 @@ Network volume `acm-ai-data` (ID: `pevpptyb5x`, 150GB) exists in **US-IL-1** (Il
 
 ---
 
-## KI-3: Cloudflare Tunnel DNS/TLS Failure
+## KI-3: Cloudflare Tunnel — Migrated to silvatron.au
 
 | Field | Value |
 |-------|-------|
-| **Severity** | High |
-| **Status** | Open |
+| **Severity** | Low |
+| **Status** | Resolved |
 
-The Cloudflare tunnel is running on the pod with 4 connections registered, but external custom domain URLs fail with TLS handshake errors:
-- `https://api.acmv3.coralshades.ai` -- SSL alert handshake failure
-- `https://app.acmv3.coralshades.ai` -- SSL alert handshake failure
+Previously: `acmv3.coralshades.ai` tunnel had DNS/TLS issues. Migrated to new Cloudflare account with `silvatron.au` domain.
 
-**Impact:** Cannot access services via custom domain names. Must use RunPod proxy URLs instead.
-
-**Workaround:** Use RunPod proxy URLs:
-- Frontend: `https://qpzht3hvrbg95w-8502.proxy.runpod.net`
-- API: `https://qpzht3hvrbg95w-5055.proxy.runpod.net`
-- API Docs: `https://qpzht3hvrbg95w-5055.proxy.runpod.net/docs`
-
-**Fix:** Check Cloudflare dashboard:
-1. Verify CNAME records exist for `api.acmv3` and `app.acmv3` pointing to `01582008-a8d2-400f-a342-cc56a632e381.cfargotunnel.com` (proxied, orange cloud)
-2. Verify SSL/TLS encryption mode is set to "Full" or "Flexible" (not "Full (strict)" unless a valid origin cert is installed)
-3. Ensure the tunnel ingress rules in `config.yml` on the pod match the expected hostnames
+**Current state:**
+- Tunnel `acm-ai-runpod` (ID `157a5fd8-4eee-458c-83b7-f9055b45b20b`) running with 4 connections
+- `https://acmapi.silvatron.au` → API (port 5055) — working
+- `https://acm.silvatron.au` → Frontend (port 8502) — working
+- Old `coralshades.ai` tunnel (ID `01582008-...`) is deprecated
 
 ---
 
@@ -130,13 +122,11 @@ LANGFUSE_SECRET_KEY=sk-lf-...
 | **Severity** | Medium |
 | **Status** | Open |
 
-The RTX 5090 deployment scripts (`deploy-5090.sh`, `setup-pod-5090.sh`, `start-services-5090.sh`, `health-check-5090.sh`) exist on the `feat/sf-reconciliation-20260411` branch but have not been merged to `main`. The pod was cloned from `main`, so the scripts were manually copied from `/tmp/runpod-setup/` during initial setup.
+The RTX 5090 deployment scripts exist on the `deploy/runpod-5090` branch (pushed 2026-04-15). The pod is now tracking this branch.
 
-**Impact:** Running `git pull` on the pod (tracking `main`) will not include the 5090 scripts, or may overwrite manually placed copies if they were added to the working tree.
+**Impact:** Changes merged to `main` won't appear on the pod until `deploy/runpod-5090` is rebased or merged.
 
-**Workaround:** Do not rely on `git pull` to update the scripts. If the pod is recreated, manually copy the scripts from the feature branch or from local.
-
-**Fix:** Merge the `feat/sf-reconciliation-20260411` branch (or at minimum the 5090 scripts) to `main`, then `git pull` on the pod.
+**Fix:** Merge `deploy/runpod-5090` to `main` when ready for production.
 
 ---
 
@@ -153,7 +143,7 @@ RunPod proxy URLs contain the pod ID (e.g., `qpzht3hvrbg95w`). CORS configuratio
 
 **Workaround:** After creating a new pod, update `CORS_ALLOWED_ORIGINS` in `.env` with the new pod ID in the proxy URLs.
 
-**Fix:** Use wildcard CORS for `*.proxy.runpod.net` in development, or rely solely on the Cloudflare tunnel custom domain (once KI-3 is resolved) which provides stable URLs.
+**Fix:** Use wildcard CORS for `*.proxy.runpod.net` in development, or rely solely on the Cloudflare tunnel custom domain (`acm.silvatron.au` / `acmapi.silvatron.au`) which provides stable URLs.
 
 ---
 
@@ -163,8 +153,8 @@ RunPod proxy URLs contain the pod ID (e.g., `qpzht3hvrbg95w`). CORS configuratio
 |----|-------|----------|--------|
 | KI-1 | Disk space manageable (64% used, resized to 100GB) | Low | Mitigated |
 | KI-2 | Network volume not attached (150GB wasted) | High | Open |
-| KI-3 | Cloudflare Tunnel DNS/TLS failure | High | Open |
+| KI-3 | Cloudflare Tunnel — migrated to silvatron.au | Low | Resolved |
 | KI-4 | PyTorch nightly required for RTX 5090 | Medium | Mitigated |
 | KI-5 | Docker not available (no Langfuse) | Medium | Open |
-| KI-6 | 5090 scripts not merged to main | Medium | Open |
+| KI-6 | 5090 scripts on deploy branch (not main) | Medium | Open |
 | KI-7 | CORS config tied to pod identity | Low | Open |

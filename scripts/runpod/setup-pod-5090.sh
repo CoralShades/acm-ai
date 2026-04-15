@@ -451,8 +451,8 @@ phase_10() {
     echo -e "========================================${NC}"
     echo ""
     echo "  External access:"
-    echo "    API:       https://api.acmv3.coralshades.ai"
-    echo "    Frontend:  https://app.acmv3.coralshades.ai"
+    echo "    API:       https://acmapi.silvatron.au"
+    echo "    Frontend:  https://acm.silvatron.au"
     echo ""
 
     # RunPod proxy URLs

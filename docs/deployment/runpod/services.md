@@ -135,10 +135,10 @@ tmux new-session -d -s tunnel \
 ```
 
 The tunnel maps:
-- `api.acmv3.coralshades.ai` → `http://localhost:5055`
-- `app.acmv3.coralshades.ai` → `http://localhost:8502`
+- `acmapi.silvatron.au` → `http://localhost:5055`
+- `acm.silvatron.au` → `http://localhost:8502`
 
-> **Status:** DNS/TLS issue — currently not resolving. Use RunPod proxy URLs as the primary access method.
+> **Tunnel ID:** `157a5fd8-4eee-458c-83b7-f9055b45b20b` (acm-ai-runpod) on silvatron.au Cloudflare account.
 
 ## Service Startup Order
 

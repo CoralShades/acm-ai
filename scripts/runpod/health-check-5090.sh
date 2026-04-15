@@ -161,7 +161,7 @@ if [[ -f "$ENV_FILE" ]]; then
     if [[ -n "$CORS" ]]; then
         echo -e "  ${GREEN}[PASS]${NC} CORS_ALLOWED_ORIGINS is set"
         ((PASS++))
-        for domain in "acmv3.coralshades.ai" "app.acmv3.coralshades.ai" "api.acmv3.coralshades.ai"; do
+        for domain in "acm.silvatron.au" "acmapi.silvatron.au"; do
             if echo "$CORS" | grep -q "$domain"; then
                 echo -e "  ${GREEN}[PASS]${NC} $domain in CORS"
                 ((PASS++))
@@ -185,10 +185,10 @@ echo "--- Cloudflare Tunnel ---"
 if tmux has-session -t tunnel 2>/dev/null; then
     echo -e "  ${GREEN}[PASS]${NC} Tunnel tmux session running"
     ((PASS++))
-    warn_check "API via tunnel (api.acmv3.coralshades.ai)" \
-        "curl -sf --max-time 10 https://api.acmv3.coralshades.ai/health -o /dev/null"
-    warn_check "Frontend via tunnel (app.acmv3.coralshades.ai)" \
-        "curl -sf --max-time 10 -o /dev/null -w '%{http_code}' https://app.acmv3.coralshades.ai/ | grep -q 200"
+    warn_check "API via tunnel (acmapi.silvatron.au)" \
+        "curl -sf --max-time 10 https://acmapi.silvatron.au/health -o /dev/null"
+    warn_check "Frontend via tunnel (acm.silvatron.au)" \
+        "curl -sf --max-time 10 -o /dev/null -w '%{http_code}' https://acm.silvatron.au/ | grep -q 200"
 elif pgrep -f 'cloudflared tunnel' > /dev/null 2>&1; then
     echo -e "  ${GREEN}[PASS]${NC} cloudflared process running (not via tmux)"
     ((PASS++))

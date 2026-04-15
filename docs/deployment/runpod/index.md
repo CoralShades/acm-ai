@@ -55,9 +55,10 @@ bash /mnt/d/ailocal/acm-ai/scripts/runpod/deploy-5090.sh
 # API:       https://qpzht3hvrbg95w-5055.proxy.runpod.net
 # API Docs:  https://qpzht3hvrbg95w-5055.proxy.runpod.net/docs
 
-# Service URLs (via Cloudflare Tunnel — DNS/TLS issue, currently not resolving)
-# Frontend:  https://app.acmv3.coralshades.ai
-# API:       https://api.acmv3.coralshades.ai
+# Service URLs (via Cloudflare Tunnel — silvatron.au)
+# Frontend:  https://acm.silvatron.au
+# API:       https://acmapi.silvatron.au
+# API Docs:  https://acmapi.silvatron.au/docs
 
 # Pod management (from local machine)
 runpodctl pod list                    # List pods
