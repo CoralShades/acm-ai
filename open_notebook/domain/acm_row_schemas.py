@@ -31,8 +31,9 @@ class ACMItemRow(BaseModel):
         None,
         description="Where in the room, e.g. 'Ceiling', 'Walls', 'Floor', 'Eaves'",
     )
-    item_name: str = Field(
-        description="Material/product name, e.g. 'Vinyl floor tiles', 'Cement sheet lining', 'Fibro eaves'"
+    item_name: Optional[str] = Field(
+        None,
+        description="Material/product name, e.g. 'Vinyl floor tiles', 'Cement sheet lining', 'Fibro eaves'",
     )
     friability: Optional[str] = Field(
         None,

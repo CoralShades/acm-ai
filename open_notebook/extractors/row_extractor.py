@@ -378,11 +378,16 @@ async def extract_all_rows(
             flat_rows.append(row)
 
     total_flat = len(flat_rows)
+    # Diagnostic: verify Ollama format parameter is set correctly
+    _fmt = getattr(model, "format", None)
+    _fmt_label = "schema" if isinstance(_fmt, dict) else repr(_fmt)
     logger.info(
-        "Extracting {total} rows ({flat} after splits) for building '{building}'",
+        "Extracting {total} rows ({flat} after splits) for building '{building}'"
+        " | model.format={fmt}",
         total=total,
         flat=total_flat,
         building=building_context,
+        fmt=_fmt_label,
     )
 
     for i, row in enumerate(flat_rows):
