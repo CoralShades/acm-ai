@@ -407,12 +407,34 @@
 | **#15** | **gemma3:27b** | **Docker RTX4090** | **0/38** | **0%** | **37** | **253s** | **Broadmeadows** |
 | **#15** | **gemma3:27b** | **Docker RTX4090** | **10/106** | **9.4%** | **110** | **617s** | **Alexander** |
 
-## Next Actions (LOCAL RTX 4090 — Docker Ollama)
+### Entry 39: RunPod Deployment — COMPLETE
+- Pushed main → deploy/runpod-5090 (e666f520, 17 commits)
+- SSH to pod: pulled code, pulled gemma3:27b (17GB)
+- Updated .env: ACM_EXTRACTION_MODEL=gemma3:27b
+- Updated SurrealDB: default_extraction_model → model:gxfnicio24wqkr5gkqex
+- Restarted API + worker tmux sessions, verified healthy via CF tunnel
+- Raw API test: gemma3:27b 100% pass, 10.3s on RTX 5090 (full 32K context, 24GB/32GB VRAM)
+- **Storage audit:** Removed gemma4:26b (17GB freed, 88%→71% usage)
+- **DB cleanup:** Removed 12 orphaned model records (phi4, qwen, llama, deepseek, mistral)
+- **Fixed 2 broken defaults:** default_chat_model + default_tools_model pointed to deleted phi4:latest
+  - Reassigned to gemma4:latest (model:sddrd1n6kofnzqmykd26)
+- **Fixed model visibility:** gemma4:31b + gemma4:latest had `type: NONE` → set to `language`
+- All 5 models now visible in frontend model list
+
+### RunPod Default Model Assignments (CURRENT)
+
+| Purpose | Model | Size |
+|---------|-------|------|
+| Chat / Tools / Transformation | gemma4:latest | 9.6GB |
+| **Extraction** | **gemma3:27b** | **17GB** |
+| Large Context | gemma4:31b | 19GB |
+| Embedding | mxbai-embed-large | 669MB |
+
+## Next Actions
 1. ~~Commit crash prevention fixes~~ — DONE (b1931c18)
-2. ~~Run Broadmeadows~~ — DONE (Run #15: 37 records, 253s, 0% failure)
-3. ~~Alexander extraction~~ — DONE (Run #15: 110 records, 617s, 9.4% low-output)
-4. ~~Analyze results + update run comparison table~~ — DONE
-5. ~~Query Langfuse traces for observability verification~~ — DONE (Entry 38)
-6. Phase 7: Speed benchmark comparison
-7. Deploy gemma3:27b fix to RunPod
-8. RunPod re-run for cross-environment validation
+2. ~~Run Broadmeadows + Alexander~~ — DONE (Run #15)
+3. ~~Langfuse observability verification~~ — DONE (Entry 38)
+4. ~~Deploy gemma3:27b fix to RunPod~~ — DONE (Entry 39)
+5. RunPod extraction validation run (cross-environment)
+6. Phase 11: Field-level quality audit (PA-14)
+7. Phase 7: Speed benchmark comparison
