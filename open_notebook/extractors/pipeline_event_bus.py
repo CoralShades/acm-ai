@@ -379,17 +379,27 @@ class PipelineEventBus:
       batch UUID).
     - Each call to subscribe() creates an isolated asyncio.Queue so multiple
       concurrent SSE connections for the same operation receive all events.
+    - A rolling replay buffer (_recent_events, max _MAX_BUFFER events per
+      operation) lets late subscribers catch up on events they missed.  The
+      buffer snapshot and queue registration are both synchronous (no await
+      between them) so no events can slip between snapshot and queue.
     - Thread safety: operates entirely within the asyncio event loop of a
       single API worker process.
     """
+
+    _MAX_BUFFER: int = 50
 
     def __init__(self) -> None:
         self._subscribers: Dict[
             str, List[asyncio.Queue[Optional[V3PipelineEvent]]]
         ] = {}
+        self._recent_events: Dict[str, List[V3PipelineEvent]] = {}
 
     async def publish(self, event: V3PipelineEvent) -> int:
         """Dispatch event to all subscribers for the event's operation_id.
+
+        Also appends to the rolling replay buffer so late subscribers can
+        catch up.
 
         Args:
             event: The V3PipelineEvent to publish.
@@ -397,6 +407,12 @@ class PipelineEventBus:
         Returns:
             The number of subscriber queues the event was delivered to.
         """
+        # Update replay buffer (keep last _MAX_BUFFER events)
+        buf = self._recent_events.setdefault(event.operation_id, [])
+        buf.append(event)
+        if len(buf) > self._MAX_BUFFER:
+            self._recent_events[event.operation_id] = buf[-self._MAX_BUFFER :]
+
         queues = self._subscribers.get(event.operation_id, [])
         for q in queues:
             await q.put(event)
@@ -414,32 +430,44 @@ class PipelineEventBus:
     ) -> AsyncGenerator[V3PipelineEvent, None]:
         """Subscribe to events for a given operation_id.
 
-        Creates a new asyncio.Queue, registers it under operation_id, and
-        yields events as they arrive.  The generator cleans up its queue on
-        normal exit, GeneratorExit, and asyncio.TimeoutError.
+        Replays buffered events first (so late subscribers get recent context),
+        then yields live events as they arrive.  The buffer snapshot and queue
+        registration are performed synchronously (no await between them) so no
+        events can be lost or duplicated at the boundary.
 
         Args:
             operation_id: The operation to subscribe to.
-            timeout_seconds: Seconds to wait for each event before timing out.
+            timeout_seconds: Seconds to wait for each *new* event before timing
+                out.  The timeout only applies to the live-event loop, not to
+                buffered-event replay.
 
         Yields:
             V3PipelineEvent instances published for this operation_id.
 
         Raises:
-            asyncio.TimeoutError: If no event arrives within timeout_seconds.
+            asyncio.TimeoutError: If no new event arrives within timeout_seconds.
         """
         queue: asyncio.Queue[Optional[V3PipelineEvent]] = asyncio.Queue()
 
-        # Register queue
+        # --- Atomic: snapshot buffer then register queue (no await between) ---
+        recent_snapshot = list(self._recent_events.get(operation_id, []))
         if operation_id not in self._subscribers:
             self._subscribers[operation_id] = []
         self._subscribers[operation_id].append(queue)
+        # --- End atomic section ---
+
         logger.debug(
             f"[EventBus] New subscriber for operation {operation_id} "
-            f"(total: {len(self._subscribers[operation_id])})"
+            f"(total: {len(self._subscribers[operation_id])}, "
+            f"replaying {len(recent_snapshot)} buffered event(s))"
         )
 
         try:
+            # Replay buffered events so the subscriber catches up
+            for past_event in recent_snapshot:
+                yield past_event
+
+            # Yield live events
             while True:
                 event = await asyncio.wait_for(queue.get(), timeout=timeout_seconds)
                 if event is None:

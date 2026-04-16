@@ -1,6 +1,16 @@
 import axios, { AxiosResponse } from 'axios'
 import { getApiUrl } from '@/lib/config'
 
+/**
+ * Read the acm_token cookie value, used as a fallback when localStorage
+ * auth-storage has been cleared (e.g. after a 401 response interceptor ran).
+ */
+function getCookieToken(): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(/(?:^|;\s*)acm_token=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
 // API client with runtime-configurable base URL
 // The base URL is fetched from the API config endpoint on first request
 // Timeout increased to 5 minutes (300000ms = 300s) to accommodate slow LLM operations
@@ -24,16 +34,26 @@ apiClient.interceptors.request.use(async (config) => {
   }
 
   if (typeof window !== 'undefined') {
+    let token: string | null = null
+
+    // Primary: localStorage Zustand persist store
     const authStorage = localStorage.getItem('auth-storage')
     if (authStorage) {
       try {
         const { state } = JSON.parse(authStorage)
-        if (state?.token) {
-          config.headers.Authorization = `Bearer ${state.token}`
-        }
+        if (state?.token) token = state.token as string
       } catch (error) {
         console.error('Error parsing auth storage:', error)
       }
+    }
+
+    // Fallback: acm_token cookie (survives localStorage clears, e.g. after 401)
+    if (!token) {
+      token = getCookieToken()
+    }
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
   }
 

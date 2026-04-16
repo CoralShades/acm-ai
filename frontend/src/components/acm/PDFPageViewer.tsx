@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import {
   Loader2,
@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/lib/stores/auth-store'
 
 // Import react-pdf styles
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -59,6 +60,17 @@ interface PDFPageViewerProps {
  * Story: E33-S6 Provenance Viewer (enhanced)
  */
 export function PDFPageViewer({ pdfUrl, pageNumber: initialPage, bbox, className }: PDFPageViewerProps) {
+  // Auth token for authenticated PDF fetches (pdfjs doesn't send auth headers by default)
+  const token = useAuthStore((state) => state.token)
+
+  // Build the pdfjs file object — include Authorization header when a token is present.
+  // react-pdf accepts { url, httpHeaders } as an alternative to a bare URL string.
+  const pdfFile = useMemo(() => {
+    if (!pdfUrl) return null
+    if (!token || token === 'not-required') return pdfUrl
+    return { url: pdfUrl, httpHeaders: { Authorization: `Bearer ${token}` } }
+  }, [pdfUrl, token])
+
   // Document state
   const [numPages, setNumPages] = useState(0)
   const [pageNumber, setPageNumber] = useState(initialPage)
@@ -377,7 +389,7 @@ export function PDFPageViewer({ pdfUrl, pageNumber: initialPage, bbox, className
 
   // ─── Render ─────────────────────────────────────────
 
-  if (!pdfUrl) {
+  if (!pdfFile) {
     return (
       <div
         className={cn(
@@ -625,7 +637,7 @@ export function PDFPageViewer({ pdfUrl, pageNumber: initialPage, bbox, className
             left-aligns when content overflows so scrollbar reaches both edges */}
         <div style={{ width: 'fit-content', margin: '0 auto' }}>
           <Document
-            file={pdfUrl}
+            file={pdfFile}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             loading=""

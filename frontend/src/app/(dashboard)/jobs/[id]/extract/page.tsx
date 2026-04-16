@@ -67,6 +67,12 @@ function ExtractPageContent() {
   // resolved once so the hook receives a stable value on mount)
   const v3CommandId = aguiCommandId
 
+  // Auto-open the event feed collapsible as soon as the command ID is known
+  // so the SSE subscription starts (and the replay buffer is consumed) immediately.
+  useEffect(() => {
+    if (v3CommandId) setLiveViewOpen(true)
+  }, [v3CommandId])
+
   // Fetch buildings for the live panels
   const { data: buildingsData } = useQuery({
     queryKey: ['acm', 'buildings', sourceId],
