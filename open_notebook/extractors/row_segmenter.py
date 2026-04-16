@@ -159,8 +159,14 @@ def _is_acm_table(table_data: dict, extra_mappings: dict[str, str] | None = None
     """Return True if table headers indicate an ACM register table.
 
     Filters out TOC, summary, and diagnostic tables by checking that the
-    table has item_description mapped (material/product column) plus at least
-    one ACM supporting column.
+    table has sufficient ACM-related columns.  Accepts tables via two paths:
+
+    Path A (primary):  ``item_description`` + at least one other ACM column.
+    Path B (secondary): 2+ columns from the combined core + supporting set,
+        even without ``item_description``.  This handles continuation tables
+        and secondary formats (e.g. "No Access" summaries) that use compound
+        headers like "Sample Location / Description / Size" where the
+        material column is merged into a combined header.
 
     Args:
         table_data: Docling table JSON object.
@@ -179,16 +185,19 @@ def _is_acm_table(table_data: dict, extra_mappings: dict[str, str] | None = None
     mapping = detect_column_mapping(header_cells, extra_mappings=extra_mappings)
     mapped_canonical = set(mapping.keys())
 
-    # Must have item_description (the product/material column) to be an ACM table
-    if "item_description" not in mapped_canonical:
-        return False
+    all_acm_columns = _ACM_CORE_COLUMNS | _ACM_SUPPORTING_COLUMNS
+    matched_acm = mapped_canonical & all_acm_columns
 
-    # Must also have at least one ACM supporting column
-    has_supporting = bool(
-        (mapped_canonical & _ACM_CORE_COLUMNS) - {"item_description"}
-        or mapped_canonical & _ACM_SUPPORTING_COLUMNS
-    )
-    return has_supporting
+    # Path A: item_description + at least one other ACM column
+    if "item_description" in matched_acm and len(matched_acm) >= 2:
+        return True
+
+    # Path B: 2+ ACM columns even without item_description
+    # (handles compound-header tables like "Sample Location / Description / Size")
+    if len(matched_acm) >= 2:
+        return True
+
+    return False
 
 
 def _is_footer_row(row_cells: list[dict], num_cols: int) -> bool:
@@ -393,18 +402,25 @@ def detect_column_mapping(
                 continue
 
         # Priority 2: fuzzy match against COLUMN_ALIASES
+        # Try the full header first, then split compound headers on "/"
+        # to handle formats like "Sample Location / Description / Size".
         header_lower = header_text.lower()
+        tokens = [header_lower]
+        if "/" in header_lower:
+            tokens.extend(t.strip() for t in header_lower.split("/") if t.strip())
+
         best_canonical: Optional[str] = None
         best_score = 0.0
 
-        for canonical, aliases in COLUMN_ALIASES.items():
-            if canonical in claimed:
-                continue
-            for alias in aliases:
-                score = _jaro_winkler(header_lower, alias.lower())
-                if score > best_score:
-                    best_score = score
-                    best_canonical = canonical
+        for token in tokens:
+            for canonical, aliases in COLUMN_ALIASES.items():
+                if canonical in claimed:
+                    continue
+                for alias in aliases:
+                    score = _jaro_winkler(token, alias.lower())
+                    if score > best_score:
+                        best_score = score
+                        best_canonical = canonical
 
         if best_canonical is not None and best_score >= _JW_THRESHOLD:
             mapping[best_canonical] = header_text
