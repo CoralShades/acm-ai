@@ -184,6 +184,8 @@ app.add_middleware(
         "/api/agui/crud-chat",
         "/api/extraction-events/*",
         "/api/acm/extract/events/*",
+        "/api/acm/extraction-progress/*",
+        "/api/agui/extraction/*",
         "/api/v3/stream/*",
         "/.well-known/agent.json",
     ],
