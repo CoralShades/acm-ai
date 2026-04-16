@@ -1277,18 +1277,27 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                                 ACMItemRow,
                             )
 
-                            _schema = ACMItemRow.model_json_schema()
-                            _schema.pop("required", None)
+                            # Build a minimal schema — Ollama's grammar
+                            # compiler struggles with Pydantic's verbose
+                            # anyOf/title/description/default metadata.
+                            # Simple {type: "string"} per property + no
+                            # required list is the lightest grammar.
+                            _schema = {
+                                "type": "object",
+                                "properties": {
+                                    name: {"type": "string"}
+                                    for name in ACMItemRow.model_fields
+                                },
+                            }
                             object.__setattr__(
                                 row_model,
                                 "format",
                                 _schema,
                             )
                             logger.info(
-                                f"[RC-10] Ollama JSON schema mode enabled for "
-                                f"per-row extraction (ACMItemRow, "
+                                f"[RC-10] Ollama JSON schema mode: "
                                 f"{len(ACMItemRow.model_fields)} fields, "
-                                f"all optional)",
+                                f"minimal grammar (no anyOf/required)",
                             )
 
                         # Get Langfuse handler for tracing (if available)
