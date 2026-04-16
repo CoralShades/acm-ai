@@ -60,7 +60,7 @@ services:
       - OLLAMA_HOST=0.0.0.0:11434
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -77,6 +77,14 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_DEBUG=INFO
+      # Prevent 32K default KV cache — extraction only needs 2K, chat needs 4K max.
+      # Reduces gemma3:27b VRAM from 20.7 GiB → ~17 GiB, leaving room for
+      # embedding model to coexist without eviction/reload cycles.
+      - OLLAMA_CONTEXT_LENGTH=4096
+      # Keep models loaded 30min after last request — prevents eviction during
+      # pipeline stages that alternate between extraction and embedding models.
+      - OLLAMA_KEEP_ALIVE=30m
     deploy:
       resources:
         reservations:
@@ -86,7 +94,7 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       retries: 3

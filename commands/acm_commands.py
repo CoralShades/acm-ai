@@ -14,6 +14,7 @@ import time
 from typing import Optional
 
 from loguru import logger
+from pydantic import Field
 from surreal_commands import CommandInput, CommandOutput, command
 
 from open_notebook.database.repository import repo_query
@@ -172,7 +173,14 @@ class ACMExtractionInput(CommandInput):
     source_id: str
     model_id: Optional[str] = None  # Optional model override
     force: bool = False  # Delete existing records before extraction (default: False)
-    embed_records: bool = True  # Embed records for semantic search (E1-S6)
+    # Embed records for semantic search (E1-S6).
+    # Default reads ACM_DEFER_EMBEDDING env var — set to "true" on GPU-constrained
+    # machines to prevent VRAM model swaps between extraction (gemma3:27b, ~17GB)
+    # and embedding (mxbai-embed-large, ~0.7GB) models. Deferred records can be
+    # embedded later via the rebuild_embeddings command.
+    embed_records: bool = Field(
+        default_factory=lambda: os.getenv("ACM_DEFER_EMBEDDING", "").lower() != "true"
+    )
 
 
 class ACMExtractionOutput(CommandOutput):
