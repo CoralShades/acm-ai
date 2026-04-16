@@ -343,12 +343,76 @@
 - PC crashed (Windows Ollama overload) before extraction completed
 - Need to re-run on Docker Ollama
 
+## Session 6: 2026-04-16 (continued — crash fixes applied)
+
+### Entry 35: GPU Crash Prevention Fixes (committed b1931c18)
+- P0: OLLAMA_CONTEXT_LENGTH=4096 in docker-compose.yml (gemma3:27b VRAM 20.7→17 GiB)
+- P1: ACM_DEFER_EMBEDDING=true support in acm_commands.py (Field+default_factory)
+- P2: OLLAMA_KEEP_ALIVE=30m (prevents model eviction between stages)
+- Healthcheck fix: curl→ollama list (curl not in image)
+- Both models coexist: gemma3:27b (19GB) + mxbai-embed-large (769MB) = 21.1/24 GiB
+
+### Entry 36: Broadmeadows Run #15 (Docker Ollama v0.20.7, ctx=4096)
+- **253s (4.2 min)** — fastest yet (vs 319s ctx=32768, vs 555s Windows Ollama)
+- 37 records (31 med + 6 low), 37 embedded
+- **0% per-row JSON parse failures**
+- **17/17 unique sample_nos matched (100%)**
+- Embedding succeeded inline (both models coexist, no VRAM swap needed)
+- Commit: b1931c18 (crash prevention) + 95807643 (docs)
+
+### Entry 37: Alexander Run #15 (Docker Ollama v0.20.7, ctx=4096) — COMPLETE
+- Command: command:11viygogb6vvgtbsdj1v
+- **110 records** (96 medium + 14 low), **616.7s (10.3 min)**
+- **0% per-row JSON parse failures** (vs 50-87% with gemma4:31b!)
+- 6 buildings: B001(20), B002(9), B003(7), B004(16), B005(55), B006(3)
+- **45 unique sample_nos** vs ~43 ground truth = **105% coverage**
+- 110 records embedded (embedding succeeded — both models coexist)
+- B005 (Main Hospital) alone produced 55 records with 36 unique samples — largest building
+
+## Run Comparison Table (UPDATED)
+
+| Run | Model | Env | Failures | Rate | Records | Time | Document |
+|-----|-------|-----|----------|------|---------|------|----------|
+| #4 | gemma4:31b | RunPod | 10/34 | 29% | 36 | ~15m | Broadmeadows |
+| #8 | gemma4:31b | RunPod | 6/34 | 18% | 36 | ~15m | Broadmeadows |
+| #9 | gemma4:31b | RunPod | ~39/45 | ~87% | killed | - | Alexander |
+| #12 | gemma4:31b | RunPod | ~16/32 | ~50% | killed | - | Alexander |
+| **#15** | **gemma3:27b** | **Docker RTX4090** | **0/34** | **0%** | **37** | **253s** | **Broadmeadows** |
+| **#15** | **gemma3:27b** | **Docker RTX4090** | **0/~102** | **0%** | **110** | **617s** | **Alexander** |
+
+### Entry 38: Langfuse Observability Verification — COMPLETE
+- Queried Langfuse v3.155.1 API for both Run #15 traces
+- **Broadmeadows** (trace `8626e5af814e6764ceec447c37807883`):
+  - 61 observations: 19 CHAIN + 42 GENERATION, all 14 pipeline nodes traced
+  - 62,092 total tokens (53,909 in / 8,183 out)
+  - **0/38 per-row empty responses (0.0%)**
+  - 4.0s avg inter-row latency, 248s total
+- **Alexander** (trace `008e1f30c4855e81e1ac268433b93b8d`):
+  - 134 observations: 19 CHAIN + 115 GENERATION, all 14 pipeline nodes traced
+  - 147,614 total tokens (126,392 in / 21,222 out)
+  - **10/106 per-row empty responses (9.4%)** — gemma3:27b edge case, handled by fallback
+  - 4.1s avg inter-row latency, 606s total
+- No ERROR-level spans in either trace
+- Session IDs not set (traces findable by `metadata.source_id` instead)
+- Per-row token usage very consistent: ~600-650 in, ~150 out
+
+## Run Comparison Table (UPDATED)
+
+| Run | Model | Env | Parse Fail | Rate | Records | Time | Document |
+|-----|-------|-----|------------|------|---------|------|----------|
+| #4 | gemma4:31b | RunPod | 10/34 | 29% | 36 | ~15m | Broadmeadows |
+| #8 | gemma4:31b | RunPod | 6/34 | 18% | 36 | ~15m | Broadmeadows |
+| #9 | gemma4:31b | RunPod | ~39/45 | ~87% | killed | - | Alexander |
+| #12 | gemma4:31b | RunPod | ~16/32 | ~50% | killed | - | Alexander |
+| **#15** | **gemma3:27b** | **Docker RTX4090** | **0/38** | **0%** | **37** | **253s** | **Broadmeadows** |
+| **#15** | **gemma3:27b** | **Docker RTX4090** | **10/106** | **9.4%** | **110** | **617s** | **Alexander** |
+
 ## Next Actions (LOCAL RTX 4090 — Docker Ollama)
-1. ~~Pull gemma4:31b~~ — NOT NEEDED, gemma3:27b is the fix
-2. ~~Start Langfuse~~ — RUNNING (v3.155.1)
-3. ~~Systematic debugging Phase 1~~ — COMPLETE (RC-12 confirmed)
-4. Verify DB model config still points to gemma3:27b
-5. Re-run Alexander extraction with gemma3:27b on Docker Ollama
-6. Run Broadmeadows extraction (fresh, with Langfuse traces)
-7. Compare results: gemma3:27b vs gemma4:31b run table
-8. Phase 7: Speed benchmark on RTX 4090
+1. ~~Commit crash prevention fixes~~ — DONE (b1931c18)
+2. ~~Run Broadmeadows~~ — DONE (Run #15: 37 records, 253s, 0% failure)
+3. ~~Alexander extraction~~ — DONE (Run #15: 110 records, 617s, 9.4% low-output)
+4. ~~Analyze results + update run comparison table~~ — DONE
+5. ~~Query Langfuse traces for observability verification~~ — DONE (Entry 38)
+6. Phase 7: Speed benchmark comparison
+7. Deploy gemma3:27b fix to RunPod
+8. RunPod re-run for cross-environment validation

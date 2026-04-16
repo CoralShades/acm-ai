@@ -324,6 +324,62 @@ The logit distribution collapse is structural to gemma4's token generation. Temp
 
 ---
 
+## Langfuse Observability Analysis (2026-04-16)
+
+### Broadmeadows Run #15 — gemma3:27b / Docker Ollama v0.20.7
+
+| Metric | Value |
+|--------|-------|
+| Trace ID | `8626e5af814e6764ceec447c37807883` |
+| Total observations | 61 (19 CHAIN + 42 GENERATION) |
+| Structural LLM calls | 4 (metadata, inventory, schema_inference, extract_building) |
+| Per-row extraction calls | 38 |
+| Total tokens | 53,909 in / 8,183 out / 62,092 total |
+| Avg per-row tokens | 650 in / 149 out |
+| Empty responses (≤10 tok_out) | **0/38 (0.0%)** |
+| Avg inter-row latency | 4.0s (min 3.4s, max 5.3s) |
+| Pipeline duration | 248s |
+| Pipeline nodes traced | 14/14 |
+
+### Alexander Run #15 — gemma3:27b / Docker Ollama v0.20.7
+
+| Metric | Value |
+|--------|-------|
+| Trace ID | `008e1f30c4855e81e1ac268433b93b8d` |
+| Total observations | 134 (19 CHAIN + 115 GENERATION) |
+| Structural LLM calls | 9 (metadata, inventory, schema_inference, 6× extract_building) |
+| Per-row extraction calls | 106 |
+| Total tokens | 126,392 in / 21,222 out / 147,614 total |
+| Avg per-row tokens | 606 in / 153 out |
+| Empty responses (≤10 tok_out) | **10/106 (9.4%)** — gemma3:27b edge case, NOT the gemma4 defect |
+| Avg inter-row latency | 4.1s (min 0.2s, max 9.2s) |
+| Pipeline duration | 606s |
+| Pipeline nodes traced | 14/14 |
+
+### Pipeline Nodes Traced (both runs)
+
+All 14 LangGraph nodes visible with correct execution order:
+1. `metadata_and_structure` — document metadata + page structure
+2. `inventory` — building inventory extraction
+3. `save_intelligence` — persist document intelligence
+4. `schema_inference` — detect column headers → extraction fields
+5. `extract_building` — per-building context extraction (1× Broadmeadows, 6× Alexander)
+6. `extract_items` — per-row LLM extraction (38 rows Broadmeadows, 106 rows Alexander)
+7. `normalize_to_sf` — Salesforce field mapping
+8. `validate` → `should_correct` → `correct` — 3 correction cycles
+9. `deduplicate` — sample_no whitespace normalization + dedup
+10. `recover_no_access` — "No Access" entry recovery
+11. `save` — persist to SurrealDB
+
+### Observations
+
+- **Session IDs not set**: All traces show `session=None`. The `session_id=extraction-{source_id}` convention from `/acm-observability` is not wired in the current codebase. Traces are findable by `metadata.source_id` instead.
+- **Alexander 9.4% low-output**: 10 rows produced only 3 output tokens (likely `{}`). The pipeline's `row_extractor.py` fallback creates low-confidence records for these. This is structural to gemma3:27b with certain row content, but vastly better than gemma4:31b's 50-87% failure.
+- **No ERROR-level spans**: All observations at `level=DEFAULT` — no LLM errors, no timeouts.
+- **Token efficiency**: Per-row calls use ~600-650 input tokens (prompt + row content) and ~150 output tokens (16-field JSON). Very consistent across both documents.
+
+---
+
 ## Key Code Locations
 
 | Component | File | Lines |

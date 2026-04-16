@@ -55,7 +55,7 @@
 - [ ] **PIVOT: Systematic debugging Phase 1 — find actual root cause before more fixes**
 
 ### Phase 3b: Systematic Debugging — Empty Response Root Cause
-**Status:** in_progress
+**Status:** complete
 **Environment:** LOCAL RTX 4090 (Docker Ollama v0.20.7 + gemma3:27b, Langfuse v3.155.1, LangSmith)
 **Problem:** gemma4:31b produces 0 tokens for ~50% of per-row extraction calls on Alexander, regardless of temperature (0, 0.3, 0.7) or grammar mode (schema, "json").
 
@@ -76,14 +76,14 @@
 - [x] Root cause: gemma4 family has systemic structured output defect (ollama/ollama#15502, google-deepmind/gemma#622)
 - [x] Hypothesis: Switch to gemma3:27b (confirmed NOT affected in upstream testing, 0/3 failures vs 60-100% with gemma4:31b)
 
-**Phase 3 Minimal Fix — IN PROGRESS:**
+**Phase 3 Minimal Fix — COMPLETE:**
 - [x] Pull gemma3:27b on local Ollama (Docker Ollama v0.20.7, 17.4GB)
 - [x] Update .env: ACM_EXTRACTION_MODEL=gemma3:27b
 - [x] Update SurrealDB: default_extraction_model → model:jt8t1x32rb0iyi0v78mx (ollama/gemma3:27b)
 - [x] Raw API verification: 4/4 batch test passes, 0% structured output failure
-- [x] Broadmeadows Run #13: 38 records, 0% parse failure, 17/17 samples (555s)
-- [ ] Alexander Run #14: re-run on Docker Ollama (PC crashed on Windows Ollama)
-- [ ] Compare results with gemma4:31b runs
+- [x] Broadmeadows Run #15: 37 records, 0/38 parse failure (0%), 17/17 samples, 253s
+- [x] Alexander Run #15: 110 records, 10/106 low-output (9.4%), 45 samples, 617s
+- [x] Langfuse observability: All 14 pipeline nodes traced, 0 ERROR-level spans
 - **Environment note:** Windows Ollama removed (caused PC crash). Docker Ollama v0.20.7 now primary.
 
 ### Phase 4: Pipeline Component Audit (PA-4 through PA-7)
@@ -115,11 +115,14 @@
 - [ ] Compare: Old (37min-1hr) vs New (expected <2min)
 - [ ] Document bottlenecks
 
-### Phase 8: Cloud Observability (PA-12)
-**Status:** pending
+### Phase 8: Observability (PA-12)
+**Status:** partial
+- [x] Local Langfuse v3.155.1: Both Run #15 traces fully instrumented, 14/14 nodes, 0 errors
+- [x] Token usage: Broadmeadows 62K total, Alexander 148K total
+- [x] Per-row latency: ~4s avg on RTX 4090
 - [ ] Configure Langfuse Cloud for RunPod pod
 - [ ] SSH to pod, update .env with cloud keys
-- [ ] Verify tracing works on next extraction
+- [ ] Verify tracing works on RunPod extraction
 
 ### Phase 9: Merge and Local Environment Setup
 **Status:** complete
