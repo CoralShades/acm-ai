@@ -2682,35 +2682,18 @@ def _recover_not_sampled_records_ara(
 async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
     """Graph node: recover no-access records missed by LLM extraction.
 
-    TODO (Bug A3 — BUG-NO-ACCESS-DEAD): Per-row extraction handles synthetic
-    rows (Type D/F — "No Access" / "Previously Removed") via
-    ``scan_text_for_synthetics()`` inside ``_extract_items_for_building``, and
-    ``per_row_actually_ran`` is set True when ALL buildings used that path.
+    Always runs — even when per-row extraction handled synthetic rows via
+    ``scan_text_for_synthetics()``.  Reason: the per-row path only processes
+    Docling table rows and synthetic rows detected in building_content text.
+    If Docling missed a table fragment (e.g., page 8 of Broadmeadows with
+    only 2 "No Access" rows), the synthetic-row LLM extraction may produce
+    poor results (wrong room_name, null sample_result).  This dedicated
+    recovery function produces cleaner No Access records and deduplicates
+    against existing records, so running it is always safe.
 
-    However, ``_recover_no_access_records()`` below uses ``context.building_id``
-    and ``context.building_name`` which come from the OLD single-building
-    ``BuildingRoomContext`` — it does not iterate over all buildings in the
-    multi-building inventory.  If per-row extraction ran but missed a "No
-    Access" entry in a building whose ``building_id`` differs from
-    ``context.building_id``, recovery is silently skipped for that building.
-
-    Correct fix: replace the single-building ``_recover_no_access_records``
-    call with a loop over all buildings in ``state["inventory"].buildings``,
-    calling it once per building with that building's id/name, then merging
-    recovered records back into state["records"].  This requires surfacing
-    ``BuildingInventory`` from state (it is already stored there as
-    ``"inventory"``).  Deferred because the per-row segmenter covers the
-    common case and this is a rare edge-case; track as BUG-NO-ACCESS-DEAD.
+    Iterates over all buildings in the inventory (fixes BUG-NO-ACCESS-DEAD)
+    rather than using the single-building ``BuildingRoomContext``.
     """
-    # Only skip recovery if per-row extraction ACTUALLY ran for all buildings.
-    # When docling_document_json is NULL, per-row falls back to bulk but the env
-    # var still says "per_row" — recovery must run in that case.
-    if state.get("per_row_actually_ran"):
-        logger.info(
-            "Skipping no-access recovery (per-row segmenter handled synthetic rows)"
-        )
-        return state
-
     records: List[ACMExtractionRecord] = state.get("records", [])
     source: Source = state["source"]
     context: BuildingRoomContext = state.get("context", BuildingRoomContext())
@@ -2733,25 +2716,42 @@ async def recover_no_access_node(state: dict, config: RunnableConfig) -> dict:
             await agui.emit_step_finished("recover_no_access", recovered=0)
         return {"records": records}
 
-    building_id = context.building_id or "unknown"
-    building_name = context.building_name or ""
+    # Iterate over all buildings in inventory (fixes BUG-NO-ACCESS-DEAD).
+    # Falls back to single-building context if no inventory available.
+    inventory: Optional[BuildingInventory] = state.get("building_inventory")
+    all_recovered: List[ACMExtractionRecord] = []
 
-    recovered = _recover_no_access_records(
-        full_text, records, building_id, building_name
-    )
+    if inventory and inventory.buildings:
+        for building in inventory.buildings:
+            bid = building.building_id or "unknown"
+            bname = building.name or ""
+            recovered = _recover_no_access_records(
+                full_text, records + all_recovered, bid, bname
+            )
+            all_recovered.extend(recovered)
+    else:
+        building_id = context.building_id or "unknown"
+        building_name = context.building_name or ""
+        all_recovered = _recover_no_access_records(
+            full_text, records, building_id, building_name
+        )
 
-    if recovered:
-        records = list(records) + recovered
-        logger.info(f"Recovered {len(recovered)} no-access records via fallback")
+    if all_recovered:
+        records = list(records) + all_recovered
+        logger.info(
+            f"Recovered {len(all_recovered)} no-access records via text fallback"
+        )
 
     if pl:
         pl.stage_complete(
             StageId.NO_ACCESS_RECOVERY,
-            summary=f"Recovery complete: {len(recovered)} records found",
-            records_recovered=len(recovered),
+            summary=f"Recovery complete: {len(all_recovered)} records found",
+            records_recovered=len(all_recovered),
         )
     if agui:
-        await agui.emit_step_finished("recover_no_access", recovered=len(recovered))
+        await agui.emit_step_finished(
+            "recover_no_access", recovered=len(all_recovered)
+        )
 
     return {"records": records}
 

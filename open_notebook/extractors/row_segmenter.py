@@ -813,11 +813,32 @@ def segment_multiple_tables(
             extra_mappings=extra_mappings,
         )
 
-    # Group by num_cols
+    # Group by num_cols.  When column counts differ by at most 2 (common
+    # Docling detection variance across pages of the same register), coalesce
+    # them into a single group so the simpler Type B merge path is used
+    # instead of the Type H JOIN, which can drop rows with duplicate keys.
     groups: dict[int, list[dict]] = {}
     for t in tables:
         nc = t.get("num_cols", 0)
         groups.setdefault(nc, []).append(t)
+
+    if len(groups) > 1:
+        col_counts = sorted(groups.keys())
+        if col_counts[-1] - col_counts[0] <= 2:
+            # Small variance — coalesce into the majority column count
+            majority_nc = max(groups, key=lambda k: len(groups[k]))
+            coalesced = []
+            for tables_in_group in groups.values():
+                coalesced.extend(tables_in_group)
+            groups = {majority_nc: coalesced}
+            logger.info(
+                "Coalesced %d column-count groups (range %d-%d) into single "
+                "group (nc=%d) for Type B merge",
+                len(col_counts),
+                col_counts[0],
+                col_counts[-1],
+                majority_nc,
+            )
 
     all_rows: list[RawTableRow] = []
 
