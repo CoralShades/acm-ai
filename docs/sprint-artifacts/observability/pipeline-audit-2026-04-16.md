@@ -181,11 +181,91 @@ The old 37min-1hr time was caused by:
 2. Possibly MinerU running in addition to Docling (now optional)
 3. CPU-bound processing instead of GPU
 
-## Next Steps
+## Production Test Results
 
-1. Apply RC-1 fix (1 line change)
-2. Run local extraction with Broadmeadows PDF
-3. Verify record count reaches 31
-4. Apply RC-2 and RC-3 fixes
-5. Run Alexander District Hospital PDF (43 ground truth)
-6. Set up Langfuse/LangSmith for trace visibility
+### Fix Timeline
+
+| Commit | Fixes | Broadmeadows Records | Change |
+|--------|-------|---------------------|--------|
+| Pre-fix | - | 10 (32%) | baseline |
+| 79ab59c9 | RC-1, RC-2, RC-3 | 23 (74%) | +13 |
+| f24132c4 | RC-6 (total_pages) | 23 (74%) | RC-6 confirmed in logs |
+| 88a27774 | RC-7, RC-8 | **36 (116%)** | +13 (10 from coalescing, 3 from No Access) |
+| 088cae48 | RC-9 (dedup) | pending re-run | expected ~34 after dedup |
+| 16a4d706 | RC-10 (full schema) | 36 (116%) | 10/34 failures (same) |
+| 23d2a05a | RC-10b (all-optional) | 36 (116%) | 10/34 failures (same) |
+| 469959f2 | RC-10c (minimal schema) | **36 (116%)** | **6/34 failures (18%)** |
+
+### Run #4 Details (RC-7+RC-8, gemma4:31b on RTX 5090)
+
+- **36 records** in 907s (24 medium + 12 low)
+- 34 rows segmented from 3 Docling tables (up from 24 — RC-8 coalescing confirmed)
+- 3 No Access records recovered via text scan (RC-7 confirmed)
+- 10/34 rows failed LLM JSON parse (29% failure rate with gemma4:31b)
+- Dedup missed 1 duplicate (sample_no whitespace variance) → RC-9 fix applied
+- Schema inference failed (`inferred_schema=None`) → generic prompt used
+
+### Additional Root Causes Found
+
+| RC | Severity | Description | Fix |
+|----|----------|-------------|-----|
+| RC-6 | HIGH | `_extract_total_pages()` runs on truncated content (15K chars), finds only ~10 of 19 pages | Re-count total_pages from full text after metadata extraction |
+| RC-7 | HIGH | `recover_no_access_node` skips when `per_row_actually_ran=True`, missing No Access entries on pages without Docling tables | Always run recovery, iterate all buildings in inventory |
+| RC-8 | MEDIUM | Column-count variance (18 vs 19 cols) triggers Type H JOIN instead of Type B merge, dropping rows | Coalesce groups within ≤2 column difference |
+| RC-9 | LOW | Sample_no "039- 016" vs "039-016" not normalized by split+join | `re.sub(r"\s*-\s*", "-", sample)` in dedup key |
+
+### Speed Observations
+
+- **Solo extraction**: ~18s/row with gemma4:31b on RTX 5090
+- **Concurrent extraction** (2 sources): ~60-84s/row (Ollama queuing)
+- **Structure phase**: 100-200s (building inventory LLM)
+- **Bottleneck**: Serial per-row LLM extraction (`extract_all_rows` at row_extractor.py:388)
+- **Per-row parallelization** would dramatically improve speed (asyncio.gather with semaphore)
+
+## Remaining Issues
+
+1. **Schema inference** always fails with gemma4:31b → fallback prompt lacks field descriptions
+2. **29% LLM failure rate** → high number of low-confidence fallback records
+3. **Speed target** (<60s) unreachable with serial per-row extraction (34 rows × 18s = 612s)
+4. **Embedding OOM** with gemma4:31b loaded — mxbai-embed-large can't load concurrently
+
+## RC-10: Ollama JSON Schema Mode (Applied)
+
+**Commit:** `16a4d706`
+
+**Problem:** `format="json"` only constrains Ollama to output valid JSON, but doesn't enforce the ACMItemRow structure. gemma4:31b frequently produces non-JSON or wrong-structure JSON (29% failure rate in Run #4, 100% under concurrent load in Run #5).
+
+**Fix:** Pass `ACMItemRow.model_json_schema()` (16-field Pydantic schema) to Ollama's `format` parameter. This uses grammar-constrained token generation — every output token is validated against a grammar derived from the JSON schema. The model can ONLY produce valid JSON matching the exact structure.
+
+**Verification:**
+- Ollama 0.20.7 on RunPod supports JSON schema format ✓
+- ChatOllama 1.0.0 `format` field accepts `dict[str, Any]` ✓
+- `anyOf: [{type: "string"}, {type: "null"}]` for Optional fields works ✓
+- Live test: gemma4:31b produced valid ACMItemRow JSON in 36.6s ✓
+- Pydantic validates sparse output (only populated fields) ✓
+
+**Expected impact:** 0% parse failure rate (grammar constrains every token)
+
+**Trade-off:** ~50% slower per-row (~30s vs ~18s) due to grammar validation overhead. But 0% failure vs 29% failure is a clear win — fewer fallback records, higher data quality.
+
+### Run #6 Result (RC-10 with required item_name)
+
+Same 29% failure rate (10/34). All failures returned `raw_response_preview=<empty>`. The grammar sampler deadlocked: `item_name: str` was the only required field. When the model couldn't determine a value, the grammar prevented any valid JSON output.
+
+### RC-10b Fix (commit `23d2a05a`)
+
+Made `item_name: Optional[str]` and removed `required` from schema. All 16 fields are now optional — grammar can always produce valid JSON (even `{}`). Run #7 pending.
+
+## RC-11: Concurrent Extraction Contention
+
+**Problem:** Running 2+ extraction commands simultaneously (Broadmeadows + Alexander = 4+ concurrent building extraction loops) causes 100% per-row LLM failure. Ollama serializes CUDA compute but KV cache thrashing between conversations degrades output to non-JSON.
+
+**Fix:** Set `ACM_MAX_CONCURRENT_BUILDINGS=1` in `.env` for Ollama deployments. Run extractions sequentially (not concurrent sources on single-GPU pods).
+
+## Recommendations
+
+1. **Model selection**: Use a cloud model (OpenRouter) for schema inference and per-row extraction for production quality
+2. **Parallel extraction**: Convert `extract_all_rows` from serial to parallel (asyncio.gather + semaphore)
+3. ~~**Ollama JSON schema mode**~~: ✅ Applied — commit `16a4d706`
+4. **Diagnostic logging**: Row extraction failure now logs raw response preview (commit 26eb60dd)
+5. **Sequential extraction on single-GPU**: Never run concurrent source extractions on Ollama pods

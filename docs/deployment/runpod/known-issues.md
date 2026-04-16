@@ -148,6 +148,50 @@ RunPod proxy URLs contain the pod ID (e.g., `qpzht3hvrbg95w`). CORS configuratio
 
 ---
 
+## KI-8: Extraction Accuracy — 10/31 Broadmeadows Records
+
+| Field | Value |
+|-------|-------|
+| **Severity** | High |
+| **Status** | Under Investigation |
+
+Broadmeadows Police Station PDF extraction on RunPod produced only 10 records instead of the expected 31 (per ground truth). Source processing completed successfully (45.4s, 17 tables extracted), but the ACM per-row extraction produced significantly fewer records.
+
+**Potential root causes (under investigation):**
+1. **Small table detection**: Page 8 has a 2-row table that TableFormer fails to detect, causing subsequent pages to be missed
+2. **acm_extract not triggering**: The per-row extraction step may not have auto-triggered after source processing
+3. **LLM model/config on pod**: The Ollama model configured for extraction on the pod may differ from local (need to verify .env)
+4. **TOC/page range logic**: Page tagging may be dropping register pages from extraction scope
+
+**Impact:** Core extraction pipeline accuracy is unacceptable for production use. Only 32% of expected records recovered.
+
+**Workaround:** None. Pipeline audit planned (PA-1 through PA-12 in sprint-status.yaml).
+
+**Fix:** End-to-end pipeline audit starting locally on RTX 4090 with Langfuse/LangSmith observability, then applying fixes to RunPod. See `pipeline-audit-2026-04-16` in sprint-status.yaml.
+
+**LangSmith trace IDs (local Broadmeadows test):**
+- `d890fadf-1816-4ca5-9b6a-2a593c7409d9`
+- `2c0961fd-6d28-4e6d-8152-77351182e8c2`
+
+---
+
+## KI-9: No Observability on RunPod (No Langfuse/LangSmith)
+
+| Field | Value |
+|-------|-------|
+| **Severity** | Medium |
+| **Status** | Open |
+
+The RunPod pod has no observability stack. Docker is unavailable (community cloud, KI-5), so self-hosted Langfuse cannot run. LangSmith Cloud is not configured in the pod `.env`.
+
+**Impact:** Cannot trace extraction pipeline failures on the pod. All debugging must be done via log files (`tmux attach -t worker`).
+
+**Workaround:** Run extraction locally with Langfuse/LangSmith for debugging, then push fixes to pod.
+
+**Fix:** Configure Langfuse Cloud and LangSmith Cloud API keys in pod `.env`. See PA-12 in pipeline audit plan.
+
+---
+
 ## Summary
 
 | ID | Issue | Severity | Status |
@@ -155,7 +199,9 @@ RunPod proxy URLs contain the pod ID (e.g., `qpzht3hvrbg95w`). CORS configuratio
 | KI-1 | Disk space manageable (64% used, resized to 100GB) | Low | Mitigated |
 | KI-2 | Network volume not attached (150GB wasted) | High | Open |
 | KI-3 | Cloudflare Tunnel — migrated to silvatron.au | Low | Resolved |
-| KI-4 | PyTorch nightly required for RTX 5090 | Medium | Mitigated |
+| KI-4 | PyTorch stable cu128 for RTX 5090 | Medium | Mitigated |
 | KI-5 | Docker not available (no Langfuse) | Medium | Open |
 | KI-6 | 5090 scripts on deploy branch (not main) | Medium | Open |
 | KI-7 | CORS config tied to pod identity | Low | Open |
+| KI-8 | Extraction accuracy — 10/31 Broadmeadows records | High | Under Investigation |
+| KI-9 | No observability on RunPod | Medium | Open |

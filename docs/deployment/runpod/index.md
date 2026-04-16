@@ -34,6 +34,7 @@ Deploy ACM-AI on a RunPod GPU pod for high-performance extraction with cloud GPU
 | [Optimization](optimization.md) | GPU memory, model selection, cost management, performance |
 | [Maintenance](maintenance.md) | Updates, backups, pod lifecycle, model management |
 | [Troubleshooting](troubleshooting.md) | Common issues, fixes, diagnostic commands |
+| [Known Issues](known-issues.md) | Active issues: disk, volume, PyTorch, Docker, extraction accuracy |
 
 ## Quick Reference
 
@@ -93,12 +94,15 @@ Local Machine                          RunPod Pod (RTX 5090)
 |-----------|----------------|----------------|
 | SurrealDB | Docker container | Native binary (v2.2.1) |
 | Ollama | Host binary (localhost) | Native binary (direct GPU) |
-| API | `uv run python run_api.py` | Same (tmux session) |
-| Worker | `uv run python run_worker.py` | Same (tmux session) |
+| API | `uv run python run_api.py` | `.venv/bin/python run_api.py` (tmux session) |
+| Worker | `uv run python run_worker.py` | `.venv/bin/python run_worker.py` (tmux session) |
 | Frontend | `npm run dev` (port 8502/8503) | `npm run start` production build, port 8502 (tmux) |
 | Langfuse | Docker Compose stack | Not available (community cloud has no Docker-in-Docker) |
 | Cloudflare Tunnel | N/A | `cloudflared tunnel run` (tmux session) |
 | GPU | RTX 4090 (24GB) | RTX 5090 (32GB) |
+| PyTorch | Standard (cu126) | Stable cu128 (`torch-2.11.0+cu128` for sm_120) |
+
+> **CRITICAL on RunPod:** Never use `uv run` — it triggers `uv sync` which overwrites the cu128 PyTorch build with PyPI's default (cu126, no sm_120 support). Always use `.venv/bin/python` directly. The `start-services-5090.sh` sm_120 guard auto-detects and fixes this on every service start.
 
 ---
 
