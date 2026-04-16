@@ -129,19 +129,24 @@ async def extract_single_row(
 
     max_attempts = 2
     last_error: Optional[str] = None
-    # Stash original format for grammar-fallback on retry.
+    # Stash originals for grammar/temperature fallback on retry.
     _original_format = getattr(model, "format", None)
+    _original_temp = getattr(model, "temperature", 0)
 
     for attempt in range(1, max_attempts + 1):
-        # RC-10d: On retry, relax grammar from schema to plain "json".
-        # If the schema grammar caused a deadlock (empty response),
-        # retrying with the same grammar is futile.  Plain "json" lets
-        # the model produce *some* valid JSON that we can validate.
-        if attempt > 1 and isinstance(_original_format, dict):
+        # RC-10e: On retry, relax grammar to plain "json" AND bump
+        # temperature from 0 to 0.3.  With temperature=0 the model
+        # deterministically picks the same degenerate "nothing" token
+        # for rows it can't handle.  A small temperature introduces
+        # enough randomness to break the deadlock.  format="json"
+        # removes the grammar constraint so any valid JSON is accepted.
+        if attempt > 1:
             try:
-                object.__setattr__(model, "format", "json")
+                if isinstance(_original_format, dict):
+                    object.__setattr__(model, "format", "json")
+                object.__setattr__(model, "temperature", 0.3)
             except Exception:
-                pass  # frozen model — leave format as-is
+                pass  # frozen model — leave as-is
 
         current_human = human_msg
         if last_error is not None:
@@ -187,10 +192,12 @@ async def extract_single_row(
                 preview=raw_preview,
             )
         finally:
-            # Restore original format so subsequent rows get schema grammar.
-            if attempt > 1 and isinstance(_original_format, dict):
+            # Restore original format + temperature for subsequent rows.
+            if attempt > 1:
                 try:
-                    object.__setattr__(model, "format", _original_format)
+                    if isinstance(_original_format, dict):
+                        object.__setattr__(model, "format", _original_format)
+                    object.__setattr__(model, "temperature", _original_temp)
                 except Exception:
                     pass
 

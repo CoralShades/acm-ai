@@ -244,6 +244,39 @@ def _get_v3_item_schema() -> dict:
     return _V3_ITEM_JSON_SCHEMA
 
 
+_OLLAMA_CTX_CACHE: dict[str, int] = {}
+
+
+def _get_ollama_model_context_length(model_name: str) -> int | None:
+    """Query Ollama /api/ps for the loaded model's context_length.
+
+    Returns the context_length if found, or None on failure.
+    Results are cached per model name for the process lifetime.
+    """
+    if model_name in _OLLAMA_CTX_CACHE:
+        return _OLLAMA_CTX_CACHE[model_name]
+    try:
+        import json as _json
+        import urllib.request
+
+        ollama_base = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        resp = urllib.request.urlopen(f"{ollama_base}/api/ps", timeout=3)
+        data = _json.loads(resp.read())
+        for m in data.get("models", []):
+            if m.get("name", "").startswith(model_name.split(":")[0]):
+                ctx = m.get("context_length")
+                if ctx and isinstance(ctx, int):
+                    _OLLAMA_CTX_CACHE[model_name] = ctx
+                    logger.info(
+                        f"Auto-detected context_length={ctx} for {model_name} "
+                        f"(override with OLLAMA_NUM_CTX env var)"
+                    )
+                    return ctx
+    except Exception:
+        pass
+    return None
+
+
 def _apply_ollama_extraction_settings(
     lc_model: BaseChatModel,
     schema_dict: dict | None = None,
@@ -283,12 +316,16 @@ def _apply_ollama_extraction_settings(
 
     format_label = "schema" if schema_dict else "json"
 
-    # Set num_ctx for extraction models. Ollama defaults to 8192 tokens which
-    # is far too small for 50k+ char ARA documents. Use env var OLLAMA_NUM_CTX
-    # if set, otherwise default to 32768 (adequate for qwen2.5:7b/32b and
-    # phi4:14b without OOM risk on 16GB VRAM).
+    # Set num_ctx for extraction models. Ollama defaults to 4096 tokens
+    # which is far too small for 50k+ char ARA documents.
+    # Priority: OLLAMA_NUM_CTX env var > loaded model's context_length > 32768
     num_ctx_env = os.getenv("OLLAMA_NUM_CTX")
-    num_ctx_target = int(num_ctx_env) if num_ctx_env else 32768
+    if num_ctx_env:
+        num_ctx_target = int(num_ctx_env)
+    else:
+        # Query loaded model's actual context length from Ollama /api/ps.
+        # Falls back to 32768 if the query fails.
+        num_ctx_target = _get_ollama_model_context_length(model_name) or 32768
     # Only set num_ctx if the caller didn't explicitly configure it.
     # A non-zero current_num_ctx means the caller deliberately chose a value
     # (e.g. per-row extraction uses num_ctx=2048 via ACM_ROW_EXTRACTION_NUM_CTX).
