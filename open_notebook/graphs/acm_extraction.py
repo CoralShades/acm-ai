@@ -1263,6 +1263,29 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
                             ),
                         )
 
+                        # RC-10: Ollama JSON schema mode — pass full ACMItemRow
+                        # schema to format parameter for grammar-constrained
+                        # generation (guarantees valid JSON matching the schema)
+                        _is_ollama = any(
+                            "ollama" in c.__name__.lower()
+                            for c in type(row_model).__mro__
+                        )
+                        if _is_ollama:
+                            from open_notebook.domain.acm_row_schemas import (
+                                ACMItemRow,
+                            )
+
+                            object.__setattr__(
+                                row_model,
+                                "format",
+                                ACMItemRow.model_json_schema(),
+                            )
+                            logger.info(
+                                "[RC-10] Ollama JSON schema mode enabled for "
+                                "per-row extraction (ACMItemRow, %d fields)",
+                                len(ACMItemRow.model_fields),
+                            )
+
                         # Get Langfuse handler for tracing (if available)
                         langfuse_handler = get_langfuse_handler()
 

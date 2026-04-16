@@ -244,15 +244,20 @@ def _get_v3_item_schema() -> dict:
     return _V3_ITEM_JSON_SCHEMA
 
 
-def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
-    """Apply Ollama-specific extraction settings: format=json and num_ctx.
+def _apply_ollama_extraction_settings(
+    lc_model: BaseChatModel,
+    schema_dict: dict | None = None,
+) -> BaseChatModel:
+    """Apply Ollama-specific extraction settings: format + num_ctx.
 
     Separated from _inject_response_format so it can be called without a
     JSON schema (e.g. in provision_extraction_fallback_model where the schema
     is applied later by the calling extraction function).
 
-    - format="json": forces Ollama to emit pure JSON, preventing qwen2.5/phi4
-      from returning conversational tutorial text instead of extraction data.
+    - format: When *schema_dict* is provided, passes the full JSON schema to
+      Ollama's ``format`` parameter — this uses grammar-constrained generation
+      to guarantee output matches the schema exactly. When *schema_dict* is
+      ``None``, falls back to ``format="json"`` (free-form JSON).
     - num_ctx: sets the context window to 32768 (or OLLAMA_NUM_CTX env var),
       replacing the Ollama default of 8192 which truncates large ARA docs.
 
@@ -270,7 +275,13 @@ def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
     # model_kwargs. Setting model_kwargs["format"] is silently ignored because
     # ChatOllama builds its request payload from self.format directly
     # (see langchain_ollama/chat_models.py: params["format"] = self.format).
-    object.__setattr__(lc_model, "format", "json")
+    # ChatOllama.format accepts Union[Literal['', 'json'], dict, None].
+    if schema_dict is not None:
+        object.__setattr__(lc_model, "format", schema_dict)
+    else:
+        object.__setattr__(lc_model, "format", "json")
+
+    format_label = "schema" if schema_dict else "json"
 
     # Set num_ctx for extraction models. Ollama defaults to 8192 tokens which
     # is far too small for 50k+ char ARA documents. Use env var OLLAMA_NUM_CTX
@@ -287,7 +298,7 @@ def _apply_ollama_extraction_settings(lc_model: BaseChatModel) -> BaseChatModel:
 
     logger.debug(
         f"Applied Ollama extraction settings: "
-        f"format=json, num_ctx={getattr(lc_model, 'num_ctx', None)} "
+        f"format={format_label}, num_ctx={getattr(lc_model, 'num_ctx', None)} "
         f"for model {model_name}"
     )
     return lc_model
@@ -321,10 +332,10 @@ def _inject_response_format(
     Returns:
         The same model with response_format injected into extra_body.
     """
-    # Ollama: delegate to shared helper (also used by fallback model path)
+    # Ollama: delegate to shared helper with schema for grammar-constrained output
     is_ollama = any("ollama" in c.__name__.lower() for c in type(lc_model).__mro__)
     if is_ollama:
-        return _apply_ollama_extraction_settings(lc_model)
+        return _apply_ollama_extraction_settings(lc_model, schema_dict=schema_dict)
 
     base_url = (
         getattr(lc_model, "openai_api_base", None)
