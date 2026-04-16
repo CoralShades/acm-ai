@@ -1,0 +1,4 @@
+-- Rollback migration 57: Remove user authentication table
+REMOVE INDEX IF EXISTS idx_user_username ON user;
+REMOVE INDEX IF EXISTS idx_user_email ON user;
+REMOVE TABLE IF EXISTS user;

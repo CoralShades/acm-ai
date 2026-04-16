@@ -9,39 +9,53 @@ export function useAuth() {
   const {
     isAuthenticated,
     isLoading,
+    user,
     login,
+    loginLegacy,
     logout,
     checkAuth,
     checkAuthRequired,
+    fetchMe,
     error,
     hasHydrated,
-    authRequired
+    authRequired,
+    authMode,
   } = useAuthStore()
 
   useEffect(() => {
-    // Only check auth after the store has hydrated from localStorage
     if (hasHydrated) {
-      // First check if auth is required
       if (authRequired === null) {
         checkAuthRequired().then((required) => {
-          // If auth is required, check if we have valid credentials
           if (required) {
             checkAuth()
           }
-        })
+        }).catch(() => {})
       } else if (authRequired) {
-        // Auth is required, check credentials
         checkAuth()
       }
-      // If authRequired === false, we're already authenticated (set in checkAuthRequired)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, authRequired])
 
-  const handleLogin = async (password: string) => {
-    const success = await login(password)
+  // Fetch user profile when authenticated in JWT mode
+  useEffect(() => {
+    if (isAuthenticated && authMode === 'jwt' && !user) {
+      fetchMe()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, authMode])
+
+  const handleLogin = async (emailOrPassword: string, password?: string) => {
+    let success: boolean
+    if (authMode === 'jwt' && password) {
+      // JWT mode: email + password
+      success = await login(emailOrPassword, password)
+    } else {
+      // Legacy mode: password only
+      success = await loginLegacy(emailOrPassword)
+    }
+
     if (success) {
-      // Check if there's a stored redirect path
       const redirectPath = sessionStorage.getItem('redirectAfterLogin')
       if (redirectPath) {
         sessionStorage.removeItem('redirectAfterLogin')
@@ -60,9 +74,11 @@ export function useAuth() {
 
   return {
     isAuthenticated,
-    isLoading: isLoading || !hasHydrated, // Treat lack of hydration as loading
+    isLoading: isLoading || !hasHydrated,
     error,
+    user,
+    authMode,
     login: handleLogin,
-    logout: handleLogout
+    logout: handleLogout,
   }
 }

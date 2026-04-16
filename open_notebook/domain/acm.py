@@ -71,6 +71,7 @@ class ACMRecord(ObjectModel):
 
     # Foreign key to source document
     source_id: str  # Will be record<source> in DB
+    owner: Optional[str] = None
 
     # School identification
     school_name: Optional[str] = None

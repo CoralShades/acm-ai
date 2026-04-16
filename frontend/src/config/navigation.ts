@@ -16,6 +16,7 @@ import {
   ListChecks,
   House,
   BookText,
+  Users,
 } from 'lucide-react'
 import { MARKETING_DOCS_URL, MARKETING_URL } from '@/lib/site-urls'
 
@@ -68,6 +69,7 @@ export const navigationConfig: NavGroup[] = [
       { name: 'Parsers', href: '/settings/parsers', icon: FileCode },
       { name: 'Field Schema', href: '/settings/field-schema', icon: ListChecks, acmOnly: true },
       { name: 'Processing', href: '/settings/processing', icon: Cog },
+      { name: 'User Management', href: '/settings/users', icon: Users },
       { name: 'General', href: '/settings', icon: SlidersHorizontal },
     ],
   },

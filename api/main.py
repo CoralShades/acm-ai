@@ -37,7 +37,7 @@ logger.add(
     diagnose=True,
 )
 
-from api.auth import PasswordAuthMiddleware
+from api.auth import AuthMiddleware
 from api.model_provisioning import run_model_provisioning
 from open_notebook.observability.logfire_config import init_logfire
 
@@ -46,6 +46,7 @@ init_logfire()
 from api.routers import (
     a2a,
     acm,
+    admin,
     agui_extraction,
     auth,
     config,
@@ -165,20 +166,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add password authentication middleware first
-# Exclude /api/auth/status and /api/config from authentication
+# Add authentication middleware (supports legacy password + JWT modes)
+# Excluded paths bypass auth entirely (public endpoints + SSE streams)
 app.add_middleware(
-    PasswordAuthMiddleware,
+    AuthMiddleware,
     excluded_paths=[
         "/",
         "/health",
+        "/health/ready",
         "/docs",
         "/openapi.json",
         "/redoc",
         "/api/auth/status",
+        "/api/auth/login",
         "/api/config",
         "/api/agui/chat",
         "/api/agui/crud-chat",
+        "/api/extraction-events/*",
+        "/api/acm/extract/events/*",
+        "/api/v3/stream/*",
         "/.well-known/agent.json",
     ],
 )
@@ -200,6 +206,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
+app.include_router(admin.router, prefix="/api/auth", tags=["admin"])
 app.include_router(config.router, prefix="/api", tags=["config"])
 app.include_router(notebooks.router, prefix="/api", tags=["notebooks"])
 app.include_router(search.router, prefix="/api", tags=["search"])

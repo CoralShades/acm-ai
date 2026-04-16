@@ -1,0 +1,12 @@
+-- Migration 58: Add owner field for per-user data isolation
+-- Adds owner (record<user>) to core content tables. Null for legacy/system records.
+
+DEFINE FIELD IF NOT EXISTS owner ON TABLE source TYPE option<record<user>>;
+DEFINE FIELD IF NOT EXISTS owner ON TABLE notebook TYPE option<record<user>>;
+DEFINE FIELD IF NOT EXISTS owner ON TABLE acm_record TYPE option<record<user>>;
+DEFINE FIELD IF NOT EXISTS owner ON TABLE building_record TYPE option<record<user>>;
+
+DEFINE INDEX IF NOT EXISTS idx_source_owner ON source FIELDS owner;
+DEFINE INDEX IF NOT EXISTS idx_notebook_owner ON notebook FIELDS owner;
+DEFINE INDEX IF NOT EXISTS idx_acm_record_owner ON acm_record FIELDS owner;
+DEFINE INDEX IF NOT EXISTS idx_building_record_owner ON building_record FIELDS owner;
