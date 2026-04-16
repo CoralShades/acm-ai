@@ -1,0 +1,17 @@
+-- Migration 57: User authentication table
+-- Supports per-user auth with email/password, admin/user roles, and soft delete via status field.
+
+DEFINE TABLE IF NOT EXISTS user SCHEMAFULL;
+
+DEFINE FIELD username ON user TYPE string;
+DEFINE FIELD email ON user TYPE string ASSERT string::is::email($value);
+DEFINE FIELD password_hash ON user TYPE string;
+DEFINE FIELD role ON user TYPE string ASSERT $value IN ['admin', 'user'] DEFAULT 'user';
+DEFINE FIELD status ON user TYPE string ASSERT $value IN ['active', 'inactive'] DEFAULT 'active';
+DEFINE FIELD name ON user TYPE option<string>;
+DEFINE FIELD created_at ON user TYPE datetime DEFAULT time::now();
+DEFINE FIELD updated_at ON user TYPE datetime DEFAULT time::now();
+DEFINE FIELD last_login ON user TYPE option<datetime>;
+
+DEFINE INDEX idx_user_email ON user FIELDS email UNIQUE;
+DEFINE INDEX idx_user_username ON user FIELDS username UNIQUE;

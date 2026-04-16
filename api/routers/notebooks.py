@@ -1,8 +1,9 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from loguru import logger
 
+from api.auth_dependencies import get_current_user_optional
 from api.models import NotebookCreate, NotebookResponse, NotebookUpdate
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.notebook import Notebook, Source
@@ -13,21 +14,31 @@ router = APIRouter()
 
 @router.get("/notebooks", response_model=List[NotebookResponse])
 async def get_notebooks(
+    request: Request,
     archived: Optional[bool] = Query(None, description="Filter by archived status"),
     order_by: str = Query("updated desc", description="Order by field and direction"),
+    user: Optional[dict[str, Any]] = Depends(get_current_user_optional),
 ):
     """Get all notebooks with optional filtering and ordering."""
     try:
+        # Build owner filter for per-user data isolation
+        owner_filter = ""
+        params: dict[str, Any] = {}
+        if user and user.get("role") != "admin":
+            owner_filter = "WHERE owner = type::thing($owner_id)"
+            params["owner_id"] = user["id"]
+
         # Build the query with counts
         query = f"""
             SELECT *,
             count(<-reference.in) as source_count,
             count(<-artifact.in) as note_count
             FROM notebook
+            {owner_filter}
             ORDER BY {order_by}
         """
 
-        result = await repo_query(query)
+        result = await repo_query(query, params if params else None)
 
         # Filter by archived status if specified
         if archived is not None:
@@ -54,12 +65,17 @@ async def get_notebooks(
 
 
 @router.post("/notebooks", response_model=NotebookResponse)
-async def create_notebook(notebook: NotebookCreate):
+async def create_notebook(
+    notebook: NotebookCreate,
+    request: Request,
+    user: Optional[dict[str, Any]] = Depends(get_current_user_optional),
+):
     """Create a new notebook."""
     try:
         new_notebook = Notebook(
             name=notebook.name,
             description=notebook.description,
+            owner=user["id"] if user else None,
         )
         await new_notebook.save()
 

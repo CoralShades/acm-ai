@@ -1,45 +1,69 @@
+"""
+Dual-mode authentication middleware for ACM-AI.
+
+Resolution order:
+1. If OPEN_NOTEBOOK_PASSWORD is set -> legacy shared-password mode (backward compat)
+2. Else if ACM_JWT_SECRET is set   -> per-user JWT auth mode
+3. Else                            -> no auth (dev mode, unprotected)
+"""
+
 import os
 from typing import Optional
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from api.auth_service import decode_access_token, get_user_by_id
 
-class PasswordAuthMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to check password authentication for all API requests.
-    Only active when OPEN_NOTEBOOK_PASSWORD environment variable is set.
-    """
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """Unified auth middleware supporting legacy password and JWT modes."""
 
     def __init__(self, app, excluded_paths: Optional[list] = None):
         super().__init__(app)
-        self.password = os.environ.get("OPEN_NOTEBOOK_PASSWORD")
-        self.excluded_paths = excluded_paths or [
-            "/",
-            "/health",
-            "/docs",
-            "/openapi.json",
-            "/redoc",
-        ]
+        self.legacy_password = os.environ.get("OPEN_NOTEBOOK_PASSWORD")
+        self.jwt_secret = os.environ.get("ACM_JWT_SECRET")
+        self.excluded_paths = excluded_paths or []
+
+    def _is_excluded(self, path: str) -> bool:
+        """Check if path is in the excluded list or matches a prefix."""
+        for excluded in self.excluded_paths:
+            if excluded.endswith("*"):
+                if path.startswith(excluded[:-1]):
+                    return True
+            elif path == excluded:
+                return True
+        return False
 
     async def dispatch(self, request: Request, call_next):
-        # Skip authentication if no password is set
-        if not self.password:
+        path = request.url.path
+
+        # Skip for excluded paths
+        if self._is_excluded(path):
             return await call_next(request)
 
-        # Skip authentication for excluded paths
-        if request.url.path in self.excluded_paths:
-            return await call_next(request)
-
-        # Skip authentication for CORS preflight requests (OPTIONS)
+        # Skip CORS preflight
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        # Check authorization header
-        auth_header = request.headers.get("Authorization")
+        # Mode 1: Legacy shared password
+        if self.legacy_password:
+            return await self._legacy_auth(request, call_next)
 
+        # Mode 2: JWT per-user auth
+        if self.jwt_secret:
+            return await self._jwt_auth(request, call_next)
+
+        # Mode 3: No auth configured — allow all
+        return await call_next(request)
+
+    async def _legacy_auth(self, request: Request, call_next):
+        """Original shared-password authentication."""
+        auth_header = request.headers.get("Authorization")
         if not auth_header:
             return JSONResponse(
                 status_code=401,
@@ -47,11 +71,10 @@ class PasswordAuthMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Expected format: "Bearer {password}"
         try:
             scheme, credentials = auth_header.split(" ", 1)
             if scheme.lower() != "bearer":
-                raise ValueError("Invalid authentication scheme")
+                raise ValueError("Invalid scheme")
         except ValueError:
             return JSONResponse(
                 status_code=401,
@@ -59,50 +82,80 @@ class PasswordAuthMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Check password
-        if credentials != self.password:
+        if credentials != self.legacy_password:
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid password"},
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Password is correct, proceed with the request
-        response = await call_next(request)
-        return response
+        return await call_next(request)
+
+    async def _jwt_auth(self, request: Request, call_next):
+        """JWT-based per-user authentication."""
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing authorization header"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        try:
+            scheme, token = auth_header.split(" ", 1)
+            if scheme.lower() != "bearer":
+                raise ValueError("Invalid scheme")
+        except ValueError:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid authorization header format"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Decode JWT
+        payload = decode_access_token(token)
+        if not payload:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or expired token"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Verify user is still active (soft delete check)
+        user = await get_user_by_id(payload["sub"])
+        if not user or user.get("status") != "active":
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Account deactivated"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Inject user into request state for downstream handlers
+        request.state.user = user
+        return await call_next(request)
 
 
-# Optional: HTTPBearer security scheme for OpenAPI documentation
+# Keep for backward compatibility (OpenAPI docs)
 security = HTTPBearer(auto_error=False)
 
 
 def check_api_password(
     credentials: Optional[HTTPAuthorizationCredentials] = None,
 ) -> bool:
-    """
-    Utility function to check API password.
-    Can be used as a dependency in individual routes if needed.
-    """
+    """Legacy utility for individual route password checks."""
     password = os.environ.get("OPEN_NOTEBOOK_PASSWORD")
-
-    # No password set, allow access
     if not password:
         return True
-
-    # No credentials provided
     if not credentials:
         raise HTTPException(
             status_code=401,
             detail="Missing authorization",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Check password
     if credentials.credentials != password:
         raise HTTPException(
             status_code=401,
             detail="Invalid password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
     return True

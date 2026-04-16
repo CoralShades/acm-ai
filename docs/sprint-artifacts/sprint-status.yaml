@@ -1773,3 +1773,16 @@ pipeline-audit-2026-04-16:
     - docs/sprint-artifacts/reports/pipeline-analysis-2026-04-09.md
     - docs/sprint-artifacts/reports/extraction-test-2026-04-09.md
     - docs/sprint-artifacts/reports/full-audit-2026-04-09.md
+
+  # ─────────────────────────────────────────────────────
+  # Epic 39: User Authentication & Data Isolation (P0)
+  # Client-requested. Branch: feat/user-auth
+  # Goal: Replace shared-password auth with per-user JWT auth,
+  #   admin-only user management, per-user data isolation.
+  # Planning: docs/sprint-artifacts/auth-implementation/
+  # ─────────────────────────────────────────────────────
+  epic-39: in-progress
+  e39-s1-user-auth-backend: in-progress  # SurrealDB user table, JWT auth service, FastAPI middleware (dual-mode: legacy+JWT), auth router (login/me/change-password), admin router (CRUD users), seed script. Migrations 57-58.
+  e39-s2-user-auth-frontend: in-progress  # Login form upgrade (email+password), Next.js middleware.ts, auth store refactor (JWT), UserMenu, ChangePasswordDialog, sidebar integration.
+  e39-s3-data-isolation: in-progress  # Owner field on source/notebook/acm_record/building_record. Repository-level owner filtering. Admin bypasses filters.
+  e39-s4-verification-e2e: backlog  # pytest, ruff, frontend build, browser verification with Playwright.

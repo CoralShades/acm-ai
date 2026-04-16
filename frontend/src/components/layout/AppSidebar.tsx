@@ -23,6 +23,7 @@ import {
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { Separator } from '@/components/ui/separator'
 import { VendorAttribution } from '@/components/brand/VendorAttribution'
+import { UserMenu } from '@/components/auth/UserMenu'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,9 @@ const isAcmMode = process.env.NEXT_PUBLIC_ACM_MODE !== 'false'
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { logout } = useAuth()
+  const { logout, user, authMode } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const isJwtMode = authMode === 'jwt'
   const { isCollapsed, expandedSections, toggleCollapse, toggleSection } =
     useSidebarStore()
   const router = useRouter()
@@ -302,57 +305,68 @@ export function AppSidebar() {
             </div>
           )}
 
-          {/* Settings Dropdown */}
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center"
-                  onClick={() => router.push('/settings')}
-                  aria-label="Settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Settings</TooltipContent>
-            </Tooltip>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3"
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="top" className="w-56">
-                {configureItems.map((item) => (
-                  <DropdownMenuItem key={item.name} asChild>
-                    <Link href={item.href} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {item.name}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <div className="flex items-center gap-2">
-                    <ThemeToggle />
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* User Menu (JWT mode) */}
+          {isJwtMode && <UserMenu collapsed={isCollapsed} />}
+
+          {/* Settings Dropdown — shown for admins or non-JWT mode */}
+          {(!isJwtMode || isAdmin) && (
+            <>
+              {isCollapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-center"
+                      onClick={() => router.push('/settings')}
+                      aria-label="Settings"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Settings</TooltipContent>
+                </Tooltip>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-3"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" side="top" className="w-56">
+                    {configureItems.map((item) => (
+                      <DropdownMenuItem key={item.name} asChild>
+                        <Link href={item.href} className="flex items-center gap-2">
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <div className="flex items-center gap-2">
+                        <ThemeToggle />
+                      </div>
+                    </DropdownMenuItem>
+                    {!isJwtMode && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={logout}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </>
           )}
 
           {/* Footer links */}

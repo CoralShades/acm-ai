@@ -18,6 +18,7 @@ class Notebook(ObjectModel):
     name: str
     description: str
     archived: Optional[bool] = False
+    owner: Optional[str] = None
 
     @field_validator("name")
     @classmethod
@@ -148,6 +149,7 @@ class Source(ObjectModel):
     topics: Optional[List[str]] = Field(default_factory=list)
     full_text: Optional[str] = None
     review_status: Optional[str] = None
+    owner: Optional[str] = None
     command: Optional[str] = Field(
         default=None, description="Link to surreal-commands processing job"
     )

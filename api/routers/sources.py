@@ -9,12 +9,14 @@ from fastapi import (
     Form,
     HTTPException,
     Query,
+    Request,
     UploadFile,
 )
 from fastapi.responses import FileResponse, Response
 from loguru import logger
 from surreal_commands import submit_command, wait_for_command
 
+from api.auth_dependencies import get_current_user_optional
 from api.command_service import CommandService
 from api.models import (
     AssetModel,
@@ -212,6 +214,7 @@ def parse_source_form_data(
 
 @router.get("/sources", response_model=List[SourceListResponse])
 async def get_sources(
+    request: Request,
     notebook_id: Optional[str] = Query(None, description="Filter by notebook ID"),
     limit: int = Query(
         50, ge=1, le=100, description="Number of sources to return (1-100)"
@@ -221,6 +224,7 @@ async def get_sources(
         "updated", description="Field to sort by (created or updated)"
     ),
     sort_order: str = Query("desc", description="Sort order (asc or desc)"),
+    user: Optional[dict] = Depends(get_current_user_optional),
 ):
     """Get sources with pagination and sorting support."""
     try:
@@ -263,6 +267,13 @@ async def get_sources(
                 },
             )
         else:
+            # Build owner filter for per-user data isolation
+            owner_filter = ""
+            query_params: dict[str, Any] = {"limit": limit, "offset": offset}
+            if user and user.get("role") != "admin":
+                owner_filter = "WHERE owner = type::thing($owner_id)"
+                query_params["owner_id"] = user["id"]
+
             # Query all sources - include command field
             query = f"""
                 SELECT id, asset, created, title, updated, topics, command, review_status,
@@ -270,10 +281,11 @@ async def get_sources(
                 ((SELECT VALUE id FROM source_embedding WHERE source = $parent.id LIMIT 1)) != NONE AS embedded,
                 (SELECT VALUE total_pages FROM source_intelligence WHERE source_id = $parent.id LIMIT 1)[0] OR 0 AS page_count
                 FROM source
+                {owner_filter}
                 {order_clause}
                 LIMIT $limit START $offset
             """
-            result = await repo_query(query, {"limit": limit, "offset": offset})
+            result = await repo_query(query, query_params)
 
         source_ids = [str(row["id"]) for row in result if row.get("id")]
         # SurrealDB record<source> fields need type::thing() for comparison.
@@ -521,9 +533,11 @@ async def get_sources(
 
 @router.post("/sources", response_model=SourceResponse)
 async def create_source(
+    request: Request,
     form_data: tuple[SourceCreate, Optional[UploadFile]] = Depends(
         parse_source_form_data
     ),
+    user: Optional[dict] = Depends(get_current_user_optional),
 ):
     """Create a new source with support for both JSON and multipart form data."""
     source_data, upload_file = form_data
@@ -602,6 +616,7 @@ async def create_source(
                 title=source_data.title or "Processing...",
                 topics=[],
                 review_status="extracting",
+                owner=user["id"] if user else None,
             )
             await source.save()
 
@@ -692,6 +707,7 @@ async def create_source(
                 source = Source(
                     title=source_data.title or "Processing...",
                     topics=[],
+                    owner=user["id"] if user else None,
                 )
                 await source.save()
 

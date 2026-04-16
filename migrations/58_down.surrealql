@@ -1,0 +1,10 @@
+-- Rollback migration 58: Remove owner fields and indexes
+REMOVE INDEX IF EXISTS idx_building_record_owner ON building_record;
+REMOVE INDEX IF EXISTS idx_acm_record_owner ON acm_record;
+REMOVE INDEX IF EXISTS idx_notebook_owner ON notebook;
+REMOVE INDEX IF EXISTS idx_source_owner ON source;
+
+REMOVE FIELD IF EXISTS owner ON TABLE building_record;
+REMOVE FIELD IF EXISTS owner ON TABLE acm_record;
+REMOVE FIELD IF EXISTS owner ON TABLE notebook;
+REMOVE FIELD IF EXISTS owner ON TABLE source;
