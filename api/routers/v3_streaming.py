@@ -62,15 +62,17 @@ _SSE_HEADERS: dict[str, str] = {
 
 
 def _format_sse_event(event: V3PipelineEvent) -> str:
-    """Serialise a V3PipelineEvent to SSE named-event wire format.
+    """Serialise a V3PipelineEvent to SSE unnamed-event wire format.
+
+    Sends as an unnamed (default ``message``) event so ``EventSource.onmessage``
+    fires on the client.  The event type is available inside the JSON payload.
 
     Format::
 
-        event: <type>\\n
         data: <json>\\n
         \\n
     """
-    return f"event: {event.type}\ndata: {event.model_dump_json()}\n\n"
+    return f"data: {event.model_dump_json()}\n\n"
 
 
 def _format_sse_done(operation_id: str, final_type: str) -> str:
