@@ -173,8 +173,22 @@ class ObjectModel(BaseModel):
             raise DatabaseOperationError(e)
 
     def _prepare_save_data(self) -> Dict[str, Any]:
+        import re
+
+        _RECORD_ID_RE = re.compile(r"^([a-zA-Z_][a-zA-Z0-9_]*):[a-zA-Z0-9_]{6,}$")
+
         data = self.model_dump()
-        return {key: value for key, value in data.items() if value is not None}
+        result = {}
+        for key, value in data.items():
+            if value is None:
+                continue
+            # Convert "table:id" strings to SurrealDB RecordID objects so that
+            # fields typed as option<record<table>> (e.g. owner) are accepted.
+            if isinstance(value, str) and _RECORD_ID_RE.match(value):
+                table, rec_id = value.split(":", 1)
+                value = SurrealRecordID(table, rec_id)
+            result[key] = value
+        return result
 
     async def delete(self) -> bool:
         if self.id is None:
