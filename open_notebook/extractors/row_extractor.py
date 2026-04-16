@@ -129,8 +129,20 @@ async def extract_single_row(
 
     max_attempts = 2
     last_error: Optional[str] = None
+    # Stash original format for grammar-fallback on retry.
+    _original_format = getattr(model, "format", None)
 
     for attempt in range(1, max_attempts + 1):
+        # RC-10d: On retry, relax grammar from schema to plain "json".
+        # If the schema grammar caused a deadlock (empty response),
+        # retrying with the same grammar is futile.  Plain "json" lets
+        # the model produce *some* valid JSON that we can validate.
+        if attempt > 1 and isinstance(_original_format, dict):
+            try:
+                object.__setattr__(model, "format", "json")
+            except Exception:
+                pass  # frozen model — leave format as-is
+
         current_human = human_msg
         if last_error is not None:
             current_human += (
@@ -152,6 +164,13 @@ async def extract_single_row(
                 else str(response.content)
             )
             parsed = parse_json_response(content)
+            # RC-10c cleanup: minimal schema grammar produces literal
+            # "null" strings instead of JSON null (grammar only allows
+            # {type: "string"} per property).  Scrub before validation.
+            parsed = {
+                k: (None if v in ("null", "None", "none", "") else v)
+                for k, v in parsed.items()
+            }
             item = ACMItemRow.model_validate(parsed)
             return item
         except Exception as exc:
@@ -167,6 +186,13 @@ async def extract_single_row(
                 error=last_error,
                 preview=raw_preview,
             )
+        finally:
+            # Restore original format so subsequent rows get schema grammar.
+            if attempt > 1 and isinstance(_original_format, dict):
+                try:
+                    object.__setattr__(model, "format", _original_format)
+                except Exception:
+                    pass
 
     raise ValueError(
         f"Failed to extract row {row.row_index} after {max_attempts} attempts: "
