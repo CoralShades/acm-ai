@@ -365,6 +365,18 @@ async def metadata_and_structure_node(state: dict, config: RunnableConfig) -> di
             metadata_content, model_id=model_id
         )
 
+        # RC-6 fix: _extract_total_pages inside extract_metadata_and_structure
+        # only saw the truncated content (15K chars, ~5 pages). Re-count from
+        # the FULL text so building_inventory gets the real page_end.
+        if len(content) > _METADATA_MAX_CHARS:
+            full_total = _extract_total_pages(content)
+            if full_total > structure.total_pages:
+                logger.info(
+                    f"[S4] total_pages corrected from {structure.total_pages} "
+                    f"to {full_total} (truncated content missed pages)"
+                )
+                structure.total_pages = full_total
+
         # PyMuPDF page-count fallback (from existing extract_structure node)
         if structure.total_pages == 0:
             pdf_path = (
