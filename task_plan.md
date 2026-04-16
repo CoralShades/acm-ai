@@ -115,6 +115,30 @@
 - [ ] Compare: Old (37min-1hr) vs New (expected <2min)
 - [ ] Document bottlenecks
 
+### Phase 10: RunPod Deployment (NEW)
+**Status:** complete
+- [x] Push main → deploy/runpod-5090 (e666f520)
+- [x] SSH to pod, pull code (17 commits)
+- [x] Pull gemma3:27b model (17GB on RunPod Ollama)
+- [x] Update .env: ACM_EXTRACTION_MODEL=gemma3:27b
+- [x] Update SurrealDB: default_extraction_model → model:gxfnicio24wqkr5gkqex (ollama/gemma3:27b)
+- [x] Restart API + worker tmux sessions
+- [x] Verify API health via CF tunnel (acmapi.silvatron.au)
+- [x] Raw API test: gemma3:27b structured output 100% pass, 10.3s on RTX 5090
+- **Note:** RunPod uses full 32K context (vs 4096 on local RTX 4090). 24GB/32GB VRAM used.
+
+### Phase 11: Field-Level Quality Audit (PA-14) — NEXT
+**Status:** pending
+- [ ] Compare extracted sample_numbers against ground truth for both documents
+- [ ] Check room_name, floor_level population rates
+- [ ] Verify condition mapping accuracy
+- [ ] Check Assumed Positive vs Unknown classification (issue-1)
+- [ ] Audit acm_labelled, quantity, risk_status coverage (issue-4)
+- [ ] Analyze over-extraction: 37 vs 31 Broadmeadows (issue-3)
+- [ ] Building-level record distribution validation
+- [ ] Product classification accuracy
+- [ ] User-specified additional quality checks (TBD)
+
 ### Phase 8: Observability (PA-12)
 **Status:** partial
 - [x] Local Langfuse v3.155.1: Both Run #15 traces fully instrumented, 14/14 nodes, 0 errors

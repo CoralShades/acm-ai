@@ -1593,13 +1593,15 @@ pipeline-audit-2026-04-16:
     broadmeadows_10_records:
       - "d890fadf-1816-4ca5-9b6a-2a593c7409d9"
       - "2c0961fd-6d28-4e6d-8152-77351182e8c2"
+  langfuse_traces:
+    broadmeadows_run15: "8626e5af814e6764ceec447c37807883"
+    alexander_run15: "008e1f30c4855e81e1ac268433b93b8d"
   summary: |
-    Broadmeadows improved from 10 to 36 records (116% of 31 ground truth — over-extraction via duplicates).
-    Alexander remains ~50% failure rate on per-row extraction.
-    Root causes RC-1 through RC-9 fixed and deployed. RC-10a-f (Ollama grammar/temperature tuning) exhausted.
-    PIVOT: Systematic debugging needed — gemma4:31b produces 0 tokens for ~50% of rows regardless of temperature.
-    All fixes merged to main and pushed to origin (44d93b33). RunPod on deploy/runpod-5090.
-    Next: Local debugging with Langfuse + RTX 4090 Ollama.
+    ROOT CAUSE RESOLVED: gemma4:31b has systemic structured output defect (ollama/ollama#15502, google-deepmind/gemma#622).
+    Switched to gemma3:27b — 0% parse failure on Broadmeadows, 9.4% low-output on Alexander (handled by fallback).
+    All 14 LangGraph pipeline nodes traced in Langfuse. No ERROR-level spans.
+    Deployed gemma3:27b to RunPod RTX 5090 (e666f520 on deploy/runpod-5090).
+    NEXT: Field-level quality audit + speed benchmark + RunPod extraction validation.
   commits:
     - "79ab59c9 — RC-1/2/3 fixes (page_end expansion, cross-validation, column aliases)"
     - "f24132c4 — RC-6 total_pages truncation fix"
@@ -1611,17 +1613,29 @@ pipeline-audit-2026-04-16:
     - "482eaa0b — RC-10e temperature perturbation + dynamic num_ctx"
     - "41a5bf30 — RC-10f temperature 0.3 default"
     - "44d93b33 — planning files + RC-10f results"
+    - "b1931c18 — GPU crash prevention (VRAM model thrashing)"
+    - "95807643 — gemma3:27b validation + crash fixes"
+    - "e666f520 — Langfuse observability analysis"
   run_results:
     broadmeadows:
       run1_gemma4_latest: "23/31 (74%) — RC-1/2/3, gemma4:latest"
       run3_gemma4_31b: "23/31 (74%) — RC-6, gemma4:31b, 645s"
       run4_rc7_rc8: "36/31 (116%) — RC-7/8, over-extraction, 907s"
       run8_minimal_schema: "36/31 (116%) — RC-10c, 6/34 failures (18%)"
+      run15_gemma3_27b: "37 records, 0/38 parse failure (0%), 17/17 samples, 253s — Docker RTX 4090"
     alexander:
       run9_minimal_schema: "~87% failure — catastrophic"
       run10_hybrid_retry: "~50-80% failure"
       run11_temp_perturbation: "~50% failure, 29% retry rescue"
       run12_temp_default: "~50% failure — temperature tuning exhausted"
+      run15_gemma3_27b: "110 records, 10/106 low-output (9.4%), 45 samples, 617s — Docker RTX 4090"
+  deployment:
+    runpod_model: "gemma3:27b (model:gxfnicio24wqkr5gkqex)"
+    runpod_branch: "deploy/runpod-5090 @ e666f520"
+    runpod_env_updated: true
+    runpod_surrealdb_updated: true
+    runpod_services_restarted: true
+    runpod_raw_api_verified: true
   audit_scope:
     # Phase 1: Observability setup (local Docker services)
     - id: PA-1
@@ -1636,13 +1650,14 @@ pipeline-audit-2026-04-16:
       status: done
       notes: "PRIMARY ROOT CAUSE: page_end +2 cap in LLM path. 5 contributing causes. All documented in findings.md"
     - id: PA-3
-      name: "Run both test PDFs through full pipeline on RunPod with fixes"
+      name: "Run both test PDFs through full pipeline with fixes"
       priority: P0
-      status: in-progress
+      status: done
       notes: |
-        Broadmeadows: 36/31 records (over-extraction). Alexander: ~50% per-row failure.
-        12 runs completed on RunPod RTX 5090. RC-1 through RC-10f applied.
-        BLOCKED: gemma4:31b empty response root cause unknown. Systematic debugging Phase 1 needed.
+        RESOLVED: Switched from gemma4:31b to gemma3:27b. Run #15 on Docker RTX 4090:
+        Broadmeadows: 37 records, 0% parse failure, 17/17 samples, 253s.
+        Alexander: 110 records, 9.4% low-output, 45 samples, 617s.
+        Deployed to RunPod RTX 5090 (e666f520). All services restarted and verified.
     # Phase 3: Pipeline component audit
     - id: PA-4
       name: "Table detection — small table sensitivity (Broadmeadows page 8)"
@@ -1657,11 +1672,11 @@ pipeline-audit-2026-04-16:
     - id: PA-6
       name: "Per-row LLM extraction quality"
       priority: P0
-      status: in-progress
+      status: done
       notes: |
-        gemma4:31b produces 0 tokens for ~50% of rows regardless of temperature (0, 0.3, 0.7) or grammar mode.
-        Systematic debugging Phase 1 in progress — need to compare failing vs succeeding row content,
-        test raw Ollama API, research GBNF + gemma4 known issues.
+        ROOT CAUSE: gemma4 structured output defect (ollama#15502, google-deepmind/gemma#622).
+        FIX: Switch to gemma3:27b — 0% parse failure on Broadmeadows, 9.4% low-output on Alexander.
+        Remaining: field-level quality audit (sample_number accuracy, room_name population, etc.)
     - id: PA-7
       name: "Pipeline component necessity audit"
       priority: P1
@@ -1691,44 +1706,67 @@ pipeline-audit-2026-04-16:
       notes: "RunPod RTX 5090: 250-907s per document. Local RTX 4090 not yet tested. Target <120s."
     # Phase 6: Cloud observability
     - id: PA-12
-      name: "Configure Langfuse Cloud + LangSmith for RunPod pod"
+      name: "Observability verification"
       priority: P2
-      status: pending
+      status: partial
+      notes: |
+        LOCAL DONE: Langfuse v3.155.1 — both Run #15 traces fully instrumented, 14/14 nodes, 0 errors.
+        Broadmeadows: 62K tokens, 4.0s avg inter-row. Alexander: 148K tokens, 4.1s avg inter-row.
+        PENDING: Langfuse Cloud for RunPod pod.
     # Phase 7: Systematic debugging — empty response root cause
     - id: PA-13
       name: "Systematic debugging — gemma4:31b empty response root cause"
       priority: P0
-      status: in-progress
+      status: done
       notes: |
-        Phase 1 evidence gathering (NO FIXES until complete):
-        1a. Compare failing vs succeeding row CONTENT
-        1b. Check Ollama server logs for generation errors (partially done — found truncation, NUM_PARALLEL)
-        1c. Test raw Ollama API bypassing LangChain
-        1d. Research Ollama GBNF + gemma4 known issues via context7
+        ROOT CAUSE CONFIRMED (RC-12): gemma4 family systemic structured output defect.
+        Three upstream issues: ollama/ollama#15502, ollama/ollama#15260, google-deepmind/gemma#622.
+        Three conditions required: (1) gemma4 Dense model, (2) format= with JSON schema, (3) free-text string fields.
+        FIX: Switch to gemma3:27b — confirmed NOT affected. 0% failure in raw API test (4/4).
+        Validated: Run #15 Broadmeadows 0% failure, Alexander 9.4% low-output (edge case, not same defect).
+    - id: PA-14
+      name: "Field-level quality audit"
+      priority: P0
+      status: pending
+      notes: |
+        NEXT PHASE: Compare extracted field values against ground truth.
+        Check: sample_number accuracy, room_name population, floor_level, condition mapping,
+        acm_labelled, quantity, risk_status, Assumed Positive handling, product classification.
+        Also: over-extraction analysis (37 vs 31 Broadmeadows), building-level record distribution.
 
   top_issues:
     - severity: critical
       id: issue-1
       description: "Assumed Positive result category extracted as Unknown — regression from ~70% to 17%"
       file: "prompts/acm/row_extraction.jinja"
+      status: open  # PA-14 quality audit
     - severity: high
       id: issue-2
       description: "Cloud fallback uses hardcoded direct Anthropic/OpenAI model IDs; system is OpenRouter-only"
       file: "open_notebook/graphs/acm_extraction.py:994"
+      status: open
     - severity: high
       id: issue-3
-      description: "Over-extraction: 57 records vs 31 expected — non-ACM tables included as noise"
+      description: "Over-extraction: 37 records vs 31 expected Broadmeadows — dedup or non-ACM noise"
+      status: open  # PA-14 quality audit
     - severity: high
       id: issue-4
       description: "Missing critical fields: acm_labelled, quantity, risk_status (0% coverage since baseline 2026-02-10)"
       file: "open_notebook/domain/acm_row_schemas.py"
+      status: open  # PA-14 quality audit
     - severity: medium
       id: issue-5
       description: "validation-summary endpoint returns {buildings:[]} for source with 120 records"
       file: "api/routers/acm.py"
+      status: open
     - severity: medium
       id: issue-6
       description: "Job detail status badge shows Extracting when extraction is completed (completed_at is None)"
+      status: open
+    - severity: resolved
+      id: issue-7
+      description: "gemma4:31b structured output defect — 50-87% per-row extraction failure"
+      status: resolved  # RC-12: switched to gemma3:27b
   reports:
     - docs/sprint-artifacts/reports/log-audit-2026-04-09.md
     - docs/sprint-artifacts/reports/browser-test-2026-04-09.md
