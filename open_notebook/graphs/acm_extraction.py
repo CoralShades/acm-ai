@@ -1253,11 +1253,19 @@ async def extract_items_node(state: dict, config: RunnableConfig) -> dict:
 
                     if rows:
                         # Provision model for per-row extraction (small context)
+                        # RC-10f: Use temperature=0.3 for per-row extraction.
+                        # temperature=0 causes deterministic empty responses for
+                        # 40-80% of rows on Alexander-style documents with
+                        # gemma4:31b.  0.3 introduces enough randomness for
+                        # first-attempt success; retry bumps to 0.7 (in
+                        # row_extractor.py).
                         row_model = await provision_langchain_model(
                             "",
                             state.get("model_id"),
                             "extraction",
-                            temperature=0,
+                            temperature=float(
+                                os.getenv("ACM_ROW_EXTRACTION_TEMPERATURE", "0.3")
+                            ),
                             num_ctx=int(
                                 os.getenv("ACM_ROW_EXTRACTION_NUM_CTX", "2048")
                             ),

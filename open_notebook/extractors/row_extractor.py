@@ -134,17 +134,16 @@ async def extract_single_row(
     _original_temp = getattr(model, "temperature", 0)
 
     for attempt in range(1, max_attempts + 1):
-        # RC-10e: On retry, relax grammar to plain "json" AND bump
-        # temperature from 0 to 0.3.  With temperature=0 the model
-        # deterministically picks the same degenerate "nothing" token
-        # for rows it can't handle.  A small temperature introduces
-        # enough randomness to break the deadlock.  format="json"
-        # removes the grammar constraint so any valid JSON is accepted.
+        # RC-10f: On retry, relax grammar to plain "json" AND bump
+        # temperature to 0.7.  The first attempt already uses 0.3 (set
+        # in acm_extraction.py).  A higher retry temperature gives the
+        # sampler more paths to explore when the model struggles with
+        # a particular row's content.
         if attempt > 1:
             try:
                 if isinstance(_original_format, dict):
                     object.__setattr__(model, "format", "json")
-                object.__setattr__(model, "temperature", 0.3)
+                object.__setattr__(model, "temperature", 0.7)
             except Exception:
                 pass  # frozen model — leave as-is
 
