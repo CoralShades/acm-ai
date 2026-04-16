@@ -143,6 +143,7 @@ async def extract_single_row(
             HumanMessage(content=current_human),
         ]
 
+        content = ""
         try:
             response = await model.ainvoke(messages, config=config)
             content = (
@@ -155,13 +156,16 @@ async def extract_single_row(
             return item
         except Exception as exc:
             last_error = str(exc)
+            # Log truncated raw response to help diagnose JSON parse failures
+            raw_preview = content[:200] if content else "<empty>"
             logger.warning(
                 "Row extraction attempt {attempt}/{max_retries} failed for row "
-                "{row_idx}: {error}",
+                "{row_idx}: {error} | raw_response_preview={preview}",
                 attempt=attempt,
                 max_retries=max_attempts,
                 row_idx=row.row_index,
                 error=last_error,
+                preview=raw_preview,
             )
 
     raise ValueError(
