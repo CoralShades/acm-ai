@@ -250,7 +250,9 @@ def _generate_dedup_key(record: ACMExtractionRecord, school_code: Optional[str])
     # Normalize: lowercase, strip, collapse whitespace for dedup stability
     product = " ".join((record.product or "unknown").lower().strip().split())
     location = " ".join((record.location or "unknown").lower().strip().split())
+    # Strip spaces around dashes in sample_no — OCR often inserts "039- 016" vs "039-016"
     sample = " ".join((record.sample_no or "no_sample").lower().strip().split())
+    sample = re.sub(r"\s*-\s*", "-", sample)
 
     # Create hash of product description (first 50 chars) using SHA-256
     desc_hash = hashlib.sha256(
