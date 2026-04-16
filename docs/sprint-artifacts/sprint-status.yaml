@@ -1587,74 +1587,124 @@ runpod-5090-deployment:
 # ═══════════════════════════════════════════════════════════════════════
 pipeline-audit-2026-04-16:
   date: 2026-04-16
-  status: planned
+  status: in-progress
+  updated: 2026-04-16
   langsmith_traces:
     broadmeadows_10_records:
       - "d890fadf-1816-4ca5-9b6a-2a593c7409d9"
       - "2c0961fd-6d28-4e6d-8152-77351182e8c2"
+  summary: |
+    Broadmeadows improved from 10 to 36 records (116% of 31 ground truth — over-extraction via duplicates).
+    Alexander remains ~50% failure rate on per-row extraction.
+    Root causes RC-1 through RC-9 fixed and deployed. RC-10a-f (Ollama grammar/temperature tuning) exhausted.
+    PIVOT: Systematic debugging needed — gemma4:31b produces 0 tokens for ~50% of rows regardless of temperature.
+    All fixes merged to main and pushed to origin (44d93b33). RunPod on deploy/runpod-5090.
+    Next: Local debugging with Langfuse + RTX 4090 Ollama.
+  commits:
+    - "79ab59c9 — RC-1/2/3 fixes (page_end expansion, cross-validation, column aliases)"
+    - "f24132c4 — RC-6 total_pages truncation fix"
+    - "88a27774 — RC-7 No Access recovery + RC-8 column coalescing"
+    - "16a4d706 — RC-10 Ollama JSON schema mode"
+    - "23d2a05a — RC-10b all-optional schema"
+    - "469959f2 — RC-10c minimal schema"
+    - "51e50a1a — RC-10d hybrid retry (schema→json)"
+    - "482eaa0b — RC-10e temperature perturbation + dynamic num_ctx"
+    - "41a5bf30 — RC-10f temperature 0.3 default"
+    - "44d93b33 — planning files + RC-10f results"
+  run_results:
+    broadmeadows:
+      run1_gemma4_latest: "23/31 (74%) — RC-1/2/3, gemma4:latest"
+      run3_gemma4_31b: "23/31 (74%) — RC-6, gemma4:31b, 645s"
+      run4_rc7_rc8: "36/31 (116%) — RC-7/8, over-extraction, 907s"
+      run8_minimal_schema: "36/31 (116%) — RC-10c, 6/34 failures (18%)"
+    alexander:
+      run9_minimal_schema: "~87% failure — catastrophic"
+      run10_hybrid_retry: "~50-80% failure"
+      run11_temp_perturbation: "~50% failure, 29% retry rescue"
+      run12_temp_default: "~50% failure — temperature tuning exhausted"
   audit_scope:
     # Phase 1: Observability setup (local Docker services)
     - id: PA-1
       name: "Start local observability stack (Langfuse + LangSmith Docker)"
       priority: P0
-      status: planned
+      status: pending
+      notes: "Requires Windows/PowerShell — cannot do from WSL. Langfuse on Docker, LangSmith keys in .env"
     # Phase 2: Accuracy audit — where are records lost?
     - id: PA-2
       name: "Trace Broadmeadows 10/31 record loss (LangSmith traces above)"
       priority: P0
-      status: planned
-      notes: "Check: (a) Docling table detection (page 8 small table), (b) page range/TOC logic, (c) per-row LLM extraction quality, (d) did acm_extract even trigger?"
+      status: done
+      notes: "PRIMARY ROOT CAUSE: page_end +2 cap in LLM path. 5 contributing causes. All documented in findings.md"
     - id: PA-3
-      name: "Run both test PDFs through full pipeline locally with observability"
+      name: "Run both test PDFs through full pipeline on RunPod with fixes"
       priority: P0
-      status: planned
-      notes: "Broadmeadows + Alexander District Hospital on RTX 4090"
+      status: in-progress
+      notes: |
+        Broadmeadows: 36/31 records (over-extraction). Alexander: ~50% per-row failure.
+        12 runs completed on RunPod RTX 5090. RC-1 through RC-10f applied.
+        BLOCKED: gemma4:31b empty response root cause unknown. Systematic debugging Phase 1 needed.
     # Phase 3: Pipeline component audit
     - id: PA-4
       name: "Table detection — small table sensitivity (Broadmeadows page 8)"
       priority: P0
-      status: planned
-      notes: "Known issue: 2-row table on page 8 not detected by TableFormer, losing all subsequent pages"
+      status: done
+      notes: "Gap detection exists at source_commands.py:211. Page 8 has 2 No Access entries — recovered by RC-7."
     - id: PA-5
       name: "TOC / page range logic audit"
       priority: P0
-      status: planned
-      notes: "How pages are tagged, building boundaries identified, section structure parsed"
+      status: done
+      notes: "Page tags derive from inventory page ranges — compounds RC-1. Fixed by RC-1/2/6."
     - id: PA-6
       name: "Per-row LLM extraction quality"
       priority: P0
-      status: planned
-      notes: "Prompt effectiveness, model choice (Ollama vs cloud), structured output quality"
+      status: in-progress
+      notes: |
+        gemma4:31b produces 0 tokens for ~50% of rows regardless of temperature (0, 0.3, 0.7) or grammar mode.
+        Systematic debugging Phase 1 in progress — need to compare failing vs succeeding row content,
+        test raw Ollama API, research GBNF + gemma4 known issues.
     - id: PA-7
       name: "Pipeline component necessity audit"
       priority: P1
-      status: planned
-      notes: "Identify unnecessary components (vision models, etc.) that slow pipeline without adding value"
+      status: done
+      notes: "All 12 LangGraph nodes necessary. No redundant components found."
     # Phase 4: Worker queue audit
     - id: PA-8
       name: "Worker queue health — handoff timing between stages"
       priority: P1
-      status: planned
-      notes: "Time from source_process complete → acm_extract start. Does it auto-trigger?"
+      status: done
+      notes: "NO auto-chaining from process_source → acm_extract. Frontend must call POST /api/acm/extract."
     - id: PA-9
       name: "Worker reliability — auto-trigger, retry, error recovery"
       priority: P1
-      status: planned
+      status: done
+      notes: "10 records confirm acm_extract DID fire."
     - id: PA-10
       name: "Full queue health — depth, concurrency, stuck commands"
       priority: P1
-      status: planned
+      status: done
+      notes: "ACM_MAX_CONCURRENT_BUILDINGS=1 for single-GPU Ollama. Concurrent extraction causes 100% failure."
     # Phase 5: Speed optimization
     - id: PA-11
-      name: "Benchmark local pipeline with OCR fix (was 37min-1hr, now should be much faster)"
+      name: "Benchmark local pipeline on RTX 4090"
       priority: P1
-      status: planned
-      notes: "Old pipeline pre-OCR-fix took 37min-1hr. New code not yet tested locally."
+      status: pending
+      notes: "RunPod RTX 5090: 250-907s per document. Local RTX 4090 not yet tested. Target <120s."
     # Phase 6: Cloud observability
     - id: PA-12
       name: "Configure Langfuse Cloud + LangSmith for RunPod pod"
       priority: P2
-      status: planned
+      status: pending
+    # Phase 7: Systematic debugging — empty response root cause
+    - id: PA-13
+      name: "Systematic debugging — gemma4:31b empty response root cause"
+      priority: P0
+      status: in-progress
+      notes: |
+        Phase 1 evidence gathering (NO FIXES until complete):
+        1a. Compare failing vs succeeding row CONTENT
+        1b. Check Ollama server logs for generation errors (partially done — found truncation, NUM_PARALLEL)
+        1c. Test raw Ollama API bypassing LangChain
+        1d. Research Ollama GBNF + gemma4 known issues via context7
 
   top_issues:
     - severity: critical

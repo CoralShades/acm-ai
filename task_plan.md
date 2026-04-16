@@ -56,11 +56,19 @@
 
 ### Phase 3b: Systematic Debugging — Empty Response Root Cause
 **Status:** in_progress
+**Environment:** LOCAL RTX 4090 (Ollama Docker + gemma4:31b, Langfuse, LangSmith)
 **Problem:** gemma4:31b produces 0 tokens for ~50% of per-row extraction calls on Alexander, regardless of temperature (0, 0.3, 0.7) or grammar mode (schema, "json").
 
+**Key Evidence So Far:**
+- Temperature tuning exhausted (RC-10d/e/f) — 0, 0.3, 0.7 all produce same ~50% failure
+- Same rows fail consistently across all temperatures — structural, not sampling
+- HTTP 200 returned even with 0 tokens — Ollama doesn't report error
+- 22-28s per request even for empty responses (prompt processing time on 31B Q4_K_M)
+- Prompt truncation warnings when content exceeds 32K tokens (different issue — metadata calls)
+
 **Phase 1 Evidence Gathering (NO FIXES until complete):**
-- [ ] 1a: Compare failing vs succeeding row CONTENT — what's different?
-- [ ] 1b: Check Ollama server logs for grammar/generation errors
+- [ ] 1a: Compare failing vs succeeding row CONTENT — what's different about the row data?
+- [x] 1b: Check Ollama server logs — found truncation warnings, OLLAMA_NUM_PARALLEL=2 (partially done)
 - [ ] 1c: Test raw Ollama API (curl) bypassing LangChain — isolate layer
 - [ ] 1d: Research Ollama GBNF + gemma4 known issues via context7
 
@@ -105,6 +113,17 @@
 - [ ] Configure Langfuse Cloud for RunPod pod
 - [ ] SSH to pod, update .env with cloud keys
 - [ ] Verify tracing works on next extraction
+
+### Phase 9: Merge and Local Environment Setup
+**Status:** complete
+- [x] Merge feat/sf-reconciliation-20260411 to main (fast-forward, 289 files)
+- [x] Push main to origin (267276d3..44d93b33)
+- [x] Update sprint-status.yaml with all PA items
+- [ ] Pull gemma4:31b to local Ollama Docker (in progress)
+- [ ] Start Langfuse (Docker Compose or standalone)
+- [ ] Verify LangSmith keys in .env
+- [ ] Start API + worker locally
+- [ ] Run Broadmeadows extraction locally on RTX 4090
 
 ## Decisions Log
 

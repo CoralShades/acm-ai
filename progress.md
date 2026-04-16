@@ -282,9 +282,50 @@
 
 \* Run #11 only completed B001+B002 (20 rows total)
 
-## Next Actions
-1. Monitor Alexander Run #12 (RC-10f) — compare B001+B002 failure rates
-2. If improved, let full extraction complete. If not, consider model switch
-3. Run Broadmeadows with RC-10f to check for regression
-4. Phase 7: Speed benchmark
-5. Phase 8: Cloud observability
+### Entry 29: Alexander RC-10f Run #12 Results (B001-B004 observed)
+- **Temperature=0.3 default, 0.7 retry — NO IMPROVEMENT over temp=0**
+- B001 Myrtle Street (10 rows): ~4/10 failures (40%) — same as RC-10e
+- B002 Mortuary Buildings (10 rows): ~5/10 failures (50%)
+- B003 Pathology Department (8 rows): 8/8 records produced but same pattern
+- B004 VMO Accommodations (14 rows): ~7/14 failures (50%) — in progress when killed
+- **CONCLUSION: Temperature tuning exhausted**. 0, 0.3, 0.7 all produce identical ~50% failure rates.
+- The empty response issue is structural to gemma4:31b + certain row inputs, not sampling-related.
+
+### Entry 30: Merge to Main + Push to Origin
+- **Merged** feat/sf-reconciliation-20260411 → main (fast-forward at 44d93b33)
+- **Pushed** main to origin (267276d3..44d93b33, 289 files)
+- RunPod continues on deploy/runpod-5090 branch — client unaffected
+- Client's Parks Victoria extraction (source:zf6opyipahvo8j9d64b9) completed bulk mode with 38 records
+
+### Entry 31: Local Environment Inventory
+- SurrealDB: Docker, healthy on port 8000
+- Ollama Docker: running but unhealthy, has 14 models including gemma3:27b, qwen3:32b — NO gemma4:31b
+- gemma4:31b pull initiated (background)
+- Langfuse: NOT running — not in docker-compose.yml, localhost:3000 unreachable
+- LangSmith: keys configured in .env (LANGCHAIN_TRACING_V2=true)
+- Langfuse keys: configured in .env pointing to localhost:3000 (needs service)
+
+## Run Comparison Table (FINAL)
+
+| Run | RC | Temperature | Failures | Rate | Records | Change | Document |
+|-----|-----|-----------|----------|------|---------|--------|----------|
+| #1 | RC-1/2/3 | 0 | - | - | 23 | +13 from baseline 10 | Broadmeadows |
+| #3 | RC-6 | 0 | - | - | 23 | total_pages fix | Broadmeadows |
+| #4 | RC-7/8 | 0 | 10/34 | 29% | 36 | +13 (row coalescing + No Access) | Broadmeadows |
+| #6 | RC-10 | 0 | 10/34 | 29% | 36 | full schema — no change | Broadmeadows |
+| #7 | RC-10b | 0 | 10/34 | 29% | 36 | all-optional — no change | Broadmeadows |
+| #8 | RC-10c | 0 | 6/34 | 18% | 36 | **minimal schema -4 failures** | Broadmeadows |
+| #9 | RC-10c | 0 | ~39/45 | ~87% | killed | catastrophic on Alexander | Alexander |
+| #10 | RC-10d | 0 (retry: 0) | killed | ~50-80% | killed | format switch — no improvement | Alexander |
+| #11 | RC-10e | 0 (retry: 0.3) | 10/20 | ~50% | killed | marginal (29% rescue) | Alexander |
+| #12 | RC-10f | **0.3** (retry: 0.7) | ~16/32 | ~50% | ongoing | **temp tuning exhausted** | Alexander |
+
+## Next Actions (LOCAL RTX 4090)
+1. Pull gemma4:31b to local Ollama Docker
+2. Start Langfuse (need Docker Compose or standalone setup)
+3. Systematic debugging Phase 1: Compare failing vs succeeding row content
+4. Systematic debugging Phase 1: Test raw Ollama API with curl
+5. Systematic debugging Phase 1: Research Ollama GBNF + gemma4 issues via context7
+6. Phase 2: Synthesize evidence, form hypothesis
+7. Phase 3: Test minimal fix based on root cause
+8. Phase 7: Speed benchmark on RTX 4090
