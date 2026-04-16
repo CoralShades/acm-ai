@@ -56,7 +56,7 @@
 
 ### Phase 3b: Systematic Debugging — Empty Response Root Cause
 **Status:** in_progress
-**Environment:** LOCAL RTX 4090 (Ollama Docker + gemma4:31b, Langfuse, LangSmith)
+**Environment:** LOCAL RTX 4090 (Docker Ollama v0.20.7 + gemma3:27b, Langfuse v3.155.1, LangSmith)
 **Problem:** gemma4:31b produces 0 tokens for ~50% of per-row extraction calls on Alexander, regardless of temperature (0, 0.3, 0.7) or grammar mode (schema, "json").
 
 **Key Evidence So Far:**
@@ -66,18 +66,25 @@
 - 22-28s per request even for empty responses (prompt processing time on 31B Q4_K_M)
 - Prompt truncation warnings when content exceeds 32K tokens (different issue — metadata calls)
 
-**Phase 1 Evidence Gathering (NO FIXES until complete):**
-- [ ] 1a: Compare failing vs succeeding row CONTENT — what's different about the row data?
-- [x] 1b: Check Ollama server logs — found truncation warnings, OLLAMA_NUM_PARALLEL=2 (partially done)
-- [ ] 1c: Test raw Ollama API (curl) bypassing LangChain — isolate layer
-- [ ] 1d: Research Ollama GBNF + gemma4 known issues via context7
+**Phase 1 Evidence Gathering — COMPLETE:**
+- [x] 1a: Compare failing vs succeeding row CONTENT (skipped — root cause found via 1d)
+- [x] 1b: Check Ollama server logs — found truncation warnings, OLLAMA_NUM_PARALLEL=2
+- [x] 1c: Test raw Ollama API — gemma3:27b 4/4 passes with full 16-field anyOf schema, 21.4 tok/s on RTX 4090
+- [x] 1d: Research Ollama GBNF + gemma4 known issues — **ROOT CAUSE CONFIRMED** (see RC-12 in findings.md)
 
-**Phase 2 Analysis:**
-- [ ] Synthesize evidence, identify root cause pattern
-- [ ] Form single testable hypothesis
+**Phase 2 Analysis — COMPLETE:**
+- [x] Root cause: gemma4 family has systemic structured output defect (ollama/ollama#15502, google-deepmind/gemma#622)
+- [x] Hypothesis: Switch to gemma3:27b (confirmed NOT affected in upstream testing, 0/3 failures vs 60-100% with gemma4:31b)
 
-**Phase 3 Minimal Fix:**
-- [ ] Test smallest possible change against known-failing rows
+**Phase 3 Minimal Fix — IN PROGRESS:**
+- [x] Pull gemma3:27b on local Ollama (Docker Ollama v0.20.7, 17.4GB)
+- [x] Update .env: ACM_EXTRACTION_MODEL=gemma3:27b
+- [x] Update SurrealDB: default_extraction_model → model:jt8t1x32rb0iyi0v78mx (ollama/gemma3:27b)
+- [x] Raw API verification: 4/4 batch test passes, 0% structured output failure
+- [x] Broadmeadows Run #13: 38 records, 0% parse failure, 17/17 samples (555s)
+- [ ] Alexander Run #14: re-run on Docker Ollama (PC crashed on Windows Ollama)
+- [ ] Compare results with gemma4:31b runs
+- **Environment note:** Windows Ollama removed (caused PC crash). Docker Ollama v0.20.7 now primary.
 
 ### Phase 4: Pipeline Component Audit (PA-4 through PA-7)
 **Status:** complete

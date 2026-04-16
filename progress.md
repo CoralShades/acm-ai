@@ -320,12 +320,35 @@
 | #11 | RC-10e | 0 (retry: 0.3) | 10/20 | ~50% | killed | marginal (29% rescue) | Alexander |
 | #12 | RC-10f | **0.3** (retry: 0.7) | ~16/32 | ~50% | ongoing | **temp tuning exhausted** | Alexander |
 
-## Next Actions (LOCAL RTX 4090)
-1. Pull gemma4:31b to local Ollama Docker
-2. Start Langfuse (need Docker Compose or standalone setup)
-3. Systematic debugging Phase 1: Compare failing vs succeeding row content
-4. Systematic debugging Phase 1: Test raw Ollama API with curl
-5. Systematic debugging Phase 1: Research Ollama GBNF + gemma4 issues via context7
-6. Phase 2: Synthesize evidence, form hypothesis
-7. Phase 3: Test minimal fix based on root cause
+## Session 5: 2026-04-16 (continued — Docker Ollama)
+
+### Entry 32: Environment Change — Windows Ollama removed, Docker Ollama primary
+- **Windows Ollama v0.18.1 removed** — was causing PC crashes under sustained 27B model load
+- **Docker Ollama v0.20.7** now primary, healthy, port-mapped `0.0.0.0:11434->11434/tcp`
+- gemma3:27b (17.4GB Q4_K_M) available in Docker Ollama
+- All services running: API (5055), Langfuse v3.155.1 (3000), LangSmith, Frontend (8502), SurrealDB (8000)
+
+### Entry 33: Broadmeadows Run #13 (gemma3:27b, previous session)
+- **Model switch: gemma4:31b → gemma3:27b** (RC-12 fix — gemma4 structured output defect)
+- Raw API verification: 4/4 batch test passes, 0% structured output failure, 21.4 tok/s
+- Full pipeline extraction: **38 records created** (31 medium + 7 low), 555s
+- **0% per-row JSON parse failures** (vs 29-50% with gemma4:31b)
+- 17/17 unique sample_nos matched (100% coverage of ground truth samples)
+- 73 total records in DB (includes duplicates from per-row + No Access recovery paths)
+- Dedup needed — same samples appear 2-6x with slightly different product descriptions
+
+### Entry 34: Alexander Run #14 (gemma3:27b) — triggered, PC crashed before results
+- Triggered via POST /api/jobs/source:qnt6w2t1h251x0y0uxpw/restart
+- Command: command:ssp5bt97otk9u98vpyc0
+- PC crashed (Windows Ollama overload) before extraction completed
+- Need to re-run on Docker Ollama
+
+## Next Actions (LOCAL RTX 4090 — Docker Ollama)
+1. ~~Pull gemma4:31b~~ — NOT NEEDED, gemma3:27b is the fix
+2. ~~Start Langfuse~~ — RUNNING (v3.155.1)
+3. ~~Systematic debugging Phase 1~~ — COMPLETE (RC-12 confirmed)
+4. Verify DB model config still points to gemma3:27b
+5. Re-run Alexander extraction with gemma3:27b on Docker Ollama
+6. Run Broadmeadows extraction (fresh, with Langfuse traces)
+7. Compare results: gemma3:27b vs gemma4:31b run table
 8. Phase 7: Speed benchmark on RTX 4090

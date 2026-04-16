@@ -290,6 +290,40 @@ The per-row path processes Docling table rows and calls `scan_text_for_synthetic
 
 ---
 
+### RC-12: CRITICAL — gemma4 family has systemic structured output defect (CONFIRMED UPSTREAM)
+
+**Upstream issues:**
+- ollama/ollama#15502 — gemma4:31b repetition loop in constrained JSON with free-text strings
+- ollama/ollama#15260 — think=false breaks format constraint for gemma4
+- ollama/ollama#15428 — gemma4:26b empty response on long system prompts
+- google-deepmind/gemma#622 — model-level token repetition tendency (filed by #15502 author)
+
+**Impact:** 29-87% per-row extraction failure depending on document complexity
+
+**Evidence (from #15502, 39 trials across 13 test configurations):**
+- Three conditions ALL required to trigger: (1) gemma4:31b, (2) format= with JSON schema, (3) free-text string fields
+- gemma3:27b does NOT have this bug — 0/3 repetition, 3/3 valid JSON in same test
+- repeat_penalty has NO effect (tested 1.0, 1.15, 1.5 — same failure rate)
+- Including schema in prompt text helps for SHORT outputs but fails for longer ones
+- Bug confirmed in BOTH gemma4:31b (Dense) and gemma4:26b (MoE)
+- Root cause is in the MODEL, not Ollama — same issue in Google AI Studio
+
+**Our pipeline matches all three trigger conditions:**
+1. gemma4:31b ✓
+2. format= with minimal JSON schema (625 chars) ✓
+3. 16 free-text string fields (item_name, item_description, room_name, etc.) ✓
+
+**Why temperature tuning failed (RC-10d/e/f):**
+The logit distribution collapse is structural to gemma4's token generation. Temperature modifies sampling probabilities but cannot fix the underlying degenerate distribution. This explains why 0, 0.3, 0.7 all produce identical ~50% failure rates.
+
+**Fix options (ranked by confidence):**
+1. Switch to gemma3:27b — confirmed NOT affected, available on both local and RunPod
+2. Remove format= entirely — use prompt-only JSON guidance with regex post-processing
+3. Switch model family — llama3.1:8b, qwen3:32b, etc.
+4. Wait for Google/Ollama fix — unknown timeline, model-level issue
+
+---
+
 ## Key Code Locations
 
 | Component | File | Lines |
