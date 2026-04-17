@@ -187,6 +187,10 @@ class ObjectModel(BaseModel):
             if isinstance(value, str) and _RECORD_ID_RE.match(value):
                 table, rec_id = value.split(":", 1)
                 value = SurrealRecordID(table, rec_id)
+            # Strip NUL bytes from strings — SurrealDB 2.x panics on \x00
+            # in RPC response serialization (response.rs unwrap on NUL byte).
+            if isinstance(value, str):
+                value = value.replace("\x00", "")
             result[key] = value
         return result
 
