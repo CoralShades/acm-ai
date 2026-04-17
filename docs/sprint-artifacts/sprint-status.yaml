@@ -34,7 +34,7 @@
 # - SM typically drafts next story ONLY after previous one is 'done'
 
 generated: 2025-12-20
-updated: 2026-04-16
+updated: 2026-04-17
 project: acm-ai
 project_key: acm-ai
 tracking_system: file-system
@@ -1775,6 +1775,19 @@ pipeline-audit-2026-04-16:
     - docs/sprint-artifacts/reports/full-audit-2026-04-09.md
 
   # ─────────────────────────────────────────────────────
+  # Hotfix: Frontend auth/API bootstrap fixes (2026-04-17)
+  # Branch: main | Deployed: acm.silvatron.au (RunPod RTX 5090)
+  # ─────────────────────────────────────────────────────
+  # Commit 7ec21e3b (session prior to 2026-04-17):
+  hotfix-pdf-provenance-401: done  # Added auth headers for pdfjs PDF viewer — fixes 401 on PDF provenance endpoint
+  hotfix-acm-records-401: done     # Cookie fallback in apiClient — fixes 401 on ACM records fetch
+  hotfix-extraction-event-feed: done  # 50-event replay buffer + auto-open collapsible on extraction event feed
+  # Commit 3ef6c479 (2026-04-17) — root cause: Next.js middleware intercepted /config bootstrap route:
+  hotfix-config-route-auth: done   # frontend/src/middleware.ts: added /config to PUBLIC_PATHS so bootstrap route is not redirected to /login
+  hotfix-stale-cookie-loop: done   # frontend/src/lib/api/client.ts: clear acm_token cookie on 401 (breaks stale-cookie redirect loop)
+  hotfix-config-retry: done        # frontend/src/lib/config.ts: reset configPromise on failure (allows retry) + redirect:'manual' for defense-in-depth
+
+  # ─────────────────────────────────────────────────────
   # Epic 39: User Authentication & Data Isolation (P0)
   # Client-requested. Branch: feat/user-auth
   # Goal: Replace shared-password auth with per-user JWT auth,
@@ -1786,3 +1799,41 @@ pipeline-audit-2026-04-16:
   e39-s2-user-auth-frontend: in-progress  # Login form upgrade (email+password), Next.js middleware.ts, auth store refactor (JWT), UserMenu, ChangePasswordDialog, sidebar integration.
   e39-s3-data-isolation: in-progress  # Owner field on source/notebook/acm_record/building_record. Repository-level owner filtering. Admin bypasses filters.
   e39-s4-verification-e2e: backlog  # pytest, ruff, frontend build, browser verification with Playwright.
+
+# ═══════════════════════════════════════════════════════════════════════
+# Frontend Auth/Bootstrap Hotfixes — Deployed 2026-04-17
+# Environment: acm.silvatron.au (RunPod RTX 5090, main branch)
+# ═══════════════════════════════════════════════════════════════════════
+frontend-hotfixes-2026-04-17:
+  date: 2026-04-17
+  status: deployed
+  environment: acm.silvatron.au
+  branch: main
+
+  session_prior:
+    commit: 7ec21e3b
+    fixes:
+      - name: PDF provenance 401
+        file: frontend/src/lib/api/client.ts
+        description: "Added auth headers for pdfjs PDF viewer requests to fix 401 on PDF provenance endpoint"
+      - name: ACM records 401
+        file: frontend/src/lib/api/client.ts
+        description: "Cookie fallback in apiClient for ACM records fetch when Authorization header is absent"
+      - name: Extraction event feed
+        files:
+          - frontend/src/components/...  # SSE event-feed component
+        description: "50-event replay buffer + auto-open collapsible on extraction event feed so users see in-progress events on page load"
+
+  session_2026-04-17:
+    commit: 3ef6c479
+    root_cause: "Next.js auth middleware (middleware.ts) intercepted the /config bootstrap route before any auth cookie existed, redirecting to /login. Frontend could not discover the API URL — all pages showed 'Unable to Connect to API'."
+    fixes:
+      - name: "/config added to PUBLIC_PATHS"
+        file: frontend/src/middleware.ts
+        description: "Bootstrap route /config exempted from auth redirect so API URL is discoverable without a session"
+      - name: "Clear acm_token on 401"
+        file: frontend/src/lib/api/client.ts
+        description: "Clears stale acm_token cookie when any request returns 401, breaking the redirect loop caused by an invalid cached token"
+      - name: "configPromise reset on failure + redirect:manual"
+        file: frontend/src/lib/config.ts
+        description: "Resets configPromise on fetch failure so the next page load retries. Added redirect:'manual' as defense-in-depth against redirect loops in the fetch call itself."
