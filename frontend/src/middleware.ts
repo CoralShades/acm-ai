@@ -7,7 +7,7 @@ const REDIRECTS: Record<string, string> = {
   '/models': '/settings/models',
 }
 
-const PUBLIC_PATHS = ['/login']
+const PUBLIC_PATHS = ['/login', '/config']
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`${REDIRECTS[pathname]}${search}`, request.url))
   }
 
-  // Skip public paths (login page)
+  // Skip public paths (login page, config bootstrap route)
   if (PUBLIC_PATHS.includes(pathname)) {
     return NextResponse.next()
   }

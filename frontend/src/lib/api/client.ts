@@ -73,9 +73,10 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear auth and redirect to login
+      // Clear all auth state and redirect to login
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth-storage')
+        document.cookie = 'acm_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
         window.location.href = '/login'
       }
     }

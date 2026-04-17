@@ -68,11 +68,14 @@ async function fetchConfig(): Promise<AppConfig> {
     console.log('🔧 [Config] Attempting to fetch runtime config from /config endpoint...')
     const runtimeResponse = await fetch('/config', {
       cache: 'no-store',
+      redirect: 'manual',
     })
     if (runtimeResponse.ok) {
       const runtimeData = await runtimeResponse.json()
       runtimeApiUrl = runtimeData.apiUrl
       console.log('✅ [Config] Runtime API URL from server:', runtimeApiUrl)
+    } else if (runtimeResponse.type === 'opaqueredirect') {
+      console.log('⚠️ [Config] Runtime config endpoint redirected (likely auth middleware)')
     } else {
       console.log('⚠️ [Config] Runtime config endpoint returned status:', runtimeResponse.status)
     }
@@ -133,7 +136,8 @@ async function fetchConfig(): Promise<AppConfig> {
       throw new Error(`API config endpoint returned status ${response.status}`)
     }
   } catch (error) {
-    // Don't log error here - ConnectionGuard will display it with proper UI
+    // Reset singleton so the next call retries instead of returning a rejected promise
+    configPromise = null
     throw error
   }
 }
